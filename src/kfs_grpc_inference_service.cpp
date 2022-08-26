@@ -150,30 +150,42 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
+    return ModelReadyOV(context, request, response).grpc();
+}
+
+Status KFSInferenceServiceImpl::ModelReadyOV(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
     (void)context;
     auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
     if (nullptr == module) {
-        return grpc::Status(grpc::StatusCode::NOT_FOUND, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
+        return Status(StatusCode::MODEL_MISSING, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
     }
     auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
     // TODO if not succeed then return error
     auto& manager = servableManagerModule->getServableManager();
-    return this->getModelReady(request, response, manager).grpc();
+    return this->getModelReady(request, response, manager);
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) {
+    return ServerMetadataOV(context, request, response).grpc();
+}
+
+Status KFSInferenceServiceImpl::ServerMetadataOV(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) {
     (void)context;
     (void)request;
     (void)response;
     response->set_name(PROJECT_NAME);
     response->set_version(PROJECT_VERSION);
-    return grpc::Status::OK;
+    return StatusCode::OK;
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
+    return ModelMetadataOV(context, request, response).grpc();
+}
+
+Status KFSInferenceServiceImpl::ModelMetadataOV(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
     auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
     if (nullptr == module) {
-        return grpc::Status(grpc::StatusCode::NOT_FOUND, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
+        return Status(StatusCode::MODEL_MISSING, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
     }
     auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
     // TODO if not succeed then return error
@@ -186,7 +198,7 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
         SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
         auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
         if (!pipelineDefinition) {
-            return Status(StatusCode::MODEL_NAME_MISSING).grpc();
+            return Status(StatusCode::MODEL_NAME_MISSING);
         }
         auto status = buildResponse(*pipelineDefinition, response);
         if (status.ok()) {
@@ -205,19 +217,19 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
             requestedVersion = versionRead.value();
         } else {
             SPDLOG_DEBUG("GetModelMetadata requested model: name {}; with version in invalid format: {}", name, versionString);
-            return Status(StatusCode::MODEL_VERSION_INVALID_FORMAT).grpc();
+            return Status(StatusCode::MODEL_VERSION_INVALID_FORMAT);
         }
         instance = model->getModelInstanceByVersion(requestedVersion);
         if (instance == nullptr) {
             SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
-            return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
+            return Status(StatusCode::MODEL_VERSION_MISSING);
         }
     } else {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
             SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
-            return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
+            return Status(StatusCode::MODEL_VERSION_MISSING);
         }
     }
     auto status = buildResponse(*model, *instance, response);
@@ -227,10 +239,14 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
         INCREMENT_IF_ENABLED(instance->getMetricReporter().requestFailGrpcModelMetadata);
     }
 
-    return status.grpc();
+    return status;
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
+    return ModelInferOV(context, request, response).grpc();
+}
+
+Status KFSInferenceServiceImpl::ModelInferOV(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
     (void)context;
     OVMS_PROFILE_FUNCTION();
     Timer timer;
@@ -254,7 +270,7 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestSuccessGrpcModelInfer);
         }
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
-        return status.grpc();
+        return status;
     }
 
     if (pipelinePtr) {
@@ -276,12 +292,12 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
     }
 
     if (!status.ok()) {
-        return status.grpc();
+        return status;
     }
 
     timer.stop("total");
     SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
-    return grpc::Status::OK;
+    return StatusCode::OK;
 }
 
 Status KFSInferenceServiceImpl::buildResponse(

@@ -111,13 +111,13 @@ void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(
 }
 
 void HttpRestApiHandler::registerAll() {
-    registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, &response);
         } else {
             SPDLOG_WARN("Requested REST resource not found");
-            return (Status)StatusCode::REST_NOT_FOUND;
+            return StatusCode::REST_NOT_FOUND;
         }
     });
 
@@ -195,9 +195,9 @@ Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponen
 Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::inference::ServerMetadataRequest grpc_request;
     ::inference::ServerMetadataResponse grpc_response;
-    ::grpc::Status gstatus = kfsGrpcImpl.ServerMetadata(nullptr, &grpc_request, &grpc_response);
+    Status gstatus = kfsGrpcImpl.ServerMetadataOV(nullptr, &grpc_request, &grpc_response);
     if (!gstatus.ok()) {
-        return StatusCode::INTERNAL_ERROR;
+        return gstatus;
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
@@ -492,14 +492,14 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     ::inference::ModelInferRequest grpc_request;
     prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
     ::inference::ModelInferResponse grpc_response;
-    const ::grpc::Status gstatus = kfsGrpcImpl.ModelInfer(nullptr, &grpc_request, &grpc_response);
+    const Status gstatus = kfsGrpcImpl.ModelInferOV(nullptr, &grpc_request, &grpc_response);
     if (!gstatus.ok()) {
-        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        return gstatus;
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts_out;
     Status status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
-    if (status != StatusCode::OK) {
+    if (!status.ok()) {
         return status;
     }
     response = output;
@@ -533,14 +533,16 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
 Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::inference::ModelReadyRequest grpc_request;
     ::inference::ModelReadyResponse grpc_response;
-    Status status;
     std::string modelName(request_components.model_name);
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     grpc_request.set_name(modelName);
     grpc_request.set_version(modelVersion);
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
 
-    kfsGrpcImpl.ModelReady(nullptr, &grpc_request, &grpc_response);
+    Status status = kfsGrpcImpl.ModelReadyOV(nullptr, &grpc_request, &grpc_response);
+    if (!status.ok()) {
+        return status;
+    }
 
     if (grpc_response.ready()) {
         return StatusCode::OK;
@@ -551,16 +553,21 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
 Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::inference::ModelMetadataRequest grpc_request;
     ::inference::ModelMetadataResponse grpc_response;
-    Status status;
     std::string modelName(request_components.model_name);
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     grpc_request.set_name(modelName);
     grpc_request.set_version(modelVersion);
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
-    kfsGrpcImpl.ModelMetadata(nullptr, &grpc_request, &grpc_response);
+    Status gstatus = kfsGrpcImpl.ModelMetadataOV(nullptr, &grpc_request, &grpc_response);
+    if (!gstatus.ok()) {
+        return gstatus;
+    }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
-    google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    if (!status.ok()) {
+        return StatusCode::JSON_SERIALIZATION_ERROR;
+    }
     response = output;
     return StatusCode::OK;
 }
