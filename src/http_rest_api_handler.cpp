@@ -204,14 +204,122 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
     return buffer.GetString();
 }
 
+Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char* binaryInputs, size_t binaryInputsSize) {
+    int expectedBinaryInputsSize = 0;
+    for(int i = 0; i < grpc_request.inputs().size(); i++ ){
+        auto input = grpc_request.inputs().at(i);
+        if(input.parameters().count("binary_data_size") > 0) {
+            if (input.parameters().at("binary_data_size").parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
+                auto binary_input_size = input.parameters().at("binary_data_size").int64_param();
+                expectedBinaryInputsSize += binary_input_size;
+            }
+            else
+            {
+                SPDLOG_WARN("binary_data_size parameter type should be int64");
+                return StatusCode::OK;
+            }
+        }
+    }
+
+    SPDLOG_WARN("Binary inputs size = {}", expectedBinaryInputsSize);
+    if(binaryInputsSize != expectedBinaryInputsSize){
+        SPDLOG_ERROR("Expected binary inputs size {} does not match actual size {}", expectedBinaryInputsSize, binaryInputsSize);
+        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+    }
+
+    int binaryInputOffset = 0;
+    for(int i = 0; i < grpc_request.mutable_inputs()->size(); i++ ){
+        auto input = grpc_request.mutable_inputs()->Mutable(i);
+        if(input->parameters().count("binary_data_size") > 0) {
+            auto binary_input_size = input->parameters().at("binary_data_size").int64_param();
+
+            if (input->datatype() == "FP32") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(float)){
+                    auto value = input->mutable_contents()->mutable_fp32_contents()->Add();
+                    *value = (*(reinterpret_cast<const float*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "INT64") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(int64_t)){
+                    auto value = input->mutable_contents()->mutable_int64_contents()->Add();
+                    *value = (*(reinterpret_cast<const int64_t*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "INT32") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(int32_t)){
+                    auto value = input->mutable_contents()->mutable_int_contents()->Add();
+                    *value = (*(reinterpret_cast<const int32_t*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "INT16") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(int16_t)){
+                    auto value = input->mutable_contents()->mutable_int_contents()->Add();
+                    *value = (*(reinterpret_cast<const int16_t*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "INT8") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(int8_t)){
+                    auto value = input->mutable_contents()->mutable_int_contents()->Add();
+                    *value = (*(reinterpret_cast<const int8_t*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "UINT64") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(uint64_t)){
+                    auto value = input->mutable_contents()->mutable_uint64_contents()->Add();
+                    *value = (*(reinterpret_cast<const uint64_t*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "UINT32") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(uint32_t)){
+                    auto value = input->mutable_contents()->mutable_uint_contents()->Add();
+                    *value = (*(reinterpret_cast<const uint32_t*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "UINT16") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(uint16_t)){
+                    auto value = input->mutable_contents()->mutable_uint_contents()->Add();
+                    *value = (*(reinterpret_cast<const uint16_t*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "UINT8") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(uint8_t)){
+                    auto value = input->mutable_contents()->mutable_uint_contents()->Add();
+                    *value = (*(reinterpret_cast<const uint8_t*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "FP64") {
+                for (size_t i = 0; i < binary_input_size; i += sizeof(double)){
+                    auto value = input->mutable_contents()->mutable_fp64_contents()->Add();
+                    *value = (*(reinterpret_cast<const double*>(binaryInputs + binaryInputOffset + i)));
+                }
+            } else if (input->datatype() == "BYTES") {
+                input->mutable_contents()->add_bytes_contents(binaryInputs + binaryInputOffset, binary_input_size);
+            }
+            else {
+                return StatusCode::REST_UNSUPPORTED_PRECISION;
+            }
+            binaryInputOffset += binary_input_size;
+        }
+    }
+    return StatusCode::OK;
+}
+
 ::inference::ModelInferRequest HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body) {
     ::inference::ModelInferRequest grpc_request;
 
-    std::string request(preprocessInferRequest(request_body));
-
     google::protobuf::util::JsonParseOptions opts;
     opts.ignore_unknown_fields = true;
-    google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
+    auto jsonClosingBracket = request_body.find_last_of("}");
+    bool dataAfterHeader = ((jsonClosingBracket != std::string::npos) && (jsonClosingBracket != (request_body.length() - 1)));
+    if(dataAfterHeader) {
+        std::string request(preprocessInferRequest(request_body.substr(0, jsonClosingBracket + 1).c_str()));
+        google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
+        auto binaryInputsString = request_body.substr(jsonClosingBracket + 1, request_body.length());
+        SPDLOG_WARN("String after JSON = {}", binaryInputsString);
+        auto status = addBinaryInputs(grpc_request, &(request_body[jsonClosingBracket + 1]), binaryInputsString.length());
+        if(!status.ok()) {
+             SPDLOG_ERROR("Binary inputs error");
+        }
+    }
+    else
+    {
+        std::string request(preprocessInferRequest(request_body));
+        google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
+    }
+    std::string req;
+    google::protobuf::util::MessageToJsonString(grpc_request, &req);
+    SPDLOG_ERROR("JSON : {}", req);
     grpc_request.set_model_name(modelName);
     grpc_request.set_model_version(modelVersion);
     return grpc_request;

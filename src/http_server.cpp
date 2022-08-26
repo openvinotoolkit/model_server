@@ -64,6 +64,8 @@ public:
 private:
     void processRequest(net_http::ServerRequestInterface* req) {
         SPDLOG_DEBUG("REST request {}", req->uri_path());
+        SPDLOG_ERROR("REST request header Inference-Header-Content-Length {}", req->GetRequestHeader("Inference-Header-Content-Length"));
+        SPDLOG_ERROR("REST request header Content-Length {}", req->GetRequestHeader("Content-Length"));
         std::string body;
         int64_t num_bytes = 0;
         auto request_chunk = req->ReadRequestBytes(&num_bytes);
