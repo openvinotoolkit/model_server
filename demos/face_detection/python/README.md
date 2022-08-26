@@ -10,6 +10,12 @@ the functionality of dynamic shape in OpenVINO Model Server and how to process t
 
 The example relies on the model [face-detection-retail-0004](https://docs.openvinotoolkit.org/2022.1/omz_models_model_face_detection_retail_0004.html).
 
+Clone the repository and enter face_detection directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/face_detection/python
+```
+
 Prepare environment:
 ```bash
 pip install -r ../../common/python/requirements.txt
@@ -63,12 +69,6 @@ mkdir -p model/1
 wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin
 wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
 docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
-```
-
-Clone the repository and enter face_detection directory
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/face_detection/python
 ```
 
 Run the client:
