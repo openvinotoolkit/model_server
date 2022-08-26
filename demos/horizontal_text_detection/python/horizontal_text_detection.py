@@ -140,8 +140,12 @@ class RequestingThread(threading.Thread):
         while (True):
             self.wait_for_input()
             if force_exit:
+                print("Detected exit signal...")
                 break
             is_success, buffer = cv2.imencode(".jpg", self.input_frame)
+            if not is_success:
+                print("Encoding a frame as JPG failed")
+                continue
             request = predict_pb2.PredictRequest()
             request.model_spec.name = request.model_spec.name = 'detect_text_images' if args.use_case == 'ocr' else 'text'
             request.inputs['image'].CopyFrom(make_tensor_proto([buffer.tobytes()], shape=[1]))
@@ -151,6 +155,7 @@ class RequestingThread(threading.Thread):
             try:
                 result = stub.Predict(request, 10.0)
             except grpc.RpcError as err:
+                print("Encountered gRPC error")
                 if err.code() == grpc.StatusCode.ABORTED:
                     pass
                 else:
@@ -185,9 +190,9 @@ def finish():
 def grab_frame(cap):
     WIDTH = 704
     HEIGHT = 704
-    ret, frame = cap.read()
-    if frame == None:
-        print(f"[WARNING] No Input frame")
+    success, frame = cap.read()
+    if not success:
+        print("[WARNING] No Input frame")
         finish()
         return None
 
@@ -206,11 +211,11 @@ frames_processed = 0
 last_display_time = time.time()
 app_start_time = time.time()
 
-if grab_frame(cap) == None:
-    print(f"[ERROR] Check camera input...")
-    force_exit = False
+if grab_frame(cap) is None:
+    print("[ERROR] Check camera input...")
+    force_exit = True
 
-while(force_exit):
+while not force_exit:
     if not threads[i].is_initialized():
         threads[i].set_input(grab_frame(cap))
         i = (i + 1) % args.num_threads

@@ -139,16 +139,35 @@ The recommended method for testing the custom library is via OVMS execution:
 For debugging steps, refer to the OVMS [developer guide](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/docs/developer_guide.md)
 
 
-## Custom node examples 
-The best starting point for developing new custom nodes is by exploring and copying from the existing examples.
+## Built-in custom nodes
+Along with the OpenVINO Model Server, there are also built-in custom nodes provided in the image.
+They reside in the `/ovms/lib/custom_nodes` directory in the container and can be reffered in the configuration file.
+Below you can see the list of fully functional custom nodes embedded in the model server docker image:
 
-Fully functional custom nodes are available here:
-- [east-resnet50 OCR custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/east_ocr)
-- [horizontal OCR custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/horizontal_ocr)
-- [model zoo intel object detection custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/model_zoo_intel_object_detection)
-- [image transformation custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/image_transformation)
-- [add one custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/add_one) - demonstrates example implementation of memory pool to avoid dynamic allocation
-- [face blur custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/face_blur)
+| Custom Node      | Location in the container |
+| :---        |    :----   |
+| [east-resnet50 OCR custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/east_ocr) | `/ovms/lib/custom_nodes/libcustom_node_east_ocr.so`|
+| [horizontal OCR custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/horizontal_ocr) | `/ovms/lib/custom_nodes/libcustom_node_horizontal_ocr.so`|
+| [model zoo intel object detection custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/model_zoo_intel_object_detection) | `/ovms/lib/custom_nodes/libcustom_node_model_zoo_intel_object_detection.so`|
+| [image transformation custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/image_transformation) | `/ovms/lib/custom_nodes/libcustom_node_image_transformation.so`|
+| [add one custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/add_one) | `/ovms/lib/custom_nodes/libcustom_node_add_one.so`|
+| [face blur custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/face_blur) | `/ovms/lib/custom_nodes/libcustom_node_face_blur.so`|
+
+
+**Example:** 
+Including built-in [horizontal OCR custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/horizontal_ocr) in the `config.json` would look like:
+```json
+...
+    "custom_node_library_config_list": [
+        {
+            "name": "ocr_image_extractor",
+            "base_path": "/ovms/lib/custom_nodes/libcustom_node_horizontal_ocr.so"
+        }
+    ],
+...
+```
+
+The custom node is already available under this path. No need to build anything and mounting to the container. 
 
 Additional examples are included in the unit tests:
 - [node_add_sub.c](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/test/custom_nodes/node_add_sub.c)

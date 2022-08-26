@@ -93,6 +93,8 @@ OVMS_CPP_CONTAINTER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
 
+BUILD_CUSTOM_NODES ?= true
+
 .PHONY: default docker_build \
 
 default: docker_build
@@ -153,6 +155,10 @@ clang-format: venv
 
 .PHONY: docker_build
 docker_build:
+ifeq ($(BUILD_CUSTOM_NODES),true)
+	@echo "Building custom nodes"
+	@cd src/custom_nodes && make BASE_OS=$(BASE_OS)
+endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
