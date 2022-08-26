@@ -351,20 +351,20 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
     bool mismatch = false;
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
     if (batchingMode == AUTO) {  // Skip batch dimension
-        for (int i = 0; i < batchSizeIndex; i++) {
+        for (size_t i = 0; i < batchSizeIndex; i++) {
             if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
                 mismatch = true;
                 break;
             }
         }
-        for (int i = batchSizeIndex + 1; i < rsi.getShapeSize(); i++) {
+        for (size_t i = batchSizeIndex + 1; i < rsi.getShapeSize(); i++) {
             if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
                 mismatch = true;
                 break;
             }
         }
     } else {  // Do not skip batch dimension
-        for (int i = 0; i < rsi.getShapeSize(); i++) {
+        for (size_t i = 0; i < rsi.getShapeSize(); i++) {
             if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
                 mismatch = true;
                 break;

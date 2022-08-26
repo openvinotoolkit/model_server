@@ -199,7 +199,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
-    for (size_t i = 0; i < src.string_val_size(); i++) {
+    for (size_t i = 0; i < (size_t)src.string_val_size(); i++) {
         if (src.string_val(i).size() <= 0) {
             return StatusCode::STRING_VAL_EMPTY;
         }
@@ -229,7 +229,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
-    for (size_t i = 0; i < src.contents().bytes_contents_size(); i++) {
+    for (size_t i = 0; i <  (size_t)src.contents().bytes_contents_size(); i++) {
         if (src.contents().bytes_contents(i).size() <= 0) {
             return StatusCode::BYTES_CONTENTS_EMPTY;
         }
@@ -328,7 +328,7 @@ Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<
     bool resizeSupported = isResizeSupported(tensorInfo);
     bool enforceResolutionAlignment = !resizeSupported;
 
-    for (int i = 0; i < getBinaryInputsSize(src); i++) {
+    for (size_t i = 0; i < getBinaryInputsSize(src); i++) {
         cv::Mat image = convertStringToMat(getBinaryInput(src, i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;

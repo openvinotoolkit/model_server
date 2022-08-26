@@ -251,7 +251,7 @@ std::string tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& 
     oss << "(";
     size_t i = 0;
     if (shape.size() > 0) {
-        for (; i < shape.size() - 1; i++) {
+        for (; i < (size_t)shape.size() - 1; i++) {
             oss << shape[i] << ",";
         }
         oss << shape[i];

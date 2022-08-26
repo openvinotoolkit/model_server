@@ -231,7 +231,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
         }
         if ((demultiplexCount.value() != -1) &&
-            (newDims[0] != demultiplexCount.value())) {
+            (newDims[0] != (size_t)demultiplexCount.value())) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[0] size: {} of tensor: {} expected: {} to demultiply",
                 newDims[0], tensorName, demultiplexCount.value());
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
