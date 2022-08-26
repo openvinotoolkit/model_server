@@ -73,14 +73,6 @@ const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
 const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
     R"(/v2)";
 
-
-const std::string HttpRestApiHandler::kfs_serverreadyRegexExp =
-    R"(/v2/health/ready)";
-const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
-    R"(/v2/health/live)";
-const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
-    R"(/v2)";
-
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics)";
 
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
