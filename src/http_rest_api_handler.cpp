@@ -65,8 +65,6 @@ const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)";
 const std::string HttpRestApiHandler::kfs_inferRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))";
-
-
 const std::string HttpRestApiHandler::kfs_serverreadyRegexExp =
     R"(/v2/health/ready)";
 const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
