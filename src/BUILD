@@ -114,6 +114,8 @@ cc_library(
         "kfs_grpc_inference_service.hpp",
         "metric.cpp",
         "metric.hpp",
+        "metric_config.cpp",
+        "metric_config.hpp",
         "metric_family.cpp",
         "metric_family.hpp",
         "metric_registry.cpp",
