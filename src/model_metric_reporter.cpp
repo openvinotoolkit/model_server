@@ -15,9 +15,8 @@
 //*****************************************************************************
 #include "model_metric_reporter.hpp"
 
-#include "execution_context.hpp"
-#include "metric_family.hpp"
 #include "metric_registry.hpp"
+#include "metric_family.hpp"
 
 namespace ovms {
 
@@ -131,7 +130,7 @@ ModelMetricReporter::ModelMetricReporter(MetricRegistry* registry, const std::st
     this->requestFailGrpcModelStatus = family->addMetric({{"name", modelName},
         {"version", std::to_string(modelVersion)},
         {"protocol", "kserve"},
-        {"method", "modelready"},
+        {"method", "modelstatus"},
         {"interface", "grpc"}});
     this->requestFailRestModelInfer = family->addMetric({{"name", modelName},
         {"version", std::to_string(modelVersion)},
@@ -146,7 +145,7 @@ ModelMetricReporter::ModelMetricReporter(MetricRegistry* registry, const std::st
     this->requestFailRestModelStatus = family->addMetric({{"name", modelName},
         {"version", std::to_string(modelVersion)},
         {"protocol", "kserve"},
-        {"method", "modelready"},
+        {"method", "modelstatus"},
         {"interface", "rest"}});
 }
 
