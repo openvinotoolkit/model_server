@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,13 +77,44 @@ public:
 
     Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);
-    void setAllMetricsTo(bool enabled);
 
-    MetricConfig() {
+    ModelConfig(){
         metricsEnabled = false;
         endpointsPath = "/metrics";
 
-        setAllMetricsTo(false);
+        requestSuccessGrpcPredict = false;
+        requestSuccessGrpcGetModelMetadata= false;
+        requestSuccessGrpcGetModelStatus= false;
+
+        requestSuccessRestPredict= false;
+        requestSuccessRestGetModelMetadata= false;
+        requestSuccessRestGetModelStatus= false;
+
+        requestFailGrpcPredict= false;
+        requestFailGrpcGetModelMetadata= false;
+        requestFailGrpcGetModelStatus= false;
+
+        requestFailRestPredict= false;
+        requestFailRestGetModelMetadata= false;
+        requestFailRestGetModelStatus= false;
+
+        // KFS
+        requestSuccessGrpcModelInfer= false;
+        requestSuccessGrpcModelMetadata= false;
+        requestSuccessGrpcModelStatus= false;
+
+        requestSuccessRestModelInfer= false;
+        requestSuccessRestModelMetadata= false;
+        requestSuccessRestModelStatus= false;
+
+        requestFailGrpcModelInfer= false;
+        requestFailGrpcModelMetadata= false;
+        requestFailGrpcModelStatus= false;
+
+        requestFailRestModelInfer= false;
+        requestFailRestModelMetadata= false;
+        requestFailRestModelStatus= false;
     }
+    
 };
 }  // namespace ovms

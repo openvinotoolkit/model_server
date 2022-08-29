@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "metric_config.hpp"
+#include "metrics_config.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -32,22 +32,17 @@
 
 namespace ovms {
 
-// Getting the "monitoring" metrics config as input
-Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
-    Status status = StatusCode::OK;
-    if (!metrics.HasMember("metrics"))
-        return status;
-
-    const auto& v = metrics["metrics"].GetObject();
-
+// Getting the "monitoring" config as input
+Status MetricConfig::parseMetricsConfig(const rapidjson::Value& v) {
     if (v.HasMember("enable")) {
+        // if (v.HasMember("enable").isBool())
         metricsEnabled = v["enable"].GetBool();
     } else {
         metricsEnabled = false;
     }
 
     if (v.HasMember("endpoint_path")) {
-        endpointsPath = v["endpoint_path"].GetString();
+        endpointsPath = v["enable"].GetString();
     } else {
         endpointsPath = "/metrics";
     }
@@ -55,127 +50,91 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
     if (v.HasMember("metrics_list")) {
         status = parseMetricsArray(v["metrics_list"]);
     } else {
-        setAllMetricsTo(metricsEnabled);
-    }
-
-    return status;
-}
-
-Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
-    for (auto& sh : v.GetArray()) {
-        std::string metric = std::string(sh.GetString());
-        if (metric == "requestSuccessGrpcPredict") {
-            requestSuccessGrpcPredict = true;
-        }
-        if (metric == "requestSuccessGrpcGetModelMetadata") {
-            requestSuccessGrpcGetModelMetadata = true;
-        }
-        if (metric == "requestSuccessGrpcGetModelStatus") {
-            requestSuccessGrpcGetModelStatus = true;
-        }
-        if (metric == "requestSuccessRestPredict") {
-            requestSuccessRestPredict = true;
-        }
-        if (metric == "requestSuccessRestGetModelMetadata") {
-            requestSuccessRestGetModelMetadata = true;
-        }
-        if (metric == "requestSuccessRestGetModelStatus") {
-            requestSuccessRestGetModelStatus = true;
-        }
-        if (metric == "requestFailGrpcPredict") {
-            requestFailGrpcPredict = true;
-        }
-        if (metric == "requestFailGrpcGetModelMetadata") {
-            requestFailGrpcGetModelMetadata = true;
-        }
-        if (metric == "requestFailGrpcGetModelStatus") {
-            requestFailGrpcGetModelStatus = true;
-        }
-        if (metric == "requestFailRestPredict") {
-            requestFailRestPredict = true;
-        }
-        if (metric == "requestFailRestGetModelMetadata") {
-            requestFailRestGetModelMetadata = true;
-        }
-        if (metric == "requestFailRestGetModelStatus") {
-            requestFailRestGetModelStatus = true;
-        }
-        if (metric == "requestSuccessGrpcModelInfer") {
-            requestSuccessGrpcModelInfer = true;
-        }
-        // KFS
-        if (metric == "requestSuccessGrpcModelMetadata") {
-            requestSuccessGrpcModelMetadata = true;
-        }
-        if (metric == "requestSuccessGrpcModelStatus") {
-            requestSuccessGrpcModelStatus = true;
-        }
-        if (metric == "requestSuccessRestModelInfer") {
-            requestSuccessRestModelInfer = true;
-        }
-        if (metric == "requestSuccessRestModelMetadata") {
-            requestSuccessRestModelMetadata = true;
-        }
-        if (metric == "requestSuccessRestModelStatus") {
-            requestSuccessRestModelStatus = true;
-        }
-        if (metric == "requestFailGrpcModelInfer") {
-            requestFailGrpcModelInfer = true;
-        }
-        if (metric == "requestFailGrpcModelMetadata") {
-            requestFailGrpcModelMetadata = true;
-        }
-        if (metric == "requestFailGrpcModelStatus") {
-            requestFailGrpcModelStatus = true;
-        }
-
-        if (metric == "requestFailRestModelInfer") {
-            requestFailRestModelInfer = true;
-        }
-        if (metric == "requestFailRestModelMetadata") {
-            requestFailRestModelMetadata = true;
-        }
-        if (metric == "requestFailRestModelStatus") {
-            requestFailRestModelStatus = true;
-        }
+        // Log missing metrics list or list empty
+        // or enable all metrics ?
     }
 
     return StatusCode::OK;
 }
 
-void MetricConfig::setAllMetricsTo(bool enabled){
-    requestSuccessGrpcPredict = enabled;
-    requestSuccessGrpcGetModelMetadata = enabled;
-    requestSuccessGrpcGetModelStatus = enabled;
+Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
+    for (auto& sh : v.value.GetArray()) {
+        if (sh.GetString() == "requestSuccessGrpcPredict") {
+            requestSuccessGrpcPredict = true;
+        }
+        if (sh.GetString() == "requestSuccessGrpcGetModelMetadata") {
+            requestSuccessGrpcGetModelMetadata = true;
+        }
+        if (sh.GetString() == "requestSuccessGrpcGetModelStatus") {
+            requestSuccessGrpcGetModelStatus = true;
+        }
+        if (sh.GetString() == "requestSuccessRestPredict") {
+            requestSuccessRestPredict = true;
+        }
+        if (sh.GetString() == "requestSuccessRestGetModelMetadata") {
+            requestSuccessRestGetModelMetadata = true;
+        }
+        if (sh.GetString() == "requestSuccessRestGetModelStatus") {
+            requestSuccessRestGetModelStatus = true;
+        }
+        if (sh.GetString() == "requestFailGrpcPredict") {
+            requestFailGrpcPredict = true;
+        }
+        if (sh.GetString() == "requestFailGrpcGetModelMetadata") {
+            requestFailGrpcGetModelMetadata = true;
+        }
+        if (sh.GetString() == "requestFailGrpcGetModelStatus") {
+            requestFailGrpcGetModelStatus = true;
+        }
+        if (sh.GetString() == "requestFailRestPredict") {
+            requestFailRestPredict = true;
+        }
+        if (sh.GetString() == "requestFailRestGetModelMetadata") {
+            requestFailRestGetModelMetadata = true;
+        }
+        if (sh.GetString() == "requestFailRestGetModelStatus") {
+            requestFailRestGetModelStatus = true;
+        }
+        if (sh.GetString() == "requestSuccessGrpcModelInfer") {
+            requestSuccessGrpcModelInfer = true;
+        }
+        // KFS
+        if (sh.GetString() == "requestSuccessGrpcModelMetadata") {
+            requestSuccessGrpcModelMetadata = true;
+        }
+        if (sh.GetString() == "requestSuccessGrpcModelStatus") {
+            requestSuccessGrpcModelStatus = true;
+        }
+        if (sh.GetString() == "requestSuccessRestModelInfer") {
+            requestSuccessRestModelInfer = true;
+        }
+        if (sh.GetString() == "requestSuccessRestModelMetadata") {
+            requestSuccessRestModelMetadata = true;
+        }
+        if (sh.GetString() == "requestSuccessRestModelStatus") {
+            requestSuccessRestModelStatus = true;
+        }
+        if (sh.GetString() == "requestFailGrpcModelInfer") {
+            requestFailGrpcModelInfer = true;
+        }
+        if (sh.GetString() == "requestFailGrpcModelMetadata") {
+            requestFailGrpcModelMetadata = true;
+        }
+        if (sh.GetString() == "requestFailGrpcModelStatus") {
+            requestFailGrpcModelStatus = true;
+        }
 
-    requestSuccessRestPredict = enabled;
-    requestSuccessRestGetModelMetadata = enabled;
-    requestSuccessRestGetModelStatus = enabled;
-
-    requestFailGrpcPredict = enabled;
-    requestFailGrpcGetModelMetadata = enabled;
-    requestFailGrpcGetModelStatus = enabled;
-
-    requestFailRestPredict = enabled;
-    requestFailRestGetModelMetadata = enabled;
-    requestFailRestGetModelStatus = enabled;
-
-    // KFS
-    requestSuccessGrpcModelInfer = enabled;
-    requestSuccessGrpcModelMetadata = enabled;
-    requestSuccessGrpcModelStatus = enabled;
-
-    requestSuccessRestModelInfer = enabled;
-    requestSuccessRestModelMetadata = enabled;
-    requestSuccessRestModelStatus = enabled;
-
-    requestFailGrpcModelInfer = enabled;
-    requestFailGrpcModelMetadata = enabled;
-    requestFailGrpcModelStatus = enabled;
-
-    requestFailRestModelInfer = enabled;
-    requestFailRestModelMetadata = enabled;
-    requestFailRestModelStatus = enabled;
+        if (sh.GetString() == "requestFailRestModelInfer") {
+            requestFailRestModelInfer = true;
+        }
+        if (sh.GetString() == "requestFailRestModelMetadata") {
+            requestFailRestModelMetadata = true;
+        }
+        if (sh.GetString() == "requestFailRestModelStatus") {
+            requestFailRestModelStatus = true;
+        }
+    }
+    return StatusCode::OK;
 }
 
 }  // namespace ovms
