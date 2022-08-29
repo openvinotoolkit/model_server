@@ -199,7 +199,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
-    for (size_t i = 0; i < static_cast<size_t>(src.string_val_size()); i++) {
+    for (int i = 0; i < src.string_val_size(); i++) {
         if (src.string_val(i).size() <= 0) {
             return StatusCode::STRING_VAL_EMPTY;
         }
@@ -229,7 +229,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
-    for (size_t i = 0; i < static_cast<size_t>(src.contents().bytes_contents_size()); i++) {
+    for (int i = 0; i < src.contents().bytes_contents_size(); i++) {
         if (src.contents().bytes_contents(i).size() <= 0) {
             return StatusCode::BYTES_CONTENTS_EMPTY;
         }
@@ -311,11 +311,11 @@ const std::string& getBinaryInput(const ::inference::ModelInferRequest::InferInp
     return tensor.contents().bytes_contents(i);
 }
 
-size_t getBinaryInputsSize(const tensorflow::TensorProto& tensor) {
+int getBinaryInputsSize(const tensorflow::TensorProto& tensor) {
     return tensor.string_val_size();
 }
 
-size_t getBinaryInputsSize(const ::inference::ModelInferRequest::InferInputTensor& tensor) {
+int getBinaryInputsSize(const ::inference::ModelInferRequest::InferInputTensor& tensor) {
     return tensor.contents().bytes_contents_size();
 }
 
@@ -328,7 +328,7 @@ Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<
     bool resizeSupported = isResizeSupported(tensorInfo);
     bool enforceResolutionAlignment = !resizeSupported;
 
-    for (size_t i = 0; i < getBinaryInputsSize(src); i++) {
+    for (int i = 0; i < getBinaryInputsSize(src); i++) {
         cv::Mat image = convertStringToMat(getBinaryInput(src, i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
