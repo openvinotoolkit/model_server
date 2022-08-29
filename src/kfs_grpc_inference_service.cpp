@@ -20,6 +20,7 @@
 #include <string>
 
 #include "deserialization.hpp"
+#include "metric.hpp"
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
@@ -107,7 +108,13 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
         if (!pipelineDefinition) {
             return Status(StatusCode::MODEL_NAME_MISSING);
         }
-        return buildResponse(*pipelineDefinition, response);
+        auto status = buildResponse(*pipelineDefinition, response);
+        if (status.ok()) {
+            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().requestSuccessGrpcModelStatus);
+        } else {
+            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().requestFailGrpcModelStatus);
+        }
+        return status;
     }
     std::shared_ptr<ModelInstance> instance = nullptr;
     if (!versionString.empty()) {
@@ -133,7 +140,13 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
             return Status(StatusCode::MODEL_VERSION_MISSING);
         }
     }
-    return buildResponse(instance, response);
+    auto status = buildResponse(instance, response);
+    if (status.ok()) {
+        INCREMENT_IF_ENABLED(instance->getMetricReporter().requestSuccessGrpcModelStatus);
+    } else {
+        INCREMENT_IF_ENABLED(instance->getMetricReporter().requestFailGrpcModelStatus);
+    }
+    return status;
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
@@ -175,7 +188,13 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
         if (!pipelineDefinition) {
             return Status(StatusCode::MODEL_NAME_MISSING).grpc();
         }
-        return buildResponse(*pipelineDefinition, response);
+        auto status = buildResponse(*pipelineDefinition, response);
+        if (status.ok()) {
+            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().requestSuccessGrpcModelMetadata);
+        } else {
+            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().requestFailGrpcModelMetadata);
+        }
+        return status;
     }
     std::shared_ptr<ModelInstance> instance = nullptr;
     if (!versionString.empty()) {
@@ -201,7 +220,14 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
             return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     }
-    return buildResponse(*model, *instance, response).grpc();
+    auto status = buildResponse(*model, *instance, response);
+    if (status.ok()) {
+        INCREMENT_IF_ENABLED(instance->getMetricReporter().requestSuccessGrpcModelMetadata);
+    } else {
+        INCREMENT_IF_ENABLED(instance->getMetricReporter().requestFailGrpcModelMetadata);
+    }
+
+    return status.grpc();
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
@@ -224,14 +250,29 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
         status = getPipeline(request, response, pipelinePtr);
     }
     if (!status.ok()) {
+        if (modelInstance) {
+            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestSuccessGrpcModelInfer);
+        }
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return status.grpc();
     }
 
     if (pipelinePtr) {
-        status = pipelinePtr->execute();
+        status = pipelinePtr->execute(ExecutionContext(
+            ExecutionContext::Interface::GRPC,
+            ExecutionContext::Method::ModelInfer));
+        if (status.ok()) {
+            INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestSuccessGrpcModelInfer);
+        } else {
+            INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestFailGrpcModelInfer);
+        }
     } else {
         status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
+        if (status.ok()) {
+            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestSuccessGrpcModelInfer);
+        } else {
+            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcModelInfer);
+        }
     }
 
     if (!status.ok()) {

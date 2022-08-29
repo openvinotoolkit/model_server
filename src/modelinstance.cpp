@@ -36,6 +36,7 @@
 #include "layout.hpp"
 #include "layout_configuration.hpp"
 #include "logging.hpp"
+#include "model_metric_reporter.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"
@@ -56,6 +57,16 @@ const uint MAX_NIREQ_COUNT = 100000;
 const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
+
+ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry) :
+    ieCore(ieCore),
+    name(name),
+    version(version),
+    subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)),
+    status(name, version),
+    reporter(std::make_unique<ModelMetricReporter>(registry, name, version)) {
+    isCustomLoaderConfigChanged = false;
+}
 
 void ModelInstance::subscribe(PipelineDefinition& pd) {
     subscriptionManager.subscribe(pd);

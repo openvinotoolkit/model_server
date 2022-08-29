@@ -33,6 +33,7 @@
 #include "aliases.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
 #include "kfs_grpc_inference_service.hpp"
+#include "model_metric_reporter.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
@@ -87,6 +88,8 @@ private:
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
 
+    std::unique_ptr<ModelMetricReporter> reporter;
+
 protected:
     PipelineDefinitionStatus status;
 
@@ -102,10 +105,12 @@ public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
     PipelineDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
-        const pipeline_connections_t& connections) :
+        const pipeline_connections_t& connections,
+        MetricRegistry* registry = nullptr) :
         pipelineName(pipelineName),
         nodeInfos(nodeInfos),
         connections(connections),
+        reporter(std::make_unique<ModelMetricReporter>(registry, pipelineName, VERSION)),
         status(this->pipelineName) {}
     template <typename RequestType, typename ResponseType>
     Status create(std::unique_ptr<Pipeline>& pipeline,
@@ -149,6 +154,8 @@ public:
 
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
+
+    ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
 
 protected:
     virtual Status updateInputsInfo(const ModelManager& manager);

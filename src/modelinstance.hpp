@@ -33,6 +33,7 @@
 
 #include "customloaderconfig.hpp"
 #include "customloaderinterface.hpp"
+#include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -73,6 +74,7 @@ private:
 };
 
 class PipelineDefinition;
+class MetricRegistry;
 
 /**
      * @brief This class contains all the information about model
@@ -168,6 +170,8 @@ protected:
          * @brief Lock to disable concurrent modelinstance load/unload/reload
          */
     std::recursive_mutex loadingMutex;
+
+    std::unique_ptr<ModelMetricReporter> reporter;
 
     /**
          * @brief Load OV Engine
@@ -314,12 +318,7 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore) :
-        ieCore(ieCore),
-        name(name),
-        version(version),
-        subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)),
-        status(name, version) { isCustomLoaderConfigChanged = false; }
+    ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry = nullptr);
 
     /**
          * @brief Destroy the Model Instance object
@@ -552,5 +551,7 @@ public:
     virtual Status infer(const ::inference::ModelInferRequest* requestProto,
         ::inference::ModelInferResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+
+    ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
 };
 }  // namespace ovms

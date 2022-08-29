@@ -25,6 +25,19 @@ class Histogram;
 
 namespace ovms {
 
+#define INCREMENT_IF_ENABLED(metric) \
+    if (metric) {                    \
+        metric->increment();         \
+    }
+#define DECREMENT_IF_ENABLED(metric) \
+    if (metric) {                    \
+        metric->decrement();         \
+    }
+#define OBSERVE_IF_ENABLED(metric, val) \
+    if (metric) {                       \
+        metric->observe(val);           \
+    }
+
 template <typename T>
 class MetricFamily;
 

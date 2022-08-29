@@ -47,6 +47,7 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 class Config;
 class IVersionReader;
 class CustomNodeLibraryManager;
+class MetricRegistry;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 /**
@@ -57,7 +58,7 @@ public:
     /**
      * @brief A default constructor is private
      */
-    ModelManager(const std::string& modelCacheDirectory = "");
+    ModelManager(const std::string& modelCacheDirectory = "", MetricRegistry* registry = nullptr);
 
 protected:
     void logPluginConfiguration();
@@ -189,6 +190,8 @@ private:
      * @brief Directory for OpenVINO to store cache files.
      */
     std::string modelCacheDirectory;
+
+    MetricRegistry* metricRegistry;
 
 public:
     /**
@@ -420,6 +423,8 @@ public:
      * @brief Cleaner thread procedure to cleanup resources that are not used
      */
     void cleanupResources();
+
+    MetricRegistry* getMetricRegistry() const { return this->metricRegistry; }
 };
 
 void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);

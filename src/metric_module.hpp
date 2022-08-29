@@ -16,21 +16,19 @@
 #pragma once
 #include <memory>
 
+#include "metric_registry.hpp"
 #include "server.hpp"
 
 namespace ovms {
-class Config;
-class ModelManager;
-
-class ServableManagerModule : public Module {
-protected:
-    mutable std::unique_ptr<ModelManager> servableManager;
+class MetricModule : public Module {
+    std::unique_ptr<MetricRegistry> registry;
 
 public:
-    ServableManagerModule(ovms::Server& ovmsServer);
-    ~ServableManagerModule();
-    int start(const ovms::Config& config) override;
-    void shutdown() override;
-    ModelManager& getServableManager() const;
+    MetricModule() :
+        registry(std::make_unique<MetricRegistry>()) {}
+    int start(const ovms::Config& config) override { return EXIT_SUCCESS; }
+    void shutdown() override {}
+
+    MetricRegistry& getRegistry() const { return *this->registry; }
 };
 }  // namespace ovms

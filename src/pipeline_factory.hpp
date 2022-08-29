@@ -37,6 +37,7 @@ namespace ovms {
 class ModelManager;
 class Pipeline;
 class PipelineDefinition;
+class MetricRegistry;
 
 class PipelineFactory {
     std::map<std::string, std::unique_ptr<PipelineDefinition>> definitions;
