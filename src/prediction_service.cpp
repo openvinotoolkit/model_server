@@ -27,6 +27,7 @@
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
 
+#include "execution_context.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
@@ -103,14 +104,29 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         status = getPipeline(request, response, pipelinePtr);
     }
     if (!status.ok()) {
+        if (modelInstance) {
+            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);
+        }
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
         return status.grpc();
     }
 
     if (pipelinePtr) {
-        status = pipelinePtr->execute();
+        status = pipelinePtr->execute(ExecutionContext(
+            ExecutionContext::Interface::GRPC,
+            ExecutionContext::Method::Predict));
+        if (status.ok()) {
+            INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestSuccessGrpcPredict);
+        } else {
+            INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestFailGrpcPredict);
+        }
     } else {
         status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
+        if (status.ok()) {
+            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestSuccessGrpcPredict);
+        } else {
+            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);
+        }
     }
 
     if (!status.ok()) {
@@ -127,7 +143,9 @@ grpc::Status PredictionServiceImpl::GetModelMetadata(
     const tensorflow::serving::GetModelMetadataRequest* request,
     tensorflow::serving::GetModelMetadataResponse* response) {
     OVMS_PROFILE_FUNCTION();
-    return getModelMetadataImpl.getModelStatus(request, response).grpc();
+    return getModelMetadataImpl.getModelStatus(request, response, ExecutionContext(
+            ExecutionContext::Interface::GRPC,
+            ExecutionContext::Method::GetModelMetadata)).grpc();
 }
 
 const GetModelMetadataImpl& PredictionServiceImpl::getTFSModelMetadataImpl() const {

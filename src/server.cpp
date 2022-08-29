@@ -39,6 +39,7 @@
 #include "httpservermodule.hpp"
 #include "kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
+#include "metric_module.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
@@ -54,6 +55,7 @@ const std::string PROFILER_MODULE_NAME = "ProfilerModule";
 const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
 const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
 const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
+const std::string METRICS_MODULE_NAME = "MetricsModule";
 }  // namespace ovms
 using namespace ovms;
 
@@ -218,7 +220,9 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
     if (name == HTTP_SERVER_MODULE_NAME)
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)
-        return std::make_unique<ServableManagerModule>();
+        return std::make_unique<ServableManagerModule>(*this);
+    if (name == METRICS_MODULE_NAME)
+        return std::make_unique<MetricModule>();
     return nullptr;
 }
 
@@ -236,6 +240,16 @@ int Server::startModules(ovms::Config& config) {
     if (retCode)
         return retCode;
 #endif
+
+    {
+        auto module = this->createModule(METRICS_MODULE_NAME);
+        std::unique_lock lock(modulesMtx);
+        std::tie(it, inserted) = this->modules.emplace(METRICS_MODULE_NAME, std::move(module));
+    }
+    retCode = modules.at(METRICS_MODULE_NAME)->start(config);
+    if (retCode)
+        return retCode;
+
     {
         auto module = this->createModule(GRPC_SERVER_MODULE_NAME);
         std::unique_lock lock(modulesMtx);

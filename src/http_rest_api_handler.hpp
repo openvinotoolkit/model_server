@@ -42,7 +42,8 @@ enum RequestType { Predict,
     ConfigStatus,
     KFS_GetModelReady,
     KFS_Infer,
-    KFS_GetModelMetadata };
+    KFS_GetModelMetadata,
+    Metrics };
 struct HttpRequestComponents {
     RequestType type;
     std::string_view http_method;
@@ -63,6 +64,8 @@ public:
     static const std::string kfs_modelreadyRegexExp;
     static const std::string kfs_modelmetadataRegexExp;
     static const std::string kfs_inferRegexExp;
+
+    static const std::string metricsRegexExp;
     /**
      * @brief Construct a new HttpRest Api Handler
      *
@@ -173,6 +176,7 @@ public:
     Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
 private:
     const std::regex predictionRegex;
@@ -183,6 +187,8 @@ private:
     const std::regex kfs_modelreadyRegex;
     const std::regex kfs_modelmetadataRegex;
     const std::regex kfs_inferRegex;
+
+    const std::regex metricsRegex;
 
     std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>> handlers;
     int timeout_in_ms;

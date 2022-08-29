@@ -53,7 +53,7 @@ Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQue
 }
 
 template <typename RequestType>
-Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context) {
     OVMS_PROFILE_FUNCTION();
     TensorWithSourceMap outputs;
     auto status = fetchResults(outputs);
@@ -164,8 +164,8 @@ const Status EntryNode<::inference::ModelInferRequest>::validate() {
 
 template Status EntryNode<tensorflow::serving::PredictRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status EntryNode<::inference::ModelInferRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
-template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status EntryNode<::inference::ModelInferRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context);
+template Status EntryNode<::inference::ModelInferRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context);
 template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(TensorWithSourceMap& outputs);
 template Status EntryNode<::inference::ModelInferRequest>::fetchResults(TensorWithSourceMap& outputs);
 template Status EntryNode<tensorflow::serving::PredictRequest>::isInputBinary(const std::string& name, bool& isBinary) const;

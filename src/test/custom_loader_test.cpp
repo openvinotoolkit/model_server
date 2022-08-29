@@ -624,7 +624,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatus) {
     model_spec->Clear();
     model_spec->set_name("dummy");
     model_spec->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const = res;
     std::string json_output;
@@ -848,7 +848,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
     model_spec->Clear();
     model_spec->set_name("dummy");
     model_spec->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const = res;
     std::string json_output;
@@ -868,7 +868,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
     model_specx->set_name("dummy");
     model_specx->mutable_version()->set_value(1);
 
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&reqx, &resx, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&reqx, &resx, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_constx = resx;
     json_output = "";
@@ -1070,7 +1070,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListingModel) {
     model_spec->Clear();
     model_spec->set_name("dummy");
     model_spec->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     tensorflow::serving::GetModelStatusResponse response_const = res;
     std::string json_output;
@@ -1093,7 +1093,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListingModel) {
     model_specx->set_name("dummy");
     model_specx->mutable_version()->set_value(1);
 
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&reqx, &resx, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&reqx, &resx, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_constx = resx;
     json_output = "";
@@ -1129,7 +1129,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListingRevoke) {
     model_spec->Clear();
     model_spec->set_name("dummy");
     model_spec->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const = res;
     std::string json_output;
@@ -1151,7 +1151,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListingRevoke) {
     model_spec1->Clear();
     model_spec1->set_name("dummy");
     model_spec1->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req1, &res1, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req1, &res1, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const1 = res1;
     json_output = "";
@@ -1170,7 +1170,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListingRevoke) {
     model_spec2->Clear();
     model_spec2->set_name("dummy");
     model_spec2->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req2, &res2, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req2, &res2, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const2 = res2;
     json_output = "";
@@ -1206,7 +1206,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     model_spec->Clear();
     model_spec->set_name("dummy");
     model_spec->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req, &res, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const = res;
     std::string json_output;
@@ -1228,7 +1228,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     model_spec1->Clear();
     model_spec1->set_name("dummy");
     model_spec1->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req1, &res1, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req1, &res1, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const1 = res1;
     json_output = "";
@@ -1249,7 +1249,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     model_spec2->Clear();
     model_spec2->set_name("dummy");
     model_spec2->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req2, &res2, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req2, &res2, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const2 = res2;
     json_output = "";
@@ -1268,7 +1268,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     model_spec3->Clear();
     model_spec3->set_name("dummy");
     model_spec3->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req3, &res3, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req3, &res3, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const3 = res3;
     json_output = "";
@@ -1311,7 +1311,7 @@ TEST_F(TestCustomLoader, CustomLoaderLoadBlackListedModel) {
     model_spec1->Clear();
     model_spec1->set_name("dummy");
     model_spec1->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req1, &res1, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req1, &res1, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const1 = res1;
     std::string json_output1;
@@ -1334,7 +1334,7 @@ TEST_F(TestCustomLoader, CustomLoaderLoadBlackListedModel) {
     model_spec2->Clear();
     model_spec2->set_name("dummy");
     model_spec2->mutable_version()->set_value(1);
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req2, &res2, manager), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req2, &res2, manager, GetModelStatusImpl::Kind::GRPC), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_const2 = res2;
     std::string json_output2;

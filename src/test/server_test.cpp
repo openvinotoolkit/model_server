@@ -154,7 +154,8 @@ class MockedServableManagerModule : public ovms::ServableManagerModule {
 public:
     bool waitWithStart = true;
     bool waitWithChangingState = true;
-    MockedServableManagerModule() = default;
+    MockedServableManagerModule(ovms::Server& ovmsServer) :
+        ovms::ServableManagerModule(ovmsServer) {}
     int start(const Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
@@ -190,7 +191,7 @@ public:
     std::unique_ptr<Module> createModule(const std::string& name) override {
         if (name != ovms::SERVABLE_MANAGER_MODULE_NAME)
             return Server::createModule(name);
-        return std::make_unique<MockedServableManagerModule>();
+        return std::make_unique<MockedServableManagerModule>(*this);
     };
     Module* getModule(const std::string& name) {
         return const_cast<Module*>(Server::getModule(name));

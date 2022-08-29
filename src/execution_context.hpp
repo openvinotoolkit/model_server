@@ -1,4 +1,4 @@
-//****************************************************************************
+//*****************************************************************************
 // Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,23 +14,32 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <memory>
-
-#include "server.hpp"
 
 namespace ovms {
-class Config;
-class ModelManager;
 
-class ServableManagerModule : public Module {
-protected:
-    mutable std::unique_ptr<ModelManager> servableManager;
+struct ExecutionContext {
+    enum class Interface {
+        GRPC,
+        REST,
+    };
+    enum class Method {
+        // TensorflowServing
+        Predict,
+        GetModelMetadata,
+        GetModelStatus,
 
-public:
-    ServableManagerModule(ovms::Server& ovmsServer);
-    ~ServableManagerModule();
-    int start(const ovms::Config& config) override;
-    void shutdown() override;
-    ModelManager& getServableManager() const;
+        // KServe
+        ModelInfer,
+        ModelReady,
+        ModelStatus,
+    };
+
+    Interface interface;
+    Method method;
+
+    ExecutionContext(Interface interface, Method method) :
+        interface(interface),
+        method(method) {}
 };
+
 }  // namespace ovms

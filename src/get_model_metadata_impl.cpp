@@ -32,7 +32,8 @@ GetModelMetadataImpl::GetModelMetadataImpl(ovms::Server& ovmsServer) :
 
 Status GetModelMetadataImpl::getModelStatus(
     const tensorflow::serving::GetModelMetadataRequest* request,
-    tensorflow::serving::GetModelMetadataResponse* response) const {
+    tensorflow::serving::GetModelMetadataResponse* response,
+    ExecutionContext context) const {
     auto status = validate(request);
     if (!status.ok()) {
         return status;
@@ -44,13 +45,14 @@ Status GetModelMetadataImpl::getModelStatus(
     auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
     // TODO if not succeed then return error
     auto& manager = servableManagerModule->getServableManager();
-    return getModelStatus(request, response, manager);
+    return getModelStatus(request, response, manager, context);
 }
 
 Status GetModelMetadataImpl::getModelStatus(
     const tensorflow::serving::GetModelMetadataRequest* request,
     tensorflow::serving::GetModelMetadataResponse* response,
-    ModelManager& manager) {
+    ModelManager& manager,
+    ExecutionContext context) {
     const auto& name = request->model_spec().name();
     model_version_t version = request->model_spec().has_version() ? request->model_spec().version().value() : 0;
 
@@ -61,7 +63,10 @@ Status GetModelMetadataImpl::getModelStatus(
         if (!pipelineDefinition) {
             return StatusCode::MODEL_NAME_MISSING;
         }
-        return buildResponse(*pipelineDefinition, response, manager);
+        auto status = buildResponse(*pipelineDefinition, response, manager);
+        auto metric = status.ok() ? (context.interface == ExecutionContext::Interface::GRPC ? pipelineDefinition->getMetricReporter().requestSuccessGrpcGetModelMetadata : pipelineDefinition->getMetricReporter().requestSuccessRestGetModelMetadata) : (context.interface == ExecutionContext::Interface::GRPC ? pipelineDefinition->getMetricReporter().requestFailGrpcGetModelMetadata : pipelineDefinition->getMetricReporter().requestFailRestGetModelMetadata);
+        INCREMENT_IF_ENABLED(metric);
+        return status;
     }
 
     std::shared_ptr<ModelInstance> instance = nullptr;
@@ -81,7 +86,10 @@ Status GetModelMetadataImpl::getModelStatus(
         }
     }
 
-    return buildResponse(instance, response);
+    auto status = buildResponse(instance, response);
+    auto metric = status.ok() ? (context.interface == ExecutionContext::Interface::GRPC ? instance->getMetricReporter().requestSuccessGrpcGetModelMetadata : instance->getMetricReporter().requestSuccessRestGetModelMetadata) : (context.interface == ExecutionContext::Interface::GRPC ? instance->getMetricReporter().requestFailGrpcGetModelMetadata : instance->getMetricReporter().requestFailRestGetModelMetadata);
+    INCREMENT_IF_ENABLED(metric);
+    return status;
 }
 
 Status GetModelMetadataImpl::validate(
