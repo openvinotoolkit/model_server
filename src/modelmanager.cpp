@@ -561,21 +561,23 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
 }
 
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
-    const auto itr = configJson.FindMember("monitoring");
-    if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
+    Status firstErrorStatus = StatusCode::OK;
+    
+    const auto itr2 = configJson.FindMember("monitoring");
+    if (itr2 == configJson.MemberEnd() || !itr2->value.IsArray()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Configuration file doesn't have metrics property.");
     } else {
         MetricConfig metricsConfig;
-        auto status = metricsConfig.parseMetricsConfig(itr->value);
+        auto status = metricsConfig.parseMetricsConfig(itr2->value.GetObject()["metrics"]);
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
     
-    itr = configJson.FindMember("model_config_list");
+    const auto itr = configJson.FindMember("model_config_list");
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
-
+    
     std::set<std::string> modelsInConfigFile;
     std::set<std::string> modelsWithInvalidConfig;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
