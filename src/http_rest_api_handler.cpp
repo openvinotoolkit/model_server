@@ -622,7 +622,9 @@ Status HttpRestApiHandler::processModelMetadataRequest(
     if (!status.ok()) {
         return status;
     }
-    status = grpcGetModelMetadataImpl.getModelStatus(&grpc_request, &grpc_response, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::GetModelMetadata));
+    status = grpcGetModelMetadataImpl.getModelStatus(&grpc_request, &grpc_response, ExecutionContext(
+            ExecutionContext::Interface::REST,
+            ExecutionContext::Method::GetModelMetadata));
     if (!status.ok()) {
         return status;
     }
@@ -656,7 +658,9 @@ Status HttpRestApiHandler::processModelStatusRequest(
     auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
     // TODO #KFS_CLEANUP
     auto& manager = servableManagerModule->getServableManager();
-    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, manager, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::GetModelStatus));
+    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, manager, ExecutionContext(
+            ExecutionContext::Interface::REST,
+            ExecutionContext::Method::GetModelStatus));
     if (!status.ok()) {
         return status;
     }
@@ -714,8 +718,9 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     }
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
-                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Do not count as GetModelStatus?
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(
+            ExecutionContext::Interface::REST,
+            ExecutionContext::Method::GetModelStatus));  // TODO: Do not count as GetModelStatus?
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed. Check server logs for more info.");
         return status;
@@ -739,8 +744,9 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
     Status status;
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
-                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Do not count as GetModelStatus?
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(
+            ExecutionContext::Interface::REST,
+            ExecutionContext::Method::GetModelStatus));  // TODO: Do not count as GetModelStatus?
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed.");
         return status;

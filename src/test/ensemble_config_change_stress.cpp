@@ -1281,7 +1281,7 @@ public:
                 break;
             }
             auto status = ovms::GetModelMetadataImpl::createGrpcRequest(pipelineName, 1, &request);
-            status = ovms::GetModelMetadataImpl::getModelStatus(&request, &response, manager, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata));
+            status = ovms::GetModelMetadataImpl::getModelStatus(&request, &response, manager, ovms::GetModelMetadataImpl::Kind::GRPC);
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
@@ -1318,7 +1318,7 @@ public:
                 break;
             }
             auto status = ovms::GetModelStatusImpl::createGrpcRequest(getServableName(), 1, &request);
-            status = ovms::GetModelStatusImpl::getModelStatus(&request, &response, manager, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelStatus));
+            status = ovms::GetModelStatusImpl::getModelStatus(&request, &response, manager, ovms::GetModelStatusImpl::Kind::GRPC);
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))

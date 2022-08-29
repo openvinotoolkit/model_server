@@ -1,4 +1,4 @@
-//****************************************************************************
+//*****************************************************************************
 // Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,22 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-#include <memory>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-#include "metric_registry.hpp"
-#include "server.hpp"
+#include "../metric_registry.hpp"
+#include "../modelconfig.hpp"
+#include "test_utils.hpp"
 
-namespace ovms {
-class MetricModule : public Module {
-    std::unique_ptr<MetricRegistry> registry;
+using namespace ovms;
 
-public:
-    MetricModule() :
-        registry(std::make_unique<MetricRegistry>()) {}
-    int start(const ovms::Config& config) override { return EXIT_SUCCESS; }
-    void shutdown() override {}
+using testing::ContainsRegex;
+using testing::HasSubstr;
+using testing::Not;
 
-    MetricRegistry& getRegistry() const { return *this->registry; }
-};
-}  // namespace ovms
+TEST(MetricPredictTest, RegistryEmpty) {
+    MetricRegistry registry;
+    ConstructorEnabledModelManager manager("", &registry);
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    auto status = manager.reloadModelWithVersions(config);
+    ASSERT_TRUE(status.ok()) << status.string();
+}

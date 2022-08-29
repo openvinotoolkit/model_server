@@ -18,20 +18,18 @@
 #include <memory>
 #include <string>
 
-#include "execution_context.hpp"
-#include "metric.hpp"
 #include "modelversion.hpp"
+#include "metric.hpp"
 
 namespace ovms {
 
 class MetricRegistry;
-class MetricConfig;
 
 class ModelMetricReporter {
     MetricRegistry* registry;
 
 public:
-    ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
+    ModelMetricReporter(MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
 
     // TFS
     std::shared_ptr<MetricCounter> requestSuccessGrpcPredict;
@@ -66,48 +64,6 @@ public:
     std::shared_ptr<MetricCounter> requestFailRestModelInfer;
     std::shared_ptr<MetricCounter> requestFailRestModelMetadata;
     std::shared_ptr<MetricCounter> requestFailRestModelStatus;
-
-    inline std::shared_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) {
-        if (context.interface == ExecutionContext::Interface::GRPC) {
-            return this->requestSuccessGrpcGetModelStatus;
-        } else {
-            return this->requestSuccessRestGetModelStatus;
-        }
-    }
-
-    inline std::shared_ptr<MetricCounter>& getGetModelMetadataRequestMetric(const ExecutionContext& context, bool success) {
-        if (success) {
-            if (context.interface == ExecutionContext::Interface::GRPC) {
-                return this->requestSuccessGrpcGetModelMetadata;
-            } else {
-                return this->requestSuccessRestGetModelMetadata;
-            }
-        } else {
-            if (context.interface == ExecutionContext::Interface::GRPC) {
-                return this->requestFailGrpcGetModelMetadata;
-            } else {
-                return this->requestFailRestGetModelMetadata;
-            }
-        }
-    }
-
-    inline std::shared_ptr<MetricCounter>& getInferRequestMetric(const ExecutionContext& context) {
-        if (context.method == ExecutionContext::Method::Predict) {
-            if (context.interface == ExecutionContext::Interface::GRPC) {
-                return this->requestSuccessGrpcPredict;
-            } else {
-                return this->requestSuccessRestPredict;
-            }
-        } else if (context.method == ExecutionContext::Method::ModelInfer) {
-            if (context.interface == ExecutionContext::Interface::GRPC) {
-                return this->requestSuccessGrpcModelInfer;
-            } else {
-                return this->requestSuccessRestModelInfer;
-            }
-        } else {
-            throw std::logic_error("wrong context method for inference");
-        }
-    }
 };
 
 }  // namespace ovms

@@ -45,7 +45,7 @@ class Pipeline {
     ModelMetricReporter& reporter;
 
 public:
-    Pipeline(Node& entry, Node& exit, ModelMetricReporter& reporter, const std::string& name = "default_name");
+    Pipeline(Node& entry, Node& exit, const std::string& name, ModelMetricReporter& reporter);
 
     void push(std::unique_ptr<Node> node);
     ~Pipeline();
@@ -55,7 +55,7 @@ public:
 
     static void connect(Node& from, Node& to, const Aliases& tensorNamesMapping);
 
-    Status execute(ExecutionContext context);
+    Status execute(ExecutionContext ec);
     const std::string& getName() const {
         return name;
     }

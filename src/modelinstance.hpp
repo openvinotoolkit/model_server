@@ -318,7 +318,7 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr);
+    ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry = nullptr);
 
     /**
          * @brief Destroy the Model Instance object

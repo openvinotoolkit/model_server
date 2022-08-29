@@ -32,7 +32,7 @@ using DeferredNodeSessions = std::vector<std::pair<std::reference_wrapper<Node>,
 
 Pipeline::~Pipeline() = default;
 
-Pipeline::Pipeline(Node& entry, Node& exit, ModelMetricReporter& reporter, const std::string& name) :
+Pipeline::Pipeline(Node& entry, Node& exit, const std::string& name, ModelMetricReporter& reporter) :
     name(name),
     entry(entry),
     exit(exit),
@@ -82,7 +82,7 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
             getName(), NODE.getName(), sessionKey, status.getCode(), status.string());                                                     \
     }
 
-Status Pipeline::execute(ExecutionContext context) {
+Status Pipeline::execute(ExecutionContext ec) {
     OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Started execution of pipeline: {}", getName());
 
@@ -134,7 +134,7 @@ Status Pipeline::execute(ExecutionContext context) {
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
             SessionResults sessionResults;
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Fetching results of pipeline: {} node: {} session: {}", getName(), finishedNode.getName(), sessionKey);
-            status = finishedNode.fetchResults(sessionKey, sessionResults);
+            status = finishedNode.fetchResults(sessionKey, sessionResults, ec);
             CHECK_AND_LOG_ERROR(finishedNode)
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
 

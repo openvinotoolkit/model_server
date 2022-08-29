@@ -106,12 +106,11 @@ public:
     PipelineDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
-        MetricRegistry* registry = nullptr,
-        MetricConfig* metricConfig = nullptr) :
+        MetricRegistry* registry = nullptr) :
         pipelineName(pipelineName),
         nodeInfos(nodeInfos),
         connections(connections),
-        reporter(std::make_unique<ModelMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
+        reporter(std::make_unique<ModelMetricReporter>(registry, pipelineName, VERSION)),
         status(this->pipelineName) {}
     template <typename RequestType, typename ResponseType>
     Status create(std::unique_ptr<Pipeline>& pipeline,

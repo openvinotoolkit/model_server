@@ -45,7 +45,6 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
-#include "metric_config.hpp"
 #include "metric_registry.hpp"
 #include "node_library.hpp"
 #include "openssl/md5.h"

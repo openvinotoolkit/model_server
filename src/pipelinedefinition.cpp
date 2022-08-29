@@ -274,7 +274,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             Pipeline::connect(*dependencyNode, *dependantNode, pair.second);
         }
     }
-    pipeline = std::make_unique<Pipeline>(*entry, *exit, *this->reporter, pipelineName);
+    pipeline = std::make_unique<Pipeline>(*entry, *exit, pipelineName, *this->reporter);
     for (auto& kv : nodes) {
         pipeline->push(std::move(kv.second));
     }

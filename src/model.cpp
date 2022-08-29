@@ -109,20 +109,20 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
     return modelInstanceIt->second;
 }
 
-std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) {
+std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion, ov::Core& ieCore, MetricRegistry* registry) {
     if (isStateful()) {
         SPDLOG_DEBUG("Creating new stateful model instance - model name: {}; model version: {};", modelName, modelVersion);
         return std::move(std::static_pointer_cast<ModelInstance>(
-            std::make_shared<StatefulModelInstance>(modelName, modelVersion, ieCore, registry, metricConfig, this->globalSequencesViewer)));
+            std::make_shared<StatefulModelInstance>(modelName, modelVersion, ieCore, registry, this->globalSequencesViewer)));
     } else {
         SPDLOG_DEBUG("Creating new model instance - model name: {}; model version: {};", modelName, modelVersion);
-        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion, ieCore, registry, metricConfig));
+        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion, ieCore, registry));
     }
 }
 
 Status Model::addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegistry* registry) {
     const auto& version = config.getVersion();
-    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version, ieCore, registry, &config.getMetricConfig());
+    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version, ieCore, registry);
 
     std::unique_lock lock(modelVersionsMtx);
     modelVersions.emplace(version, modelInstance);

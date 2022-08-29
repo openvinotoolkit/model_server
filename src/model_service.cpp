@@ -71,7 +71,9 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
     auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
     // TODO if not succeed then return error
     auto& manager = servableManagerModule->getServableManager();
-    return GetModelStatusImpl::getModelStatus(request, response, manager, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelStatus)).grpc();
+    return GetModelStatusImpl::getModelStatus(request, response, manager, ExecutionContext(
+            ExecutionContext::Interface::GRPC,
+            ExecutionContext::Method::GetModelStatus)).grpc();
 }
 
 Status GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
@@ -111,7 +113,8 @@ Status GetModelStatusImpl::getModelStatus(
         if (!pipelineDefinition) {
             return StatusCode::MODEL_NAME_MISSING;
         }
-        INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
+        auto metric = context.interface == ExecutionContext::Interface::GRPC ? pipelineDefinition->getMetricReporter().requestSuccessGrpcGetModelStatus : pipelineDefinition->getMetricReporter().requestSuccessRestGetModelStatus;
+        INCREMENT_IF_ENABLED(metric);
 
         addStatusToResponse(response, pipelineDefinition->getVersion(), pipelineDefinition->getStatus());
         SPDLOG_DEBUG("model_service: response: {}", response->DebugString());
@@ -127,7 +130,8 @@ Status GetModelStatusImpl::getModelStatus(
             SPDLOG_DEBUG("requested model {} in version {} was not found.", requested_model_name, requested_version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
-        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
+        auto metric = context.interface == ExecutionContext::Interface::GRPC ? modelInstance->getMetricReporter().requestSuccessGrpcGetModelStatus : modelInstance->getMetricReporter().requestSuccessRestGetModelStatus;
+        INCREMENT_IF_ENABLED(metric);
         const auto& status = modelInstance->getStatus();
         SPDLOG_DEBUG("adding model {} - {} :: {} to response", requested_model_name, requested_version, status.getStateString());
         addStatusToResponse(response, requested_version, status);
@@ -136,9 +140,10 @@ Status GetModelStatusImpl::getModelStatus(
         auto modelVersionsInstances = model_ptr->getModelVersionsMapCopy();
         bool reported = false;
         for (const auto& [modelVersion, modelInstance] : modelVersionsInstances) {
+            auto metric = context.interface == ExecutionContext::Interface::GRPC ? modelInstance.getMetricReporter().requestSuccessGrpcGetModelStatus : modelInstance.getMetricReporter().requestSuccessRestGetModelStatus;
             // GetModelStatus is tracked once for all versions (no version label) - this is why we only report once in a loop (each model instance metric refer to the same metric)
             if (!reported) {
-                INCREMENT_IF_ENABLED(modelInstance.getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
+                INCREMENT_IF_ENABLED(metric);
                 reported = true;
             }
             const auto& status = modelInstance.getStatus();

@@ -285,8 +285,8 @@ class ConstructorEnabledModelManager : public ovms::ModelManager {
     ovms::MetricRegistry registry;
 
 public:
-    ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "") :
-        ovms::ModelManager(modelCacheDirectory, &registry) {}
+    ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "", ovms::MetricRegistry* registry = nullptr) :
+        ovms::ModelManager(modelCacheDirectory, registry) {}
     ~ConstructorEnabledModelManager() {
         join();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());

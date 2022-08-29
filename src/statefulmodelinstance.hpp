@@ -27,7 +27,6 @@
 namespace ovms {
 
 class MetricRegistry;
-class MetricConfig;
 
 class StatefulModelInstance : public ModelInstance {
     static const std::set<std::string> SPECIAL_INPUT_NAMES;
@@ -36,8 +35,8 @@ public:
     /**
          * @brief A default constructor
          */
-    StatefulModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricsConfig = nullptr, GlobalSequencesViewer* globalSequencesViewer = nullptr) :
-        ModelInstance(name, version, ieCore, registry, metricsConfig),
+    StatefulModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, GlobalSequencesViewer* globalSequencesViewer) :
+        ModelInstance(name, version, ieCore, registry),
         globalSequencesViewer(globalSequencesViewer) {
         sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), name, version);
     }
