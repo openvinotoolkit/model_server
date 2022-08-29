@@ -55,22 +55,12 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(tensorResults, inferRequest, model, nodeSession.getSessionKey());
 
-    if (context.method == ExecutionContext::Method::Predict) {
-        if (context.interface == ExecutionContext::Interface::GRPC) {
-            INCREMENT_IF_ENABLED(model.getMetricReporter().requestSuccessGrpcPredict);
-        } else {
-            INCREMENT_IF_ENABLED(model.getMetricReporter().requestSuccessRestPredict);
-        }
-    } else if (context.method == ExecutionContext::Method::ModelInfer) {
-        if (context.interface == ExecutionContext::Interface::GRPC) {
-            INCREMENT_IF_ENABLED(model.getMetricReporter().requestSuccessGrpcModelInfer);
-        } else {
-            INCREMENT_IF_ENABLED(model.getMetricReporter().requestSuccessRestModelInfer);
-        }
-    } else {
-        return StatusCode::INTERNAL_ERROR;  // TODO
+    try {
+        INCREMENT_IF_ENABLED(model.getMetricReporter().getInferRequestMetric(context));
+    } catch (std::logic_error& e) {
+        SPDLOG_ERROR("Metric error: {}", e.what());
+        return StatusCode::INTERNAL_ERROR;
     }
-
     return status;
 }
 
