@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "metric_config.hpp"
+#include "metrics_config.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -34,7 +34,6 @@ namespace ovms {
 
 // Getting the "monitoring" config as input
 Status MetricConfig::parseMetricsConfig(const rapidjson::Value& v) {
-    Status status = StatusCode::OK;
     if (v.HasMember("enable")) {
         // if (v.HasMember("enable").isBool())
         metricsEnabled = v["enable"].GetBool();
@@ -55,84 +54,83 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& v) {
         // or enable all metrics ?
     }
 
-    return status;
+    return StatusCode::OK;
 }
 
 Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
-    for (auto& sh : v.GetArray()) {
-        std::string metric = std::string(sh.GetString());
-        if (metric == "requestSuccessGrpcPredict") {
+    for (auto& sh : v.value.GetArray()) {
+        if (sh.GetString() == "requestSuccessGrpcPredict") {
             requestSuccessGrpcPredict = true;
         }
-        if (metric == "requestSuccessGrpcGetModelMetadata") {
+        if (sh.GetString() == "requestSuccessGrpcGetModelMetadata") {
             requestSuccessGrpcGetModelMetadata = true;
         }
-        if (metric == "requestSuccessGrpcGetModelStatus") {
+        if (sh.GetString() == "requestSuccessGrpcGetModelStatus") {
             requestSuccessGrpcGetModelStatus = true;
         }
-        if (metric == "requestSuccessRestPredict") {
+        if (sh.GetString() == "requestSuccessRestPredict") {
             requestSuccessRestPredict = true;
         }
-        if (metric == "requestSuccessRestGetModelMetadata") {
+        if (sh.GetString() == "requestSuccessRestGetModelMetadata") {
             requestSuccessRestGetModelMetadata = true;
         }
-        if (metric == "requestSuccessRestGetModelStatus") {
+        if (sh.GetString() == "requestSuccessRestGetModelStatus") {
             requestSuccessRestGetModelStatus = true;
         }
-        if (metric == "requestFailGrpcPredict") {
+        if (sh.GetString() == "requestFailGrpcPredict") {
             requestFailGrpcPredict = true;
         }
-        if (metric == "requestFailGrpcGetModelMetadata") {
+        if (sh.GetString() == "requestFailGrpcGetModelMetadata") {
             requestFailGrpcGetModelMetadata = true;
         }
-        if (metric == "requestFailGrpcGetModelStatus") {
+        if (sh.GetString() == "requestFailGrpcGetModelStatus") {
             requestFailGrpcGetModelStatus = true;
         }
-        if (metric == "requestFailRestPredict") {
+        if (sh.GetString() == "requestFailRestPredict") {
             requestFailRestPredict = true;
         }
-        if (metric == "requestFailRestGetModelMetadata") {
+        if (sh.GetString() == "requestFailRestGetModelMetadata") {
             requestFailRestGetModelMetadata = true;
         }
-        if (metric == "requestFailRestGetModelStatus") {
+        if (sh.GetString() == "requestFailRestGetModelStatus") {
             requestFailRestGetModelStatus = true;
         }
-        if (metric == "requestSuccessGrpcModelInfer") {
+        if (sh.GetString() == "requestSuccessGrpcModelInfer") {
             requestSuccessGrpcModelInfer = true;
         }
         // KFS
-        if (metric == "requestSuccessGrpcModelMetadata") {
+        if (sh.GetString() == "requestSuccessGrpcModelMetadata") {
             requestSuccessGrpcModelMetadata = true;
         }
-        if (metric == "requestSuccessGrpcModelStatus") {
+        if (sh.GetString() == "requestSuccessGrpcModelStatus") {
             requestSuccessGrpcModelStatus = true;
         }
-        if (metric == "requestSuccessRestModelInfer") {
+        if (sh.GetString() == "requestSuccessRestModelInfer") {
             requestSuccessRestModelInfer = true;
         }
-        if (metric == "requestSuccessRestModelMetadata") {
+        if (sh.GetString() == "requestSuccessRestModelMetadata") {
             requestSuccessRestModelMetadata = true;
         }
-        if (metric == "requestSuccessRestModelStatus") {
+        if (sh.GetString() == "requestSuccessRestModelStatus") {
             requestSuccessRestModelStatus = true;
         }
-        if (metric == "requestFailGrpcModelInfer") {
+        if (sh.GetString() == "requestFailGrpcModelInfer") {
             requestFailGrpcModelInfer = true;
         }
-        if (metric == "requestFailGrpcModelMetadata") {
+        if (sh.GetString() == "requestFailGrpcModelMetadata") {
             requestFailGrpcModelMetadata = true;
         }
-        if (metric == "requestFailGrpcModelStatus") {
+        if (sh.GetString() == "requestFailGrpcModelStatus") {
             requestFailGrpcModelStatus = true;
         }
 
-        if (metric == "requestFailRestModelInfer") {
+        if (sh.GetString() == "requestFailRestModelInfer") {
             requestFailRestModelInfer = true;
         }
-        if (metric == "requestFailRestModelMetadata") {
+        if (sh.GetString() == "requestFailRestModelMetadata") {
             requestFailRestModelMetadata = true;
         }
-        if (metric == "requestFailRestModelStatus") {
+        if (sh.GetString() == "requestFailRestModelStatus") {
             requestFailRestModelStatus = true;
         }
     }

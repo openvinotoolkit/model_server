@@ -561,19 +561,16 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
 }
 
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
-    Status firstErrorStatus = StatusCode::OK;
-    MetricConfig metricConfig;
-
-    const auto itr2 = configJson.FindMember("monitoring");
-    if (itr2 == configJson.MemberEnd() || !itr2->value.IsArray()) {
+    const auto itr = configJson.FindMember("monitoring");
+    if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Configuration file doesn't have metrics property.");
     } else {
-        
-        auto status = metricConfig.parseMetricsConfig(itr2->value.GetObject()["metrics"]);
+        MetricConfig metricsConfig;
+        auto status = metricsConfig.parseMetricsConfig(itr->value);
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
     
-    const auto itr = configJson.FindMember("model_config_list");
+    itr = configJson.FindMember("model_config_list");
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
