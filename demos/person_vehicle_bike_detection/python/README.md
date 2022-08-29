@@ -24,6 +24,7 @@ docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest -
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/person_vehicle_bike_detection/python
+pip3 install -r requirements.txt
 python person_vehicle_bike_detection.py --help
 ```
 
