@@ -15,8 +15,9 @@
 //*****************************************************************************
 #include "model_metric_reporter.hpp"
 
-#include "metric_registry.hpp"
+#include "execution_context.hpp"
 #include "metric_family.hpp"
+#include "metric_registry.hpp"
 
 namespace ovms {
 

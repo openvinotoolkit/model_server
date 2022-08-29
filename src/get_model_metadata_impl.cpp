@@ -64,8 +64,7 @@ Status GetModelMetadataImpl::getModelStatus(
             return StatusCode::MODEL_NAME_MISSING;
         }
         auto status = buildResponse(*pipelineDefinition, response, manager);
-        auto metric = status.ok() ? (context.interface == ExecutionContext::Interface::GRPC ? pipelineDefinition->getMetricReporter().requestSuccessGrpcGetModelMetadata : pipelineDefinition->getMetricReporter().requestSuccessRestGetModelMetadata) : (context.interface == ExecutionContext::Interface::GRPC ? pipelineDefinition->getMetricReporter().requestFailGrpcGetModelMetadata : pipelineDefinition->getMetricReporter().requestFailRestGetModelMetadata);
-        INCREMENT_IF_ENABLED(metric);
+        INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getGetModelMetadataRequestMetric(context, status.ok()));
         return status;
     }
 
@@ -87,8 +86,7 @@ Status GetModelMetadataImpl::getModelStatus(
     }
 
     auto status = buildResponse(instance, response);
-    auto metric = status.ok() ? (context.interface == ExecutionContext::Interface::GRPC ? instance->getMetricReporter().requestSuccessGrpcGetModelMetadata : instance->getMetricReporter().requestSuccessRestGetModelMetadata) : (context.interface == ExecutionContext::Interface::GRPC ? instance->getMetricReporter().requestFailGrpcGetModelMetadata : instance->getMetricReporter().requestFailRestGetModelMetadata);
-    INCREMENT_IF_ENABLED(metric);
+    INCREMENT_IF_ENABLED(instance->getMetricReporter().getGetModelMetadataRequestMetric(context, status.ok()));
     return status;
 }
 

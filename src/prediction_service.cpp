@@ -143,9 +143,7 @@ grpc::Status PredictionServiceImpl::GetModelMetadata(
     const tensorflow::serving::GetModelMetadataRequest* request,
     tensorflow::serving::GetModelMetadataResponse* response) {
     OVMS_PROFILE_FUNCTION();
-    return getModelMetadataImpl.getModelStatus(request, response, ExecutionContext(
-            ExecutionContext::Interface::GRPC,
-            ExecutionContext::Method::GetModelMetadata)).grpc();
+    return getModelMetadataImpl.getModelStatus(request, response, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelMetadata)).grpc();
 }
 
 const GetModelMetadataImpl& PredictionServiceImpl::getTFSModelMetadataImpl() const {
