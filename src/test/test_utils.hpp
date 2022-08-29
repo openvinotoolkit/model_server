@@ -35,6 +35,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "../kfs_grpc_inference_service.hpp"
+#include "../metric_registry.hpp"
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
 #include "../tensorinfo.hpp"
@@ -278,9 +279,11 @@ static std::vector<T> asVector(const std::string& tensor_content) {
 }
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {
+    ovms::MetricRegistry registry;
+
 public:
-    ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "", ovms::MetricRegistry* registry = nullptr) :
-        ovms::ModelManager(modelCacheDirectory, registry) {}
+    ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "") :
+        ovms::ModelManager(modelCacheDirectory, &registry) {}
     ~ConstructorEnabledModelManager() {
         join();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());

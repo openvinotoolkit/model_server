@@ -19,9 +19,11 @@
 #include <gtest/gtest.h>
 
 #include "../entry_node.hpp"
+#include "../execution_context.hpp"
 #include "../exit_node.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../kfs_grpc_inference_service.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelmanager.hpp"
 #include "../pipeline.hpp"
@@ -43,6 +45,8 @@ protected:
     void SetUp() override {
         TestWithTempDir::SetUp();
 
+        defaultContext = std::make_unique<ExecutionContext>(ExecutionContext::Interface::GRPC, ExecutionContext::Method::Predict);
+
         configPath = directoryPath + "/config.json";
         modelPath = directoryPath + "/dummy";
         mappingConfigPath = modelPath + "/1/mapping_config.json";
@@ -53,6 +57,8 @@ protected:
     std::string configPath;
     std::string modelPath;
     std::string mappingConfigPath;
+
+    std::unique_ptr<ExecutionContext> defaultContext;
 
     ConstructorEnabledModelManager managerWithDummyModel;
 };
@@ -106,7 +112,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     // Execute pipeline
     factory.create(pipeline, "pipeline", &request, &response, managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(*this->defaultContext), StatusCode::OK);
 
     // Compare response
     ASSERT_EQ(response.outputs_size(), 1);
@@ -299,7 +305,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
 
     // Execute pipeline
     pd.create(pipeline, &request, &response, managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(*this->defaultContext), StatusCode::OK);
 
     // Compare response
     ASSERT_EQ(response.outputs_size(), 1);
