@@ -78,7 +78,7 @@ public:
     Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);
 
-    ModelConfig(){
+    MetricConfig(){
         metricsEnabled = false;
         endpointsPath = "/metrics";
 
