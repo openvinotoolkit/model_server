@@ -78,43 +78,42 @@ public:
     Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);
 
-    MetricConfig(){
+    MetricConfig() {
         metricsEnabled = false;
         endpointsPath = "/metrics";
 
         requestSuccessGrpcPredict = false;
-        requestSuccessGrpcGetModelMetadata= false;
-        requestSuccessGrpcGetModelStatus= false;
+        requestSuccessGrpcGetModelMetadata = false;
+        requestSuccessGrpcGetModelStatus = false;
 
-        requestSuccessRestPredict= false;
-        requestSuccessRestGetModelMetadata= false;
-        requestSuccessRestGetModelStatus= false;
+        requestSuccessRestPredict = false;
+        requestSuccessRestGetModelMetadata = false;
+        requestSuccessRestGetModelStatus = false;
 
-        requestFailGrpcPredict= false;
-        requestFailGrpcGetModelMetadata= false;
-        requestFailGrpcGetModelStatus= false;
+        requestFailGrpcPredict = false;
+        requestFailGrpcGetModelMetadata = false;
+        requestFailGrpcGetModelStatus = false;
 
-        requestFailRestPredict= false;
-        requestFailRestGetModelMetadata= false;
-        requestFailRestGetModelStatus= false;
+        requestFailRestPredict = false;
+        requestFailRestGetModelMetadata = false;
+        requestFailRestGetModelStatus = false;
 
         // KFS
-        requestSuccessGrpcModelInfer= false;
-        requestSuccessGrpcModelMetadata= false;
-        requestSuccessGrpcModelStatus= false;
+        requestSuccessGrpcModelInfer = false;
+        requestSuccessGrpcModelMetadata = false;
+        requestSuccessGrpcModelStatus = false;
 
-        requestSuccessRestModelInfer= false;
-        requestSuccessRestModelMetadata= false;
-        requestSuccessRestModelStatus= false;
+        requestSuccessRestModelInfer = false;
+        requestSuccessRestModelMetadata = false;
+        requestSuccessRestModelStatus = false;
 
-        requestFailGrpcModelInfer= false;
-        requestFailGrpcModelMetadata= false;
-        requestFailGrpcModelStatus= false;
+        requestFailGrpcModelInfer = false;
+        requestFailGrpcModelMetadata = false;
+        requestFailGrpcModelStatus = false;
 
-        requestFailRestModelInfer= false;
-        requestFailRestModelMetadata= false;
-        requestFailRestModelStatus= false;
+        requestFailRestModelInfer = false;
+        requestFailRestModelMetadata = false;
+        requestFailRestModelStatus = false;
     }
-    
 };
 }  // namespace ovms
