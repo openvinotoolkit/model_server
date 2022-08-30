@@ -237,6 +237,24 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
 }
 
+TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
+    std::string request = "/v2/models/dummy/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[[0,1],[2,3],[4,5],[6,7],[8,9]]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "POST", request);
+    std::string response;
+    handler->dispatchToProcessor(request_body, &response, comp);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    int i = 1;
+    for (auto& data : output) {
+        ASSERT_EQ(data.GetFloat(), i++);
+    }
+}
+
 TEST_F(HttpRestApiHandlerTest, inferRequest) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}], \"id\":\"1\"}";
