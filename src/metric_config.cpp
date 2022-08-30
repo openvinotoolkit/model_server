@@ -32,18 +32,22 @@
 
 namespace ovms {
 
-// Getting the "monitoring" config as input
-Status MetricConfig::parseMetricsConfig(const rapidjson::Value& v) {
+// Getting the "monitoring" metrics config as input
+Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
     Status status = StatusCode::OK;
+    if (!metrics.HasMember("metrics"))
+        return status;
+
+    const auto& v = metrics["metrics"].GetObject();
+
     if (v.HasMember("enable")) {
-        // if (v.HasMember("enable").isBool())
         metricsEnabled = v["enable"].GetBool();
     } else {
         metricsEnabled = false;
     }
 
     if (v.HasMember("endpoint_path")) {
-        endpointsPath = v["enable"].GetString();
+        endpointsPath = v["endpoint_path"].GetString();
     } else {
         endpointsPath = "/metrics";
     }
@@ -136,6 +140,10 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
             requestFailRestModelStatus = true;
         }
     }
+
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "requestFailRestModelStatus {}", requestFailRestModelStatus);
+
+
     return StatusCode::OK;
 }
 
