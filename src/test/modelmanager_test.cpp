@@ -1478,7 +1478,7 @@ class ModelWithModelInstanceFakeLoad : public ovms::Model {
 public:
     ModelWithModelInstanceFakeLoad(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<MockModelInstanceFakeLoad>(ieCore);
     }
 };
@@ -1530,7 +1530,7 @@ class ModelWithModelInstanceLoadedStuckInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<ModelInstanceLoadedStuckInLoadingState>(ieCore);
     }
 };
@@ -1574,7 +1574,7 @@ public:
     ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint modelInstanceLoadDelayInMilliseconds) :
         Model(name, false, nullptr),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<ModelInstanceLoadedWaitInLoadingState>(ieCore, modelInstanceLoadDelayInMilliseconds);
     }
 
