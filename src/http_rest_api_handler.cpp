@@ -550,7 +550,7 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
     return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
 }
 
-void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc){
+void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
     for (SizeType i = 0; i < scope.Size(); i++) {
         Value data = scope[i].GetObject()["shape"].GetArray();
         Value shape(rapidjson::kArrayType);
