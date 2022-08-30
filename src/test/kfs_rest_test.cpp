@@ -228,18 +228,18 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
 
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["name"].GetString()), "b");
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
-    ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetString()), "1");
-    ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetString()), "10");
+    ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
+    ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
 
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["name"].GetString()), "a");
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
-    ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetString()), "1");
-    ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetString()), "10");
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
 }
 
 TEST_F(HttpRestApiHandlerTest, inferRequest) {
     std::string request = "/v2/models/dummy/versions/1/infer";
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}]}";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}], \"id\":\"1\"}";
     ovms::HttpRequestComponents comp;
 
     handler->parseRequestComponents(comp, "POST", request);
@@ -248,6 +248,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
+    ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
+    ASSERT_EQ(doc["id"].GetString(), std::string("1"));
     auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
     int i = 1;
     for (auto& data : output) {

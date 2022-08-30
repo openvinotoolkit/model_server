@@ -180,6 +180,8 @@ public:
 
     Status processConfigReloadRequest(std::string& response, ModelManager& manager);
 
+    void convertShapeType(rapidjson::Value& scope, rapidjson::Document& doc);
+    
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
     Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);

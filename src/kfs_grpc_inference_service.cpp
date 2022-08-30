@@ -295,6 +295,8 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         return status;
     }
 
+    response->set_id(request->id());
+
     timer.stop("total");
     SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
     return StatusCode::OK;
