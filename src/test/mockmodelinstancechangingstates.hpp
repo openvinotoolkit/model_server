@@ -66,8 +66,8 @@ public:
     virtual ~MockModelWithInstancesJustChangingStates() {}
 
 protected:
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(ov::Core& ieCore) { return modelInstanceFactory("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, nullptr); }
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t version, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr) override {
-        return std::move(std::make_shared<MockModelInstanceChangingStates>(modelName, version, ieCore, registry));
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(ov::Core& ieCore) { return modelInstanceFactory("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, nullptr, nullptr); }
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t version, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, ovms::MetricConfig* metricConfig = nullptr) override {
+        return std::move(std::make_shared<MockModelInstanceChangingStates>(modelName, version, ieCore, registry, modelConfig));
     }
 };

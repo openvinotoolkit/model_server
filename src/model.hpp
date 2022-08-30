@@ -95,7 +95,7 @@ protected:
          *
          * @return modelInstance
          */
-    virtual std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion, ov::Core& ieCore, MetricRegistry* registry = nullptr);
+    virtual std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig);
 
     ModelChangeSubscription subscriptionManager;
 
