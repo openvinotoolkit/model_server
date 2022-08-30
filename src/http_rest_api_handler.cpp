@@ -195,7 +195,7 @@ Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponen
 Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::inference::ServerMetadataRequest grpc_request;
     ::inference::ServerMetadataResponse grpc_response;
-    Status gstatus = kfsGrpcImpl.ServerMetadataOV(nullptr, &grpc_request, &grpc_response);
+    Status gstatus = kfsGrpcImpl.ServerMetadataImpl(nullptr, &grpc_request, &grpc_response);
     if (!gstatus.ok()) {
         return gstatus;
     }
@@ -492,7 +492,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     ::inference::ModelInferRequest grpc_request;
     prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
     ::inference::ModelInferResponse grpc_response;
-    const Status gstatus = kfsGrpcImpl.ModelInferOV(nullptr, &grpc_request, &grpc_response);
+    const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response);
     if (!gstatus.ok()) {
         return gstatus;
     }
@@ -539,7 +539,7 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
     grpc_request.set_version(modelVersion);
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
 
-    Status status = kfsGrpcImpl.ModelReadyOV(nullptr, &grpc_request, &grpc_response);
+    Status status = kfsGrpcImpl.ModelReadyImpl(nullptr, &grpc_request, &grpc_response);
     if (!status.ok()) {
         return status;
     }
@@ -558,7 +558,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     grpc_request.set_name(modelName);
     grpc_request.set_version(modelVersion);
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
-    Status gstatus = kfsGrpcImpl.ModelMetadataOV(nullptr, &grpc_request, &grpc_response);
+    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response);
     if (!gstatus.ok()) {
         return gstatus;
     }

@@ -150,10 +150,10 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
-    return ModelReadyOV(context, request, response).grpc();
+    return ModelReadyImpl(context, request, response).grpc();
 }
 
-Status KFSInferenceServiceImpl::ModelReadyOV(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
+Status KFSInferenceServiceImpl::ModelReadyImpl(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
     (void)context;
     auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
     if (nullptr == module) {
@@ -166,10 +166,10 @@ Status KFSInferenceServiceImpl::ModelReadyOV(::grpc::ServerContext* context, con
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) {
-    return ServerMetadataOV(context, request, response).grpc();
+    return ServerMetadataImpl(context, request, response).grpc();
 }
 
-Status KFSInferenceServiceImpl::ServerMetadataOV(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) {
+Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) {
     (void)context;
     (void)request;
     (void)response;
@@ -179,10 +179,10 @@ Status KFSInferenceServiceImpl::ServerMetadataOV(::grpc::ServerContext* context,
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
-    return ModelMetadataOV(context, request, response).grpc();
+    return ModelMetadataImpl(context, request, response).grpc();
 }
 
-Status KFSInferenceServiceImpl::ModelMetadataOV(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
+Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
     auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
     if (nullptr == module) {
         return Status(StatusCode::MODEL_MISSING, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
@@ -243,10 +243,10 @@ Status KFSInferenceServiceImpl::ModelMetadataOV(::grpc::ServerContext* context, 
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
-    return ModelInferOV(context, request, response).grpc();
+    return ModelInferImpl(context, request, response).grpc();
 }
 
-Status KFSInferenceServiceImpl::ModelInferOV(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
+Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
     (void)context;
     OVMS_PROFILE_FUNCTION();
     Timer timer;

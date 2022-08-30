@@ -526,7 +526,7 @@ TEST_F(HttpRestApiHandlerTest, serverReady) {
     std::string response;
     ovms::Status status = handler->dispatchToProcessor(request, &response, comp);
 
-    ASSERT_EQ(status, server->isReady() ? ovms::StatusCode::OK : ovms::StatusCode::MODEL_NOT_LOADED);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST_F(HttpRestApiHandlerTest, serverLive) {
