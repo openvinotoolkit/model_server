@@ -554,8 +554,8 @@ void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
     for (SizeType i = 0; i < scope.Size(); i++) {
         Value data = scope[i].GetObject()["shape"].GetArray();
         Value shape(rapidjson::kArrayType);
-        for (SizeType i = 0; i < data.Size(); i++) {
-            shape.PushBack(atoi(data[i].GetString()), doc.GetAllocator());
+        for (SizeType j = 0; j < data.Size(); j++) {
+            shape.PushBack(atoi(data[j].GetString()), doc.GetAllocator());
         }
         scope[i].GetObject()["shape"] = shape;
     }

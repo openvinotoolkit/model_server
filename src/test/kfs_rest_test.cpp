@@ -36,43 +36,9 @@ using ovms::SERVABLE_MANAGER_MODULE_NAME;
 using ovms::Server;
 
 namespace {
-class MockedServableManagerModule : public ovms::ServableManagerModule {
-public:
-    MockedServableManagerModule() = default;
-    int start(const Config& config) override {
-        state = ModuleState::STARTED_INITIALIZE;
-        SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
-        // we don't start ModelManager since we don't use it here
-        state = ModuleState::INITIALIZED;
-        return EXIT_SUCCESS;
-    }
-};
-class MockedGRPCServerModule : public ovms::GRPCServerModule {
-public:
-    MockedGRPCServerModule(ovms::Server& server) :
-        GRPCServerModule(server) {}
-    int start(const Config& config) override {
-        state = ModuleState::STARTED_INITIALIZE;
-        SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
-        // we don't start ModelManager since we don't use it here
-        state = ModuleState::INITIALIZED;
-        return EXIT_SUCCESS;
-    }
-};
 class MockedServer : public Server {
 public:
     MockedServer() = default;
-
-    std::unique_ptr<Module> createModule(const std::string& name) override {
-        if (name == ovms::SERVABLE_MANAGER_MODULE_NAME)
-            return std::make_unique<ovms::ServableManagerModule>();
-        if (name == ovms::GRPC_SERVER_MODULE_NAME)
-            return std::make_unique<ovms::GRPCServerModule>(*this);
-        return Server::createModule(name);
-    };
-    Module* getModule(const std::string& name) {
-        return const_cast<Module*>(Server::getModule(name));
-    }
 };
 }  // namespace
 
@@ -89,6 +55,8 @@ public:
             (char*)"/ovms/src/test/dummy",
             (char*)"--log_level",
             (char*)"DEBUG",
+            (char*)"--batch_size",
+            (char*)"auto",
             (char*)"--port",
             (char*)port.c_str(),
             nullptr};
@@ -239,7 +207,7 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
 
 TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
     std::string request = "/v2/models/dummy/versions/1/infer";
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[[0,1],[2,3],[4,5],[6,7],[8,9]]}], \"id\":\"1\"}";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[2,10],\"datatype\":\"FP32\",\"data\":[[0,1,2,3,4,5,6,7,8,9],[10,11,12,13,14,15,16,17,18,19]]}], \"id\":\"1\"}";
     ovms::HttpRequestComponents comp;
 
     handler->parseRequestComponents(comp, "POST", request);
