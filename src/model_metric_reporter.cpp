@@ -16,8 +16,9 @@
 #include "model_metric_reporter.hpp"
 
 #include "execution_context.hpp"
-#include "metric_family.hpp"
 #include "metric_config.hpp"
+#include "metric_family.hpp"
+#include "metric_registry.hpp"
 
 namespace ovms {
 
@@ -39,7 +40,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
             {"protocol", "tensorflowserving"},
             {"method", "predict"},
             {"interface", "grpc"}});
-    if (metricConfig->requestSuccessGrpcGetModelMetadata)     
+    if (metricConfig->requestSuccessGrpcGetModelMetadata)
         this->requestSuccessGrpcGetModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
@@ -50,54 +51,54 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
             {"protocol", "tensorflowserving"},
             {"method", "getmodelstatus"},
             {"interface", "grpc"}});
-    if (metricConfig->requestSuccessRestPredict)   
+    if (metricConfig->requestSuccessRestPredict)
         this->requestSuccessRestPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
             {"method", "predict"},
             {"interface", "rest"}});
-    if (metricConfig->requestSuccessRestGetModelMetadata)   
+    if (metricConfig->requestSuccessRestGetModelMetadata)
         this->requestSuccessRestGetModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
             {"method", "getmodelmetadata"},
             {"interface", "rest"}});
-    if (metricConfig->requestSuccessRestGetModelStatus)   
+    if (metricConfig->requestSuccessRestGetModelStatus)
         this->requestSuccessRestGetModelStatus = family->addMetric({{"name", modelName},
             {"protocol", "tensorflowserving"},
             {"method", "getmodelstatus"},
             {"interface", "rest"}});
     // KFS
-    if (metricConfig->requestSuccessGrpcModelInfer)   
+    if (metricConfig->requestSuccessGrpcModelInfer)
         this->requestSuccessGrpcModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelinfer"},
             {"interface", "grpc"}});
-    if (metricConfig->requestSuccessGrpcModelMetadata)   
+    if (metricConfig->requestSuccessGrpcModelMetadata)
         this->requestSuccessGrpcModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelmetadata"},
             {"interface", "grpc"}});
-    if (metricConfig->requestSuccessGrpcModelStatus)   
+    if (metricConfig->requestSuccessGrpcModelStatus)
         this->requestSuccessGrpcModelStatus = family->addMetric({{"name", modelName},
             {"protocol", "kserve"},
             {"method", "modelstatus"},
             {"interface", "grpc"}});
-    if (metricConfig->requestSuccessRestModelInfer)   
+    if (metricConfig->requestSuccessRestModelInfer)
         this->requestSuccessRestModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelinfer"},
             {"interface", "rest"}});
-    if (metricConfig->requestSuccessRestModelMetadata)   
+    if (metricConfig->requestSuccessRestModelMetadata)
         this->requestSuccessRestModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelmetadata"},
             {"interface", "rest"}});
-    if (metricConfig->requestSuccessRestModelStatus)   
+    if (metricConfig->requestSuccessRestModelStatus)
         this->requestSuccessRestModelStatus = family->addMetric({{"name", modelName},
             {"protocol", "kserve"},
             {"method", "modelstatus"},
@@ -105,74 +106,74 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     family = registry->createFamily<MetricCounter>("requests_fail", "desc");
 
     // TFS
-    if (metricConfig->requestFailGrpcPredict)   
+    if (metricConfig->requestFailGrpcPredict)
         this->requestFailGrpcPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
             {"method", "predict"},
             {"interface", "grpc"}});
-    if (metricConfig->requestFailGrpcGetModelMetadata)   
+    if (metricConfig->requestFailGrpcGetModelMetadata)
         this->requestFailGrpcGetModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
             {"method", "getmodelmetadata"},
             {"interface", "grpc"}});
-    if (metricConfig->requestFailGrpcGetModelStatus)   
+    if (metricConfig->requestFailGrpcGetModelStatus)
         this->requestFailGrpcGetModelStatus = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
             {"method", "getmodelstatus"},
             {"interface", "grpc"}});
-    if (metricConfig->requestFailRestPredict)   
+    if (metricConfig->requestFailRestPredict)
         this->requestFailRestPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
             {"method", "predict"},
             {"interface", "rest"}});
-    if (metricConfig->requestFailRestGetModelMetadata)   
+    if (metricConfig->requestFailRestGetModelMetadata)
         this->requestFailRestGetModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
             {"method", "getmodelmetadata"},
             {"interface", "rest"}});
-    if (metricConfig->requestFailRestGetModelStatus)   
+    if (metricConfig->requestFailRestGetModelStatus)
         this->requestFailRestGetModelStatus = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
             {"method", "getmodelstatus"},
             {"interface", "rest"}});
     // KFS
-    if (metricConfig->requestFailGrpcModelInfer)   
+    if (metricConfig->requestFailGrpcModelInfer)
         this->requestFailGrpcModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelinfer"},
             {"interface", "grpc"}});
-    if (metricConfig->requestFailGrpcModelMetadata)   
+    if (metricConfig->requestFailGrpcModelMetadata)
         this->requestFailGrpcModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelmetadata"},
             {"interface", "grpc"}});
-    if (metricConfig->requestFailGrpcModelStatus)   
+    if (metricConfig->requestFailGrpcModelStatus)
         this->requestFailGrpcModelStatus = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelstatus"},
             {"interface", "grpc"}});
-    if (metricConfig->requestFailRestModelInfer)   
+    if (metricConfig->requestFailRestModelInfer)
         this->requestFailRestModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelinfer"},
             {"interface", "rest"}});
-    if (metricConfig->requestFailRestModelMetadata)   
+    if (metricConfig->requestFailRestModelMetadata)
         this->requestFailRestModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelmetadata"},
             {"interface", "rest"}});
-    if (metricConfig->requestFailRestModelStatus)   
+    if (metricConfig->requestFailRestModelStatus)
         this->requestFailRestModelStatus = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
