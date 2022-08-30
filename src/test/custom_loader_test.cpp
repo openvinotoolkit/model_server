@@ -376,7 +376,7 @@ public:
 class MockModelInstance : public ovms::ModelInstance {
 public:
     MockModelInstance(ov::Core& ieCore) :
-        ModelInstance("UNUSED_NAME", 42, ieCore) {}
+        ModelInstance("UNUSED_NAME", 42, ieCore, nullptr, nullptr) {}
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
     }

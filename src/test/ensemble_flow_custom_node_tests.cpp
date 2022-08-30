@@ -48,7 +48,7 @@ protected:
         TestWithTempDir::SetUp();
 
         defaultContext = std::make_unique<ExecutionContext>(ExecutionContext::Interface::GRPC, ExecutionContext::Method::Predict);
-        reporter = std::make_unique<ModelMetricReporter>(nullptr, "example_pipeline_name", 1);  // TODO: Add real metric registry
+        reporter = std::make_unique<ModelMetricReporter>(nullptr, nullptr, "example_pipeline_name", 1);  // TODO: Add real metric registry
 
         CustomNodeLibraryManager manager;
         ASSERT_EQ(manager.loadLibrary(
@@ -3300,7 +3300,7 @@ public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         Model(name, false, nullptr),
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return modelInstance;
     }
 };

@@ -61,7 +61,7 @@ public:
         config.setNireq(NIREQ);
 
         defaultContext = std::make_unique<ExecutionContext>(ExecutionContext::Interface::GRPC, ExecutionContext::Method::Predict);
-        reporter = std::make_unique<ModelMetricReporter>(nullptr, "example_pipeline_name", 1);  // TODO: Add real metric registry
+        reporter = std::make_unique<ModelMetricReporter>(nullptr, nullptr, "example_pipeline_name", 1);  // TODO: Add real metric registry
 
         // Prepare request
         prepareRequest(bs1requestData, request, customPipelineInputName);
@@ -128,7 +128,7 @@ protected:
         config.setNireq(NIREQ);
 
         defaultContext = std::make_unique<ExecutionContext>(ExecutionContext::Interface::GRPC, ExecutionContext::Method::Predict);
-        reporter = std::make_unique<ModelMetricReporter>(nullptr, "example_pipeline_name", 1);  // TODO: Add real metric registry
+        reporter = std::make_unique<ModelMetricReporter>(nullptr, nullptr, "example_pipeline_name", 1);  // TODO: Add real metric registry
 
         // Prepare request
         prepareRequest(bs1requestData, request, customPipelineInputName);

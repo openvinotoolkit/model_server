@@ -144,7 +144,7 @@ class MockedValidateStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
     ovms::GlobalSequencesViewer sequencesViewer;
     MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version, ov::Core& ieCore) :
-        StatefulModelInstance(name, version, ieCore, nullptr, &sequencesViewer) {}
+        StatefulModelInstance(name, version, ieCore, nullptr, nullptr, &sequencesViewer) {}
 
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request, ovms::SequenceProcessingSpec& processingSpec) {
         return validate(request, processingSpec);
@@ -164,7 +164,7 @@ public:
     std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(60, "dummy", 1);
 
     MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version, ov::Core& ieCore) :
-        StatefulModelInstance(name, version, ieCore, nullptr, &sequencesViewer) {}
+        StatefulModelInstance(name, version, ieCore, nullptr, nullptr, &sequencesViewer) {}
 
     const std::unique_ptr<MockedSequenceManager>& getMockedSequenceManager() const {
         return this->mockedSequenceManager;
@@ -1056,7 +1056,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferStandardFlow) {
 
 TEST_F(StatefulModelInstanceTempDir, loadModel) {
     ovms::GlobalSequencesViewer sequencesViewer;
-    ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion, *ieCore, nullptr, &sequencesViewer);
+    ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion, *ieCore, nullptr, nullptr, &sequencesViewer);
 
     const ovms::ModelConfig config1{
         dummyModelName,
