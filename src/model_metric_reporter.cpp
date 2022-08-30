@@ -17,7 +17,6 @@
 
 #include "execution_context.hpp"
 #include "metric_family.hpp"
-#include "metric_registry.hpp"
 #include "metric_config.hpp"
 
 namespace ovms {

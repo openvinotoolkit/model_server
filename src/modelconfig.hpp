@@ -545,15 +545,6 @@ public:
     }
 
     /**
-         * @brief Get the metric config
-         * 
-         * @return const std::string&
-         */
-    const MetricConfig& getMetricConfig() const {
-        return this->metricConfig;
-    }
-
-    /**
          * @brief Set the plugin config
          * 
          * @param pluginConfig 
@@ -571,15 +562,6 @@ public:
         this->metricConfig = metricConfig;
     }
     
-    /**
-         * @brief Set the metric config
-         * 
-         * @param metricConfig 
-         */
-    void setMetricConfig(const MetricConfig& metricConfig) {
-        this->metricConfig = metricConfig;
-    }
-
     /**
      * @brief Get stateful model flag
      *
