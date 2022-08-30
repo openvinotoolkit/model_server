@@ -128,7 +128,7 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
         std::string name = std::string(info[i].name);
         auto precision = toInferenceEnginePrecision(info[i].precision);
         ovms::Shape shape;
-        for (int j = 0; j < info[i].dimsCount; ++j) {
+        for (uint64_t j = 0; j < info[i].dimsCount; ++j) {
             auto dim = info[i].dims[j];
             shape.add(dim ? Dimension(dim) : Dimension::any());
         }

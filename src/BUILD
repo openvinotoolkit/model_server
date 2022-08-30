@@ -252,7 +252,6 @@ cc_library(
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
-        "-Wno-sign-compare",
     ],
 )
 

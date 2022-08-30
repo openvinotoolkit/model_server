@@ -38,7 +38,11 @@ std::optional<Dimension> getRequestBatchSize(const ::inference::ModelInferReques
         return std::nullopt;
     }
     auto& requestInput = requestInputItr;  // assuming same batch size for all inputs
-    if (requestInput->shape().size() < batchSizeIndex + 1) {
+    if (requestInput->shape().size() < 0) {
+        SPDLOG_DEBUG("Failed to get batch size of a request. Input shape size cannot be a negative number. Validation of request failed");
+        return std::nullopt;
+    }
+    if (static_cast<size_t>(requestInput->shape().size()) < batchSizeIndex + 1) {
         SPDLOG_DEBUG("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
         return std::nullopt;
     }
@@ -66,7 +70,13 @@ std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictR
         return std::nullopt;
     }
     auto& requestInput = requestInputItr->second;  // assuming same batch size for all inputs
-    if (requestInput.tensor_shape().dim_size() < batchSizeIndex + 1) {
+
+    if (requestInput.tensor_shape().dim_size() < 0) {
+        SPDLOG_DEBUG("Failed to get batch size of a request. Input shape size cannot be a negative number. Validation of request failed");
+        return std::nullopt;
+    }
+
+    if (static_cast<size_t>(requestInput.tensor_shape().dim_size()) < batchSizeIndex + 1) {
         SPDLOG_DEBUG("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
         return std::nullopt;
     }
