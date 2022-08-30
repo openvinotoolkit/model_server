@@ -24,8 +24,8 @@
 
 namespace ovms {
 
-std::string toString(Precision precision) {
-    static std::unordered_map<Precision, const char*> precisionMap{
+const std::string& toString(Precision precision) {
+    static std::unordered_map<Precision, std::string> precisionMap{
         {Precision::BF16, "BF16"},
         {Precision::FP64, "FP64"},
         {Precision::FP32, "FP32"},
@@ -49,7 +49,8 @@ std::string toString(Precision precision) {
         {Precision::CUSTOM, "CUSTOM"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        return "UNKNOWN";
+        static const std::string UNKNOWN{"UNKNOWN"};
+        return UNKNOWN;
     }
     return it->second;
 }
@@ -149,7 +150,7 @@ size_t KFSDataTypeSize(const KFSDataType& datatype) {
     return it->second;
 }
 
-KFSDataType ovmsPrecisionToKFSPrecision(Precision precision) {
+const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision) {
     static std::unordered_map<Precision, KFSDataType> precisionMap{
         {Precision::FP64, "FP64"},
         {Precision::FP32, "FP32"},
@@ -175,7 +176,8 @@ KFSDataType ovmsPrecisionToKFSPrecision(Precision precision) {
     // {Precision::UNDEFINED, "UNDEFINED"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        return "INVALID";
+        static const std::string invalid{"INVALID"};
+        return invalid;
     }
     return it->second;
 }

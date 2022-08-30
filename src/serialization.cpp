@@ -24,6 +24,7 @@ Status serializePrecision(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
         SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
             servableOutput->getName(),
@@ -62,6 +63,7 @@ Status serializePrecision(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
         SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
             servableOutput->getName(),
@@ -101,6 +103,7 @@ Status serializeShape(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     responseOutput.mutable_tensor_shape()->Clear();
     auto& effectiveNetworkOutputShape = servableOutput->getShape();
     ov::Shape actualTensorShape = tensor.get_shape();
@@ -125,6 +128,7 @@ Status serializeShape(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     responseOutput.clear_shape();
     auto& effectiveNetworkOutputShape = servableOutput->getShape();
     ov::Shape actualTensorShape = tensor.get_shape();
@@ -146,6 +150,7 @@ Status serializeShape(
 }
 
 void serializeContent(std::string* content, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     // We only fill if the content is not already filled.
     // It can be filled in gather exit node handler.
     if (content->size() == 0) {
@@ -157,6 +162,7 @@ Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
     if (!status.ok()) {
         return status;
@@ -174,6 +180,7 @@ Status serializeTensorToTensorProto(
     std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
     if (!status.ok()) {
         return status;
@@ -188,6 +195,7 @@ Status serializeTensorToTensorProto(
 
 template <>
 Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     try {
         tensor = outputSource.get_tensor(name);
     } catch (const ov::Exception& e) {
@@ -200,16 +208,19 @@ Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor&
 
 template <>
 tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::createOutput(const std::string& name) {
+    OVMS_PROFILE_FUNCTION();
     return (*protoStorage->mutable_outputs())[name];
 }
 
 template <>
 std::string* ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::createContent(const std::string& name) {
+    OVMS_PROFILE_FUNCTION();
     return nullptr;
 }
 
 template <>
 ::inference::ModelInferResponse::InferOutputTensor& ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::createOutput(const std::string& name) {
+    OVMS_PROFILE_FUNCTION();
     for (int i = 0; i < protoStorage->outputs_size(); i++) {
         auto& tensor = *protoStorage->mutable_outputs(i);
         if (tensor.name() == name) {
@@ -223,6 +234,7 @@ template <>
 
 template <>
 std::string* ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::createContent(const std::string& name) {
+    OVMS_PROFILE_FUNCTION();
     for (int i = 0; i < protoStorage->outputs_size(); i++) {
         auto& tensor = *protoStorage->mutable_outputs(i);
         if (tensor.name() == name) {

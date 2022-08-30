@@ -51,6 +51,7 @@ public:
         const ::inference::ModelInferRequest::InferInputTensor& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo,
         const std::string* buffer) {
+        OVMS_PROFILE_FUNCTION();
         if (nullptr != buffer) {
             switch (tensorInfo->getPrecision()) {
             case ovms::Precision::FP64:
@@ -212,6 +213,7 @@ public:
     static ov::Tensor deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo) {
+        OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP32:
         case ovms::Precision::I32:

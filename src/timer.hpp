@@ -27,6 +27,28 @@ struct is_chrono_duration_type : std::false_type {};
 template <typename T, typename U>
 struct is_chrono_duration_type<std::chrono::duration<T, U>> : std::true_type {};
 
+typedef unsigned int SIZE_TYPE;
+template <SIZE_TYPE N>
+class Timer2 {
+    std::array<std::chrono::high_resolution_clock::time_point, N> startTimestamps;
+    std::array<std::chrono::high_resolution_clock::time_point, N> stopTimestamps;
+
+public:
+    void start(SIZE_TYPE i) {
+        startTimestamps[i] = std::chrono::high_resolution_clock::now();
+    }
+
+    void stop(SIZE_TYPE i) {
+        stopTimestamps[i] = std::chrono::high_resolution_clock::now();
+    }
+
+    template <typename T>
+    double elapsed(SIZE_TYPE i) {
+        static_assert(is_chrono_duration_type<T>::value, "Non supported type.");
+        return std::chrono::duration_cast<T>(stopTimestamps[i] - startTimestamps[i]).count();
+    }
+};
+
 class Timer {
     std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> startTimestamps;
     std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> stopTimestamps;

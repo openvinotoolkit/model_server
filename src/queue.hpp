@@ -26,6 +26,8 @@
 #include <utility>
 #include <vector>
 
+// #include "profiler.hpp"
+
 namespace ovms {
 
 template <typename T>
@@ -35,6 +37,7 @@ public:
     * @brief Allocating idle stream for execution
     */
     std::future<int> getIdleStream() {
+        // OVMS_PROFILE_FUNCTION();
         int value;
         std::promise<int> idleStreamPromise;
         std::future<int> idleStreamFuture = idleStreamPromise.get_future();
@@ -53,6 +56,7 @@ public:
     }
 
     std::optional<int> tryToGetIdleStream() {
+        // OVMS_PROFILE_FUNCTION();
         int value;
         std::unique_lock<std::mutex> lk(front_mut);
         if (streams[front_idx] < 0) {  // we need to wait for any idle stream to be returned
@@ -70,6 +74,7 @@ public:
     * @brief Release stream after execution
     */
     void returnStream(int streamID) {
+        // OVMS_PROFILE_FUNCTION();
         std::unique_lock<std::mutex> lk(queue_mutex);
         if (promises.size()) {
             std::promise<int> promise = std::move(promises.front());

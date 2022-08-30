@@ -970,6 +970,7 @@ Status ModelInstance::reloadModelIfRequired(
     const std::optional<Dimension>& requestedBatchSize,
     const std::map<std::string, shape_t>& requestedShapes,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
     Status status = validationStatus;
     if (status.batchSizeChangeRequired()) {
         try {
@@ -1140,9 +1141,11 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     if (!status.ok())
         return status;
     timer.start("get infer request");
+    OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     int executingInferId = executingStreamIdGuard.getId();
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    OVMS_PROFILE_SYNC_END("getInferRequest");
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);

@@ -173,14 +173,14 @@ public:
         *
         * @return const std::string
         */
-    std::string getPrecisionAsString() const;
+    const std::string& getPrecisionAsString() const;
 
     /**
         * @brief Get the Precision As String object representing KFS precision
         *
         * @return const std::string
         */
-    std::string getPrecisionAsKFSPrecision() const;
+    const std::string& getPrecisionAsKFSPrecision() const;
 
     /**
         * @brief Get the string representation of TensorInfo object
@@ -189,9 +189,9 @@ public:
         */
     std::string asString() const;
 
-    static std::string getPrecisionAsString(Precision precision);
+    static const std::string& getPrecisionAsString(Precision precision);
 
-    static std::string getPrecisionAsKFSPrecision(Precision precision);
+    static const std::string& getPrecisionAsKFSPrecision(Precision precision);
 
     /**
          * @brief Get the layout name from Layout
@@ -199,7 +199,7 @@ public:
          * @param Layout
          * @return std::string
          */
-    static std::string getStringFromLayout(const Layout& layout);
+    static const std::string& getStringFromLayout(const Layout& layout);
 
     /**
          * @brief Get the Layout string

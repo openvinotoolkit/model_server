@@ -30,6 +30,7 @@
 
 #include "logging.hpp"
 #include "opencv2/opencv.hpp"
+#include "profiler.hpp"
 #include "status.hpp"
 
 #pragma GCC diagnostic push
@@ -71,6 +72,7 @@ bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision) {
 }
 
 cv::Mat convertStringToMat(const std::string& image) {
+    OVMS_PROFILE_FUNCTION();
     std::vector<unsigned char> data(image.begin(), image.end());
     cv::Mat dataMat(data, true);
 
@@ -83,6 +85,7 @@ cv::Mat convertStringToMat(const std::string& image) {
 }
 
 Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision requestedPrecision) {
+    OVMS_PROFILE_FUNCTION();
     int type = getMatTypeFromTensorPrecision(requestedPrecision);
     if (type == -1) {
         SPDLOG_DEBUG("Error during binary input conversion: not supported precision: {}", toString(requestedPrecision));
@@ -94,6 +97,7 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision 
 }
 
 Status validateLayout(const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     static const std::string binarySupportedLayout = "N...HWC";
     if (!tensorInfo->getLayout().createIntersection(Layout(binarySupportedLayout), tensorInfo->getShape().size()).has_value()) {
         SPDLOG_DEBUG("Endpoint needs to be compatible with {} to support binary image inputs, actual: {}",
@@ -112,6 +116,7 @@ bool resizeNeeded(const cv::Mat& image, const dimension_value_t height, const di
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t height, const dimension_value_t width) {
+    OVMS_PROFILE_FUNCTION();
     cv::resize(src, dst, cv::Size(width, height));
     return StatusCode::OK;
 }
@@ -119,6 +124,7 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t heigh
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage) {
+    OVMS_PROFILE_FUNCTION();
 
     // At this point we can either have nhwc format or pretendant to be nhwc but with ANY layout in pipeline info
     Dimension numberOfChannels;
@@ -147,6 +153,7 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
 }
 
 Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage) {
+    OVMS_PROFILE_FUNCTION();
     if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
         return StatusCode::OK;
     }
@@ -157,6 +164,7 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
 
 bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
+    OVMS_PROFILE_FUNCTION();
     if (!tensorInfo->getBatchSize().has_value()) {
         return true;
     }
@@ -169,6 +177,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
     // This forces binary utility to create tensors with resolution inherited from first batch of binary input image (request).
     // In case of any dimension in endpoint shape is dynamic, we need to validate images against first image resolution.
     // Otherwise we can omit that, and proceed to image resize.
+    OVMS_PROFILE_FUNCTION();
     if (firstBatchImage && enforceResolutionAlignment) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
         if (!status.ok()) {
@@ -180,6 +189,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
+    OVMS_PROFILE_FUNCTION();
     auto status = validateLayout(tensorInfo);
     if (!status.ok()) {
         return status;
@@ -210,6 +220,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const ::inference::ModelInferRequest::InferInputTensor& src) {
+    OVMS_PROFILE_FUNCTION();
     auto status = validateLayout(tensorInfo);
     if (!status.ok()) {
         return status;
@@ -321,6 +332,7 @@ int getBinaryInputsSize(const ::inference::ModelInferRequest::InferInputTensor& 
 
 template <typename TensorType>
 Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     Dimension targetHeight = getTensorInfoHeightDim(tensorInfo);
     Dimension targetWidth = getTensorInfoWidthDim(tensorInfo);
 
@@ -377,6 +389,7 @@ Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<
     return StatusCode::OK;
 }
 shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     shape_t dims;
     dims.push_back(images.size());
     if (tensorInfo->isInfluencedByDemultiplexer()) {
@@ -389,6 +402,7 @@ shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared
 }
 
 ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     ov::Shape shape = getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::Tensor tensor(precision, shape);
@@ -401,6 +415,7 @@ ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::s
 }
 
 ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     switch (tensorInfo->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
@@ -423,6 +438,7 @@ ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_p
 
 template <typename TensorType>
 Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;
