@@ -507,6 +507,7 @@ cc_test(
         "test/layout_test.cpp",
         "test/localfilesystem_test.cpp",
         "test/metrics_test.cpp",
+        "test/metric_config_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",
         "test/model_cache_test.cpp",
         "test/model_service_test.cpp",
