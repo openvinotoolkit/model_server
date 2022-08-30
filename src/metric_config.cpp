@@ -141,8 +141,7 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
         }
     }
 
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "requestFailRestModelStatus {}", requestFailRestModelStatus);
-
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "requestFailRestModelStatus {}", requestFailRestModelStatus);
 
     return StatusCode::OK;
 }

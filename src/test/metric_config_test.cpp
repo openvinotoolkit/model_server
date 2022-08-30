@@ -17,9 +17,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../metric_config.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#include "../metric_config.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
