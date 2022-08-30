@@ -587,7 +587,6 @@ cc_test(
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
-        "-Wno-sign-compare",
     ],
 )
 

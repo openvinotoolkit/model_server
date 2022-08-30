@@ -34,6 +34,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#include "../execution_context.hpp"
 #include "../kfs_grpc_inference_service.hpp"
 #include "../metric_registry.hpp"
 #include "../modelmanager.hpp"
@@ -128,6 +129,8 @@ constexpr const char* INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME = "output";
 constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
+
+static const ovms::ExecutionContext DEFAULT_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
 
 using KFSRequestType = ::inference::ModelInferRequest;
 using KFSResponseType = ::inference::ModelInferResponse;

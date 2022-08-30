@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "execution_context.hpp"
 #include "session_id.hpp"
 
 namespace ovms {
@@ -37,12 +38,19 @@ struct CollapseDetails {
 class NodeSessionMetadata {
     std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
     std::vector<std::string> sessionsLevels;
+    ExecutionContext context;
+
+protected:
+    NodeSessionMetadata();
 
 public:
+    NodeSessionMetadata(const ExecutionContext context);
+    NodeSessionMetadata(const std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>>& details, const std::vector<std::string>& sessionLevels, const ExecutionContext context);
     std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const;
     std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {}) const;
     std::pair<NodeSessionMetadata, CollapseDetails> getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const;
     session_id_t getSubsessionSize(const std::string& subsessionName) const;
     session_id_t getShardId(const std::set<std::string>& collapsedNames = {}) const;
+    ExecutionContext getContext() const;
 };
 }  // namespace ovms

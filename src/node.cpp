@@ -56,7 +56,7 @@ Node::Node(const std::string& nodeName, std::optional<int32_t> demultiplyCount, 
             } }));
 }
 
-Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs, ExecutionContext& context) {
+Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs) {
     OVMS_PROFILE_FUNCTION();
     auto it = nodeSessions.find(sessionId);
 
@@ -65,7 +65,7 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Could not find session: {} for node: {}", sessionId, getName());
         return StatusCode::UNKNOWN_ERROR;
     }
-    auto status = fetchResults(*nodeSession, nodeSessionOutputs, context);
+    auto status = fetchResults(*nodeSession, nodeSessionOutputs);
     if (status.ok() && demultiplexCount) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs with demultiplyCount: {}", getName(), demultiplyCountSettingToString(demultiplexCount));
         status = demultiplyOutputs(nodeSessionOutputs);
@@ -168,7 +168,7 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create new session: {} for node: {}",
         sessionKey, getName());
-    NodeSessionMetadata newSessionMetadata;
+    NodeSessionMetadata newSessionMetadata = metadata;
     CollapseDetails collapsingDetails;
     if (gatherFrom) {
         try {
@@ -177,8 +177,6 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create collapsed metadata for node: {}", getName());
             return nullptr;
         }
-    } else {
-        newSessionMetadata = metadata;
     }
     std::unique_ptr<NodeSession> nodeSession = createNodeSession(newSessionMetadata, collapsingDetails);
     auto emplacePair = nodeSessions.emplace(sessionKey, std::move(nodeSession));

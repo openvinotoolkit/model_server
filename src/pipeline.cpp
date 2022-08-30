@@ -85,14 +85,22 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
 Status Pipeline::execute(ExecutionContext context) {
     OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Started execution of pipeline: {}", getName());
+
+    if (context.method != ExecutionContext::Method::Predict && context.method != ExecutionContext::Method::ModelInfer) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Executing pipeline: {} wrong context", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
+
     PipelineEventQueue finishedNodeQueue;
     ovms::Status firstErrorStatus{ovms::StatusCode::OK};
     std::set<std::string> startedSessions;
     std::set<std::string> finishedSessions;
-    NodeSessionMetadata meta;
-    // entry node does not have setInputsCalled so it has no
-    // session created. Here is just assumption that this meta has the same key
-    // that the one in EntryNode::execute();
+    NodeSessionMetadata meta(context);
+    auto* entryNodeSession = entry.getNodeSession(meta);
+    if (!entryNodeSession) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Executing pipeline: {} cannot create entry session", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
     auto entrySessionKey = meta.getSessionKey();
     startedSessions.emplace(entry.getName() + entrySessionKey);
     ovms::Status status = entry.execute(entrySessionKey, finishedNodeQueue);  // first node will triger first message
@@ -126,7 +134,7 @@ Status Pipeline::execute(ExecutionContext context) {
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
             SessionResults sessionResults;
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Fetching results of pipeline: {} node: {} session: {}", getName(), finishedNode.getName(), sessionKey);
-            status = finishedNode.fetchResults(sessionKey, sessionResults, context);
+            status = finishedNode.fetchResults(sessionKey, sessionResults);
             CHECK_AND_LOG_ERROR(finishedNode)
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
 
