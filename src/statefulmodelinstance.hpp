@@ -36,7 +36,7 @@ public:
     /**
          * @brief A default constructor
          */
-    StatefulModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricsConfig, GlobalSequencesViewer* globalSequencesViewer) :
+    StatefulModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricsConfig = nullptr, GlobalSequencesViewer* globalSequencesViewer = nullptr) :
         ModelInstance(name, version, ieCore, registry, metricsConfig),
         globalSequencesViewer(globalSequencesViewer) {
         sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), name, version);
