@@ -176,12 +176,12 @@ def main():
 
             # create numpy inputs for IE
             inputs = {
-                input_names[0]: np.array([input_ids], dtype=np.int32),
-                input_names[1]: np.array([attention_mask], dtype=np.int32),
-                input_names[2]: np.array([token_type_ids], dtype=np.int32),
+                input_names[0]: np.array([input_ids], dtype=np.int64),
+                input_names[1]: np.array([attention_mask], dtype=np.int64),
+                input_names[2]: np.array([token_type_ids], dtype=np.int64),
             }
             if len(input_names)>3:
-                inputs[input_names[3]] = np.arange(input_ids_length, dtype=np.int32)[None,:]
+                inputs[input_names[3]] = np.arange(input_ids_length, dtype=np.int64)[None,:]
 
 
             #print("inputs:",inputs)
