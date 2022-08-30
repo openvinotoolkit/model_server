@@ -27,6 +27,7 @@
 #include <rapidjson/document.h>
 
 #include "layout_configuration.hpp"
+#include "metric_config.hpp"
 #include "model_version_policy.hpp"
 #include "shape.hpp"
 #include "status.hpp"
@@ -126,7 +127,13 @@ private:
          */
     plugin_config_t pluginConfig;
 
+     /**
+         * @brief Metrics config
+         */
+    MetricConfig metricConfig;
+
     /**
+     * 
          * @brief Layout for single input
          */
     LayoutConfiguration layout;
@@ -528,6 +535,15 @@ public:
         return this->pluginConfig;
     }
 
+     /**
+         * @brief Get the metric config
+         * 
+         * @return const std::string&
+         */
+    const MetricConfig& getMetricConfig() const {
+        return this->metricConfig;
+    }
+
     /**
          * @brief Set the plugin config
          * 
@@ -537,6 +553,15 @@ public:
         this->pluginConfig = pluginConfig;
     }
 
+     /**
+         * @brief Set the metric config
+         * 
+         * @param metricConfig 
+         */
+    void setMetricConfig(const MetricConfig& metricConfig) {
+        this->metricConfig = metricConfig;
+    }
+    
     /**
      * @brief Get stateful model flag
      *

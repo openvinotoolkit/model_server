@@ -25,12 +25,13 @@
 namespace ovms {
 
 class MetricRegistry;
+class MetricConfig;
 
 class ModelMetricReporter {
     MetricRegistry* registry;
 
 public:
-    ModelMetricReporter(MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
+    ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
 
     // TFS
     std::shared_ptr<MetricCounter> requestSuccessGrpcPredict;
