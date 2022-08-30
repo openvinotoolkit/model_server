@@ -47,7 +47,7 @@ public:
     }
 
     using Node::fetchResults;
-    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context) {
+    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
         const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
         const auto sessionKey = sessionMetadata.getSessionKey();
         std::pair<NodeSessionMetadata, TensorWithSourceMap> metaTensorsPair{sessionMetadata, std::move(intermediateResults)};
@@ -88,10 +88,7 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
-    ExecutionContext context(
-        ExecutionContext::Interface::GRPC,
-        ExecutionContext::Method::Predict);
-    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults, context);
+    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
     ASSERT_EQ(status, StatusCode::OK);
     ASSERT_EQ(sessionResults.size(), demultiplyCount);
     auto demultiplexedMetadata = meta.generateSubsessions(demultiplexerNodeName, demultiplyCount);
@@ -129,10 +126,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
-    ExecutionContext context(
-        ExecutionContext::Interface::GRPC,
-        ExecutionContext::Method::Predict);
-    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults, context);
+    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
     ASSERT_EQ(status, StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY);
 }
 
@@ -153,10 +147,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
-    ExecutionContext context(
-        ExecutionContext::Interface::GRPC,
-        ExecutionContext::Method::Predict);
-    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults, context);
+    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
     ASSERT_EQ(status, StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY);
 }
 
@@ -178,10 +169,7 @@ TEST(DemultiplexerTest, ShardsShareDataWithSourceTensor) {
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
-    ExecutionContext context(
-        ExecutionContext::Interface::GRPC,
-        ExecutionContext::Method::Predict);
-    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults, context);
+    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
     ASSERT_EQ(status, StatusCode::OK);
     ASSERT_EQ(sessionResults.size(), demultiplyCount);
     auto demultiplexedMetadata = meta.generateSubsessions(demultiplexerNodeName, demultiplyCount);

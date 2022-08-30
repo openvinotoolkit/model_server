@@ -51,7 +51,7 @@ public:
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
-    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context) override;
+    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
     Status fetchResults(TensorWithSourceMap& outputs, session_key_t sessionKey);
 
     const std::string& getRealOutputName(const std::string& alias) const {

@@ -43,7 +43,7 @@ public:
 
     Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) override;
 
-    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context) override;
+    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
 protected:
     Status fetchResults(TensorWithSourceMap& outputs);

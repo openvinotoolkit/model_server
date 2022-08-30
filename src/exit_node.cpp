@@ -31,7 +31,7 @@
 
 namespace ovms {
 template <typename ResponseType>
-Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context) {
+Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
     OVMS_PROFILE_FUNCTION();
     auto& exitNodeSession = static_cast<ExitNodeSession<ResponseType>&>(nodeSession);
     return this->fetchResults(exitNodeSession.getInputTensors());
@@ -66,8 +66,8 @@ std::unique_ptr<NodeSession> ExitNode<ResponseType>::createNodeSession(const Nod
     return std::make_unique<ExitNodeSession<ResponseType>>(metadata, getName(), previous.size(), collapsingDetails, response);
 }
 
-template Status ExitNode<::inference::ModelInferResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context);
-template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context);
+template Status ExitNode<::inference::ModelInferResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
 template Status ExitNode<::inference::ModelInferResponse>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status ExitNode<tensorflow::serving::PredictResponse>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status ExitNode<::inference::ModelInferResponse>::fetchResults(const TensorMap& inputTensors);

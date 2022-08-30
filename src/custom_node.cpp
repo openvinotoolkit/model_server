@@ -47,7 +47,7 @@ Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyE
     return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), getCNLIMWrapperPtr(customNodeLibraryInternalManager));
 }
 
-Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context) {
+Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
     auto& customNodeSession = static_cast<CustomNodeSession&>(nodeSession);
     const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
     SessionResult sessionResults{sessionMetadata, {}};
