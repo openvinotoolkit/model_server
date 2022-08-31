@@ -68,6 +68,29 @@ static const char* modelMetricsChangedConfig = R"(
         }
 })";
 
+static const char* modelMetricsAllEnabledConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true
+            }
+        }
+})";
+
 class MetricsConfigTest : public TestWithTempDir {
 public:
     std::string configFilePath;
@@ -123,4 +146,22 @@ TEST_F(MetricsConfigTest, ChangedValues) {
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, true);
     ASSERT_EQ(metricConfig.requestFailRestModelStatus, true);
     ASSERT_EQ(metricConfig.requestSuccessGrpcModelStatus, false);
+}
+
+TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
+    SetUpConfig(modelMetricsAllEnabledConfig);
+    ConstructorEnabledModelManager manager;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    auto modelConfig = modelInstance->getModelConfig();
+
+    auto metricConfig = modelConfig.getMetricConfig();
+    ASSERT_EQ(metricConfig.metricsEnabled, true);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestFailGrpcModelInfer, true);
+    ASSERT_EQ(metricConfig.requestFailRestModelInfer, true);
+    ASSERT_EQ(metricConfig.requestFailRestModelMetadata, true);
 }
