@@ -212,7 +212,7 @@ Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, 
     std::string numberString;
     while (std::getline(streamData, numberString, ',')) {
         std::optional<int> binarySize = stoi32(numberString);
-        if(!binarySize.has_value()) {
+        if (!binarySize.has_value()) {
             SPDLOG_DEBUG("Invalid argument in binary size string: {}", numberString);
             return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
         }
@@ -357,7 +357,7 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
             return status;
         }
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
-        if(binary_data_size_parameter != input->parameters().end()) {
+        if (binary_data_size_parameter != input->parameters().end()) {
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 auto binary_input_size = binary_data_size_parameter->second.int64_param();
                 if (binary_input_offset + binary_input_size > binary_inputs_size) {

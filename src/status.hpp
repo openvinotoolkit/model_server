@@ -193,7 +193,7 @@ enum class StatusCode {
     REST_SERIALIZE_VAL_FIELD_INVALID_SIZE,      /*!< Number of elements in xxx_val field does not match declared tensor shape */
     REST_SERIALIZE_NO_DATA,                     /*!< No data found in tensor_content or xxx_val field matching tensor dtype */
     REST_BINARY_DATA_SIZE_PARAMETER_INVALID,    /*!< binary_data_size parameter is invalid and cannot be parsed*/
-    REST_BINARY_BUFFER_EXCEEDED,                 /*!< Received buffer size is smaller than binary_data_size parameter indicates*/
+    REST_BINARY_BUFFER_EXCEEDED,                /*!< Received buffer size is smaller than binary_data_size parameter indicates*/
     REST_CONTENTS_FIELD_NOT_EMPTY,              /*!< Request contains values both in binary data and in content value*/
 
     // Pipeline validation errors
