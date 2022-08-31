@@ -45,8 +45,6 @@ protected:
     void SetUp() override {
         TestWithTempDir::SetUp();
 
-        defaultContext = std::make_unique<ExecutionContext>(ExecutionContext::Interface::GRPC, ExecutionContext::Method::Predict);
-
         configPath = directoryPath + "/config.json";
         modelPath = directoryPath + "/dummy";
         mappingConfigPath = modelPath + "/1/mapping_config.json";
@@ -57,8 +55,6 @@ protected:
     std::string configPath;
     std::string modelPath;
     std::string mappingConfigPath;
-
-    std::unique_ptr<ExecutionContext> defaultContext;
 
     ConstructorEnabledModelManager managerWithDummyModel;
 };
@@ -112,7 +108,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     // Execute pipeline
     factory.create(pipeline, "pipeline", &request, &response, managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(*this->defaultContext), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     // Compare response
     ASSERT_EQ(response.outputs_size(), 1);
@@ -305,7 +301,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
 
     // Execute pipeline
     pd.create(pipeline, &request, &response, managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(*this->defaultContext), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     // Compare response
     ASSERT_EQ(response.outputs_size(), 1);
