@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,8 +55,7 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
     if (v.HasMember("metrics_list")) {
         status = parseMetricsArray(v["metrics_list"]);
     } else {
-        // Log missing metrics list or list empty
-        // or enable all metrics ?
+        setAllMetricsTo(metricsEnabled);
     }
 
     return status;
@@ -141,9 +140,42 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
         }
     }
 
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "requestFailRestModelStatus {}", requestFailRestModelStatus);
-
     return StatusCode::OK;
+}
+
+void MetricConfig::setAllMetricsTo(bool enabled){
+    requestSuccessGrpcPredict = enabled;
+    requestSuccessGrpcGetModelMetadata = enabled;
+    requestSuccessGrpcGetModelStatus = enabled;
+
+    requestSuccessRestPredict = enabled;
+    requestSuccessRestGetModelMetadata = enabled;
+    requestSuccessRestGetModelStatus = enabled;
+
+    requestFailGrpcPredict = enabled;
+    requestFailGrpcGetModelMetadata = enabled;
+    requestFailGrpcGetModelStatus = enabled;
+
+    requestFailRestPredict = enabled;
+    requestFailRestGetModelMetadata = enabled;
+    requestFailRestGetModelStatus = enabled;
+
+    // KFS
+    requestSuccessGrpcModelInfer = enabled;
+    requestSuccessGrpcModelMetadata = enabled;
+    requestSuccessGrpcModelStatus = enabled;
+
+    requestSuccessRestModelInfer = enabled;
+    requestSuccessRestModelMetadata = enabled;
+    requestSuccessRestModelStatus = enabled;
+
+    requestFailGrpcModelInfer = enabled;
+    requestFailGrpcModelMetadata = enabled;
+    requestFailGrpcModelStatus = enabled;
+
+    requestFailRestModelInfer = enabled;
+    requestFailRestModelMetadata = enabled;
+    requestFailRestModelStatus = enabled;
 }
 
 }  // namespace ovms
