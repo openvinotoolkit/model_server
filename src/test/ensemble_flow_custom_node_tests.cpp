@@ -48,7 +48,7 @@ protected:
     void SetUp() override {
         TestWithTempDir::SetUp();
 
-        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);  // TODO: Add real metric registry
+        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);
 
         CustomNodeLibraryManager manager;
         ASSERT_EQ(manager.loadLibrary(

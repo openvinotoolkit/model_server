@@ -61,7 +61,7 @@ public:
         config = DUMMY_MODEL_CONFIG;
         config.setNireq(NIREQ);
 
-        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);  // TODO: Add real metric registry
+        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);
 
         // Prepare request
         prepareRequest(bs1requestData, request, customPipelineInputName);
@@ -127,7 +127,7 @@ protected:
         config = DUMMY_MODEL_CONFIG;
         config.setNireq(NIREQ);
 
-        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);  // TODO: Add real metric registry
+        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);
 
         // Prepare request
         prepareRequest(bs1requestData, request, customPipelineInputName);
