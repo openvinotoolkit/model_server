@@ -131,7 +131,7 @@ ModelMetricReporter::ModelMetricReporter(MetricRegistry* registry, const std::st
     this->requestFailGrpcModelStatus = family->addMetric({{"name", modelName},
         {"version", std::to_string(modelVersion)},
         {"protocol", "kserve"},
-        {"method", "modelstatus"},
+        {"method", "modelready"},
         {"interface", "grpc"}});
     this->requestFailRestModelInfer = family->addMetric({{"name", modelName},
         {"version", std::to_string(modelVersion)},
@@ -146,7 +146,7 @@ ModelMetricReporter::ModelMetricReporter(MetricRegistry* registry, const std::st
     this->requestFailRestModelStatus = family->addMetric({{"name", modelName},
         {"version", std::to_string(modelVersion)},
         {"protocol", "kserve"},
-        {"method", "modelstatus"},
+        {"method", "modelready"},
         {"interface", "rest"}});
 }
 

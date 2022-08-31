@@ -15,14 +15,16 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
+
 namespace ovms {
 
 struct ExecutionContext {
-    enum class Interface {
+    enum class Interface : uint8_t {
         GRPC,
         REST,
     };
-    enum class Method {
+    enum class Method : uint8_t {
         // TensorflowServing
         Predict,
         GetModelMetadata,
