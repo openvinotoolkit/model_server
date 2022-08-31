@@ -62,7 +62,7 @@ static const char* modelMetricsChangedConfig = R"(
             "metrics":
             {
                 "enable" : true,
-                "metrics_list": ["requestSuccessGrpcPredict", "requestFailRestModelStatus"],
+                "metrics_list": ["requestSuccessGrpcPredict", "requestFailRestModelReady"],
                 "endpoint_path": "/newmetrics" 
             }
         }
@@ -127,7 +127,7 @@ TEST_F(MetricsConfigTest, DefaultValues) {
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
-    ASSERT_EQ(metricConfig.requestFailRestModelStatus, false);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
 }
 
 TEST_F(MetricsConfigTest, ChangedValues) {
@@ -144,8 +144,8 @@ TEST_F(MetricsConfigTest, ChangedValues) {
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/newmetrics");
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, true);
-    ASSERT_EQ(metricConfig.requestFailRestModelStatus, true);
-    ASSERT_EQ(metricConfig.requestSuccessGrpcModelStatus, false);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, true);
+    ASSERT_EQ(metricConfig.requestSuccessGrpcModelReady, false);
 }
 
 TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {

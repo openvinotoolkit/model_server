@@ -26,7 +26,6 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
-#include "logging.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
 
@@ -107,8 +106,8 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
         if (metric == "requestSuccessGrpcModelMetadata") {
             requestSuccessGrpcModelMetadata = true;
         }
-        if (metric == "requestSuccessGrpcModelStatus") {
-            requestSuccessGrpcModelStatus = true;
+        if (metric == "requestSuccessGrpcModelReady") {
+            requestSuccessGrpcModelReady = true;
         }
         if (metric == "requestSuccessRestModelInfer") {
             requestSuccessRestModelInfer = true;
@@ -116,8 +115,8 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
         if (metric == "requestSuccessRestModelMetadata") {
             requestSuccessRestModelMetadata = true;
         }
-        if (metric == "requestSuccessRestModelStatus") {
-            requestSuccessRestModelStatus = true;
+        if (metric == "requestSuccessRestModelReady") {
+            requestSuccessRestModelReady = true;
         }
         if (metric == "requestFailGrpcModelInfer") {
             requestFailGrpcModelInfer = true;
@@ -125,8 +124,8 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
         if (metric == "requestFailGrpcModelMetadata") {
             requestFailGrpcModelMetadata = true;
         }
-        if (metric == "requestFailGrpcModelStatus") {
-            requestFailGrpcModelStatus = true;
+        if (metric == "requestFailGrpcModelReady") {
+            requestFailGrpcModelReady = true;
         }
 
         if (metric == "requestFailRestModelInfer") {
@@ -135,8 +134,8 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
         if (metric == "requestFailRestModelMetadata") {
             requestFailRestModelMetadata = true;
         }
-        if (metric == "requestFailRestModelStatus") {
-            requestFailRestModelStatus = true;
+        if (metric == "requestFailRestModelReady") {
+            requestFailRestModelReady = true;
         }
     }
 
@@ -163,19 +162,19 @@ void MetricConfig::setAllMetricsTo(bool enabled){
     // KFS
     requestSuccessGrpcModelInfer = enabled;
     requestSuccessGrpcModelMetadata = enabled;
-    requestSuccessGrpcModelStatus = enabled;
+    requestSuccessGrpcModelReady = enabled;
 
     requestSuccessRestModelInfer = enabled;
     requestSuccessRestModelMetadata = enabled;
-    requestSuccessRestModelStatus = enabled;
+    requestSuccessRestModelReady = enabled;
 
     requestFailGrpcModelInfer = enabled;
     requestFailGrpcModelMetadata = enabled;
-    requestFailGrpcModelStatus = enabled;
+    requestFailGrpcModelReady = enabled;
 
     requestFailRestModelInfer = enabled;
     requestFailRestModelMetadata = enabled;
-    requestFailRestModelStatus = enabled;
+    requestFailRestModelReady = enabled;
 }
 
 }  // namespace ovms
