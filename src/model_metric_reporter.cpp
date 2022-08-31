@@ -28,7 +28,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         return;
     }
 
-    if (!metricConfig && !metricConfig->metricsEnabled) {
+    if (!metricConfig || !metricConfig->metricsEnabled) {
         return;
     }
 

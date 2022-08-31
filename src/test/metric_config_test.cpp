@@ -18,6 +18,8 @@
 #include <gtest/gtest.h>
 
 #include "../metric_config.hpp"
+#include "../metric_registry.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "test_utils.hpp"
@@ -87,6 +89,30 @@ static const char* modelMetricsAllEnabledConfig = R"(
             "metrics":
             {
                 "enable" : true
+            }
+        }
+})";
+
+static const char* modelMetricsBadEndpoint = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "endpoint_path": "/new..metrics"
             }
         }
 })";
@@ -164,4 +190,48 @@ TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
     ASSERT_EQ(metricConfig.requestFailGrpcModelInfer, true);
     ASSERT_EQ(metricConfig.requestFailRestModelInfer, true);
     ASSERT_EQ(metricConfig.requestFailRestModelMetadata, true);
+}
+
+TEST_F(MetricsConfigTest, MetricsBadEndpoint) {
+    SetUpConfig(modelMetricsBadEndpoint);
+    ConstructorEnabledModelManager manager;
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    auto modelInstance = manager.findModelInstance(dummyModelName);
+    auto modelConfig = modelInstance->getModelConfig();
+
+    auto metricConfig = modelConfig.getMetricConfig();
+    ASSERT_EQ(metricConfig.endpointsPath, "/new..metrics");
+}
+
+class ModelMetricReporterTest : public ::testing::Test {};
+
+TEST_F(ModelMetricReporterTest, MetricReporterConstructorTest) {
+    MetricRegistry registry;
+    ModelMetricReporter reporter1 = ModelMetricReporter(nullptr, nullptr, "example_pipeline_name", 1);
+    ASSERT_EQ(reporter1.requestFailGrpcGetModelMetadata, nullptr);
+
+    ModelMetricReporter reporter2 = ModelMetricReporter(nullptr, &registry, "example_pipeline_name", 1);
+    auto metrics = registry.collect();
+    ASSERT_EQ(metrics, "");
+    ASSERT_EQ(reporter2.requestFailGrpcGetModelMetadata, nullptr);
+
+    MetricConfig metricConfig;
+    ModelMetricReporter reporter3 = ModelMetricReporter(&metricConfig, &registry, "example_pipeline_name", 1);
+    metrics = registry.collect();
+    ASSERT_EQ(metrics, "");
+    ASSERT_EQ(reporter3.requestFailGrpcGetModelMetadata, nullptr);
+
+    metricConfig.setAllMetricsTo(true);
+    ModelMetricReporter reporter4 = ModelMetricReporter(&metricConfig, &registry, "example_pipeline_name", 1);
+    metrics = registry.collect();
+    ASSERT_EQ(metrics, "");
+    ASSERT_EQ(reporter4.requestFailGrpcGetModelMetadata, nullptr);
+
+    metricConfig.metricsEnabled = true;
+    ModelMetricReporter reporter5 = ModelMetricReporter(&metricConfig, &registry, "example_pipeline_name", 1);
+    metrics = registry.collect();
+    ASSERT_FALSE(metrics == "");
+    ASSERT_TRUE(reporter5.requestFailGrpcGetModelMetadata != nullptr);
 }
