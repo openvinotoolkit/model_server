@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -241,6 +242,7 @@ int Server::startModules(ovms::Config& config) {
         return retCode;
 #endif
 
+    // It is required to have the metrics module, it is used by ServableManagerModule.
     {
         auto module = this->createModule(METRICS_MODULE_NAME);
         std::unique_lock lock(modulesMtx);

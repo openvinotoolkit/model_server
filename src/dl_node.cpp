@@ -54,13 +54,7 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& inferRequest = dlNodeSession.getInferRequest(waitTimeMicroseconds);
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(tensorResults, inferRequest, model, nodeSession.getSessionKey());
-
-    try {
-        INCREMENT_IF_ENABLED(model.getMetricReporter().getInferRequestMetric(sessionMetadata.getContext()));
-    } catch (std::logic_error& e) {
-        SPDLOG_ERROR("Metric error: {}", e.what());
-        return StatusCode::INTERNAL_ERROR;
-    }
+    INCREMENT_IF_ENABLED(model.getMetricReporter().getInferRequestMetric(sessionMetadata.getContext()));
     return status;
 }
 
