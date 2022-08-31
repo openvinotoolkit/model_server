@@ -48,7 +48,7 @@ protected:
     void SetUp() override {
         TestWithTempDir::SetUp();
 
-        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);
+        reporter = std::make_unique<ModelMetricReporter>(nullptr, &this->registry, "example_pipeline_name", 1);
 
         CustomNodeLibraryManager manager;
         ASSERT_EQ(manager.loadLibrary(
@@ -3300,7 +3300,7 @@ public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         Model(name, false, nullptr),
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* config = nullptr) override {
         return modelInstance;
     }
 };
