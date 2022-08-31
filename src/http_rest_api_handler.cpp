@@ -18,7 +18,6 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include <numeric>
 #include <string>
 #include <string_view>
 #include <utility>
