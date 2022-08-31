@@ -37,6 +37,7 @@
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
 #include "server.hpp"
+#include "stringutils.hpp"
 #include "timer.hpp"
 
 using tensorflow::serving::PredictRequest;
@@ -206,21 +207,18 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
 
 Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
     std::stringstream streamData(comma_separated_numbers);
+    std::vector<int> sizes_;
 
     std::string numberString;
     while (std::getline(streamData, numberString, ',')) {
-        int binarySize;
-        try {
-            binarySize = std::stoi(numberString);
-        } catch (const std::invalid_argument& ia) {
-            SPDLOG_ERROR("Invalid argument in binary size string: {}", numberString);
-            return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
-        } catch (const std::out_of_range& oor) {
-            SPDLOG_ERROR("Argument in binary size string out of range: {}", numberString);
+        std::optional<int> binarySize = stoi32(numberString);
+        if(!binarySize.has_value()) {
+            SPDLOG_DEBUG("Invalid argument in binary size string: {}", numberString);
             return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
         }
-        sizes.push_back(binarySize);
+        sizes_.push_back(binarySize.value());
     }
+    sizes = std::move(sizes_);
 
     return StatusCode::OK;
 }
@@ -285,60 +283,62 @@ Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, 
     return StatusCode::OK;
 }
 
+static std::string contentFieldNotEmptyErrorMessage = " contents is not empty. Content field should be empty when using binary inputs extension.";
+
 Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputTensor* input) {
     if (input->datatype() == "FP32") {
         if (input->contents().fp32_contents_size() > 0) {
-            SPDLOG_ERROR("FP32 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("FP32" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT64") {
         if (input->contents().int64_contents_size() > 0) {
-            SPDLOG_ERROR("INT64 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("INT64" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT32") {
         if (input->contents().int_contents_size() > 0) {
-            SPDLOG_ERROR("INT32 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("INT32" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT16") {
         if (input->contents().int_contents_size() > 0) {
-            SPDLOG_ERROR("INT16 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("INT16" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT8") {
         if (input->contents().int_contents_size() > 0) {
-            SPDLOG_ERROR("INT8 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("INT8" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "UINT64") {
         if (input->contents().uint64_contents_size() > 0) {
-            SPDLOG_ERROR("UINT64 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("UINT64" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "UINT32") {
         if (input->contents().uint_contents_size() > 0) {
-            SPDLOG_ERROR("UINT32 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("UINT32" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "UINT16") {
         if (input->contents().uint_contents_size() > 0) {
-            SPDLOG_ERROR("UINT16 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("UINT16" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "UINT8") {
         if (input->contents().uint_contents_size() > 0) {
-            SPDLOG_ERROR("UINT8 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("UINT8" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "FP64") {
         if (input->contents().fp64_contents_size() > 0) {
-            SPDLOG_ERROR("FP64 contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("FP64" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "BYTES") {
         if (input->contents().bytes_contents_size() > 0) {
-            SPDLOG_ERROR("BYTES contents is not empty. Content field should be empty when using binary inputs extension.");
+            SPDLOG_DEBUG("BYTES" + contentFieldNotEmptyErrorMessage);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else {
@@ -356,28 +356,29 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
         if (!status.ok()) {
             return status;
         }
-        if (input->parameters().count("binary_data_size") > 0) {
-            if (input->parameters().at("binary_data_size").parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
-                auto binary_input_size = input->parameters().at("binary_data_size").int64_param();
+        auto binary_data_size_parameter = input->parameters().find("binary_data_size");
+        if(binary_data_size_parameter != input->parameters().end()) {
+            if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
+                auto binary_input_size = binary_data_size_parameter->second.int64_param();
                 if (binary_input_offset + binary_input_size > binary_inputs_size) {
-                    SPDLOG_ERROR("Binary inputs size exceeds provided buffer size {}", binary_inputs_size);
-                    return StatusCode::REST_BINARY_BUFFER_ECEEDED;
+                    SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_inputs_size);
+                    return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
                 }
                 status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
                 if (!status.ok()) {
                     return status;
                 }
                 binary_input_offset += binary_input_size;
-            } else if (input->parameters().at("binary_data_size").parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
+            } else if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
                 std::vector<int> binary_inputs_sizes;
-                status = convertStringToVectorOfSizes(input->parameters().at("binary_data_size").string_param(), binary_inputs_sizes);
+                status = convertStringToVectorOfSizes(binary_data_size_parameter->second.string_param(), binary_inputs_sizes);
                 if (!status.ok()) {
                     return status;
                 }
                 for (auto size : binary_inputs_sizes) {
                     if (binary_input_offset + size > binary_inputs_size) {
-                        SPDLOG_ERROR("Binary inputs size exceeds provided buffor size {}", binary_inputs_size);
-                        return StatusCode::REST_BINARY_BUFFER_ECEEDED;
+                        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_inputs_size);
+                        return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
                     }
                     status = parseBinaryInput(input, size, binary_inputs + binary_input_offset);
                     if (!status.ok()) {
@@ -403,11 +404,12 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
         size_t endOfJson = jsonClosingBracket + 1;
         std::string request(preprocessInferRequest(request_body.substr(0, endOfJson).c_str()));
         google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
-        auto binaryInputsString = request_body.substr(endOfJson, request_body.length());
         auto status = addBinaryInputs(grpc_request, &(request_body[endOfJson]), request_body.length() - endOfJson);
         if (!status.ok()) {
             return status;
         }
+        std::string req;
+        google::protobuf::util::MessageToJsonString(grpc_request, &req);
     } else {
         std::string request(preprocessInferRequest(request_body));
         google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);

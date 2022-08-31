@@ -255,6 +255,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES) {
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
     ASSERT_EQ(grpc_request.inputs()[0].contents().bytes_contents()[0], binaryData);
+    ASSERT_EQ(grpc_request.inputs()[0].contents().bytes_contents_size(), 1);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsINT16) {
@@ -389,7 +390,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsFP64) {
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsBinaryDataAndContentField) {
     std::string binaryData{0x00, 0x01, 0x02, 0x03};
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"data\":[0,1,2,3,4,5,6,7,8,9]}], \"datatype\":\"INT8\",\"parameters\":{\"binary_data_size\":4}}]}";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"data\":[0,1,2,3,4,5,6,7,8,9], \"datatype\":\"INT8\",\"parameters\":{\"binary_data_size\":4}}]}";
     request_body += binaryData;
 
     std::string modelName("dummy");
@@ -408,7 +409,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBufferSmallerThanExpected) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::REST_BINARY_BUFFER_ECEEDED);
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::REST_BINARY_BUFFER_EXCEEDED);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidBinaryDataSizeParameter) {
@@ -459,4 +460,16 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBinaryDataSizeStringParameterInvalid)
 
     ::inference::ModelInferRequest grpc_request;
     ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID);
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsEmptyRequest) {
+    std::string binaryData{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+    std::string request_body = "";
+    request_body += binaryData;
+
+    std::string modelName("dummy");
+    std::string modelVersion("1");
+
+    ::inference::ModelInferRequest grpc_request;
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
 }
