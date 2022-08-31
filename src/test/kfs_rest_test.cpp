@@ -232,7 +232,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8) {
     for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
         ASSERT_EQ(content, i++);
     }
-    ASSERT_EQ(i,4);
+    ASSERT_EQ(i, 4);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES) {
@@ -280,7 +280,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT16) {
     for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
         ASSERT_EQ(content, i++);
     }
-    ASSERT_EQ(i,4);
+    ASSERT_EQ(i, 4);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsINT32) {
@@ -306,7 +306,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT32) {
     for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
         ASSERT_EQ(content, i++);
     }
-    ASSERT_EQ(i,4);
+    ASSERT_EQ(i, 4);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsINT64) {
@@ -332,13 +332,13 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT64) {
     for (auto content : grpc_request.inputs()[0].contents().int64_contents()) {
         ASSERT_EQ(content, i++);
     }
-    ASSERT_EQ(i,4);
+    ASSERT_EQ(i, 4);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsFP32) {
     float values[] = {0.0, 1.0, 2.0, 3.0};
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":16}}]}";
-    request_body.append((char *)values, 16);
+    request_body.append((char*)values, 16);
 
     std::string modelName("dummy");
     std::string modelVersion("1");
@@ -358,13 +358,13 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsFP32) {
     for (auto content : grpc_request.inputs()[0].contents().fp32_contents()) {
         ASSERT_EQ(content, i++);
     }
-    ASSERT_EQ(i,4);
+    ASSERT_EQ(i, 4);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsFP64) {
     double values[] = {0.0, 1.0, 2.0, 3.0};
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"FP64\",\"parameters\":{\"binary_data_size\":32}}]}";
-    request_body.append((char *)values, 32);
+    request_body.append((char*)values, 32);
 
     std::string modelName("dummy");
     std::string modelVersion("1");
@@ -384,7 +384,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsFP64) {
     for (auto content : grpc_request.inputs()[0].contents().fp64_contents()) {
         ASSERT_EQ(content, i++);
     }
-    ASSERT_EQ(i,4);
+    ASSERT_EQ(i, 4);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsBinaryDataAndContentField) {
@@ -446,7 +446,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8BatchSize2) {
     for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
         ASSERT_EQ(content, i++);
     }
-    ASSERT_EQ(i,8);
+    ASSERT_EQ(i, 8);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsBinaryDataSizeStringParameterInvalid) {
