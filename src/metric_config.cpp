@@ -13,7 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+<<<<<<< HEAD
 #include "metric_config.hpp"
+=======
+#include "metrics_config.hpp"
+>>>>>>> 07b76239 (Metrics config init.)
 
 #include <algorithm>
 #include <filesystem>
@@ -35,6 +39,7 @@ namespace ovms {
 // Getting the "monitoring" config as input
 Status MetricConfig::parseMetricsConfig(const rapidjson::Value& v) {
     Status status = StatusCode::OK;
+
     if (v.HasMember("enable")) {
         // if (v.HasMember("enable").isBool())
         metricsEnabled = v["enable"].GetBool();

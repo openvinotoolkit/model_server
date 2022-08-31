@@ -574,6 +574,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     }
     
     const auto itr = configJson.FindMember("model_config_list");
+
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
