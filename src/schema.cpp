@@ -121,7 +121,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 		},
 		"metrics": {
 			"type": "object",
-			"required": ["enable", "endpoint_path"],
+			"required": ["enable"],
 			"properties": {
 				"enable": {
 					"type": "boolean"
