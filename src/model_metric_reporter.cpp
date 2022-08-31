@@ -81,8 +81,8 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
             {"protocol", "kserve"},
             {"method", "modelmetadata"},
             {"interface", "grpc"}});
-    if (metricConfig->requestSuccessGrpcModelStatus)
-        this->requestSuccessGrpcModelStatus = family->addMetric({{"name", modelName},
+    if (metricConfig->requestSuccessGrpcModelReady)
+        this->requestSuccessGrpcModelReady = family->addMetric({{"name", modelName},
             {"protocol", "kserve"},
             {"method", "modelstatus"},
             {"interface", "grpc"}});
@@ -98,8 +98,8 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
             {"protocol", "kserve"},
             {"method", "modelmetadata"},
             {"interface", "rest"}});
-    if (metricConfig->requestSuccessRestModelStatus)
-        this->requestSuccessRestModelStatus = family->addMetric({{"name", modelName},
+    if (metricConfig->requestSuccessRestModelReady)
+        this->requestSuccessRestModelReady = family->addMetric({{"name", modelName},
             {"protocol", "kserve"},
             {"method", "modelstatus"},
             {"interface", "rest"}});
@@ -155,8 +155,8 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
             {"protocol", "kserve"},
             {"method", "modelmetadata"},
             {"interface", "grpc"}});
-    if (metricConfig->requestFailGrpcModelStatus)
-        this->requestFailGrpcModelStatus = family->addMetric({{"name", modelName},
+    if (metricConfig->requestFailGrpcModelReady)
+        this->requestFailGrpcModelReady = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelstatus"},
@@ -173,8 +173,8 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
             {"protocol", "kserve"},
             {"method", "modelmetadata"},
             {"interface", "rest"}});
-    if (metricConfig->requestFailRestModelStatus)
-        this->requestFailRestModelStatus = family->addMetric({{"name", modelName},
+    if (metricConfig->requestFailRestModelReady)
+        this->requestFailRestModelReady = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "kserve"},
             {"method", "modelstatus"},

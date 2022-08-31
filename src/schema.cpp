@@ -127,7 +127,8 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 					"type": "boolean"
 				},
 				"endpoint_path": {
-					"type": "string"
+					"type": "string",
+					"pattern": "\/[a-z]*[A-Z]*[0-9]*"
 				},
 				"metrics_list": {
 					"type": "array",

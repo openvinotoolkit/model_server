@@ -53,19 +53,19 @@ public:
     // KFS
     std::shared_ptr<MetricCounter> requestSuccessGrpcModelInfer;
     std::shared_ptr<MetricCounter> requestSuccessGrpcModelMetadata;
-    std::shared_ptr<MetricCounter> requestSuccessGrpcModelStatus;
+    std::shared_ptr<MetricCounter> requestSuccessGrpcModelReady;
 
     std::shared_ptr<MetricCounter> requestSuccessRestModelInfer;
     std::shared_ptr<MetricCounter> requestSuccessRestModelMetadata;
-    std::shared_ptr<MetricCounter> requestSuccessRestModelStatus;
+    std::shared_ptr<MetricCounter> requestSuccessRestModelReady;
 
     std::shared_ptr<MetricCounter> requestFailGrpcModelInfer;
     std::shared_ptr<MetricCounter> requestFailGrpcModelMetadata;
-    std::shared_ptr<MetricCounter> requestFailGrpcModelStatus;
+    std::shared_ptr<MetricCounter> requestFailGrpcModelReady;
 
     std::shared_ptr<MetricCounter> requestFailRestModelInfer;
     std::shared_ptr<MetricCounter> requestFailRestModelMetadata;
-    std::shared_ptr<MetricCounter> requestFailRestModelStatus;
+    std::shared_ptr<MetricCounter> requestFailRestModelReady;
 
     inline std::shared_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(ExecutionContext& context) {
         if (context.interface == ExecutionContext::Interface::GRPC) {

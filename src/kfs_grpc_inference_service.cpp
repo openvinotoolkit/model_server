@@ -110,9 +110,9 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
         }
         auto status = buildResponse(*pipelineDefinition, response);
         if (status.ok()) {
-            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().requestSuccessGrpcModelStatus);
+            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().requestSuccessGrpcModelReady);
         } else {
-            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().requestFailGrpcModelStatus);
+            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().requestFailGrpcModelReady);
         }
         return status;
     }
@@ -142,9 +142,9 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
     }
     auto status = buildResponse(instance, response);
     if (status.ok()) {
-        INCREMENT_IF_ENABLED(instance->getMetricReporter().requestSuccessGrpcModelStatus);
+        INCREMENT_IF_ENABLED(instance->getMetricReporter().requestSuccessGrpcModelReady);
     } else {
-        INCREMENT_IF_ENABLED(instance->getMetricReporter().requestFailGrpcModelStatus);
+        INCREMENT_IF_ENABLED(instance->getMetricReporter().requestFailGrpcModelReady);
     }
     return status;
 }

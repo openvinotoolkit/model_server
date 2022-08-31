@@ -15,20 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <fstream>
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <tuple>
-#include <unordered_map>
-#include <vector>
-
 #include <rapidjson/document.h>
-
-#include "layout_configuration.hpp"
-#include "model_version_policy.hpp"
-#include "shape.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -61,19 +48,19 @@ public:
     // KFS
     bool requestSuccessGrpcModelInfer;
     bool requestSuccessGrpcModelMetadata;
-    bool requestSuccessGrpcModelStatus;
+    bool requestSuccessGrpcModelReady;
 
     bool requestSuccessRestModelInfer;
     bool requestSuccessRestModelMetadata;
-    bool requestSuccessRestModelStatus;
+    bool requestSuccessRestModelReady;
 
     bool requestFailGrpcModelInfer;
     bool requestFailGrpcModelMetadata;
-    bool requestFailGrpcModelStatus;
+    bool requestFailGrpcModelReady;
 
     bool requestFailRestModelInfer;
     bool requestFailRestModelMetadata;
-    bool requestFailRestModelStatus;
+    bool requestFailRestModelReady;
 
     Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);
@@ -84,6 +71,13 @@ public:
         endpointsPath = "/metrics";
 
         setAllMetricsTo(false);
+    }
+
+    MetricConfig(bool enabled) {
+        metricsEnabled = enabled;
+        endpointsPath = "/metrics";
+
+        setAllMetricsTo(enabled);
     }
 };
 }  // namespace ovms
