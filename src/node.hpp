@@ -25,7 +25,6 @@
 #include <openvino/openvino.hpp>
 
 #include "aliases.hpp"
-#include "execution_context.hpp"
 #include "nodesession.hpp"
 #include "nodesessionresult.hpp"
 #include "pipelineeventqueue.hpp"
@@ -63,10 +62,10 @@ public:
     const std::string& getName() const { return this->nodeName; }
 
     virtual Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) = 0;
-    Status fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs, ExecutionContext& context);
+    Status fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs);
 
 protected:
-    virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context) = 0;
+    virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
     Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
     virtual Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 
