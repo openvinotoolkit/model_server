@@ -59,7 +59,7 @@ public:
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
-    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
+    Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context) override;
 
 private:
     Status fetchResults(TensorWithSourceMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);

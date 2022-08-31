@@ -563,6 +563,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
     Status firstErrorStatus = StatusCode::OK;
     MetricConfig metricConfig;
+
     const auto itr2 = configJson.FindMember("monitoring");
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");

@@ -37,7 +37,7 @@ Status DLNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQu
     return dlNodeSession.execute(notifyEndQueue, WAIT_FOR_STREAM_ID_TIMEOUT_MICROSECONDS, *this);
 }
 
-Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs, ExecutionContext& context) {
     auto& dlNodeSession = static_cast<DLNodeSession&>(nodeSession);
     const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
     SessionResult sessionResults{sessionMetadata, {}};
@@ -54,7 +54,14 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& inferRequest = dlNodeSession.getInferRequest(waitTimeMicroseconds);
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(tensorResults, inferRequest, model, nodeSession.getSessionKey());
-    INCREMENT_IF_ENABLED(model.getMetricReporter().getInferRequestMetric(sessionMetadata.getContext()));
+
+    try {
+        INCREMENT_IF_ENABLED(model.getMetricReporter().getInferRequestMetric(context));
+    } catch (std::logic_error& e) {
+        SPDLOG_ERROR("Metric error: {}", e.what());
+        return StatusCode::INTERNAL_ERROR;
+    }
+
     return status;
 }
 
