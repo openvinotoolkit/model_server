@@ -20,6 +20,7 @@
 
 #include "dlnodesession.hpp"
 #include "logging.hpp"
+#include "metric.hpp"
 #include "modelmanager.hpp"
 #include "ov_utils.hpp"
 #include "ovinferrequestsqueue.hpp"
@@ -53,6 +54,7 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& inferRequest = dlNodeSession.getInferRequest(waitTimeMicroseconds);
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(tensorResults, inferRequest, model, nodeSession.getSessionKey());
+    INCREMENT_IF_ENABLED(model.getMetricReporter().getInferRequestMetric(sessionMetadata.getContext()));
     return status;
 }
 

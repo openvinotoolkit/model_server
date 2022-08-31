@@ -26,10 +26,13 @@
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
+#include "execution_context.hpp"
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
 #include "kfs_grpc_inference_service.hpp"
+#include "metric_module.hpp"
+#include "metric_registry.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "pipelinedefinition.hpp"
@@ -61,6 +64,9 @@ const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)";
 const std::string HttpRestApiHandler::kfs_inferRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))";
+
+const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics)";
+
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
     predictionRegex(predictionRegexExp),
     modelstatusRegex(modelstatusRegexExp),
@@ -69,6 +75,7 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     kfs_modelreadyRegex(kfs_modelreadyRegexExp),
     kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
     kfs_inferRegex(kfs_inferRegexExp),
+    metricsRegex(metricsRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
 
@@ -142,6 +149,9 @@ void HttpRestApiHandler::registerAll() {
     });
     registerHandler(KFS_Infer, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
         return processInferKFSRequest(request_components, response, request_body);
+    });
+    registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+        return processMetrics(request_components, response, request_body);
     });
 }
 void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
@@ -249,6 +259,16 @@ Status HttpRestApiHandler::dispatchToProcessor(
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
+}
+
+Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    auto module = this->ovmsServer.getModule(METRICS_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::INTERNAL_ERROR;  // TODO: Return proper code when metric endpoint is disabled (missing module).
+    }
+    auto metricModule = dynamic_cast<const MetricModule*>(module);
+    response = metricModule->getRegistry().collect();
+    return StatusCode::OK;
 }
 
 Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
@@ -379,6 +399,10 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         }
         if (std::regex_match(request_path, sm, predictionRegex))
             return StatusCode::REST_UNSUPPORTED_METHOD;
+        if (std::regex_match(request_path, sm, metricsRegex)) {
+            requestComponents.type = Metrics;
+            return StatusCode::OK;
+        }
     }
     return StatusCode::REST_INVALID_URL;
 }
@@ -480,6 +504,9 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         modelInstanceUnloadGuard);
 
     if (!status.ok()) {
+        if (modelInstance) {
+            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
+        }
         SPDLOG_WARN("Requested model instance - name: {}, version: {} - does not exist.", modelName, modelVersion.value_or(0));
         return status;
     }
@@ -488,6 +515,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     RestParser requestParser(modelInstance->getInputsInfo());
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
+        modelInstance->getMetricReporter().requestFailRestPredict->increment();
         return status;
     }
     requestOrder = requestParser.getOrder();
@@ -500,6 +528,11 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         requestProto.mutable_model_spec()->mutable_version()->set_value(modelVersion.value());
     }
     status = modelInstance->infer(&requestProto, &responseProto, modelInstanceUnloadGuard);
+    if (status.ok()) {
+        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestSuccessRestPredict);
+    } else {
+        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
+    }
     return status;
 }
 
@@ -564,7 +597,14 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     if (!status.ok()) {
         return status;
     }
-    status = pipelinePtr->execute();
+    status = pipelinePtr->execute(ExecutionContext(
+        ExecutionContext::Interface::REST,
+        ExecutionContext::Method::Predict));
+    if (status.ok()) {
+        INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestSuccessRestPredict);
+    } else {
+        INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestFailRestPredict);
+    }
     return status;
 }
 
@@ -582,7 +622,7 @@ Status HttpRestApiHandler::processModelMetadataRequest(
     if (!status.ok()) {
         return status;
     }
-    status = grpcGetModelMetadataImpl.getModelStatus(&grpc_request, &grpc_response);
+    status = grpcGetModelMetadataImpl.getModelStatus(&grpc_request, &grpc_response, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::GetModelMetadata));
     if (!status.ok()) {
         return status;
     }
@@ -616,7 +656,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
     auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
     // TODO #KFS_CLEANUP
     auto& manager = servableManagerModule->getServableManager();
-    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, manager);
+    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, manager, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::GetModelStatus));
     if (!status.ok()) {
         return status;
     }
@@ -674,7 +714,8 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     }
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
+                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Have separate method for ConfigReload and do not increment
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed. Check server logs for more info.");
         return status;
@@ -698,7 +739,8 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
     Status status;
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
+                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Have separate method for ConfigStatus and do not increment
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed.");
         return status;

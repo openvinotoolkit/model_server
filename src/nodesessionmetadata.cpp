@@ -25,6 +25,17 @@
 
 namespace ovms {
 
+NodeSessionMetadata::NodeSessionMetadata() :
+    context({ExecutionContext::Interface::GRPC, ExecutionContext::Method::Predict}) {}
+
+NodeSessionMetadata::NodeSessionMetadata(ExecutionContext context) :
+    context(context) {}
+
+NodeSessionMetadata::NodeSessionMetadata(const std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>>& details, const std::vector<std::string>& sessionsLevels, ExecutionContext context) :
+    details(details),
+    sessionsLevels(sessionsLevels),
+    context(context) {}
+
 std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const {
     if (nodeName.size() == 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to generate subsession with empty node name");
@@ -37,12 +48,10 @@ std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const 
     if (subsessionSize == 0) {
         return {};
     }
-    std::vector<NodeSessionMetadata> metas(subsessionSize);
-    uint counter = 0;
+    std::vector<NodeSessionMetadata> metas(subsessionSize, *this);
+    uint32_t counter = 0;
     for (auto& meta : metas) {
-        meta.details = this->details;
         meta.details.insert({nodeName, {counter, subsessionSize}});
-        meta.sessionsLevels = this->sessionsLevels;
         meta.sessionsLevels.push_back(nodeName);
         ++counter;
     }
@@ -194,4 +203,7 @@ session_id_t NodeSessionMetadata::getShardId(const std::set<std::string>& collap
     }
     return shardId;
 }
+
+ExecutionContext NodeSessionMetadata::getContext() const { return this->context; }
+
 }  // namespace ovms

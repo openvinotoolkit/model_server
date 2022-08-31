@@ -16,6 +16,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -24,6 +25,7 @@
 #include "tensorflow_serving/apis/model_service.pb.h"
 #pragma GCC diagnostic pop
 
+#include "../execution_context.hpp"
 #include "../model_service.hpp"
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
@@ -63,9 +65,9 @@ using MyTypes = ::testing::Types<
 
 TYPED_TEST_SUITE(ModelServiceTest, MyTypes);
 
-void executeModelStatus(const TFSGetModelStatusRequest& modelStatusRequest, TFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ovms::StatusCode statusCode = StatusCode::OK) {
+void executeModelStatus(const TFSGetModelStatusRequest& modelStatusRequest, TFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
     modelStatusResponse.Clear();
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&modelStatusRequest, &modelStatusResponse, manager), statusCode);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&modelStatusRequest, &modelStatusResponse, manager, context), statusCode);
 }
 
 void setModelStatusRequest(TFSGetModelStatusRequest& modelStatusRequest, const std::string& name, int version) {
@@ -94,7 +96,7 @@ void verifyModelStatusResponse(const KFSGetModelStatusResponse& modelStatusRespo
     ASSERT_TRUE(modelStatusResponse.ready());
 }
 
-void executeModelStatus(const KFSGetModelStatusRequest& modelStatusRequest, KFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ovms::StatusCode statusCode = StatusCode::OK) {
+void executeModelStatus(const KFSGetModelStatusRequest& modelStatusRequest, KFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
     modelStatusResponse.Clear();
     ASSERT_EQ(KFSInferenceServiceImpl::getModelReady(&modelStatusRequest, &modelStatusResponse, manager), statusCode);
 }
@@ -107,14 +109,14 @@ void setModelStatusRequest(KFSGetModelStatusRequest& modelStatusRequest, const s
 }
 
 TYPED_TEST(ModelServiceTest, empty_request) {
-    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, StatusCode::MODEL_NAME_MISSING);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_CONTEXT, StatusCode::MODEL_NAME_MISSING);
 }
 
 TYPED_TEST(ModelServiceTest, single_version_model) {
     const std::string name = "dummy";
     auto version = 1;  // existing version
     setModelStatusRequest(this->modelStatusRequest, name, version);
-    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_CONTEXT);
     verifyModelStatusResponse(this->modelStatusResponse);
 }
 
@@ -169,19 +171,19 @@ TYPED_TEST(ModelServiceTest, pipeline) {
     // existing version
     int version = 1;
     setModelStatusRequest(this->modelStatusRequest, name, version);
-    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_CONTEXT);
     verifyModelStatusResponse(this->modelStatusResponse);
 
     // No version specified - with 0 version value is not set in helper function
     version = 0;
     setModelStatusRequest(this->modelStatusRequest, name, version);
-    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_CONTEXT);
     verifyModelStatusResponse(this->modelStatusResponse);
 
     // Any version
     version = 5;
     setModelStatusRequest(this->modelStatusRequest, name, version);
-    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_CONTEXT);
     verifyModelStatusResponse(this->modelStatusResponse);
 }
 
@@ -189,21 +191,21 @@ TYPED_TEST(ModelServiceTest, non_existing_model) {
     const std::string name = "non_existing_model";
     int version = 0;
     setModelStatusRequest(this->modelStatusRequest, name, version);
-    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, StatusCode::MODEL_NAME_MISSING);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_CONTEXT, StatusCode::MODEL_NAME_MISSING);
 }
 
 TYPED_TEST(ModelServiceTest, non_existing_version) {
     const std::string name = "dummy";
     int version = 989464;
     setModelStatusRequest(this->modelStatusRequest, name, version);
-    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, StatusCode::MODEL_VERSION_MISSING);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_CONTEXT, StatusCode::MODEL_VERSION_MISSING);
 }
 
 TYPED_TEST(ModelServiceTest, negative_version) {
     const std::string name = "dummy";
     int version = -1;
     setModelStatusRequest(this->modelStatusRequest, name, version);
-    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, StatusCode::MODEL_VERSION_MISSING);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_CONTEXT, StatusCode::MODEL_VERSION_MISSING);
 }
 
 TEST(RestModelStatus, CreateGrpcRequestVersionSet) {
@@ -268,6 +270,7 @@ const ovms::ModelConfig DUMMY_MODEL_WITH_ONLY_NAME_CONFIG{
 class ModelServiceDummyWith2Versions : public ::testing::Test {
 protected:
     ConstructorEnabledModelManager manager;
+
     void SetUp() override {
         const ::testing::TestInfo* const test_info =
             ::testing::UnitTest::GetInstance()->current_test_info();
@@ -305,7 +308,7 @@ TEST_F(ModelServiceDummyWith2Versions, all_versions) {
     const std::string name = "dummy";
     int version = 0;
     setModelStatusRequest(modelStatusRequest, name, version);
-    executeModelStatus(modelStatusRequest, modelStatusResponse, this->manager);
+    executeModelStatus(modelStatusRequest, modelStatusResponse, this->manager, DEFAULT_CONTEXT);
     verifyModelStatusResponse(modelStatusResponse, {1, 2});
 }
 
@@ -313,7 +316,7 @@ TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versio
     auto config = DUMMY_MODEL_WITH_ONLY_NAME_CONFIG;
     this->manager.reloadModelWithVersions(config);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, this->manager);
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, this->manager, DEFAULT_CONTEXT);
     EXPECT_EQ(modelsStatuses.size(), 1);
     EXPECT_EQ(modelsStatuses.begin()->second.model_version_status_size(), 0);
 
@@ -322,7 +325,7 @@ TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versio
     config.setModelVersionPolicy(std::make_shared<AllModelVersionPolicy>());
     this->manager.reloadModelWithVersions(config);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, this->manager);
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, this->manager, DEFAULT_CONTEXT);
 
     ASSERT_EQ(modelsStatusesAfterReload.size(), 1);
     verifyModelStatusResponse(modelsStatusesAfterReload.begin()->second, {1, 2});
@@ -333,13 +336,13 @@ using TFSModelServiceTest = ModelServiceTest<TFSGetModelStatusInterface>;
 
 TEST_F(TFSModelServiceTest, getAllModelsStatuses_two_models_with_one_versions) {
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, this->manager);
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, this->manager, DEFAULT_CONTEXT);
     verifyModelStatusResponse(modelsStatuses.begin()->second);
 
     auto config = SUM_MODEL_CONFIG;
     this->manager.reloadModelWithVersions(config);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, this->manager);
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, this->manager, DEFAULT_CONTEXT);
     ASSERT_EQ(modelsStatusesAfterReload.size(), 2);
     auto dummyModelStatus = modelsStatusesAfterReload.find("dummy");
     auto sumModelStatus = modelsStatusesAfterReload.find("sum");
@@ -366,14 +369,14 @@ TEST_F(TFSModelServiceTest, getAllModelsStatuses_one_model_one_version) {
     auto config = DUMMY_MODEL_WITH_ONLY_NAME_CONFIG;
     manager.reloadModelWithVersions(config);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, DEFAULT_CONTEXT);
     EXPECT_EQ(modelsStatuses.size(), 1);
     EXPECT_EQ(modelsStatuses.begin()->second.model_version_status_size(), 0);
 
     config = DUMMY_MODEL_CONFIG;
     manager.reloadModelWithVersions(config);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, manager);
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, manager, DEFAULT_CONTEXT);
 
     ASSERT_EQ(modelsStatusesAfterReload.size(), 1);
     verifyModelStatusResponse(modelsStatusesAfterReload.begin()->second);

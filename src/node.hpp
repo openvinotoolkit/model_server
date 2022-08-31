@@ -93,8 +93,9 @@ public:
 
     static void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs);
 
-protected:
     NodeSession* getNodeSession(const NodeSessionMetadata& metadata);
+
+protected:
     NodeSession& getNodeSession(const session_key_t& sessionKey) const;
     virtual std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
 };

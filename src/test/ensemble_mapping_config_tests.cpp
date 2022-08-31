@@ -19,9 +19,11 @@
 #include <gtest/gtest.h>
 
 #include "../entry_node.hpp"
+#include "../execution_context.hpp"
 #include "../exit_node.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../kfs_grpc_inference_service.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelmanager.hpp"
 #include "../pipeline.hpp"
@@ -106,7 +108,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     // Execute pipeline
     factory.create(pipeline, "pipeline", &request, &response, managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     // Compare response
     ASSERT_EQ(response.outputs_size(), 1);
@@ -299,7 +301,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
 
     // Execute pipeline
     pd.create(pipeline, &request, &response, managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     // Compare response
     ASSERT_EQ(response.outputs_size(), 1);

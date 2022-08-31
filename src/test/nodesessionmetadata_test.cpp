@@ -28,16 +28,17 @@ using testing::Not;
 using testing::Return;
 
 class NodeSessionMetadataTest : public ::testing::Test {
-    NodeSessionMetadata meta1;
+protected:
+    ExecutionContext context{ExecutionContext::Interface::GRPC, ExecutionContext::Method::Predict};
 };
 
 TEST_F(NodeSessionMetadataTest, GenerateSessionKeyWhenNoSubsessions) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     EXPECT_EQ(meta.getSessionKey(), "");
 }
 
 TEST_F(NodeSessionMetadataTest, GenerateSubsession) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto demultiplexedMetas = meta.generateSubsessions("request", 2);
     ASSERT_EQ(demultiplexedMetas.size(), 2);
     EXPECT_EQ(demultiplexedMetas[0].getSessionKey(), "request_0");
@@ -47,10 +48,10 @@ TEST_F(NodeSessionMetadataTest, GenerateSubsession) {
 TEST_F(NodeSessionMetadataTest, GenerateTwoLevelsOfSubsession) {
     const uint firstLevelDemultiplexSize = 3;
     const uint secondLevelDemultiplexSize = 2;
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto demultiplexedMetas = meta.generateSubsessions("request", firstLevelDemultiplexSize);
     ASSERT_EQ(demultiplexedMetas.size(), firstLevelDemultiplexSize);
-    std::vector<NodeSessionMetadata> secondLevelMetas(firstLevelDemultiplexSize * secondLevelDemultiplexSize);
+    std::vector<NodeSessionMetadata> secondLevelMetas(firstLevelDemultiplexSize * secondLevelDemultiplexSize, NodeSessionMetadata{context});
     for (size_t demMetaId = 0; demMetaId != demultiplexedMetas.size(); ++demMetaId) {
         auto newLevelMetas = demultiplexedMetas[demMetaId].generateSubsessions("2ndDemultiplexer", secondLevelDemultiplexSize);
         std::move(newLevelMetas.begin(), newLevelMetas.end(), secondLevelMetas.begin() + demMetaId * secondLevelDemultiplexSize);
@@ -71,7 +72,7 @@ TEST_F(NodeSessionMetadataTest, GenerateThreeLevelsOfSubsession) {
     const uint firstLevelDemultiplexSize = 3;
     const uint secondLevelDemultiplexSize = 2;
     const uint thirdLevelDemultiplexSize = 4;
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto demultiplexedMetaLev3 = meta
                                      .generateSubsessions("request", firstLevelDemultiplexSize)[2]
                                      .generateSubsessions("extract1st", secondLevelDemultiplexSize)[0]
@@ -83,18 +84,18 @@ TEST_F(NodeSessionMetadataTest, GenerateThreeLevelsOfSubsession) {
 }
 
 TEST_F(NodeSessionMetadataTest, GenerateSubsessionWithEmptyNameShouldThrow) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     EXPECT_THROW(meta.generateSubsessions("", 3), std::logic_error);
 }
 
 TEST_F(NodeSessionMetadataTest, CanGenerateEmptySubsession) {
-    NodeSessionMetadata startMeta;
+    NodeSessionMetadata startMeta{context};
     auto meta = startMeta.generateSubsessions("someName", 0);
     EXPECT_EQ(meta.size(), 0) << meta[0].getSessionKey();
 }
 
 TEST_F(NodeSessionMetadataTest, GenerateTwoSubsessionsWithTheSameNameShouldThrow) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto newMetas = meta.generateSubsessions("request", 1);
     ASSERT_EQ(newMetas.size(), 1);
     EXPECT_THROW(newMetas[0].generateSubsessions("request", 12), std::logic_error);
@@ -104,7 +105,7 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1Level) {
     const uint firstLevelDemultiplexSize = 3;
     const uint secondLevelDemultiplexSize = 2;
     const uint thirdLevelDemultiplexSize = 4;
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto demultiplexedMetaLev3 = meta
                                      .generateSubsessions("request", firstLevelDemultiplexSize)[2]
                                      .generateSubsessions("extract1st", secondLevelDemultiplexSize)[0]
@@ -113,7 +114,7 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1Level) {
     ASSERT_THAT(hash, HasSubstr("request_2"));
     ASSERT_THAT(hash, HasSubstr("extract1st_0"));
     ASSERT_THAT(hash, HasSubstr("extract2nd_2"));
-    NodeSessionMetadata metaCollapsedOnExtract1st;
+    NodeSessionMetadata metaCollapsedOnExtract1st{context};
     CollapseDetails collapsingDetails;
     std::tie(metaCollapsedOnExtract1st, collapsingDetails) = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract2nd"});
     auto hashCollapsed = metaCollapsedOnExtract1st.getSessionKey();
@@ -133,7 +134,7 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1LevelNotInLIFOOrderShouldThro
     const uint firstLevelDemultiplexSize = 3;
     const uint secondLevelDemultiplexSize = 2;
     const uint thirdLevelDemultiplexSize = 4;
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto demultiplexedMetaLev3 = meta
                                      .generateSubsessions("request", firstLevelDemultiplexSize)[2]
                                      .generateSubsessions("extract1st", secondLevelDemultiplexSize)[0]
@@ -142,7 +143,7 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1LevelNotInLIFOOrderShouldThro
     ASSERT_THAT(hash, HasSubstr("request_2"));
     ASSERT_THAT(hash, HasSubstr("extract1st_0"));
     ASSERT_THAT(hash, HasSubstr("extract2nd_2"));
-    NodeSessionMetadata metaCollapsedOnExtract1st;
+    NodeSessionMetadata metaCollapsedOnExtract1st{context};
     CollapseDetails collapsingDetails;
     EXPECT_THROW(demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st"}), std::logic_error);
 }
@@ -151,7 +152,7 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsessions2LevelsAtOnce) {
     const uint firstLevelDemultiplexSize = 13;
     const uint secondLevelDemultiplexSize = 42;
     const uint thirdLevelDemultiplexSize = 666;
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto demultiplexedMetaLev3 = meta
                                      .generateSubsessions("request", firstLevelDemultiplexSize)[12]
                                      .generateSubsessions("extract1st", secondLevelDemultiplexSize)[32]
@@ -161,7 +162,7 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsessions2LevelsAtOnce) {
     ASSERT_THAT(hash, HasSubstr("extract1st_32"));
     ASSERT_THAT(hash, HasSubstr("extract2nd_512"));
 
-    NodeSessionMetadata metaCollapsed;
+    NodeSessionMetadata metaCollapsed{context};
     CollapseDetails collapsingDetails;
     std::tie(metaCollapsed, collapsingDetails) = demultiplexedMetaLev3.getCollapsedSessionMetadata({"extract1st", "extract2nd"});
     auto hashCollapsed = metaCollapsed.getSessionKey();
@@ -177,20 +178,20 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsessions2LevelsAtOnce) {
 }
 
 TEST_F(NodeSessionMetadataTest, CollapsingNonExistingSubsessionShouldThrow) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto subsessionMeta = meta.generateSubsessions("request", 2)[0];
     EXPECT_THROW(subsessionMeta.getCollapsedSessionMetadata({"NonExistingSubsessionName"}), std::logic_error);
 }
 
 TEST_F(NodeSessionMetadataTest, CollapsingManySubsessionsButOneNonExistingShouldThrow) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto subsessionMeta = meta.generateSubsessions("request", 2)[0]
                               .generateSubsessions("anotherSession", 5)[1];
     EXPECT_THROW(subsessionMeta.getCollapsedSessionMetadata({"anotherSession", "NonExistingSubsessionName"}), std::logic_error);
 }
 
 TEST_F(NodeSessionMetadataTest, GenerateCollapsedSubsessionKey) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto subsessionMeta = meta.generateSubsessions("request", 2)[0]
                               .generateSubsessions("anotherSession", 5)[1];
     auto hash = subsessionMeta.getSessionKey({"anotherSession"});
@@ -199,7 +200,7 @@ TEST_F(NodeSessionMetadataTest, GenerateCollapsedSubsessionKey) {
 }
 
 TEST_F(NodeSessionMetadataTest, GenerateCollapsedSeveralSubsessionsAtOnceKey) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto subsessionMeta = meta.generateSubsessions("request", 2)[0]
                               .generateSubsessions("anotherSession", 5)[1]
                               .generateSubsessions("yetAnotherSession", 3)[2];
@@ -210,26 +211,26 @@ TEST_F(NodeSessionMetadataTest, GenerateCollapsedSeveralSubsessionsAtOnceKey) {
 }
 
 TEST_F(NodeSessionMetadataTest, GenerateCollapsedSubsessionKeyShouldThrowWhenNonExistingSubsession) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto subsessionMeta = meta.generateSubsessions("request", 2)[1];
     EXPECT_THROW(subsessionMeta.getSessionKey({"NonExistingSubsession"}), std::logic_error);
 }
 
 TEST_F(NodeSessionMetadataTest, GenerateCollapsedSeveralSubsessionKeyShouldThrowWhenJustOneNonExisting) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto subsessionMeta = meta.generateSubsessions("request", 2)[1]
                               .generateSubsessions("anotherSession", 5)[1];
     EXPECT_THROW(subsessionMeta.getSessionKey({"anotherSession", "NonExistingSubsession"}), std::logic_error);
 }
 
 TEST_F(NodeSessionMetadataTest, ReturnSubsessionSize) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto subsessionMeta = meta.generateSubsessions("request", 5)[0];
     EXPECT_EQ(subsessionMeta.getSubsessionSize("request"), 5);
 }
 
 TEST_F(NodeSessionMetadataTest, ReturnSubsessionsSizeForAllLevels) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto subsessionMeta = meta.generateSubsessions("request", 5)[0]
                               .generateSubsessions("extract1", 4)[0]
                               .generateSubsessions("extract2", 3)[0]
@@ -241,17 +242,17 @@ TEST_F(NodeSessionMetadataTest, ReturnSubsessionsSizeForAllLevels) {
 }
 
 TEST_F(NodeSessionMetadataTest, GetSubsessionSizeShouldThrowWhenNonExistingSubsession) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     auto subsessionMeta = meta.generateSubsessions("request", 5)[0];
     EXPECT_THROW(subsessionMeta.getSubsessionSize("nonExisting"), std::logic_error);
 }
 
 TEST_F(NodeSessionMetadataTest, GetShardIdNoSubsession) {
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{context};
     EXPECT_EQ(meta.getShardId(), 0);
 }
 TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevel) {
-    NodeSessionMetadata metaStart;
+    NodeSessionMetadata metaStart{context};
     uint subsessionSize = 13;
     const std::string subsessionName = "subsession";
     auto subsessions = metaStart.generateSubsessions(subsessionName, subsessionSize);
@@ -262,7 +263,7 @@ TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevel) {
 }
 
 TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevelCollapsing) {
-    NodeSessionMetadata metaStart;
+    NodeSessionMetadata metaStart{context};
     uint subsessionSize = 13;
     const std::string subsessionName = "subsession";
     auto subsessions = metaStart.generateSubsessions(subsessionName, subsessionSize);
@@ -273,7 +274,7 @@ TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevelCollapsing) {
 }
 
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevels) {
-    NodeSessionMetadata metaStart;
+    NodeSessionMetadata metaStart{context};
     uint subsessionSize1st = 13;
     uint subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
@@ -286,7 +287,7 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevels) {
 }
 
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1) {
-    NodeSessionMetadata metaStart;
+    NodeSessionMetadata metaStart{context};
     uint subsessionSize1st = 13;
     uint subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
@@ -299,7 +300,7 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1) {
 }
 
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1NotInOrderShouldThrow) {
-    NodeSessionMetadata metaStart;
+    NodeSessionMetadata metaStart{context};
     uint subsessionSize1st = 13;
     uint subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
@@ -312,7 +313,7 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1NotInOrderSh
 }
 
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse2) {
-    NodeSessionMetadata metaStart;
+    NodeSessionMetadata metaStart{context};
     uint subsessionSize1st = 13;
     uint subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
@@ -325,7 +326,7 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse2) {
     }
 }
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse3ShouldThrow) {
-    NodeSessionMetadata metaStart;
+    NodeSessionMetadata metaStart{context};
     uint subsessionSize1st = 13;
     uint subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
@@ -339,7 +340,7 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse3ShouldThrow)
 }
 
 TEST_F(NodeSessionMetadataTest, GetShardId4SubsessionLevelsCollapse3) {
-    NodeSessionMetadata metaStart;
+    NodeSessionMetadata metaStart{context};
     uint subsessionSize1 = 13;
     uint subsessionSize2 = 9;
     uint subsessionSize3 = 7;
@@ -362,7 +363,7 @@ TEST_F(NodeSessionMetadataTest, GetShardId4SubsessionLevelsCollapse3) {
 }
 
 TEST_F(NodeSessionMetadataTest, GetShardId4SubsessionLevelsCollapse1) {
-    NodeSessionMetadata metaStart;
+    NodeSessionMetadata metaStart{context};
     uint subsessionSize1 = 13;
     uint subsessionSize2 = 9;
     uint subsessionSize3 = 7;

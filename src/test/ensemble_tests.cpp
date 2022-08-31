@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdio>
+#include <memory>
 #include <sstream>
 
 #include <gmock/gmock.h>
@@ -26,6 +27,8 @@
 #include "../exit_node.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
+#include "../metric_registry.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../pipeline.hpp"
@@ -58,6 +61,8 @@ public:
         config = DUMMY_MODEL_CONFIG;
         config.setNireq(NIREQ);
 
+        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);
+
         // Prepare request
         prepareRequest(bs1requestData, request, customPipelineInputName);
         requestData = bs1requestData;
@@ -88,6 +93,8 @@ public:
     ModelConfig config;
     RequestType request;
     ResponseType response;
+    MetricRegistry registry;
+    std::unique_ptr<ModelMetricReporter> reporter;
 
     std::string dummyModelName = "dummy";
     std::optional<model_version_t> requestedModelVersion{std::nullopt};
@@ -119,6 +126,8 @@ protected:
         // Prepare manager
         config = DUMMY_MODEL_CONFIG;
         config.setNireq(NIREQ);
+
+        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);
 
         // Prepare request
         prepareRequest(bs1requestData, request, customPipelineInputName);
@@ -203,6 +212,8 @@ protected:
 
     PredictRequest request;
     PredictResponse response;
+    MetricRegistry registry;
+    std::unique_ptr<ModelMetricReporter> reporter;
 
     std::string dummyModelName = "dummy";
     std::optional<model_version_t> requestedModelVersion{std::nullopt};
@@ -234,7 +245,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
     auto model_node = std::make_unique<DLNode>("dummy_node", this->dummyModelName, this->requestedModelVersion, managerWithDummyModel);
     const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
 
@@ -242,7 +253,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
     this->checkDummyResponse(dummySeriallyConnectedCount);
 }
@@ -283,7 +294,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMat
         auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", this->requestedModelVersion, managerWithDummyModel);
         const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
         auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
-        Pipeline pipeline(*input_node, *output_node);
+        Pipeline pipeline(*input_node, *output_node, *this->reporter);
         pipeline.connect(*input_node, *model_node_A, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
@@ -293,7 +304,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMat
         pipeline.push(std::move(model_node_B));
         pipeline.push(std::move(output_node));
 
-        ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+        ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
         checkIncrement4DimResponse<float>(this->customPipelineOutputName, std::vector<float>{7.0, 8.0, 17.0, 18.0}, this->request, this->response, {2, 2});
     }
 
@@ -308,7 +319,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMat
         auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", this->requestedModelVersion, managerWithDummyModel);
         const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
         auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
-        Pipeline pipeline(*input_node, *output_node);
+        Pipeline pipeline(*input_node, *output_node, *this->reporter);
         pipeline.connect(*input_node, *model_node_A, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
@@ -318,7 +329,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMat
         pipeline.push(std::move(model_node_B));
         pipeline.push(std::move(output_node));
 
-        ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+        ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
     }
 
     // 2x1 not passing due to not matched dummy_B (but matching dummy_A)
@@ -332,7 +343,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMat
         auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", this->requestedModelVersion, managerWithDummyModel);
         const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
         auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
-        Pipeline pipeline(*input_node, *output_node);
+        Pipeline pipeline(*input_node, *output_node, *this->reporter);
         pipeline.connect(*input_node, *model_node_A, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
@@ -342,7 +353,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMat
         pipeline.push(std::move(model_node_B));
         pipeline.push(std::move(output_node));
 
-        ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+        ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
     }
 }
 
@@ -382,7 +393,7 @@ TEST_F(EnsembleFlowTest, TwoInnerNodesConnectedShapeRangeNotMatching) {
     auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", requestedModelVersion, managerWithDummyModel);
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node_A, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -392,7 +403,7 @@ TEST_F(EnsembleFlowTest, TwoInnerNodesConnectedShapeRangeNotMatching) {
     pipeline.push(std::move(model_node_B));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
 }
 
 class EnsembleFlowValidationTest : public EnsembleFlowTest {
@@ -403,7 +414,7 @@ public:
         auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
         const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
         auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
-        auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+        auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node, *this->reporter);
         pipeline->connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline->connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
@@ -419,7 +430,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelValid) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 }
 
 TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorNumberOfInputs) {
@@ -431,7 +442,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorNumberOfInputs)
     auto& proto2 = (*request.mutable_inputs())["input2"];
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_INPUTS);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_NO_OF_INPUTS);
     proto1.Clear();
     proto2.Clear();
 }
@@ -444,7 +455,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorMissingInput) {
     auto& proto1 = (*request.mutable_inputs())["input1"];
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_MISSING_INPUT);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_MISSING_INPUT);
     proto1.Clear();
 }
 
@@ -458,7 +469,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorShapeValueNegat
     proto1.mutable_tensor_shape()->add_dim()->set_size(-10);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
 }
 
 TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputWrongNumberOfShapeDimensions) {
@@ -472,7 +483,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputWron
     proto1.mutable_tensor_shape()->add_dim()->set_size(1);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
 TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputBatchSizeMismatch) {
@@ -485,7 +496,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputBatc
     proto1.mutable_tensor_shape()->add_dim()->set_size(2);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_BATCH_SIZE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_BATCH_SIZE);
 }
 
 TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorPrecisionMismatch) {
@@ -499,7 +510,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorPrecisionMismat
     proto1.set_dtype(tensorflow::DataType::DT_INT32);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_PRECISION);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_PRECISION);
 }
 
 TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidNumberOfShapeDimensions) {
@@ -514,7 +525,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidNumberOf
     proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
 TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidBatchSize) {
@@ -528,7 +539,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidBatchSiz
     proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_BATCH_SIZE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_BATCH_SIZE);
 }
 
 TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidShape) {
@@ -542,7 +553,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidShape) {
     proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
 }
 
 TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidTensorContentSize) {
@@ -558,7 +569,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidTensorCo
     proto1.mutable_tensor_content()->assign((char*)data.data(), data.size() * sizeof(float));
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_CONTENT_SIZE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_CONTENT_SIZE);
 }
 
 class EnsembleFlowValidationShapeRangeTest : public EnsembleFlowValidationTest {
@@ -586,7 +597,7 @@ TEST_F(EnsembleFlowValidationShapeRangeTest, DummyModelValid) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 }
 
 TEST_F(EnsembleFlowValidationShapeRangeTest, DummyModelProtoValidationErrorInvalidBatchSize) {
@@ -600,7 +611,7 @@ TEST_F(EnsembleFlowValidationShapeRangeTest, DummyModelProtoValidationErrorInval
     proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_BATCH_SIZE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_BATCH_SIZE);
 }
 
 TEST_F(EnsembleFlowValidationShapeRangeTest, DummyModelProtoValidationErrorInvalidShape) {
@@ -614,7 +625,7 @@ TEST_F(EnsembleFlowValidationShapeRangeTest, DummyModelProtoValidationErrorInval
     proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
 }
 
 class EnsembleFlowValidationShapeAnyTest : public EnsembleFlowValidationTest {
@@ -642,7 +653,7 @@ TEST_F(EnsembleFlowValidationShapeAnyTest, DummyModelValid) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 }
 
 TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
@@ -691,7 +702,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
@@ -699,7 +710,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 
@@ -742,7 +753,7 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
         dummy_nodes[i] = std::make_unique<DLNode>("dummy_node_" + std::to_string(i), dummyModelName, requestedModelVersion, managerWithDummyModel);
     }
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *(dummy_nodes[0]), {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*(dummy_nodes[N - 1]), *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
     for (int i = 0; i < N - 1; i++) {
@@ -757,7 +768,7 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
 
     timer.stop("prepare pipeline");
     timer.start("pipeline::execute");
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     timer.stop("pipeline::execute");
 
     timer.start("compare results");
@@ -803,7 +814,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeAny) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -812,7 +823,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeAny) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     const int seriallyConnectedDummyModels = 1;
     checkDummyResponse(seriallyConnectedDummyModels, batchSize);
 }
@@ -853,7 +864,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeRange) {
         const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
         auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-        Pipeline pipeline(*input_node, *output_node);
+        Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
         pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -862,7 +873,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeRange) {
         pipeline.push(std::move(model_node));
         pipeline.push(std::move(output_node));
 
-        ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+        ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
         const int seriallyConnectedDummyModels = 1;
         checkDummyResponse(seriallyConnectedDummyModels, batchSize);
     }
@@ -878,7 +889,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeRange) {
         const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
         auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-        Pipeline pipeline(*input_node, *output_node);
+        Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
         pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -887,7 +898,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeRange) {
         pipeline.push(std::move(model_node));
         pipeline.push(std::move(output_node));
 
-        ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_BATCH_SIZE);
+        ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::INVALID_BATCH_SIZE);
     }
 }
 
@@ -923,7 +934,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeAny) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -932,7 +943,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeAny) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
     const auto& output_proto = response.outputs().at(customPipelineOutputName);
@@ -985,7 +996,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeRange) {
         const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
         auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-        Pipeline pipeline(*input_node, *output_node);
+        Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
         pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -994,7 +1005,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeRange) {
         pipeline.push(std::move(model_node));
         pipeline.push(std::move(output_node));
 
-        ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+        ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
 
         ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
         const auto& output_proto = response.outputs().at(customPipelineOutputName);
@@ -1023,7 +1034,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeRange) {
         const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
         auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-        Pipeline pipeline(*input_node, *output_node);
+        Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
         pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1032,7 +1043,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeRange) {
         pipeline.push(std::move(model_node));
         pipeline.push(std::move(output_node));
 
-        ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+        ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
     }
 }
 
@@ -1086,7 +1097,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchAndShapeSetToAny) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1095,7 +1106,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchAndShapeSetToAny) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
 
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
     const auto& output_proto = response.outputs().at(customPipelineOutputName);
@@ -1167,7 +1178,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchAndShapeSetToRange) {
         const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
         auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-        Pipeline pipeline(*input_node, *output_node);
+        Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
         pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1176,7 +1187,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchAndShapeSetToRange) {
         pipeline.push(std::move(model_node));
         pipeline.push(std::move(output_node));
 
-        ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
+        ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
 
         ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
         const auto& output_proto = response.outputs().at(customPipelineOutputName);
@@ -1206,7 +1217,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchAndShapeSetToRange) {
         const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
         auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-        Pipeline pipeline(*input_node, *output_node);
+        Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
         pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1215,7 +1226,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchAndShapeSetToRange) {
         pipeline.push(std::move(model_node));
         pipeline.push(std::move(output_node));
 
-        ASSERT_EQ(pipeline.execute(), ovms::StatusCode::INVALID_SHAPE);
+        ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), ovms::StatusCode::INVALID_SHAPE);
     }
 }
 
@@ -1256,7 +1267,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchSize) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, outputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1265,7 +1276,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchSize) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     const int seriallyConnectedDummyModels = 1;
     checkDummyResponse(seriallyConnectedDummyModels, batchSize);
 }
@@ -1305,7 +1316,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1314,7 +1325,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
     const auto& output_proto = response.outputs().at(customPipelineOutputName);
@@ -1383,7 +1394,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchAndShape) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1392,7 +1403,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchAndShape) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
 
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
     const auto& output_proto = response.outputs().at(customPipelineOutputName);
@@ -1464,7 +1475,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape_RequestHasDiff
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1473,7 +1484,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape_RequestHasDiff
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
 
     const int seriallyConnectedDummyModels = 1;
     checkDummyResponse(seriallyConnectedDummyModels, BATCH_SIZE);
@@ -1510,7 +1521,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
                 Layout{"NC"}));
     }
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     std::unique_ptr<DLNode> dummy_nodes[N];
 
     for (int i = 0; i < N; i++) {
@@ -1539,7 +1550,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
         proto.mutable_tensor_shape()->add_dim()->set_size(10);
     }
-    ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
     for (int i = 0; i < N; i++) {
         ASSERT_EQ(response.outputs().count(customPipelineOutputName + std::to_string(i)), 1);
     }
@@ -1634,7 +1645,7 @@ TEST_F(EnsembleFlowTest, OrderOfScheduling) {
     auto node_2 = std::make_unique<DLNodeDeferred>("dummy_node_2", dummyModelName, requestedModelVersion, managerWithDummyModel, order);
     auto node_3 = std::make_unique<DLNodeNext>("dummy_node_3", dummyModelName, requestedModelVersion, managerWithDummyModel, order);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *node_1, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
 
@@ -1651,7 +1662,7 @@ TEST_F(EnsembleFlowTest, OrderOfScheduling) {
     pipeline.push(std::move(node_2));
     pipeline.push(std::move(node_3));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     EXPECT_THAT(order, ElementsAre(
                            1,    // try to schedule node_1 with success
                            2,    // try to schedule node_2, defer (with order ticket #1)
@@ -1679,7 +1690,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeSetInputsMissingInput) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}, {"NON_EXISTING_INPUT", "REQUIRED_IN_THEORY_OUTPUT"}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1688,7 +1699,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeSetInputsMissingInput) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    EXPECT_EQ(pipeline.execute(), ovms::StatusCode::INVALID_MISSING_INPUT);
+    EXPECT_EQ(pipeline.execute(DEFAULT_CONTEXT), ovms::StatusCode::INVALID_MISSING_INPUT);
 }
 
 TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
@@ -1705,7 +1716,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, std::string(DUMMY_MODEL_INPUT_NAME) + "_NON_EXISTING_INPUT_NAME_IN_MODEL"}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1714,7 +1725,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    EXPECT_EQ(pipeline.execute(), ovms::StatusCode::INVALID_MISSING_INPUT);
+    EXPECT_EQ(pipeline.execute(DEFAULT_CONTEXT), ovms::StatusCode::INVALID_MISSING_INPUT);
 }
 
 class DLNodeFailInFetch : public DLNode {
@@ -1742,7 +1753,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *failInFetchNode, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*failInFetchNode, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -1751,7 +1762,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
     pipeline.push(std::move(failInFetchNode));
     pipeline.push(std::move(output_node));
 
-    auto status = pipeline.execute();
+    auto status = pipeline.execute(DEFAULT_CONTEXT);
     EXPECT_EQ(status, ovms::StatusCode::UNKNOWN_ERROR) << status.string();
 }
 
@@ -1771,7 +1782,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResultsStreamIdReleasedForDeferredNode
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
 
     pipeline.connect(*input_node, *failInFetchNode, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*input_node, *modelNode, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
@@ -1783,7 +1794,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResultsStreamIdReleasedForDeferredNode
     pipeline.push(std::move(modelNode));
     pipeline.push(std::move(output_node));
 
-    auto status = pipeline.execute();
+    auto status = pipeline.execute(DEFAULT_CONTEXT);
     EXPECT_EQ(status, ovms::StatusCode::UNKNOWN_ERROR) << status.string();
 }
 
@@ -2418,7 +2429,7 @@ TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
     ASSERT_EQ(factory.create(pipeline, pipelineName, &request, &response, managerWithDummyModel), StatusCode::OK);
 
     // Execute pipeline
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 }
@@ -2484,7 +2495,7 @@ TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
         ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response_local, managerWithDummyModel), StatusCode::OK);
 
         // Execute pipeline
-        ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+        ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
         // Validate response
         ASSERT_EQ(response_local.outputs_size(), PARALLEL_DUMMY_NODES);
@@ -2668,7 +2679,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
         &request,
         &response);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 }
@@ -2741,7 +2752,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
         &request,
         &response);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
     ASSERT_EQ(response.outputs().count(std::string(customPipelineOutputName) + "2"), 1);
     // check 1st output
@@ -3099,7 +3110,7 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
     auto dummy_node_2 = std::make_unique<DLNode>("dummy_node_2", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto dummy_node_3 = std::make_unique<DLNode>("dummy_node_3", dummyModelName, requestedModelVersion, managerWithDummyModel);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *dummy_node_1, {{"proto_input_1x10", DUMMY_MODEL_INPUT_NAME}});  // this node will start execution, reserve stream id
     pipeline.connect(*input_node, *dummy_node_2, {{"proto_input_1x10", DUMMY_MODEL_INPUT_NAME}});  // this node will start execution, get future object for stream id, defer to queue
     pipeline.connect(*input_node, *dummy_node_3, {{"proto_input_1x5", DUMMY_MODEL_INPUT_NAME}});   // this node will fail at validation time
@@ -3134,7 +3145,7 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
     proto_input_1x10.mutable_tensor_shape()->add_dim()->set_size(1);
     proto_input_1x10.mutable_tensor_shape()->add_dim()->set_size(data_1x10.size());
 
-    EXPECT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+    EXPECT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
 }
 
 TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithNewModelNameShouldPass) {
@@ -3298,7 +3309,7 @@ TEST_F(EnsembleFlowTest, ExecuteOnPipelineCreatedBeforeRetireShouldPass) {
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
     ASSERT_TRUE(status.ok());
     pd.retire(managerWithDummyModel);
-    pipelineBeforeRetire->execute();
+    pipelineBeforeRetire->execute(DEFAULT_CONTEXT);
     uint dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 }
@@ -3336,7 +3347,7 @@ TEST_F(EnsembleFlowTest, RuntimeWrongBatchSizeArbitraryPosition) {
     auto model_node_2 = std::make_unique<DLNode>("dummy_node_2", "dummy_C1_N15", requestedModelVersion, managerWithDummyModel);
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node_1, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node_1, *model_node_2, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -3346,7 +3357,7 @@ TEST_F(EnsembleFlowTest, RuntimeWrongBatchSizeArbitraryPosition) {
     pipeline.push(std::move(model_node_2));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_BATCH_SIZE);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::INVALID_BATCH_SIZE);
 }
 
 TEST_F(EnsembleFlowTest, RuntimeWrongShapeArbitraryBatchPosition) {
@@ -3382,7 +3393,7 @@ TEST_F(EnsembleFlowTest, RuntimeWrongShapeArbitraryBatchPosition) {
     auto model_node_2 = std::make_unique<DLNode>("dummy_node_2", "dummy_C2_N10", requestedModelVersion, managerWithDummyModel);
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node_1, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node_1, *model_node_2, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -3392,7 +3403,7 @@ TEST_F(EnsembleFlowTest, RuntimeWrongShapeArbitraryBatchPosition) {
     pipeline.push(std::move(model_node_2));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
 }
 
 class MockedPipelineDefinitionWithHandlingStatus : public PipelineDefinition {
@@ -3448,7 +3459,7 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
     ASSERT_TRUE(status.ok()) << status.string();
     uint dummySeriallyConnectedCount = 1;
-    pipelineBeforeRetire->execute();
+    pipelineBeforeRetire->execute(DEFAULT_CONTEXT);
     checkDummyResponse(dummySeriallyConnectedCount);
     t.join();
     t2.join();
@@ -4526,7 +4537,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWC) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, request, response, {1, 3, 1, 2});
 }
 
@@ -4586,7 +4597,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimInputNHWCDynamicBa
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &this->request, &this->response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>(std::string{"pipeline_output"}, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, this->request, this->response, {2, 1, 3, 1, 2});
 }
 
@@ -4644,7 +4655,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimOutputNHWC) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, request, response, {1, 1, 2, 3});
 }
 
@@ -4705,7 +4716,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimOutputNHWCDynamicB
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &this->request, &this->response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, this->request, this->response, {2, 1, 1, 2, 3});
 }
 
@@ -4863,7 +4874,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithInnerNhwcConnection) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, request, response, {1, 3, 1, 2});
 }
 
@@ -4929,7 +4940,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BatchSize1) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 3, 1, 1});
 }
 
@@ -4986,7 +4997,7 @@ TEST_F(EnsembleFlowTestBinaryInput, DoublePrecision) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<double>("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 1, 1, 3});
 }
 
@@ -5045,7 +5056,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BatchSizeAny) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimShape("pipeline_output", response, {batchSize, 3, 1, 1});
 }
 
@@ -5101,7 +5112,7 @@ TEST_F(EnsembleFlowTestBinaryInput, NchwEntryNotSupported) {
 
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
-    auto status = pipeline->execute();
+    auto status = pipeline->execute(DEFAULT_CONTEXT);
     ASSERT_EQ(status, StatusCode::INVALID_NO_OF_CHANNELS) << status.string();
 }
 
@@ -5159,7 +5170,7 @@ TEST_F(EnsembleFlowTestBinaryInput, GrayscaleImage) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {1.0}, request, response, {1, 1, 1, 1});
 }
 
@@ -5218,7 +5229,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BatchSize5) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 3, 1, 1});
 }
 
@@ -5276,7 +5287,7 @@ TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch1) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, request, response, {1, 3, 2, 2});
 }
 
@@ -5335,7 +5346,7 @@ TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch5) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0},
         request, response, {5, 3, 2, 2});
 }
@@ -5394,7 +5405,7 @@ TEST_F(EnsembleFlowTestBinaryInput, ColorChannelsDiffer) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_CHANNELS);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_NO_OF_CHANNELS);
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, InvalidData) {
@@ -5412,7 +5423,7 @@ TEST_F(EnsembleFlowTestBinaryInput, InvalidData) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::IMAGE_PARSING_FAILED);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::IMAGE_PARSING_FAILED);
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1x1EntryDemultiplexer = R"(
@@ -5471,7 +5482,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexer) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
 }
 
@@ -5531,7 +5542,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionMatches) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
 }
 
@@ -5547,7 +5558,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionAutoAlign)
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimShape("pipeline_output", response, {5, 1, 3, 3, 3});
 }
 
@@ -5607,7 +5618,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionMatches) 
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
 }
 
@@ -5623,7 +5634,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionResolutio
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
 }
 
 static const char* pipelineWithOnlyDynamicCustomNode = R"(
@@ -5678,7 +5689,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 3});
 }
 
@@ -5692,7 +5703,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 3});
 }
 
@@ -5705,7 +5716,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
 }
 
 TEST_F(EnsembleFlowTest, TensorContentInputWithPipelineInputLayoutANY_RequestNhwc) {
@@ -5717,7 +5728,7 @@ TEST_F(EnsembleFlowTest, TensorContentInputWithPipelineInputLayoutANY_RequestNhw
     prepareRequest({1.0, 2.0, 3.0, 4.0}, request, "pipeline_input", {1, 4, 1});  // should be [1, 4, 1, 1]
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
 static const char* pipelineWithOnlyDynamicCustomNodeAndDemultiplexer = R"(
@@ -5770,7 +5781,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 1, 3});
 }
 
@@ -5784,7 +5795,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 1, 3});
 }
 
@@ -5797,7 +5808,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     prepareMisalignedBinaryImageRequest(imagePath2x2, imagePath, request, "pipeline_input");
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
 }
 
 TYPED_TEST(EnsembleFlowBothApiTest, TensorContentInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {
@@ -5809,7 +5820,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, TensorContentInputWithPipelineInputLayoutANY
     this->prepareRequest({1.0, 2.0, 3.0, 4.0}, this->request, "pipeline_input", {1, 1, 4, 1});  // should be [1, 1, 4, 1, 1]
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &this->request, &this->response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
 static const char* pipelineWithDynamicCustomNodeDemultiplexerAndDynamicResolutionModel = R"(
@@ -5887,7 +5898,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomN
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, request, response, {1, 1, 3, 1, 1});
 }
 
@@ -5967,7 +5978,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomN
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::INVALID_SHAPE);
 
     request.Clear();
     response.Clear();
@@ -5976,6 +5987,6 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomN
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, request, response, {1, 1, 3, 1, 1});
 }

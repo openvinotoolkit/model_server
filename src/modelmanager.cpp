@@ -45,6 +45,7 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
+#include "metric_registry.hpp"
 #include "node_library.hpp"
 #include "openssl/md5.h"
 #include "ov_utils.hpp"
@@ -59,10 +60,11 @@ namespace ovms {
 
 static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 
-ModelManager::ModelManager(const std::string& modelCacheDirectory) :
+ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry) :
     ieCore(std::make_unique<ov::Core>()),
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
-    modelCacheDirectory(modelCacheDirectory) {
+    modelCacheDirectory(modelCacheDirectory),
+    metricRegistry(registry) {
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {
         this->modelCacheDirectory = ovms::Config::instance().cacheDir();
@@ -1117,7 +1119,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed);
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),

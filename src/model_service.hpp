@@ -28,6 +28,7 @@
 #include "tensorflow_serving/apis/model_service.pb.h"
 #pragma GCC diagnostic pop
 
+#include "execution_context.hpp"
 #include "modelmanager.hpp"
 #include "status.hpp"
 
@@ -54,11 +55,11 @@ class GetModelStatusImpl {
 
 public:
     GetModelStatusImpl(ovms::Server& ovmsServer);
-    static Status getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response, ModelManager& manager);
+    static Status getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response, ModelManager& manager, ExecutionContext context);
     static Status createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request);
     static Status serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse* response, std::string* output);
 
-    static Status getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& models_versions, ModelManager& manager);
+    static Status getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& models_versions, ModelManager& manager, ExecutionContext context);
     static Status serializeModelsStatuses2Json(const std::map<std::string, tensorflow::serving::GetModelStatusResponse>& models_versions, std::string& output);
 };
 

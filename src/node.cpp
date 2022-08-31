@@ -168,7 +168,7 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create new session: {} for node: {}",
         sessionKey, getName());
-    NodeSessionMetadata newSessionMetadata;
+    NodeSessionMetadata newSessionMetadata = metadata;
     CollapseDetails collapsingDetails;
     if (gatherFrom) {
         try {
@@ -177,8 +177,6 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create collapsed metadata for node: {}", getName());
             return nullptr;
         }
-    } else {
-        newSessionMetadata = metadata;
     }
     std::unique_ptr<NodeSession> nodeSession = createNodeSession(newSessionMetadata, collapsingDetails);
     auto emplacePair = nodeSessions.emplace(sessionKey, std::move(nodeSession));

@@ -57,7 +57,7 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
     std::vector<TensorWithSource> inputTensors{
         TensorWithSource(createSharedTensor(precisions[0], shapes[0], tensorsData[0].data())),
         TensorWithSource(createSharedTensor(precisions[1], shapes[1], tensorsData[1].data()))};
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{DEFAULT_CONTEXT};
     const std::string demultiplexerName = "NOT_IMPORTANT_NAME";
     auto newMeta = meta.generateSubsessions(demultiplexerName, shardsCount)[0];
     auto [_, collapsingDetails] = newMeta.getCollapsedSessionMetadata({demultiplexerName});
@@ -95,7 +95,7 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     ov::element::Type_t precision{ov::element::Type_t::f32};
     const std::vector<session_id_t> demultiplyCounts{3, 5};  // 3 for first demultiply, 5 for second
     const std::vector<std::string> demultiplexerNodeNames{"firstDemultiplexer", "secondDemultiplexer"};
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{DEFAULT_CONTEXT};
     auto firstLevelMetas = meta.generateSubsessions(demultiplexerNodeNames[0], demultiplyCounts[0]);
     std::vector<std::vector<NodeSessionMetadata>> metadatas(demultiplyCounts[0]);
     for (size_t i = 0; i < demultiplyCounts[0]; ++i) {
@@ -240,7 +240,7 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     // prepare session results
     TensorWithSourceMap dummy1Result{{DUMMY_MODEL_OUTPUT_NAME, TensorWithSource(originalTensor1)}};
     TensorWithSourceMap dummy2Result{{DUMMY_MODEL_OUTPUT_NAME, TensorWithSource(originalTensor2)}};
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{DEFAULT_CONTEXT};
     const session_id_t shardsCount = 2;
     auto subsessions = meta.generateSubsessions(demultiplexerNodeName, shardsCount);
     ASSERT_EQ(subsessions.size(), 2);

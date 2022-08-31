@@ -14,23 +14,24 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+
 #include <memory>
 
+#include "metric_registry.hpp"
 #include "server.hpp"
 
 namespace ovms {
-class Config;
-class ModelManager;
 
-class ServableManagerModule : public Module {
-protected:
-    mutable std::unique_ptr<ModelManager> servableManager;
+class Config;
+
+class MetricModule : public Module {
+    std::unique_ptr<MetricRegistry> registry;
 
 public:
-    ServableManagerModule(ovms::Server& ovmsServer);
-    ~ServableManagerModule();
-    int start(const ovms::Config& config) override;
+    MetricModule();
+    int start(const Config& config) override;
     void shutdown() override;
-    ModelManager& getServableManager() const;
+
+    MetricRegistry& getRegistry() const;
 };
 }  // namespace ovms

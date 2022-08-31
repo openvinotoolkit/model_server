@@ -25,6 +25,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "execution_context.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -59,11 +60,12 @@ public:
 
     Status getModelStatus(
         const tensorflow::serving::GetModelMetadataRequest* request,
-        tensorflow::serving::GetModelMetadataResponse* response) const;
+        tensorflow::serving::GetModelMetadataResponse* response, ExecutionContext context) const;
     static Status getModelStatus(
         const tensorflow::serving::GetModelMetadataRequest* request,
         tensorflow::serving::GetModelMetadataResponse* response,
-        ModelManager& manager);
+        ModelManager& manager,
+        ExecutionContext context);
     static Status createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request);
     static Status serializeResponse2Json(const tensorflow::serving::GetModelMetadataResponse* response, std::string* output);
 };

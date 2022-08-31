@@ -1,4 +1,4 @@
-//****************************************************************************
+//***************************************************************************
 // Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,24 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-#include <memory>
+#include "metric_module.hpp"
 
-#include "server.hpp"
+#include "config.hpp"
+#include "metric_registry.hpp"
 
 namespace ovms {
-class Config;
-class ModelManager;
 
-class ServableManagerModule : public Module {
-protected:
-    mutable std::unique_ptr<ModelManager> servableManager;
+MetricModule::MetricModule() :
+    registry(std::make_unique<MetricRegistry>()) {}
 
-public:
-    ServableManagerModule(ovms::Server& ovmsServer);
-    ~ServableManagerModule();
-    int start(const ovms::Config& config) override;
-    void shutdown() override;
-    ModelManager& getServableManager() const;
-};
+int MetricModule::start(const Config& config) { return EXIT_SUCCESS; }
+
+void MetricModule::shutdown() {}
+
+MetricRegistry& MetricModule::getRegistry() const { return *this->registry; }
+
 }  // namespace ovms

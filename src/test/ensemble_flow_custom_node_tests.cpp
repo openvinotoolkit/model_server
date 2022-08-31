@@ -27,7 +27,10 @@
 #include "../custom_node_library_manager.hpp"
 #include "../dl_node.hpp"
 #include "../entry_node.hpp"
+#include "../execution_context.hpp"
 #include "../exit_node.hpp"
+#include "../metric_registry.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../node_library.hpp"
 #include "../node_library_utils.hpp"
 #include "../pipelinedefinition.hpp"
@@ -44,6 +47,9 @@ class EnsembleFlowCustomNodePipelineExecutionTest : public TestWithTempDir {
 protected:
     void SetUp() override {
         TestWithTempDir::SetUp();
+
+        reporter = std::make_unique<ModelMetricReporter>(&this->registry, "example_pipeline_name", 1);
+
         CustomNodeLibraryManager manager;
         ASSERT_EQ(manager.loadLibrary(
                       this->libraryName,
@@ -100,7 +106,7 @@ protected:
             createLibraryMock<T>(),
             parameters_t{});
 
-        auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+        auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node, *this->reporter);
         pipeline->connect(*input_node, *custom_node, {{pipelineInputName, customNodeInputName}});
         pipeline->connect(*custom_node, *output_node, {{customNodeOutputName, pipelineOutputName}});
 
@@ -160,6 +166,8 @@ protected:
 
     PredictRequest request;
     PredictResponse response;
+    MetricRegistry registry;
+    std::unique_ptr<ModelMetricReporter> reporter;
 
     NodeLibrary library;
 
@@ -201,7 +209,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
             {"add_value", std::to_string(addValue)},
             {"sub_value", std::to_string(subValue)}});
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *custom_node, {{pipelineInputName, customNodeInputName}});
     pipeline.connect(*custom_node, *output_node, {{customNodeOutputName, pipelineOutputName}});
 
@@ -209,7 +217,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
     pipeline.push(std::move(custom_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().size(), 1);
 
     this->checkResponse<float>(inputValues, [addValue, subValue](float value) -> float {
@@ -245,6 +253,7 @@ protected:
     const int32_t demultiplyCount = 4;  // different ops library has (1,4,10) as output
 
     void SetUp() override {
+        EnsembleFlowCustomNodePipelineExecutionTest::SetUp();
         // increasing default nireq == 1 to speed up the tests
         // in multilayered demultiplication we still will have more than
         // 16 concurrent inferences
@@ -323,7 +332,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
         nodes[i++] = std::make_unique<CustomNode>(chooseMaxNodeName + "-" + std::to_string(demultiplicationLayer), chooseMaxLibrary, parameters, chooseMaxOutputAlias, std::nullopt, std::set<std::string>({differentOpsNodeName + "-" + std::to_string(demultiplicationLayer)}));
     }
 
-    Pipeline pipeline(*nodes[0], *nodes[1]);
+    Pipeline pipeline(*nodes[0], *nodes[1], *this->reporter);
     i = 2;
     for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
         if (i == 2) {  // first node after entry
@@ -344,7 +353,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
         pipeline.push(std::move(node));
     }
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().size(), 1);
     this->checkResponse(pipelineOutputName, response, expectedResult, {1, 10});
 }
@@ -396,7 +405,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
         nodes[nodesCount - 1 - (i / 2)] = std::make_unique<CustomNode>(chooseMaxNodeName + "-" + std::to_string(demultiplicationLayer), chooseMaxLibrary, parameters, chooseMaxOutputAlias, std::nullopt, std::set<std::string>({differentOpsNodeName + "-" + std::to_string(demultiplicationLayer)}));
     }
 
-    Pipeline pipeline(*nodes[0], *nodes[nodesCount - 1]);
+    Pipeline pipeline(*nodes[0], *nodes[nodesCount - 1], *this->reporter);
     i = 1;
     for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
         if (i == 1) {  // first node after entry needs to connect to entry
@@ -426,7 +435,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
         pipeline.push(std::move(node));
     }
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().size(), 1);
     this->checkResponse(pipelineOutputName, response, expectedResult, {1, 10});
 }
@@ -467,7 +476,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
                 {"sub_value", std::to_string(subValues[i % PARAMETERS_PAIRS_COUNT])}});
     }
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *(custom_nodes[0]), {{pipelineInputName, customNodeInputName}});
     pipeline.connect(*(custom_nodes[N - 1]), *output_node, {{customNodeOutputName, pipelineOutputName}});
     for (int i = 0; i < N - 1; i++) {
@@ -480,7 +489,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
         pipeline.push(std::move(custom_node));
     }
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().size(), 1);
 
     this->checkResponse<float>(inputValues, [N, addValues, subValues](float value) -> float {
@@ -527,7 +536,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
     }
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     std::unique_ptr<CustomNode> custom_nodes[N];
     for (int i = 0; i < N; i++) {
         custom_nodes[i] = std::make_unique<CustomNode>(customNodeName + std::to_string(i), library,
@@ -543,7 +552,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().size(), N);
 
     for (int i = 0; i < N; i++) {
@@ -591,7 +600,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomAndDLNodes) {
                 {"add_value", std::to_string(addValues[1])},
                 {"sub_value", std::to_string(subValues[1])}})};
 
-    Pipeline pipeline(*input_node, *output_node);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *(custom_node[0]), {{pipelineInputName, customNodeInputName}});
     pipeline.connect(*(custom_node[0]), *model_node, {{customNodeOutputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *(custom_node[1]), {{DUMMY_MODEL_OUTPUT_NAME, customNodeInputName}});
@@ -603,7 +612,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomAndDLNodes) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline.execute(DEFAULT_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().size(), 1);
 
     this->checkResponse<float>(inputValues, [addValues, subValues](float value) -> float {
@@ -635,7 +644,7 @@ struct LibraryFailInExecute {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeExecution) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryFailInExecute>();
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
 }
 
 struct LibraryCorruptedOutputHandle {
@@ -664,7 +673,7 @@ struct LibraryCorruptedOutputHandle {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorruptedHandle) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryCorruptedOutputHandle>();
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED);
 }
 
 struct LibraryCorruptedOutputsNumber {
@@ -693,7 +702,7 @@ struct LibraryCorruptedOutputsNumber {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorruptedNumberOfOutputs) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryCorruptedOutputsNumber>();
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT);
 }
 
 struct LibraryMissingOutput {
@@ -729,7 +738,7 @@ struct LibraryMissingOutput {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeMissingOutput) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryMissingOutput>();
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_MISSING_OUTPUT);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_MISSING_OUTPUT);
 }
 
 struct LibraryIncorrectOutputPrecision {
@@ -764,7 +773,7 @@ struct LibraryIncorrectOutputPrecision {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidPrecision) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputPrecision>();
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_PRECISION);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_INVALID_PRECISION);
 }
 
 struct LibraryIncorrectOutputShape {
@@ -799,7 +808,7 @@ struct LibraryIncorrectOutputShape {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidShape) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputShape>();
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_SHAPE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_INVALID_SHAPE);
 }
 
 struct LibraryIncorrectOutputContentSize {
@@ -834,7 +843,7 @@ struct LibraryIncorrectOutputContentSize {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidContentSize) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputContentSize>();
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE);
 }
 
 struct LibraryNotInitilizedExecuteCorrectly {
@@ -872,7 +881,7 @@ struct LibraryNotInitilizedExecuteCorrectly {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SuccessInCustomNodeExecutionNotInitialized) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryNotInitilizedExecuteCorrectly>();
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 }
 
 struct LibraryNotInitializedFailInExecute {
@@ -915,7 +924,7 @@ struct LibraryNotInitializedFailInExecute {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeExecutionNotInitialized) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryNotInitializedFailInExecute>();
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeInitialize) {
@@ -993,7 +1002,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeDeinitialize
     // creating definition, pipeline and then executing works propely due to correct initialization
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
     ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     this->checkResponse<float>(inputValues, [addValue, subValue](float value) -> float {
         return value + addValue - subValue;
@@ -1041,7 +1050,7 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, SimplePipelineFactory
     std::unique_ptr<Pipeline> pipeline;
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
     ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     this->checkResponse<float>(inputValues, [addValue, subValue](float value) -> float {
         return value + addValue - subValue;
@@ -1109,7 +1118,7 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, ParallelPipelineFacto
         PredictResponse response_local;
 
         ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &requests[i], &response_local, manager), StatusCode::OK);
-        ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+        ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
         for (int n = 0; n < PARALLEL_CUSTOM_NODES; n++) {
             this->checkResponse<float>("output_" + std::to_string(n), response_local, inputValues, [addValues, subValues, n](float value) -> float {
@@ -1273,7 +1282,7 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, PipelineFactoryCreati
     std::unique_ptr<Pipeline> pipeline;
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
     ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     this->checkResponse<float>(AddSubInternalManager::mockedOutput, [](float value) -> float {
         return value;
@@ -1324,7 +1333,7 @@ static const char* pipelineCustomNodeConfig = R"(
 class EnsembleFlowCustomNodeLoadConfigThenExecuteTest : public EnsembleFlowCustomNodePipelineExecutionTest {
 protected:
     void SetUp() override {
-        TestWithTempDir::SetUp();
+        EnsembleFlowCustomNodePipelineExecutionTest::SetUp();
         configJsonFilePath = directoryPath + "/ovms_config_file.json";
     }
 
@@ -1354,7 +1363,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, AddSubCustomNode) {
     this->prepareRequest(inputValues);
     this->loadCorrectConfiguration();
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     this->checkResponseForCorrectConfiguration();
 }
 
@@ -1407,7 +1416,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceMissingLibraryT
     // This is due to fact that when OVMS loads pipeline definition for the first time and fails, its status is RETIRED.
     this->loadCorrectConfiguration();
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
@@ -1417,7 +1426,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceMissingLibraryT
 
     this->loadCorrectConfiguration();
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     this->checkResponseForCorrectConfiguration();
 }
 
@@ -1468,18 +1477,18 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithExec
     // This is due to fact that when OVMS loads pipeline definition for the first time and fails, its status is RETIRED.
     this->loadCorrectConfiguration();
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
     this->loadConfiguration(pipelineCustomNodeReferenceLibraryWithExecutionErrorMissingParamsLibraryConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
     response.Clear();
 
     this->loadCorrectConfiguration();
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     this->checkResponseForCorrectConfiguration();
 }
 
@@ -1531,18 +1540,18 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, MissingRequiredNodeParam
     // This is due to fact that when OVMS loads pipeline definition for the first time and fails, its status is RETIRED.
     this->loadCorrectConfiguration();
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
     this->loadConfiguration(pipelineCustomNodeMissingParametersConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
     response.Clear();
 
     this->loadCorrectConfiguration();
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     this->checkResponseForCorrectConfiguration();
 }
 
@@ -1595,7 +1604,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithRest
     // This is due to fact that when OVMS loads pipeline definition for the first time and fails, its status is RETIRED.
     this->loadCorrectConfiguration();
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     this->checkResponseForCorrectConfiguration();
     response.Clear();
 
@@ -1605,7 +1614,7 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithRest
 
     this->loadCorrectConfiguration();
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     this->checkResponseForCorrectConfiguration();
 }
 
@@ -1754,7 +1763,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDiff
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
@@ -1845,7 +1854,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
     std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
@@ -1927,7 +1936,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperations2OutputsConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
@@ -2041,7 +2050,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
@@ -2156,7 +2165,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumThenDummyConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
@@ -2249,7 +2258,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Demultip
     this->prepareRequest(request, input, differentOpsInputName, {4, 1, 10});
     this->loadConfiguration(demultiplyThenDummyThenChooseMaximumConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    auto status = pipeline->execute();
+    auto status = pipeline->execute(DEFAULT_CONTEXT);
     ASSERT_EQ(status, StatusCode::OK) << status.string();
 
     std::vector<float> expectedOutput{5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
@@ -3291,7 +3300,7 @@ public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         Model(name, false, nullptr),
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr) override {
         return modelInstance;
     }
 };
@@ -3467,7 +3476,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerA
         aliases, demultiplyCount);
     auto model_node = std::make_unique<DLNode>("dummy_node", "dummy", std::nullopt, manager);
 
-    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node, *this->reporter);
     pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "in"}});
     pipeline->connect(*custom_node, *model_node, {{"out", DUMMY_MODEL_INPUT_NAME}});
     pipeline->connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
@@ -3478,7 +3487,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerA
     pipeline->push(std::move(output_node));
 
     // Execute
-    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
 
     // Check response
     std::vector<float> expectedOutput = input;
@@ -4251,7 +4260,7 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     this->prepareRequest(request, input, differentOpsInputName);
     this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     std::vector<float> expectedOutput(dynamicDemultiplyCount * DUMMY_MODEL_OUTPUT_SIZE);
     for (size_t i = 0; i < dynamicDemultiplyCount; ++i) {
@@ -4444,7 +4453,7 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     this->prepareRequest(request, input, differentOpsInputName, {dynamicDemultiplyCount, 1, 10});
     this->loadConfiguration(pipelineEntryNodeDynamicDemultiplexThenDummyConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     std::vector<float> expectedOutput = input;
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
@@ -4518,7 +4527,7 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     this->prepareRequest(request, input, pipelineInputName, {3, 5, DUMMY_MODEL_INPUT_SIZE});
     this->loadConfiguration(pipelineEntryNodeDemultiplexThenDummyConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     std::vector<float> expectedOutput = input;
     std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
@@ -4551,7 +4560,7 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     this->prepareRequest(request, input, differentOpsInputName);
     this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    auto status = pipeline->execute();
+    auto status = pipeline->execute(DEFAULT_CONTEXT);
     ASSERT_EQ(status, StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY) << status.string();
 }
 
@@ -4647,7 +4656,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     this->prepareRequest(request, factors, differentOpsFactorsName);
     this->loadConfiguration(pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumNotInOrderConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
@@ -4664,7 +4673,7 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     this->prepareRequest(request, input, differentOpsInputName);
     this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS);
 }
 
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DISABLED_JustDynamicDemultiplexerConfigReturning0Batch) {
@@ -4674,7 +4683,7 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     this->prepareRequest(request, input, differentOpsInputName);
     this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), StatusCode::OK);
 
     std::vector<float> expectedOutput(dynamicDemultiplyCount * DUMMY_MODEL_OUTPUT_SIZE);
     for (size_t i = 0; i < dynamicDemultiplyCount; ++i) {
@@ -4843,7 +4852,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
         parameters_t{}, aliases, demultiplyCount);
     auto model_node = std::make_unique<DLNode>("increment_node", "increment_1x3x4x5", std::nullopt, manager);
 
-    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node, *this->reporter);
     pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "any"}});
     pipeline->connect(*custom_node, *model_node, {{"custom_node_output", "input"}});
     pipeline->connect(*model_node, *output_node, {{"output", pipelineOutputName}});
@@ -4854,7 +4863,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     pipeline->push(std::move(output_node));
 
     // Execute
-    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
     checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
 }
 
@@ -4949,7 +4958,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
         parameters_t{}, aliases, demultiplyCount);
     auto model_node = std::make_unique<DLNode>("increment_node", "increment_1x3x4x5", std::nullopt, manager);
 
-    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node, *this->reporter);
     pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "any"}});
     pipeline->connect(*custom_node, *model_node, {{"custom_node_output", "input"}});
     pipeline->connect(*model_node, *output_node, {{"output", pipelineOutputName}});
@@ -4960,7 +4969,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     pipeline->push(std::move(output_node));
 
     // Execute
-    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
     checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
 }
 
@@ -5011,7 +5020,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
         parameters_t{}, aliases, demultiplyCount);
     auto model_node = std::make_unique<DLNode>("increment_node", "dummy_fp64", std::nullopt, manager);
 
-    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node, *this->reporter);
     pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "any"}});
     pipeline->connect(*custom_node, *model_node, {{"custom_node_output", "input:0"}});
     pipeline->connect(*model_node, *output_node, {{"output:0", pipelineOutputName}});
@@ -5022,7 +5031,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     pipeline->push(std::move(output_node));
 
     // Execute
-    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
     checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {3, 1, 1, 2, 3});
 }
 
@@ -5070,7 +5079,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     auto model_node_1 = std::make_unique<DLNode>("increment_node_1", "dummy_fp64", std::nullopt, manager);
     auto model_node_2 = std::make_unique<DLNode>("increment_node_2", "dummy_fp64", std::nullopt, manager);
 
-    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node, *this->reporter);
     pipeline->connect(*input_node, *model_node_1, {{pipelineInputName, "input:0"}});
     pipeline->connect(*model_node_1, *model_node_2, {{"output:0", "input:0"}});
     pipeline->connect(*model_node_2, *output_node, {{"output:0", pipelineOutputName}});
@@ -5081,7 +5090,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     pipeline->push(std::move(output_node));
 
     // Execute
-    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_CONTEXT), ovms::StatusCode::OK);
     checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {2, 1, 2, 1, 2});
 }
 

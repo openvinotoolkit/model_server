@@ -109,20 +109,20 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
     return modelInstanceIt->second;
 }
 
-std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion, ov::Core& ieCore) {
+std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion, ov::Core& ieCore, MetricRegistry* registry) {
     if (isStateful()) {
         SPDLOG_DEBUG("Creating new stateful model instance - model name: {}; model version: {};", modelName, modelVersion);
         return std::move(std::static_pointer_cast<ModelInstance>(
-            std::make_shared<StatefulModelInstance>(modelName, modelVersion, ieCore, this->globalSequencesViewer)));
+            std::make_shared<StatefulModelInstance>(modelName, modelVersion, ieCore, registry, this->globalSequencesViewer)));
     } else {
         SPDLOG_DEBUG("Creating new model instance - model name: {}; model version: {};", modelName, modelVersion);
-        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion, ieCore));
+        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion, ieCore, registry));
     }
 }
 
-Status Model::addVersion(const ModelConfig& config, ov::Core& ieCore) {
+Status Model::addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegistry* registry) {
     const auto& version = config.getVersion();
-    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version, ieCore);
+    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version, ieCore, registry);
 
     std::unique_lock lock(modelVersionsMtx);
     modelVersions.emplace(version, modelInstance);
@@ -136,7 +136,7 @@ Status Model::addVersion(const ModelConfig& config, ov::Core& ieCore) {
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed) {
+Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed, MetricRegistry* registry) {
     Status result = StatusCode::OK;
     downloadModels(fs, config, versionsToStart);
     versionsFailed->clear();
@@ -144,7 +144,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
         SPDLOG_INFO("Will add model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
         config.parseModelMapping();
-        auto status = addVersion(config, ieCore);
+        auto status = addVersion(config, ieCore, registry);
         if (!status.ok()) {
             SPDLOG_ERROR("Error occurred while loading model: {}; version: {}; error: {}",
                 getName(),

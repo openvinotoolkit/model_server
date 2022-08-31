@@ -20,12 +20,14 @@
 
 #include "config.hpp"
 #include "logging.hpp"
+#include "metric_module.hpp"
 #include "modelmanager.hpp"
 
 namespace ovms {
 
-ServableManagerModule::ServableManagerModule() :
-    servableManager(std::make_unique<ModelManager>()) {}
+ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
+    this->servableManager = std::make_unique<ModelManager>("", &dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))->getRegistry());
+}
 
 int ServableManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;

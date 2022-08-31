@@ -22,9 +22,12 @@
 #include <vector>
 
 #include "aliases.hpp"
+#include "execution_context.hpp"
 #include "status.hpp"
 
 namespace ovms {
+
+class ModelMetricReporter;
 
 class Node;
 template <typename PredictRequest>
@@ -39,9 +42,10 @@ class Pipeline {
     const std::string name;
     Node& entry;
     Node& exit;
+    ModelMetricReporter& reporter;
 
 public:
-    Pipeline(Node& entry, Node& exit, const std::string& name = "default_name");
+    Pipeline(Node& entry, Node& exit, ModelMetricReporter& reporter, const std::string& name = "default_name");
 
     void push(std::unique_ptr<Node> node);
     ~Pipeline();
@@ -51,10 +55,12 @@ public:
 
     static void connect(Node& from, Node& to, const Aliases& tensorNamesMapping);
 
-    Status execute();
+    Status execute(ExecutionContext context);
     const std::string& getName() const {
         return name;
     }
+
+    ModelMetricReporter& getMetricReporter() const { return this->reporter; }
 
 private:
     std::map<const std::string, bool> prepareStatusMap() const;

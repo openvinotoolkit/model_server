@@ -32,10 +32,11 @@ using DeferredNodeSessions = std::vector<std::pair<std::reference_wrapper<Node>,
 
 Pipeline::~Pipeline() = default;
 
-Pipeline::Pipeline(Node& entry, Node& exit, const std::string& name) :
+Pipeline::Pipeline(Node& entry, Node& exit, ModelMetricReporter& reporter, const std::string& name) :
     name(name),
     entry(entry),
-    exit(exit) {}
+    exit(exit),
+    reporter(reporter) {}
 
 void Pipeline::push(std::unique_ptr<Node> node) {
     nodes.emplace_back(std::move(node));
@@ -81,17 +82,25 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
             getName(), NODE.getName(), sessionKey, status.getCode(), status.string());                                                     \
     }
 
-Status Pipeline::execute() {
+Status Pipeline::execute(ExecutionContext context) {
     OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Started execution of pipeline: {}", getName());
+
+    if (context.method != ExecutionContext::Method::Predict && context.method != ExecutionContext::Method::ModelInfer) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Executing pipeline: {} wrong context", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
+
     PipelineEventQueue finishedNodeQueue;
     ovms::Status firstErrorStatus{ovms::StatusCode::OK};
     std::set<std::string> startedSessions;
     std::set<std::string> finishedSessions;
-    NodeSessionMetadata meta;
-    // entry node does not have setInputsCalled so it has no
-    // session created. Here is just assumption that this meta has the same key
-    // that the one in EntryNode::execute();
+    NodeSessionMetadata meta(context);
+    auto* entryNodeSession = entry.getNodeSession(meta);
+    if (!entryNodeSession) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Executing pipeline: {} cannot create entry session", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
     auto entrySessionKey = meta.getSessionKey();
     startedSessions.emplace(entry.getName() + entrySessionKey);
     ovms::Status status = entry.execute(entrySessionKey, finishedNodeQueue);  // first node will triger first message
