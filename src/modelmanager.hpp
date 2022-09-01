@@ -87,7 +87,8 @@ protected:
 
 private:
     /**
-     * @brief Private copying constructor
+     * @brief 
+     * 
      */
     ModelManager(const ModelManager&) = delete;
 
@@ -137,6 +138,11 @@ private:
      * @brief A thread object used for cleanup
      */
     std::thread cleanerThread;
+
+    /**
+         * @brief Metrics config
+         */
+    MetricConfig metricConfig;
 
     /**
      * @brief An exit trigger to notify watcher thread to exit
@@ -332,6 +338,26 @@ public:
      * @return Status 
      */
     Status startFromConfig();
+
+    /**
+         * @brief Get the metric config
+         * 
+         * @return const std::string&
+         */
+    const MetricConfig& getMetricConfig() const {
+        return this->metricConfig;
+    }
+
+    Status loadMetricsConfig(rapidjson::Document& configJson);
+    
+    /**
+         * @brief Set the metric config
+         * 
+         * @param metricConfig 
+         */
+    void setMetricConfig(const MetricConfig& metricConfig) {
+        this->metricConfig = metricConfig;
+    }
 
     /**
      * @brief Reload model versions located in base path

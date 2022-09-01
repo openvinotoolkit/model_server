@@ -146,10 +146,7 @@ TEST_F(MetricsConfigTest, DefaultValues) {
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
-    auto modelInstance = manager.findModelInstance(dummyModelName);
-    auto modelConfig = modelInstance->getModelConfig();
-
-    auto metricConfig = modelConfig.getMetricConfig();
+    const auto& metricConfig = manager.getMetricConfig();
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
@@ -163,10 +160,7 @@ TEST_F(MetricsConfigTest, ChangedValues) {
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
-    auto modelInstance = manager.findModelInstance(dummyModelName);
-    auto modelConfig = modelInstance->getModelConfig();
-
-    auto metricConfig = modelConfig.getMetricConfig();
+    const auto& metricConfig = manager.getMetricConfig();
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/newmetrics");
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, true);
@@ -181,10 +175,7 @@ TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
-    auto modelInstance = manager.findModelInstance(dummyModelName);
-    auto modelConfig = modelInstance->getModelConfig();
-
-    auto metricConfig = modelConfig.getMetricConfig();
+    const auto& metricConfig = manager.getMetricConfig();
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
     ASSERT_EQ(metricConfig.requestFailGrpcModelInfer, true);
@@ -198,10 +189,8 @@ TEST_F(MetricsConfigTest, MetricsBadEndpoint) {
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
-    auto modelInstance = manager.findModelInstance(dummyModelName);
-    auto modelConfig = modelInstance->getModelConfig();
 
-    auto metricConfig = modelConfig.getMetricConfig();
+    const auto& metricConfig = manager.getMetricConfig();
     ASSERT_EQ(metricConfig.endpointsPath, "/new..metrics");
 }
 

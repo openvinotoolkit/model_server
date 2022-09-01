@@ -96,7 +96,7 @@ class MockModel : public ovms::Model {
 public:
     MockModel() :
         Model("MOCK_NAME", false, nullptr) {}
-    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::Core&, ovms::MetricRegistry*), (override));
+    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::Core&, ovms::MetricRegistry*, const ovms::MetricConfig*), (override));
 };
 
 std::shared_ptr<MockModel> modelMock;
@@ -475,7 +475,7 @@ TEST(ModelManager, StartFromFile) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    EXPECT_CALL(*modelMock, addVersion(_, _, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
     auto status = manager.startFromFile(fileToReload);
@@ -502,7 +502,7 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     createConfigFileWithContent(config_1_model, fileToReload);
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
-    EXPECT_CALL(*modelMock, addVersion(_, _, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
 
     auto status = manager.startFromFile(fileToReload);
@@ -906,7 +906,7 @@ TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    EXPECT_CALL(*modelMock, addVersion(_, _, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
     auto status = manager.startFromFile(fileToReload);

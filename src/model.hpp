@@ -88,7 +88,7 @@ protected:
          *
          * @return status
          */
-    virtual Status addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegistry* registry = nullptr);
+    virtual Status addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr);
 
     /**
          * @brief ModelInstances factory
@@ -176,7 +176,7 @@ public:
          *
          * @return status
          */
-    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed, MetricRegistry* registry = nullptr);
+    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed, MetricRegistry* registry = nullptr,const MetricConfig* metricConfig = nullptr);
 
     /**
          * @brief Retires versions of Model

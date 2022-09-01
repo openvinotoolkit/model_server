@@ -560,19 +560,24 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     return firstErrorStatus;
 }
 
-Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
+Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson)
+{
     Status firstErrorStatus = StatusCode::OK;
-    MetricConfig metricConfig;
-
     const auto itr2 = configJson.FindMember("monitoring");
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
     } else {
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring config settings: {}", itr2->value.GetString());
-        auto status = metricConfig.parseMetricsConfig(metrics);
-        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+        firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics);
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(firstErrorStatus);
     }
+
+    return firstErrorStatus;
+}
+
+Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
+    Status firstErrorStatus = StatusCode::OK;
 
     const auto itr = configJson.FindMember("model_config_list");
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
@@ -585,7 +590,6 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
-        modelConfig.setMetricConfig(metricConfig);
         auto status = modelConfig.parseNode(configs["config"]);
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
@@ -732,6 +736,11 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     Status firstErrorStatus = StatusCode::OK;
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+    
+    status = loadMetricsConfig(configJson);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
@@ -1134,7 +1143,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry);
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry, &this->metricConfig);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
