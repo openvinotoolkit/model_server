@@ -64,6 +64,8 @@ public:
 
     Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);
+    bool ValidateEndpointPath(std::string endpoint);
+
     void setAllMetricsTo(bool enabled);
 
     MetricConfig() {

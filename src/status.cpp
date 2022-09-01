@@ -248,6 +248,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Model control API
     {StatusCode::OK_NOT_RELOADED, "Config reload was not needed"},
     {StatusCode::OK_RELOADED, "Config reload successful"},
+
+    // Metrics
+    {StatusCode::INVALID_METRICS_ENDPOINT, "Metrics config endpoint path is invalid"},
 };
 
 const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {

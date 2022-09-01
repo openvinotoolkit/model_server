@@ -21,6 +21,7 @@
 #include <set>
 #include <sstream>
 
+#include <regex>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -30,6 +31,12 @@
 #include "stringutils.hpp"
 
 namespace ovms {
+
+bool MetricConfig::ValidateEndpointPath(std::string endpoint)
+{
+    std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
+    return std::regex_match(endpoint, valid_endpoint_regex);
+}
 
 // Getting the "monitoring" metrics config as input
 Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
@@ -46,7 +53,10 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
     }
 
     if (v.HasMember("endpoint_path")) {
-        endpointsPath = v["endpoint_path"].GetString();
+        if (ValidateEndpointPath(v["endpoint_path"].GetString()))
+            endpointsPath = v["endpoint_path"].GetString();
+        else
+            return StatusCode::INVALID_METRICS_ENDPOINT;
     } else {
         endpointsPath = "/metrics";
     }

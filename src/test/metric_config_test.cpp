@@ -188,10 +188,7 @@ TEST_F(MetricsConfigTest, MetricsBadEndpoint) {
     ConstructorEnabledModelManager manager;
     createConfigFileWithContent(ovmsConfig, configFilePath);
     auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-
-    const auto& metricConfig = manager.getMetricConfig();
-    ASSERT_EQ(metricConfig.endpointsPath, "/new..metrics");
+    ASSERT_EQ(status, StatusCode::INVALID_METRICS_ENDPOINT) << status.string();
 }
 
 class ModelMetricReporterTest : public ::testing::Test {};
