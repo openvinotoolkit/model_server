@@ -28,6 +28,6 @@ cc_library(
     hdrs = glob([
         "include/**/*.*"
     ]),
-    strip_include_prefix = "include",
+    strip_include_prefix = "include/opencv4",
     visibility = ["//visibility:public"],
 )
