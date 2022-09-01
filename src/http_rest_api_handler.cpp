@@ -264,7 +264,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
 Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     auto module = this->ovmsServer.getModule(METRICS_MODULE_NAME);
     if (nullptr == module) {
-        return StatusCode::INTERNAL_ERROR;  // TODO
+        return StatusCode::INTERNAL_ERROR;  // TODO: Return proper code when metric endpoint is disabled (missing module).
     }
     auto metricModule = dynamic_cast<const MetricModule*>(module);
     response = metricModule->getRegistry().collect();
@@ -715,7 +715,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
-                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Do not count as GetModelStatus?
+                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Have separate method for ConfigReload and do not increment
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed. Check server logs for more info.");
         return status;
@@ -740,7 +740,7 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
-                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Do not count as GetModelStatus?
+                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Have separate method for ConfigStatus and do not increment
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed.");
         return status;
