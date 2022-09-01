@@ -349,7 +349,7 @@ public:
     }
 
     Status loadMetricsConfig(rapidjson::Document& configJson);
-    
+
     /**
          * @brief Set the metric config
          * 

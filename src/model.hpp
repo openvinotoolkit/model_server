@@ -176,7 +176,7 @@ public:
          *
          * @return status
          */
-    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed, MetricRegistry* registry = nullptr,const MetricConfig* metricConfig = nullptr);
+    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr);
 
     /**
          * @brief Retires versions of Model

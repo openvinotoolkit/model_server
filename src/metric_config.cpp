@@ -18,10 +18,10 @@
 #include <algorithm>
 #include <filesystem>
 #include <limits>
+#include <regex>
 #include <set>
 #include <sstream>
 
-#include <regex>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -32,8 +32,7 @@
 
 namespace ovms {
 
-bool MetricConfig::ValidateEndpointPath(std::string endpoint)
-{
+bool MetricConfig::ValidateEndpointPath(std::string endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
     return std::regex_match(endpoint, valid_endpoint_regex);
 }
@@ -152,7 +151,7 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     return StatusCode::OK;
 }
 
-void MetricConfig::setAllMetricsTo(bool enabled){
+void MetricConfig::setAllMetricsTo(bool enabled) {
     requestSuccessGrpcPredict = enabled;
     requestSuccessGrpcGetModelMetadata = enabled;
     requestSuccessGrpcGetModelStatus = enabled;

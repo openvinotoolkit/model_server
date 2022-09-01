@@ -16,6 +16,7 @@
 #pragma once
 
 #include <rapidjson/document.h>
+
 #include "status.hpp"
 
 namespace ovms {
