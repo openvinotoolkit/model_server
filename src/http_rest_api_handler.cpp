@@ -193,19 +193,25 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
 
     Document doc;
     doc.Parse(request_body.c_str());
-    Value& inputs = doc["inputs"];
-    for (SizeType i = 0; i < inputs.Size(); i++) {
-        Value data = inputs[i].GetObject()["data"].GetArray();
-        Value contents(rapidjson::kObjectType);
-        Value datatype(types[inputs[i].GetObject()["datatype"].GetString()].c_str(), doc.GetAllocator());
-        contents.AddMember(datatype, data, doc.GetAllocator());
-        inputs[i].AddMember("contents", contents, doc.GetAllocator());
-        parseParams(inputs[i], doc);
+    if (doc.HasMember("inputs")) {
+        Value& inputs = doc["inputs"];
+        for (SizeType i = 0; i < inputs.Size(); i++) {
+            Value data = inputs[i].GetObject()["data"].GetArray();
+            Value contents(rapidjson::kObjectType);
+            Value datatype(types[inputs[i].GetObject()["datatype"].GetString()].c_str(), doc.GetAllocator());
+            contents.AddMember(datatype, data, doc.GetAllocator());
+            inputs[i].AddMember("contents", contents, doc.GetAllocator());
+            parseParams(inputs[i], doc);
+        }
     }
-    Value& outputs = doc["outputs"];
-    for (SizeType i = 0; i < outputs.Size(); i++) {
-        parseParams(outputs[i], doc);
+
+    if (doc.HasMember("outputs")) {
+        Value& outputs = doc["outputs"];
+        for (SizeType i = 0; i < outputs.Size(); i++) {
+            parseParams(outputs[i], doc);
+        }
     }
+
     parseParams(doc, doc);
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
