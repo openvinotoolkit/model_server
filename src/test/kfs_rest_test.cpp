@@ -229,7 +229,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8) {
 
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-    
+
     int i = 0;
     for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
         ASSERT_EQ(content, i++);
@@ -281,7 +281,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT16) {
 
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-    
+
     int i = 0;
     for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
         ASSERT_EQ(content, i++);
@@ -309,7 +309,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT32) {
 
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-    
+
     int i = 0;
     for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
         ASSERT_EQ(content, i++);
@@ -337,7 +337,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT64) {
 
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-    
+
     int i = 0;
     for (auto content : grpc_request.inputs()[0].contents().int64_contents()) {
         ASSERT_EQ(content, i++);
