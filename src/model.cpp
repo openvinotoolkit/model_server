@@ -136,7 +136,7 @@ Status Model::addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegi
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed, MetricRegistry* registry,const MetricConfig* metricConfig) {
+Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed, MetricRegistry* registry, const MetricConfig* metricConfig) {
     Status result = StatusCode::OK;
     downloadModels(fs, config, versionsToStart);
     versionsFailed->clear();

@@ -560,8 +560,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     return firstErrorStatus;
 }
 
-Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson)
-{
+Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     Status firstErrorStatus = StatusCode::OK;
     const auto itr2 = configJson.FindMember("monitoring");
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
@@ -739,7 +738,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
-    
+
     status = loadMetricsConfig(configJson);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);

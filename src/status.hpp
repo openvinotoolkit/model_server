@@ -271,7 +271,7 @@ enum class StatusCode {
 
     // Metrics
     INVALID_METRICS_ENDPOINT,
-    
+
     STATUS_CODE_END
 };
 
