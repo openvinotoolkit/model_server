@@ -20,15 +20,17 @@
 #include "server.hpp"
 
 namespace ovms {
+
+class Config;
+
 class MetricModule : public Module {
     std::unique_ptr<MetricRegistry> registry;
 
 public:
-    MetricModule() :
-        registry(std::make_unique<MetricRegistry>()) {}
-    int start(const ovms::Config& config) override { return EXIT_SUCCESS; }
-    void shutdown() override {}
+    MetricModule();
+    int start(const Config& config) override;
+    void shutdown() override;
 
-    MetricRegistry& getRegistry() const { return *this->registry; }
+    MetricRegistry& getRegistry() const;
 };
 }  // namespace ovms

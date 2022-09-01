@@ -61,6 +61,7 @@ public:
     Status getModelStatus(
         const tensorflow::serving::GetModelMetadataRequest* request,
         tensorflow::serving::GetModelMetadataResponse* response, ExecutionContext kind) const;
+
     static Status getModelStatus(
         const tensorflow::serving::GetModelMetadataRequest* request,
         tensorflow::serving::GetModelMetadataResponse* response,

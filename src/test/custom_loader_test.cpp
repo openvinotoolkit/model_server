@@ -869,7 +869,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
     model_specx->set_name("dummy");
     model_specx->mutable_version()->set_value(1);
 
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&reqx, &resx, manager, *defaultContext), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&reqx, &resx, manager, DEFAULT_CONTEXT), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_constx = resx;
     json_output = "";
@@ -1094,7 +1094,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListingModel) {
     model_specx->set_name("dummy");
     model_specx->mutable_version()->set_value(1);
 
-    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&reqx, &resx, manager, *defaultContext), StatusCode::OK);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&reqx, &resx, manager, DEFAULT_CONTEXT), StatusCode::OK);
 
     const tensorflow::serving::GetModelStatusResponse response_constx = resx;
     json_output = "";

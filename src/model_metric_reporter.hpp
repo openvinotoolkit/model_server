@@ -67,7 +67,7 @@ public:
     std::shared_ptr<MetricCounter> requestFailRestModelMetadata;
     std::shared_ptr<MetricCounter> requestFailRestModelReady;
 
-    inline std::shared_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(ExecutionContext& context) {
+    inline std::shared_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) {
         if (context.interface == ExecutionContext::Interface::GRPC) {
             return this->requestSuccessGrpcGetModelStatus;
         } else {
@@ -75,7 +75,7 @@ public:
         }
     }
 
-    inline std::shared_ptr<MetricCounter>& getGetModelMetadataRequestMetric(ExecutionContext& context, bool success) {
+    inline std::shared_ptr<MetricCounter>& getGetModelMetadataRequestMetric(const ExecutionContext& context, bool success) {
         if (success) {
             if (context.interface == ExecutionContext::Interface::GRPC) {
                 return this->requestSuccessGrpcGetModelMetadata;
@@ -91,7 +91,7 @@ public:
         }
     }
 
-    inline std::shared_ptr<MetricCounter>& getInferRequestMetric(ExecutionContext& context) {
+    inline std::shared_ptr<MetricCounter>& getInferRequestMetric(const ExecutionContext& context) {
         if (context.method == ExecutionContext::Method::Predict) {
             if (context.interface == ExecutionContext::Interface::GRPC) {
                 return this->requestSuccessGrpcPredict;
