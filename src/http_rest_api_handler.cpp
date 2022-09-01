@@ -283,62 +283,62 @@ Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, 
     return StatusCode::OK;
 }
 
-static std::string contentFieldNotEmptyErrorMessage = " contents is not empty. Content field should be empty when using binary inputs extension.";
+#define CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE " contents is not empty. Content field should be empty when using binary inputs extension."
 
 Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputTensor* input) {
     if (input->datatype() == "FP32") {
         if (input->contents().fp32_contents_size() > 0) {
-            SPDLOG_DEBUG("FP32" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("FP32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT64") {
         if (input->contents().int64_contents_size() > 0) {
-            SPDLOG_DEBUG("INT64" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("INT64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT32") {
         if (input->contents().int_contents_size() > 0) {
-            SPDLOG_DEBUG("INT32" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("INT32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT16") {
         if (input->contents().int_contents_size() > 0) {
-            SPDLOG_DEBUG("INT16" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("INT16" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT8") {
         if (input->contents().int_contents_size() > 0) {
-            SPDLOG_DEBUG("INT8" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("INT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "UINT64") {
         if (input->contents().uint64_contents_size() > 0) {
-            SPDLOG_DEBUG("UINT64" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("UINT64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "UINT32") {
         if (input->contents().uint_contents_size() > 0) {
-            SPDLOG_DEBUG("UINT32" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("UINT32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "UINT16") {
         if (input->contents().uint_contents_size() > 0) {
-            SPDLOG_DEBUG("UINT16" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("UINT16" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "UINT8") {
         if (input->contents().uint_contents_size() > 0) {
-            SPDLOG_DEBUG("UINT8" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("UINT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "FP64") {
         if (input->contents().fp64_contents_size() > 0) {
-            SPDLOG_DEBUG("FP64" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("FP64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "BYTES") {
         if (input->contents().bytes_contents_size() > 0) {
-            SPDLOG_DEBUG("BYTES" + contentFieldNotEmptyErrorMessage);
+            SPDLOG_DEBUG("BYTES" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else {
