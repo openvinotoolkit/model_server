@@ -128,11 +128,6 @@ private:
     plugin_config_t pluginConfig;
 
     /**
-         * @brief Metrics config
-         */
-    MetricConfig metricConfig;
-
-    /**
      * 
          * @brief Layout for single input
          */
@@ -536,30 +531,12 @@ public:
     }
 
     /**
-         * @brief Get the metric config
-         * 
-         * @return const std::string&
-         */
-    const MetricConfig& getMetricConfig() const {
-        return this->metricConfig;
-    }
-
-    /**
          * @brief Set the plugin config
          * 
          * @param pluginConfig 
          */
     void setPluginConfig(const plugin_config_t& pluginConfig) {
         this->pluginConfig = pluginConfig;
-    }
-
-    /**
-         * @brief Set the metric config
-         * 
-         * @param metricConfig 
-         */
-    void setMetricConfig(const MetricConfig& metricConfig) {
-        this->metricConfig = metricConfig;
     }
 
     /**

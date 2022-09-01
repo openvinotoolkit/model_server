@@ -107,7 +107,7 @@ public:
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
         MetricRegistry* registry = nullptr,
-        MetricConfig* metricConfig = nullptr) :
+        const MetricConfig* metricConfig = nullptr) :
         pipelineName(pipelineName),
         nodeInfos(nodeInfos),
         connections(connections),

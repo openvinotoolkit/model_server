@@ -56,7 +56,7 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "pipeline definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections, manager.getMetricRegistry());
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections, manager.getMetricRegistry(), &manager.getMetricConfig());
 
     pipelineDefinition->makeSubscriptions(manager);
     Status validationResult = pipelineDefinition->validate(manager);
