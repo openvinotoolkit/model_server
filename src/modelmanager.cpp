@@ -740,10 +740,16 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 
-    status = loadMetricsConfig(configJson);
+    // Reading metric config only once per server start
+    static bool once = []() {
+        status = loadMetricsConfig(configJson);
+        return true;
+    }();
+
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
+
     std::vector<ModelConfig> gatedModelConfigs;
     status = loadModelsConfig(configJson, gatedModelConfigs);
     if (!status.ok()) {
