@@ -283,6 +283,7 @@ static std::vector<T> asVector(const std::string& tensor_content) {
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {
     ovms::MetricRegistry registry;
+    ovms::MetricConfig metricConfig;
 
 public:
     ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "") :
