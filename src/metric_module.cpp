@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "metric_module.hpp"
+
 #include "config.hpp"
 #include "metric_registry.hpp"
 
