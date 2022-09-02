@@ -49,7 +49,7 @@ def test_PredictResponse_to_dict_valid_outputs(response, expected_output):
     predict_response = HttpPredictResponse(predict_raw_response)
     output = predict_response.to_dict()
 
-    assert(outputsEqual(output, expected_output))
+    assert (outputsEqual(output, expected_output))
 
 
 @pytest.mark.parametrize("response, expected_error", PREDICT_RESPONSE_MALFROMED_RESPONSE)
@@ -80,7 +80,7 @@ def test_ModelMetadataResponse_to_dict_valid_outputs(response, expected_output):
     metadata_response = HttpModelMetadataResponse(metadata_raw_response)
     output = metadata_response.to_dict()
 
-    assert(output == expected_output)
+    assert (output == expected_output)
 
 
 @pytest.mark.parametrize("response, expected_output", RESPONSE_VALID_OTHER)
@@ -90,7 +90,7 @@ def test_ModelMetadataResponse_to_dict_valid_other(response, expected_output):
     metadata_response = HttpModelMetadataResponse(metadata_raw_response)
     output = metadata_response.to_dict()
 
-    assert(output == expected_output)
+    assert (output == expected_output)
 
 
 @pytest.mark.parametrize("response, expected_errors",
@@ -112,7 +112,7 @@ def test_ModelStatusResponse_to_dict_valid_outputs(response, expected_output):
     status_response = HttpModelStatusResponse(status_raw_response)
     output = status_response.to_dict()
 
-    assert(output == expected_output)
+    assert (output == expected_output)
 
 
 @pytest.mark.parametrize("response, expected_error", STATUS_RESPONSE_MALFROMED_RESPONSE)
