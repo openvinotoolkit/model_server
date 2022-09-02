@@ -127,7 +127,7 @@ std::optional<int64_t> stoi64(const std::string& str) {
             return std::nullopt;
         }
     }
-    if (str[isMinus] == '0') {
+    if (str.size() > 1 && str[isMinus] == '0') {
         return std::nullopt;
     }
     try {

@@ -160,7 +160,11 @@ TEST(StringUtils, stoi32) {
 }
 
 TEST(StringUtils, stoi64) {
-    auto result = ovms::stoi64("100");
+    auto result = ovms::stoi64("0");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 0);
+
+    result = ovms::stoi64("100");
     EXPECT_TRUE(result);
     EXPECT_EQ(result.value(), 100);
 
