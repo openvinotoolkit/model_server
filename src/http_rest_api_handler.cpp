@@ -359,7 +359,7 @@ Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputT
 }
 
 Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char* binary_inputs, size_t binary_inputs_size) {
-    int binary_input_offset = 0;
+    size_t binary_input_offset = 0;
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
         auto input = grpc_request.mutable_inputs()->Mutable(i);
         auto status = validateContentFieldsEmptiness(input);
@@ -397,7 +397,7 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
                     binary_input_offset += size;
                 }
             } else {
-                SPDLOG_WARN("binary_data_size parameter type should be int64 or string");
+                SPDLOG_DEBUG("binary_data_size parameter type should be int64 or string");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
             }
         }
