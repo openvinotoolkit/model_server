@@ -72,78 +72,78 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
 Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     for (auto& sh : v.GetArray()) {
         std::string metric = std::string(sh.GetString());
-        if (metric == "requestSuccessGrpcPredict") {
+        if (metric == "request_success_grpc_predict") {
             requestSuccessGrpcPredict = true;
         }
-        if (metric == "requestSuccessGrpcGetModelMetadata") {
+        if (metric == "request_success_grpc_get_model_metadata") {
             requestSuccessGrpcGetModelMetadata = true;
         }
-        if (metric == "requestSuccessGrpcGetModelStatus") {
+        if (metric == "request_success_grpc_get_model_status") {
             requestSuccessGrpcGetModelStatus = true;
         }
-        if (metric == "requestSuccessRestPredict") {
+        if (metric == "request_success_rest_predict") {
             requestSuccessRestPredict = true;
         }
-        if (metric == "requestSuccessRestGetModelMetadata") {
+        if (metric == "request_success_rest_get_model_metadata") {
             requestSuccessRestGetModelMetadata = true;
         }
-        if (metric == "requestSuccessRestGetModelStatus") {
+        if (metric == "request_success_rest_get_model_status") {
             requestSuccessRestGetModelStatus = true;
         }
-        if (metric == "requestFailGrpcPredict") {
+        if (metric == "request_fail_grpc_predict") {
             requestFailGrpcPredict = true;
         }
-        if (metric == "requestFailGrpcGetModelMetadata") {
+        if (metric == "request_fail_grpc_get_model_metadata") {
             requestFailGrpcGetModelMetadata = true;
         }
-        if (metric == "requestFailGrpcGetModelStatus") {
+        if (metric == "request_fail_grpc_get_model_status") {
             requestFailGrpcGetModelStatus = true;
         }
-        if (metric == "requestFailRestPredict") {
+        if (metric == "request_fail_rest_predict") {
             requestFailRestPredict = true;
         }
-        if (metric == "requestFailRestGetModelMetadata") {
+        if (metric == "request_fail_rest_get_model_metadata") {
             requestFailRestGetModelMetadata = true;
         }
-        if (metric == "requestFailRestGetModelStatus") {
+        if (metric == "request_fail_rest_get_model_status") {
             requestFailRestGetModelStatus = true;
         }
-        if (metric == "requestSuccessGrpcModelInfer") {
+        if (metric == "request_success_grpc_model_infer") {
             requestSuccessGrpcModelInfer = true;
         }
         // KFS
-        if (metric == "requestSuccessGrpcModelMetadata") {
+        if (metric == "request_success_grpc_model_metadata") {
             requestSuccessGrpcModelMetadata = true;
         }
-        if (metric == "requestSuccessGrpcModelReady") {
+        if (metric == "request_success_grpc_model_ready") {
             requestSuccessGrpcModelReady = true;
         }
-        if (metric == "requestSuccessRestModelInfer") {
+        if (metric == "request_success_rest_model_infer") {
             requestSuccessRestModelInfer = true;
         }
-        if (metric == "requestSuccessRestModelMetadata") {
+        if (metric == "request_success_rest_model_metadata") {
             requestSuccessRestModelMetadata = true;
         }
-        if (metric == "requestSuccessRestModelReady") {
+        if (metric == "request_success_rest_model_ready") {
             requestSuccessRestModelReady = true;
         }
-        if (metric == "requestFailGrpcModelInfer") {
+        if (metric == "request_fail_grpc_model_infer") {
             requestFailGrpcModelInfer = true;
         }
-        if (metric == "requestFailGrpcModelMetadata") {
+        if (metric == "request_fail_grpc_model_metadata") {
             requestFailGrpcModelMetadata = true;
         }
-        if (metric == "requestFailGrpcModelReady") {
+        if (metric == "request_fail_grpc_model_ready") {
             requestFailGrpcModelReady = true;
         }
 
-        if (metric == "requestFailRestModelInfer") {
+        if (metric == "request_fail_rest_model_infer") {
             requestFailRestModelInfer = true;
         }
-        if (metric == "requestFailRestModelMetadata") {
+        if (metric == "request_fail_rest_model_metadata") {
             requestFailRestModelMetadata = true;
         }
-        if (metric == "requestFailRestModelReady") {
+        if (metric == "request_fail_rest_model_ready") {
             requestFailRestModelReady = true;
         }
     }
