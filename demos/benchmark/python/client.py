@@ -17,6 +17,7 @@
 """Base inference client for benchmarks"""
 
 import os
+import re
 import io
 import abc
 import sys
@@ -25,7 +26,8 @@ import math
 import json
 import random
 import traceback
-
+import datetime
+import uuid
 import png
 import grpc
 import numpy
@@ -66,13 +68,39 @@ class BaseClient(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def DTYPE_FLOAT_32(self):
-        pass
+    def DTYPE_FLOAT_16(self): pass
+    @property
+    @abc.abstractmethod
+    def DTYPE_FLOAT_32(self): pass
+    @property
+    @abc.abstractmethod
+    def DTYPE_FLOAT_64(self): pass
 
     @property
     @abc.abstractmethod
-    def DTYPE_INT_32(self):
-        pass
+    def DTYPE_INT_8(self): pass
+    @property
+    @abc.abstractmethod
+    def DTYPE_INT_16(self): pass
+    @property
+    @abc.abstractmethod
+    def DTYPE_INT_32(self): pass
+    @property
+    @abc.abstractmethod
+    def DTYPE_INT_64(self): pass
+
+    @property
+    @abc.abstractmethod
+    def DTYPE_UINT_8(self): pass
+    @property
+    @abc.abstractmethod
+    def DTYPE_UINT_16(self): pass
+    @property
+    @abc.abstractmethod
+    def DTYPE_UINT_32(self): pass
+    @property
+    @abc.abstractmethod
+    def DTYPE_UINT_64(self): pass
 
     @abc.abstractmethod
     def get_stub(self):
@@ -98,15 +126,26 @@ class BaseClient(metaclass=abc.ABCMeta):
     ############################# End Of Abstract #############################
     ###########################################################################
 
-    def print_info(self, info, force=False):
+    def _get_print_prefix(self):
+        if not self.printtime: return ""
+        dt = datetime.datetime.now().strftime("%H:%M:%S.%f")
+        return f"[{dt}] "
+
+    def print_info(self, *info, force=False):
         if self.printall or force:
-            sys.stdout.write(f"XI {self.worker_id}: {info}\n")
+            time_prefix = self._get_print_prefix()
+            info = ' '.join(map(str, info))
+            sys.stdout.write(f"{time_prefix:10}XI {self.worker_id}: {info}\n")
 
-    def print_warning(self, info):
-        sys.stderr.write(f"XW {self.worker_id}: {info}\n")
+    def print_warning(self, *info):
+        time_prefix = self._get_print_prefix()
+        info = ' '.join(map(str, info))
+        sys.stderr.write(f"{time_prefix:10}XW {self.worker_id}: {info}\n")
 
-    def print_error(self, info):
-        sys.stderr.write(f"XE {self.worker_id}: {info}\n")
+    def print_error(self, *info):
+        time_prefix = self._get_print_prefix()
+        info = ' '.join(map(str, info))
+        sys.stderr.write(f"{time_prefix:10}XE {self.worker_id}: {info}\n")
 
     def make_credentials(self, certs_dir):
         server_cert_path = os.path.join(certs_dir, "server.pem")
@@ -143,6 +182,7 @@ class BaseClient(metaclass=abc.ABCMeta):
         self.final_status = True
         self.jsonout = False
         self.printall = False
+        self.printtime = False
 
         if certs_dir is None:
             func = grpc.insecure_channel
@@ -175,9 +215,12 @@ class BaseClient(metaclass=abc.ABCMeta):
         self.stateful_id = 1
         self.min_value = 0.0
         self.max_value = 1.0
+        self.dump_png = False
+        self.xrandom_number = 8
         self.model_name = None
         self.model_version = None
         self.dataset_length = 0
+        self.report_warmup = False
         self.forced_shape = None
         self.batchsizes = []
         self.requests = []
@@ -185,7 +228,9 @@ class BaseClient(metaclass=abc.ABCMeta):
         self.inputs = {}
         self.xdata = {}
 
-    def set_flags(self, jsonout=False, printall=False):
+    def set_flags(self, jsonout=False, printall=False, printtimed=False, reportwarmup=False):
+        self.report_warmup = reportwarmup
+        self.printtime = printtimed
         self.printall = printall
         self.jsonout = jsonout
         if self.printall:
@@ -201,6 +246,13 @@ class BaseClient(metaclass=abc.ABCMeta):
         self.print_info(f"new random range: {min_value}, {max_value}")
         self.min_value = float(min_value)
         self.max_value = float(max_value)
+
+    def set_xrandom_number(self, number):
+        assert int(number) > 0
+        self.xrandom_number = int(number)
+
+    def set_dump_png(self):
+        self.dump_png = True
 
     def prepare_data(self, data_description, bs_list, dataset_length=None, forced_shape=None):
         self.forced_shape = forced_shape
@@ -226,43 +278,60 @@ class BaseClient(metaclass=abc.ABCMeta):
             super_method_name = "random"
 
         for input_name in self.inputs:
-            method_name = parsed_data_description.get(
-                input_name, super_method_name)
+            method_name = parsed_data_description.get(input_name, super_method_name)
             if "." in method_name:
-                self.load_data(input_name, method_name)
+                self.load_data(input_name, method_name, dataset_length)
             elif method_name in ("random", "urandom"):
                 self.generate_urandom_data(input_name, dataset_length)
-            elif method_name in ("png-random", "png-urandom", "png"):
+            elif re.match(r"^png([0-9]*)(-random|-urandom)*$", method_name):
+                radius = re.match(r"png([0-9]*)", method_name).group(1)
+                try: radius = int(radius)
+                except ValueError: radius = 1
                 self.set_random_range(0, 255)
-                self.print_warning("Forced random range (0, 255) for methods png-random / png-urandom / png")
-                self.generate_png_urandom_data(input_name, dataset_length)
-            elif method_name in ("png4-random", "png4-urandom", "png4"):
-                self.set_random_range(0, 255)
-                self.print_warning("Forced random range (0, 255) for methods png5-random / png5-urandom / png4")
-                self.generate_png_urandom_data(input_name, dataset_length, 4)
-            elif method_name in ("png8-random", "png8-urandom", "png8"):
-                self.set_random_range(0, 255)
-                self.print_warning("Forced random range (0, 255) for methods png8-random / png8-urandom / png8")
-                self.generate_png_urandom_data(input_name, dataset_length, 8)
-            elif method_name in ("png16-random", "png16-urandom", "png16"):
-                self.set_random_range(0, 255)
-                self.print_warning("Forced random range (0, 255) for methods png16-random / png16-urandom / png16")
-                self.generate_png_urandom_data(input_name, dataset_length, 16)
+                self.print_warning(f"Forced random range (0, 255) for method {method_name}")
+                self.generate_png_urandom_data(input_name, dataset_length, radius)
             elif method_name in ("vehicle-jpeg", "vehicle-jpg"):
                 self.load_vehicle_jpeg_data(input_name, dataset_length)
+            elif method_name in ("png-xrandom", "xrandom", "xrand"):
+                self.generate_png_xrandom_data(input_name, dataset_length)
             else: raise ValueError(f"unknown method: {method_name}")
         self.prepare_batch_requests()
 
-    def load_data(self, input_name, file_name):
+    def create_batch_from_data(self, content, content_offset, input_name, batch_length):
+        batch = []
+        for i in range(batch_length):
+            try: batch.append(content[content_offset + i])
+            except IndexError:
+                if len(batch) == 0:
+                    self.print_warning(f"Not enough data in create all batches. " +
+                                       f"Number of entries in file ({content_offset + i}) " +
+                                       f"is smaller then required batches {self.batchsizes} " +
+                                       f"with --dataset_length {self.dataset_length}")
+                else:
+                    self.print_warning(f"Not enought data in create all batches. " +
+                                       f"Cannot fill batch of size {batch_length}. " +
+                                       f"Created {len(self.xdata[input_name])} batches. ")
+                return None
+        return batch
+
+    def load_data(self, input_name, file_name, dataset_length):
         assert os.path.exists(file_name), f"File does not exist: {file_name}"
         content = numpy.load(file_name)
+        content_offset = 0
         assert isinstance(content, numpy.ndarray)
-        if self.dataset_length == 0:
-            self.dataset_length = content.shape
-        self.print_info(
-            f"{self.inputs[input_name]}.{input_name}: {content.shape}")
-        msg = f"{input_name}: loading data from file is not supported"
-        raise NotImplementedError(msg)
+        if dataset_length is None or dataset_length <= 0:
+            self.dataset_length = content.shape[0]
+        else: self.dataset_length = dataset_length
+
+        self.xdata[input_name] = []
+        for i in range(self.dataset_length):
+            batch_length = self.batchsizes[i % len(self.batchsizes)]
+            batch = self.create_batch_from_data(content, content_offset, input_name, batch_length)
+            if batch is None: break
+            content_offset += len(batch)
+            xargs = batch, {"shape": list(content.shape[1:])}
+            self.xdata[input_name].append(xargs)
+        self.dataset_length = len(self.xdata[input_name])
 
     def __fix_dataset_length(self, input_name, dataset_length):
         assert input_name in self.inputs.keys()
@@ -288,8 +357,12 @@ class BaseClient(metaclass=abc.ABCMeta):
         dtype = self.inputs[input_name]["dtype"]
         if dtype == self.DTYPE_FLOAT_32:
             dtype = tensorflow.dtypes.float32
+        elif dtype == self.DTYPE_INT_8:
+            dtype = tensorflow.dtypes.int8
         elif dtype == self.DTYPE_INT_32:
             dtype = tensorflow.dtypes.int32
+        elif dtype == self.DTYPE_INT_64:
+            dtype = tensorflow.dtypes.int64
         else: raise ValueError(f"not supported type: {dtype}")
         return shape, dtype
 
@@ -324,11 +397,11 @@ class BaseClient(metaclass=abc.ABCMeta):
         with io.BytesIO() as bytes_file:
             writ.write(bytes_file, png_image)
             binary_png = bytes_file.getvalue()
-        ### uncomment to dump this png file
-        # import uuid
-        # filename = "/tmp/xcli-" + uuid.uuid4().hex + ".png"
-        # with open(filename, "wb") as fd:
-        #     writ.write(fd, png_image)
+
+        if self.dump_png:
+            filename = "/tmp/xcli-" + uuid.uuid4().hex + ".png"
+            with open(filename, "wb") as fd:
+                writ.write(fd, png_image)
         return binary_png
 
     def load_vehicle_jpeg_data(self, input_name, dataset_length):
@@ -388,11 +461,67 @@ class BaseClient(metaclass=abc.ABCMeta):
             xargs = batch, {"dtype": dtype, "shape": batch.shape}
             self.xdata[input_name].append(xargs)
 
-    def run_workload(self, steps_number, duration, timeout=30, errors_limits=(0,0),
-                     warmup=0, window=None, hist_base=10, hist_factor=1000):
+    def __xrand_single_png(self, width, height):
+        xvector = []
+        for _ in range(self.xrandom_number):
+            rgb = []
+            x = random.randint(0, width-1)
+            y = random.randint(0, height-1)
+            for _ in range(3):
+                s = random.randint(0, 3)
+                if s == 0: rgb.append(0)
+                elif s == 1: rgb.append(255)
+                else: rgb.append(random.randint(self.min_value, self.max_value))
+            xvector.append((x, y, rgb))
+        png_image = []
+        for oy in range(height):
+            row = ()
+            for ox in range(width):
+                min_d = math.inf
+                min_rgb = (0, 0, 0)
+                for x, y, rgb in xvector:
+                    d = (ox - x) ** 2 + (oy - y) ** 2
+                    if d < min_d: min_rgb, min_d = tuple(rgb), d
+                row = row + min_rgb
+            png_image.append(row)
+
+        writ = png.Writer(width, height, greyscale=False)
+        with io.BytesIO() as bytes_file:
+            writ.write(bytes_file, png_image)
+            binary_png = bytes_file.getvalue()
+
+        if self.dump_png:
+            filename = "/tmp/xcli-" + uuid.uuid4().hex + ".png"
+            with open(filename, "wb") as fd:
+                writ.write(fd, png_image)
+        return binary_png
+
+    def generate_png_xrandom_data(self, input_name, dataset_length):
+        self.__fix_dataset_length(input_name, dataset_length)
+        shape, dtype = self.__fix_shape_and_type(input_name)
+        assert shape[-1] == 3, f"PNG has to have RGB channel - set NHWC - (now: {shape})"
+        width, height = shape[-3], shape[-2]
+
+        self.xdata[input_name] = []
+        for index in range(self.dataset_length):
+            batch_index = index % len(self.batchsizes)
+            batch_length = self.batchsizes[batch_index]
+            batch = []
+            for _ in range(batch_length):
+               batch.append(self.__xrand_single_png(width, height))
+            xargs = batch, {"shape": [batch_length]}
+            self.xdata[input_name].append(xargs)
+
+    def run_workload(self, steps_number, duration, timeout=30, errors_limits=(0,0), warmup=0,
+                     window=None, hist_base=10, hist_factor=1000, max_throughput=None, concurr=1):
         assert self.dataset_length, "no data to inference!"
         errors_limit, errors_exposition = errors_limits
         fail_counter, counter = 0, 0
+
+        # ONly for limited throughput
+        if max_throughput is not None:
+            max_throughput = float(max_throughput)
+            single_max_throughput = max_throughput / int(concurr)
 
         if errors_limit is None: errors_limit = 0
         if steps_number is None: steps_number = 0
@@ -471,6 +600,14 @@ class BaseClient(metaclass=abc.ABCMeta):
                 if window_series.stop():
                     window_ts = window_series.stop_timestamp
                     self.print_info(f"Window normally stopped: {window_ts}")
+
+            if max_throughput is not None:
+                current_throughput = float(batch_size) / request_time
+                if current_throughput > single_max_throughput:
+                    extra_throughput = current_throughput - single_max_throughput
+                    interval_to_sleep = request_time * extra_throughput / single_max_throughput
+                    time.sleep(interval_to_sleep)
+
         if warmup_series.stop():
             warmup_ts = warmup_series.stop_timestamp
             self.print_info(f"Warmup unnormally stopped: {warmup_ts}")
@@ -482,13 +619,14 @@ class BaseClient(metaclass=abc.ABCMeta):
             self.print_info(f"Window stopped: {window_ts}")
         total_series.stop()
 
-        total_stats = total_series.analyze()
-        window_stats = window_series.analyze()
-        warmup_stats = warmup_series.analyze()
         workload_statistics = {}
+        total_stats = total_series.analyze()
         workload_statistics.update(total_stats)
+        window_stats = window_series.analyze()
         workload_statistics.update(window_stats)
-        workload_statistics.update(warmup_stats)
+        if self.report_warmup:
+            warmup_stats = warmup_series.analyze()
+            workload_statistics.update(warmup_stats)
         if self.printall:
             for key, value in workload_statistics.items():
                 self.print_info(f"{key}: {value}")
@@ -501,4 +639,3 @@ class BaseClient(metaclass=abc.ABCMeta):
 
     def get_status(self):
         return self.final_status
-

@@ -22,7 +22,7 @@ RUN apt-get install -y python3
 RUN apt-get install -y python3-pip
 RUN apt-get install -y curl
 
-RUN curl --fail https://bootstrap.pypa.io/get-pip.py | python3
+RUN curl https://bootstrap.pypa.io/get-pip.py | python3
 
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install numpy
@@ -42,14 +42,13 @@ ENV TF_CPP_MIN_LOG_LEVEL=2
 RUN mkdir -p /ovms_benchmark_client
 COPY main.py /ovms_benchmark_client
 COPY client.py /ovms_benchmark_client
-COPY client_ovms.py /ovms_benchmark_client
+COPY client_tfs.py /ovms_benchmark_client
+COPY client_kfs.py /ovms_benchmark_client
 COPY metrics.py /ovms_benchmark_client
 COPY db_exporter.py /ovms_benchmark_client
 COPY __init__.py /ovms_benchmark_client
 COPY entrypoint.sh /
 
-# Comment it to remove NvTrt support from the image
-COPY client_nvtrt.py /ovms_benchmark_client
 
 RUN mkdir -p /data
 COPY road1.jpg /data

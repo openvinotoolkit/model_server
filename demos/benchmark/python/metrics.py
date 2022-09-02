@@ -135,9 +135,10 @@ class XMetrics(dict):
 
     def __iadd__(self, other):
         self.calc_sum(other, "submetrics")
-        self.__iadd_series("warmup_", other)
         self.__iadd_series("window_", other)
         self.__iadd_series("", other)
+        try: self.__iadd_series("warmup_", other)
+        except KeyError: pass
         return self
 
 
@@ -252,11 +253,11 @@ class XSeries:
             self.fail_latency_sum2 += float(lat) ** 2
 
     def start(self):
-        self.start_timestamp = time.time()
+        self.start_timestamp = time.perf_counter()
 
     def stop(self):
         if self.stop_timestamp is None:
-            self.stop_timestamp = time.time()
+            self.stop_timestamp = time.perf_counter()
             return True
         return False
 

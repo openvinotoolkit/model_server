@@ -22,46 +22,41 @@
 # PART 1 - Import and Definitions
 ###
 
-import copy
 import sys
+import copy
+import time
 import json
 import argparse
 import multiprocessing
-import time
-import os
 
 try:
     from ovms_benchmark_client.metrics import XMetrics
-    from ovms_benchmark_client.db_exporter import DBExporter
-    from ovms_benchmark_client.client_ovms import OVmsClient
     from ovms_benchmark_client.client import BaseClient
+    from ovms_benchmark_client.client_tfs import TFS_Client
+    from ovms_benchmark_client.client_kfs import KFS_Client
+    from ovms_benchmark_client.db_exporter import DBExporter
 except ModuleNotFoundError:
     from metrics import XMetrics
-    from db_exporter import DBExporter
-    from client_ovms import OVmsClient
     from client import BaseClient
-try:
-    from ovms_benchmark_client.client_nvtrt import NvTrtClient
-except ModuleNotFoundError:
-    try:
-        from client_nvtrt import NvTrtClient
-    except ImportError:
-        # NvTrt is optional
-        print("NvTrt is not included!")
-        NvTrtClient = None
+    from client_tfs import TFS_Client
+    from client_kfs import KFS_Client
+    from db_exporter import DBExporter
+
+def get_client(xargs):
+    if xargs["api"] == "TFS": return TFS_Client
+    elif xargs["api"] == "KFS": return KFS_Client
+    elif xargs["api"] == "REST": raise NotImplementedError("TODO - add REST support")
+    else: return TFS_Client # default client API
+
 
 # Version used for print only...
-INTERNAL_VERSION="1.17"
+INTERNAL_VERSION="2.6"
 
 # client engine - used for single and multiple client configuration
 def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
 
     # choose Client import for Triton / OVMS
-    if xargs["nv_triton"]:
-        if NvTrtClient is None:
-            raise TypeError("NvTrt is not included!")
-        else: Client = NvTrtClient
-    else: Client = OVmsClient
+    Client = get_client(xargs)
 
     if isinstance(worker_name_or_client, str):
         worker_name = worker_name_or_client
@@ -72,16 +67,17 @@ def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
     else: raise TypeError
 
     if json_flag is None:
-        client.set_flags(xargs["json"], xargs["print_all"])
-    else: client.set_flags(json_flag, xargs["print_all"])
-    client.get_model_metadata(xargs["model_name"],
-                              xargs["model_version"],
-                              xargs["metadata_timeout"])
+        client.set_flags(xargs["json"], xargs["print_all"], xargs["print_time"], xargs["report_warmup"])
+    else: client.set_flags(json_flag, xargs["print_all"], xargs["print_time"], xargs["report_warmup"])
+    client.get_model_metadata(xargs["model_name"], xargs["model_version"], xargs["metadata_timeout"])
+
     stateful_id = int(xargs["stateful_id"]) + int(index)
     client.set_stateful(stateful_id, xargs["stateful_length"], 0)
     client.set_random_range(xargs["min_value"], xargs["max_value"])
-    bs_list = [int(b) for bs in xargs["bs"] for b in str(bs).split("-")]
+    client.set_xrandom_number(xargs["xrand"])
+    if xargs["dump_png"]: client.set_dump_png()
 
+    bs_list = [int(b) for bs in xargs["bs"] for b in str(bs).split("-")]
     if xargs["stateful_length"] is not None and int(xargs["stateful_length"]) > 0:
         if xargs["dataset_length"] is not None:
             factor = int(xargs["dataset_length"]) // int(xargs["stateful_length"])
@@ -96,6 +92,7 @@ def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
         # --shape input-name: 1 225 225 3 input_name2: 2 3
         # --shape layer:3: 64 64
         # --shape 1 225 225 3
+        curr_input = None
         forced_shape[None] = []
         for shape_item in xargs["shape"]:
             if isinstance(shape_item, str) and shape_item and shape_item[-1] == ":":
@@ -116,51 +113,43 @@ def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
                                   xargs["warmup"],
                                   xargs["window"],
                                   xargs["hist_base"],
-                                  xargs["hist_factor"])
+                                  xargs["hist_factor"],
+                                  xargs["max_throughput"],
+                                  xargs["concurrency"])
     return_code = 0 if client.get_status() else -1
     return return_code, results
 
 
 # single client launcher
-def exec_single_client(xargs, db_exporter):
+def exec_single_client(xargs):
     worker_id = xargs.get("id", "worker")
     # choose Client import for Triton / OVMS
-    if xargs["nv_triton"]:
-        if NvTrtClient is None:
-            raise TypeError("NvTrt is not included!")
-        else: Client = NvTrtClient
-    else: Client = OVmsClient
+    Client = get_client(xargs)
     client = Client(f"{worker_id}", xargs["server_address"], xargs["grpc_port"],
                     xargs["rest_port"], xargs["certs_dir"])
-    client.set_flags(xargs["json"], xargs["print_all"])
+    client.set_flags(xargs["json"], xargs["print_all"], xargs["print_time"], xargs["report_warmup"])
     if xargs["list_models"]:
-        client.set_flags(xargs["json"], True)
+        client.set_flags(xargs["json"], True, xargs["print_time"], False)
         client.show_server_status()
         client.print_warning("Finished execution. If you want to run inference remove --list_models.")
         if xargs["model_name"] is not None:
             tout = int(xargs["metadata_timeout"])
             client.get_model_metadata(xargs["model_name"], xargs["model_version"], tout)
-        return 0
+        return 0, {}
 
     if xargs["model_name"] is None:
-        client.set_flags(xargs["json"], True)
+        client.set_flags(xargs["json"], True, xargs["print_time"], False)
         client.show_server_status()
         raise ValueError("Model to inference is needed!")
 
-    return_code, results = run_single_client(xargs, client, 0)
+    return_code, results = run_single_client(xargs, client, 0, False)
     base, factor = float(xargs["hist_base"]), float(xargs["hist_factor"])
     x_results = XMetrics(results)
-
-    if xargs["quantile_list"] is not None:
-        x_results.recalculate_quantiles("window_", base, factor, xargs["quantile_list"])
-    x_results["window_hist_factor"] = factor
-    x_results["window_hist_base"] = base
-    db_exporter.upload_results(x_results, return_code)
-    return return_code
+    return return_code, x_results
 
 
 # many client launcher
-def exec_many_clients(xargs, db_exporter):
+def exec_many_clients(xargs):
     def launcher(worker_name, queue):
         xargs2 = copy.deepcopy(xargs)
         return_code, results = run_single_client(
@@ -173,12 +162,13 @@ def exec_many_clients(xargs, db_exporter):
         fargs = (worker_name, queue)
         job = multiprocessing.Process(target=launcher, args=fargs)
         job.start()
+    if xargs["duration"] is not None:
+        time.sleep(int(xargs["duration"]))
 
     final_return_code = 0
     common_results = XMetrics(submetrics=0)
     counter = int(xargs["concurrency"])
-    if xargs["duration"] is not None:
-        time.sleep(int(xargs["duration"]))
+
     while counter > 0:
         time.sleep(int(xargs["sync_interval"]))
         while queue.qsize() > 0:
@@ -189,29 +179,29 @@ def exec_many_clients(xargs, db_exporter):
             x_results = XMetrics(results)
             common_results += x_results
             counter -= 1
-    base, factor = float(xargs["hist_base"]), float(xargs["hist_factor"])
-    if xargs["quantile_list"] is not None:
-        common_results.recalculate_quantiles("window_", base, factor, xargs["quantile_list"])
-    common_results["window_hist_factor"] = factor
-    common_results["window_hist_base"] = base
-    db_exporter.upload_results(common_results, final_return_code)
+    return final_return_code, common_results
 
-    if xargs["json"]:
-        jout = json.dumps(common_results)
-        print(f"{BaseClient.json_prefix}###{worker_id}###STATISTICS###{jout}")
-    if xargs["print_all"]:
-        for key, value in common_results.items():
-            sys.stdout.write(f"{worker_id}: {key}: {value}\n")
-    return final_return_code
+
+class Unbuffered(object):
+   def __init__(self, stream):
+       self.stream = stream
+   def write(self, data):
+       self.stream.write(data)
+       self.stream.flush()
+   def writelines(self, datas):
+       self.stream.writelines(datas)
+       self.stream.flush()
+   def __getattr__(self, attr):
+       return getattr(self.stream, attr)
+
 
 ###
 # PART 2 - Execution
 ###
 
 if __name__ == "__main__":
-    description = f"""
-    This is a benchmarking client (version {INTERNAL_VERSION}) which uses TF API over the
-    gRPC internet protocol to communicate with serving services (like OVMS, TFS, etc.).
+    description = """
+    This is benchmarking client which uses TFS/KFS API to communicate with OVMS/TFS/KFS-based-services.
     """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("-i", "--id", required=False, default="worker",
@@ -252,18 +242,30 @@ if __name__ == "__main__":
                         help="counter limit of errors to break, default: None")
     parser.add_argument("-x", "--error_exposition", required=False, default=None,
                         help="counter limit of errors to show, default None")
+    parser.add_argument("--max_throughput", required=False, default=None,
+                        help="max throughput in Sa per second, default: None")
     parser.add_argument("--max_value", required=False, default=255.0,
                         help="random maximal value, default: 255")
     parser.add_argument("--min_value", required=False, default=0.0,
                         help="random minimal value, default: 0")
+    parser.add_argument("--xrand", required=False, default=8,
+                        help="xrandom value, default: 8")
+    parser.add_argument("--dump_png", required=False, action="store_true",
+                        help="flag to dump PNG data")
     parser.add_argument("--step_timeout", required=False, default=30,
                         help="iteration timeout in seconds, default: 30")
     parser.add_argument("--metadata_timeout", required=False, default=45,
                         help="metadata timeout in seconds, default: 45")
-    parser.add_argument("-y", "--db_config", required=False, default=None,
-                        help="database configuration. default: None")
+    parser.add_argument("-Y", "--db_endpoint", required=False, default=None,
+                        help="database endpoint configuration. default: None")
+    parser.add_argument("-y", "--db_metadata", required=False, default=None, nargs="*",
+                        help="database metadata configuration. default: None")
     parser.add_argument("--print_all", required=False, action="store_true",
-                        help="flag to form output in JSON format")
+                        help="flag to print all output")
+    parser.add_argument("--print_time", required=False, action="store_true",
+                        help="flag to print datetime next to each output line")
+    parser.add_argument("--report_warmup", required=False, action="store_true",
+                        help="flag to report warmup statistics")
     parser.add_argument("--certs_dir", required=False, default=None,
                         help="directory to certificats, default: None")
     parser.add_argument("-q", "--stateful_length", required=False, default=0,
@@ -272,8 +274,6 @@ if __name__ == "__main__":
                         help="stateful sequence id, default: 1")
     parser.add_argument("--stateful_hop", required=False, default=0,
                         help="stateful sequence id hopsize, default: 0")
-    parser.add_argument("--nv_triton", required=False, action="store_true",
-                        help="flag to use NvClient to connect with Nvidia Triton Server")
     parser.add_argument("--sync_interval", required=False, default=1,
                         help="sync interval for multi-client mode, default: 1")
     parser.add_argument("--quantile_list", required=False, default=None, nargs="*",
@@ -284,6 +284,10 @@ if __name__ == "__main__":
                         help="histogram base, default: 1.5")
     parser.add_argument("--internal_version", required=False, action="store_true",
                         help="flag to print internal version")
+    parser.add_argument("--unbuffered", required=False, action="store_true",
+                        help="flag to print stdout/stderr immediately rather than buffer")
+    parser.add_argument("--api", required=False, default="TFS", choices=["TFS", "KFS", "REST"],
+                        help="flag to choose which API to use")
     xargs = vars(parser.parse_args())
     if xargs["internal_version"]:
         print(INTERNAL_VERSION)
@@ -302,11 +306,34 @@ if __name__ == "__main__":
         duration_error_flag = xargs["steps_number"] is None and xargs["duration"] is None
         assert not duration_error_flag, "Steps/duration not set!"
 
-    # mongo exporter is optional
-    db_exporter = DBExporter(xargs)
+    # buffering
+    if xargs["unbuffered"]:
+        sys.stdout = Unbuffered(sys.stdout)
+        sys.stderr = Unbuffered(sys.stderr)
 
+    # mongo exporter is optional
     worker_id = xargs.get("id", "worker")
+    db_exporter = DBExporter(xargs, worker_id)
+
+    # workload
     if xargs["concurrency"] in ("1", 1):
-        return_code = exec_single_client(xargs, db_exporter)
-    else: return_code = exec_many_clients(xargs, db_exporter)
+        return_code, common_results = exec_single_client(xargs)
+    else: return_code, common_results = exec_many_clients(xargs)
+    if not common_results:
+        sys.exit(return_code)
+
+    base, factor = float(xargs["hist_base"]), float(xargs["hist_factor"])
+    if xargs["quantile_list"] is not None:
+        common_results.recalculate_quantiles("window_", base, factor, xargs["quantile_list"])
+    common_results["window_hist_factor"] = factor
+    common_results["window_hist_base"] = base
+
+    # exporting results
+    db_exporter.upload_results(common_results, return_code)
+    if xargs["json"]:
+        jout = json.dumps(common_results)
+        print(f"{BaseClient.json_prefix}###{worker_id}###STATISTICS###{jout}")
+    if xargs["print_all"]:
+        for key, value in common_results.items():
+            sys.stdout.write(f"{worker_id}: {key}: {value}\n")
     sys.exit(return_code)
