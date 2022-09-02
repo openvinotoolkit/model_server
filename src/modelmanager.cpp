@@ -741,12 +741,13 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     // Reading metric config only once per server start
-    static bool once = []() {
+    static bool once = [this, &status, &configJson]() {
         status = loadMetricsConfig(configJson);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start");
         return true;
     }();
 
-    if (!status.ok()) {
+    if (once && !status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 

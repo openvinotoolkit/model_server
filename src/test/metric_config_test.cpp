@@ -128,21 +128,23 @@ public:
         ovmsConfig = configContent;
         dummyModelName = "dummy";
         const std::string modelPathToReplace{"/ovms/src/test/dummy"};
-        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
-        configFilePath = directoryPath + "/ovms_config.json";
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath); 
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
         // Prepare manager
         modelPath = directoryPath + "/dummy/";
-        SetUpConfig(modelDefaultConfig);
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        configFilePath = directoryPath + "/ovms_config.json";
     }
 };
 
 TEST_F(MetricsConfigTest, DefaultValues) {
-    ConstructorEnabledModelManager manager;
+    SetUpConfig(modelDefaultConfig);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
+    
+    ConstructorEnabledModelManager manager;
+    
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
@@ -155,8 +157,11 @@ TEST_F(MetricsConfigTest, DefaultValues) {
 
 TEST_F(MetricsConfigTest, ChangedValues) {
     SetUpConfig(modelMetricsChangedConfig);
-    ConstructorEnabledModelManager manager;
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+    
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
@@ -170,8 +175,10 @@ TEST_F(MetricsConfigTest, ChangedValues) {
 
 TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
     SetUpConfig(modelMetricsAllEnabledConfig);
-    ConstructorEnabledModelManager manager;
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
+    ConstructorEnabledModelManager manager;
+
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
@@ -185,8 +192,10 @@ TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
 
 TEST_F(MetricsConfigTest, MetricsBadEndpoint) {
     SetUpConfig(modelMetricsBadEndpoint);
-    ConstructorEnabledModelManager manager;
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
+    ConstructorEnabledModelManager manager;
+
     auto status = manager.loadConfig(configFilePath);
     ASSERT_EQ(status, StatusCode::INVALID_METRICS_ENDPOINT) << status.string();
 }
