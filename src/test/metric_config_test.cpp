@@ -128,7 +128,7 @@ public:
         ovmsConfig = configContent;
         dummyModelName = "dummy";
         const std::string modelPathToReplace{"/ovms/src/test/dummy"};
-        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath); 
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
@@ -142,9 +142,9 @@ TEST_F(MetricsConfigTest, DefaultValues) {
     SetUpConfig(modelDefaultConfig);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
-    
+
     ConstructorEnabledModelManager manager;
-    
+
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
@@ -161,7 +161,7 @@ TEST_F(MetricsConfigTest, ChangedValues) {
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     ConstructorEnabledModelManager manager;
-    
+
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
@@ -171,6 +171,31 @@ TEST_F(MetricsConfigTest, ChangedValues) {
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, true);
     ASSERT_EQ(metricConfig.requestFailRestModelReady, true);
     ASSERT_EQ(metricConfig.requestSuccessGrpcModelReady, false);
+}
+
+TEST_F(MetricsConfigTest, InitOnce) {
+    SetUpConfig(modelMetricsChangedConfig);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+    TearDown();
+    SetUp();
+    SetUpConfig(modelDefaultConfig);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    status = manager.loadConfig(configFilePath);
+
+    const auto& metricConfig2 = manager.getMetricConfig();
+    ASSERT_EQ(metricConfig2.metricsEnabled, true);
+    ASSERT_EQ(metricConfig2.endpointsPath, "/newmetrics");
+    ASSERT_EQ(metricConfig2.requestSuccessGrpcPredict, true);
+    ASSERT_EQ(metricConfig2.requestFailRestModelReady, true);
+    ASSERT_EQ(metricConfig2.requestSuccessGrpcModelReady, false);
 }
 
 TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {

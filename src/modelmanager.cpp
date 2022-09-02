@@ -567,7 +567,7 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
     } else {
         const auto& metrics = itr2->value.GetObject();
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring config settings: {}", itr2->value.GetString());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
         firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics);
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(firstErrorStatus);
     }
@@ -741,14 +741,14 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     // Reading metric config only once per server start
-    static bool once = [this, &status, &configJson]() {
+    if (!this->metricConfigLoadedOnce) {
         status = loadMetricsConfig(configJson);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start");
-        return true;
-    }();
+        this->metricConfigLoadedOnce = true;
 
-    if (once && !status.ok()) {
-        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+        if (!status.ok()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+        }
     }
 
     std::vector<ModelConfig> gatedModelConfigs;

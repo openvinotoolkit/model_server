@@ -145,6 +145,11 @@ private:
     MetricConfig metricConfig;
 
     /**
+         * @brief Metrics config was loaded flag
+         */
+    bool metricConfigLoadedOnce = false;
+
+    /**
      * @brief An exit trigger to notify watcher thread to exit
      */
     std::promise<void> exitTrigger;
