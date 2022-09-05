@@ -164,6 +164,9 @@ public:
          * @return specific model version
          */
     const std::shared_ptr<ModelInstance> getModelInstanceByVersion(const model_version_t& version) const {
+        if (version == 0) {
+            return getDefaultModelInstance();
+        }
         std::shared_lock lock(modelVersionsMtx);
         auto it = modelVersions.find(version);
         return it != modelVersions.end() ? it->second : nullptr;

@@ -66,15 +66,11 @@ public:
     static const std::string configReloadRegexExp;
     static const std::string configStatusRegexExp;
 
-    static const std::string kfs_modelreadyRegexExp;
-    static const std::string kfs_modelmetadataRegexExp;
-    static const std::string kfs_inferRegexExp;
-
     static const std::string metricsRegexExp;
 
-    static const std::string kfs_serverreadyRegexExp;
-    static const std::string kfs_serverliveRegexExp;
-    static const std::string kfs_servermetadataRegexExp;
+    static const std::string kfs_modelRegexExp;
+    static const std::string kfs_serverRegexExp;
+
     /**
      * @brief Construct a new HttpRest Api Handler
      *
@@ -201,13 +197,8 @@ private:
     const std::regex configReloadRegex;
     const std::regex configStatusRegex;
 
-    const std::regex kfs_modelreadyRegex;
-    const std::regex kfs_modelmetadataRegex;
-
-    const std::regex kfs_inferRegex;
-    const std::regex kfs_serverreadyRegex;
-    const std::regex kfs_serverliveRegex;
-    const std::regex kfs_servermetadataRegex;
+    const std::regex kfs_modelRegex;
+    const std::regex kfs_serverRegex;
 
     const std::regex metricsRegex;
 

@@ -60,32 +60,18 @@ const std::string HttpRestApiHandler::modelstatusRegexExp =
 const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/v1\/config\/reload)";
 const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/v1\/config)";
 
-const std::string HttpRestApiHandler::kfs_modelreadyRegexExp =
-    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(ready)))";
-const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp =
-    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)";
-const std::string HttpRestApiHandler::kfs_inferRegexExp =
-    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))";
-const std::string HttpRestApiHandler::kfs_serverreadyRegexExp =
-    R"(/v2/health/ready)";
-const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
-    R"(/v2/health/live)";
-const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
-    R"(/v2)";
-
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics)";
+
+const std::string HttpRestApiHandler::kfs_modelRegexExp = R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer|ready))?)";
+const std::string HttpRestApiHandler::kfs_serverRegexExp = R"(/v2(?:/health/(live|ready))?)";
 
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
     predictionRegex(predictionRegexExp),
     modelstatusRegex(modelstatusRegexExp),
     configReloadRegex(configReloadRegexExp),
     configStatusRegex(configStatusRegexExp),
-    kfs_modelreadyRegex(kfs_modelreadyRegexExp),
-    kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
-    kfs_inferRegex(kfs_inferRegexExp),
-    kfs_serverreadyRegex(kfs_serverreadyRegexExp),
-    kfs_serverliveRegex(kfs_serverliveRegexExp),
-    kfs_servermetadataRegex(kfs_servermetadataRegexExp),
+    kfs_modelRegex(kfs_modelRegexExp),
+    kfs_serverRegex(kfs_serverRegexExp),
     metricsRegex(metricsRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
@@ -635,15 +621,6 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             requestComponents.type = ConfigReload;
             return StatusCode::OK;
         }
-        if (std::regex_match(request_path, sm, kfs_inferRegex, std::regex_constants::match_any)) {
-            requestComponents.type = KFS_Infer;
-            requestComponents.model_name = sm[1];
-            std::string model_version_str = sm[2];
-            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
-            if (!status.ok())
-                return status;
-            return StatusCode::OK;
-        }
         if (std::regex_match(request_path, sm, modelstatusRegex))
             return StatusCode::REST_UNSUPPORTED_METHOD;
     } else if (http_method == "GET") {
@@ -666,49 +643,61 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             } else {
                 requestComponents.type = GetModelStatus;
             }
+            if (std::regex_match(request_path, sm, metricsRegex)) {
+                requestComponents.type = Metrics;
+            }
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, configStatusRegex)) {
             requestComponents.type = ConfigStatus;
             return StatusCode::OK;
         }
-        if (std::regex_match(request_path, sm, kfs_serverliveRegex)) {
-            requestComponents.type = KFS_GetServerLive;
-            return StatusCode::OK;
-        }
-        if (std::regex_match(request_path, sm, kfs_serverreadyRegex)) {
-            requestComponents.type = KFS_GetServerReady;
-            return StatusCode::OK;
-        }
-        if (std::regex_match(request_path, sm, kfs_servermetadataRegex)) {
-            requestComponents.type = KFS_GetServerMetadata;
-            return StatusCode::OK;
-        }
-        if (std::regex_match(request_path, sm, kfs_modelmetadataRegex)) {
-            requestComponents.model_name = sm[1];
-            std::string model_version_str = sm[2];
-            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
-            if (!status.ok())
-                return status;
-            requestComponents.type = KFS_GetModelMetadata;
-            return StatusCode::OK;
-        }
-        if (std::regex_match(request_path, sm, kfs_modelreadyRegex)) {
-            requestComponents.model_name = sm[1];
-            std::string model_version_str = sm[2];
-            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
-            if (!status.ok())
-                return status;
-            requestComponents.type = KFS_GetModelReady;
-            return StatusCode::OK;
-        }
         if (std::regex_match(request_path, sm, predictionRegex))
             return StatusCode::REST_UNSUPPORTED_METHOD;
-        if (std::regex_match(request_path, sm, metricsRegex)) {
-            requestComponents.type = Metrics;
-            return StatusCode::OK;
-        }
     }
+
+    if (std::regex_match(request_path, sm, kfs_modelRegex)) {
+        auto path = tokenize(request_path, '/');
+        requestComponents.model_name = path[3];
+        uint64_t offset = 0;
+        if (path.size() > 4 && path[4] == "versions") {
+            auto status = parseModelVersion(path[5], requestComponents.model_version);
+            if (!status.ok())
+                return status;
+            offset = 2;
+        } else {
+            requestComponents.model_version = 0;
+        }
+        static std::map<std::pair<std::string, std::string>, ovms::RequestType> types = {
+            {{"infer", "POST"}, RequestType::KFS_Infer},
+            {{"ready", "GET"}, RequestType::KFS_GetModelReady},
+            {{"", "GET"}, RequestType::KFS_GetModelMetadata}};
+        auto type = types.find({((path.size() < 4 + offset + 1) ? "" : path[4 + offset]), std::string(http_method)});
+        if (type != types.end()) {
+            requestComponents.type = type->second;
+        } else {
+            return StatusCode::REST_UNSUPPORTED_METHOD;
+        }
+        return StatusCode::OK;
+    }
+
+    if (std::regex_match(request_path, sm, kfs_serverRegex)) {
+        auto path = tokenize(request_path, '/');
+        SPDLOG_DEBUG("{}", path.size());
+
+        std::map<std::pair<std::string, std::string>, ovms::RequestType> types = {
+            {{"ready", "GET"}, RequestType::KFS_GetServerReady},
+            {{"live", "GET"}, RequestType::KFS_GetServerLive},
+            {{"", "GET"}, RequestType::KFS_GetServerMetadata}};
+        auto type = types.find({((path.size() < 3) ? "" : path[3]), std::string(http_method)});
+        if (type != types.end()) {
+            requestComponents.type = type->second;
+        } else {
+            return StatusCode::REST_UNSUPPORTED_METHOD;
+        }
+        return StatusCode::OK;
+    }
+
     return StatusCode::REST_INVALID_URL;
 }
 
