@@ -241,7 +241,6 @@ int Server::startModules(ovms::Config& config) {
     if (retCode)
         return retCode;
 #endif
-
     // It is required to have the metrics module, it is used by ServableManagerModule.
     {
         auto module = this->createModule(METRICS_MODULE_NAME);

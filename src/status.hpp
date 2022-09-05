@@ -272,6 +272,9 @@ enum class StatusCode {
     OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */
     OK_RELOADED,     /*!< Operation succeeded and config reload was needed */
 
+    // Metrics
+    INVALID_METRICS_ENDPOINT,
+
     STATUS_CODE_END
 };
 

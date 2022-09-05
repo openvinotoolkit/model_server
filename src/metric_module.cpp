@@ -28,5 +28,4 @@ int MetricModule::start(const Config& config) { return EXIT_SUCCESS; }
 void MetricModule::shutdown() {}
 
 MetricRegistry& MetricModule::getRegistry() const { return *this->registry; }
-
 }  // namespace ovms
