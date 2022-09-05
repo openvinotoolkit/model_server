@@ -68,20 +68,14 @@ const std::string HttpRestApiHandler::modelstatusRegexExp =
 const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/v1\/config\/reload)";
 const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/v1\/config)";
 
-const std::string HttpRestApiHandler::kfs_modelreadyRegexExp =
-    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(ready)))";
-const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp =
-    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)";
-const std::string HttpRestApiHandler::kfs_inferRegexExp =
-    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))";
-const std::string HttpRestApiHandler::kfs_serverreadyRegexExp =
-    R"(/v2/health/ready)";
-const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
-    R"(/v2/health/live)";
-const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
-    R"(/v2)";
-
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics)";
+
+const std::string HttpRestApiHandler::kfs_modelreadyRegexExp = R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(ready)))"; 
+const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp = R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)"; 
+const std::string HttpRestApiHandler::kfs_inferRegexExp = R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))"; 
+const std::string HttpRestApiHandler::kfs_serverreadyRegexExp = R"(/v2/health/ready)"; 
+const std::string HttpRestApiHandler::kfs_serverliveRegexExp = R"(/v2/health/live)"; 
+const std::string HttpRestApiHandler::kfs_servermetadataRegexExp = R"(/v2)";
 
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
     predictionRegex(predictionRegexExp),

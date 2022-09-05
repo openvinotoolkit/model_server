@@ -34,6 +34,7 @@ using ovms::Module;
 using ovms::ModuleState;
 using ovms::SERVABLE_MANAGER_MODULE_NAME;
 using ovms::Server;
+using ovms::StatusCode;
 
 namespace {
 class MockedServer : public Server {
@@ -88,33 +89,65 @@ public:
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
 std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 
+TEST_F(HttpRestApiHandlerTest, RegexParseReadyWithImplicitVersion) {
+    std::string request = "/v2/models/dummy/ready";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
+
+    ASSERT_EQ(comp.type, KFS_GetModelReady);
+    ASSERT_EQ(comp.model_version, 0);
+    ASSERT_EQ(comp.model_name, "dummy");
+}
+
 TEST_F(HttpRestApiHandlerTest, RegexParseReady) {
     std::string request = "/v2/models/dummy/versions/1/ready";
     ovms::HttpRequestComponents comp;
 
-    handler->parseRequestComponents(comp, "GET", request);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
 
     ASSERT_EQ(comp.type, KFS_GetModelReady);
     ASSERT_EQ(comp.model_version, 1);
     ASSERT_EQ(comp.model_name, "dummy");
 }
 
-TEST_F(HttpRestApiHandlerTest, RegexParseMetadata) {
-    std::string request = "/v2/models/dummy/versions/1/";
+TEST_F(HttpRestApiHandlerTest, RegexParseMetadataWithImplicitVersion) {
+    std::string request = "/v2/models/dummy";
     ovms::HttpRequestComponents comp;
 
-    handler->parseRequestComponents(comp, "GET", request);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
+
+    ASSERT_EQ(comp.type, KFS_GetModelMetadata);
+    ASSERT_EQ(comp.model_version, 0);
+    ASSERT_EQ(comp.model_name, "dummy");
+}
+
+TEST_F(HttpRestApiHandlerTest, RegexParseMetadata) {
+    std::string request = "/v2/models/dummy/versions/1";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
 
     ASSERT_EQ(comp.type, KFS_GetModelMetadata);
     ASSERT_EQ(comp.model_version, 1);
     ASSERT_EQ(comp.model_name, "dummy");
 }
 
+TEST_F(HttpRestApiHandlerTest, RegexParseInferWithImplicitVersion) {
+    std::string request = "/v2/models/dummy/infer";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), StatusCode::OK);
+
+    ASSERT_EQ(comp.type, ovms::KFS_Infer);
+    ASSERT_EQ(comp.model_version, 0);
+    ASSERT_EQ(comp.model_name, "dummy");
+}
 TEST_F(HttpRestApiHandlerTest, RegexParseInfer) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
 
-    handler->parseRequestComponents(comp, "POST", request);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), StatusCode::OK);
 
     ASSERT_EQ(comp.type, ovms::KFS_Infer);
     ASSERT_EQ(comp.model_version, 1);
@@ -125,7 +158,7 @@ TEST_F(HttpRestApiHandlerTest, RegexParseServerMetadata) {
     std::string request = "/v2";
     ovms::HttpRequestComponents comp;
 
-    handler->parseRequestComponents(comp, "GET", request);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
 
     ASSERT_EQ(comp.type, ovms::KFS_GetServerMetadata);
 }
@@ -134,7 +167,7 @@ TEST_F(HttpRestApiHandlerTest, RegexParseServerReady) {
     std::string request = "/v2/health/ready";
     ovms::HttpRequestComponents comp;
 
-    handler->parseRequestComponents(comp, "GET", request);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
 
     ASSERT_EQ(comp.type, ovms::KFS_GetServerReady);
 }
@@ -143,13 +176,13 @@ TEST_F(HttpRestApiHandlerTest, RegexParseServerLive) {
     std::string request = "/v2/health/live";
     ovms::HttpRequestComponents comp;
 
-    handler->parseRequestComponents(comp, "GET", request);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
 
     ASSERT_EQ(comp.type, ovms::KFS_GetServerLive);
 }
 
 TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
-    std::string request = "/v2/models/dummy/versions/1/";
+    std::string request = "/v2/models/dummy/versions/1";
     ovms::HttpRequestComponents comp;
     int c = 0;
 
@@ -181,7 +214,7 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
 }
 
 TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
-    std::string request = "/v2/models/dummy/versions/1/";
+    std::string request = "/v2/models/dummy/versions/1";
     ovms::HttpRequestComponents comp;
 
     handler->parseRequestComponents(comp, "GET", request);
