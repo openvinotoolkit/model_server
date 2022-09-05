@@ -440,8 +440,10 @@ Status makeJsonFromPredictResponse(
     writer.StartObject();
     writer.Key("model_name");
     writer.String(response_proto.model_name().c_str());
-    writer.Key("id");
-    writer.String(response_proto.id().c_str());
+    if (response_proto.id().length() > 0) {
+        writer.Key("id");
+        writer.String(response_proto.id().c_str());
+    }
     if (response_proto.model_version().length() > 0) {
         writer.Key("model_version");
         writer.String(response_proto.model_version().c_str());

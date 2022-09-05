@@ -550,6 +550,17 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
     return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
 }
 
+void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
+    for (SizeType i = 0; i < scope.Size(); i++) {
+        Value data = scope[i].GetObject()["shape"].GetArray();
+        Value shape(rapidjson::kArrayType);
+        for (SizeType j = 0; j < data.Size(); j++) {
+            shape.PushBack(atoi(data[j].GetString()), doc.GetAllocator());
+        }
+        scope[i].GetObject()["shape"] = shape;
+    }
+}
+
 Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::inference::ModelMetadataRequest grpc_request;
     ::inference::ModelMetadataResponse grpc_response;
@@ -568,7 +579,18 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     if (!status.ok()) {
         return StatusCode::JSON_SERIALIZATION_ERROR;
     }
-    response = output;
+
+    Document doc;
+    doc.Parse(output.c_str());
+
+    convertShapeType(doc["inputs"], doc);
+    convertShapeType(doc["outputs"], doc);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    response = buffer.GetString();
     return StatusCode::OK;
 }
 

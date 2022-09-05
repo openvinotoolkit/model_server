@@ -1214,6 +1214,9 @@ Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
     if (!status.ok())
         return status;
 
+    responseProto->set_model_name(getName());
+    responseProto->set_model_version(std::to_string(getVersion()));
+
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 

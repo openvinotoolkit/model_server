@@ -36,44 +36,9 @@ using ovms::SERVABLE_MANAGER_MODULE_NAME;
 using ovms::Server;
 
 namespace {
-class MockedServableManagerModule : public ovms::ServableManagerModule {
-public:
-    MockedServableManagerModule(ovms::Server& server) :
-        ovms::ServableManagerModule(server) {}
-    int start(const Config& config) override {
-        state = ModuleState::STARTED_INITIALIZE;
-        SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
-        // we don't start ModelManager since we don't use it here
-        state = ModuleState::INITIALIZED;
-        return EXIT_SUCCESS;
-    }
-};
-class MockedGRPCServerModule : public ovms::GRPCServerModule {
-public:
-    MockedGRPCServerModule(ovms::Server& server) :
-        GRPCServerModule(server) {}
-    int start(const Config& config) override {
-        state = ModuleState::STARTED_INITIALIZE;
-        SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
-        // we don't start ModelManager since we don't use it here
-        state = ModuleState::INITIALIZED;
-        return EXIT_SUCCESS;
-    }
-};
 class MockedServer : public Server {
 public:
     MockedServer() = default;
-
-    std::unique_ptr<Module> createModule(const std::string& name) override {
-        if (name == ovms::SERVABLE_MANAGER_MODULE_NAME)
-            return std::make_unique<MockedServableManagerModule>(*this);
-        if (name == ovms::GRPC_SERVER_MODULE_NAME)
-            return std::make_unique<MockedGRPCServerModule>(*this);
-        return Server::createModule(name);
-    };
-    Module* getModule(const std::string& name) {
-        return const_cast<Module*>(Server::getModule(name));
-    }
 };
 }  // namespace
 
@@ -90,12 +55,14 @@ public:
             (char*)"/ovms/src/test/dummy",
             (char*)"--log_level",
             (char*)"DEBUG",
+            (char*)"--batch_size",
+            (char*)"auto",
             (char*)"--port",
             (char*)port.c_str(),
             nullptr};
         thread = std::make_unique<std::thread>(
             [&argv]() {
-                ASSERT_EQ(EXIT_SUCCESS, server->start(9, argv));
+                ASSERT_EQ(EXIT_SUCCESS, server->start(11, argv));
             });
         auto start = std::chrono::high_resolution_clock::now();
         while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
@@ -213,7 +180,70 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
     ASSERT_EQ(c, 1);
 }
 
+TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
+    std::string request = "/v2/models/dummy/versions/1/";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "GET", request);
+    std::string response;
+    handler->dispatchToProcessor(std::string(), &response, comp);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(std::string(doc["name"].GetString()), "dummy");
+    ASSERT_EQ(std::string(doc["versions"].GetArray()[0].GetString()), "1");
+    ASSERT_EQ(std::string(doc["platform"].GetString()), "OpenVINO");
+
+    ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["name"].GetString()), "b");
+    ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
+    ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
+
+    ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["name"].GetString()), "a");
+    ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
+}
+
+TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
+    std::string request = "/v2/models/dummy/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[2,10],\"datatype\":\"FP32\",\"data\":[[0,1,2,3,4,5,6,7,8,9],[10,11,12,13,14,15,16,17,18,19]]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "POST", request);
+    std::string response;
+    handler->dispatchToProcessor(request_body, &response, comp);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    int i = 1;
+    for (auto& data : output) {
+        ASSERT_EQ(data.GetFloat(), i++);
+    }
+}
+
 TEST_F(HttpRestApiHandlerTest, inferRequest) {
+    std::string request = "/v2/models/dummy/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "POST", request);
+    std::string response;
+    handler->dispatchToProcessor(request_body, &response, comp);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
+    ASSERT_EQ(doc["id"].GetString(), std::string("1"));
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    int i = 1;
+    for (auto& data : output) {
+        ASSERT_EQ(data.GetFloat(), i++);
+    }
+}
+
+TEST_F(HttpRestApiHandlerTest, inferPreprocess) {
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}],\"parameters\":{\"binary_data_output\":1, \"bool_test\":true, \"string_test\":\"test\"}}";
 
     std::string modelName("dummy");
