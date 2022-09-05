@@ -252,6 +252,6 @@ TEST_F(ModelMetricReporterTest, MetricReporterConstructorTest) {
     metricConfig.metricsEnabled = true;
     ModelMetricReporter reporter5 = ModelMetricReporter(&metricConfig, &registry, "example_pipeline_name", 1);
     metrics = registry.collect();
-    ASSERT_FALSE(metrics == "");
+    ASSERT_NE(metrics, "");
     ASSERT_TRUE(reporter5.requestFailGrpcGetModelMetadata != nullptr);
 }

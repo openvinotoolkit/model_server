@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
+
 #include <rapidjson/document.h>
 
 #include "status.hpp"

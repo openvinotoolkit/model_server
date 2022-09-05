@@ -21,6 +21,7 @@
 #include <regex>
 #include <set>
 #include <sstream>
+#include <string>
 
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
