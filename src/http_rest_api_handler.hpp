@@ -43,7 +43,11 @@ enum RequestType { Predict,
     KFS_GetModelReady,
     KFS_Infer,
     KFS_GetModelMetadata,
+    KFS_GetServerReady,
+    KFS_GetServerLive,
+    KFS_GetServerMetadata,
     Metrics };
+
 struct HttpRequestComponents {
     RequestType type;
     std::string_view http_method;
@@ -66,6 +70,10 @@ public:
     static const std::string kfs_inferRegexExp;
 
     static const std::string metricsRegexExp;
+
+    static const std::string kfs_serverreadyRegexExp;
+    static const std::string kfs_serverliveRegexExp;
+    static const std::string kfs_servermetadataRegexExp;
     /**
      * @brief Construct a new HttpRest Api Handler
      *
@@ -178,6 +186,10 @@ public:
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
+    Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+
 private:
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;
@@ -186,7 +198,11 @@ private:
 
     const std::regex kfs_modelreadyRegex;
     const std::regex kfs_modelmetadataRegex;
+
     const std::regex kfs_inferRegex;
+    const std::regex kfs_serverreadyRegex;
+    const std::regex kfs_serverliveRegex;
+    const std::regex kfs_servermetadataRegex;
 
     const std::regex metricsRegex;
 

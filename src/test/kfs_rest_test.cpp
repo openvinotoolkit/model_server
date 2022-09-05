@@ -17,12 +17,14 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include <rapidjson/document.h>
 
 #include "../config.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
+#include "../version.hpp"
 
 using ovms::Config;
 using ovms::HttpRestApiHandler;
@@ -150,6 +152,33 @@ TEST_F(HttpRestApiHandlerTest, RegexParseInfer) {
     ASSERT_EQ(comp.type, ovms::KFS_Infer);
     ASSERT_EQ(comp.model_version, 1);
     ASSERT_EQ(comp.model_name, "dummy");
+}
+
+TEST_F(HttpRestApiHandlerTest, RegexParseServerMetadata) {
+    std::string request = "/v2";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "GET", request);
+
+    ASSERT_EQ(comp.type, ovms::KFS_GetServerMetadata);
+}
+
+TEST_F(HttpRestApiHandlerTest, RegexParseServerReady) {
+    std::string request = "/v2/health/ready";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "GET", request);
+
+    ASSERT_EQ(comp.type, ovms::KFS_GetServerReady);
+}
+
+TEST_F(HttpRestApiHandlerTest, RegexParseServerLive) {
+    std::string request = "/v2/health/live";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "GET", request);
+
+    ASSERT_EQ(comp.type, ovms::KFS_GetServerLive);
 }
 
 TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
@@ -488,4 +517,37 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsEmptyRequest) {
 
     ::inference::ModelInferRequest grpc_request;
     ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+}
+
+TEST_F(HttpRestApiHandlerTest, serverReady) {
+    ovms::HttpRequestComponents comp;
+    comp.type = ovms::KFS_GetServerReady;
+    std::string request;
+    std::string response;
+    ovms::Status status = handler->dispatchToProcessor(request, &response, comp);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+}
+
+TEST_F(HttpRestApiHandlerTest, serverLive) {
+    ovms::HttpRequestComponents comp;
+    comp.type = ovms::KFS_GetServerLive;
+    std::string request;
+    std::string response;
+    ovms::Status status = handler->dispatchToProcessor(request, &response, comp);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+}
+
+TEST_F(HttpRestApiHandlerTest, serverMetadata) {
+    ovms::HttpRequestComponents comp;
+    comp.type = ovms::KFS_GetServerMetadata;
+    std::string request;
+    std::string response;
+    ovms::Status status = handler->dispatchToProcessor(request, &response, comp);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(std::string(doc["name"].GetString()), PROJECT_NAME);
+    ASSERT_EQ(std::string(doc["version"].GetString()), PROJECT_VERSION);
 }
