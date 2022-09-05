@@ -182,7 +182,7 @@ TEST_F(HttpRestApiHandlerTest, RegexParseServerLive) {
 }
 
 TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
-    std::string request = "/v2/models/dummy/versions/1/";
+    std::string request = "/v2/models/dummy/versions/1";
     ovms::HttpRequestComponents comp;
     int c = 0;
 
@@ -214,7 +214,7 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
 }
 
 TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
-    std::string request = "/v2/models/dummy/versions/1/";
+    std::string request = "/v2/models/dummy/versions/1";
     ovms::HttpRequestComponents comp;
 
     handler->parseRequestComponents(comp, "GET", request);
