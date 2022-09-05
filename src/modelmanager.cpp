@@ -749,6 +749,8 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
         }
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config skipped.");
     }
 
     std::vector<ModelConfig> gatedModelConfigs;

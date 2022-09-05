@@ -33,7 +33,7 @@
 
 namespace ovms {
 
-bool MetricConfig::ValidateEndpointPath(std::string endpoint) {
+bool MetricConfig::validateEndpointPath(std::string endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
     return std::regex_match(endpoint, valid_endpoint_regex);
 }
@@ -53,7 +53,7 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
     }
 
     if (v.HasMember("endpoint_path")) {
-        if (ValidateEndpointPath(v["endpoint_path"].GetString()))
+        if (validateEndpointPath(v["endpoint_path"].GetString()))
             endpointsPath = v["endpoint_path"].GetString();
         else
             return StatusCode::INVALID_METRICS_ENDPOINT;
