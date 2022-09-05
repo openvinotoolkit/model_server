@@ -116,7 +116,7 @@ void HttpRestApiHandler::registerAll() {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, &response);
         } else {
-            SPDLOG_WARN("Requested REST resource not found");
+            SPDLOG_DEBUG("Requested REST resource not found");
             return StatusCode::REST_NOT_FOUND;
         }
     });
@@ -525,8 +525,18 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
     if (nullptr == module) {
         return StatusCode::INTERNAL_ERROR;  // TODO: Return proper code when metric endpoint is disabled (missing module).
     }
+
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    auto& manager = servableManagerModule->getServableManager();
+    auto& metricConfig = manager.getMetricConfig();
+
+    if (!metricConfig.metricsEnabled) {
+        return StatusCode::REST_INVALID_URL;
+    }
+    
     auto metricModule = dynamic_cast<const MetricModule*>(module);
     response = metricModule->getRegistry().collect();
+
     return StatusCode::OK;
 }
 
