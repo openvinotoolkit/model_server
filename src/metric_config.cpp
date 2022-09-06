@@ -15,12 +15,7 @@
 //*****************************************************************************
 #include "metric_config.hpp"
 
-#include <algorithm>
-#include <filesystem>
-#include <limits>
 #include <regex>
-#include <set>
-#include <sstream>
 #include <string>
 
 #include <rapidjson/istreamwrapper.h>

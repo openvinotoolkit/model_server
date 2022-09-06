@@ -64,7 +64,7 @@ static const char* modelMetricsChangedConfig = R"(
             "metrics":
             {
                 "enable" : true,
-                "metrics_list": ["request_success_grpc_predict", "request_fail_rest_model_ready"],
+                "metrics_list": ["request_success_grpc_predict", "request_fail_rest_model_ready"]
             }
         }
 })";
