@@ -98,6 +98,7 @@ RUN bazel build \
     @org_tensorflow//tensorflow/core:lib
 
 RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/third_party/opencv/install_opencv.sh && \
+    wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/third_party/opencv/opencv_cmake_flags.txt && \
     chmod 755 install_opencv.sh && ./install_opencv.sh
 
 COPY src/ /build/src/
