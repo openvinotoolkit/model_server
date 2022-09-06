@@ -1,0 +1,2 @@
+ovmsclient
+opencv-python
