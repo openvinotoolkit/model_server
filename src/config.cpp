@@ -150,6 +150,10 @@ Config& Config::parse(int argc, char** argv) {
                 "Flag indicating model is stateful",
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
+            ("metrics_enabled",
+                "Flag indicating if metrics are enabled",
+                cxxopts::value<bool>()->default_value("false"),
+                "METRICS")
             ("idle_sequence_cleanup",
                 "Flag indicating if model is subject to sequence cleaner scans",
                 cxxopts::value<bool>()->default_value("true"),
