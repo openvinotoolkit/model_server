@@ -66,8 +66,6 @@ static const char* modelDefaultConfig = R"(
     ]
 })";
 
-
-
 TEST_F(MetricsConfigTest, DefaultValues) {
     SetUpConfig(modelDefaultConfig);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
@@ -259,7 +257,7 @@ TEST_F(MetricsConfigTest, MetricsNegative3) {
 
     auto status = manager.loadConfig(configFilePath);
     ASSERT_FALSE(status.ok());
-    }
+}
 
 static const char* modelMetricsNegative2 = R"(
 {

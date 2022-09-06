@@ -132,6 +132,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						"type": "string"
 					}
 				}
+				"additionalProperties": false
 			},
 			"additionalProperties": false
 		},
