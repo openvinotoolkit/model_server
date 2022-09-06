@@ -75,7 +75,7 @@ public:
         metricsEnabled = false;
         endpointsPath = "/metrics";
 
-        setAllMetricsTo(false);
+        setAllMetricsTo(metricsEnabled);
     }
 
     MetricConfig(bool enabled) {
