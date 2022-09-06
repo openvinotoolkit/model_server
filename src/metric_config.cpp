@@ -18,11 +18,13 @@
 #include <regex>
 #include <string>
 
+#include "rapidjson/document.h"
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
+#include "config.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
 
@@ -180,6 +182,33 @@ void MetricConfig::setAllMetricsTo(bool enabled) {
     requestFailRestModelInfer = enabled;
     requestFailRestModelMetadata = enabled;
     requestFailRestModelReady = enabled;
+}
+
+Status MetricConfig::loadSettings(ovms::config& config) {
+    using namespace rapidjson;
+    Document document;
+    document.SetObject("metrics");
+
+    Value o(kObjectType);
+    {
+        Value v(config.metricsEnabled());
+        // adding elements to contacts array.
+        o.AddMember("enabled", v, document.GetAllocator());
+    }
+
+    // Create metrics array
+    if (config.metricsList() != "") {
+        Value a(kArrayType);
+        Document::AllocatorType& allocator = document.GetAllocator();
+        const char separator = ',';
+        std::stringstream streamData(strData);
+        std::string val;
+        while (std::getline(streamData, val, separator)) {
+            a.PushBack(val, allocator);
+        }
+    }
+
+    return this->parseMetricsConfig(document.GetObject())
 }
 
 }  // namespace ovms
