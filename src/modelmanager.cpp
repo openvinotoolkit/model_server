@@ -205,9 +205,24 @@ Status ModelManager::startFromConfig() {
         return StatusCode::UNKNOWN_ERROR;
     }
 
+    Status status = StatusCode::OK;
+
+    // Reading metric config only once per server start
+    if (!this->metricConfigLoadedOnce) {
+        status = metricsConfig.loadSettings(config);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start");
+
+        this->metricConfigLoadedOnce = true;
+    }
+
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't load metrics settings");
+        return status;
+    }
+
     ModelConfig& modelConfig = it->second;
 
-    auto status = modelConfig.parsePluginConfig(config.pluginConfig());
+    status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse plugin config");
         return status;

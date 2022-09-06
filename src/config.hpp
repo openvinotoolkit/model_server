@@ -285,6 +285,16 @@ public:
         return result->operator[]("metrics_enabled").as<bool>();
     }
 
+    
+    /**
+        * @brief Get metrics list
+        *
+        * @return std::string
+        */
+    std::string metricsList() const {
+        return result->operator[]("metrics_list").as<std::string>();
+    }
+
     /**
      * @brief Get idle sequence cleanup flag
      *

@@ -20,6 +20,7 @@
 #include <rapidjson/document.h>
 
 #include "status.hpp"
+#include "config.hpp"
 
 namespace ovms {
 /**
@@ -70,6 +71,7 @@ public:
     bool validateEndpointPath(std::string endpoint);
 
     void setAllMetricsTo(bool enabled);
+    Status loadSettings(ovms::config& config);
 
     MetricConfig() {
         metricsEnabled = false;

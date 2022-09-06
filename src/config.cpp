@@ -154,6 +154,10 @@ Config& Config::parse(int argc, char** argv) {
                 "Flag indicating if metrics are enabled",
                 cxxopts::value<bool>()->default_value("false"),
                 "METRICS")
+            ("metrics_list",
+                "List of metrics to be enabled. Comma separated.",
+                cxxopts::value<std::string>()->default_value(""),
+                "METRICS_LIST")
             ("idle_sequence_cleanup",
                 "Flag indicating if model is subject to sequence cleaner scans",
                 cxxopts::value<bool>()->default_value("true"),

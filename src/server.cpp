@@ -81,6 +81,7 @@ void logConfig(const Config& config) {
         SPDLOG_DEBUG("plugin_config: {}", config.pluginConfig());
         SPDLOG_DEBUG("stateful: {}", config.stateful());
         SPDLOG_DEBUG("metrics_enabled: {}", config.metricsEnabled());
+        SPDLOG_DEBUG("metrics_list: {}", config.metricsList());
         SPDLOG_DEBUG("idle_sequence_cleanup: {}", config.idleSequenceCleanup());
         SPDLOG_DEBUG("max_sequence_number: {}", config.maxSequenceNumber());
         SPDLOG_DEBUG("low_latency_transformation: {}", config.lowLatencyTransformation());
