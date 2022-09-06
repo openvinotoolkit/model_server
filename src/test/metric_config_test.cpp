@@ -65,7 +65,6 @@ static const char* modelMetricsChangedConfig = R"(
             {
                 "enable" : true,
                 "metrics_list": ["request_success_grpc_predict", "request_fail_rest_model_ready"],
-                "endpoint_path": "/newmetrics" 
             }
         }
 })";
@@ -167,7 +166,7 @@ TEST_F(MetricsConfigTest, ChangedValues) {
 
     const auto& metricConfig = manager.getMetricConfig();
     ASSERT_EQ(metricConfig.metricsEnabled, true);
-    ASSERT_EQ(metricConfig.endpointsPath, "/newmetrics");
+    //ASSERT_EQ(metricConfig.endpointsPath, "/newmetrics");
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, true);
     ASSERT_EQ(metricConfig.requestFailRestModelReady, true);
     ASSERT_EQ(metricConfig.requestSuccessGrpcModelReady, false);
@@ -192,7 +191,7 @@ TEST_F(MetricsConfigTest, InitOnce) {
 
     const auto& metricConfig2 = manager.getMetricConfig();
     ASSERT_EQ(metricConfig2.metricsEnabled, true);
-    ASSERT_EQ(metricConfig2.endpointsPath, "/newmetrics");
+    //ASSERT_EQ(metricConfig2.endpointsPath, "/newmetrics");
     ASSERT_EQ(metricConfig2.requestSuccessGrpcPredict, true);
     ASSERT_EQ(metricConfig2.requestFailRestModelReady, true);
     ASSERT_EQ(metricConfig2.requestSuccessGrpcModelReady, false);
@@ -215,7 +214,7 @@ TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
     ASSERT_EQ(metricConfig.requestFailRestModelMetadata, true);
 }
 
-TEST_F(MetricsConfigTest, MetricsBadEndpoint) {
+TEST_F(MetricsConfigTest, DISABLED_MetricsBadEndpoint) {
     SetUpConfig(modelMetricsBadEndpoint);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
