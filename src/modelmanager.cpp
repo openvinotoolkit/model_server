@@ -45,6 +45,7 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
+#include "metric_config.hpp"
 #include "metric_registry.hpp"
 #include "node_library.hpp"
 #include "openssl/md5.h"
@@ -559,13 +560,31 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     return firstErrorStatus;
 }
 
+Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
+    Status firstErrorStatus = StatusCode::OK;
+    const auto itr2 = configJson.FindMember("monitoring");
+    if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
+    } else {
+        const auto& metrics = itr2->value.GetObject();
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
+        firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics);
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(firstErrorStatus);
+    }
+
+    return firstErrorStatus;
+}
+
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
+    Status firstErrorStatus = StatusCode::OK;
+
     const auto itr = configJson.FindMember("model_config_list");
+
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
-    Status firstErrorStatus = StatusCode::OK;
+
     std::set<std::string> modelsInConfigFile;
     std::set<std::string> modelsWithInvalidConfig;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
@@ -720,6 +739,20 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
+
+    // Reading metric config only once per server start
+    if (!this->metricConfigLoadedOnce) {
+        status = loadMetricsConfig(configJson);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start");
+        this->metricConfigLoadedOnce = true;
+
+        if (!status.ok()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+        }
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config skipped.");
+    }
+
     std::vector<ModelConfig> gatedModelConfigs;
     status = loadModelsConfig(configJson, gatedModelConfigs);
     if (!status.ok()) {
@@ -1119,7 +1152,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry);
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry, &this->metricConfig);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),

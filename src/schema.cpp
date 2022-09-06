@@ -119,6 +119,23 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"additionalProperties": false
 			}
 		},
+		"metrics": {
+			"type": "object",
+			"required": ["enable"],
+			"additionalProperties": false,
+			"unevaluatedProperties": false,
+			"properties": {
+				"enable": {
+					"type": "boolean"
+				},
+				"metrics_list": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		},
 		"source_node_names": {
 			"type": "object",
 			"required": ["node_name", "data_item"],
@@ -286,6 +303,10 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 			"items": {
 				"$ref": "#/definitions/custom_node_library_config"
 			}
+		},
+		"monitoring": {
+			"type": "object",
+			"required": ["metrics"]
 		}
 	},
 	"additionalProperties": false

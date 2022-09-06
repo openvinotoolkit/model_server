@@ -58,13 +58,13 @@ const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
-ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry) :
+ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) :
     ieCore(ieCore),
     name(name),
     version(version),
     subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)),
     status(name, version),
-    reporter(std::make_unique<ModelMetricReporter>(registry, name, version)) {
+    reporter(std::make_unique<ModelMetricReporter>(metricConfig, registry, name, version)) {
     isCustomLoaderConfigChanged = false;
 }
 

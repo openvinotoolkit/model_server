@@ -27,6 +27,7 @@
 #include <rapidjson/document.h>
 
 #include "layout_configuration.hpp"
+#include "metric_config.hpp"
 #include "model_version_policy.hpp"
 #include "shape.hpp"
 #include "status.hpp"
@@ -127,6 +128,7 @@ private:
     plugin_config_t pluginConfig;
 
     /**
+     * 
          * @brief Layout for single input
          */
     LayoutConfiguration layout;

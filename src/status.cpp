@@ -251,6 +251,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Model control API
     {StatusCode::OK_NOT_RELOADED, "Config reload was not needed"},
     {StatusCode::OK_RELOADED, "Config reload successful"},
+
+    // Metrics
+    {StatusCode::INVALID_METRICS_ENDPOINT, "Metrics config endpoint path is invalid"},
 };
 
 const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
@@ -337,6 +340,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     // REST handler failure
     {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_UNSUPPORTED_METHOD, net_http::HTTPStatusCode::NONE_ACC},
+    {StatusCode::REST_NOT_FOUND, net_http::HTTPStatusCode::NOT_FOUND},
 
     // REST parser failure
     {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
