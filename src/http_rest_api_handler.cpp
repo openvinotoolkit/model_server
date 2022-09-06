@@ -526,7 +526,12 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
         return StatusCode::INTERNAL_ERROR;  // TODO: Return proper code when metric endpoint is disabled (missing module).
     }
 
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    auto manager_module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == manager_module) {
+        return StatusCode::MODEL_NOT_LOADED;
+    }
+
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(manager_module);
     auto& manager = servableManagerModule->getServableManager();
     auto& metricConfig = manager.getMetricConfig();
 
