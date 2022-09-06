@@ -122,6 +122,8 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 		"metrics": {
 			"type": "object",
 			"required": ["enable"],
+			"additionalProperties": false,
+			"unevaluatedProperties": false,
 			"properties": {
 				"enable": {
 					"type": "boolean"
@@ -132,9 +134,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						"type": "string"
 					}
 				}
-				"additionalProperties": false
-			},
-			"additionalProperties": false
+			}
 		},
 		"source_node_names": {
 			"type": "object",

@@ -226,39 +226,6 @@ TEST_F(MetricsConfigTest, DISABLED_MetricsBadEndpoint) {
     ASSERT_EQ(status, StatusCode::INVALID_METRICS_ENDPOINT) << status.string();
 }
 
-static const char* modelMetricsNegative3 = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "monitoring":
-        {
-            "metrics":
-            {
-                "enable" : {},
-            }
-        }
-})";
-
-TEST_F(MetricsConfigTest, MetricsNegative3) {
-    SetUpConfig(modelMetricsNegative3);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-    ConstructorEnabledModelManager manager;
-
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_FALSE(status.ok());
-}
-
 static const char* modelMetricsNegative2 = R"(
 {
     "model_config_list": [
@@ -277,8 +244,7 @@ static const char* modelMetricsNegative2 = R"(
         {
             "metrics":
             {
-                "enable" : true,
-                "something" : "else"
+                "enable" : {},
             }
         }
 })";
