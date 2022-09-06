@@ -29,6 +29,27 @@ using namespace ovms;
 using testing::_;
 using testing::Return;
 
+class MetricsConfigTest : public TestWithTempDir {
+public:
+    std::string configFilePath;
+    std::string ovmsConfig;
+    std::string modelPath;
+    std::string dummyModelName;
+
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        dummyModelName = "dummy";
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+    }
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/ovms_config.json";
+    }
+};
+
 static const char* modelDefaultConfig = R"(
 {
     "model_config_list": [
@@ -44,6 +65,25 @@ static const char* modelDefaultConfig = R"(
         }
     ]
 })";
+
+
+
+TEST_F(MetricsConfigTest, DefaultValues) {
+    SetUpConfig(modelDefaultConfig);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok());
+
+    const auto& metricConfig = manager.getMetricConfig();
+    ASSERT_EQ(metricConfig.metricsEnabled, false);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
+}
 
 static const char* modelMetricsChangedConfig = R"(
 {
@@ -68,91 +108,6 @@ static const char* modelMetricsChangedConfig = R"(
             }
         }
 })";
-
-static const char* modelMetricsAllEnabledConfig = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "monitoring":
-        {
-            "metrics":
-            {
-                "enable" : true
-            }
-        }
-})";
-
-static const char* modelMetricsBadEndpoint = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "monitoring":
-        {
-            "metrics":
-            {
-                "enable" : true,
-                "endpoint_path": "/new..metrics"
-            }
-        }
-})";
-
-class MetricsConfigTest : public TestWithTempDir {
-public:
-    std::string configFilePath;
-    std::string ovmsConfig;
-    std::string modelPath;
-    std::string dummyModelName;
-
-    void SetUpConfig(const std::string& configContent) {
-        ovmsConfig = configContent;
-        dummyModelName = "dummy";
-        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
-        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
-    }
-    void SetUp() override {
-        TestWithTempDir::SetUp();
-        // Prepare manager
-        modelPath = directoryPath + "/dummy/";
-        configFilePath = directoryPath + "/ovms_config.json";
-    }
-};
-
-TEST_F(MetricsConfigTest, DefaultValues) {
-    SetUpConfig(modelDefaultConfig);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
-    createConfigFileWithContent(ovmsConfig, configFilePath);
-
-    ConstructorEnabledModelManager manager;
-
-    auto status = manager.loadConfig(configFilePath);
-    ASSERT_TRUE(status.ok());
-
-    const auto& metricConfig = manager.getMetricConfig();
-    ASSERT_EQ(metricConfig.metricsEnabled, false);
-    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
-    ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
-}
 
 TEST_F(MetricsConfigTest, ChangedValues) {
     SetUpConfig(modelMetricsChangedConfig);
@@ -199,6 +154,29 @@ TEST_F(MetricsConfigTest, InitOnce) {
     ASSERT_EQ(metricConfig2.requestSuccessGrpcModelReady, false);
 }
 
+static const char* modelMetricsAllEnabledConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true
+            }
+        }
+})";
+
 TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
     SetUpConfig(modelMetricsAllEnabledConfig);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
@@ -216,6 +194,30 @@ TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
     ASSERT_EQ(metricConfig.requestFailRestModelMetadata, true);
 }
 
+static const char* modelMetricsBadEndpoint = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "endpoint_path": "/new..metrics"
+            }
+        }
+})";
+
 TEST_F(MetricsConfigTest, DISABLED_MetricsBadEndpoint) {
     SetUpConfig(modelMetricsBadEndpoint);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
@@ -224,6 +226,106 @@ TEST_F(MetricsConfigTest, DISABLED_MetricsBadEndpoint) {
 
     auto status = manager.loadConfig(configFilePath);
     ASSERT_EQ(status, StatusCode::INVALID_METRICS_ENDPOINT) << status.string();
+}
+
+static const char* modelMetricsNegative3 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : {},
+            }
+        }
+})";
+
+TEST_F(MetricsConfigTest, MetricsNegative3) {
+    SetUpConfig(modelMetricsNegative3);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_FALSE(status.ok());
+    }
+
+static const char* modelMetricsNegative2 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "something" : "else"
+            }
+        }
+})";
+
+TEST_F(MetricsConfigTest, MetricsNegative2) {
+    SetUpConfig(modelMetricsNegative2);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_FALSE(status.ok());
+}
+
+static const char* modelMetricsNegative1 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : 1,
+            }
+        }
+})";
+
+TEST_F(MetricsConfigTest, MetricsNegative1) {
+    SetUpConfig(modelMetricsNegative1);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_FALSE(status.ok());
 }
 
 class ModelMetricReporterTest : public ::testing::Test {};
