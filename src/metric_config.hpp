@@ -82,7 +82,7 @@ public:
         metricsEnabled = enabled;
         endpointsPath = "/metrics";
 
-        setAllMetricsTo(enabled);
+        setAllMetricsTo(metricsEnabled);
     }
 };
 }  // namespace ovms
