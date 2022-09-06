@@ -88,18 +88,17 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN mkdir -p /opt/intel/openvino && cd /opt/intel/openvino && curl -s https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv/openvino_opencv_ubuntu20.tgz | tar -xzf - && cd /build
+RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/third_party/opencv/install_opencv.sh && \
+    wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/third_party/opencv/opencv_cmake_flags.txt && \
+    chmod 755 install_opencv.sh && ./install_opencv.sh
 
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
     @com_github_grpc_grpc//:grpc++ \
     @com_google_protobuf//:protobuf_lite \
     @org_tensorflow//tensorflow/core:framework \
-    @org_tensorflow//tensorflow/core:lib
-
-RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/third_party/opencv/install_opencv.sh && \
-    wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/third_party/opencv/opencv_cmake_flags.txt && \
-    chmod 755 install_opencv.sh && ./install_opencv.sh
+    @org_tensorflow//tensorflow/core:lib \
+    @opencv//:opencv
 
 COPY src/ /build/src/
 
@@ -118,4 +117,4 @@ COPY --from=base_build \
     /clients
 COPY --from=base_build /input/images/*.jpeg /clients/images/
 COPY --from=base_build /input/input_images.txt /clients/
-COPY --from=base_build /opt/intel/openvino/extras/opencv/lib/* /lib/x86_64-linux-gnu/
+COPY --from=base_build /opt/opencv/lib/* /lib/x86_64-linux-gnu/
