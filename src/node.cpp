@@ -246,7 +246,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             OVMS_PROFILE_SCOPE("Create Shard");
             ov::Tensor dividedTensor;
             this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
-            if (spdlog::default_logger()->level() <= spdlog::level::debug) {
+            if (dag_executor_logger->level() <= spdlog::level::debug) {
                 std::stringstream ss;
                 ss << "Node: " << getName() << " input demultiplied: " << tensorName
                    << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
