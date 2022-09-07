@@ -265,6 +265,12 @@ void Config::validate() {
         exit(EX_USAGE);
     }
 
+    // metrics on rest port
+    if (result->count("metrics_enabled") && !result->count("rest_port") &&) {
+        std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
+        exit(EX_USAGE);
+    }
+
     // check bind addresses:
     if (result->count("rest_bind_address") && check_hostname_or_ip(this->restBindAddress()) == false) {
         std::cerr << "rest_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
