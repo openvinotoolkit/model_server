@@ -285,7 +285,6 @@ public:
         return result->operator[]("metrics_enabled").as<bool>();
     }
 
-    
     /**
         * @brief Get metrics list
         *

@@ -18,13 +18,13 @@
 #include <regex>
 #include <string>
 
-#include "rapidjson/document.h"
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
+#include "rapidjson/document.h"
 #include "schema.hpp"
 #include "stringutils.hpp"
 
@@ -184,7 +184,7 @@ void MetricConfig::setAllMetricsTo(bool enabled) {
     requestFailRestModelReady = enabled;
 }
 
-Status MetricConfig::loadSettings(Config& config){
+Status MetricConfig::loadSettings(Config& config) {
     using namespace rapidjson;
     Document document;
     document.SetObject("metrics");
