@@ -118,15 +118,6 @@ std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& igno
     cached = true;
     this->cachedSessionKey = createSessionKey(ignoredNodeNames);
     return this->cachedSessionKey;
-
-    if (ignoredNodeNames.size()) {
-        cached = false;
-        this->cachedSessionKey = createSessionKey(ignoredNodeNames);
-    } else if (!cached) {
-        this->cachedSessionKey = createSessionKey(ignoredNodeNames);
-        cached = true;
-    }
-    return this->cachedSessionKey;
 }
 
 std::pair<NodeSessionMetadata, CollapseDetails> NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const {
