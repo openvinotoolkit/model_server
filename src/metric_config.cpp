@@ -23,7 +23,6 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
-#include "config.hpp"
 #include "rapidjson/document.h"
 #include "schema.hpp"
 #include "stringutils.hpp"
@@ -184,31 +183,35 @@ void MetricConfig::setAllMetricsTo(bool enabled) {
     requestFailRestModelReady = enabled;
 }
 
-Status MetricConfig::loadSettings(Config& config) {
+Status MetricConfig::loadSettings(bool isEnabled, std::string metricsList) {
     using namespace rapidjson;
     Document document;
-    document.SetObject("metrics");
+    document.SetObject();
 
     Value o(kObjectType);
     {
-        Value v(config.metricsEnabled());
+        o.SetString("metrics");
+        Value v(isEnabled);
         // adding elements to contacts array.
-        o.AddMember("enabled", v, document.GetAllocator());
+        o.AddMember("enable", v, document.GetAllocator());
     }
 
     // Create metrics array
-    if (config.metricsList() != "") {
-        Value a(kArrayType);
+    if (metricsList != "") {
+        Value array(kArrayType);
         Document::AllocatorType& allocator = document.GetAllocator();
         const char separator = ',';
-        std::stringstream streamData(strData);
+        std::stringstream streamData(metricsList);
         std::string val;
         while (std::getline(streamData, val, separator)) {
-            a.PushBack(val, allocator);
+            Value metric(val.c_str(), allocator);
+            array.PushBack(metric, allocator);
         }
+
+        o.AddMember("metrics_list",array , allocator);
     }
 
-    return this->parseMetricsConfig(document.GetObject())
+    return this->parseMetricsConfig(document.GetObject());
 }
 
 }  // namespace ovms
