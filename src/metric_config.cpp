@@ -18,7 +18,6 @@
 #include <regex>
 #include <string>
 
-#include <boost/algorithm/string/trim.hpp>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -184,7 +183,7 @@ void MetricConfig::setAllMetricsTo(bool enabled) {
     requestFailRestModelReady = enabled;
 }
 
-Status MetricConfig::loadSettings(bool isEnabled, std::string metricsList) {
+Status MetricConfig::loadSettings(bool isEnabled, const std::string& metricsList) {
     using namespace rapidjson;
     Document document;
     document.SetObject();
