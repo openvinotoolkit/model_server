@@ -213,8 +213,7 @@ Status ModelManager::startFromConfig() {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
 
         this->metricConfigLoadedOnce = true;
-    }
-    else{
+    } else {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metric cli settings already loaded error.");
         return StatusCode::INTERNAL_ERROR;
     }
