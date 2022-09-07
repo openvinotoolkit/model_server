@@ -70,7 +70,7 @@ public:
     bool validateEndpointPath(std::string endpoint);
 
     void setAllMetricsTo(bool enabled);
-    Status loadSettings(bool isEnabled, std::string metricsList);
+    Status loadSettings(bool isEnabled, const std::string& metricsList);
 
     MetricConfig() {
         metricsEnabled = false;
