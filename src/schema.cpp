@@ -291,7 +291,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 			"type": "object",
 			"required": ["metrics"],
 			"properties":{
-              	"metrics": {
+				"metrics": {
 					"type": "object",
 					"required": ["enable"],
 					"properties": {
@@ -306,10 +306,10 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						}
 					},
 					"additionalProperties": false
-                },
+				},
 				"additionalProperties": false
-            },
-            "additionalProperties": false
+			},
+			"additionalProperties": false
 		}
 	},
 	"additionalProperties": false

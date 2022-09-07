@@ -190,10 +190,8 @@ Status MetricConfig::loadSettings(bool isEnabled, const std::string& metricsList
     Document::AllocatorType& allocator = document.GetAllocator();
 
     Value metrics(kObjectType);
-    {
-        metrics.SetObject();
-        metrics.AddMember("enable", isEnabled, allocator);
-    }
+    metrics.SetObject();
+    metrics.AddMember("enable", isEnabled, allocator);
 
     // Create metrics array
     if (metricsList != "") {

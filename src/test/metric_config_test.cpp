@@ -226,7 +226,7 @@ TEST_F(MetricsConfigTest, DISABLED_MetricsBadEndpoint) {
     ASSERT_EQ(status, StatusCode::INVALID_METRICS_ENDPOINT) << status.string();
 }
 
-static const char* modelMetricsNegative4 = R"(
+static const char* MetricsNegativeAdditionalMember = R"(
 {
     "model_config_list": [
         {
@@ -250,8 +250,8 @@ static const char* modelMetricsNegative4 = R"(
         }
 })";
 
-TEST_F(MetricsConfigTest, MetricsNegative4) {
-    SetUpConfig(modelMetricsNegative4);
+TEST_F(MetricsConfigTest, MetricsNegativeAdditionalMember) {
+    SetUpConfig(MetricsNegativeAdditionalMember);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     ConstructorEnabledModelManager manager;
@@ -260,7 +260,7 @@ TEST_F(MetricsConfigTest, MetricsNegative4) {
     ASSERT_FALSE(status.ok());
 }
 
-static const char* modelMetricsNegative3 = R"(
+static const char* MetricsNegativeBadMember = R"(
 {
     "model_config_list": [
         {
@@ -283,8 +283,8 @@ static const char* modelMetricsNegative3 = R"(
         }
 })";
 
-TEST_F(MetricsConfigTest, MetricsNegative3) {
-    SetUpConfig(modelMetricsNegative3);
+TEST_F(MetricsConfigTest, MetricsNegativeBadMember) {
+    SetUpConfig(MetricsNegativeBadMember);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     ConstructorEnabledModelManager manager;
@@ -293,7 +293,7 @@ TEST_F(MetricsConfigTest, MetricsNegative3) {
     ASSERT_FALSE(status.ok());
 }
 
-static const char* modelMetricsNegative2 = R"(
+static const char* MetricsNegativeBadJson = R"(
 {
     "model_config_list": [
         {
@@ -316,8 +316,8 @@ static const char* modelMetricsNegative2 = R"(
         }
 })";
 
-TEST_F(MetricsConfigTest, MetricsNegative2) {
-    SetUpConfig(modelMetricsNegative2);
+TEST_F(MetricsConfigTest, MetricsNegativeBadJson) {
+    SetUpConfig(MetricsNegativeBadJson);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     ConstructorEnabledModelManager manager;
@@ -326,7 +326,7 @@ TEST_F(MetricsConfigTest, MetricsNegative2) {
     ASSERT_FALSE(status.ok());
 }
 
-static const char* modelMetricsNegative1 = R"(
+static const char* MetricsNegativeBadType = R"(
 {
     "model_config_list": [
         {
@@ -349,8 +349,8 @@ static const char* modelMetricsNegative1 = R"(
         }
 })";
 
-TEST_F(MetricsConfigTest, MetricsNegative1) {
-    SetUpConfig(modelMetricsNegative1);
+TEST_F(MetricsConfigTest, MetricsNegativeBadType) {
+    SetUpConfig(MetricsNegativeBadType);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     ConstructorEnabledModelManager manager;
