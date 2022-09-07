@@ -88,9 +88,7 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/third_party/opencv/install_opencv.sh && \
-    wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/third_party/opencv/opencv_cmake_flags.txt && \
-    chmod 755 install_opencv.sh && ./install_opencv.sh
+RUN cp /build/third_party/opencv/install_opencv.sh /build/third_party/opencv/opencv_cmake_flags.txt . && ./install_opencv.sh
 
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
