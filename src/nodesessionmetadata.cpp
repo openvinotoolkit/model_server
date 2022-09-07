@@ -109,11 +109,11 @@ std::string NodeSessionMetadata::createSessionKey(const std::set<std::string>& i
 std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& ignoredNodeNames) const {
     // if set not empty then we need to regenerate the cache and mark it as not cached
     // we don't want to store previous set but we want to limit recreation of the key
-    if (cached && (ignoredNodeNames.size() == 0)) {
-        return this->cachedSessionKey;
-    }
     if (ignoredNodeNames.size() != 0) {
         return createSessionKey(ignoredNodeNames);
+    }
+    if (cached) {
+        return this->cachedSessionKey;
     }
     cached = true;
     this->cachedSessionKey = createSessionKey(ignoredNodeNames);
