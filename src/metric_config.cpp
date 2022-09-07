@@ -18,6 +18,7 @@
 #include <regex>
 #include <string>
 
+#include <boost/algorithm/string/trim.hpp>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -187,29 +188,31 @@ Status MetricConfig::loadSettings(bool isEnabled, std::string metricsList) {
     using namespace rapidjson;
     Document document;
     document.SetObject();
+    Document::AllocatorType& allocator = document.GetAllocator();
 
-    Value o(kObjectType);
+    Value metrics(kObjectType);
     {
-        o.SetString("metrics");
-        Value v(isEnabled);
-        // adding elements to contacts array.
-        o.AddMember("enable", v, document.GetAllocator());
+        metrics.SetObject();
+        metrics.AddMember("enable", isEnabled, allocator);
     }
 
     // Create metrics array
     if (metricsList != "") {
         Value array(kArrayType);
-        Document::AllocatorType& allocator = document.GetAllocator();
+
         const char separator = ',';
         std::stringstream streamData(metricsList);
         std::string val;
         while (std::getline(streamData, val, separator)) {
+            trim(val);
             Value metric(val.c_str(), allocator);
             array.PushBack(metric, allocator);
         }
 
-        o.AddMember("metrics_list",array , allocator);
+        metrics.AddMember("metrics_list", array, allocator);
     }
+
+    document.AddMember("metrics", metrics, allocator);
 
     return this->parseMetricsConfig(document.GetObject());
 }
