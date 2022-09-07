@@ -184,7 +184,7 @@ void MetricConfig::setAllMetricsTo(bool enabled) {
     requestFailRestModelReady = enabled;
 }
 
-Status MetricConfig::loadSettings(ovms::config& config) {
+Status MetricConfig::loadSettings(Config& config){
     using namespace rapidjson;
     Document document;
     document.SetObject("metrics");
