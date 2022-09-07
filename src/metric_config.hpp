@@ -19,8 +19,8 @@
 
 #include <rapidjson/document.h>
 
-#include "status.hpp"
 #include "config.hpp"
+#include "status.hpp"
 
 namespace ovms {
 /**
