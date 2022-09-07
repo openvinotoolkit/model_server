@@ -117,4 +117,5 @@ COPY --from=base_build \
     /clients
 COPY --from=base_build /input/images/*.jpeg /clients/images/
 COPY --from=base_build /input/input_images.txt /clients/
+COPY --from=base_build /usr/lib/x86_64-linux-gnu/libpng* /lib/x86_64-linux-gnu/
 COPY --from=base_build /opt/opencv/lib/* /lib/x86_64-linux-gnu/
