@@ -71,7 +71,7 @@ public:
     bool validateEndpointPath(std::string endpoint);
 
     void setAllMetricsTo(bool enabled);
-    Status loadSettings(ovms::config& config);
+    Status loadSettings(Config& config);
 
     MetricConfig() {
         metricsEnabled = false;
