@@ -266,7 +266,7 @@ void Config::validate() {
     }
 
     // metrics on rest port
-    if (result->count("metrics_enabled") && !result->count("rest_port") &&) {
+    if (result->count("metrics_enabled") && !result->count("rest_port")) {
         std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
         exit(EX_USAGE);
     }
