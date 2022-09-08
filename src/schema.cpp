@@ -119,23 +119,6 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"additionalProperties": false
 			}
 		},
-		"metrics": {
-			"type": "object",
-			"required": ["enable"],
-			"additionalProperties": false,
-			"unevaluatedProperties": false,
-			"properties": {
-				"enable": {
-					"type": "boolean"
-				},
-				"metrics_list": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				}
-			}
-		},
 		"source_node_names": {
 			"type": "object",
 			"required": ["node_name", "data_item"],
@@ -306,7 +289,27 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 		},
 		"monitoring": {
 			"type": "object",
-			"required": ["metrics"]
+			"required": ["metrics"],
+			"properties":{
+				"metrics": {
+					"type": "object",
+					"required": ["enable"],
+					"properties": {
+						"enable": {
+							"type": "boolean"
+						},
+						"metrics_list": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							}
+						}
+					},
+					"additionalProperties": false
+				},
+				"additionalProperties": false
+			},
+			"additionalProperties": false
 		}
 	},
 	"additionalProperties": false

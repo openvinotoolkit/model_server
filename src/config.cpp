@@ -150,6 +150,14 @@ Config& Config::parse(int argc, char** argv) {
                 "Flag indicating model is stateful",
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
+            ("metrics_enabled",
+                "Flag indicating if metrics are enabled",
+                cxxopts::value<bool>()->default_value("false"),
+                "METRICS")
+            ("metrics_list",
+                "List of metrics to be enabled. Comma separated.",
+                cxxopts::value<std::string>()->default_value(""),
+                "METRICS_LIST")
             ("idle_sequence_cleanup",
                 "Flag indicating if model is subject to sequence cleaner scans",
                 cxxopts::value<bool>()->default_value("true"),
@@ -254,6 +262,12 @@ void Config::validate() {
     }
     if (result->count("rest_port") && ((this->restPort() > MAX_PORT_NUMBER) || (this->restPort() < 0))) {
         std::cerr << "rest_port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
+        exit(EX_USAGE);
+    }
+
+    // metrics on rest port
+    if (result->count("metrics_enabled") && !result->count("rest_port")) {
+        std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
         exit(EX_USAGE);
     }
 

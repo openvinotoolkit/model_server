@@ -226,7 +226,74 @@ TEST_F(MetricsConfigTest, DISABLED_MetricsBadEndpoint) {
     ASSERT_EQ(status, StatusCode::INVALID_METRICS_ENDPOINT) << status.string();
 }
 
-static const char* modelMetricsNegative2 = R"(
+static const char* MetricsNegativeAdditionalMember = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "something" : "else"
+            }
+        }
+})";
+
+TEST_F(MetricsConfigTest, MetricsNegativeAdditionalMember) {
+    SetUpConfig(MetricsNegativeAdditionalMember);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_FALSE(status.ok());
+}
+
+static const char* MetricsNegativeBadMember = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enabled" : true
+            }
+        }
+})";
+
+TEST_F(MetricsConfigTest, MetricsNegativeBadMember) {
+    SetUpConfig(MetricsNegativeBadMember);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_FALSE(status.ok());
+}
+
+static const char* MetricsNegativeBadJson = R"(
 {
     "model_config_list": [
         {
@@ -249,8 +316,8 @@ static const char* modelMetricsNegative2 = R"(
         }
 })";
 
-TEST_F(MetricsConfigTest, MetricsNegative2) {
-    SetUpConfig(modelMetricsNegative2);
+TEST_F(MetricsConfigTest, MetricsNegativeBadJson) {
+    SetUpConfig(MetricsNegativeBadJson);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     ConstructorEnabledModelManager manager;
@@ -259,7 +326,7 @@ TEST_F(MetricsConfigTest, MetricsNegative2) {
     ASSERT_FALSE(status.ok());
 }
 
-static const char* modelMetricsNegative1 = R"(
+static const char* MetricsNegativeBadType = R"(
 {
     "model_config_list": [
         {
@@ -282,8 +349,8 @@ static const char* modelMetricsNegative1 = R"(
         }
 })";
 
-TEST_F(MetricsConfigTest, MetricsNegative1) {
-    SetUpConfig(modelMetricsNegative1);
+TEST_F(MetricsConfigTest, MetricsNegativeBadType) {
+    SetUpConfig(MetricsNegativeBadType);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     ConstructorEnabledModelManager manager;
@@ -321,4 +388,70 @@ TEST_F(ModelMetricReporterTest, MetricReporterConstructorTest) {
     metrics = registry.collect();
     ASSERT_NE(metrics, "");
     ASSERT_TRUE(reporter5.requestFailGrpcGetModelMetadata != nullptr);
+}
+
+class MetricsCli : public ::testing::Test {};
+
+TEST_F(MetricsCli, DefaultCliReading) {
+    MetricConfig metricConfig;
+    ASSERT_EQ(metricConfig.metricsEnabled, false);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
+
+    auto status = metricConfig.loadFromCLIString(true, "request_success_grpc_predict, request_fail_rest_model_ready");
+
+    ASSERT_TRUE(status.ok());
+    ASSERT_EQ(metricConfig.metricsEnabled, true);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, true);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, true);
+}
+
+TEST_F(MetricsCli, DefaultEmptyList) {
+    MetricConfig metricConfig;
+    ASSERT_EQ(metricConfig.metricsEnabled, false);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
+
+    auto status = metricConfig.loadFromCLIString(true, "");
+
+    ASSERT_TRUE(status.ok());
+    ASSERT_EQ(metricConfig.metricsEnabled, true);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, true);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, true);
+}
+
+TEST_F(MetricsCli, BadCliReading) {
+    MetricConfig metricConfig;
+    ASSERT_EQ(metricConfig.metricsEnabled, false);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
+
+    auto status = metricConfig.loadFromCLIString(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready");
+
+    ASSERT_TRUE(status.ok());
+    ASSERT_EQ(metricConfig.metricsEnabled, true);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
+}
+
+TEST_F(MetricsCli, DisabledMetrics) {
+    MetricConfig metricConfig;
+    ASSERT_EQ(metricConfig.metricsEnabled, false);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
+
+    auto status = metricConfig.loadFromCLIString(false, "request_success_grpc_predict, request_fail_rest_model_ready");
+
+    ASSERT_TRUE(status.ok());
+    ASSERT_EQ(metricConfig.metricsEnabled, false);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, true);
+    ASSERT_EQ(metricConfig.requestFailRestModelReady, true);
 }

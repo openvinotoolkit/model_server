@@ -205,9 +205,27 @@ Status ModelManager::startFromConfig() {
         return StatusCode::UNKNOWN_ERROR;
     }
 
+    Status status = StatusCode::OK;
+
+    // Reading metric config only once per server start
+    if (!this->metricConfigLoadedOnce) {
+        status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
+
+        this->metricConfigLoadedOnce = true;
+    } else {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metric cli settings already loaded error.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't load metrics settings");
+        return status;
+    }
+
     ModelConfig& modelConfig = it->second;
 
-    auto status = modelConfig.parsePluginConfig(config.pluginConfig());
+    status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse plugin config");
         return status;
@@ -743,14 +761,14 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
         status = loadMetricsConfig(configJson);
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start.");
         this->metricConfigLoadedOnce = true;
 
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
         }
     } else {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config skipped.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric from config json file skipped. Settings already loaded.");
     }
 
     std::vector<ModelConfig> gatedModelConfigs;

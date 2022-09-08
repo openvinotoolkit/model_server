@@ -277,6 +277,24 @@ public:
     }
 
     /**
+     * @brief Get metrics enabled flag
+     *
+     * @return bool
+     */
+    bool metricsEnabled() const {
+        return result->operator[]("metrics_enabled").as<bool>();
+    }
+
+    /**
+        * @brief Get metrics list
+        *
+        * @return std::string
+        */
+    std::string metricsList() const {
+        return result->operator[]("metrics_list").as<std::string>();
+    }
+
+    /**
      * @brief Get idle sequence cleanup flag
      *
      * @return uint

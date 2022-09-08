@@ -23,6 +23,7 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
+#include "rapidjson/document.h"
 #include "schema.hpp"
 #include "stringutils.hpp"
 
@@ -180,6 +181,37 @@ void MetricConfig::setAllMetricsTo(bool enabled) {
     requestFailRestModelInfer = enabled;
     requestFailRestModelMetadata = enabled;
     requestFailRestModelReady = enabled;
+}
+
+Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList) {
+    using namespace rapidjson;
+    Document document;
+    document.SetObject();
+    Document::AllocatorType& allocator = document.GetAllocator();
+
+    Value metrics(kObjectType);
+    metrics.SetObject();
+    metrics.AddMember("enable", isEnabled, allocator);
+
+    // Create metrics array
+    if (metricsList != "") {
+        Value array(kArrayType);
+
+        const char separator = ',';
+        std::stringstream streamData(metricsList);
+        std::string val;
+        while (std::getline(streamData, val, separator)) {
+            trim(val);
+            Value metric(val.c_str(), allocator);
+            array.PushBack(metric, allocator);
+        }
+
+        metrics.AddMember("metrics_list", array, allocator);
+    }
+
+    document.AddMember("metrics", metrics, allocator);
+
+    return this->parseMetricsConfig(document.GetObject());
 }
 
 }  // namespace ovms
