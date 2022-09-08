@@ -9,20 +9,23 @@ As an example, we will use [ocrnet-hrnet-w48-paddle](https://github.com/openvino
 
 - Python 3.6 or newer installed
 
-- [paddlepaddle](https://pypi.org/project/paddlepaddle/) Python package installed
-
 ## Preparing to Run
 
 Clone the repository and enter segmentation_using_paddlepaddle_model directory
 
-```bash
+```Bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/segmentation_using_paddlepaddle_model/python
 ```
 
+Install [paddlepaddle](https://pypi.org/project/paddlepaddle/) package required to export the model to deployable format
+```Bash
+pip3 install paddlepaddle
+```
+
 You can prepare the workspace by just running
 
-```bash
+```Bash
 make
 ```
 
@@ -30,18 +33,18 @@ make
 
 Deploy OVMS with vehicles analysis pipeline using the following command:
 
-```bash
+```Bash
 docker run -p 9000:9000 -d -v ${PWD}/model:/models openvino/model_server --port 9000 --model_path /models --model_name ocrnet
 ```
 ## Requesting the Service
 
 Install python dependencies:
-```bash
+```Bash
 pip3 install -r requirements.txt
 ``` 
 
 Now you can run the client:
-```bash
+```Bash
 python3 segmentation_using_paddlepaddle_model.py --grpc_port 9000 --image_input_path ../../common/static/images/cars/road1.jpg --image_output_path ./road2.jpg
 ```
 Exemplary result of running the demo:
