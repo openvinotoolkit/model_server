@@ -456,20 +456,31 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     bool dataAfterHeader = ((jsonClosingBracket != std::string::npos) && (jsonClosingBracket != (request_body.length() - 1)));
     if (dataAfterHeader) {
         size_t endOfJson = jsonClosingBracket + 1;
-        std::string request(preprocessInferRequest(request_body.substr(0, endOfJson).c_str()));
-        google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
-        auto status = addBinaryInputs(grpc_request, &(request_body[endOfJson]), request_body.length() - endOfJson);
+        KFSRestParser requestParser;
+        auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
+        if (!status.ok()) {
+            //modelInstance->getMetricReporter().requestFailRestPredict->increment();
+            return status;
+        }
+        grpc_request = requestParser.getProto();
+        status = addBinaryInputs(grpc_request, &(request_body[endOfJson]), request_body.length() - endOfJson);
         if (!status.ok()) {
             return status;
         }
         std::string req;
         google::protobuf::util::MessageToJsonString(grpc_request, &req);
     } else {
-        std::string request(preprocessInferRequest(request_body));
-        google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
+        KFSRestParser requestParser;
+        auto status = requestParser.parse(request_body.c_str());
+        if (!status.ok()) {
+            //modelInstance->getMetricReporter().requestFailRestPredict->increment();
+            return status;
+        }
+        grpc_request = requestParser.getProto();
     }
     std::string req;
     google::protobuf::util::MessageToJsonString(grpc_request, &req);
+    SPDLOG_ERROR(req);
     grpc_request.set_model_name(modelName);
     grpc_request.set_model_version(modelVersion);
     return StatusCode::OK;
@@ -483,7 +494,12 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
     ::inference::ModelInferRequest grpc_request;
+    Timer timer;
+    timer.start("prepareGrpcRequest");
+    using std::chrono::microseconds;
     prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
+    timer.stop("prepareGrpcRequest");
+    SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>("prepareGrpcRequest") / 1000);
     ::inference::ModelInferResponse grpc_response;
     const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer},
         reporter);
@@ -809,7 +825,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     reporterOut = &modelInstance->getMetricReporter();
     Timer timer;
     timer.start("parse");
-    RestParser requestParser(modelInstance->getInputsInfo());
+    TFSRestParser requestParser(modelInstance->getInputsInfo());
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
         INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
@@ -860,7 +876,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
         return status;
     }
 
-    RestParser requestParser(inputs);
+    TFSRestParser requestParser(inputs);
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
         return status;

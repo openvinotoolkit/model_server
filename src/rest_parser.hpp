@@ -24,6 +24,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#include "kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
 #include "status.hpp"
@@ -49,10 +50,12 @@ enum class Format {
     NONAMED
 };
 
+class RestParser {};
+
 /**
  * @brief This class encapsulates http request body string parsing to request proto.
  */
-class RestParser {
+class TFSRestParser : RestParser {
     /**
      * @brief Request order
      */
@@ -174,7 +177,7 @@ public:
      * 
      * @param tensors Tensor map with model input parameters
      */
-    RestParser(const tensor_map_t& tensors);
+    TFSRestParser(const tensor_map_t& tensors);
 
     /**
      * @brief Gets parsed request proto
@@ -213,6 +216,19 @@ public:
      * }
      */
     Status parse(const char* json);
+};
+
+class KFSRestParser : RestParser {
+    ::inference::ModelInferRequest requestProto;
+    Status parseId(rapidjson::Value& node);
+    Status parseRequestParameters(rapidjson::Value& node);
+    Status parseInputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input);
+    Status parseData(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input);
+    Status parseInput(rapidjson::Value& node);
+    Status parseInputs(rapidjson::Value& node);
+    public:
+    Status parse(const char* json);
+    ::inference::ModelInferRequest& getProto() { return requestProto; }
 };
 
 }  // namespace ovms
