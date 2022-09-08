@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 #include <memory>
 #include <utility>
 
 #include "config.hpp"
 #include "logging.hpp"
 #include "module.hpp"
-
 
 namespace ovms {
 class Profiler;

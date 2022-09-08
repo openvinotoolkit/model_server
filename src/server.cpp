@@ -234,19 +234,19 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
     return nullptr;
 }
 
-#define INSERT_MODULE(MODULE_NAME, IT_NAME) \
-    { \
-        auto module = this->createModule(MODULE_NAME); \
-        std::unique_lock lock(modulesMtx); \
+#define INSERT_MODULE(MODULE_NAME, IT_NAME)                                                  \
+    {                                                                                        \
+        auto module = this->createModule(MODULE_NAME);                                       \
+        std::unique_lock lock(modulesMtx);                                                   \
         std::tie(IT_NAME, inserted) = this->modules.emplace(MODULE_NAME, std::move(module)); \
-    } \
-    if (!inserted) \
-        return EXIT_FAILURE 
+    }                                                                                        \
+    if (!inserted)                                                                           \
+    return EXIT_FAILURE
 
-#define START_MODULE(IT_NAME) \
+#define START_MODULE(IT_NAME)                 \
     retCode = IT_NAME->second->start(config); \
-    if (retCode) \
-        return retCode
+    if (retCode)                              \
+    return retCode
 
 int Server::startModules(ovms::Config& config) {
     // The order of starting modules is slightly different from inserting modules
@@ -262,7 +262,6 @@ int Server::startModules(ovms::Config& config) {
     auto retCode = EXIT_SUCCESS;
     bool inserted = false;
     auto it = modules.end();
-    retCode = modules.at(PROFILER_MODULE_NAME)->start(config);
 #if MTR_ENABLED
     INSERT_MODULE(PROFILER_MODULE_NAME, it);
     START_MODULE(it);
@@ -271,6 +270,10 @@ int Server::startModules(ovms::Config& config) {
     INSERT_MODULE(METRICS_MODULE_NAME, it);
     START_MODULE(it);
 
+    // we need servable module during GRPC/HTTP requests so create it here
+    // but start it later to quickly respond with liveness probe
+    auto itServable = modules.end();
+    INSERT_MODULE(SERVABLE_MANAGER_MODULE_NAME, itServable);
     auto itGrpc = modules.end();
     INSERT_MODULE(GRPC_SERVER_MODULE_NAME, itGrpc);
     START_MODULE(itGrpc);
@@ -280,8 +283,6 @@ int Server::startModules(ovms::Config& config) {
         INSERT_MODULE(HTTP_SERVER_MODULE_NAME, itHttp);
         START_MODULE(itHttp);
     }
-    auto itServable = modules.end();
-    INSERT_MODULE(SERVABLE_MANAGER_MODULE_NAME, itServable);
     START_MODULE(itServable);
     return retCode;
 }

@@ -40,6 +40,7 @@ class PipelineDefinition;
 
 class KFSInferenceServiceImpl final : public GRPCInferenceService::Service {
     const Server& ovmsServer;
+    ModelManager& modelManager;
 
 public:
     Status ModelReadyImpl(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response);

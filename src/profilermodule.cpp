@@ -23,35 +23,35 @@
 
 namespace ovms {
 #ifdef MTR_ENABLED
-    ProfilerModule::ProfilerModule() = default;
-    int ProfilerModule::start(const Config& config) {
-        state = ModuleState::STARTED_INITIALIZE;
-        SPDLOG_INFO("{} starting", PROFILER_MODULE_NAME);
-        this->profiler = std::make_unique<Profiler>(config.tracePath());
-        if (!this->profiler) {
-            return EXIT_FAILURE;
-        }
-        if (!this->profiler->isInitialized()) {
-            SPDLOG_ERROR("Cannot open file for profiler, --trace_path: {}", config.tracePath());
-            return EXIT_FAILURE;
-        }
-        state = ModuleState::INITIALIZED;
-        SPDLOG_INFO("{} started", PROFILER_MODULE_NAME);
-        return EXIT_SUCCESS;
+ProfilerModule::ProfilerModule() = default;
+int ProfilerModule::start(const Config& config) {
+    state = ModuleState::STARTED_INITIALIZE;
+    SPDLOG_INFO("{} starting", PROFILER_MODULE_NAME);
+    this->profiler = std::make_unique<Profiler>(config.tracePath());
+    if (!this->profiler) {
+        return EXIT_FAILURE;
     }
+    if (!this->profiler->isInitialized()) {
+        SPDLOG_ERROR("Cannot open file for profiler, --trace_path: {}", config.tracePath());
+        return EXIT_FAILURE;
+    }
+    state = ModuleState::INITIALIZED;
+    SPDLOG_INFO("{} started", PROFILER_MODULE_NAME);
+    return EXIT_SUCCESS;
+}
 
-    void ProfilerModule::shutdown() {
-        if (state == ModuleState::SHUTDOWN)
-            return;
-        state = ModuleState::STARTED_SHUTDOWN;
-        SPDLOG_INFO("{} shutting down", PROFILER_MODULE_NAME);
-        profiler.reset();
-        state = ModuleState::SHUTDOWN;
-        SPDLOG_INFO("{} shutdown", PROFILER_MODULE_NAME);
-    }
+void ProfilerModule::shutdown() {
+    if (state == ModuleState::SHUTDOWN)
+        return;
+    state = ModuleState::STARTED_SHUTDOWN;
+    SPDLOG_INFO("{} shutting down", PROFILER_MODULE_NAME);
+    profiler.reset();
+    state = ModuleState::SHUTDOWN;
+    SPDLOG_INFO("{} shutdown", PROFILER_MODULE_NAME);
+}
 
-    ProfilerModule::~ProfilerModule() {
-        this->shutdown();
-    }
+ProfilerModule::~ProfilerModule() {
+    this->shutdown();
+}
 #endif
 }  // namespace ovms

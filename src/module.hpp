@@ -35,4 +35,4 @@ public:
     virtual ~Module() = default;
     ModuleState getState() const;
 };
-} // namespace ovms
+}  // namespace ovms

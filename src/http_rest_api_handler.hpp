@@ -214,6 +214,7 @@ private:
     ovms::Server& ovmsServer;
     ovms::KFSInferenceServiceImpl& kfsGrpcImpl;
     const GetModelMetadataImpl& grpcGetModelMetadataImpl;
+    ovms::ModelManager& modelManager;
 
     Status getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs);
 };
