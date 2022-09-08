@@ -399,7 +399,7 @@ TEST_F(MetricsCli, DefaultCliReading) {
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
     ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
 
-    auto status = metricConfig.loadSettings(true, "request_success_grpc_predict, request_fail_rest_model_ready");
+    auto status = metricConfig.loadFromCLIString(true, "request_success_grpc_predict, request_fail_rest_model_ready");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -415,7 +415,7 @@ TEST_F(MetricsCli, DefaultEmptyList) {
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
     ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
 
-    auto status = metricConfig.loadSettings(true, "");
+    auto status = metricConfig.loadFromCLIString(true, "");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -431,7 +431,7 @@ TEST_F(MetricsCli, BadCliReading) {
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
     ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
 
-    auto status = metricConfig.loadSettings(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready");
+    auto status = metricConfig.loadFromCLIString(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -447,7 +447,7 @@ TEST_F(MetricsCli, DisabledMetrics) {
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
     ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
 
-    auto status = metricConfig.loadSettings(false, "request_success_grpc_predict, request_fail_rest_model_ready");
+    auto status = metricConfig.loadFromCLIString(false, "request_success_grpc_predict, request_fail_rest_model_ready");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, false);

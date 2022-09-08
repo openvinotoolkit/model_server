@@ -183,7 +183,7 @@ void MetricConfig::setAllMetricsTo(bool enabled) {
     requestFailRestModelReady = enabled;
 }
 
-Status MetricConfig::loadSettings(bool isEnabled, const std::string& metricsList) {
+Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList) {
     using namespace rapidjson;
     Document document;
     document.SetObject();

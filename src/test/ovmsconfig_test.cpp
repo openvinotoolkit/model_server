@@ -98,6 +98,12 @@ TEST_F(OvmsConfigDeathTest, negativeMissingPathAndName) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use config_path or model_path");
 }
 
+TEST_F(OvmsConfigDeathTest, metricMissingPort) {
+    char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--metrics_enabled"};
+    int arg_count = 8;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_port setting is missing, metrics are enabled on rest port");
+}
+
 TEST_F(OvmsConfigDeathTest, negativeMissingName) {
     char* n_argv[] = {"ovms", "--model_path", "/path/to/model"};
     int arg_count = 3;
