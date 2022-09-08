@@ -234,58 +234,55 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
     return nullptr;
 }
 
+#define INSERT_MODULE(MODULE_NAME, IT_NAME) \
+    { \
+        auto module = this->createModule(MODULE_NAME); \
+        std::unique_lock lock(modulesMtx); \
+        std::tie(IT_NAME, inserted) = this->modules.emplace(MODULE_NAME, std::move(module)); \
+    } \
+    if (!inserted) \
+        return EXIT_FAILURE 
+
+#define START_MODULE(IT_NAME) \
+    retCode = IT_NAME->second->start(config); \
+    if (retCode) \
+        return retCode
+
 int Server::startModules(ovms::Config& config) {
+    // The order of starting modules is slightly different from inserting modules
+    // due to dependency of modules on each other during runtime
+    // To avoid unnecessary runtime calls in eg. prediction we have different order
+    // of modules creation than start
+    // HTTP depends on GRPC, SERVABLE, METRICS
+    // GRPC depends on SERVABLE
+    // SERVABLE depends on metrics
+    // while we want to start the server as quickly as possible to respond with liveness probe
+    // thats why we delay starting the servable until the very end while we need to create it before
+    // GRPC & REST
     auto retCode = EXIT_SUCCESS;
     bool inserted = false;
     auto it = modules.end();
-#if MTR_ENABLED
-    {
-        auto module = this->createModule(PROFILER_MODULE_NAME);
-        std::unique_lock lock(modulesMtx);
-        std::tie(it, inserted) = this->modules.emplace(PROFILER_MODULE_NAME, std::move(module));
-    }
     retCode = modules.at(PROFILER_MODULE_NAME)->start(config);
-    if (retCode)
-        return retCode;
+#if MTR_ENABLED
+    INSERT_MODULE(PROFILER_MODULE_NAME, it);
+    START_MODULE(it);
 #endif
     // It is required to have the metrics module, it is used by ServableManagerModule.
-    {
-        auto module = this->createModule(METRICS_MODULE_NAME);
-        std::unique_lock lock(modulesMtx);
-        std::tie(it, inserted) = this->modules.emplace(METRICS_MODULE_NAME, std::move(module));
-    }
-    retCode = modules.at(METRICS_MODULE_NAME)->start(config);
-    if (retCode)
-        return retCode;
+    INSERT_MODULE(METRICS_MODULE_NAME, it);
+    START_MODULE(it);
 
-    {
-        auto module = this->createModule(GRPC_SERVER_MODULE_NAME);
-        std::unique_lock lock(modulesMtx);
-        std::tie(it, inserted) = this->modules.emplace(GRPC_SERVER_MODULE_NAME, std::move(module));
-    }
-
-    if (!inserted)
-        return EXIT_FAILURE;
+    auto itGrpc = modules.end();
+    INSERT_MODULE(GRPC_SERVER_MODULE_NAME, itGrpc);
+    START_MODULE(itGrpc);
     // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
-    retCode = it->second->start(config);
-    if (retCode)
-        return retCode;
+    auto itHttp = modules.end();
     if (config.restPort() != 0) {
-        {
-            auto module = this->createModule(HTTP_SERVER_MODULE_NAME);
-            std::unique_lock lock(modulesMtx);
-            std::tie(it, inserted) = this->modules.emplace(HTTP_SERVER_MODULE_NAME, std::move(module));
-        }
-        retCode = it->second->start(config);
-        if (retCode)
-            return retCode;
+        INSERT_MODULE(HTTP_SERVER_MODULE_NAME, itHttp);
+        START_MODULE(itHttp);
     }
-    {
-        auto module = this->createModule(SERVABLE_MANAGER_MODULE_NAME);
-        std::unique_lock lock(modulesMtx);
-        std::tie(it, inserted) = this->modules.emplace(SERVABLE_MANAGER_MODULE_NAME, std::move(module));
-    }
-    retCode = it->second->start(config);
+    auto itServable = modules.end();
+    INSERT_MODULE(SERVABLE_MANAGER_MODULE_NAME, itServable);
+    START_MODULE(itServable);
     return retCode;
 }
 
