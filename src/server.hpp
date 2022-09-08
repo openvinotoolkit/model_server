@@ -54,8 +54,6 @@ public:
     void setShutdownRequest(int i);
     virtual ~Server();
 
-    // TODO potentially to be hiden under protected and exposed only in tests by inheritance
-    // #KFS_CLEANUP
     int startModules(ovms::Config& config);
     void shutdownModules();
 
