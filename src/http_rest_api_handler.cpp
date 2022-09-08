@@ -15,11 +15,11 @@
 //*****************************************************************************
 #include "http_rest_api_handler.hpp"
 
-#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -232,7 +232,7 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
 }
 
 std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body) {
-    static std::map<std::string, std::string> types = {
+    static std::unordered_map<std::string, std::string> types = {
         {"BOOL", "bool_contents"},
         {"INT8", "int_contents"},
         {"INT16", "int_contents"},

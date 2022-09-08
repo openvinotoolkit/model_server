@@ -121,7 +121,7 @@ void TensorInfo::setPrecision(const ovms::Precision& requestedPrecision) {
     precision = requestedPrecision;
 }
 
-std::string TensorInfo::getPrecisionAsString(Precision precision) {
+const std::string& TensorInfo::getPrecisionAsString(Precision precision) {
     return toString(precision);
 }
 
@@ -129,19 +129,19 @@ ov::element::Type TensorInfo::getOvPrecision() const {
     return ovmsPrecisionToIE2Precision(precision);
 }
 
-std::string TensorInfo::getPrecisionAsString() const {
+const std::string& TensorInfo::getPrecisionAsString() const {
     return getPrecisionAsString(precision);
 }
 
-std::string TensorInfo::getPrecisionAsKFSPrecision(Precision precision) {
+const std::string& TensorInfo::getPrecisionAsKFSPrecision(Precision precision) {
     return ovmsPrecisionToKFSPrecision(precision);
 }
 
-std::string TensorInfo::getPrecisionAsKFSPrecision() const {
+const std::string& TensorInfo::getPrecisionAsKFSPrecision() const {
     return getPrecisionAsKFSPrecision(precision);
 }
 
-std::string TensorInfo::getStringFromLayout(const Layout& layout) {
+const std::string& TensorInfo::getStringFromLayout(const Layout& layout) {
     return layout;
 }
 

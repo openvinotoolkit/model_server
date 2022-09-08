@@ -15,8 +15,8 @@
 //*****************************************************************************
 #pragma once
 
-#include <map>
 #include <string>
+#include <unordered_map>
 
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
@@ -71,7 +71,7 @@ class RestParser {
     /**
      * @brief Request content precision
      */
-    std::map<std::string, ovms::Precision> tensorPrecisionMap;
+    std::unordered_map<std::string, ovms::Precision> tensorPrecisionMap;
 
     void removeUnusedInputs();
 

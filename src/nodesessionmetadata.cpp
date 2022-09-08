@@ -53,6 +53,7 @@ std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const 
     for (auto& meta : metas) {
         meta.details.insert({nodeName, {counter, subsessionSize}});
         meta.sessionsLevels.push_back(nodeName);
+        meta.cached = false;
         ++counter;
     }
     SPDLOG_LOGGER_TRACE(dag_executor_logger, "Generated subsession levels: {}",
@@ -65,7 +66,7 @@ std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const 
     return metas;
 }
 
-std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& ignoredNodeNames) const {
+std::string NodeSessionMetadata::createSessionKey(const std::set<std::string>& ignoredNodeNames) const {
     if (details.size() == 0) {
         return "";
     }
@@ -103,6 +104,20 @@ std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& igno
         }
     }
     return ss.str();
+}
+
+std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& ignoredNodeNames) const {
+    // if set not empty then we need to regenerate the cache and mark it as not cached
+    // we don't want to store previous set but we want to limit recreation of the key
+    if (ignoredNodeNames.size() != 0) {
+        return createSessionKey(ignoredNodeNames);
+    }
+    if (cached) {
+        return this->cachedSessionKey;
+    }
+    cached = true;
+    this->cachedSessionKey = createSessionKey(ignoredNodeNames);
+    return this->cachedSessionKey;
 }
 
 std::pair<NodeSessionMetadata, CollapseDetails> NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const {

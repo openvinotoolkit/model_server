@@ -107,6 +107,7 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     ::inference::ModelInferResponse* response,
     outputNameChooser_t outputNameChooser) {
+    OVMS_PROFILE_FUNCTION();
     Status status;
     ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(response);
     for (const auto& [outputName, outputInfo] : outputMap) {

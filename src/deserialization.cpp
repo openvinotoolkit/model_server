@@ -19,6 +19,7 @@ namespace ovms {
 
 template <>
 Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     Status status;
     try {
         requester.set_tensor(name, tensor);
@@ -40,6 +41,7 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         shape.push_back(requestInput.tensor_shape().dim(i).size());
@@ -51,6 +53,7 @@ ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
 ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo,
     const std::string& buffer) {
+    OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     for (int i = 0; i < requestInput.shape_size(); i++) {
         shape.push_back(requestInput.shape().at(i));
@@ -61,6 +64,7 @@ ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& re
 }
 ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     for (int i = 0; i < requestInput.shape_size(); i++) {
         shape.push_back(requestInput.shape().at(i));

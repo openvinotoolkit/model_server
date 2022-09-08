@@ -39,6 +39,8 @@ class NodeSessionMetadata {
     std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>> details;
     std::vector<std::string> sessionsLevels;
     ExecutionContext context;
+    mutable std::string cachedSessionKey = "";
+    mutable bool cached = false;
 
 protected:
     NodeSessionMetadata();
@@ -52,5 +54,8 @@ public:
     session_id_t getSubsessionSize(const std::string& subsessionName) const;
     session_id_t getShardId(const std::set<std::string>& collapsedNames = {}) const;
     ExecutionContext getContext() const;
+
+private:
+    std::string createSessionKey(const std::set<std::string>& ignoredNodeNames = {}) const;
 };
 }  // namespace ovms

@@ -53,7 +53,7 @@ enum class Precision {
     BIN
 };
 
-std::string toString(Precision precision);
+const std::string& toString(Precision precision);
 
 Precision fromString(const std::string& s);
 
@@ -62,7 +62,7 @@ Precision TFSPrecisionToOvmsPrecision(const TFSDataType& s);
 
 size_t KFSDataTypeSize(const KFSDataType& datatype);
 
-KFSDataType ovmsPrecisionToKFSPrecision(Precision precision);
+const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision);
 
 ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision);
 

@@ -46,6 +46,7 @@ Status ExitNode<ResponseType>::execute(session_key_t sessionId, PipelineEventQue
 
 template <>
 Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     auto it = outputSource.find(name);
     if (it == outputSource.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
