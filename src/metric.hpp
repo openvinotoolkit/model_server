@@ -33,6 +33,10 @@ namespace ovms {
     if (metric) {                    \
         metric->decrement();         \
     }
+#define SET_IF_ENABLED(metric, val) \
+    if (metric) {                   \
+        metric->set(val);           \
+    }
 #define OBSERVE_IF_ENABLED(metric, val) \
     if (metric) {                       \
         metric->observe(val);           \
@@ -64,6 +68,7 @@ public:
 
     void increment(double value = 1.0f);
     void decrement(double value = 1.0f);
+    void set(double value = 1.0f);
 
 private:
     prometheus::Gauge& gaugeImpl;

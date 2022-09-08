@@ -39,11 +39,11 @@ private:
     MetricFamily(MetricFamily&&) = delete;
 
 public:
-    std::shared_ptr<MetricType> addMetric(
+    std::unique_ptr<MetricType> addMetric(
         const MetricLabels& labels = {},
         const BucketBoundaries& bucketBoundaries = {});
 
-    void remove(std::shared_ptr<MetricType> metric);
+    void remove(std::unique_ptr<MetricType>& metric);
 
 private:
     prometheus::Registry& registryImplRef;

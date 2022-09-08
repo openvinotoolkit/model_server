@@ -143,6 +143,30 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
         if (metric == "request_fail_rest_model_ready") {
             requestFailRestModelReady = true;
         }
+        if (metric == "request_time_grpc") {
+            requestTimeGrpc = true;
+        }
+        if (metric == "request_time_rest") {
+            requestTimeRest = true;
+        }
+        if (metric == "inference_time") {
+            inferenceTime = true;
+        }
+        if (metric == "wait_for_infer_req_time") {
+            waitForInferReqTime = true;
+        }
+        if (metric == "streams") {
+            inferenceTime = true;
+        }
+        if (metric == "infer_req_queue_size") {
+            inferReqQueueSize = true;
+        }
+        if (metric == "infer_req_active") {
+            inferReqActive = true;
+        }
+        if (metric == "current_requests") {
+            currentRequests = true;
+        }
     }
 
     return StatusCode::OK;
@@ -181,6 +205,19 @@ void MetricConfig::setAllMetricsTo(bool enabled) {
     requestFailRestModelInfer = enabled;
     requestFailRestModelMetadata = enabled;
     requestFailRestModelReady = enabled;
+
+    requestTimeGrpc = enabled;
+    requestTimeRest = enabled;
+
+    inferenceTime = enabled;
+    waitForInferReqTime = enabled;
+
+    streams = enabled;
+
+    inferReqQueueSize = enabled;
+    inferReqActive = enabled;
+
+    currentRequests = enabled;
 }
 
 Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList) {

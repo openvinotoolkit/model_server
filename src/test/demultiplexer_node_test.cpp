@@ -80,7 +80,7 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
         {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data()))},
         {mockerDemutliplexerNodeOutputName2, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed2.data()))}};
     // construct demultiplexer node
-    NodeSessionMetadata meta{DEFAULT_CONTEXT};
+    NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);
@@ -118,7 +118,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     TensorWithSourceMap intermediateResultTensors{
         {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
-    NodeSessionMetadata meta{DEFAULT_CONTEXT};
+    NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
@@ -139,7 +139,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
     TensorWithSourceMap intermediateResultTensors{
         {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
-    NodeSessionMetadata meta{DEFAULT_CONTEXT};
+    NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
@@ -161,7 +161,7 @@ TEST(DemultiplexerTest, ShardsShareDataWithSourceTensor) {
     TensorWithSourceMap intermediateResultTensors{
         {mockerDemutliplexerNodeOutputName, TensorWithSource(intermediateTensor)}};
     // construct demultiplexer node
-    NodeSessionMetadata meta{DEFAULT_CONTEXT};
+    NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
@@ -249,7 +249,7 @@ TEST(DemultiplexerTest, GatherShardsWithExistingSourceTensors) {
 
     // Prepare session results and pass to ::setInputs method - source and actual tensors.
     // This imitates demultiplexing (or any process in DAG that forces tensor to keep its source tensor).
-    NodeSessionMetadata meta{DEFAULT_CONTEXT};
+    NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     auto subMetas = meta.generateSubsessions("dummy_node_1", demultiplyCount);
     for (int i = 0; i < demultiplyCount; i++) {
         TensorWithSource tensorWithSource{

@@ -88,7 +88,7 @@ private:
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
 
-    std::unique_ptr<ModelMetricReporter> reporter;
+    std::unique_ptr<ServableMetricReporter> reporter;
 
 protected:
     PipelineDefinitionStatus status;
@@ -111,7 +111,7 @@ public:
         pipelineName(pipelineName),
         nodeInfos(nodeInfos),
         connections(connections),
-        reporter(std::make_unique<ModelMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
+        reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
         status(this->pipelineName) {}
     template <typename RequestType, typename ResponseType>
     Status create(std::unique_ptr<Pipeline>& pipeline,
@@ -156,7 +156,7 @@ public:
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
 
-    ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
+    ServableMetricReporter& getMetricReporter() const { return *this->reporter; }
 
 protected:
     virtual Status updateInputsInfo(const ModelManager& manager);

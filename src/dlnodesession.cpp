@@ -82,7 +82,8 @@ Status DLNodeSession::requestExecuteRequiredResources() {
     if (!status.ok()) {
         return status;
     }
-    this->nodeStreamIdGuard = std::make_unique<NodeStreamIdGuard>(model->getInferRequestsQueue());
+    this->timer->start("get infer request");
+    this->nodeStreamIdGuard = std::make_unique<NodeStreamIdGuard>(model->getInferRequestsQueue(), model->getMetricReporter());
     return status;
 }
 
@@ -227,6 +228,9 @@ Status DLNodeSession::execute(PipelineEventQueue& notifyEndQueue, uint waitForSt
     }
     auto& inferRequestsQueue = this->model->getInferRequestsQueue();
     auto& inferRequest = inferRequestsQueue.getInferRequest(streamIdOpt.value());
+    this->timer->stop("get infer request");
+    double getInferRequestTime = this->timer->elapsed<std::chrono::microseconds>("get infer request");
+    OBSERVE_IF_ENABLED(this->model->getMetricReporter().waitForInferReqTime, getInferRequestTime);
     status = setInputsForInference(inferRequest);
     if (!status.ok()) {
         notifyEndQueue.push({node, getSessionKey()});

@@ -220,7 +220,7 @@ public:
         sequenceManagerLock.unlock();
 
         timer.start("get infer request");
-        ovms::ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+        ovms::ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
         ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
         timer.stop("get infer request");
 

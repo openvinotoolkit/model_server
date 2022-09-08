@@ -315,7 +315,7 @@ void performPrediction(const std::string modelName,
     auto requestShapes = ovms::getRequestShapes(&request);
     ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, requestBatchSize, requestShapes, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
-    ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
+    ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue(), modelInstance->getMetricReporter());
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     ovms::InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;

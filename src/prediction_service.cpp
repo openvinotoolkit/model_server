@@ -104,22 +104,16 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         return status.grpc();
     }
 
+    ExecutionContext executionContext{
+        ExecutionContext::Interface::GRPC,
+        ExecutionContext::Method::Predict};
+
     if (pipelinePtr) {
-        status = pipelinePtr->execute(ExecutionContext(
-            ExecutionContext::Interface::GRPC,
-            ExecutionContext::Method::Predict));
-        if (status.ok()) {
-            INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestSuccessGrpcPredict);
-        } else {
-            INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestFailGrpcPredict);
-        }
+        status = pipelinePtr->execute(executionContext);
+        INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     } else {
         status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
-        if (status.ok()) {
-            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestSuccessGrpcPredict);
-        } else {
-            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);
-        }
+        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     }
 
     if (!status.ok()) {
@@ -127,7 +121,13 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     }
 
     timer.stop("total");
-    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
+    double requestTotal = timer.elapsed<microseconds>("total");
+    if (pipelinePtr) {
+        OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().requestTimeGrpc, requestTotal);
+    } else {
+        OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().requestTimeGrpc, requestTotal);
+    }
+    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", requestTotal / 1000);
     return grpc::Status::OK;
 }
 

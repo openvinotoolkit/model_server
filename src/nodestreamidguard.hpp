@@ -20,25 +20,33 @@
 
 #include <spdlog/spdlog.h>
 
+#include "metric.hpp"
+#include "model_metric_reporter.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "profiler.hpp"
 
 namespace ovms {
 
 struct NodeStreamIdGuard {
-    NodeStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
+    NodeStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter) :
         inferRequestsQueue_(inferRequestsQueue),
-        futureStreamId(inferRequestsQueue_.getIdleStream()) {}
+        futureStreamId(inferRequestsQueue_.getIdleStream()),
+        reporter(reporter) {
+        INCREMENT_IF_ENABLED(reporter.currentRequests);
+    }
 
     ~NodeStreamIdGuard() {
         if (!disarmed) {
             if (!streamId) {
                 SPDLOG_DEBUG("Trying to disarm stream Id that is not needed anymore...");
                 streamId = futureStreamId.get();
+                INCREMENT_IF_ENABLED(reporter.inferReqActive);
             }
             SPDLOG_DEBUG("Returning streamId: {}", streamId.value());
+            DECREMENT_IF_ENABLED(reporter.inferReqActive);  // TODO: Order is important?
             inferRequestsQueue_.returnStream(streamId.value());
         }
+        DECREMENT_IF_ENABLED(reporter.currentRequests);
     }
 
     std::optional<int> tryGetId(const uint microseconds = 1) {
@@ -46,6 +54,7 @@ struct NodeStreamIdGuard {
         if (!streamId) {
             if (std::future_status::ready == futureStreamId.wait_for(std::chrono::microseconds(microseconds))) {
                 streamId = futureStreamId.get();
+                INCREMENT_IF_ENABLED(reporter.inferReqActive);
             }
         }
         return streamId;
@@ -66,5 +75,6 @@ private:
     std::future<int> futureStreamId;
     std::optional<int> streamId = std::nullopt;
     bool disarmed = false;
+    ModelMetricReporter& reporter;
 };
 }  // namespace ovms

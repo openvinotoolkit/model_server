@@ -15,16 +15,21 @@
 //*****************************************************************************
 #pragma once
 
+#include "model_metric_reporter.hpp"
 #include "ovinferrequestsqueue.hpp"
 
 namespace ovms {
 
 struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
+    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter) :
         inferRequestsQueue_(inferRequestsQueue),
         id_(inferRequestsQueue_.getIdleStream().get()),
-        inferRequest(inferRequestsQueue.getInferRequest(id_)) {}
+        inferRequest(inferRequestsQueue.getInferRequest(id_)),
+        reporter(reporter) {
+        INCREMENT_IF_ENABLED(reporter.inferReqActive);
+    }
     ~ExecutingStreamIdGuard() {
+        DECREMENT_IF_ENABLED(reporter.inferReqActive);  // TODO: Order is important?
         inferRequestsQueue_.returnStream(id_);
     }
     int getId() { return id_; }
@@ -34,6 +39,7 @@ private:
     ovms::OVInferRequestsQueue& inferRequestsQueue_;
     const int id_;
     ov::InferRequest& inferRequest;
+    ModelMetricReporter& reporter;
 };
 
 }  //  namespace ovms

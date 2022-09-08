@@ -65,6 +65,19 @@ public:
     bool requestFailRestModelMetadata;
     bool requestFailRestModelReady;
 
+    bool requestTimeGrpc;
+    bool requestTimeRest;
+
+    bool inferenceTime;
+    bool waitForInferReqTime;
+
+    bool streams;
+
+    bool inferReqQueueSize;
+    bool inferReqActive;
+
+    bool currentRequests;
+
     Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);
     bool validateEndpointPath(std::string endpoint);

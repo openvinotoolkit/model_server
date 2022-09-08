@@ -27,7 +27,7 @@
 
 namespace ovms {
 
-class ModelMetricReporter;
+class ServableMetricReporter;
 
 class Node;
 template <typename PredictRequest>
@@ -42,10 +42,10 @@ class Pipeline {
     const std::string name;
     Node& entry;
     Node& exit;
-    ModelMetricReporter& reporter;
+    ServableMetricReporter& reporter;
 
 public:
-    Pipeline(Node& entry, Node& exit, ModelMetricReporter& reporter, const std::string& name = "default_name");
+    Pipeline(Node& entry, Node& exit, ServableMetricReporter& reporter, const std::string& name = "default_name");
 
     void push(std::unique_ptr<Node> node);
     ~Pipeline();
@@ -60,7 +60,7 @@ public:
         return name;
     }
 
-    ModelMetricReporter& getMetricReporter() const { return this->reporter; }
+    ServableMetricReporter& getMetricReporter() const { return this->reporter; }
 
 private:
     std::map<const std::string, bool> prepareStatusMap() const;

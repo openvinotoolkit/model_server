@@ -32,6 +32,7 @@
 #include "status.hpp"
 
 namespace ovms {
+class ModelMetricReporter;
 class KFSInferenceServiceImpl;
 class GetModelMetadataImpl;
 class Server;
@@ -139,13 +140,15 @@ public:
         const std::optional<int64_t>& modelVersion,
         const std::string& request,
         Order& requestOrder,
-        tensorflow::serving::PredictResponse& responseProto);
+        tensorflow::serving::PredictResponse& responseProto,
+        ServableMetricReporter*& reporterOut);
 
     Status processPipelineRequest(
         const std::string& modelName,
         const std::string& request,
         Order& requestOrder,
-        tensorflow::serving::PredictResponse& responseProto);
+        tensorflow::serving::PredictResponse& responseProto,
+        ServableMetricReporter*& reporterOut);
 
     /**
      * @brief Process Model Metadata request
