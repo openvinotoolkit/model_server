@@ -478,9 +478,9 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
         }
         grpc_request = requestParser.getProto();
     }
-    std::string req;
-    google::protobuf::util::MessageToJsonString(grpc_request, &req);
-    SPDLOG_ERROR(req);
+    // std::string req;
+    // google::protobuf::util::MessageToJsonString(grpc_request, &req);
+    // SPDLOG_ERROR(req);
     grpc_request.set_model_name(modelName);
     grpc_request.set_model_version(modelVersion);
     return StatusCode::OK;
@@ -497,7 +497,11 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     Timer timer;
     timer.start("prepareGrpcRequest");
     using std::chrono::microseconds;
-    prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
+    auto status = prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("REST to GRPC request conversion failed dor model: {}", modelName);
+        return status;
+    }
     timer.stop("prepareGrpcRequest");
     SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>("prepareGrpcRequest") / 1000);
     ::inference::ModelInferResponse grpc_response;
@@ -508,7 +512,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts_out;
-    Status status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
+    status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
     if (!status.ok()) {
         return status;
     }
