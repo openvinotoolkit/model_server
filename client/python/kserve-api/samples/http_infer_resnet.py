@@ -114,7 +114,7 @@ if __name__ == '__main__':
             else:
                 inputs.append(httpclient.InferInput(args['input_name'], img.shape, "FP32"))
             outputs = []
-            inputs[0].set_data_from_numpy(img)
+            inputs[0].set_data_from_numpy(img, False)
             start_time = datetime.datetime.now()
             results = triton_client.infer(
                 model_name= args.get('pipeline_name') if is_pipeline_request else args.get('model_name'),
