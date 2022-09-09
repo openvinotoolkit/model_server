@@ -43,7 +43,7 @@ struct NodeStreamIdGuard {
                 INCREMENT_IF_ENABLED(reporter.inferReqActive);
             }
             SPDLOG_DEBUG("Returning streamId: {}", streamId.value());
-            DECREMENT_IF_ENABLED(reporter.inferReqActive);  // TODO: Order is important?
+            DECREMENT_IF_ENABLED(reporter.inferReqActive);
             inferRequestsQueue_.returnStream(streamId.value());
         }
         DECREMENT_IF_ENABLED(reporter.currentRequests);

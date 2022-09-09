@@ -150,17 +150,4 @@ public:
     ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
 };
 
-class CurrentRequestsMetricGuard {
-    ModelMetricReporter& reporter;
-
-public:
-    CurrentRequestsMetricGuard(ModelMetricReporter& reporter) :
-        reporter(reporter) {
-        INCREMENT_IF_ENABLED(reporter.currentRequests);
-    }
-    ~CurrentRequestsMetricGuard() {
-        DECREMENT_IF_ENABLED(reporter.currentRequests);
-    }
-};
-
 }  // namespace ovms

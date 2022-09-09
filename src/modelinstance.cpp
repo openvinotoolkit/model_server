@@ -668,7 +668,9 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
     try {
         loadCompiledModelPtr(pluginConfig);
-        SET_IF_ENABLED(getMetricReporter().streams, getNumOfStreams());
+        auto numberOfStreams = getNumOfStreams();
+        SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
+        SPDLOG_INFO("Number of OV streams: {}", numberOfStreams);
     } catch (ov::Exception& e) {
         Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
@@ -1151,7 +1153,6 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         return status;
     timer.start("get infer request");
     OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
-    CurrentRequestsMetricGuard currentRequestsMetricGuard(this->getMetricReporter());
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
     int executingInferId = executingStreamIdGuard.getId();
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
@@ -1207,7 +1208,6 @@ Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
     if (!status.ok())
         return status;
     timer.start("get infer request");
-    CurrentRequestsMetricGuard currentRequestsMetricGuard(this->getMetricReporter());
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
     int executingInferId = executingStreamIdGuard.getId();
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();

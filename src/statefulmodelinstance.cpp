@@ -219,7 +219,6 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     sequenceManagerLock.unlock();
 
     timer.start("get infer request");
-    CurrentRequestsMetricGuard currentRequestsMetricGuard(this->getMetricReporter());
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
     int executingInferId = executingStreamIdGuard.getId();
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();

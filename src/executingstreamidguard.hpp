@@ -20,8 +20,22 @@
 
 namespace ovms {
 
+class CurrentRequestsMetricGuard {
+    ModelMetricReporter& reporter;
+
+public:
+    CurrentRequestsMetricGuard(ModelMetricReporter& reporter) :
+        reporter(reporter) {
+        INCREMENT_IF_ENABLED(reporter.currentRequests);
+    }
+    ~CurrentRequestsMetricGuard() {
+        DECREMENT_IF_ENABLED(reporter.currentRequests);
+    }
+};
+
 struct ExecutingStreamIdGuard {
     ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter) :
+        metricGuard(reporter),
         inferRequestsQueue_(inferRequestsQueue),
         id_(inferRequestsQueue_.getIdleStream().get()),
         inferRequest(inferRequestsQueue.getInferRequest(id_)),
@@ -29,13 +43,14 @@ struct ExecutingStreamIdGuard {
         INCREMENT_IF_ENABLED(reporter.inferReqActive);
     }
     ~ExecutingStreamIdGuard() {
-        DECREMENT_IF_ENABLED(reporter.inferReqActive);  // TODO: Order is important?
+        DECREMENT_IF_ENABLED(reporter.inferReqActive);
         inferRequestsQueue_.returnStream(id_);
     }
     int getId() { return id_; }
     ov::InferRequest& getInferRequest() { return inferRequest; }
 
 private:
+    CurrentRequestsMetricGuard metricGuard;
     ovms::OVInferRequestsQueue& inferRequestsQueue_;
     const int id_;
     ov::InferRequest& inferRequest;
