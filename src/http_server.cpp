@@ -62,6 +62,13 @@ public:
     }
 
 private:
+    void parseHeaders(const net_http::ServerRequestInterface* req, std::vector<std::pair<std::string, std::string>>* headers) {
+        if(req->GetRequestHeader("Inference-Header-Content-Length").size()>0){
+            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", req->GetRequestHeader("Inference-Header-Content-Length")};
+            headers->push_back(header);
+            SPDLOG_ERROR("HEADER PARSED");
+        }
+    }
     void processRequest(net_http::ServerRequestInterface* req) {
         SPDLOG_DEBUG("REST request {}", req->uri_path());
         SPDLOG_DEBUG("REST request header {}", req->GetRequestHeader("Inference-Header-Content-Length"));
@@ -75,6 +82,7 @@ private:
         }
 
         std::vector<std::pair<std::string, std::string>> headers;
+        parseHeaders(req, &headers);
         std::string output;
         SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
             req->http_method(),
