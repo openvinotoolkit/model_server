@@ -32,6 +32,12 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/horizontal_text_detection/python
 ```
 
+Clone the repository and enter horizontal_text_detection directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/horizontal_text_detection/python
+```
+
 Install required packages:
 ```bash
 pip3 install -r requirements.txt
