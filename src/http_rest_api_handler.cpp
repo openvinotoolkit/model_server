@@ -92,6 +92,10 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     kfsGrpcImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getKFSGrpcImpl()),
     grpcGetModelMetadataImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getTFSModelMetadataImpl()),
     modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))
+        throw std::logic_error("Tried to create http rest api handler without grpc server module");
+    if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))
+        throw std::logic_error("Tried to create http rest api handler without servable manager module");
     registerAll();
 }
 

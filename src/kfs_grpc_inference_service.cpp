@@ -328,7 +328,13 @@ Status KFSInferenceServiceImpl::buildResponse(
 
 KFSInferenceServiceImpl::KFSInferenceServiceImpl(const Server& server) :
     ovmsServer(server),
-    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {}
+    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
+        const char* message = "Tried to create kserve inference service impl without servable manager module";
+        SPDLOG_ERROR(message);
+        throw std::logic_error(message);
+    }
+}
 
 Status KFSInferenceServiceImpl::buildResponse(
     PipelineDefinition& pipelineDefinition,

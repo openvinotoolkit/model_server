@@ -52,7 +52,13 @@ namespace ovms {
 PredictionServiceImpl::PredictionServiceImpl(ovms::Server& ovmsServer) :
     ovmsServer(ovmsServer),
     getModelMetadataImpl(ovmsServer),
-    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {}
+    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
+        const char* message = "Tried to create prediction service impl without servable manager module";
+        SPDLOG_ERROR(message);
+        throw std::logic_error(message);
+    }
+}
 
 Status PredictionServiceImpl::getModelInstance(const PredictRequest* request,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
