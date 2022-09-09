@@ -162,8 +162,9 @@ docker run -p 9000:9000 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_pat
 
 ## Requesting the Service
 
-Enter optical_character_recognition directory
+Clone the repository and enter optical_character_recognition directory
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/optical_character_recognition/python
 ```
 
