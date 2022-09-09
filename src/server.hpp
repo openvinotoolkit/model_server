@@ -21,27 +21,10 @@
 #include <string>
 #include <unordered_map>
 
+#include "module.hpp"
+
 namespace ovms {
 class Config;
-enum class ModuleState {
-    NOT_INITIALIZED,
-    STARTED_INITIALIZE,
-    INITIALIZED,
-    RELOADING,
-    STARTED_SHUTDOWN,
-    SHUTDOWN
-};
-
-class Module {
-protected:
-    ModuleState state = ModuleState::NOT_INITIALIZED;
-
-public:
-    virtual int start(const ovms::Config& config) = 0;
-    virtual void shutdown() = 0;
-    virtual ~Module() = default;
-    ModuleState getState() const;
-};
 
 extern const std::string PROFILER_MODULE_NAME;
 extern const std::string GRPC_SERVER_MODULE_NAME;
@@ -71,8 +54,6 @@ public:
     void setShutdownRequest(int i);
     virtual ~Server();
 
-    // TODO potentially to be hiden under protected and exposed only in tests by inheritance
-    // #KFS_CLEANUP
     int startModules(ovms::Config& config);
     void shutdownModules();
 

@@ -1135,12 +1135,8 @@ public:
             [](auto& p) { return p.get_future(); });
 
         std::unordered_map<StatusCode, std::atomic<uint64_t>> createPipelineRetCodesCounters;
-        std::unordered_map<StatusCode, std::atomic<uint64_t>> executePipelineRetCodesCounters;
         for (uint i = 0; i != static_cast<uint>(StatusCode::STATUS_CODE_END); ++i) {
             createPipelineRetCodesCounters[static_cast<StatusCode>(i)] = 0;
-        }
-        for (uint i = 0; i != static_cast<uint>(StatusCode::STATUS_CODE_END); ++i) {
-            executePipelineRetCodesCounters[static_cast<StatusCode>(i)] = 0;
         }
         // create worker threads
         std::vector<std::unique_ptr<std::thread>> workerThreads;

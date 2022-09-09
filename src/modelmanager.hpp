@@ -122,7 +122,7 @@ private:
     /**
      * @brief Mutex for blocking concurrent add & remove of resources
      */
-    std::shared_mutex resourcesMtx;
+    mutable std::shared_mutex resourcesMtx;
 
     /**
      * @brief A JSON configuration filename
@@ -287,7 +287,7 @@ public:
     Status getModelInstance(const std::string& modelName,
         ovms::model_version_t modelVersionId,
         std::shared_ptr<ovms::ModelInstance>& modelInstance,
-        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const;
 
     const bool modelExists(const std::string& name) const {
         if (findModelByName(name) == nullptr)

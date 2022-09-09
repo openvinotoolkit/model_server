@@ -51,34 +51,27 @@ namespace ovms {
 
 PredictionServiceImpl::PredictionServiceImpl(ovms::Server& ovmsServer) :
     ovmsServer(ovmsServer),
-    getModelMetadataImpl(ovmsServer) {}
+    getModelMetadataImpl(ovmsServer),
+    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
+        const char* message = "Tried to create prediction service impl without servable manager module";
+        SPDLOG_ERROR(message);
+        throw std::logic_error(message);
+    }
+}
 
 Status PredictionServiceImpl::getModelInstance(const PredictRequest* request,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
-    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return StatusCode::MODEL_NOT_LOADED;
-    }
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-    // TODO if not succeed then return error
-    auto& manager = servableManagerModule->getServableManager();
-    return manager.getModelInstance(request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
+    return this->modelManager.getModelInstance(request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
 }
 
 Status PredictionServiceImpl::getPipeline(const PredictRequest* request,
     PredictResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     OVMS_PROFILE_FUNCTION();
-    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return StatusCode::MODEL_NOT_LOADED;
-    }
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-    // TODO if not succeed then return error
-    auto& manager = servableManagerModule->getServableManager();
-    return manager.createPipeline(pipelinePtr, request->model_spec().name(), request, response);
+    return this->modelManager.createPipeline(pipelinePtr, request->model_spec().name(), request, response);
 }
 
 grpc::Status ovms::PredictionServiceImpl::Predict(
