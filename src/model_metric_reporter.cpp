@@ -24,6 +24,10 @@
 
 namespace ovms {
 
+constexpr int NUMBER_OF_BUCKETS = 33;
+constexpr double BUCKET_POWER_BASE = 1.8;
+constexpr double BUCKET_MULTIPLIER = 10;
+
 ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion) :
     registry(registry) {
     if (!registry) {
@@ -34,8 +38,8 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         return;
     }
 
-    for (int i = 0; i < 33; i++) {
-        this->buckets.emplace_back(10 * pow(1.8, i));
+    for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+        this->buckets.emplace_back(floor(BUCKET_MULTIPLIER * pow(BUCKET_POWER_BASE, i)));
     }
 
     auto family = registry->createFamily<MetricCounter>("requests_success",
