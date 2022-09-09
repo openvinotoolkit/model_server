@@ -459,7 +459,7 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
         KFSRestParser requestParser;
         auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
         if (!status.ok()) {
-            //modelInstance->getMetricReporter().requestFailRestPredict->increment();
+            // modelInstance->getMetricReporter().requestFailRestPredict->increment();
             return status;
         }
         grpc_request = requestParser.getProto();
@@ -473,7 +473,7 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
         KFSRestParser requestParser;
         auto status = requestParser.parse(request_body.c_str());
         if (!status.ok()) {
-            //modelInstance->getMetricReporter().requestFailRestPredict->increment();
+            // modelInstance->getMetricReporter().requestFailRestPredict->increment();
             return status;
         }
         grpc_request = requestParser.getProto();
