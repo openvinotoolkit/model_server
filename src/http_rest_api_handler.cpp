@@ -656,6 +656,10 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             return StatusCode::REST_UNSUPPORTED_METHOD;
     }
 
+    auto hash = [](const std::pair<std::string, std::string>& p){
+        return std::hash<std::string>()(p.first) * 31 + std::hash<std::string>()(p.second);
+    };
+
     if (std::regex_match(request_path, sm, kfs_modelRegex)) {
         auto path = tokenize(request_path, '/');
         requestComponents.model_name = path[3];
@@ -668,10 +672,11 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         } else {
             requestComponents.model_version = 0;
         }
-        static std::map<std::pair<std::string, std::string>, ovms::RequestType> types = {
+        static const std::unordered_map<std::pair<std::string, std::string>, ovms::RequestType, decltype(hash)> types({
             {{"infer", "POST"}, RequestType::KFS_Infer},
             {{"ready", "GET"}, RequestType::KFS_GetModelReady},
-            {{"", "GET"}, RequestType::KFS_GetModelMetadata}};
+            {{"", "GET"}, RequestType::KFS_GetModelMetadata}},
+             3, hash);
         auto type = types.find({((path.size() < 4 + offset + 1) ? "" : path[4 + offset]), std::string(http_method)});
         if (type != types.end()) {
             requestComponents.type = type->second;
@@ -685,10 +690,11 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         auto path = tokenize(request_path, '/');
         SPDLOG_DEBUG("{}", path.size());
 
-        std::map<std::pair<std::string, std::string>, ovms::RequestType> types = {
+        static const std::unordered_map<std::pair<std::string, std::string>, ovms::RequestType, decltype(hash)> types({
             {{"ready", "GET"}, RequestType::KFS_GetServerReady},
             {{"live", "GET"}, RequestType::KFS_GetServerLive},
-            {{"", "GET"}, RequestType::KFS_GetServerMetadata}};
+            {{"", "GET"}, RequestType::KFS_GetServerMetadata}},
+             3, hash);
         auto type = types.find({((path.size() < 3) ? "" : path[3]), std::string(http_method)});
         if (type != types.end()) {
             requestComponents.type = type->second;
