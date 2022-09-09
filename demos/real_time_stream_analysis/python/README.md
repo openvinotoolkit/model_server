@@ -52,7 +52,6 @@ Clone the repository and enter real_time_stream_analysis directory
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/real_time_stream_analysis/python
 ```
-
 Install required packages:
 ```bash
 pip3 install -r requirements.txt
