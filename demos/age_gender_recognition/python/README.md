@@ -21,12 +21,6 @@ Clone the repository
 git clone https://github.com/openvinotoolkit/model_server.git
 ```
 
-#### Requesting the Service
-Clone the repository
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-```
-
 Enter age_gender_recognition python demo directory:
 ```bash
 cd model_server/demos/age_gender_recognition/python
