@@ -69,102 +69,102 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
 Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     for (auto& sh : v.GetArray()) {
         std::string metric = std::string(sh.GetString());
-        if (metric == "requests_success_grpc_predict") {
+        if (metric == "ovms_requests_success_grpc_predict") {
             requestSuccessGrpcPredict = true;
         }
-        if (metric == "requests_success_grpc_getmodelmetadata") {
+        if (metric == "ovms_requests_success_grpc_getmodelmetadata") {
             requestSuccessGrpcGetModelMetadata = true;
         }
-        if (metric == "requests_success_grpc_getmodelstatus") {
+        if (metric == "ovms_requests_success_grpc_getmodelstatus") {
             requestSuccessGrpcGetModelStatus = true;
         }
-        if (metric == "requests_success_rest_predict") {
+        if (metric == "ovms_requests_success_rest_predict") {
             requestSuccessRestPredict = true;
         }
-        if (metric == "requests_success_rest_get_modelmetadata") {
+        if (metric == "ovms_requests_success_rest_get_modelmetadata") {
             requestSuccessRestGetModelMetadata = true;
         }
-        if (metric == "requests_success_rest_get_modelstatus") {
+        if (metric == "ovms_requests_success_rest_get_modelstatus") {
             requestSuccessRestGetModelStatus = true;
         }
-        if (metric == "requests_fail_grpc_predict") {
+        if (metric == "ovms_requests_fail_grpc_predict") {
             requestFailGrpcPredict = true;
         }
-        if (metric == "requests_fail_grpc_get_modelmetadata") {
+        if (metric == "ovms_requests_fail_grpc_get_modelmetadata") {
             requestFailGrpcGetModelMetadata = true;
         }
-        if (metric == "requests_fail_grpc_get_modelstatus") {
+        if (metric == "ovms_requests_fail_grpc_get_modelstatus") {
             requestFailGrpcGetModelStatus = true;
         }
-        if (metric == "requests_fail_rest_predict") {
+        if (metric == "ovms_requests_fail_rest_predict") {
             requestFailRestPredict = true;
         }
-        if (metric == "requests_fail_rest_get_modelmetadata") {
+        if (metric == "ovms_requests_fail_rest_get_modelmetadata") {
             requestFailRestGetModelMetadata = true;
         }
-        if (metric == "requests_fail_rest_get_modelstatus") {
+        if (metric == "ovms_requests_fail_rest_get_modelstatus") {
             requestFailRestGetModelStatus = true;
         }
-        if (metric == "requests_success_grpc_modelinfer") {
+        if (metric == "ovms_requests_success_grpc_modelinfer") {
             requestSuccessGrpcModelInfer = true;
         }
         // KFS
-        if (metric == "requests_success_grpc_modelmetadata") {
+        if (metric == "ovms_requests_success_grpc_modelmetadata") {
             requestSuccessGrpcModelMetadata = true;
         }
-        if (metric == "requests_success_grpc_modelready") {
+        if (metric == "ovms_requests_success_grpc_modelready") {
             requestSuccessGrpcModelReady = true;
         }
-        if (metric == "requests_success_rest_modelinfer") {
+        if (metric == "ovms_requests_success_rest_modelinfer") {
             requestSuccessRestModelInfer = true;
         }
-        if (metric == "requests_success_rest_modelmetadata") {
+        if (metric == "ovms_requests_success_rest_modelmetadata") {
             requestSuccessRestModelMetadata = true;
         }
-        if (metric == "requests_success_rest_modelready") {
+        if (metric == "ovms_requests_success_rest_modelready") {
             requestSuccessRestModelReady = true;
         }
-        if (metric == "requests_fail_grpc_modelinfer") {
+        if (metric == "ovms_requests_fail_grpc_modelinfer") {
             requestFailGrpcModelInfer = true;
         }
-        if (metric == "requests_fail_grpc_model_metadata") {
+        if (metric == "ovms_requests_fail_grpc_model_metadata") {
             requestFailGrpcModelMetadata = true;
         }
-        if (metric == "requests_fail_grpc_modelready") {
+        if (metric == "ovms_requests_fail_grpc_modelready") {
             requestFailGrpcModelReady = true;
         }
 
-        if (metric == "requests_fail_rest_modelinfer") {
+        if (metric == "ovms_requests_fail_rest_modelinfer") {
             requestFailRestModelInfer = true;
         }
-        if (metric == "requests_fail_rest_modelmetadata") {
+        if (metric == "ovms_requests_fail_rest_modelmetadata") {
             requestFailRestModelMetadata = true;
         }
-        if (metric == "requests_fail_rest_modelready") {
+        if (metric == "ovms_requests_fail_rest_modelready") {
             requestFailRestModelReady = true;
         }
-        if (metric == "request_time_us_grpc") {
+        if (metric == "ovms_request_time_us_grpc") {
             requestTimeGrpc = true;
         }
-        if (metric == "request_time_us_rest") {
+        if (metric == "ovms_request_time_us_rest") {
             requestTimeRest = true;
         }
-        if (metric == "inference_time_us") {
+        if (metric == "ovms_inference_time_us") {
             inferenceTime = true;
         }
-        if (metric == "wait_for_infer_req_time_us") {
+        if (metric == "ovms_wait_for_infer_req_time_us") {
             waitForInferReqTime = true;
         }
-        if (metric == "streams") {
+        if (metric == "ovms_streams") {
             streams = true;
         }
-        if (metric == "infer_req_queue_size") {
+        if (metric == "ovms_infer_req_queue_size") {
             inferReqQueueSize = true;
         }
-        if (metric == "infer_req_active") {
+        if (metric == "ovms_infer_req_active") {
             inferReqActive = true;
         }
-        if (metric == "current_requests") {
+        if (metric == "ovms_current_requests") {
             currentRequests = true;
         }
     }

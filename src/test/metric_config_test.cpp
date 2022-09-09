@@ -102,7 +102,7 @@ static const char* modelMetricsChangedConfig = R"(
             "metrics":
             {
                 "enable" : true,
-                "metrics_list": ["request_success_grpc_predict", "request_fail_rest_model_ready"]
+                "metrics_list": ["ovms_requests_success_grpc_predict", "ovms_requests_fail_rest_modelready"]
             }
         }
 })";
@@ -399,7 +399,7 @@ TEST_F(MetricsCli, DefaultCliReading) {
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
     ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
 
-    auto status = metricConfig.loadFromCLIString(true, "request_success_grpc_predict, request_fail_rest_model_ready");
+    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success_grpc_predict, ovms_requests_fail_rest_modelready");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -447,7 +447,7 @@ TEST_F(MetricsCli, DisabledMetrics) {
     ASSERT_EQ(metricConfig.requestSuccessGrpcPredict, false);
     ASSERT_EQ(metricConfig.requestFailRestModelReady, false);
 
-    auto status = metricConfig.loadFromCLIString(false, "request_success_grpc_predict, request_fail_rest_model_ready");
+    auto status = metricConfig.loadFromCLIString(false, "ovms_requests_success_grpc_predict, ovms_requests_fail_rest_modelready");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, false);
