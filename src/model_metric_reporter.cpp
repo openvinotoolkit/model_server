@@ -42,10 +42,8 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         this->buckets.emplace_back(floor(BUCKET_MULTIPLIER * pow(BUCKET_POWER_BASE, i)));
     }
 
-    auto family = registry->createFamily<MetricCounter>("requests_success",
-        "Number of successful inference/metadata/status requests received by servable (model or DAG). "
-        "Includes model inference requests inside DAG execution. "
-        "In case of demultiplexer, each batch is treated separately.");
+    auto family = registry->createFamily<MetricCounter>("ovms_requests_success",
+        "Number of successful requests to a model or a DAG.");
     // TFS
     if (metricConfig->requestSuccessGrpcPredict)
         this->requestSuccessGrpcPredict = family->addMetric({{"name", modelName},
@@ -97,7 +95,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     if (metricConfig->requestSuccessGrpcModelReady)
         this->requestSuccessGrpcModelReady = family->addMetric({{"name", modelName},
             {"protocol", "kserve"},
-            {"method", "modelstatus"},
+            {"method", "modelready"},
             {"interface", "grpc"}});
     if (metricConfig->requestSuccessRestModelInfer)
         this->requestSuccessRestModelInfer = family->addMetric({{"name", modelName},
@@ -114,11 +112,11 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     if (metricConfig->requestSuccessRestModelReady)
         this->requestSuccessRestModelReady = family->addMetric({{"name", modelName},
             {"protocol", "kserve"},
-            {"method", "modelstatus"},
+            {"method", "modelready"},
             {"interface", "rest"}});
 
-    family = registry->createFamily<MetricCounter>("requests_fail",
-        "Number of failed inference/metadata/status requests received by servable (model or DAG).");
+    family = registry->createFamily<MetricCounter>("ovms_requests_fail",
+        "Number of failed requests to a model or a DAG.");
 
     // TFS
     if (metricConfig->requestFailGrpcPredict)
@@ -195,8 +193,8 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
             {"method", "modelready"},
             {"interface", "rest"}});
 
-    auto requestTimeFamily = registry->createFamily<MetricHistogram>("request_time",
-        "Cumulative total request handling time (including pre/postprocessing and actual inference) for servable (model or DAG).");
+    auto requestTimeFamily = registry->createFamily<MetricHistogram>("ovms_request_time_us",
+        "Processing time of requests to a model or a DAG.");
 
     if (metricConfig->requestTimeGrpc)
         this->requestTimeGrpc = requestTimeFamily->addMetric({{"name", modelName},
@@ -222,40 +220,40 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     }
 
     if (metricConfig->inferenceTime)
-        this->inferenceTime = registry->createFamily<MetricHistogram>("inference_time",
-                                          "The time request spends processing inference request by OpenVINO backend.")
+        this->inferenceTime = registry->createFamily<MetricHistogram>("ovms_inference_time_us",
+                                          "Inference execution time in the OpenVINO backend.")
                                   ->addMetric(
                                       {{"name", modelName}, {"version", std::to_string(modelVersion)}},
                                       this->buckets);
 
     if (metricConfig->waitForInferReqTime)
-        this->waitForInferReqTime = registry->createFamily<MetricHistogram>("wait_for_infer_req_time",
-                                                "The time request spends waiting for in the scheduling queue.")
+        this->waitForInferReqTime = registry->createFamily<MetricHistogram>("ovms_wait_for_infer_req_time_us",
+                                                "Request waiting time in the scheduling queue.")
                                         ->addMetric(
                                             {{"name", modelName}, {"version", std::to_string(modelVersion)}},
                                             this->buckets);
 
     if (metricConfig->streams)
-        this->streams = registry->createFamily<MetricGauge>("streams",
-                                    "Number of OpenVINO streams (CPU_THROUGHPUT_STREAMS).")
+        this->streams = registry->createFamily<MetricGauge>("ovms_streams",
+                                    "Number of OpenVINO execution streams.")
                             ->addMetric(
                                 {{"name", modelName}, {"version", std::to_string(modelVersion)}});
 
     if (metricConfig->inferReqQueueSize)
-        this->inferReqQueueSize = registry->createFamily<MetricGauge>("infer_req_queue_size",
+        this->inferReqQueueSize = registry->createFamily<MetricGauge>("ovms_infer_req_queue_size",
                                               "Inference request queue size (nireq).")
                                       ->addMetric(
                                           {{"name", modelName}, {"version", std::to_string(modelVersion)}});
 
     if (metricConfig->inferReqActive)
-        this->inferReqActive = registry->createFamily<MetricGauge>("infer_req_active",
-                                           "Number of currently active inference requests (nireq) from internal queue.")
+        this->inferReqActive = registry->createFamily<MetricGauge>("ovms_infer_req_active",
+                                           "Number of currently consumed inference request from the processing queue.")
                                    ->addMetric(
                                        {{"name", modelName}, {"version", std::to_string(modelVersion)}});
 
     if (metricConfig->currentRequests)
-        this->currentRequests = registry->createFamily<MetricGauge>("current_requests",
-                                            "Number of total requests waiting for inference results (waiting for inference or currently inferencing).")
+        this->currentRequests = registry->createFamily<MetricGauge>("ovms_current_requests",
+                                            "Number of inference requests currently in process.")
                                     ->addMetric(
                                         {{"name", modelName}, {"version", std::to_string(modelVersion)}});
 }
