@@ -122,7 +122,7 @@ Copy this `lib` folder to the same location with `text-recognition` and `east_ic
 
 ```bash
 mkdir -p OCR/east_fp32 OCR/lib
-cp -R model_server/src/custom_nodes/lib/ubuntu/libcustom_node_east_ocr.so OCR/lib/
+cp -R model_server/src/custom_nodes/lib/${BASE_OS}/libcustom_node_east_ocr.so OCR/lib/
 cp -R text-recognition OCR/text-recognition
 cp -R EAST/IR/1 OCR/east_fp32/1
 ```
