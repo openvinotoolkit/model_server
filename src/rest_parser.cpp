@@ -479,23 +479,20 @@ Status KFSRestParser::parseRequestParameters(rapidjson::Value& node) {
     }
 
     for (auto& parameter : node.GetObject()) {
-        if(!parameter.name.IsString()) {
+        if (!parameter.name.IsString()) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
 
-        if(parameter.value.IsString()) {
+        if (parameter.value.IsString()) {
             auto requestParameters = requestProto.mutable_parameters();
             ((*requestParameters)[parameter.name.GetString()]).set_string_param(parameter.value.GetString());
-        }
-        else if(parameter.value.IsBool()) {
+        } else if (parameter.value.IsBool()) {
             auto requestParameters = requestProto.mutable_parameters();
             ((*requestParameters)[parameter.name.GetString()]).set_bool_param(parameter.value.GetBool());
-        }
-        else if(parameter.value.IsInt()) {
+        } else if (parameter.value.IsInt()) {
             auto requestParameters = requestProto.mutable_parameters();
             ((*requestParameters)[parameter.name.GetString()]).set_int64_param(parameter.value.GetInt());
-        }
-        else {
+        } else {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
     }
@@ -508,23 +505,20 @@ Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::inference::
     }
 
     for (auto& parameter : node.GetObject()) {
-        if(!parameter.name.IsString()) {
+        if (!parameter.name.IsString()) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
 
-        if(parameter.value.IsString()) {
+        if (parameter.value.IsString()) {
             auto inputParameters = input->mutable_parameters();
             ((*inputParameters)[parameter.name.GetString()]).set_string_param(parameter.value.GetString());
-        }
-        else if(parameter.value.IsBool()) {
+        } else if (parameter.value.IsBool()) {
             auto inputParameters = input->mutable_parameters();
             ((*inputParameters)[parameter.name.GetString()]).set_bool_param(parameter.value.GetBool());
-        }
-        else if(parameter.value.IsInt()) {
+        } else if (parameter.value.IsInt()) {
             auto inputParameters = input->mutable_parameters();
             ((*inputParameters)[parameter.name.GetString()]).set_int64_param(parameter.value.GetInt());
-        }
-        else {
+        } else {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
     }
@@ -537,158 +531,157 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::inference::ModelInferR
             // need to be validated with binary inputs
         }
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_fp32_contents()->Add(value.GetFloat());
         }
     } else if (input->datatype() == "INT64") {
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_int64_contents()->Add(value.GetInt64());
         }
     } else if (input->datatype() == "INT32") {
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_int_contents()->Add(value.GetInt());
         }
     } else if (input->datatype() == "INT16") {
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_int_contents()->Add(value.GetInt());
         }
     } else if (input->datatype() == "INT8") {
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_int_contents()->Add(value.GetInt());
         }
     } else if (input->datatype() == "UINT64") {
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_uint64_contents()->Add(value.GetUint64());
         }
     } else if (input->datatype() == "UINT32") {
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_uint_contents()->Add(value.GetUint());
         }
     } else if (input->datatype() == "UINT16") {
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_uint_contents()->Add(value.GetUint());
         }
     } else if (input->datatype() == "UINT8") {
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_uint_contents()->Add(value.GetUint());
         }
     } else if (input->datatype() == "FP64") {
         for (auto& value : node.GetArray()) {
-            if(value.IsArray()) {
+            if (value.IsArray()) {
                 for (auto& v : node.GetArray()) {
                     auto status = parseData(v, input);
-                    if(!status.ok()){
+                    if (!status.ok()) {
                         return status;
                     }
                 }
             }
-            if(!value.IsNumber()) {
+            if (!value.IsNumber()) {
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
             input->mutable_contents()->mutable_fp64_contents()->Add(value.GetFloat());
         }
     } else if (input->datatype() == "BYTES") {
         // Binary inputs
-    }
-    else {
+    } else {
         return StatusCode::REST_UNSUPPORTED_PRECISION;
     }
     return StatusCode::OK;
@@ -711,12 +704,12 @@ Status KFSRestParser::parseInput(rapidjson::Value& node) {
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     }
     for (auto& dim : shapeItr->value.GetArray()) {
-        if(!dim.IsInt()) {
+        if (!dim.IsInt()) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
         input->mutable_shape()->Add(dim.GetInt());
     }
-    
+
     auto datatypeItr = node.FindMember("datatype");
     if ((datatypeItr == node.MemberEnd()) || !(datatypeItr->value.IsString())) {
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
@@ -726,7 +719,7 @@ Status KFSRestParser::parseInput(rapidjson::Value& node) {
     auto parametersItr = node.FindMember("parameters");
     if (parametersItr != node.MemberEnd()) {
         auto status = parseInputParameters(parametersItr->value, input);
-        if(!status.ok()){
+        if (!status.ok()) {
             return status;
         }
     }
@@ -747,8 +740,7 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
     }
     for (auto& input : node.GetArray()) {
         auto status = parseInput(input);
-        if(!status.ok())
-        {
+        if (!status.ok()) {
             return status;
         }
     }
@@ -768,8 +760,7 @@ Status KFSRestParser::parse(const char* json) {
     auto idItr = doc.FindMember("id");
     if (idItr != doc.MemberEnd()) {
         auto status = parseId(idItr->value);
-        if(!status.ok())
-        {
+        if (!status.ok()) {
             return status;
         }
     }
@@ -777,7 +768,7 @@ Status KFSRestParser::parse(const char* json) {
     auto parametersItr = doc.FindMember("parameters");
     if (parametersItr != doc.MemberEnd()) {
         auto status = parseRequestParameters(parametersItr->value);
-        if(!status.ok()){
+        if (!status.ok()) {
             return status;
         }
     }

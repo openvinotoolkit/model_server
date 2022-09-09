@@ -24,6 +24,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
 #include "kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
@@ -226,7 +227,8 @@ class KFSRestParser : RestParser {
     Status parseData(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input);
     Status parseInput(rapidjson::Value& node);
     Status parseInputs(rapidjson::Value& node);
-    public:
+
+public:
     Status parse(const char* json);
     ::inference::ModelInferRequest& getProto() { return requestProto; }
 };
