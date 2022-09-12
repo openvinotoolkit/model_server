@@ -63,7 +63,7 @@ public:
 
 private:
     void parseHeaders(const net_http::ServerRequestInterface* req, std::vector<std::pair<std::string, std::string>>* headers) {
-        if(req->GetRequestHeader("Inference-Header-Content-Length").size()>0){
+        if (req->GetRequestHeader("Inference-Header-Content-Length").size() > 0) {
             std::pair<std::string, std::string> header{"Inference-Header-Content-Length", req->GetRequestHeader("Inference-Header-Content-Length")};
             headers->push_back(header);
             SPDLOG_ERROR("HEADER PARSED");

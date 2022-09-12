@@ -454,9 +454,9 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::
 
 Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, std::optional<int> inferenceHeaderContentLength) {
     KFSRestParser requestParser;
-    
+
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
-    SPDLOG_ERROR("{}",endOfJson);
+    SPDLOG_ERROR("{}", endOfJson);
     auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
     if (!status.ok()) {
         // modelInstance->getMetricReporter().requestFailRestPredict->increment();
@@ -610,13 +610,13 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 
 Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
     const std::vector<std::pair<std::string, std::string>>& headers) {
-    for(auto header : headers){
+    for (auto header : headers) {
         SPDLOG_ERROR(header.first);
         SPDLOG_ERROR(header.second);
-        if(header.first == "Inference-Header-Content-Length"){
+        if (header.first == "Inference-Header-Content-Length") {
             SPDLOG_ERROR("HEADER FOUND");
             requestComponents.inferenceHeaderContentLength = stoi32(header.second);
-            if(!requestComponents.inferenceHeaderContentLength.has_value()){
+            if (!requestComponents.inferenceHeaderContentLength.has_value()) {
                 return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID;
             }
         }
@@ -669,7 +669,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
                 return status;
-        
+
             status = parseInferenceHeaderContentLength(requestComponents, headers);
             if (!status.ok())
                 return status;
