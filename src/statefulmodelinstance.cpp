@@ -21,6 +21,7 @@
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"
+#include "model_metric_reporter.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "profiler.hpp"
 #include "serialization.hpp"
@@ -218,13 +219,14 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     sequenceManagerLock.unlock();
 
     timer.start("get infer request");
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
     int executingInferId = executingStreamIdGuard.getId();
-    (void)executingInferId;
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     timer.stop("get infer request");
+    double getInferRequestTime = timer.elapsed<microseconds>("get infer request");
+    OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId, getInferRequestTime / 1000);
 
     timer.start("preprocess");
     status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);

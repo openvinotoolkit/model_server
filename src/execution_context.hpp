@@ -30,10 +30,14 @@ struct ExecutionContext {
         GetModelMetadata,
         GetModelStatus,
 
+        // Model Control API
+        ConfigReload,
+        ConfigStatus,
+
         // KServe
         ModelInfer,
         ModelReady,
-        ModelStatus,
+        ModelMetadata,
     };
 
     Interface interface;

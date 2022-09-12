@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "execution_context.hpp"
 #include "metric.hpp"
@@ -27,47 +28,57 @@ namespace ovms {
 class MetricRegistry;
 class MetricConfig;
 
-class ModelMetricReporter {
+class ServableMetricReporter {
     MetricRegistry* registry;
 
+protected:
+    std::vector<double> buckets;
+
 public:
-    ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
+    ServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
 
     // TFS
-    std::shared_ptr<MetricCounter> requestSuccessGrpcPredict;
-    std::shared_ptr<MetricCounter> requestSuccessGrpcGetModelMetadata;
-    std::shared_ptr<MetricCounter> requestSuccessGrpcGetModelStatus;
+    std::unique_ptr<MetricCounter> requestSuccessGrpcPredict;
+    std::unique_ptr<MetricCounter> requestSuccessGrpcGetModelMetadata;
+    std::unique_ptr<MetricCounter> requestSuccessGrpcGetModelStatus;
 
-    std::shared_ptr<MetricCounter> requestSuccessRestPredict;
-    std::shared_ptr<MetricCounter> requestSuccessRestGetModelMetadata;
-    std::shared_ptr<MetricCounter> requestSuccessRestGetModelStatus;
+    std::unique_ptr<MetricCounter> requestSuccessRestPredict;
+    std::unique_ptr<MetricCounter> requestSuccessRestGetModelMetadata;
+    std::unique_ptr<MetricCounter> requestSuccessRestGetModelStatus;
 
-    std::shared_ptr<MetricCounter> requestFailGrpcPredict;
-    std::shared_ptr<MetricCounter> requestFailGrpcGetModelMetadata;
-    std::shared_ptr<MetricCounter> requestFailGrpcGetModelStatus;
+    std::unique_ptr<MetricCounter> requestFailGrpcPredict;
+    std::unique_ptr<MetricCounter> requestFailGrpcGetModelMetadata;
+    std::unique_ptr<MetricCounter> requestFailGrpcGetModelStatus;
 
-    std::shared_ptr<MetricCounter> requestFailRestPredict;
-    std::shared_ptr<MetricCounter> requestFailRestGetModelMetadata;
-    std::shared_ptr<MetricCounter> requestFailRestGetModelStatus;
+    std::unique_ptr<MetricCounter> requestFailRestPredict;
+    std::unique_ptr<MetricCounter> requestFailRestGetModelMetadata;
+    std::unique_ptr<MetricCounter> requestFailRestGetModelStatus;
 
     // KFS
-    std::shared_ptr<MetricCounter> requestSuccessGrpcModelInfer;
-    std::shared_ptr<MetricCounter> requestSuccessGrpcModelMetadata;
-    std::shared_ptr<MetricCounter> requestSuccessGrpcModelReady;
+    std::unique_ptr<MetricCounter> requestSuccessGrpcModelInfer;
+    std::unique_ptr<MetricCounter> requestSuccessGrpcModelMetadata;
+    std::unique_ptr<MetricCounter> requestSuccessGrpcModelReady;
 
-    std::shared_ptr<MetricCounter> requestSuccessRestModelInfer;
-    std::shared_ptr<MetricCounter> requestSuccessRestModelMetadata;
-    std::shared_ptr<MetricCounter> requestSuccessRestModelReady;
+    std::unique_ptr<MetricCounter> requestSuccessRestModelInfer;
+    std::unique_ptr<MetricCounter> requestSuccessRestModelMetadata;
+    std::unique_ptr<MetricCounter> requestSuccessRestModelReady;
 
-    std::shared_ptr<MetricCounter> requestFailGrpcModelInfer;
-    std::shared_ptr<MetricCounter> requestFailGrpcModelMetadata;
-    std::shared_ptr<MetricCounter> requestFailGrpcModelReady;
+    std::unique_ptr<MetricCounter> requestFailGrpcModelInfer;
+    std::unique_ptr<MetricCounter> requestFailGrpcModelMetadata;
+    std::unique_ptr<MetricCounter> requestFailGrpcModelReady;
 
-    std::shared_ptr<MetricCounter> requestFailRestModelInfer;
-    std::shared_ptr<MetricCounter> requestFailRestModelMetadata;
-    std::shared_ptr<MetricCounter> requestFailRestModelReady;
+    std::unique_ptr<MetricCounter> requestFailRestModelInfer;
+    std::unique_ptr<MetricCounter> requestFailRestModelMetadata;
+    std::unique_ptr<MetricCounter> requestFailRestModelReady;
 
-    inline std::shared_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) {
+    std::unique_ptr<MetricHistogram> requestTimeGrpc;
+    std::unique_ptr<MetricHistogram> requestTimeRest;
+
+    inline std::unique_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) {
+        if (context.method != ExecutionContext::Method::GetModelStatus) {
+            static std::unique_ptr<MetricCounter> empty = nullptr;
+            return empty;  // In case something calls it from ConfigReload/ConfigStatus methods
+        }
         if (context.interface == ExecutionContext::Interface::GRPC) {
             return this->requestSuccessGrpcGetModelStatus;
         } else {
@@ -75,7 +86,7 @@ public:
         }
     }
 
-    inline std::shared_ptr<MetricCounter>& getGetModelMetadataRequestMetric(const ExecutionContext& context, bool success) {
+    inline std::unique_ptr<MetricCounter>& getGetModelMetadataRequestMetric(const ExecutionContext& context, bool success) {
         if (success) {
             if (context.interface == ExecutionContext::Interface::GRPC) {
                 return this->requestSuccessGrpcGetModelMetadata;
@@ -91,23 +102,52 @@ public:
         }
     }
 
-    inline std::shared_ptr<MetricCounter>& getInferRequestMetric(const ExecutionContext& context) {
+    inline std::unique_ptr<MetricCounter>& getInferRequestMetric(const ExecutionContext& context, bool success = true) {
         if (context.method == ExecutionContext::Method::Predict) {
             if (context.interface == ExecutionContext::Interface::GRPC) {
-                return this->requestSuccessGrpcPredict;
+                return success ? this->requestSuccessGrpcPredict : this->requestFailGrpcPredict;
             } else {
-                return this->requestSuccessRestPredict;
+                return success ? this->requestSuccessRestPredict : this->requestFailRestPredict;
             }
         } else if (context.method == ExecutionContext::Method::ModelInfer) {
             if (context.interface == ExecutionContext::Interface::GRPC) {
-                return this->requestSuccessGrpcModelInfer;
+                return success ? this->requestSuccessGrpcModelInfer : this->requestFailGrpcModelInfer;
             } else {
-                return this->requestSuccessRestModelInfer;
+                return success ? this->requestSuccessRestModelInfer : this->requestFailRestModelInfer;
             }
         } else {
             throw std::logic_error("wrong context method for inference");
         }
     }
+
+    inline std::unique_ptr<MetricCounter>& getModelMetadataMetric(const ExecutionContext& context, bool success = true) {
+        if (context.interface == ExecutionContext::Interface::GRPC) {
+            return success ? this->requestSuccessGrpcModelMetadata : this->requestFailGrpcModelMetadata;
+        } else {
+            return success ? this->requestSuccessRestModelMetadata : this->requestFailRestModelMetadata;
+        }
+    }
+
+    inline std::unique_ptr<MetricCounter>& getModelReadyMetric(const ExecutionContext& context, bool success = true) {
+        if (context.interface == ExecutionContext::Interface::GRPC) {
+            return success ? this->requestSuccessGrpcModelReady : this->requestFailGrpcModelReady;
+        } else {
+            return success ? this->requestSuccessRestModelReady : this->requestFailRestModelReady;
+        }
+    }
+};
+
+class ModelMetricReporter : public ServableMetricReporter {
+public:
+    std::unique_ptr<MetricHistogram> inferenceTime;
+    std::unique_ptr<MetricHistogram> waitForInferReqTime;
+
+    std::unique_ptr<MetricGauge> streams;
+    std::unique_ptr<MetricGauge> inferReqQueueSize;
+    std::unique_ptr<MetricGauge> inferReqActive;
+    std::unique_ptr<MetricGauge> currentRequests;
+
+    ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
 };
 
 }  // namespace ovms

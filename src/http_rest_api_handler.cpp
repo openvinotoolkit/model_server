@@ -33,6 +33,7 @@
 #include "kfs_grpc_inference_service.hpp"
 #include "metric_module.hpp"
 #include "metric_registry.hpp"
+#include "model_metric_reporter.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "pipelinedefinition.hpp"
@@ -475,13 +476,17 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
 }
 
 Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    Timer timer;
+    timer.start("total");
+    ServableMetricReporter* reporter = nullptr;
     std::string modelName(request_components.model_name);
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
     ::inference::ModelInferRequest grpc_request;
     prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
     ::inference::ModelInferResponse grpc_response;
-    const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response);
+    const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer},
+        reporter);
     if (!gstatus.ok()) {
         return gstatus;
     }
@@ -492,6 +497,10 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
         return status;
     }
     response = output;
+    timer.stop("total");
+    double totalTime = timer.elapsed<std::chrono::microseconds>("total");
+    SPDLOG_DEBUG("Total REST request processing time: {} ms", totalTime / 1000);
+    OBSERVE_IF_ENABLED(reporter->requestTimeRest, totalTime);
     return StatusCode::OK;
 }
 
@@ -535,7 +544,7 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
     grpc_request.set_version(modelVersion);
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
 
-    Status status = kfsGrpcImpl.ModelReadyImpl(nullptr, &grpc_request, &grpc_response);
+    Status status = kfsGrpcImpl.ModelReadyImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelReady});
     if (!status.ok()) {
         return status;
     }
@@ -565,7 +574,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     grpc_request.set_name(modelName);
     grpc_request.set_version(modelVersion);
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
-    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response);
+    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata});
     if (!gstatus.ok()) {
         return gstatus;
     }
@@ -747,25 +756,31 @@ Status HttpRestApiHandler::processPredictRequest(
     tensorflow::serving::PredictResponse responseProto;
     Status status;
 
+    ServableMetricReporter* reporterOut = nullptr;
     if (this->modelManager.modelExists(modelName)) {
         SPDLOG_DEBUG("Found model with name: {}. Searching for requested version...", modelName);
-        status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto);
+        status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto, reporterOut);
     } else if (this->modelManager.pipelineDefinitionExists(modelName)) {
         SPDLOG_DEBUG("Found pipeline with name: {}", modelName);
-        status = processPipelineRequest(modelName, request, requestOrder, responseProto);
+        status = processPipelineRequest(modelName, request, requestOrder, responseProto, reporterOut);
     } else {
         SPDLOG_WARN("Model or pipeline matching request parameters not found - name: {}, version: {}", modelName, modelVersion.value_or(0));
         status = StatusCode::MODEL_NAME_MISSING;
     }
     if (!status.ok())
         return status;
+    if (!reporterOut) {
+        return StatusCode::INTERNAL_ERROR;  // should not happen
+    }
 
     status = makeJsonFromPredictResponse(responseProto, response, requestOrder);
     if (!status.ok())
         return status;
 
     timer.stop("total");
-    SPDLOG_DEBUG("Total REST request processing time: {} ms", timer.elapsed<std::chrono::microseconds>("total") / 1000);
+    double requestTime = timer.elapsed<std::chrono::microseconds>("total");
+    OBSERVE_IF_ENABLED(reporterOut->requestTimeRest, requestTime);
+    SPDLOG_DEBUG("Total REST request processing time: {} ms", requestTime / 1000);
     return StatusCode::OK;
 }
 
@@ -773,7 +788,8 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     const std::optional<int64_t>& modelVersion,
     const std::string& request,
     Order& requestOrder,
-    tensorflow::serving::PredictResponse& responseProto) {
+    tensorflow::serving::PredictResponse& responseProto,
+    ServableMetricReporter*& reporterOut) {
 
     std::shared_ptr<ModelInstance> modelInstance;
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
@@ -790,12 +806,13 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         SPDLOG_WARN("Requested model instance - name: {}, version: {} - does not exist.", modelName, modelVersion.value_or(0));
         return status;
     }
+    reporterOut = &modelInstance->getMetricReporter();
     Timer timer;
     timer.start("parse");
     RestParser requestParser(modelInstance->getInputsInfo());
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
-        modelInstance->getMetricReporter().requestFailRestPredict->increment();
+        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
         return status;
     }
     requestOrder = requestParser.getOrder();
@@ -808,11 +825,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         requestProto.mutable_model_spec()->mutable_version()->set_value(modelVersion.value());
     }
     status = modelInstance->infer(&requestProto, &responseProto, modelInstanceUnloadGuard);
-    if (status.ok()) {
-        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestSuccessRestPredict);
-    } else {
-        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
-    }
+    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::Predict}, status.ok()));
     return status;
 }
 
@@ -834,7 +847,8 @@ Status HttpRestApiHandler::getPipelineInputs(const std::string& modelName, ovms:
 Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     const std::string& request,
     Order& requestOrder,
-    tensorflow::serving::PredictResponse& responseProto) {
+    tensorflow::serving::PredictResponse& responseProto,
+    ServableMetricReporter*& reporterOut) {
 
     std::unique_ptr<Pipeline> pipelinePtr;
 
@@ -861,14 +875,10 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     if (!status.ok()) {
         return status;
     }
-    status = pipelinePtr->execute(ExecutionContext(
-        ExecutionContext::Interface::REST,
-        ExecutionContext::Method::Predict));
-    if (status.ok()) {
-        INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestSuccessRestPredict);
-    } else {
-        INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestFailRestPredict);
-    }
+    ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::Predict};
+    reporterOut = &pipelinePtr->getMetricReporter();
+    status = pipelinePtr->execute(executionContext);
+    INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     return status;
 }
 
@@ -970,8 +980,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     }
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
-                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Have separate method for ConfigReload and do not increment
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::ConfigReload));
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed. Check server logs for more info.");
         return status;
@@ -995,8 +1004,7 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
     Status status;
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
-                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Have separate method for ConfigStatus and do not increment
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::ConfigStatus));
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed.");
         return status;

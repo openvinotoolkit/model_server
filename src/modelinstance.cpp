@@ -668,6 +668,9 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
     try {
         loadCompiledModelPtr(pluginConfig);
+        auto numberOfStreams = getNumOfStreams();
+        SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
+        SPDLOG_INFO("Number of OV streams: {}", numberOfStreams);
     } catch (ov::Exception& e) {
         Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
@@ -781,6 +784,7 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
         return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
     }
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*compiledModel, numberOfParallelInferRequests);
+    SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, numberOfParallelInferRequests);
     SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
@@ -1071,6 +1075,8 @@ void ModelInstance::unloadModelComponents() {
             getName(), getVersion(), predictRequestsHandlesCount);
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
+    SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, 0);
+    SET_IF_ENABLED(this->getMetricReporter().streams, 0);
     inferRequestsQueue.reset();
     compiledModel.reset();
     model.reset();
@@ -1113,12 +1119,17 @@ template const Status ModelInstance::validate(const tensorflow::serving::Predict
 Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     OVMS_PROFILE_FUNCTION();
     try {
+        Timer timer;
+        timer.start("infer");
         OVMS_PROFILE_SYNC_BEGIN("ov::InferRequest::start_async");
         inferRequest.start_async();
         OVMS_PROFILE_SYNC_END("ov::InferRequest::start_async");
         OVMS_PROFILE_SYNC_BEGIN("ov::InferRequest::wait");
         inferRequest.wait();
         OVMS_PROFILE_SYNC_END("ov::InferRequest::wait");
+        timer.stop("infer");
+        double inferTime = timer.elapsed<std::chrono::microseconds>("infer");
+        OBSERVE_IF_ENABLED(this->getMetricReporter().inferenceTime, inferTime);
     } catch (const ov::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
         SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
@@ -1142,13 +1153,15 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         return status;
     timer.start("get infer request");
     OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
     int executingInferId = executingStreamIdGuard.getId();
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     OVMS_PROFILE_SYNC_END("getInferRequest");
     timer.stop("get infer request");
+    double getInferRequestTime = timer.elapsed<microseconds>("get infer request");
+    OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId, getInferRequestTime / 1000);
 
     timer.start("deserialize");
     InputSink<ov::InferRequest&> inputSink(inferRequest);
@@ -1195,12 +1208,14 @@ Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
     if (!status.ok())
         return status;
     timer.start("get infer request");
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
     int executingInferId = executingStreamIdGuard.getId();
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     timer.stop("get infer request");
+    double getInferRequestTime = timer.elapsed<microseconds>("get infer request");
+    OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+        requestProto->model_name(), getVersion(), executingInferId, getInferRequestTime / 1000);
 
     timer.start("deserialize");
     InputSink<ov::InferRequest&> inputSink(inferRequest);
@@ -1247,6 +1262,10 @@ const size_t ModelInstance::getBatchSizeIndex() const {
         throw std::logic_error("cannot get batch index");
     }
     return batchIndex.value();
+}
+
+uint32_t ModelInstance::getNumOfStreams() const {
+    return compiledModel->get_property(ov::num_streams);
 }
 
 }  // namespace ovms

@@ -558,5 +558,7 @@ public:
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
+
+    uint32_t getNumOfStreams() const;
 };
 }  // namespace ovms

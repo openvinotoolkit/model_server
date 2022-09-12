@@ -39,6 +39,10 @@ void MetricGauge::decrement(double value) {
     this->gaugeImpl.Decrement(value);
 }
 
+void MetricGauge::set(double value) {
+    this->gaugeImpl.Set(value);
+}
+
 MetricHistogram::MetricHistogram(prometheus::Histogram& histogramImpl) :
     histogramImpl(histogramImpl) {}
 
