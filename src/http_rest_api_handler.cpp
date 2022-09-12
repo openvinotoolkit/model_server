@@ -456,7 +456,6 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
-    SPDLOG_ERROR("{}", endOfJson);
     auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
     if (!status.ok()) {
         // modelInstance->getMetricReporter().requestFailRestPredict->increment();
