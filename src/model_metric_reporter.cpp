@@ -45,10 +45,9 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     auto familyName = "ovms_requests_success";
     auto family = registry->createFamily<MetricCounter>(familyName,
         "Number of successful requests to a model or a DAG.");
- 
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end())
-    {
-        //TFS
+
+    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
+        // TFS
         this->requestSuccessGrpcPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
             {"protocol", "tensorflowserving"},
@@ -122,8 +121,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     family = registry->createFamily<MetricCounter>(familyName,
         "Number of failed requests to a model or a DAG.");
 
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end())
-    {
+    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
         // TFS
         this->requestFailGrpcPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
@@ -160,7 +158,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
             {"protocol", "tensorflowserving"},
             {"method", "getmodelstatus"},
             {"interface", "rest"}});
-        
+
         // KFS
         this->requestFailGrpcModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
@@ -203,13 +201,12 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     auto requestTimeFamily = registry->createFamily<MetricHistogram>(familyName,
         "Processing time of requests to a model or a DAG.");
 
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end())
-    {
+    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
         this->requestTimeGrpc = requestTimeFamily->addMetric({{"name", modelName},
                                                                  {"version", std::to_string(modelVersion)},
                                                                  {"interface", "grpc"}},
             this->buckets);
-    
+
         this->requestTimeRest = requestTimeFamily->addMetric({{"name", modelName},
                                                                  {"version", std::to_string(modelVersion)},
                                                                  {"interface", "rest"}},
@@ -228,8 +225,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     }
 
     auto familyName = "ovms_inference_time_us";
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end())
-    {
+    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
         this->inferenceTime = registry->createFamily<MetricHistogram>(familyName,
                                           "Inference execution time in the OpenVINO backend.")
                                   ->addMetric(
@@ -238,8 +234,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     }
 
     familyName = "ovms_wait_for_infer_req_time_us";
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end())
-    {
+    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
         this->waitForInferReqTime = registry->createFamily<MetricHistogram>(familyName,
                                                 "Request waiting time in the scheduling queue.")
                                         ->addMetric(
@@ -248,8 +243,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     }
 
     familyName = "ovms_streams";
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end())
-    {
+    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
         this->streams = registry->createFamily<MetricGauge>(familyName,
                                     "Number of OpenVINO execution streams.")
                             ->addMetric(
@@ -257,8 +251,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     }
 
     familyName = "ovms_infer_req_queue_size";
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end())
-    {
+    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
         this->inferReqQueueSize = registry->createFamily<MetricGauge>(familyName,
                                               "Inference request queue size (nireq).")
                                       ->addMetric(
@@ -266,8 +259,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     }
 
     familyName = "ovms_infer_req_active";
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end())
-    {
+    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
         this->inferReqActive = registry->createFamily<MetricGauge>(familyName,
                                            "Number of currently consumed inference request from the processing queue.")
                                    ->addMetric(
@@ -275,8 +267,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     }
 
     familyName = "ovms_current_requests";
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end())
-    {
+    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
         this->currentRequests = registry->createFamily<MetricGauge>(familyName,
                                             "Number of inference requests currently in process.")
                                     ->addMetric(

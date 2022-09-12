@@ -70,27 +70,22 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
 Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     for (auto& sh : v.GetArray()) {
         std::string metric = std::string(sh.GetString());
-        
+
         size_t listSize = this->enabledFamiliesList.size();
 
-        for(const auto& [family, metrics] : this->defaultMetricFamilies)
-        {
-            if(metric == family)
-            {
+        for (const auto& [family, metrics] : this->defaultMetricFamilies) {
+            if (metric == family) {
                 this->enabledFamiliesList.insert(family);
             }
         }
 
-        for(const auto& [family, metrics] : this->additionalMetricFamilies)
-        {
-            if(metric == family)
-            {
+        for (const auto& [family, metrics] : this->additionalMetricFamilies) {
+            if (metric == family) {
                 this->enabledFamiliesList.insert(family);
             }
         }
 
-        if (listSize == this->enabledFamiliesList.size())
-        {
+        if (listSize == this->enabledFamiliesList.size()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Metrics family name not supported: {}", metric);
             return StatusCode::CONFIG_FILE_INVALID;
         }
@@ -101,11 +96,9 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
 
 void MetricConfig::setDefaultMetricsTo(bool enabled) {
     this->enabledFamiliesList.clear();
-    if (enabled)
-    {
-        for(const auto& [family, metrics] : this->defaultMetricFamilies)
-        {
-                this->enabledFamiliesList.insert(family);
+    if (enabled) {
+        for (const auto& [family, metrics] : this->defaultMetricFamilies) {
+            this->enabledFamiliesList.insert(family);
         }
     }
 }
