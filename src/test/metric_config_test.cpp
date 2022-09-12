@@ -125,6 +125,41 @@ TEST_F(MetricsConfigTest, ChangedValues) {
     ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_requests_fail"), metricConfig.enabledFamiliesList.end());
 }
 
+static const char* modelMetricsBadListConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "metrics_list": ["ovms_request_success", "ovms_current_requests"]
+            }
+        }
+})";
+
+TEST_F(MetricsConfigTest, BadFamilyConfig) {
+    SetUpConfig(modelMetricsBadListConfig);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_EQ(status, StatusCode::INVALID_METRICS_FAMILY_NAME);
+}
+
 TEST_F(MetricsConfigTest, InitOnce) {
     SetUpConfig(modelMetricsChangedConfig);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
@@ -445,7 +480,7 @@ TEST_F(MetricsCli, BadCliReading) {
 
     auto status = metricConfig.loadFromCLIString(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready");
 
-    ASSERT_FALSE(status.ok());
+    ASSERT_EQ(status, StatusCode::INVALID_METRICS_FAMILY_NAME);
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
     ASSERT_EQ(metricConfig.enabledFamiliesList.size(), 0);

@@ -87,7 +87,7 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
 
         if (listSize == this->enabledFamiliesList.size()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Metrics family name not supported: {}", metric);
-            return StatusCode::CONFIG_FILE_INVALID;
+            return StatusCode::INVALID_METRICS_FAMILY_NAME;
         }
     }
 
