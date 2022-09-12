@@ -71,7 +71,7 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     for (auto& sh : v.GetArray()) {
         std::string metric = std::string(sh.GetString());
 
-        size_t listSize = this->enabledFamiliesList.size();
+        const size_t listSize = this->enabledFamiliesList.size();
 
         for (const auto& [family, metrics] : this->defaultMetricFamilies) {
             if (metric == family) {
