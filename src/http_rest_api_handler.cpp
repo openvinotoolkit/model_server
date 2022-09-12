@@ -466,9 +466,6 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     if (!status.ok()) {
         return status;
     }
-    std::string req;
-    google::protobuf::util::MessageToJsonString(grpc_request, &req);
-    SPDLOG_ERROR(req);
     grpc_request.set_model_name(modelName);
     grpc_request.set_model_version(modelVersion);
     return StatusCode::OK;
@@ -610,10 +607,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
     const std::vector<std::pair<std::string, std::string>>& headers) {
     for (auto header : headers) {
-        SPDLOG_ERROR(header.first);
-        SPDLOG_ERROR(header.second);
         if (header.first == "Inference-Header-Content-Length") {
-            SPDLOG_ERROR("HEADER FOUND");
             requestComponents.inferenceHeaderContentLength = stoi32(header.second);
             if (!requestComponents.inferenceHeaderContentLength.has_value()) {
                 return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID;

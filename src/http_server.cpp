@@ -66,13 +66,10 @@ private:
         if (req->GetRequestHeader("Inference-Header-Content-Length").size() > 0) {
             std::pair<std::string, std::string> header{"Inference-Header-Content-Length", req->GetRequestHeader("Inference-Header-Content-Length")};
             headers->push_back(header);
-            SPDLOG_ERROR("HEADER PARSED");
         }
     }
     void processRequest(net_http::ServerRequestInterface* req) {
         SPDLOG_DEBUG("REST request {}", req->uri_path());
-        SPDLOG_DEBUG("REST request header {}", req->GetRequestHeader("Inference-Header-Content-Length"));
-        SPDLOG_DEBUG("REST request header {}", req->GetRequestHeader("Content-Length"));
         std::string body;
         int64_t num_bytes = 0;
         auto request_chunk = req->ReadRequestBytes(&num_bytes);
