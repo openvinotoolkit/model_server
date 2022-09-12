@@ -42,7 +42,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         this->buckets.emplace_back(floor(BUCKET_MULTIPLIER * pow(BUCKET_POWER_BASE, i)));
     }
 
-    auto familyName = "ovms_requests_success";
+    std::string familyName = "ovms_requests_success";
     auto family = registry->createFamily<MetricCounter>(familyName,
         "Number of successful requests to a model or a DAG.");
 
