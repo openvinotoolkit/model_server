@@ -46,7 +46,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     auto family = registry->createFamily<MetricCounter>(familyName,
         "Number of successful requests to a model or a DAG.");
 
-    if (metricConfig->enabledFamiliesList.find(familyName) != metricConfig->enabledFamiliesList.end()) {
+    if (metricConfig->isEnabled(familyName)) {
         // TFS
         this->requestSuccessGrpcPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
