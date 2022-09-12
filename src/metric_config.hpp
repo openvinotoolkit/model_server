@@ -50,8 +50,8 @@ public:
                 "ovms_requests_success_grpc_modelready",
                 "ovms_requests_success_rest_modelinfer",
                 "ovms_requests_success_rest_predict",
-                "ovms_requests_success_rest_get_modelmetadata",
-                "ovms_requests_success_rest_get_modelstatus",
+                "ovms_requests_success_rest_modelmetadata",
+                "ovms_requests_success_rest_modelstatus",
                 "ovms_requests_success_rest_modelmetadata",
                 "ovms_requests_success_rest_modelready"}},
         {"ovms_requests_fail",
@@ -63,8 +63,8 @@ public:
                 "ovms_requests_fail_grpc_modelready",
                 "ovms_requests_fail_rest_modelinfer",
                 "ovms_requests_fail_rest_predict",
-                "ovms_requests_fail_rest_get_modelmetadata",
-                "ovms_requests_fail_rest_get_modelstatus",
+                "ovms_requests_fail_rest_modelmetadata",
+                "ovms_requests_fail_rest_modelstatus",
                 "ovms_requests_fail_rest_modelmetadata",
                 "ovms_requests_fail_rest_modelready"}},
         {"ovms_request_time_us", {"ovms_request_time_us_grpc", "ovms_request_time_us_rest"}},
@@ -73,7 +73,8 @@ public:
 
     Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);
-    bool validateEndpointPath(std::string endpoint);
+    bool validateEndpointPath(const std::string& endpoint);
+    bool isFamilyEnabled(const std::string& family) const;
 
     void setDefaultMetricsTo(bool enabled);
     Status loadFromCLIString(bool isEnabled, const std::string& metricsList);

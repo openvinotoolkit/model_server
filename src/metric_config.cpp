@@ -30,7 +30,7 @@
 
 namespace ovms {
 
-bool MetricConfig::validateEndpointPath(std::string endpoint) {
+bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
     return std::regex_match(endpoint, valid_endpoint_regex);
 }
@@ -92,6 +92,10 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     }
 
     return StatusCode::OK;
+}
+
+bool MetricConfig::isFamilyEnabled(const std::string& family) const {
+    return this->enabledFamiliesList.find(family) != this->enabledFamiliesList.end();
 }
 
 void MetricConfig::setDefaultMetricsTo(bool enabled) {
