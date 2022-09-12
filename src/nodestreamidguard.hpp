@@ -18,60 +18,20 @@
 #include <future>
 #include <optional>
 
-#include <spdlog/spdlog.h>
-
-#include "metric.hpp"
-#include "model_metric_reporter.hpp"
-#include "ovinferrequestsqueue.hpp"
-#include "profiler.hpp"
-
 namespace ovms {
 
+class ModelMetricReporter;
+class OVInferRequestsQueue;
+
 struct NodeStreamIdGuard {
-    NodeStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter) :
-        inferRequestsQueue_(inferRequestsQueue),
-        futureStreamId(inferRequestsQueue_.getIdleStream()),
-        reporter(reporter) {
-        INCREMENT_IF_ENABLED(reporter.currentRequests);
-    }
+    NodeStreamIdGuard(OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter);
+    ~NodeStreamIdGuard();
 
-    ~NodeStreamIdGuard() {
-        if (!disarmed) {
-            if (!streamId) {
-                SPDLOG_DEBUG("Trying to disarm stream Id that is not needed anymore...");
-                streamId = futureStreamId.get();
-                INCREMENT_IF_ENABLED(reporter.inferReqActive);
-            }
-            SPDLOG_DEBUG("Returning streamId: {}", streamId.value());
-            DECREMENT_IF_ENABLED(reporter.inferReqActive);
-            inferRequestsQueue_.returnStream(streamId.value());
-        }
-        DECREMENT_IF_ENABLED(reporter.currentRequests);
-    }
-
-    std::optional<int> tryGetId(const uint microseconds = 1) {
-        OVMS_PROFILE_FUNCTION();
-        if (!streamId) {
-            if (std::future_status::ready == futureStreamId.wait_for(std::chrono::microseconds(microseconds))) {
-                streamId = futureStreamId.get();
-                INCREMENT_IF_ENABLED(reporter.inferReqActive);
-            }
-        }
-        return streamId;
-    }
-
-    bool tryDisarm(const uint microseconds = 1) {
-        if (std::future_status::ready == futureStreamId.wait_for(std::chrono::microseconds(microseconds))) {
-            streamId = futureStreamId.get();
-            SPDLOG_DEBUG("Returning streamId:", streamId.value());
-            inferRequestsQueue_.returnStream(streamId.value());
-            disarmed = true;
-        }
-        return disarmed;
-    }
+    std::optional<int> tryGetId(const uint microseconds = 1);
+    bool tryDisarm(const uint microseconds = 1);
 
 private:
-    ovms::OVInferRequestsQueue& inferRequestsQueue_;
+    OVInferRequestsQueue& inferRequestsQueue_;
     std::future<int> futureStreamId;
     std::optional<int> streamId = std::nullopt;
     bool disarmed = false;

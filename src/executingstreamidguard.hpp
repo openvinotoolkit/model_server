@@ -15,43 +15,33 @@
 //*****************************************************************************
 #pragma once
 
-#include "model_metric_reporter.hpp"
-#include "ovinferrequestsqueue.hpp"
+namespace ov {
+class InferRequest;
+}
 
 namespace ovms {
 
-class CurrentRequestsMetricGuard {
-    ModelMetricReporter& reporter;
-
-public:
-    CurrentRequestsMetricGuard(ModelMetricReporter& reporter) :
-        reporter(reporter) {
-        INCREMENT_IF_ENABLED(reporter.currentRequests);
-    }
-    ~CurrentRequestsMetricGuard() {
-        DECREMENT_IF_ENABLED(reporter.currentRequests);
-    }
-};
+class ModelMetricReporter;
+class OVInferRequestsQueue;
 
 struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter) :
-        metricGuard(reporter),
-        inferRequestsQueue_(inferRequestsQueue),
-        id_(inferRequestsQueue_.getIdleStream().get()),
-        inferRequest(inferRequestsQueue.getInferRequest(id_)),
-        reporter(reporter) {
-        INCREMENT_IF_ENABLED(reporter.inferReqActive);
-    }
-    ~ExecutingStreamIdGuard() {
-        DECREMENT_IF_ENABLED(reporter.inferReqActive);
-        inferRequestsQueue_.returnStream(id_);
-    }
-    int getId() { return id_; }
-    ov::InferRequest& getInferRequest() { return inferRequest; }
+    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter);
+    ~ExecutingStreamIdGuard();
+
+    int getId();
+    ov::InferRequest& getInferRequest();
 
 private:
-    CurrentRequestsMetricGuard metricGuard;
-    ovms::OVInferRequestsQueue& inferRequestsQueue_;
+    class CurrentRequestsMetricGuard {
+        ModelMetricReporter& reporter;
+
+    public:
+        CurrentRequestsMetricGuard(ModelMetricReporter& reporter);
+        ~CurrentRequestsMetricGuard();
+    };
+
+    CurrentRequestsMetricGuard currentRequestsMetricGuard;
+    OVInferRequestsQueue& inferRequestsQueue_;
     const int id_;
     ov::InferRequest& inferRequest;
     ModelMetricReporter& reporter;
