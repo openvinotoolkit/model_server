@@ -23,6 +23,7 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
+#include "logging.hpp"
 #include "rapidjson/document.h"
 #include "schema.hpp"
 #include "stringutils.hpp"
@@ -60,7 +61,7 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
     if (v.HasMember("metrics_list")) {
         status = parseMetricsArray(v["metrics_list"]);
     } else {
-        setAllMetricsTo(metricsEnabled);
+        setDefaultMetricsTo(metricsEnabled);
     }
 
     return status;
@@ -69,155 +70,44 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
 Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     for (auto& sh : v.GetArray()) {
         std::string metric = std::string(sh.GetString());
-        if (metric == "ovms_requests_success_grpc_predict") {
-            requestSuccessGrpcPredict = true;
-        }
-        if (metric == "ovms_requests_success_grpc_getmodelmetadata") {
-            requestSuccessGrpcGetModelMetadata = true;
-        }
-        if (metric == "ovms_requests_success_grpc_getmodelstatus") {
-            requestSuccessGrpcGetModelStatus = true;
-        }
-        if (metric == "ovms_requests_success_rest_predict") {
-            requestSuccessRestPredict = true;
-        }
-        if (metric == "ovms_requests_success_rest_get_modelmetadata") {
-            requestSuccessRestGetModelMetadata = true;
-        }
-        if (metric == "ovms_requests_success_rest_get_modelstatus") {
-            requestSuccessRestGetModelStatus = true;
-        }
-        if (metric == "ovms_requests_fail_grpc_predict") {
-            requestFailGrpcPredict = true;
-        }
-        if (metric == "ovms_requests_fail_grpc_get_modelmetadata") {
-            requestFailGrpcGetModelMetadata = true;
-        }
-        if (metric == "ovms_requests_fail_grpc_get_modelstatus") {
-            requestFailGrpcGetModelStatus = true;
-        }
-        if (metric == "ovms_requests_fail_rest_predict") {
-            requestFailRestPredict = true;
-        }
-        if (metric == "ovms_requests_fail_rest_get_modelmetadata") {
-            requestFailRestGetModelMetadata = true;
-        }
-        if (metric == "ovms_requests_fail_rest_get_modelstatus") {
-            requestFailRestGetModelStatus = true;
-        }
-        if (metric == "ovms_requests_success_grpc_modelinfer") {
-            requestSuccessGrpcModelInfer = true;
-        }
-        // KFS
-        if (metric == "ovms_requests_success_grpc_modelmetadata") {
-            requestSuccessGrpcModelMetadata = true;
-        }
-        if (metric == "ovms_requests_success_grpc_modelready") {
-            requestSuccessGrpcModelReady = true;
-        }
-        if (metric == "ovms_requests_success_rest_modelinfer") {
-            requestSuccessRestModelInfer = true;
-        }
-        if (metric == "ovms_requests_success_rest_modelmetadata") {
-            requestSuccessRestModelMetadata = true;
-        }
-        if (metric == "ovms_requests_success_rest_modelready") {
-            requestSuccessRestModelReady = true;
-        }
-        if (metric == "ovms_requests_fail_grpc_modelinfer") {
-            requestFailGrpcModelInfer = true;
-        }
-        if (metric == "ovms_requests_fail_grpc_model_metadata") {
-            requestFailGrpcModelMetadata = true;
-        }
-        if (metric == "ovms_requests_fail_grpc_modelready") {
-            requestFailGrpcModelReady = true;
+        
+        size_t listSize = this->enabledFamiliesList.size();
+
+        for(const auto& [family, metrics] : this->defaultMetricFamilies)
+        {
+            if(metric == family)
+            {
+                this->enabledFamiliesList.insert(family);
+            }
         }
 
-        if (metric == "ovms_requests_fail_rest_modelinfer") {
-            requestFailRestModelInfer = true;
+        for(const auto& [family, metrics] : this->additionalMetricFamilies)
+        {
+            if(metric == family)
+            {
+                this->enabledFamiliesList.insert(family);
+            }
         }
-        if (metric == "ovms_requests_fail_rest_modelmetadata") {
-            requestFailRestModelMetadata = true;
-        }
-        if (metric == "ovms_requests_fail_rest_modelready") {
-            requestFailRestModelReady = true;
-        }
-        if (metric == "ovms_request_time_us_grpc") {
-            requestTimeGrpc = true;
-        }
-        if (metric == "ovms_request_time_us_rest") {
-            requestTimeRest = true;
-        }
-        if (metric == "ovms_inference_time_us") {
-            inferenceTime = true;
-        }
-        if (metric == "ovms_wait_for_infer_req_time_us") {
-            waitForInferReqTime = true;
-        }
-        if (metric == "ovms_streams") {
-            streams = true;
-        }
-        if (metric == "ovms_infer_req_queue_size") {
-            inferReqQueueSize = true;
-        }
-        if (metric == "ovms_infer_req_active") {
-            inferReqActive = true;
-        }
-        if (metric == "ovms_current_requests") {
-            currentRequests = true;
+
+        if (listSize == this->enabledFamiliesList.size())
+        {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Metrics family name not supported: {}", metric);
+            return StatusCode::CONFIG_FILE_INVALID;
         }
     }
 
     return StatusCode::OK;
 }
 
-void MetricConfig::setAllMetricsTo(bool enabled) {
-    requestSuccessGrpcPredict = enabled;
-    requestSuccessGrpcGetModelMetadata = enabled;
-    requestSuccessGrpcGetModelStatus = enabled;
-
-    requestSuccessRestPredict = enabled;
-    requestSuccessRestGetModelMetadata = enabled;
-    requestSuccessRestGetModelStatus = enabled;
-
-    requestFailGrpcPredict = enabled;
-    requestFailGrpcGetModelMetadata = enabled;
-    requestFailGrpcGetModelStatus = enabled;
-
-    requestFailRestPredict = enabled;
-    requestFailRestGetModelMetadata = enabled;
-    requestFailRestGetModelStatus = enabled;
-
-    // KFS
-    requestSuccessGrpcModelInfer = enabled;
-    requestSuccessGrpcModelMetadata = enabled;
-    requestSuccessGrpcModelReady = enabled;
-
-    requestSuccessRestModelInfer = enabled;
-    requestSuccessRestModelMetadata = enabled;
-    requestSuccessRestModelReady = enabled;
-
-    requestFailGrpcModelInfer = enabled;
-    requestFailGrpcModelMetadata = enabled;
-    requestFailGrpcModelReady = enabled;
-
-    requestFailRestModelInfer = enabled;
-    requestFailRestModelMetadata = enabled;
-    requestFailRestModelReady = enabled;
-
-    requestTimeGrpc = enabled;
-    requestTimeRest = enabled;
-
-    inferenceTime = enabled;
-    waitForInferReqTime = enabled;
-
-    streams = enabled;
-
-    inferReqQueueSize = enabled;
-    inferReqActive = enabled;
-
-    currentRequests = enabled;
+void MetricConfig::setDefaultMetricsTo(bool enabled) {
+    this->enabledFamiliesList.clear();
+    if (enabled)
+    {
+        for(const auto& [family, metrics] : this->defaultMetricFamilies)
+        {
+                this->enabledFamiliesList.insert(family);
+        }
+    }
 }
 
 Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList) {
