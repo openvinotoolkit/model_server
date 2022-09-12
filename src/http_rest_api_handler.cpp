@@ -643,9 +643,6 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             } else {
                 requestComponents.type = GetModelStatus;
             }
-            if (std::regex_match(request_path, sm, metricsRegex)) {
-                requestComponents.type = Metrics;
-            }
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, configStatusRegex)) {
@@ -654,6 +651,10 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         }
         if (std::regex_match(request_path, sm, predictionRegex))
             return StatusCode::REST_UNSUPPORTED_METHOD;
+        if (std::regex_match(request_path, sm, metricsRegex)) {
+            requestComponents.type = Metrics;
+            return StatusCode::OK;
+        }
     }
 
     auto hash = [](const std::pair<std::string, std::string>& p) {
