@@ -30,6 +30,21 @@ public:
     bool metricsEnabled;
     std::string endpointsPath;
 
+    std::unordered_map<std::string, std::unordered_set<std::string>> additionalMetricFamilies = {
+        "ovms_streams" : {},
+        "ovms_infer_req_queue_size" : {},
+        "ovms_infer_req_active" : {},
+        "ovms_current_requests" : {}
+    };
+
+    std::unordered_map<std::string, std::unordered_set<std::string>> defaultMetricFamilies = {
+        "ovms_requests_success" : {"requestSuccessGrpcPredict"},
+        "ovms_requests_fail" : {" requestFailGrpcPredict "},
+        "ovms_request_time_us" : {},
+        "ovms_inference_time_us" : {},
+        "ovms_wait_for_infer_req_time_us" : {}
+    };
+
     // Request Success/Fail
     // TFS
     bool requestSuccessGrpcPredict;
