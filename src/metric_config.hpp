@@ -34,42 +34,18 @@ public:
 
     std::unordered_set<std::string> enabledFamiliesList;
 
-    std::unordered_map<std::string, std::unordered_set<std::string>> additionalMetricFamilies = {
-        {"ovms_streams", {"ovms_streams"}},
-        {"ovms_infer_req_queue_size", {"ovms_infer_req_queue_size"}},
-        {"ovms_infer_req_active", {"ovms_infer_req_active"}},
-        {"ovms_current_requests", {"ovms_current_requests"}}};
+    std::unordered_set<std::string> additionalMetricFamilies = {
+        {"ovms_streams"},
+        {"ovms_infer_req_queue_size"},
+        {"ovms_infer_req_active"},
+        {"ovms_current_requests"}};
 
-    std::unordered_map<std::string, std::unordered_set<std::string>> defaultMetricFamilies = {
-        {"ovms_requests_success",
-            {"ovms_requests_success_grpc_predict",
-                "ovms_requests_success_grpc_getmodelmetadata",
-                "ovms_requests_success_grpc_getmodelstatus",
-                "ovms_requests_success_grpc_modelinfer",
-                "ovms_requests_success_grpc_modelmetadata",
-                "ovms_requests_success_grpc_modelready",
-                "ovms_requests_success_rest_modelinfer",
-                "ovms_requests_success_rest_predict",
-                "ovms_requests_success_rest_modelmetadata",
-                "ovms_requests_success_rest_modelstatus",
-                "ovms_requests_success_rest_modelmetadata",
-                "ovms_requests_success_rest_modelready"}},
-        {"ovms_requests_fail",
-            {"ovms_requests_fail_grpc_predict",
-                "ovms_requests_fail_grpc_getmodelmetadata",
-                "ovms_requests_fail_grpc_getmodelstatus",
-                "ovms_requests_fail_grpc_modelinfer",
-                "ovms_requests_fail_grpc_modelmetadata",
-                "ovms_requests_fail_grpc_modelready",
-                "ovms_requests_fail_rest_modelinfer",
-                "ovms_requests_fail_rest_predict",
-                "ovms_requests_fail_rest_modelmetadata",
-                "ovms_requests_fail_rest_modelstatus",
-                "ovms_requests_fail_rest_modelmetadata",
-                "ovms_requests_fail_rest_modelready"}},
-        {"ovms_request_time_us", {"ovms_request_time_us_grpc", "ovms_request_time_us_rest"}},
-        {"ovms_inference_time_us", {"ovms_inference_time_us"}},
-        {"ovms_wait_for_infer_req_time_us", {"ovms_wait_for_infer_req_time_us"}}};
+    std::unordered_set<std::string> defaultMetricFamilies = {
+        {"ovms_requests_success"},
+        {"ovms_requests_fail"},
+        {"ovms_request_time_us"},
+        {"ovms_inference_time_us"},
+        {"ovms_wait_for_infer_req_time_us"}};
 
     Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);

@@ -73,13 +73,13 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
 
         const size_t listSize = this->enabledFamiliesList.size();
 
-        for (const auto& [family, metrics] : this->defaultMetricFamilies) {
+        for (const auto& family : this->defaultMetricFamilies) {
             if (metric == family) {
                 this->enabledFamiliesList.insert(family);
             }
         }
 
-        for (const auto& [family, metrics] : this->additionalMetricFamilies) {
+        for (const auto& family : this->additionalMetricFamilies) {
             if (metric == family) {
                 this->enabledFamiliesList.insert(family);
             }
@@ -101,7 +101,7 @@ bool MetricConfig::isFamilyEnabled(const std::string& family) const {
 void MetricConfig::setDefaultMetricsTo(bool enabled) {
     this->enabledFamiliesList.clear();
     if (enabled) {
-        for (const auto& [family, metrics] : this->defaultMetricFamilies) {
+        for (const auto& family : this->defaultMetricFamilies) {
             this->enabledFamiliesList.insert(family);
         }
     }
