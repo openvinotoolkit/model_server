@@ -32,9 +32,7 @@ public:
     bool metricsEnabled;
     std::string endpointsPath;
 
-    Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);
-    bool validateEndpointPath(const std::string& endpoint);
     bool isFamilyEnabled(const std::string& family) const;
 
     void setDefaultMetricsTo(bool enabled);
@@ -58,6 +56,9 @@ protected:
     std::unordered_set<std::string> enabledFamiliesList;
 
 private:
+    Status parseMetricsArray(const rapidjson::Value& v);
+    bool validateEndpointPath(const std::string& endpoint);
+
     std::unordered_set<std::string> additionalMetricFamilies = {
         {"ovms_infer_req_queue_size"},
         {"ovms_infer_req_active"}};
