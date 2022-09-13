@@ -17,6 +17,7 @@
    ovms_docs_shape_batch_layout
    ovms_docs_online_config_changes
    ovms_docs_security
+   ovms_docs_monitoring
    
 
 
