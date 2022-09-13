@@ -10,7 +10,11 @@ This document describes enabling and usage of different metrics in OVMS server t
 
 > **NOTE**: currently, Metrics feature is released as a preview feature.
 
-Internal metrics would remove dependencies on the 3rd part components and allow tracking performance without extra communication hop. It could also expose metrics which are not related to the traffic. (for example number of Idle execution streams, which models were used, model load time etc, which device was used) 
+Internal metrics remove dependencies on the 3rd party components and allow tracking performance without extra communication hop.
+
+It also exposes metrics which are not related to the traffic. 
+
+For example number of Idle execution streams, which models were used, model load time etc, which device was used.
 
 There are four types of metrics: 
 
@@ -26,7 +30,8 @@ For more information please visit [Prometheus metrics detailed description](http
 
 ## Enable metrics
 
-By default the metrics feature is disabled during standard server usage.
+By default, the metrics feature is disabled during standard server usage.
+
 To enable default metrics set you need to specify the metrics_enabled flag or json setting:
 
 CLI
@@ -72,6 +77,7 @@ CONFIG JSON
 ## Restrict only certain metrics via config.json and CLI
 
 You can enable from one up to all the metrics available at once.
+
 To enable specific set of metrics you need to specify the metrics_list flag or json setting:
 
 CLI
@@ -119,7 +125,8 @@ CONFIG JSON
 ## Available metrics families
 
 Metrics from default list are enabled with the metrics_enabled flag or json configuration.
-However you can enable also additional metrics by by listing all the metrics you want to enable in the metric_list flag or json configuration.
+
+However, you can enable also additional metrics by listing all the metrics you want to enable in the metric_list flag or json configuration.
 
 DEFAULT
 
@@ -143,7 +150,8 @@ ADDITIONAL
 ## List of available metrics per interface
 
 Metrics from default list are enabled with the metrics_enabled flag or json configuration.
-However you can enable also additional metrics by by listing all the metrics you want to enable in the metric_list flag or json configuration.
+
+However, you can enable also additional metrics by listing all the metrics you want to enable in the metric_list flag or json configuration.
 
 ovms_requests_success
 
@@ -189,6 +197,7 @@ ovms_request_time_us
 ## Changing metric endpoint port via CLI
 
 Currently the metrics endpoint is located on the '''rest_port/metrics''' endpoint.
+
 Changing the default setting is not part of the preview feature.
 
 ## Example response from metrics endpoint
@@ -201,8 +210,12 @@ TODO
 
 ## Alternative for internal OVMS metrics: 
 
-Using 3rd party components acting as proxy between the clients and the server. Examples are HAproxy, IstIo mesh, openshift mesh, Kubernetes ingress controller. 
+Using 3rd party components acting as proxy between the clients and the server. 
+
+Examples are HAproxy, IstIo mesh, openshift mesh, Kubernetes ingress controller. 
 
 ## Hardware specific metrics
 
-HW specific metrics are considered out of scope for OVMS. They are typically handled by device specific metrics exporter. They require specific knowledge about the HW drivers and monitoring API and often require privileged security mode which is not needed just for the inference execution.
+HW specific metrics are considered out of scope for OVMS. They are typically handled by device specific metrics exporter.
+
+They require specific knowledge about the HW drivers and monitoring API and often require privileged security mode which is not needed just for the inference execution.
