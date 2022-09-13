@@ -458,7 +458,6 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
     auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
     if (!status.ok()) {
-        // modelInstance->getMetricReporter().requestFailRestPredict->increment();
         return status;
     }
     grpc_request = requestParser.getProto();
