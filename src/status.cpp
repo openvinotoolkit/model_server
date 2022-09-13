@@ -254,6 +254,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
 
     // Metrics
     {StatusCode::INVALID_METRICS_ENDPOINT, "Metrics config endpoint path is invalid"},
+    {StatusCode::INVALID_METRICS_FAMILY_NAME, "Invalid name in metrics_list"},
 };
 
 const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
