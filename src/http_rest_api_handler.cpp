@@ -452,7 +452,7 @@ Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const st
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, std::optional<int>& inferenceHeaderContentLength) {
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
@@ -478,7 +478,6 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
     ::inference::ModelInferRequest grpc_request;
-    Timer timer;
     timer.start("prepareGrpcRequest");
     using std::chrono::microseconds;
     auto status = prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, request_components.inferenceHeaderContentLength);
