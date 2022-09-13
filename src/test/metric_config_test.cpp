@@ -533,5 +533,3 @@ TEST_F(MetricsCli, MetricsEnabledCliRestPortDefault) {
 
     ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
 }
-
-
