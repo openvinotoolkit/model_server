@@ -29,6 +29,14 @@ using namespace ovms;
 using testing::_;
 using testing::Return;
 
+class PublicMetricConfig : public MetricConfig {
+public:
+    friend class MetricConfig;
+    const std::unordered_set<std::string>& getEnabledFamiliesList() const {
+        return this->enabledFamiliesList;
+    }
+};
+
 class MetricsConfigTest : public TestWithTempDir {
 public:
     std::string configFilePath;
@@ -76,10 +84,10 @@ TEST_F(MetricsConfigTest, DefaultValues) {
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
 
-    const auto& metricConfig = manager.getMetricConfig();
+    auto& metricConfig = static_cast<const PublicMetricConfig&>(manager.getMetricConfig());
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_EQ(metricConfig.enabledFamiliesList.size(), 0);
+    ASSERT_EQ(metricConfig.getEnabledFamiliesList().size(), 0);
 }
 
 static const char* modelMetricsChangedConfig = R"(
@@ -101,7 +109,7 @@ static const char* modelMetricsChangedConfig = R"(
             "metrics":
             {
                 "enable" : true,
-                "metrics_list": ["ovms_requests_success", "ovms_current_requests"]
+                "metrics_list": ["ovms_requests_success", "ovms_infer_req_queue_size"]
             }
         }
 })";
@@ -120,9 +128,9 @@ TEST_F(MetricsConfigTest, ChangedValues) {
     ASSERT_EQ(metricConfig.metricsEnabled, true);
 
     // ASSERT_EQ(metricConfig.endpointsPath, "/newmetrics");
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_requests_success") != metricConfig.enabledFamiliesList.end());
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_current_requests") != metricConfig.enabledFamiliesList.end());
-    ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_requests_fail"), metricConfig.enabledFamiliesList.end());
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_fail"), false);
 }
 
 static const char* modelMetricsBadListConfig = R"(
@@ -144,7 +152,7 @@ static const char* modelMetricsBadListConfig = R"(
             "metrics":
             {
                 "enable" : true,
-                "metrics_list": ["ovms_request_success", "ovms_current_requests"]
+                "metrics_list": ["ovms_request_success", "ovms_infer_req_queue_size"]
             }
         }
 })";
@@ -181,9 +189,9 @@ TEST_F(MetricsConfigTest, InitOnce) {
     ASSERT_EQ(metricConfig2.metricsEnabled, true);
 
     // ASSERT_EQ(metricConfig2.endpointsPath, "/newmetrics");
-    ASSERT_TRUE(metricConfig2.enabledFamiliesList.find("ovms_requests_success") != metricConfig2.enabledFamiliesList.end());
-    ASSERT_TRUE(metricConfig2.enabledFamiliesList.find("ovms_current_requests") != metricConfig2.enabledFamiliesList.end());
-    ASSERT_EQ(metricConfig2.enabledFamiliesList.find("ovms_requests_fail"), metricConfig2.enabledFamiliesList.end());
+    ASSERT_TRUE(metricConfig2.isFamilyEnabled("ovms_requests_success"));
+    ASSERT_TRUE(metricConfig2.isFamilyEnabled("ovms_infer_req_queue_size"));
+    ASSERT_EQ(metricConfig2.isFamilyEnabled("ovms_requests_fail"), false);
 }
 
 static const char* modelMetricsAllEnabledConfig = R"(
@@ -221,10 +229,10 @@ TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
     const auto& metricConfig = manager.getMetricConfig();
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_requests_success") != metricConfig.enabledFamiliesList.end());
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
     // Non default metric
-    ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_current_requests"), metricConfig.enabledFamiliesList.end());
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_requests_fail") != metricConfig.enabledFamiliesList.end());
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
 }
 
 static const char* modelMetricsBadEndpoint = R"(
@@ -431,50 +439,50 @@ TEST_F(MetricsCli, DefaultCliReading) {
     MetricConfig metricConfig;
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_requests_success"), metricConfig.enabledFamiliesList.end());
-    ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_current_requests"), metricConfig.enabledFamiliesList.end());
-    ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_requests_fail"), metricConfig.enabledFamiliesList.end());
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_success"), false);
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_fail"), false);
 
     auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_requests_fail");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_requests_success") != metricConfig.enabledFamiliesList.end());
-    ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_current_requests"), metricConfig.enabledFamiliesList.end());
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_requests_fail") != metricConfig.enabledFamiliesList.end());
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
 }
 
 TEST_F(MetricsCli, WorkingCliReading) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_current_requests");
+    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_infer_req_queue_size");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_requests_success") != metricConfig.enabledFamiliesList.end());
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_current_requests") != metricConfig.enabledFamiliesList.end());
-    ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_requests_fail"), metricConfig.enabledFamiliesList.end());
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_fail"), false);
 }
 
 TEST_F(MetricsCli, DefaultEmptyList) {
-    MetricConfig metricConfig;
+    PublicMetricConfig metricConfig;
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_EQ(metricConfig.enabledFamiliesList.size(), 0);
+    ASSERT_EQ(metricConfig.getEnabledFamiliesList().size(), 0);
 
     auto status = metricConfig.loadFromCLIString(true, "");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_requests_success") != metricConfig.enabledFamiliesList.end());
-    ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_current_requests"), metricConfig.enabledFamiliesList.end());
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_requests_fail") != metricConfig.enabledFamiliesList.end());
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
 }
 
 TEST_F(MetricsCli, BadCliReading) {
-    MetricConfig metricConfig;
+    PublicMetricConfig metricConfig;
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
 
@@ -483,17 +491,17 @@ TEST_F(MetricsCli, BadCliReading) {
     ASSERT_EQ(status, StatusCode::INVALID_METRICS_FAMILY_NAME);
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_EQ(metricConfig.enabledFamiliesList.size(), 0);
+    ASSERT_EQ(metricConfig.getEnabledFamiliesList().size(), 0);
 }
 
 TEST_F(MetricsCli, DisabledMetrics) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(false, "ovms_current_requests, ovms_requests_fail");
+    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_EQ(metricConfig.enabledFamiliesList.find("ovms_requests_success"), metricConfig.enabledFamiliesList.end());
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_current_requests") != metricConfig.enabledFamiliesList.end());
-    ASSERT_TRUE(metricConfig.enabledFamiliesList.find("ovms_requests_fail") != metricConfig.enabledFamiliesList.end());
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_success"), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
 }

@@ -32,21 +32,6 @@ public:
     bool metricsEnabled;
     std::string endpointsPath;
 
-    std::unordered_set<std::string> enabledFamiliesList;
-
-    std::unordered_set<std::string> additionalMetricFamilies = {
-        {"ovms_streams"},
-        {"ovms_infer_req_queue_size"},
-        {"ovms_infer_req_active"},
-        {"ovms_current_requests"}};
-
-    std::unordered_set<std::string> defaultMetricFamilies = {
-        {"ovms_requests_success"},
-        {"ovms_requests_fail"},
-        {"ovms_request_time_us"},
-        {"ovms_inference_time_us"},
-        {"ovms_wait_for_infer_req_time_us"}};
-
     Status parseMetricsArray(const rapidjson::Value& v);
     Status parseMetricsConfig(const rapidjson::Value& v);
     bool validateEndpointPath(const std::string& endpoint);
@@ -68,5 +53,22 @@ public:
 
         setDefaultMetricsTo(metricsEnabled);
     }
+
+protected:
+    std::unordered_set<std::string> enabledFamiliesList;
+
+private:
+    std::unordered_set<std::string> additionalMetricFamilies = {
+        {"ovms_infer_req_queue_size"},
+        {"ovms_infer_req_active"}};
+
+    std::unordered_set<std::string> defaultMetricFamilies = {
+        {"ovms_current_requests"},
+        {"ovms_requests_success"},
+        {"ovms_requests_fail"},
+        {"ovms_request_time_us"},
+        {"ovms_streams"},
+        {"ovms_inference_time_us"},
+        {"ovms_wait_for_infer_req_time_us"}};
 };
 }  // namespace ovms
