@@ -525,160 +525,43 @@ Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::inference::
     return StatusCode::OK;
 }
 
+#define HANDLE_VALUE(CONTENTS,TYPE_GETTER) \
+        for (auto& value : node.GetArray()) { \
+            if (value.IsArray()) { \
+                for (auto& v : node.GetArray()) { \
+                    auto status = parseData(v, input); \
+                    if (!status.ok()) { \
+                        return status; \
+                    } \
+                } \
+            } \
+            if (!value.IsNumber()) { \
+                return StatusCode::REST_COULD_NOT_PARSE_INPUT; \
+            } \
+            input->mutable_contents()->CONTENTS()->Add(value.TYPE_GETTER()); \
+        }
+
 Status KFSRestParser::parseData(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input) {
     if (input->datatype() == "FP32") {
-        if (node.GetArray().Size() == 0) {
-            // need to be validated with binary inputs
-        }
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_fp32_contents()->Add(value.GetFloat());
-        }
+        HANDLE_VALUE(mutable_fp32_contents,GetFloat)
     } else if (input->datatype() == "INT64") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_int64_contents()->Add(value.GetInt64());
-        }
+        HANDLE_VALUE(mutable_int64_contents,GetInt64)
     } else if (input->datatype() == "INT32") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_int_contents()->Add(value.GetInt());
-        }
+        HANDLE_VALUE(mutable_int_contents,GetInt)
     } else if (input->datatype() == "INT16") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_int_contents()->Add(value.GetInt());
-        }
+        HANDLE_VALUE(mutable_int_contents,GetInt)
     } else if (input->datatype() == "INT8") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_int_contents()->Add(value.GetInt());
-        }
+        HANDLE_VALUE(mutable_int_contents,GetInt)
     } else if (input->datatype() == "UINT64") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_uint64_contents()->Add(value.GetUint64());
-        }
+        HANDLE_VALUE(mutable_uint64_contents,GetUint64)
     } else if (input->datatype() == "UINT32") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_uint_contents()->Add(value.GetUint());
-        }
+        HANDLE_VALUE(mutable_uint_contents,GetUint)
     } else if (input->datatype() == "UINT16") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_uint_contents()->Add(value.GetUint());
-        }
+        HANDLE_VALUE(mutable_uint_contents,GetUint)
     } else if (input->datatype() == "UINT8") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_uint_contents()->Add(value.GetUint());
-        }
+        HANDLE_VALUE(mutable_uint_contents,GetUint)
     } else if (input->datatype() == "FP64") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-            }
-            if (!value.IsNumber()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_fp64_contents()->Add(value.GetFloat());
-        }
+        HANDLE_VALUE(mutable_fp64_contents,GetFloat)
     } else if (input->datatype() == "BYTES") {
         // Binary inputs
     } else {

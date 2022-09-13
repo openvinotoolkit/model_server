@@ -402,7 +402,7 @@ Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputT
     return StatusCode::OK;
 }
 
-Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::string request_body, size_t endOfJson) {
+Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::string request_body, size_t endOfJson) {
     const char* binary_inputs = &(request_body[endOfJson]);
     size_t binary_inputs_size = request_body.length() - endOfJson;
 
@@ -452,7 +452,7 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, std::optional<int> inferenceHeaderContentLength) {
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, std::optional<int>& inferenceHeaderContentLength) {
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
@@ -462,7 +462,7 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
         return status;
     }
     grpc_request = requestParser.getProto();
-    status = addBinaryInputs(grpc_request, request_body, endOfJson);
+    status = handleBinaryInputs(grpc_request, request_body, endOfJson);
     if (!status.ok()) {
         return status;
     }
@@ -609,7 +609,7 @@ Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponent
     for (auto header : headers) {
         if (header.first == "Inference-Header-Content-Length") {
             requestComponents.inferenceHeaderContentLength = stoi32(header.second);
-            if (!requestComponents.inferenceHeaderContentLength.has_value()) {
+            if (!requestComponents.inferenceHeaderContentLength.has_value() || requestComponents.inferenceHeaderContentLength.value() < 0) {
                 return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID;
             }
         }
