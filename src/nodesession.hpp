@@ -26,7 +26,14 @@ namespace ovms {
 struct NodeInputHandler;
 struct NodeOutputHandler;
 class TensorWithSource;
+template <unsigned int N>
 class Timer;
+
+enum : int {
+    GET_INFER_REQUEST,
+    EXECUTE,
+    TIMER_END
+};
 
 class NodeSession {
     NodeSessionMetadata metadata;
@@ -34,7 +41,7 @@ class NodeSession {
     const std::string& nodeName;
 
 protected:
-    std::unique_ptr<Timer> timer;
+    std::unique_ptr<Timer<TIMER_END>> timer;
     std::unique_ptr<NodeInputHandler> inputHandler;
     std::unique_ptr<NodeOutputHandler> outputHandler;
 
@@ -49,7 +56,7 @@ public:
     virtual void release() {}
     virtual bool tryDisarm(uint microseconds) { return true; }
     Status notifyFinishedDependency();
-    Timer& getTimer() const;
+    Timer<TIMER_END>& getTimer() const;
 };
 
 class ReleaseSessionGuard {

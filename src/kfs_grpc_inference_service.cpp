@@ -33,6 +33,13 @@
 #include "timer.hpp"
 #include "version.hpp"
 
+namespace {
+enum : int {
+    TOTAL,
+    TIMER_END
+};
+}
+
 namespace ovms {
 
 Status KFSInferenceServiceImpl::getModelInstance(const ::inference::ModelInferRequest* request,
@@ -200,21 +207,21 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
     OVMS_PROFILE_FUNCTION();
-    Timer timer;
-    timer.start("total");
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
     SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
         request->model_name(),
         request->model_version());
     ServableMetricReporter* reporter = nullptr;
     auto status = this->ModelInferImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer}, reporter);
-    timer.stop("total");
+    timer.stop(TOTAL);
     if (!status.ok()) {
         return status.grpc();
     }
     if (!reporter) {
         return Status(StatusCode::INTERNAL_ERROR).grpc();  // should not happen
     }
-    double requestTotal = timer.elapsed<std::chrono::microseconds>("total");
+    double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total gRPC request processing time: {} ms", requestTotal / 1000);
     OBSERVE_IF_ENABLED(reporter->requestTimeGrpc, requestTotal);
     return status.grpc();

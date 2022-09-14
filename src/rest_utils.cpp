@@ -38,6 +38,14 @@ using tensorflow::serving::JsonPredictRequestFormat;
 using tensorflow::serving::MakeJsonFromTensors;
 using tensorflow::serving::PredictResponse;
 
+namespace {
+enum : int {
+    CONVERT,
+    MAKE_JSON_FROM_TENSORS,
+    TIMER_END
+};
+}
+
 namespace ovms {
 
 Status checkValField(const size_t& fieldSize, const size_t& expectedElementsNumber) {
@@ -56,10 +64,10 @@ Status makeJsonFromPredictResponse(
         return StatusCode::REST_PREDICT_UNKNOWN_ORDER;
     }
 
-    Timer timer;
+    Timer<TIMER_END> timer;
     using std::chrono::microseconds;
 
-    timer.start("convert");
+    timer.start(CONVERT);
 
     for (auto& kv : *response_proto.mutable_outputs()) {
         auto& tensor = kv.second;
@@ -173,17 +181,17 @@ Status makeJsonFromPredictResponse(
         }
     }
 
-    timer.stop("convert");
-    timer.start("MakeJsonFromTensors");
+    timer.stop(CONVERT);
+    timer.start(MAKE_JSON_FROM_TENSORS);
 
     const auto& tf_status = MakeJsonFromTensors(
         response_proto.outputs(),
         order == Order::ROW ? JsonPredictRequestFormat::kRow : JsonPredictRequestFormat::kColumnar,
         response_json);
 
-    timer.stop("MakeJsonFromTensors");
-    SPDLOG_DEBUG("tensor_content to *_val container conversion: {:.3f} ms", timer.elapsed<microseconds>("convert") / 1000);
-    SPDLOG_DEBUG("MakeJsonFromTensors call: {:.3f} ms", timer.elapsed<microseconds>("MakeJsonFromTensors") / 1000);
+    timer.stop(MAKE_JSON_FROM_TENSORS);
+    SPDLOG_DEBUG("tensor_content to *_val container conversion: {:.3f} ms", timer.elapsed<microseconds>(CONVERT) / 1000);
+    SPDLOG_DEBUG("MakeJsonFromTensors call: {:.3f} ms", timer.elapsed<microseconds>(MAKE_JSON_FROM_TENSORS) / 1000);
 
     if (!tf_status.ok()) {
         SPDLOG_ERROR("Creating json from tensors failed: {}", tf_status.error_message());
@@ -430,9 +438,9 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
 Status makeJsonFromPredictResponse(
     const ::inference::ModelInferResponse& response_proto,
     std::string* response_json) {
-    Timer timer;
+    Timer<TIMER_END> timer;
     using std::chrono::microseconds;
-    timer.start("convert");
+    timer.start(CONVERT);
 
     rapidjson::StringBuffer buffer;
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
@@ -467,8 +475,8 @@ Status makeJsonFromPredictResponse(
     writer.EndObject();
     response_json->assign(buffer.GetString());
 
-    timer.stop("convert");
-    SPDLOG_DEBUG("GRPC to HTTP response conversion: {:.3f} ms", timer.elapsed<microseconds>("convert") / 1000);
+    timer.stop(CONVERT);
+    SPDLOG_DEBUG("GRPC to HTTP response conversion: {:.3f} ms", timer.elapsed<microseconds>(CONVERT) / 1000);
 
     return StatusCode::OK;
 }

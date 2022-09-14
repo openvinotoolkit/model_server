@@ -51,6 +51,13 @@ using rapidjson::Document;
 using rapidjson::SizeType;
 using rapidjson::Value;
 
+namespace {
+enum : int {
+    TOTAL,
+    TIMER_END
+};
+}
+
 namespace ovms {
 
 const std::string HttpRestApiHandler::predictionRegexExp =
@@ -475,8 +482,8 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
 }
 
 Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    Timer timer;
-    timer.start("total");
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
     ServableMetricReporter* reporter = nullptr;
     std::string modelName(request_components.model_name);
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
@@ -504,8 +511,8 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
         return status;
     }
     response = output;
-    timer.stop("total");
-    double totalTime = timer.elapsed<std::chrono::microseconds>("total");
+    timer.stop(TOTAL);
+    double totalTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total REST request processing time: {} ms", totalTime / 1000);
     OBSERVE_IF_ENABLED(reporter->requestTimeRest, totalTime);
     return StatusCode::OK;
@@ -772,8 +779,8 @@ Status HttpRestApiHandler::processPredictRequest(
     std::string* response) {
     // model_version_label currently is not in use
 
-    Timer timer;
-    timer.start("total");
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
     using std::chrono::microseconds;
 
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}",
@@ -804,8 +811,8 @@ Status HttpRestApiHandler::processPredictRequest(
     if (!status.ok())
         return status;
 
-    timer.stop("total");
-    double requestTime = timer.elapsed<std::chrono::microseconds>("total");
+    timer.stop(TOTAL);
+    double requestTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
     OBSERVE_IF_ENABLED(reporterOut->requestTimeRest, requestTime);
     SPDLOG_DEBUG("Total REST request processing time: {} ms", requestTime / 1000);
     return StatusCode::OK;
@@ -834,8 +841,8 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         return status;
     }
     reporterOut = &modelInstance->getMetricReporter();
-    Timer timer;
-    timer.start("parse");
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
     TFSRestParser requestParser(modelInstance->getInputsInfo());
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
@@ -843,8 +850,8 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         return status;
     }
     requestOrder = requestParser.getOrder();
-    timer.stop("parse");
-    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>("parse") / 1000);
+    timer.stop(TOTAL);
+    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>(TOTAL) / 1000);
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
@@ -879,8 +886,8 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     std::unique_ptr<Pipeline> pipelinePtr;
 
-    Timer timer;
-    timer.start("parse");
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
     ovms::tensor_map_t inputs;
     auto status = getPipelineInputs(modelName, inputs);
     if (!status.ok()) {
@@ -893,8 +900,8 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
         return status;
     }
     requestOrder = requestParser.getOrder();
-    timer.stop("parse");
-    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>("parse") / 1000);
+    timer.stop(TOTAL);
+    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>(TOTAL) / 1000);
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
