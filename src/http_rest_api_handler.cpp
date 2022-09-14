@@ -52,8 +52,9 @@ using rapidjson::SizeType;
 using rapidjson::Value;
 
 namespace {
-enum : int {
+enum : unsigned int {
     TOTAL,
+    PREPARE_GRPC_REQUEST,
     TIMER_END
 };
 }
@@ -489,15 +490,15 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
     ::inference::ModelInferRequest grpc_request;
-    timer.start("prepareGrpcRequest");
+    timer.start(PREPARE_GRPC_REQUEST);
     using std::chrono::microseconds;
     auto status = prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, request_components.inferenceHeaderContentLength);
     if (!status.ok()) {
         SPDLOG_DEBUG("REST to GRPC request conversion failed for model: {}", modelName);
         return status;
     }
-    timer.stop("prepareGrpcRequest");
-    SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>("prepareGrpcRequest") / 1000);
+    timer.stop(PREPARE_GRPC_REQUEST);
+    SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>(PREPARE_GRPC_REQUEST) / 1000);
     ::inference::ModelInferResponse grpc_response;
     const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer},
         reporter);

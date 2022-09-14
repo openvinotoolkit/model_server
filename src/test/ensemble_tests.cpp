@@ -734,7 +734,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
 TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     // Most basic configuration, just process single dummy model request
 
-    enum : int {
+    enum : unsigned int {
         PREPARE,
         EXECUTE,
         COMPARE,

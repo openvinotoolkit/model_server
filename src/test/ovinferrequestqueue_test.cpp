@@ -52,7 +52,7 @@ void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
     requestsQueue.returnStream(3);
 }
 
-enum : int {
+enum : unsigned int {
     QUEUE,
     TIMER_END
 };

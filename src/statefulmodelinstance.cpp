@@ -199,7 +199,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
-    enum : int {
+    enum : unsigned int {
         GET_INFER_REQUEST,
         PREPROCESS,
         DESERIALIZE,

@@ -48,7 +48,7 @@
 #include "timer.hpp"
 
 namespace {
-enum : int {
+enum : unsigned int {
     GET_INFER_REQUEST,
     DESERIALIZE,
     PREDICTION,
@@ -1137,7 +1137,7 @@ template const Status ModelInstance::validate(const tensorflow::serving::Predict
 Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     OVMS_PROFILE_FUNCTION();
     try {
-        enum : int {
+        enum : unsigned int {
             INFER,
             TIMER_END2
         };

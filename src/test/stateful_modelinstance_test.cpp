@@ -191,7 +191,7 @@ public:
             std::cout << "[WARNING] This method must be kept up to date with StatefulModelInstance::infer for tests to function properly." << std::endl;
             testWarningPrinted = true;
         }
-        enum : int {
+        enum : unsigned int {
             GET_INFER_REQUEST,
             PREPROCESS,
             DESERIALIZE,

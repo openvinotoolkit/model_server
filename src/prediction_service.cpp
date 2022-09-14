@@ -48,7 +48,7 @@ using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
 namespace {
-enum : int {
+enum : unsigned int {
     TOTAL,
     TIMER_END
 };

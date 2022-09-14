@@ -39,7 +39,7 @@ using tensorflow::serving::MakeJsonFromTensors;
 using tensorflow::serving::PredictResponse;
 
 namespace {
-enum : int {
+enum : unsigned int {
     CONVERT,
     MAKE_JSON_FROM_TENSORS,
     TIMER_END

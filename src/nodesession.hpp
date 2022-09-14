@@ -29,7 +29,7 @@ class TensorWithSource;
 template <unsigned int N>
 class Timer;
 
-enum : int {
+enum : unsigned int {
     GET_INFER_REQUEST,
     EXECUTE,
     TIMER_END

@@ -34,7 +34,7 @@
 #include "version.hpp"
 
 namespace {
-enum : int {
+enum : unsigned int {
     TOTAL,
     TIMER_END
 };
