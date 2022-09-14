@@ -435,7 +435,8 @@ TEST_F(ModelMetricReporterTest, MetricReporterConstructorTest) {
 
 class MetricsCli : public ::testing::Test {
 public:
-    uint64_t restPort = 100000;
+    // 1024-65536
+    uint64_t restPort = 10000;
 };
 
 TEST_F(MetricsCli, DefaultCliReading) {
