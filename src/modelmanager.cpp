@@ -209,7 +209,7 @@ Status ModelManager::startFromConfig() {
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
-        status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList(), config.restPort());
+        status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList());
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
 
         this->metricConfigLoadedOnce = true;
@@ -586,7 +586,7 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     } else {
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
-        firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics);
+        firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics, ovms::Config::instance().restPort());
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(firstErrorStatus);
     }
 

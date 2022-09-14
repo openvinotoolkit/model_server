@@ -17,6 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../config.hpp"
 #include "../metric_config.hpp"
 #include "../metric_registry.hpp"
 #include "../model_metric_reporter.hpp"
@@ -28,6 +29,9 @@ using namespace ovms;
 
 using testing::_;
 using testing::Return;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 
 class PublicMetricConfig : public MetricConfig {
 public:
@@ -52,9 +56,18 @@ public:
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
-        // Prepare manager
-        modelPath = directoryPath + "/dummy/";
-        configFilePath = directoryPath + "/ovms_config.json";
+        char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--rest_port", "8080"};
+        int arg_count = 9;
+        static bool parseOnce = [&arg_count, &n_argv](){
+            ovms::Config::instance().parse(arg_count, n_argv);
+            return true;
+        } ();
+
+        if (parseOnce) {
+            // Prepare manager
+            modelPath = directoryPath + "/dummy/";
+            configFilePath = directoryPath + "/ovms_config.json";
+        }
     }
 };
 
@@ -535,3 +548,5 @@ TEST_F(MetricsCli, MetricsEnabledCliRestPortDefault) {
 
     ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
 }
+
+#pragma GCC diagnostic pop
