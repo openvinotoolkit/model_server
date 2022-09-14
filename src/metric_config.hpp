@@ -36,7 +36,7 @@ public:
     bool isFamilyEnabled(const std::string& family) const;
 
     void setDefaultMetricsTo(bool enabled);
-    Status loadFromCLIString(bool isEnabled, const std::string& metricsList);
+    Status loadFromCLIString(bool isEnabled, const std::string& metricsList, uint64_t restPort = 0);
 
     MetricConfig() {
         metricsEnabled = false;

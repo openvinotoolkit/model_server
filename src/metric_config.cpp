@@ -107,7 +107,12 @@ void MetricConfig::setDefaultMetricsTo(bool enabled) {
     }
 }
 
-Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList) {
+Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList, uint64_t restPort) {
+    if (isEnabled && restPort == 0) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cli rest_port setting is missing, metrics are enabled on rest port.");
+        return StatusCode::CONFIG_FILE_INVALID;
+    }
+
     using namespace rapidjson;
     Document document;
     document.SetObject();
