@@ -223,7 +223,10 @@ class KFSRestParser : RestParser {
     ::inference::ModelInferRequest requestProto;
     Status parseId(rapidjson::Value& node);
     Status parseRequestParameters(rapidjson::Value& node);
-    Status parseInputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input);
+    Status parseInputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor& input);
+    Status parseOutputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferRequestedOutputTensor& input);
+    Status parseOutput(rapidjson::Value& node);
+    Status parseOutputs(rapidjson::Value& node);
     Status parseData(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input);
     Status parseInput(rapidjson::Value& node);
     Status parseInputs(rapidjson::Value& node);

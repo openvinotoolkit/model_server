@@ -473,53 +473,76 @@ Status KFSRestParser::parseId(rapidjson::Value& node) {
     return StatusCode::OK;
 }
 
+#define PARSE_PARAMETER(PROTO) \
+    if (!node.IsObject()) { \
+        return StatusCode::REST_COULD_NOT_PARSE_PARAMETERS; \
+    } \
+ \
+    for (auto& parameter : node.GetObject()) { \
+        if (!parameter.name.IsString()) { \
+            return StatusCode::REST_COULD_NOT_PARSE_PARAMETERS; \
+        } \
+ \
+        if (parameter.value.IsString()) { \
+            auto requestParameters = PROTO.mutable_parameters(); \
+            ((*requestParameters)[parameter.name.GetString()]).set_string_param(parameter.value.GetString()); \
+        } else if (parameter.value.IsBool()) { \
+            auto requestParameters = PROTO.mutable_parameters(); \
+            ((*requestParameters)[parameter.name.GetString()]).set_bool_param(parameter.value.GetBool()); \
+        } else if (parameter.value.IsInt()) { \
+            auto requestParameters = PROTO.mutable_parameters(); \
+            ((*requestParameters)[parameter.name.GetString()]).set_int64_param(parameter.value.GetInt()); \
+        } else { \
+            return StatusCode::REST_COULD_NOT_PARSE_PARAMETERS; \
+        } \
+    } \
+    return StatusCode::OK;
+
 Status KFSRestParser::parseRequestParameters(rapidjson::Value& node) {
+    PARSE_PARAMETER(requestProto)
+}
+
+Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor& input) {
+    PARSE_PARAMETER(input)
+}
+
+Status KFSRestParser::parseOutputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferRequestedOutputTensor& output) {
+    PARSE_PARAMETER(output)
+}
+
+Status KFSRestParser::parseOutput(rapidjson::Value& node) {
     if (!node.IsObject()) {
-        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        return StatusCode::REST_COULD_NOT_PARSE_OUTPUT;
     }
+    requestProto.mutable_outputs()->Clear();
+    auto output = requestProto.add_outputs();
+    auto nameItr = node.FindMember("name");
+    if ((nameItr == node.MemberEnd()) || !(nameItr->value.IsString())) {
+        return StatusCode::REST_COULD_NOT_PARSE_OUTPUT;
+    }
+    output->set_name(nameItr->value.GetString());
 
-    for (auto& parameter : node.GetObject()) {
-        if (!parameter.name.IsString()) {
-            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-        }
-
-        if (parameter.value.IsString()) {
-            auto requestParameters = requestProto.mutable_parameters();
-            ((*requestParameters)[parameter.name.GetString()]).set_string_param(parameter.value.GetString());
-        } else if (parameter.value.IsBool()) {
-            auto requestParameters = requestProto.mutable_parameters();
-            ((*requestParameters)[parameter.name.GetString()]).set_bool_param(parameter.value.GetBool());
-        } else if (parameter.value.IsInt()) {
-            auto requestParameters = requestProto.mutable_parameters();
-            ((*requestParameters)[parameter.name.GetString()]).set_int64_param(parameter.value.GetInt());
-        } else {
-            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+    auto parametersItr = node.FindMember("parameters");
+    if (parametersItr != node.MemberEnd()) {
+        auto status = parseOutputParameters(parametersItr->value, *output);
+        if (!status.ok()) {
+            return status;
         }
     }
     return StatusCode::OK;
 }
 
-Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input) {
-    if (!node.IsObject()) {
+Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
+    if (!node.IsArray()) {
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     }
-
-    for (auto& parameter : node.GetObject()) {
-        if (!parameter.name.IsString()) {
-            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-        }
-
-        if (parameter.value.IsString()) {
-            auto inputParameters = input->mutable_parameters();
-            ((*inputParameters)[parameter.name.GetString()]).set_string_param(parameter.value.GetString());
-        } else if (parameter.value.IsBool()) {
-            auto inputParameters = input->mutable_parameters();
-            ((*inputParameters)[parameter.name.GetString()]).set_bool_param(parameter.value.GetBool());
-        } else if (parameter.value.IsInt()) {
-            auto inputParameters = input->mutable_parameters();
-            ((*inputParameters)[parameter.name.GetString()]).set_int64_param(parameter.value.GetInt());
-        } else {
-            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+    if (node.GetArray().Size() == 0) {
+        return StatusCode::REST_NO_INPUTS_FOUND;
+    }
+    for (auto& output : node.GetArray()) {
+        auto status = parseOutput(output);
+        if (!status.ok()) {
+            return status;
         }
     }
     return StatusCode::OK;
@@ -534,8 +557,9 @@ Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::inference::
                     return status;                                       \
                 }                                                        \
             }                                                            \
+            return StatusCode::OK; \
         }                                                                \
-        if (!value.IsNumber()) {                                         \
+        if (!value.IsNumber()) {                   \
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;               \
         }                                                                \
         input->mutable_contents()->CONTENTS()->Add(value.TYPE_GETTER()); \
@@ -601,17 +625,30 @@ Status KFSRestParser::parseInput(rapidjson::Value& node) {
 
     auto parametersItr = node.FindMember("parameters");
     if (parametersItr != node.MemberEnd()) {
-        auto status = parseInputParameters(parametersItr->value, input);
+        auto status = parseInputParameters(parametersItr->value, *input);
         if (!status.ok()) {
             return status;
         }
     }
 
     auto dataItr = node.FindMember("data");
-    if ((dataItr == node.MemberEnd()) || !(dataItr->value.IsArray())) {
-        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+    if ((dataItr != node.MemberEnd())) {
+        if(!(dataItr->value.IsArray())) {
+            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        }
+        return parseData(dataItr->value, input);
     }
-    return parseData(dataItr->value, input);
+    else
+    {
+        auto binary_data_size_parameter = input->parameters().find("binary_data_size");
+        if (binary_data_size_parameter != input->parameters().end()) {
+            return StatusCode::OK;
+        }
+        else
+        {
+            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        }
+    }
 }
 
 Status KFSRestParser::parseInputs(rapidjson::Value& node) {
@@ -644,6 +681,7 @@ Status KFSRestParser::parse(const char* json) {
     if (idItr != doc.MemberEnd()) {
         auto status = parseId(idItr->value);
         if (!status.ok()) {
+            SPDLOG_DEBUG("Parsing request ID failed");
             return status;
         }
     }
@@ -652,6 +690,16 @@ Status KFSRestParser::parse(const char* json) {
     if (parametersItr != doc.MemberEnd()) {
         auto status = parseRequestParameters(parametersItr->value);
         if (!status.ok()) {
+            SPDLOG_DEBUG("Parsing request parameters failed");
+            return status;
+        }
+    }
+
+    auto outputsItr = doc.FindMember("outputs");
+    if (outputsItr != doc.MemberEnd()) {
+        auto status = parseOutputs(parametersItr->value);
+        if (!status.ok()) {
+            SPDLOG_DEBUG("Parsing request outputs failed");
             return status;
         }
     }
@@ -661,7 +709,12 @@ Status KFSRestParser::parse(const char* json) {
         SPDLOG_DEBUG("No inputs found in request");
         return StatusCode::REST_NO_INPUTS_FOUND;
     }
-    parseInputs(inputsItr->value);
+    auto status = parseInputs(inputsItr->value);
+    if(!status.ok()) {
+        SPDLOG_DEBUG("Parsing request inputs failed");
+        return status;
+    }
+
     return StatusCode::OK;
 }
 
