@@ -109,7 +109,7 @@ void MetricConfig::setDefaultMetricsTo(bool enabled) {
 
 Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList, uint64_t restPort) {
     if (isEnabled && restPort == 0) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cli rest_port setting is missing, metrics are enabled on rest port.");
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parameter rest_port is not defined. It must be set to enable metrics on the REST interface");
         return StatusCode::CONFIG_FILE_INVALID;
     }
 
