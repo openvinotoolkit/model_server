@@ -21,7 +21,6 @@ OPENCV_INSTALL_SCRIPT ?= ../../third_party/opencv/install_opencv.sh
 BASE_OS ?= ubuntu
 
 NODES ?= add_one east_ocr face_blur horizontal_ocr image_transformation model_zoo_intel_object_detection
-NODE_TYPE ?= cpp
 
 .PHONY: all
 
@@ -34,9 +33,9 @@ all:
 	@cp -r ../queue.hpp ./queue.hpp
 	for NODE_NAME in $(NODES); do \
 		echo "Building $$NODE_NAME" ; \
-		docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg NODE_NAME=$$NODE_NAME --build-arg NODE_TYPE=$(NODE_TYPE) . ; \
+		docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg NODE_NAME=$$NODE_NAME . || exit 1 ; \
 		mkdir -p ./lib/$(BASE_OS) ; \
-		docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/libcustom_node_$$NODE_NAME.so ./lib/$(BASE_OS)/ ; \
+		docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/libcustom_node_$$NODE_NAME.so ./lib/$(BASE_OS)/ || exit 1 ; \
 		echo "Built $$NODE_NAME" ; \
 	done
 	@rm ./queue.hpp

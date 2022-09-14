@@ -668,9 +668,6 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
     try {
         loadCompiledModelPtr(pluginConfig);
-        auto numberOfStreams = getNumOfStreams();
-        SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
-        SPDLOG_INFO("Number of OV streams: {}", numberOfStreams);
     } catch (ov::Exception& e) {
         Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
@@ -690,6 +687,17 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             config.getTargetDevice());
         return status;
     }
+
+    uint32_t numberOfStreams = 0;
+    try {
+        numberOfStreams = getNumOfStreams();
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numberOfStreams);
+    } catch (ov::Exception& e) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
+    } catch (...) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+    }
+    SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
     for (const auto pair : pluginConfig) {
