@@ -691,11 +691,11 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     uint32_t numberOfStreams = 0;
     try {
         numberOfStreams = getNumOfStreams();
-        SPDLOG_INFO("Number of OpenVINO streams: {}", numberOfStreams);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numberOfStreams);
     } catch (ov::Exception& e) {
-        SPDLOG_WARN("Unable to get information about number of streams with error: {}", e.what());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
     } catch (...) {
-        SPDLOG_WARN("Unable to get information about number of streams");
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
     }
     SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
 
