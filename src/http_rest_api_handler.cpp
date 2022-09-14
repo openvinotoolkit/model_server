@@ -402,16 +402,20 @@ Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputT
     return StatusCode::OK;
 }
 
-Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char* binary_inputs, size_t binary_inputs_size) {
+Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
+    const char* binary_inputs = &(request_body[endOfJson]);
+    size_t binary_inputs_size = request_body.length() - endOfJson;
+
     size_t binary_input_offset = 0;
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
         auto input = grpc_request.mutable_inputs()->Mutable(i);
-        auto status = validateContentFieldsEmptiness(input);
-        if (!status.ok()) {
-            return status;
-        }
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
         if (binary_data_size_parameter != input->parameters().end()) {
+            auto status = validateContentFieldsEmptiness(input);
+            if (!status.ok()) {
+                SPDLOG_DEBUG("Request contains both data in json and binary inputs");
+                return status;
+            }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 auto binary_input_size = binary_data_size_parameter->second.int64_param();
                 if (binary_input_offset + binary_input_size > binary_inputs_size) {
@@ -420,6 +424,7 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
                 }
                 status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
                 if (!status.ok()) {
+                    SPDLOG_DEBUG("Parsing binary inputs failed");
                     return status;
                 }
                 binary_input_offset += binary_input_size;
@@ -436,6 +441,7 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
                     }
                     status = parseBinaryInput(input, size, binary_inputs + binary_input_offset);
                     if (!status.ok()) {
+                        SPDLOG_DEBUG("Parsing binary inputs failed");
                         return status;
                     }
                     binary_input_offset += size;
@@ -449,27 +455,20 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body, ::inference::ModelInferRequest& grpc_request) {
-    google::protobuf::util::JsonParseOptions opts;
-    opts.ignore_unknown_fields = true;
-    auto jsonClosingBracket = request_body.find_last_of("}");
-    bool dataAfterHeader = ((jsonClosingBracket != std::string::npos) && (jsonClosingBracket != (request_body.length() - 1)));
-    if (dataAfterHeader) {
-        size_t endOfJson = jsonClosingBracket + 1;
-        std::string request(preprocessInferRequest(request_body.substr(0, endOfJson).c_str()));
-        google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
-        auto status = addBinaryInputs(grpc_request, &(request_body[endOfJson]), request_body.length() - endOfJson);
-        if (!status.ok()) {
-            return status;
-        }
-        std::string req;
-        google::protobuf::util::MessageToJsonString(grpc_request, &req);
-    } else {
-        std::string request(preprocessInferRequest(request_body));
-        google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
+    KFSRestParser requestParser;
+
+    size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
+    auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Parsing http request failed");
+        return status;
     }
-    std::string req;
-    google::protobuf::util::MessageToJsonString(grpc_request, &req);
+    grpc_request = requestParser.getProto();
+    status = handleBinaryInputs(grpc_request, request_body, endOfJson);
+    if (!status.ok()) {
+        return status;
+    }
     grpc_request.set_model_name(modelName);
     grpc_request.set_model_version(modelVersion);
     return StatusCode::OK;
@@ -483,7 +482,15 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
     ::inference::ModelInferRequest grpc_request;
-    prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
+    timer.start("prepareGrpcRequest");
+    using std::chrono::microseconds;
+    auto status = prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, request_components.inferenceHeaderContentLength);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("REST to GRPC request conversion failed for model: {}", modelName);
+        return status;
+    }
+    timer.stop("prepareGrpcRequest");
+    SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>("prepareGrpcRequest") / 1000);
     ::inference::ModelInferResponse grpc_response;
     const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer},
         reporter);
@@ -492,7 +499,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts_out;
-    Status status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
+    status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
     if (!status.ok()) {
         return status;
     }
@@ -599,9 +606,23 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     return StatusCode::OK;
 }
 
+Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
+    const std::vector<std::pair<std::string, std::string>>& headers) {
+    for (auto header : headers) {
+        if (header.first == "Inference-Header-Content-Length") {
+            requestComponents.inferenceHeaderContentLength = stoi32(header.second);
+            if (!requestComponents.inferenceHeaderContentLength.has_value() || requestComponents.inferenceHeaderContentLength.value() < 0) {
+                return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID;
+            }
+        }
+    }
+    return StatusCode::OK;
+}
+
 Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
     const std::string_view http_method,
-    const std::string& request_path) {
+    const std::string& request_path,
+    const std::vector<std::pair<std::string, std::string>>& headers) {
     std::smatch sm;
     requestComponents.http_method = http_method;
     if (http_method != "POST" && http_method != "GET") {
@@ -629,6 +650,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             }
 
             requestComponents.processing_method = sm[5];
+
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, configReloadRegex)) {
@@ -640,6 +662,10 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             requestComponents.model_name = sm[1];
             std::string model_version_str = sm[2];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
+            if (!status.ok())
+                return status;
+
+            status = parseInferenceHeaderContentLength(requestComponents, headers);
             if (!status.ok())
                 return status;
             return StatusCode::OK;
@@ -726,12 +752,13 @@ Status HttpRestApiHandler::processRequest(
         return StatusCode::PATH_INVALID;
     }
 
+    HttpRequestComponents requestComponents;
+    auto status = parseRequestComponents(requestComponents, http_method, request_path_str, *headers);
+
     headers->clear();
     response->clear();
     headers->push_back({"Content-Type", "application/json"});
 
-    HttpRequestComponents requestComponents;
-    auto status = parseRequestComponents(requestComponents, http_method, request_path_str);
     if (!status.ok())
         return status;
     return dispatchToProcessor(request_body, response, requestComponents);
@@ -809,7 +836,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     reporterOut = &modelInstance->getMetricReporter();
     Timer timer;
     timer.start("parse");
-    RestParser requestParser(modelInstance->getInputsInfo());
+    TFSRestParser requestParser(modelInstance->getInputsInfo());
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
         INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
@@ -860,7 +887,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
         return status;
     }
 
-    RestParser requestParser(inputs);
+    TFSRestParser requestParser(inputs);
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
         return status;

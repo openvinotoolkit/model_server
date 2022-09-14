@@ -210,9 +210,9 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[2,10],\"datatype\":\"FP32\",\"data\":[[0,1,2,3,4,5,6,7,8,9],[10,11,12,13,14,15,16,17,18,19]]}], \"id\":\"1\"}";
     ovms::HttpRequestComponents comp;
 
-    handler->parseRequestComponents(comp, "POST", request);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
-    handler->dispatchToProcessor(request_body, &response, comp);
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -228,9 +228,9 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}], \"id\":\"1\"}";
     ovms::HttpRequestComponents comp;
 
-    handler->parseRequestComponents(comp, "POST", request);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
-    handler->dispatchToProcessor(request_body, &response, comp);
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -244,7 +244,7 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
 }
 
 TEST_F(HttpRestApiHandlerTest, inferPreprocess) {
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}],\"parameters\":{\"binary_data_output\":1, \"bool_test\":true, \"string_test\":\"test\"}}";
+    std::string request_body("{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}],\"parameters\":{\"binary_data_output\":1, \"bool_test\":true, \"string_test\":\"test\"}}");
 
     std::string modelName("dummy");
     std::string modelVersion("1");
@@ -278,7 +278,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
 
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
@@ -306,7 +307,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
 
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
@@ -330,7 +332,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT16) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
 
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
@@ -358,7 +361,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT32) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
 
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
@@ -386,7 +390,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT64) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
 
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
@@ -414,7 +419,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsFP32) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+    int inferenceHeaderContentLength = (request_body.size() - 16);
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
 
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
@@ -442,7 +448,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsFP64) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+    int inferenceHeaderContentLength = (request_body.size() - 32);
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
 
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
@@ -482,7 +489,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBufferSmallerThanExpected) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::REST_BINARY_BUFFER_EXCEEDED);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_BINARY_BUFFER_EXCEEDED);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidBinaryDataSizeParameter) {
@@ -494,7 +502,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidBinaryDataSizeParameter) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsINT8BatchSize2) {
@@ -506,7 +515,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8BatchSize2) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
 
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
@@ -534,7 +544,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBinaryDataSizeStringParameterInvalid)
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsEmptyRequest) {
@@ -546,7 +557,8 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsEmptyRequest) {
     std::string modelVersion("1");
 
     ::inference::ModelInferRequest grpc_request;
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request), ovms::StatusCode::OK);
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
 }
 
 TEST_F(HttpRestApiHandlerTest, serverReady) {
