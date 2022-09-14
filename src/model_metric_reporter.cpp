@@ -50,71 +50,71 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         // TFS
         this->requestSuccessGrpcPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "predict"},
-            {"interface", "grpc"}});
+            {"api", "TensorFlowServing"},
+            {"method", "Predict"},
+            {"interface", "gRPC"}});
 
         this->requestSuccessGrpcGetModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "getmodelmetadata"},
-            {"interface", "grpc"}});
+            {"api", "TensorFlowServing"},
+            {"method", "GetModelMetadata"},
+            {"interface", "gRPC"}});
 
         this->requestSuccessGrpcGetModelStatus = family->addMetric({{"name", modelName},
-            {"protocol", "tensorflowserving"},
-            {"method", "getmodelstatus"},
-            {"interface", "grpc"}});
+            {"api", "TensorFlowServing"},
+            {"method", "GetModelStatus"},
+            {"interface", "gRPC"}});
 
         this->requestSuccessRestPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "predict"},
-            {"interface", "rest"}});
+            {"api", "TensorFlowServing"},
+            {"method", "Predict"},
+            {"interface", "REST"}});
 
         this->requestSuccessRestGetModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "getmodelmetadata"},
-            {"interface", "rest"}});
+            {"api", "TensorFlowServing"},
+            {"method", "GetModelMetadata"},
+            {"interface", "REST"}});
 
         this->requestSuccessRestGetModelStatus = family->addMetric({{"name", modelName},
-            {"protocol", "tensorflowserving"},
-            {"method", "getmodelstatus"},
-            {"interface", "rest"}});
+            {"api", "TensorFlowServing"},
+            {"method", "GetModelStatus"},
+            {"interface", "REST"}});
         // KFS
         this->requestSuccessGrpcModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelinfer"},
-            {"interface", "grpc"}});
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "gRPC"}});
 
         this->requestSuccessGrpcModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelmetadata"},
-            {"interface", "grpc"}});
+            {"api", "KServe"},
+            {"method", "ModelMetadata"},
+            {"interface", "gRPC"}});
 
         this->requestSuccessGrpcModelReady = family->addMetric({{"name", modelName},
-            {"protocol", "kserve"},
-            {"method", "modelready"},
-            {"interface", "grpc"}});
+            {"api", "KServe"},
+            {"method", "ModelReady"},
+            {"interface", "gRPC"}});
 
         this->requestSuccessRestModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelinfer"},
-            {"interface", "rest"}});
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "REST"}});
 
         this->requestSuccessRestModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelmetadata"},
-            {"interface", "rest"}});
+            {"api", "KServe"},
+            {"method", "ModelMetadata"},
+            {"interface", "REST"}});
 
         this->requestSuccessRestModelReady = family->addMetric({{"name", modelName},
-            {"protocol", "kserve"},
-            {"method", "modelready"},
-            {"interface", "rest"}});
+            {"api", "KServe"},
+            {"method", "ModelReady"},
+            {"interface", "REST"}});
     }
 
     familyName = "ovms_requests_fail";
@@ -125,76 +125,76 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         // TFS
         this->requestFailGrpcPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "predict"},
-            {"interface", "grpc"}});
+            {"api", "TensorFlowServing"},
+            {"method", "Predict"},
+            {"interface", "gRPC"}});
 
         this->requestFailGrpcGetModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "getmodelmetadata"},
-            {"interface", "grpc"}});
+            {"api", "TensorFlowServing"},
+            {"method", "GetModelMetadata"},
+            {"interface", "gRPC"}});
 
         this->requestFailGrpcGetModelStatus = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "getmodelstatus"},
-            {"interface", "grpc"}});
+            {"api", "TensorFlowServing"},
+            {"method", "GetModelStatus"},
+            {"interface", "gRPC"}});
 
         this->requestFailRestPredict = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "predict"},
-            {"interface", "rest"}});
+            {"api", "TensorFlowServing"},
+            {"method", "Predict"},
+            {"interface", "REST"}});
 
         this->requestFailRestGetModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "getmodelmetadata"},
-            {"interface", "rest"}});
+            {"api", "TensorFlowServing"},
+            {"method", "GetModelMetadata"},
+            {"interface", "REST"}});
 
         this->requestFailRestGetModelStatus = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "tensorflowserving"},
-            {"method", "getmodelstatus"},
-            {"interface", "rest"}});
+            {"api", "TensorFlowServing"},
+            {"method", "GetModelStatus"},
+            {"interface", "REST"}});
 
         // KFS
         this->requestFailGrpcModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelinfer"},
-            {"interface", "grpc"}});
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "gRPC"}});
 
         this->requestFailGrpcModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelmetadata"},
-            {"interface", "grpc"}});
+            {"api", "KServe"},
+            {"method", "ModelMetadata"},
+            {"interface", "gRPC"}});
 
         this->requestFailGrpcModelReady = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelready"},
-            {"interface", "grpc"}});
+            {"api", "KServe"},
+            {"method", "ModelReady"},
+            {"interface", "gRPC"}});
 
         this->requestFailRestModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelinfer"},
-            {"interface", "rest"}});
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "REST"}});
 
         this->requestFailRestModelMetadata = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelmetadata"},
-            {"interface", "rest"}});
+            {"api", "KServe"},
+            {"method", "ModelMetadata"},
+            {"interface", "REST"}});
 
         this->requestFailRestModelReady = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
-            {"protocol", "kserve"},
-            {"method", "modelready"},
-            {"interface", "rest"}});
+            {"api", "KServe"},
+            {"method", "ModelReady"},
+            {"interface", "REST"}});
     }
 
     familyName = "ovms_request_time_us";
@@ -204,12 +204,12 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     if (metricConfig->isFamilyEnabled(familyName)) {
         this->requestTimeGrpc = requestTimeFamily->addMetric({{"name", modelName},
                                                                  {"version", std::to_string(modelVersion)},
-                                                                 {"interface", "grpc"}},
+                                                                 {"interface", "gRPC"}},
             this->buckets);
 
         this->requestTimeRest = requestTimeFamily->addMetric({{"name", modelName},
                                                                  {"version", std::to_string(modelVersion)},
-                                                                 {"interface", "rest"}},
+                                                                 {"interface", "REST"}},
             this->buckets);
     }
 }
