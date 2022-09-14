@@ -209,7 +209,7 @@ Status ModelManager::startFromConfig() {
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
-        status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList(), config.restPort());
+        status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList());
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
 
         this->metricConfigLoadedOnce = true;
