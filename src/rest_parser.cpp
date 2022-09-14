@@ -533,9 +533,6 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
     if (!node.IsArray()) {
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     }
-    if (node.GetArray().Size() == 0) {
-        return StatusCode::REST_NO_INPUTS_FOUND;
-    }
     for (auto& output : node.GetArray()) {
         auto status = parseOutput(output);
         if (!status.ok()) {

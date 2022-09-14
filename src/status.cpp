@@ -133,7 +133,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, "Could not parse instance content. Not valid ndarray detected"},
     {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, "Invalid JSON structure. Request inputs have different batch sizes"},
     {StatusCode::REST_INPUTS_NOT_AN_OBJECT, "Invalid JSON structure. One of inputs is not a JSON object."},
-    {StatusCode::REST_NO_INPUTS_FOUND, "Invalid JSON structure. Missing inputs in column format"},
+    {StatusCode::REST_NO_INPUTS_FOUND, "Invalid JSON structure, missing inputs"},
     {StatusCode::REST_COULD_NOT_PARSE_INPUT, "Could not parse input content. Not valid ndarray detected"},
     {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, "Could not parse output content."},
     {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, "Could not parse request parameters"},
