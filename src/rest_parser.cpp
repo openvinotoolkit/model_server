@@ -609,7 +609,7 @@ Status KFSRestParser::parseInput(rapidjson::Value& node) {
     if (!node.IsObject()) {
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     }
-    
+
     auto input = requestProto.add_inputs();
     auto nameItr = node.FindMember("name");
     if ((nameItr == node.MemberEnd()) || !(nameItr->value.IsString())) {
