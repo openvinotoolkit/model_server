@@ -29,7 +29,7 @@ struct is_chrono_duration_type<std::chrono::duration<T, U>> : std::true_type {};
 
 typedef unsigned int SIZE_TYPE;
 template <SIZE_TYPE N>
-class Timer2 {
+class Timer {
     std::array<std::chrono::high_resolution_clock::time_point, N> startTimestamps;
     std::array<std::chrono::high_resolution_clock::time_point, N> stopTimestamps;
 
@@ -48,25 +48,4 @@ public:
         return std::chrono::duration_cast<T>(stopTimestamps[i] - startTimestamps[i]).count();
     }
 };
-
-class Timer {
-    std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> startTimestamps;
-    std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> stopTimestamps;
-
-public:
-    void start(const std::string& name) {
-        startTimestamps[name] = std::chrono::high_resolution_clock::now();
-    }
-
-    void stop(const std::string& name) {
-        stopTimestamps[name] = std::chrono::high_resolution_clock::now();
-    }
-
-    template <typename T>
-    double elapsed(const std::string& name) {
-        static_assert(is_chrono_duration_type<T>::value, "Non supported type.");
-        return std::chrono::duration_cast<T>(stopTimestamps[name] - startTimestamps[name]).count();
-    }
-};
-
 }  // namespace ovms
