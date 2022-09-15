@@ -30,7 +30,7 @@ For more information please visit [Prometheus metrics detailed description](http
 
 ## Enable metrics
 
-By default, the metrics feature is disabled during standard server usage.
+By default, the metrics feature is disabled.
 
 To enable default metrics set you need to specify the metrics_enabled flag or json setting:
 
