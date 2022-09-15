@@ -286,6 +286,15 @@ public:
     }
 
     /**
+     * @brief Check if result was parsed
+     *
+     * @return bool
+     */
+    bool isResultParsed() {
+        return result.get() == nullptr;
+    }
+
+    /**
         * @brief Get metrics list
         *
         * @return std::string

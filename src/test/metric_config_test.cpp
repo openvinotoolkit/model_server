@@ -447,8 +447,7 @@ TEST_F(ModelMetricReporterTest, MetricReporterConstructorTest) {
 
 class MetricsCli : public ::testing::Test {
 public:
-    // 1024-65536
-    uint64_t restPort = 10000;
+    bool failIfMetricsAreEnabled = false;
 };
 
 TEST_F(MetricsCli, DefaultCliReading) {
@@ -459,7 +458,7 @@ TEST_F(MetricsCli, DefaultCliReading) {
     ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
     ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_fail"), false);
 
-    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_requests_fail", this->restPort);
+    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_requests_fail", this->failIfMetricsAreEnabled);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -471,7 +470,7 @@ TEST_F(MetricsCli, DefaultCliReading) {
 
 TEST_F(MetricsCli, WorkingCliReading) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_infer_req_queue_size", this->restPort);
+    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_infer_req_queue_size", this->failIfMetricsAreEnabled);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -487,7 +486,7 @@ TEST_F(MetricsCli, DefaultEmptyList) {
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
     ASSERT_EQ(metricConfig.getEnabledFamiliesList().size(), 0);
 
-    auto status = metricConfig.loadFromCLIString(true, "", this->restPort);
+    auto status = metricConfig.loadFromCLIString(true, "", this->failIfMetricsAreEnabled);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -502,7 +501,7 @@ TEST_F(MetricsCli, BadCliReading) {
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
 
-    auto status = metricConfig.loadFromCLIString(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready", this->restPort);
+    auto status = metricConfig.loadFromCLIString(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready", this->failIfMetricsAreEnabled);
 
     ASSERT_EQ(status, StatusCode::INVALID_METRICS_FAMILY_NAME);
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -512,7 +511,7 @@ TEST_F(MetricsCli, BadCliReading) {
 
 TEST_F(MetricsCli, DisabledMetrics) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail", this->restPort);
+    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail", this->failIfMetricsAreEnabled);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, false);
@@ -524,7 +523,7 @@ TEST_F(MetricsCli, DisabledMetrics) {
 
 TEST_F(MetricsCli, MetricsDisabledCliRestPort) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail", 0);
+    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail", true);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, false);
@@ -536,7 +535,7 @@ TEST_F(MetricsCli, MetricsDisabledCliRestPort) {
 
 TEST_F(MetricsCli, MetricsEnabledCliRestPort) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(true, "ovms_infer_req_queue_size, ovms_requests_fail", 0);
+    auto status = metricConfig.loadFromCLIString(true, "ovms_infer_req_queue_size, ovms_requests_fail", true);
 
     ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
 }
@@ -545,7 +544,7 @@ TEST_F(MetricsCli, MetricsEnabledCliRestPortDefault) {
     MetricConfig metricConfig;
     auto status = metricConfig.loadFromCLIString(true, "ovms_infer_req_queue_size, ovms_requests_fail");
 
-    ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
+    ASSERT_EQ(status, StatusCode::OK);
 }
 
 #pragma GCC diagnostic pop
