@@ -64,9 +64,9 @@ OpenVINO Model Server exposes TensorFlow Serving as well as KServe compatible AP
       
    ```
    TensorProto {
-      dtype: DT_FLOAT32
-      tensor_shape: [2, 300, 300, 3]
-      tensor_content: [\x11\x02\ ... \x75\x0a]
+   dtype: DT_FLOAT32
+   tensor_shape: [2, 300, 300, 3]
+   tensor_content: [\x11\x02\ ... \x75\x0a]
    }
    ```
 
@@ -74,9 +74,9 @@ OpenVINO Model Server exposes TensorFlow Serving as well as KServe compatible AP
 
    ```
    TensorProto {
-      dtype: DT_STRING
-      tensor_shape: [2]
-      string_val: [[\xff\xff ... \x66\xa0], [\x00\x00 ... \x13\x41]]
+   dtype: DT_STRING
+   tensor_shape: [2]
+   string_val: [[\xff\xff ... \x66\xa0], [\x00\x00 ... \x13\x41]]
    }
    ```   
 
@@ -92,7 +92,7 @@ OpenVINO Model Server exposes TensorFlow Serving as well as KServe compatible AP
       
    Let's see how the `inputs` field in the request body may look like if you decide to send the image:
 
-   1) as an array
+   1. as an array
 
    ```
    {
@@ -108,7 +108,7 @@ OpenVINO Model Server exposes TensorFlow Serving as well as KServe compatible AP
    }
    ```
 
-   2) as binary data
+   2. as binary data
 
    ```
    {
@@ -137,7 +137,7 @@ OpenVINO Model Server exposes TensorFlow Serving as well as KServe compatible AP
 
    Let's see how the ModelInferRequest object may look like if you decide to send the image:
 
-   1) as an array
+   1. as an array
 
    ```
    ModelInferRequest {
@@ -152,7 +152,7 @@ OpenVINO Model Server exposes TensorFlow Serving as well as KServe compatible AP
    }
    ```
 
-   2) as binary data
+   2. as binary data
 
    ```
    ModelInferRequest {
