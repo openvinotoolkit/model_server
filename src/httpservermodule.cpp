@@ -24,10 +24,6 @@
 #include "server.hpp"
 
 namespace ovms {
-// TODO should replace all messages like
-// start REST Server with start HTTP Server
-// start Server with start gRPC server
-// this should be synchronized with validation tests changes
 HTTPServerModule::HTTPServerModule(ovms::Server& ovmsServer) :
     ovmsServer(ovmsServer) {}
 int HTTPServerModule::start(const ovms::Config& config) {
