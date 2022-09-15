@@ -58,11 +58,7 @@ public:
         TestWithTempDir::SetUp();
         char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--rest_port", "8080"};
         int arg_count = 9;
-        static bool parseOnce = [&arg_count, &n_argv]() {
-            ovms::Config::instance().parse(arg_count, n_argv);
-            return true;
-        }();
-        (void)parseOnce;
+        ovms::Config::instance().parse(arg_count, n_argv);
 
         // Prepare manager
         modelPath = directoryPath + "/dummy/";
@@ -77,11 +73,7 @@ public:
         TestWithTempDir::SetUp();
         char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name"};
         int arg_count = 5;
-        static bool parseOnce = [&arg_count, &n_argv]() {
-            ovms::Config::instance().parse(arg_count, n_argv);
-            return true;
-        }();
-        (void)parseOnce;
+        ovms::Config::instance().parse(arg_count, n_argv);
 
         // Prepare manager
         modelPath = directoryPath + "/dummy/";
