@@ -290,7 +290,7 @@ public:
      *
      * @return bool
      */
-    bool isResultParsed() {
+    bool isParsed() {
         return result.get() == nullptr;
     }
 

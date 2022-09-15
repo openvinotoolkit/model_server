@@ -36,7 +36,7 @@ bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
 }
 
 // Getting the "monitoring" metrics config as input
-Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool failIfMetricsAreEnabled) {
+Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool forceFailureIfMetricsAreEnabled) {
     Status status = StatusCode::OK;
     if (!metrics.HasMember("metrics"))
         return status;
@@ -49,7 +49,7 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool fa
         metricsEnabled = false;
     }
 
-    if (metricsEnabled && failIfMetricsAreEnabled) {
+    if (metricsEnabled && forceFailureIfMetricsAreEnabled) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parameter rest_port is not defined. It must be set to enable metrics on the REST interface");
         return StatusCode::CONFIG_FILE_INVALID;
     }
@@ -112,7 +112,7 @@ void MetricConfig::setDefaultMetricsTo(bool enabled) {
     }
 }
 
-Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList, bool failIfMetricsAreEnabled) {
+Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList) {
     using namespace rapidjson;
     Document document;
     document.SetObject();
@@ -140,7 +140,7 @@ Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metric
 
     document.AddMember("metrics", metrics, allocator);
 
-    return this->parseMetricsConfig(document.GetObject(), failIfMetricsAreEnabled);
+    return this->parseMetricsConfig(document.GetObject());
 }
 
 }  // namespace ovms
