@@ -26,23 +26,72 @@ Metrics from default list are enabled with the metrics_enabled flag or json conf
 
 However, you can enable also additional metrics by listing all the metrics you want to enable in the metric_list flag or json configuration.
 
+metric, type, labels, description
+
 DEFAULT
 
    ```bash
-        ovms_streams
-        ovms_current_requests
-        ovms_requests_success
-        ovms_requests_fail
-        ovms_request_time_us
-        ovms_inference_time_us
-        ovms_wait_for_infer_req_time_us
+        gauge       ovms_streams                        Number of OpenVINO execution streams.
+        gauge       ovms_current_requests               Number of inference requests currently in process.
+        counter     ovms_requests_success               Number of successful requests to a model or a DAG.
+        counter     ovms_requests_fail                  Number of failed requests to a model or a DAG.
+        histogram   ovms_request_time_us                Processing time of requests to a model or a DAG.
+        histogram   ovms_inference_time_us              Inference execution time in the OpenVINO backend.
+        histogram   ovms_wait_for_infer_req_time_us     Request waiting time in the scheduling queue.
    ```
 
 ADDITIONAL
 
    ```bash
-        ovms_infer_req_queue_size
-        ovms_infer_req_active
+        gauge   ovms_infer_req_queue_size       Inference request queue size (nireq).
+        gauge   ovms_infer_req_active           Number of currently consumed inference request from the processing queue.
+   ```
+
+## List of available metrics labels
+
+Metrics from default list are enabled with the metrics_enabled flag or json configuration.
+
+However, you can enable also additional metrics by listing all the metrics you want to enable in the metric_list flag or json configuration.
+
+ovms_requests_success
+
+   ```bash
+        ovms_requests_success_grpc_predict
+        ovms_requests_success_grpc_getmodelmetadata
+        ovms_requests_success_grpc_getmodelstatus
+        ovms_requests_success_grpc_modelinfer
+        ovms_requests_success_grpc_modelmetadata
+        ovms_requests_success_grpc_modelready
+        ovms_requests_success_rest_modelinfer
+        ovms_requests_success_rest_predict
+        ovms_requests_success_rest_modelmetadata
+        ovms_requests_success_rest_modelstatus
+        ovms_requests_success_rest_modelmetadata
+        ovms_requests_success_rest_modelready
+   ```
+
+ovms_requests_fail
+
+   ```bash
+        ovms_requests_fail_grpc_predict
+        ovms_requests_fail_grpc_getmodelmetadata
+        ovms_requests_fail_grpc_getmodelstatus
+        ovms_requests_fail_grpc_modelinfer
+        ovms_requests_fail_grpc_modelmetadata
+        ovms_requests_fail_grpc_modelready
+        ovms_requests_fail_rest_modelinfer
+        ovms_requests_fail_rest_predict
+        ovms_requests_fail_rest_modelmetadata
+        ovms_requests_fail_rest_modelstatus
+        ovms_requests_fail_rest_modelmetadata
+        ovms_requests_fail_rest_modelready
+   ```
+
+ovms_request_time_us
+
+   ```bash
+        ovms_request_time_us_grpc
+        ovms_request_time_us_rest
    ```
 
 ## Enable metrics
