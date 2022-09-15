@@ -609,7 +609,7 @@ Status KFSRestParser::parseInput(rapidjson::Value& node) {
     if (!node.IsObject()) {
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     }
-    requestProto.mutable_inputs()->Clear();
+    
     auto input = requestProto.add_inputs();
     auto nameItr = node.FindMember("name");
     if ((nameItr == node.MemberEnd()) || !(nameItr->value.IsString())) {
@@ -665,6 +665,7 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
     if (node.GetArray().Size() == 0) {
         return StatusCode::REST_NO_INPUTS_FOUND;
     }
+    requestProto.mutable_inputs()->Clear();
     for (auto& input : node.GetArray()) {
         auto status = parseInput(input);
         if (!status.ok()) {
