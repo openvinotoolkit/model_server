@@ -1,6 +1,6 @@
 # metrics {#ovms_docs_metrics}
 
-## Introduction to Metrics
+## Introduction
 
 This document describes enabling and usage of different metrics in OVMS server that can be used for:
 
