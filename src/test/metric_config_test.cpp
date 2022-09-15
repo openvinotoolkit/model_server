@@ -62,12 +62,11 @@ public:
             ovms::Config::instance().parse(arg_count, n_argv);
             return true;
         }();
+        (void)parseOnce;
 
-        if (parseOnce) {
-            // Prepare manager
-            modelPath = directoryPath + "/dummy/";
-            configFilePath = directoryPath + "/ovms_config.json";
-        }
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/ovms_config.json";
     }
 };
 
