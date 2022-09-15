@@ -17,6 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../config.hpp"
 #include "../metric_config.hpp"
 #include "../metric_registry.hpp"
 #include "../model_metric_reporter.hpp"
@@ -28,6 +29,9 @@ using namespace ovms;
 
 using testing::_;
 using testing::Return;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 
 class PublicMetricConfig : public MetricConfig {
 public:
@@ -52,9 +56,18 @@ public:
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
-        // Prepare manager
-        modelPath = directoryPath + "/dummy/";
-        configFilePath = directoryPath + "/ovms_config.json";
+        char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--rest_port", "8080"};
+        int arg_count = 9;
+        static bool parseOnce = [&arg_count, &n_argv]() {
+            ovms::Config::instance().parse(arg_count, n_argv);
+            return true;
+        }();
+
+        if (parseOnce) {
+            // Prepare manager
+            modelPath = directoryPath + "/dummy/";
+            configFilePath = directoryPath + "/ovms_config.json";
+        }
     }
 };
 
@@ -433,7 +446,11 @@ TEST_F(ModelMetricReporterTest, MetricReporterConstructorTest) {
     ASSERT_TRUE(reporter5.requestFailGrpcGetModelMetadata != nullptr);
 }
 
-class MetricsCli : public ::testing::Test {};
+class MetricsCli : public ::testing::Test {
+public:
+    // 1024-65536
+    uint64_t restPort = 10000;
+};
 
 TEST_F(MetricsCli, DefaultCliReading) {
     MetricConfig metricConfig;
@@ -443,7 +460,7 @@ TEST_F(MetricsCli, DefaultCliReading) {
     ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
     ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_fail"), false);
 
-    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_requests_fail");
+    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_requests_fail", this->restPort);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -455,7 +472,7 @@ TEST_F(MetricsCli, DefaultCliReading) {
 
 TEST_F(MetricsCli, WorkingCliReading) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_infer_req_queue_size");
+    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_infer_req_queue_size", this->restPort);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -471,7 +488,7 @@ TEST_F(MetricsCli, DefaultEmptyList) {
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
     ASSERT_EQ(metricConfig.getEnabledFamiliesList().size(), 0);
 
-    auto status = metricConfig.loadFromCLIString(true, "");
+    auto status = metricConfig.loadFromCLIString(true, "", this->restPort);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -486,7 +503,7 @@ TEST_F(MetricsCli, BadCliReading) {
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
 
-    auto status = metricConfig.loadFromCLIString(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready");
+    auto status = metricConfig.loadFromCLIString(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready", this->restPort);
 
     ASSERT_EQ(status, StatusCode::INVALID_METRICS_FAMILY_NAME);
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -496,7 +513,7 @@ TEST_F(MetricsCli, BadCliReading) {
 
 TEST_F(MetricsCli, DisabledMetrics) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail");
+    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail", this->restPort);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, false);
@@ -505,3 +522,31 @@ TEST_F(MetricsCli, DisabledMetrics) {
     ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
     ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
 }
+
+TEST_F(MetricsCli, MetricsDisabledCliRestPort) {
+    MetricConfig metricConfig;
+    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail", 0);
+
+    ASSERT_TRUE(status.ok());
+    ASSERT_EQ(metricConfig.metricsEnabled, false);
+    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
+    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_success"), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
+}
+
+TEST_F(MetricsCli, MetricsEnabledCliRestPort) {
+    MetricConfig metricConfig;
+    auto status = metricConfig.loadFromCLIString(true, "ovms_infer_req_queue_size, ovms_requests_fail", 0);
+
+    ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
+}
+
+TEST_F(MetricsCli, MetricsEnabledCliRestPortDefault) {
+    MetricConfig metricConfig;
+    auto status = metricConfig.loadFromCLIString(true, "ovms_infer_req_queue_size, ovms_requests_fail");
+
+    ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
+}
+
+#pragma GCC diagnostic pop
