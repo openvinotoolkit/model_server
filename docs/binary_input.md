@@ -163,7 +163,6 @@ OpenVINO Model Server exposes TensorFlow Serving as well as KServe compatible AP
    ```
 
    When sending data in the array format, the shape and datatype gives information on how to interpret bytes in the contents. For binary encoded data, the only information given by the `shape` field is the amount of images in the batch. On the server side, the bytes in each element of the `bytes_contents` field are loaded, resized to match model input shape and converted to the OpenVINO-friendly array format by OpenCV.
-   ----
 
    ### HTTP
 
@@ -219,7 +218,7 @@ OpenVINO Model Server exposes TensorFlow Serving as well as KServe compatible AP
    On the server side, the binary encoded data is loaded using OpenCV which then converts it to OpenVINO-friendly data format for inference.
 
    The structure of the response is specified [Inference Response specification](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-response-json-object).
-   ```
+
 @endsphinxdirective
 
 
