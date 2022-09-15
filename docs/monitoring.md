@@ -6,7 +6,7 @@ This document describes how to use metrics endpoint in the OpenVINO Model Server
 
 - Providing performance and utilization statistics for monitoring and benchmarking purposes
 
-- Ability to auto scale model server instances in Kubernetes based on application related metrics
+- Auto scaling of the model server instances in Kubernetes and OpenShift based on application related metrics
 
 > **NOTE**: currently, Metrics feature is released as a preview feature.
 
