@@ -353,7 +353,27 @@ TEST_F(TFSModelServiceTest, getAllModelsStatuses_two_models_with_one_versions) {
 }
 
 TEST_F(TFSModelServiceTest, config_reload) {
+    std::string port = "9000";
+    randomizePort(port);
+    char* argv[] = {
+        (char*)"OpenVINO Model Server",
+        (char*)"--model_name",
+        (char*)"dummy",
+        (char*)"--model_path",
+        (char*)"/ovms/src/test/dummy",
+        (char*)"--log_level",
+        (char*)"DEBUG",
+        (char*)"--port",
+        (char*)port.c_str(),
+        nullptr};
     ovms::Server& server = ovms::Server::instance();
+    std::thread t([&argv, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
+    });
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((server.getModuleState(ovms::GRPC_SERVER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+    }
     ModelServiceImpl s(server);
     tensorflow::serving::ReloadConfigRequest modelStatusRequest;
     tensorflow::serving::ReloadConfigResponse modelStatusResponse;
@@ -362,6 +382,9 @@ TEST_F(TFSModelServiceTest, config_reload) {
     ::grpc::Status ret = s.HandleReloadConfigRequest(nullptr, &modelStatusRequest, &modelStatusResponse);
     spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
     EXPECT_EQ(ret.ok(), true);
+    server.setShutdownRequest(1);
+    t.join();
+    server.setShutdownRequest(0);
 }
 
 TEST_F(TFSModelServiceTest, getAllModelsStatuses_one_model_one_version) {
