@@ -67,11 +67,15 @@ public:
     static const std::string configReloadRegexExp;
     static const std::string configStatusRegexExp;
 
+    static const std::string kfs_modelreadyRegexExp;
+    static const std::string kfs_modelmetadataRegexExp;
+    static const std::string kfs_inferRegexExp;
+
     static const std::string metricsRegexExp;
 
-    static const std::string kfs_modelRegexExp;
-    static const std::string kfs_serverRegexExp;
-
+    static const std::string kfs_serverreadyRegexExp;
+    static const std::string kfs_serverliveRegexExp;
+    static const std::string kfs_servermetadataRegexExp;
     /**
      * @brief Construct a new HttpRest Api Handler
      *
@@ -87,7 +91,7 @@ public:
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
     static void parseParams(rapidjson::Value&, rapidjson::Document&);
     static std::string preprocessInferRequest(std::string request_body);
-    static Status prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
+    static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
 
     void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>);
     void registerAll();
@@ -199,8 +203,13 @@ private:
     const std::regex configReloadRegex;
     const std::regex configStatusRegex;
 
-    const std::regex kfs_modelRegex;
-    const std::regex kfs_serverRegex;
+    const std::regex kfs_modelreadyRegex;
+    const std::regex kfs_modelmetadataRegex;
+
+    const std::regex kfs_inferRegex;
+    const std::regex kfs_serverreadyRegex;
+    const std::regex kfs_serverliveRegex;
+    const std::regex kfs_servermetadataRegex;
 
     const std::regex metricsRegex;
 

@@ -57,7 +57,8 @@ enum : unsigned int {
     PREPARE_GRPC_REQUEST,
     TIMER_END
 };
-}
+const std::string DEFAULT_VERSION = "DEFAULT";
+}  // namespace
 
 namespace ovms {
 
@@ -68,14 +69,20 @@ const std::string HttpRestApiHandler::modelstatusRegexExp =
 const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/v1\/config\/reload)";
 const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/v1\/config)";
 
-const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics)";
+const std::string HttpRestApiHandler::kfs_modelreadyRegexExp =
+    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(ready)))";
+const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp =
+    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)";
+const std::string HttpRestApiHandler::kfs_inferRegexExp =
+    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))";
+const std::string HttpRestApiHandler::kfs_serverreadyRegexExp =
+    R"(/v2/health/ready)";
+const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
+    R"(/v2/health/live)";
+const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
+    R"(/v2)";
 
-const std::string HttpRestApiHandler::kfs_modelreadyRegexExp = R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(ready)))"; 
-const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp = R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)"; 
-const std::string HttpRestApiHandler::kfs_inferRegexExp = R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))"; 
-const std::string HttpRestApiHandler::kfs_serverreadyRegexExp = R"(/v2/health/ready)"; 
-const std::string HttpRestApiHandler::kfs_serverliveRegexExp = R"(/v2/health/live)"; 
-const std::string HttpRestApiHandler::kfs_servermetadataRegexExp = R"(/v2)";
+const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics)";
 
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
     predictionRegex(predictionRegexExp),
@@ -107,7 +114,7 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
         try {
             model_version = std::stoll(model_version_str.c_str());
         } catch (std::exception& e) {
-            SPDLOG_ERROR("Couldn't parse model version {}", model_version_str);
+            SPDLOG_DEBUG("Couldn't parse model version {}", model_version_str);
             return StatusCode::REST_COULD_NOT_PARSE_VERSION;
         }
     }
@@ -457,7 +464,7 @@ Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const st
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
@@ -472,7 +479,9 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
         return status;
     }
     grpc_request.set_model_name(modelName);
-    grpc_request.set_model_version(modelVersion);
+    if (modelVersion.has_value()) {
+        grpc_request.set_model_version(std::to_string(modelVersion.value()));
+    }
     return StatusCode::OK;
 }
 
@@ -481,12 +490,12 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     timer.start(TOTAL);
     ServableMetricReporter* reporter = nullptr;
     std::string modelName(request_components.model_name);
-    std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
-    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
+    std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
     ::inference::ModelInferRequest grpc_request;
     timer.start(PREPARE_GRPC_REQUEST);
     using std::chrono::microseconds;
-    auto status = prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, request_components.inferenceHeaderContentLength);
+    auto status = prepareGrpcRequest(modelName, request_components.model_version, request_body, grpc_request, request_components.inferenceHeaderContentLength);
     if (!status.ok()) {
         SPDLOG_DEBUG("REST to GRPC request conversion failed for model: {}", modelName);
         return status;
@@ -548,10 +557,12 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
     ::inference::ModelReadyRequest grpc_request;
     ::inference::ModelReadyResponse grpc_response;
     std::string modelName(request_components.model_name);
-    std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     grpc_request.set_name(modelName);
-    grpc_request.set_version(modelVersion);
-    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
+    if (request_components.model_version.has_value()) {
+        grpc_request.set_version(std::to_string(request_components.model_version.value()));
+    }
+    std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
 
     Status status = kfsGrpcImpl.ModelReadyImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelReady});
     if (!status.ok()) {
@@ -579,10 +590,12 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     ::inference::ModelMetadataRequest grpc_request;
     ::inference::ModelMetadataResponse grpc_response;
     std::string modelName(request_components.model_name);
-    std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     grpc_request.set_name(modelName);
-    grpc_request.set_version(modelVersion);
-    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
+    if (request_components.model_version.has_value()) {
+        grpc_request.set_version(std::to_string(request_components.model_version.value()));
+    }
+    std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
     Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata});
     if (!gstatus.ok()) {
         return gstatus;
@@ -632,7 +645,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     }
 
     if (FileSystem::isPathEscaped(request_path)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        SPDLOG_DEBUG("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
     }
 
@@ -655,10 +668,6 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
 
             return StatusCode::OK;
         }
-        if (std::regex_match(request_path, sm, configReloadRegex)) {
-            requestComponents.type = ConfigReload;
-            return StatusCode::OK;
-        }
         if (std::regex_match(request_path, sm, kfs_inferRegex, std::regex_constants::match_any)) {
             requestComponents.type = KFS_Infer;
             requestComponents.model_name = sm[1];
@@ -672,12 +681,15 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                 return status;
             return StatusCode::OK;
         }
+        if (std::regex_match(request_path, sm, configReloadRegex)) {
+            requestComponents.type = ConfigReload;
+            return StatusCode::OK;
+        }
         if (std::regex_match(request_path, sm, modelstatusRegex))
             return StatusCode::REST_UNSUPPORTED_METHOD;
     } else if (http_method == "GET") {
         if (std::regex_match(request_path, sm, modelstatusRegex)) {
             requestComponents.model_name = sm[2];
-
             std::string model_version_str = sm[3];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -750,7 +762,7 @@ Status HttpRestApiHandler::processRequest(
     std::smatch sm;
     std::string request_path_str(request_path);
     if (FileSystem::isPathEscaped(request_path_str)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        SPDLOG_DEBUG("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
     }
 
@@ -778,8 +790,9 @@ Status HttpRestApiHandler::processPredictRequest(
     timer.start(TOTAL);
     using std::chrono::microseconds;
 
+    std::string modelVersionLog = modelVersion.has_value() ? std::to_string(modelVersion.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}",
-        modelName, modelVersion.value_or(0));
+        modelName, modelVersionLog);
 
     Order requestOrder;
     tensorflow::serving::PredictResponse responseProto;
@@ -793,7 +806,7 @@ Status HttpRestApiHandler::processPredictRequest(
         SPDLOG_DEBUG("Found pipeline with name: {}", modelName);
         status = processPipelineRequest(modelName, request, requestOrder, responseProto, reporterOut);
     } else {
-        SPDLOG_WARN("Model or pipeline matching request parameters not found - name: {}, version: {}", modelName, modelVersion.value_or(0));
+        SPDLOG_DEBUG("Model or pipeline matching request parameters not found - name: {}, version: {}", modelName, modelVersionLog);
         status = StatusCode::MODEL_NAME_MISSING;
     }
     if (!status.ok())
@@ -832,7 +845,8 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
         }
-        SPDLOG_WARN("Requested model instance - name: {}, version: {} - does not exist.", modelName, modelVersion.value_or(0));
+        std::string modelVersionLog = modelVersion.has_value() ? std::to_string(modelVersion.value()) : DEFAULT_VERSION;
+        SPDLOG_DEBUG("Requested model instance - name: {}, version: {} - does not exist.", modelName, modelVersionLog);
         return status;
     }
     reporterOut = &modelInstance->getMetricReporter();
