@@ -286,12 +286,12 @@ public:
     }
 
     /**
-     * @brief Check if result was parsed
+     * @brief Check if cli was parsed
      *
      * @return bool
      */
     bool isParsed() {
-        return result.get() == nullptr;
+        return result.get() != nullptr;
     }
 
     /**

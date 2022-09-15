@@ -70,6 +70,60 @@ public:
     }
 };
 
+class MetricsConfigNegativeTest : public MetricsConfigTest {
+public:
+    friend class MetricsConfigTest;
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name"};
+        int arg_count = 5;
+        static bool parseOnce = [&arg_count, &n_argv]() {
+            ovms::Config::instance().parse(arg_count, n_argv);
+            return true;
+        }();
+        (void)parseOnce;
+
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/ovms_config.json";
+    }
+};
+
+static const char* modelMetricsChangedConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "metrics_list": ["ovms_requests_success", "ovms_infer_req_queue_size"]
+            }
+        }
+})";
+
+TEST_F(MetricsConfigNegativeTest, MissingPort) {
+    SetUpConfig(modelMetricsChangedConfig);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
+}
+
 static const char* modelDefaultConfig = R"(
 {
     "model_config_list": [
@@ -101,30 +155,6 @@ TEST_F(MetricsConfigTest, DefaultValues) {
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
     ASSERT_EQ(metricConfig.getEnabledFamiliesList().size(), 0);
 }
-
-static const char* modelMetricsChangedConfig = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "monitoring":
-        {
-            "metrics":
-            {
-                "enable" : true,
-                "metrics_list": ["ovms_requests_success", "ovms_infer_req_queue_size"]
-            }
-        }
-})";
 
 TEST_F(MetricsConfigTest, ChangedValues) {
     SetUpConfig(modelMetricsChangedConfig);
