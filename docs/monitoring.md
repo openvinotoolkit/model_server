@@ -10,7 +10,7 @@ This document describes how to use metrics endpoint in the OpenVINO Model Server
 
 > **NOTE**: currently, Metrics feature is released as a preview feature.
 
-Internal metrics remove dependencies on the 3rd party components and allow tracking performance without extra communication hop.
+Built-in metrics allows tracking the performance without any extra logic on the client side or using network traffic monitoring tools like load balancers or reverse-proxies.
 
 It also exposes metrics which are not related to the traffic. 
 
