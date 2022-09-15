@@ -1,4 +1,4 @@
-# Enabling monitoring {#ovms_docs_monitoring}
+# metrics {#ovms_docs_metrics}
 
 ## Introduction to Metrics
 
@@ -18,13 +18,13 @@ For example number of Idle execution streams, which models were used, model load
 
 There are four types of metrics: 
 
-Counter – counts the number of specific events 
+Counter â€“ counts the number of specific events 
 
-Gauge – shows current state of the ovms or model 
+Gauge â€“ shows current state of the ovms or model 
 
-Histograms – shows distributions of counters per range 
+Histograms â€“ shows distributions of counters per range 
 
-Summary – shows quantiles – will not be used on the server side 
+Summary â€“ shows quantiles â€“ will not be used on the server side 
 
 For more information please visit [Prometheus metrics detailed description](https://prometheus.io/docs/concepts/metric_types/)
 
