@@ -286,15 +286,6 @@ public:
     }
 
     /**
-     * @brief Check if cli was parsed
-     *
-     * @return bool
-     */
-    bool isParsed() {
-        return result.get() != nullptr;
-    }
-
-    /**
         * @brief Get metrics list
         *
         * @return std::string

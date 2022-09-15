@@ -219,10 +219,8 @@ TEST_F(MetricsConfigTest, InitOnce) {
 
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
-    TearDown();
-    SetUp();
     SetUpConfig(modelDefaultConfig);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     status = manager.loadConfig(configFilePath);
