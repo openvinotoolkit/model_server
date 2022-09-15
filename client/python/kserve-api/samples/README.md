@@ -114,6 +114,31 @@ python3 ./grpc_server_ready.py --grpc_port 9000 --grpc_address localhost
 Server Ready: True
 ```
 
+### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
+
+- Command
+
+```Bash
+python3 ./grpc_server_metadata.py --help
+usage: grpc_server_metadata.py [-h] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT]
+
+Sends request via KServe gRPC API to get server metadata.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --grpc_address GRPC_ADDRESS
+                        Specify url to gRPC service. default:localhost
+  --grpc_port GRPC_PORT
+                        Specify port to gRPC service. default: 9000
+```
+
+- Usage Example
+
+```Bash
+python3 ./grpc_server_metadata.py --grpc_port 9000 --grpc_address localhost
+name: "OpenVINO Model Server"
+version: "2022.2.0.c83f8ca1"
+```
 
 ### Run the Client to get model readiness <a name="grpc-model-ready"></a>
 
@@ -454,7 +479,7 @@ optional arguments:
 
 ```Bash
 python3 ./http_server_metadata.py --http_port 5000 --http_address localhost
-{'name': 'OpenVINO Model Server', 'version': '2022.2.3bba1d3d'}
+{'name': 'OpenVINO Model Server', 'version': '2022.2.0.3bba1d3d'}
 ```
 
 ### Run the Client to get model readiness <a name="http-model-ready"></a>
