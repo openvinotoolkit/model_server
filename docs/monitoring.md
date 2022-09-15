@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document describes enabling and usage of different metrics in OVMS server that can be used for:
+This document describes how to use metrics endpoint in the OpenVINO Model Server. They can be applied for:
 
 - Providing performance statistics for monitoring and benchmarking purposes
 
