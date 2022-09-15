@@ -38,14 +38,13 @@ int HTTPServerModule::start(const ovms::Config& config) {
 
     SPDLOG_INFO("Will start {} REST workers", workers);
     server = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
-    if (server != nullptr) {
-        SPDLOG_INFO("Started REST server at {}", server_address);
-    } else {
+    if (server == nullptr) {
         SPDLOG_ERROR("Failed to start REST server at " + server_address);
         return EXIT_FAILURE;
     }
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", HTTP_SERVER_MODULE_NAME);
+    SPDLOG_INFO("Started REST server at {}", server_address);
     return EXIT_SUCCESS;
 }
 void HTTPServerModule::shutdown() {
