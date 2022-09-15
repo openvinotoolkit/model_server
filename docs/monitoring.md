@@ -74,7 +74,7 @@ CONFIG JSON
    }
    ```
 
-## Restrict only certain metrics via config.json and CLI
+## Change the default list of metrics
 
 You can enable from one up to all the metrics available at once.
 
