@@ -1,4 +1,4 @@
-# metrics {#ovms_docs_metrics}
+# Metrics {#ovms_docs_metrics}
 
 ## Introduction
 
@@ -18,13 +18,13 @@ For example statistics of the inference execution queue, model runtime parameter
 
 OpenVINO Model Server metrics are compatible with Prometheus standard [Prometheus metrics detailed description](https://prometheus.io/docs)
 
-They are exposed on the /metrics endpoint.
+They are exposed on the `/metrics` endpoint.
 
 ## Available metrics families
 
-Metrics from default list are enabled with the metrics_enabled flag or json configuration.
+Metrics from default list are enabled with the `metrics_enabled` flag or json configuration.
 
-However, you can enable also additional metrics by listing all the metrics you want to enable in the metric_list flag or json configuration.
+However, you can enable also additional metrics by listing all the metrics you want to enable in the `metric_list` flag or json configuration.
 
 
 DEFAULT
@@ -127,7 +127,7 @@ Metrics endpoint is using the same port as the REST interface for running the mo
 
 It is required to enable REST in the model server by setting the parameter --rest_port.
 
-To enable default metrics set you need to specify the metrics_enabled flag or json setting:
+To enable default metrics set you need to specify the `metrics_enabled` flag or json setting:
 
 CLI
 
@@ -143,6 +143,7 @@ CONFIG CMD
    ```bash
          docker run --rm -d -v -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json -p 9001:9001 -p 9002:9002 openvino/model_server:latest \
                --rest_port 9002
+               --port 9001
    ```
 
 CONFIG JSON
@@ -178,18 +179,20 @@ To enable specific set of metrics you need to specify the metrics_list flag or j
 CLI
 
    ```bash
-         docker run --rm -d -p 9000:9000 -p 8000:8000 openvino/model_server:latest
+         docker run --rm -d -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
                --model_name resnet --model_path gs://ovms-public-eu/resnet50  --port 9000 \
                --rest_port 8000 \
-               --metrics_enabled
+               --metrics_enabled \
                --metrics_list ovms_requests_success,ovms_infer_req_queue_size
    ```
 
 CONFIG CMD
 
    ```bash
-         docker run --rm -d -v -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-               --rest_port 8000
+         docker run --rm -d -v -d -v ${PWD}/workspace:/workspace openvino/model_server \
+            --config_path /workspace/config.json -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+            --rest_port 8000 \
+            --port 9000
    ```
 
 CONFIG JSON
@@ -212,6 +215,40 @@ CONFIG JSON
             {
                 "enable" : true,
                 "metrics_list": ["ovms_requests_success", "ovms_infer_req_queue_size"]
+            }
+        }
+    }
+    ```
+
+CONFIG JSON WITH ALL METRICS ENABLED
+
+```bash
+   {
+    "model_config_list": [
+        {
+           "config": {
+                "name": "resnet",
+                "base_path": "/workspace/resnet-50-tf",
+                "layout": "NHWC:NCHW",
+                "shape": "(1,224,224,3)"
+           }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "metrics_list": 
+                    [ "ovms_requests_success",
+                    "ovms_requests_fail",
+                    "ovms_inference_time_us",
+                    "ovms_wait_for_infer_req_time_us",
+                    "ovms_request_time_us",
+                    "ovms_current_requests",
+                    "ovms_infer_req_active",
+                    "ovms_streams",
+                    "ovms_infer_req_queue_size"]
             }
         }
     }
@@ -244,7 +281,15 @@ The example output looks like this:
 
 ## Differences between metrics against model or a DAG
 
+For DAG pipeline execution there are six metrics available:
 
+DAG METRICS
+
+   ```bash
+         counter     ovms_requests_success               Number of successful requests to a model or a DAG.
+         counter     ovms_requests_fail                  Number of failed requests to a model or a DAG.
+         histogram   ovms_request_time_us                Processing time of requests to a model or a DAG.
+   ```
 
 ## Example graphics from Graphana
 
