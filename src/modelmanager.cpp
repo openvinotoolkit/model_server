@@ -588,7 +588,6 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
         bool forceFailureIfMetricsAreEnabled = ovms::Config::instance().restPort() == 0;
         firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
-        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(firstErrorStatus);
     }
 
     return firstErrorStatus;
