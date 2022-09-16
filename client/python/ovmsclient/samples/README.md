@@ -41,7 +41,7 @@ mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 
 OVMS can be started using a command:
 ```bash
-docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NCHW:NHWC
+docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000
 ```
 
 
@@ -147,7 +147,7 @@ optional arguments:
 - Usage example
 
 ```bash
-python grpc_predict_resnet.py --images_numpy ../../imgs.npy --model_name resnet --service_url localhost:9000
+python grpc_predict_resnet.py --images_numpy ../../imgs_nhwc.npy --model_name resnet --service_url localhost:9000
 Image #0 has been classified as airliner
 Image #1 has been classified as Arctic fox, white fox, Alopex lagopus
 Image #2 has been classified as bee
@@ -369,7 +369,7 @@ optional arguments:
 - Usage example
 
 ```bash
-python http_predict_resnet.py --images_numpy ../../imgs.npy --model_name resnet --service_url localhost:8000
+python http_predict_resnet.py --images_numpy ../../imgs_nhwc.npy --model_name resnet --service_url localhost:8000
 Image #0 has been classified as airliner
 Image #1 has been classified as Arctic fox, white fox, Alopex lagopus
 Image #2 has been classified as bee
