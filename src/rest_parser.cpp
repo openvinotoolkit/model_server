@@ -580,8 +580,25 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::inference::ModelInferR
         HANDLE_VALUE(mutable_uint_contents, GetUint)
     } else if (input->datatype() == "FP64") {
         HANDLE_VALUE(mutable_fp64_contents, GetFloat)
+    } else if (input->datatype() == "BOOL") {
+        for (auto& value : node.GetArray()) {
+            if (value.IsArray()) {
+                for (auto& v : node.GetArray()) {
+                    auto status = parseData(v, input);
+                    if (!status.ok()) {
+                        return status;
+                    }
+                }
+                return StatusCode::OK;
+            }
+            if (!value.IsBool()) {
+                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+            }
+            input->mutable_contents()->mutable_bool_contents()->Add(value.GetBool());
+        }
     } else if (input->datatype() == "BYTES") {
-        // Binary inputs
+        SPDLOG_DEBUG("For REST datatype BYTES is supported only with binary data extension");
+        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     } else {
         return StatusCode::REST_UNSUPPORTED_PRECISION;
     }
@@ -592,7 +609,7 @@ Status KFSRestParser::parseInput(rapidjson::Value& node) {
     if (!node.IsObject()) {
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     }
-    requestProto.mutable_inputs()->Clear();
+
     auto input = requestProto.add_inputs();
     auto nameItr = node.FindMember("name");
     if ((nameItr == node.MemberEnd()) || !(nameItr->value.IsString())) {
@@ -648,6 +665,7 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
     if (node.GetArray().Size() == 0) {
         return StatusCode::REST_NO_INPUTS_FOUND;
     }
+    requestProto.mutable_inputs()->Clear();
     for (auto& input : node.GetArray()) {
         auto status = parseInput(input);
         if (!status.ok()) {
@@ -687,7 +705,7 @@ Status KFSRestParser::parse(const char* json) {
 
     auto outputsItr = doc.FindMember("outputs");
     if (outputsItr != doc.MemberEnd()) {
-        auto status = parseOutputs(parametersItr->value);
+        auto status = parseOutputs(outputsItr->value);
         if (!status.ok()) {
             SPDLOG_DEBUG("Parsing request outputs failed");
             return status;
