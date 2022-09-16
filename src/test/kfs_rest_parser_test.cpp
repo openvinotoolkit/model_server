@@ -207,28 +207,28 @@ TEST_F(KFSRestParserTest, parseValidRequestINT8) {
     VALIDATE_INPUT("INT8", int_contents_size, int_contents);
 }
 
-// TEST_F(KFSRestParserTest, parseValidRequestFP64) {
-//     std::string request = R"({
-//     "inputs" : [
-//         {
-//         "name" : "input0",
-//         "shape" : [ 2, 2 ],
-//         "datatype" : "FP64",
-//         "data" : [ 1.1, 2.2, 3.3, 4.4 ]
-//         }
-//     ]
-//     })";
-//     auto status = parser.parse(request.c_str());
-//     ASSERT_EQ(status, StatusCode::OK);
+TEST_F(KFSRestParserTest, parseValidRequestFP64) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 2, 2 ],
+        "datatype" : "FP64",
+        "data" : [ 1.1, 2.2, 3.3, 4.4 ]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
 
-//     auto proto = parser.getProto();
-//     ASSERT_EQ(proto.inputs_size(), 1);
-//     ASSERT_EQ(proto.inputs()[0].name(), "input0");
-//     ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
-//     ASSERT_EQ(proto.inputs()[0].datatype(), "FP64");
-//     ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 4);
-//     ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre(1.1, 2.2, 3.3, 4.4));
-// }
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "FP64");
+    ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 4);
+    ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre((float)1.1, (float)2.2, (float)3.3, (float)4.4));
+}
 
 TEST_F(KFSRestParserTest, parseValidRequestFP32) {
     std::string request = R"({
