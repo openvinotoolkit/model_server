@@ -71,7 +71,7 @@ Status DLNode::fetchResults(TensorWithSourceMap& outputs, ov::InferRequest& infe
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} exception occured during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     }
-    double ovInferTime = this->getNodeSession(sessionKey).getTimer().elapsed<std::chrono::microseconds>("inference");
+    double ovInferTime = this->getNodeSession(sessionKey).getTimer().elapsed<std::chrono::microseconds>(EXECUTE);
     OBSERVE_IF_ENABLED(model.getMetricReporter().inferenceTime, ovInferTime);
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} infer request finished", getName(), sessionKey);
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Inference processing time for node {}; model name: {}; session: {} - {} ms",

@@ -734,8 +734,14 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
 TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     // Most basic configuration, just process single dummy model request
 
-    Timer timer;
-    timer.start("prepare pipeline");
+    enum : unsigned int {
+        PREPARE,
+        EXECUTE,
+        COMPARE,
+        TIMER_END
+    };
+    Timer<TIMER_END> timer;
+    timer.start(PREPARE);
 
     const int N = 100;
     // input      dummy x N      output
@@ -768,18 +774,18 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
         pipeline.push(std::move(dummy_node));
     }
 
-    timer.stop("prepare pipeline");
-    timer.start("pipeline::execute");
+    timer.stop(PREPARE);
+    timer.start(EXECUTE);
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    timer.stop("pipeline::execute");
+    timer.stop(EXECUTE);
 
-    timer.start("compare results");
+    timer.start(COMPARE);
     checkDummyResponse(N);
-    timer.stop("compare results");
+    timer.stop(COMPARE);
 
-    std::cout << "prepare pipeline: " << timer.elapsed<std::chrono::microseconds>("prepare pipeline") / 1000 << "ms\n";
-    std::cout << "pipeline::execute: " << timer.elapsed<std::chrono::microseconds>("pipeline::execute") / 1000 << "ms\n";
-    std::cout << "compare results: " << timer.elapsed<std::chrono::microseconds>("compare results") / 1000 << "ms\n";
+    std::cout << "prepare pipeline: " << timer.elapsed<std::chrono::microseconds>(PREPARE) / 1000 << "ms\n";
+    std::cout << "pipeline::execute: " << timer.elapsed<std::chrono::microseconds>(EXECUTE) / 1000 << "ms\n";
+    std::cout << "compare results: " << timer.elapsed<std::chrono::microseconds>(COMPARE) / 1000 << "ms\n";
 }
 
 TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeAny) {

@@ -486,3 +486,12 @@ void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const s
         }
     }
 }
+
+void randomizePort(std::string& port) {
+    std::mt19937_64 eng{std::random_device{}()};
+    std::uniform_int_distribution<> dist{0, 9};
+    for (auto j : {1, 2, 3}) {
+        char* digitToRandomize = (char*)port.c_str() + j;
+        *digitToRandomize += dist(eng);
+    }
+}

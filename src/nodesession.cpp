@@ -45,7 +45,7 @@ NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string&
     metadata(metadata),
     sessionKey(metadata.getSessionKey()),
     nodeName(nodeName),
-    timer(std::make_unique<Timer>()),
+    timer(std::make_unique<Timer<TIMER_END>>()),
     inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)),
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
@@ -59,7 +59,7 @@ Status NodeSession::notifyFinishedDependency() {
     return this->inputHandler->notifyFinishedDependency();
 }
 
-Timer& NodeSession::getTimer() const {
+Timer<TIMER_END>& NodeSession::getTimer() const {
     return *this->timer;
 }
 

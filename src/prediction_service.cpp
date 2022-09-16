@@ -47,6 +47,13 @@ using tensorflow::serving::PredictionService;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
+namespace {
+enum : unsigned int {
+    TOTAL,
+    TIMER_END
+};
+}
+
 namespace ovms {
 
 PredictionServiceImpl::PredictionServiceImpl(ovms::Server& ovmsServer) :
@@ -79,8 +86,8 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     const PredictRequest* request,
     PredictResponse* response) {
     OVMS_PROFILE_FUNCTION();
-    Timer timer;
-    timer.start("total");
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
     using std::chrono::microseconds;
     SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
         request->model_spec().name(),
@@ -120,8 +127,8 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         return status.grpc();
     }
 
-    timer.stop("total");
-    double requestTotal = timer.elapsed<microseconds>("total");
+    timer.stop(TOTAL);
+    double requestTotal = timer.elapsed<microseconds>(TOTAL);
     if (pipelinePtr) {
         OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().requestTimeGrpc, requestTotal);
     } else {
