@@ -20,7 +20,9 @@
 
 using namespace ovms;
 
-class KFSRestParserTest : public ::testing::Test {
+using namespace testing;
+
+class KFSRestParserTest : public Test {
 public:
     KFSRestParser parser;
 };
@@ -44,11 +46,30 @@ TEST_F(KFSRestParserTest, parseValidRequestTwoInputs) {
     })";
     auto status = parser.parse(request.c_str());
     ASSERT_EQ(status, StatusCode::OK);
+
     auto proto = parser.getProto();
     ASSERT_EQ(proto.inputs_size(), 2);
     ASSERT_EQ(proto.inputs()[0].name(), "input0");
-    ASSERT_EQ(proto.inputs()[0].shape, [2,2]);
+    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2,2));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "UINT32");
+    ASSERT_EQ(proto.inputs()[0].contents().uint_contents_size(), 4);
+    ASSERT_THAT(proto.inputs()[0].contents().uint_contents(), ElementsAre(1,2,3,4));
+
+    ASSERT_EQ(proto.inputs()[1].name(), "input1");
+    ASSERT_THAT(proto.inputs()[1].shape(),ElementsAre(3));
+    ASSERT_EQ(proto.inputs()[1].datatype(), "BOOL");
+    ASSERT_EQ(proto.inputs()[1].contents().bool_contents_size(), 1);
+    ASSERT_THAT(proto.inputs()[1].contents().bool_contents(), ElementsAre(true));
 }
+
+#define VALIDATE_INPUT(DATATYPE, CONTENTS_SIZE, CONTENTS) \
+    auto proto = parser.getProto(); \
+    ASSERT_EQ(proto.inputs_size(), 1); \
+    ASSERT_EQ(proto.inputs()[0].name(), "input0"); \
+    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2)); \
+    ASSERT_EQ(proto.inputs()[0].datatype(), DATATYPE); \
+    ASSERT_EQ(proto.inputs()[0].contents().CONTENTS_SIZE(), 4); \
+    ASSERT_THAT(proto.inputs()[0].contents().CONTENTS(), ElementsAre(1, 2, 3, 4));
 
 TEST_F(KFSRestParserTest, parseValidRequestUINT64) {
     std::string request = R"({
@@ -62,8 +83,9 @@ TEST_F(KFSRestParserTest, parseValidRequestUINT64) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT64", uint64_contents_size, uint64_contents);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestUINT32) {
@@ -78,40 +100,9 @@ TEST_F(KFSRestParserTest, parseValidRequestUINT32) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
-}
 
-TEST_F(KFSRestParserTest, parseValidRequestUINT32WitFloatingPointValues) {
-    std::string request = R"({
-    "inputs" : [
-        {
-        "name" : "input0",
-        "shape" : [ 2, 2 ],
-        "datatype" : "UINT32",
-        "data" : [ 1.0, 2.0, 3.0, 4.0 ]
-        }
-    ]
-    })";
-    auto status = parser.parse(request.c_str());
-
-    ASSERT_EQ(status, StatusCode::OK);
-}
-
-TEST_F(KFSRestParserTest, parseValidRequestUINT32WitFloatingPointValues2) {
-    std::string request = R"({
-    "inputs" : [
-        {
-        "name" : "input0",
-        "shape" : [ 2, 2 ],
-        "datatype" : "UINT32",
-        "data" : [ 1.6, 2.0, 3.0, 4.0 ]
-        }
-    ]
-    })";
-    auto status = parser.parse(request.c_str());
-
-    ASSERT_EQ(status, StatusCode::OK);
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestUINT16) {
@@ -126,8 +117,9 @@ TEST_F(KFSRestParserTest, parseValidRequestUINT16) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT16", uint_contents_size, uint_contents);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestUINT8) {
@@ -142,8 +134,9 @@ TEST_F(KFSRestParserTest, parseValidRequestUINT8) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT8", uint_contents_size, uint_contents);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestINT64) {
@@ -158,8 +151,9 @@ TEST_F(KFSRestParserTest, parseValidRequestINT64) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("INT64", int64_contents_size, int64_contents);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestINT32) {
@@ -174,8 +168,9 @@ TEST_F(KFSRestParserTest, parseValidRequestINT32) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("INT32", int_contents_size, int_contents);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestINT16) {
@@ -190,8 +185,9 @@ TEST_F(KFSRestParserTest, parseValidRequestINT16) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("INT16", int_contents_size, int_contents);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestINT8) {
@@ -206,25 +202,33 @@ TEST_F(KFSRestParserTest, parseValidRequestINT8) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("INT8", int_contents_size, int_contents);
 }
 
-TEST_F(KFSRestParserTest, parseValidRequestFP64) {
-    std::string request = R"({
-    "inputs" : [
-        {
-        "name" : "input0",
-        "shape" : [ 2, 2 ],
-        "datatype" : "FP64",
-        "data" : [ 1, 2, 3, 4 ]
-        }
-    ]
-    })";
-    auto status = parser.parse(request.c_str());
+// TEST_F(KFSRestParserTest, parseValidRequestFP64) {
+//     std::string request = R"({
+//     "inputs" : [
+//         {
+//         "name" : "input0",
+//         "shape" : [ 2, 2 ],
+//         "datatype" : "FP64",
+//         "data" : [ 1.1, 2.2, 3.3, 4.4 ]
+//         }
+//     ]
+//     })";
+//     auto status = parser.parse(request.c_str());
+//     ASSERT_EQ(status, StatusCode::OK);
 
-    ASSERT_EQ(status, StatusCode::OK);
-}
+//     auto proto = parser.getProto();
+//     ASSERT_EQ(proto.inputs_size(), 1);
+//     ASSERT_EQ(proto.inputs()[0].name(), "input0");
+//     ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+//     ASSERT_EQ(proto.inputs()[0].datatype(), "FP64");
+//     ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 4);
+//     ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre(1.1, 2.2, 3.3, 4.4));
+// }
 
 TEST_F(KFSRestParserTest, parseValidRequestFP32) {
     std::string request = R"({
@@ -232,14 +236,21 @@ TEST_F(KFSRestParserTest, parseValidRequestFP32) {
         {
         "name" : "input0",
         "shape" : [ 2, 2 ],
-        "datatype" : "INT32",
+        "datatype" : "FP32",
         "data" : [ 1.5, 2.9, 3.0, 4.1 ]
         }
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "FP32");
+    ASSERT_EQ(proto.inputs()[0].contents().fp32_contents_size(), 4);
+    ASSERT_THAT(proto.inputs()[0].contents().fp32_contents(), ElementsAre(1.5, 2.9, 3.0, 4.1));
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestFP32WithIntegers) {
@@ -248,14 +259,15 @@ TEST_F(KFSRestParserTest, parseValidRequestFP32WithIntegers) {
         {
         "name" : "input0",
         "shape" : [ 2, 2 ],
-        "datatype" : "INT32",
+        "datatype" : "FP32",
         "data" : [ 1, 2, 3, 4 ]
         }
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("FP32", fp32_contents_size, fp32_contents);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestBOOL) {
@@ -270,24 +282,15 @@ TEST_F(KFSRestParserTest, parseValidRequestBOOL) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
-}
 
-TEST_F(KFSRestParserTest, parseValidRequestBoolWithFloatData) {
-    std::string request = R"({
-    "inputs" : [
-        {
-        "name" : "input0",
-        "shape" : [ 2, 2 ],
-        "datatype" : "UINT32",
-        "data" : [ 1.0, 2.5, 3.5, 4.5]
-        }
-    ]
-    })";
-    auto status = parser.parse(request.c_str());
-
-    ASSERT_EQ(status, StatusCode::OK);
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "BOOL");
+    ASSERT_EQ(proto.inputs()[0].contents().bool_contents_size(), 4);
+    ASSERT_THAT(proto.inputs()[0].contents().bool_contents(), ElementsAre(true, true, false, false));
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestBYTES) {
@@ -302,8 +305,17 @@ TEST_F(KFSRestParserTest, parseValidRequestBYTES) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
+    auto binary_data_size_parameter = proto.inputs()[0].parameters().find("binary_data_size");
+    ASSERT_NE(binary_data_size_parameter, proto.inputs()[0].parameters().end());
+    ASSERT_EQ(binary_data_size_parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(binary_data_size_parameter->second.int64_param(),4);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithStringRequestParameter) {
@@ -319,8 +331,14 @@ TEST_F(KFSRestParserTest, parseValidRequestWithStringRequestParameter) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+
+    auto parameter = proto.parameters().find("param");
+    ASSERT_NE(parameter, proto.parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kStringParam);
+    ASSERT_EQ(parameter->second.string_param(),"value");
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithIntRequestParameter) {
@@ -336,8 +354,14 @@ TEST_F(KFSRestParserTest, parseValidRequestWithIntRequestParameter) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+
+    auto parameter = proto.parameters().find("param");
+    ASSERT_NE(parameter, proto.parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(parameter->second.int64_param(),5);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithBoolRequestParameter) {
@@ -353,14 +377,19 @@ TEST_F(KFSRestParserTest, parseValidRequestWithBoolRequestParameter) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+
+    auto parameter = proto.parameters().find("param");
+    ASSERT_NE(parameter, proto.parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kBoolParam);
+    ASSERT_EQ(parameter->second.bool_param(),true);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithId) {
     std::string request = R"({
     "id" : "50",
-    "parameters" : {"param" : true},
     "inputs" : [
         {
         "name" : "input0",
@@ -371,8 +400,10 @@ TEST_F(KFSRestParserTest, parseValidRequestWithId) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+    ASSERT_EQ(proto.id(), "50");
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithOutput) {
@@ -392,8 +423,11 @@ TEST_F(KFSRestParserTest, parseValidRequestWithOutput) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+    ASSERT_EQ(proto.outputs_size(), 1);
+    ASSERT_EQ(proto.outputs()[0].name(), "output0");
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithStringOutputParameter) {
@@ -414,8 +448,16 @@ TEST_F(KFSRestParserTest, parseValidRequestWithStringOutputParameter) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+    ASSERT_EQ(proto.outputs_size(), 1);
+    ASSERT_EQ(proto.outputs()[0].name(), "output0");
+
+    auto parameter = proto.outputs()[0].parameters().find("param");
+    ASSERT_NE(parameter, proto.outputs()[0].parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kStringParam);
+    ASSERT_EQ(parameter->second.string_param(),"value");
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithIntOutputParameter) {
@@ -436,8 +478,16 @@ TEST_F(KFSRestParserTest, parseValidRequestWithIntOutputParameter) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+    ASSERT_EQ(proto.outputs_size(), 1);
+    ASSERT_EQ(proto.outputs()[0].name(), "output0");
+
+    auto parameter = proto.outputs()[0].parameters().find("param");
+    ASSERT_NE(parameter, proto.outputs()[0].parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(parameter->second.int64_param(),5);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithBoolOutputParameter) {
@@ -458,8 +508,16 @@ TEST_F(KFSRestParserTest, parseValidRequestWithBoolOutputParameter) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+    ASSERT_EQ(proto.outputs_size(), 1);
+    ASSERT_EQ(proto.outputs()[0].name(), "output0");
+
+    auto parameter = proto.outputs()[0].parameters().find("param");
+    ASSERT_NE(parameter, proto.outputs()[0].parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kBoolParam);
+    ASSERT_EQ(parameter->second.bool_param(),true);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithStringInputParameter) {
@@ -475,8 +533,14 @@ TEST_F(KFSRestParserTest, parseValidRequestWithStringInputParameter) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+
+    auto parameter = proto.inputs()[0].parameters().find("param");
+    ASSERT_NE(parameter, proto.inputs()[0].parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kStringParam);
+    ASSERT_EQ(parameter->second.string_param(),"value");
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithIntInputParameter) {
@@ -492,8 +556,14 @@ TEST_F(KFSRestParserTest, parseValidRequestWithIntInputParameter) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+
+    auto parameter = proto.inputs()[0].parameters().find("param");
+    ASSERT_NE(parameter, proto.inputs()[0].parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(parameter->second.int64_param(),5);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithBoolInputParameter) {
@@ -509,8 +579,14 @@ TEST_F(KFSRestParserTest, parseValidRequestWithBoolInputParameter) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    VALIDATE_INPUT("UINT32", uint_contents_size, uint_contents);
+
+    auto parameter = proto.inputs()[0].parameters().find("param");
+    ASSERT_NE(parameter, proto.inputs()[0].parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kBoolParam);
+    ASSERT_EQ(parameter->second.bool_param(),true);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithNoDataButBinaryInputsParameter) {
@@ -519,14 +595,70 @@ TEST_F(KFSRestParserTest, parseValidRequestWithNoDataButBinaryInputsParameter) {
         {
         "name" : "input0",
         "shape" : [ 2, 2 ],
-        "datatype" : "UINT32",
+        "datatype" : "BYTES",
         "parameters" : {"binary_data_size" : 16}
         }
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
+    ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 0);
+
+    auto parameter = proto.inputs()[0].parameters().find("binary_data_size");
+    ASSERT_NE(parameter, proto.inputs()[0].parameters().end());
+    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(parameter->second.int64_param(),16);
+}
+
+TEST_F(KFSRestParserTest, parseInValidRequestUINT32WithFloatingPointValues) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 2, 2 ],
+        "datatype" : "UINT32",
+        "data" : [ 1.0, 2.0, 3.0, 4.0 ]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(KFSRestParserTest, parseInValidRequestUINT32WithNegativeValues) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 2, 2 ],
+        "datatype" : "UINT32",
+        "data" : [ 1, 2, 3, -4 ]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(KFSRestParserTest, parseInvalidRequestBoolWithIntData) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 2, 2 ],
+        "datatype" : "BOOL",
+        "data" : [ 0, 1, 0, 1]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
 TEST_F(KFSRestParserTest, parseInvalidRequestWithNoDataAndNoBinaryInputsParameter) {
@@ -540,7 +672,6 @@ TEST_F(KFSRestParserTest, parseInvalidRequestWithNoDataAndNoBinaryInputsParamete
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
@@ -556,7 +687,6 @@ TEST_F(KFSRestParserTest, parseInvalidRequestWithDataAndBYTESdatatype) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
@@ -571,7 +701,6 @@ TEST_F(KFSRestParserTest, parseInvalidRequestWithNoName) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
@@ -586,7 +715,6 @@ TEST_F(KFSRestParserTest, parseInvalidRequestWithNoShape) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
@@ -601,7 +729,6 @@ TEST_F(KFSRestParserTest, parseInvalidRequestWithNoDatatype) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
@@ -617,7 +744,6 @@ TEST_F(KFSRestParserTest, parseInvalidRequestUINT32WithStringData) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
@@ -633,13 +759,11 @@ TEST_F(KFSRestParserTest, parseInvalidRequestUINT32WithBoolData) {
     ]
     })";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
 TEST_F(KFSRestParserTest, parseInvalidRequestWithInputsMissing) {
     std::string request = R"({})";
     auto status = parser.parse(request.c_str());
-
     ASSERT_EQ(status, StatusCode::REST_NO_INPUTS_FOUND);
 }

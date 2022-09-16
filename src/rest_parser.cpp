@@ -542,7 +542,7 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
     return StatusCode::OK;
 }
 
-#define HANDLE_VALUE(CONTENTS, TYPE_GETTER)                              \
+#define HANDLE_VALUE(CONTENTS, TYPE_GETTER, TYPE_CHECK)                              \
     for (auto& value : node.GetArray()) {                                \
         if (value.IsArray()) {                                           \
             for (auto& v : node.GetArray()) {                            \
@@ -553,7 +553,7 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
             }                                                            \
             return StatusCode::OK;                                       \
         }                                                                \
-        if (!value.IsNumber()) {                                         \
+        if (!value.TYPE_CHECK()) {                                         \
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;               \
         }                                                                \
         input->mutable_contents()->CONTENTS()->Add(value.TYPE_GETTER()); \
@@ -561,41 +561,27 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
 
 Status KFSRestParser::parseData(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input) {
     if (input->datatype() == "FP32") {
-        HANDLE_VALUE(mutable_fp32_contents, GetFloat)
+        HANDLE_VALUE(mutable_fp32_contents, GetFloat, IsNumber)
     } else if (input->datatype() == "INT64") {
-        HANDLE_VALUE(mutable_int64_contents, GetInt64)
+        HANDLE_VALUE(mutable_int64_contents, GetInt64, IsInt)
     } else if (input->datatype() == "INT32") {
-        HANDLE_VALUE(mutable_int_contents, GetInt)
+        HANDLE_VALUE(mutable_int_contents, GetInt, IsInt)
     } else if (input->datatype() == "INT16") {
-        HANDLE_VALUE(mutable_int_contents, GetInt)
+        HANDLE_VALUE(mutable_int_contents, GetInt, IsInt)
     } else if (input->datatype() == "INT8") {
-        HANDLE_VALUE(mutable_int_contents, GetInt)
+        HANDLE_VALUE(mutable_int_contents, GetInt, IsInt)
     } else if (input->datatype() == "UINT64") {
-        HANDLE_VALUE(mutable_uint64_contents, GetUint64)
+        HANDLE_VALUE(mutable_uint64_contents, GetUint64, IsUint)
     } else if (input->datatype() == "UINT32") {
-        HANDLE_VALUE(mutable_uint_contents, GetUint)
+        HANDLE_VALUE(mutable_uint_contents, GetUint, IsUint)
     } else if (input->datatype() == "UINT16") {
-        HANDLE_VALUE(mutable_uint_contents, GetUint)
+        HANDLE_VALUE(mutable_uint_contents, GetUint, IsUint)
     } else if (input->datatype() == "UINT8") {
-        HANDLE_VALUE(mutable_uint_contents, GetUint)
+        HANDLE_VALUE(mutable_uint_contents, GetUint, IsUint)
     } else if (input->datatype() == "FP64") {
-        HANDLE_VALUE(mutable_fp64_contents, GetFloat)
+        HANDLE_VALUE(mutable_fp64_contents, GetFloat, IsNumber)
     } else if (input->datatype() == "BOOL") {
-        for (auto& value : node.GetArray()) {
-            if (value.IsArray()) {
-                for (auto& v : node.GetArray()) {
-                    auto status = parseData(v, input);
-                    if (!status.ok()) {
-                        return status;
-                    }
-                }
-                return StatusCode::OK;
-            }
-            if (!value.IsBool()) {
-                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-            }
-            input->mutable_contents()->mutable_bool_contents()->Add(value.GetBool());
-        }
+        HANDLE_VALUE(mutable_bool_contents, GetBool, IsBool)
     } else if (input->datatype() == "BYTES") {
         SPDLOG_DEBUG("For REST datatype BYTES is supported only with binary data extension");
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;

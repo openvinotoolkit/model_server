@@ -185,6 +185,20 @@ TEST_F(HttpRestApiHandlerTest, RegexParseServerLive) {
     ASSERT_EQ(comp.type, ovms::KFS_GetServerLive);
 }
 
+TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputs) {
+    std::string request = "/v2/models/dummy/versions/1/infer";
+    ovms::HttpRequestComponents comp;
+    std::vector<std::pair<std::string, std::string>> headers;
+    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length","15"};
+    headers.emplace_back(binaryInputsHeader);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::OK);
+
+    ASSERT_EQ(comp.type, ovms::KFS_Infer);
+    ASSERT_EQ(comp.model_version, 1);
+    ASSERT_EQ(comp.model_name, "dummy");
+    ASSERT_EQ(comp.inferenceHeaderContentLength.value_or(0), 15);
+}
+
 TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
     std::string request = "/v2/models/dummy/versions/1";
     ovms::HttpRequestComponents comp;
