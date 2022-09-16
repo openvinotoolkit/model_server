@@ -82,7 +82,7 @@ Status DLNodeSession::requestExecuteRequiredResources() {
     if (!status.ok()) {
         return status;
     }
-    this->timer->start("get infer request");
+    this->timer->start(GET_INFER_REQUEST);
     this->nodeStreamIdGuard = std::make_unique<NodeStreamIdGuard>(model->getInferRequestsQueue(), model->getMetricReporter());
     return status;
 }
@@ -228,8 +228,8 @@ Status DLNodeSession::execute(PipelineEventQueue& notifyEndQueue, uint waitForSt
     }
     auto& inferRequestsQueue = this->model->getInferRequestsQueue();
     auto& inferRequest = inferRequestsQueue.getInferRequest(streamIdOpt.value());
-    this->timer->stop("get infer request");
-    double getInferRequestTime = this->timer->elapsed<std::chrono::microseconds>("get infer request");
+    this->timer->stop(GET_INFER_REQUEST);
+    double getInferRequestTime = this->timer->elapsed<std::chrono::microseconds>(GET_INFER_REQUEST);
     OBSERVE_IF_ENABLED(this->model->getMetricReporter().waitForInferReqTime, getInferRequestTime);
     status = setInputsForInference(inferRequest);
     if (!status.ok()) {
@@ -304,7 +304,7 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, ov::I
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Setting completion callback for node name: {}", this->getName());
         inferRequest.set_callback([this, &notifyEndQueue, &inferRequest, &node](std::exception_ptr exception_ptr) {
             OVMS_PROFILE_ASYNC_END("async inference", this);
-            this->timer->stop("inference");
+            this->timer->stop(EXECUTE);
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Completion callback received for node name: {}", this->getName());
             // After inference is completed, input tensors are not needed anymore
             this->inputHandler->clearInputs();
@@ -312,7 +312,7 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, ov::I
             inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request
         });
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Starting infer async for node name: {}", getName());
-        this->timer->start("inference");
+        this->timer->start(EXECUTE);
         OVMS_PROFILE_SYNC_BEGIN("ov::InferRequest::start_async");
         inferRequest.start_async();
         OVMS_PROFILE_SYNC_END("ov::InferRequest::start_async");

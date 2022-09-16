@@ -41,10 +41,6 @@ int ServableManagerModule::start(const ovms::Config& config) {
     if (status.ok()) {
         state = ModuleState::INITIALIZED;
         SPDLOG_INFO("{} started", SERVABLE_MANAGER_MODULE_NAME);
-        // FIXME this should be reenabled in grpcserver module when functional tests are switched to wait
-        // for servablemanager module start log
-        // #KFS_CLEANUP
-        SPDLOG_INFO("Server started on port {}", config.port());
         return EXIT_SUCCESS;
     }
     SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());

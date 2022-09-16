@@ -64,14 +64,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
 ::grpc::Status ModelServiceImpl::GetModelStatus(
     ::grpc::ServerContext* context, const tensorflow::serving::GetModelStatusRequest* request,
     tensorflow::serving::GetModelStatusResponse* response) {
-    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return grpc::Status(grpc::StatusCode::NOT_FOUND, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
-    }
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-    // TODO if not succeed then return error
-    auto& manager = servableManagerModule->getServableManager();
-    return GetModelStatusImpl::getModelStatus(request, response, manager, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelStatus)).grpc();
+    return GetModelStatusImpl::getModelStatus(request, response, modelManager, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelStatus)).grpc();
 }
 
 Status GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
@@ -217,7 +210,13 @@ Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::stri
 }
 
 ModelServiceImpl::ModelServiceImpl(ovms::Server& ovmsServer) :
-    ovmsServer(ovmsServer) {}
+    modelManager(dynamic_cast<const ServableManagerModule*>(ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
+        const char* message = "Tried to create model service impl without servable manager module";
+        SPDLOG_ERROR(message);
+        throw std::logic_error(message);
+    }
+}
 
 ::grpc::Status ModelServiceImpl::HandleReloadConfigRequest(
     ::grpc::ServerContext* context, const tensorflow::serving::ReloadConfigRequest* request,

@@ -470,3 +470,5 @@ static const std::vector<ovms::Precision> UNSUPPORTED_KFS_INPUT_PRECISIONS_TENSO
     // ovms::Precision::BOOL
     // ovms::Precision::CUSTOM)
 };
+
+void randomizePort(std::string& port);
