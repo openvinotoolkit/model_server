@@ -539,7 +539,8 @@ Status HttpRestApiHandler::dispatchToProcessor(
 Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     auto module = this->ovmsServer.getModule(METRICS_MODULE_NAME);
     if (nullptr == module) {
-        return StatusCode::INTERNAL_ERROR;  // TODO: Return proper code when metric endpoint is disabled (missing module).
+        SPDLOG_ERROR("Failed to process metrics - metrics module is missing");
+        return StatusCode::INTERNAL_ERROR;
     }
     auto& metricConfig = this->modelManager.getMetricConfig();
 
