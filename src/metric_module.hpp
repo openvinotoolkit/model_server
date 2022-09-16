@@ -24,6 +24,7 @@ namespace ovms {
 class Config;
 
 class MetricModule : public Module {
+protected:
     std::unique_ptr<MetricRegistry> registry;
 
 public:
