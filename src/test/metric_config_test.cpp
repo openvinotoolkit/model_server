@@ -51,7 +51,7 @@ public:
         const std::string modelPathToReplace{"/ovms/src/test/dummy"};
         ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
     }
-    
+
     void SetUp() override {
         TestWithTempDir::SetUp();
         char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
@@ -67,7 +67,7 @@ public:
 class MetricsConfigNegativeTest : public MetricsConfigTest {
 public:
     friend class MetricsConfigTest;
-    
+
     void SetUp() override {
         TestWithTempDir::SetUp();
         char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name"};
