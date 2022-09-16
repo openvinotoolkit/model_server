@@ -37,6 +37,7 @@ private:
     MetricFamily(const std::string& name, const std::string& description, prometheus::Registry& registryImplRef);
     MetricFamily(const MetricFamily&) = delete;
     MetricFamily(MetricFamily&&) = delete;
+    MetricFamily& operator=(const MetricFamily&) = delete;
 
 public:
     std::unique_ptr<MetricType> addMetric(
