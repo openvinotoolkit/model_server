@@ -270,7 +270,7 @@ Status ModelManager::startFromConfig() {
 
 Status ModelManager::startFromFile(const std::string& jsonFilename) {
     Status status = loadConfig(jsonFilename);
-    if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID) {
+    if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID || status == StatusCode::METRICS_REST_PORT_MISSING || status == StatusCode::INVALID_METRICS_ENDPOINT || status == StatusCode::INVALID_METRICS_FAMILY_NAME) {
         return status;
     }
 
@@ -579,7 +579,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
 }
 
 Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
-    Status firstErrorStatus = StatusCode::OK;
+    Status status = StatusCode::OK;
     const auto itr2 = configJson.FindMember("monitoring");
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
@@ -587,11 +587,10 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
         bool forceFailureIfMetricsAreEnabled = ovms::Config::instance().restPort() == 0;
-        firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
-        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(firstErrorStatus);
+        status = this->metricConfig.parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
     }
 
-    return firstErrorStatus;
+    return status;
 }
 
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {

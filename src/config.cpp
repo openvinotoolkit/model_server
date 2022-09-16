@@ -155,7 +155,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<bool>()->default_value("false"),
                 "METRICS")
             ("metrics_list",
-                "Comma separated list of metrics. If unset, only default metrics will be enabled. Default metrics: ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us; Additional metrics: ovms_infer_req_queue_size, ovms_infer_req_active.",
+                "Comma separated list of metrics. If unset, only default metrics will be enabled. Default metrics: ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us. When set, only the listed metrics will be enabled. Additional metrics: ovms_infer_req_queue_size, ovms_infer_req_active.",
                 cxxopts::value<std::string>()->default_value(""),
                 "METRICS_LIST")
             ("idle_sequence_cleanup",
