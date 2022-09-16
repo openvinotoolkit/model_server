@@ -136,7 +136,6 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
             {"interface", "gRPC"}});
 
         this->requestFailGrpcGetModelStatus = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
             {"api", "TensorFlowServing"},
             {"method", "GetModelStatus"},
             {"interface", "gRPC"}});
@@ -154,7 +153,6 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
             {"interface", "REST"}});
 
         this->requestFailRestGetModelStatus = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
             {"api", "TensorFlowServing"},
             {"method", "GetModelStatus"},
             {"interface", "REST"}});
@@ -173,7 +171,6 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
             {"interface", "gRPC"}});
 
         this->requestFailGrpcModelReady = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
             {"api", "KServe"},
             {"method", "ModelReady"},
             {"interface", "gRPC"}});
@@ -191,7 +188,6 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
             {"interface", "REST"}});
 
         this->requestFailRestModelReady = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
             {"api", "KServe"},
             {"method", "ModelReady"},
             {"interface", "REST"}});
