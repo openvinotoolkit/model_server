@@ -26,72 +26,97 @@ Metrics from default list are enabled with the metrics_enabled flag or json conf
 
 However, you can enable also additional metrics by listing all the metrics you want to enable in the metric_list flag or json configuration.
 
-metric, type, labels, description
 
 DEFAULT
 
    ```bash
-        gauge       ovms_streams                        Number of OpenVINO execution streams.
-        gauge       ovms_current_requests               Number of inference requests currently in process.
-        counter     ovms_requests_success               Number of successful requests to a model or a DAG.
-        counter     ovms_requests_fail                  Number of failed requests to a model or a DAG.
-        histogram   ovms_request_time_us                Processing time of requests to a model or a DAG.
-        histogram   ovms_inference_time_us              Inference execution time in the OpenVINO backend.
-        histogram   ovms_wait_for_infer_req_time_us     Request waiting time in the scheduling queue.
+         gauge       ovms_streams                        Number of OpenVINO execution streams.
+         gauge       ovms_current_requests               Number of inference requests currently in process.
+         counter     ovms_requests_success               Number of successful requests to a model or a DAG.
+         counter     ovms_requests_fail                  Number of failed requests to a model or a DAG.
+         histogram   ovms_request_time_us                Processing time of requests to a model or a DAG.
+         histogram   ovms_inference_time_us              Inference execution time in the OpenVINO backend.
+         histogram   ovms_wait_for_infer_req_time_us     Request waiting time in the scheduling queue.
    ```
 
 ADDITIONAL
 
    ```bash
-        gauge   ovms_infer_req_queue_size       Inference request queue size (nireq).
-        gauge   ovms_infer_req_active           Number of currently consumed inference request from the processing queue.
+         gauge   ovms_infer_req_queue_size       Inference request queue size (nireq).
+         gauge   ovms_infer_req_active           Number of currently consumed inference request from the processing queue.
    ```
 
 ## List of available metrics labels
 
-Metrics from default list are enabled with the metrics_enabled flag or json configuration.
-
-However, you can enable also additional metrics by listing all the metrics you want to enable in the metric_list flag or json configuration.
-
 ovms_requests_success
 
    ```bash
-        ovms_requests_success_grpc_predict
-        ovms_requests_success_grpc_getmodelmetadata
-        ovms_requests_success_grpc_getmodelstatus
-        ovms_requests_success_grpc_modelinfer
-        ovms_requests_success_grpc_modelmetadata
-        ovms_requests_success_grpc_modelready
-        ovms_requests_success_rest_modelinfer
-        ovms_requests_success_rest_predict
-        ovms_requests_success_rest_modelmetadata
-        ovms_requests_success_rest_modelstatus
-        ovms_requests_success_rest_modelmetadata
-        ovms_requests_success_rest_modelready
+         api="KServe",interface="REST",method="ModelMetadata",name="resnet",version="1"
+         api="KServe",interface="gRPC",method="ModelReady",name="resnet"
+         api="KServe",interface="gRPC",method="ModelInfer",name="resnet",version="1"
+         api="KServe",interface="REST",method="ModelInfer",name="resnet",version="1"
+         api="KServe",interface="gRPC",method="ModelMetadata",name="resnet",version="1"
+         api="TensorFlowServing",interface="REST",method="Predict",name="resnet",version="1"
+         api="TensorFlowServing",interface="gRPC",method="GetModelStatus",name="resnet"
+         api="KServe",interface="REST",method="ModelReady",name="resnet"
+         api="TensorFlowServing",interface="REST",method="GetModelStatus",name="resnet"
+         api="TensorFlowServing",interface="gRPC",method="GetModelMetadata",name="resnet",version="1"
+         api="TensorFlowServing",interface="REST",method="GetModelMetadata",name="resnet",version="1"
+         api="TensorFlowServing",interface="gRPC",method="Predict",name="resnet",version="1"
    ```
 
 ovms_requests_fail
 
    ```bash
-        ovms_requests_fail_grpc_predict
-        ovms_requests_fail_grpc_getmodelmetadata
-        ovms_requests_fail_grpc_getmodelstatus
-        ovms_requests_fail_grpc_modelinfer
-        ovms_requests_fail_grpc_modelmetadata
-        ovms_requests_fail_grpc_modelready
-        ovms_requests_fail_rest_modelinfer
-        ovms_requests_fail_rest_predict
-        ovms_requests_fail_rest_modelmetadata
-        ovms_requests_fail_rest_modelstatus
-        ovms_requests_fail_rest_modelmetadata
-        ovms_requests_fail_rest_modelready
+         api="KServe",interface="REST",method="ModelMetadata",name="resnet",version="1"
+         api="KServe",interface="gRPC",method="ModelReady",name="resnet"
+         api="KServe",interface="gRPC",method="ModelInfer",name="resnet",version="1"
+         api="KServe",interface="REST",method="ModelInfer",name="resnet",version="1"
+         api="KServe",interface="gRPC",method="ModelMetadata",name="resnet",version="1"
+         api="TensorFlowServing",interface="REST",method="Predict",name="resnet",version="1"
+         api="TensorFlowServing",interface="gRPC",method="GetModelStatus",name="resnet"
+         api="KServe",interface="REST",method="ModelReady",name="resnet"
+         api="TensorFlowServing",interface="REST",method="GetModelStatus",name="resnet"
+         api="TensorFlowServing",interface="gRPC",method="GetModelMetadata",name="resnet",version="1"
+         api="TensorFlowServing",interface="REST",method="GetModelMetadata",name="resnet",version="1"
+         api="TensorFlowServing",interface="gRPC",method="Predict",name="resnet",version="1"
    ```
-
+   
 ovms_request_time_us
 
    ```bash
-        ovms_request_time_us_grpc
-        ovms_request_time_us_rest
+         interface="REST",name="resnet",version="1"
+   ```
+
+ovms_streams
+
+   ```bash
+         name="resnet",version="1"
+   ```
+
+ovms_infer_req_queue_size
+   ```bash
+         name="resnet",version="1"
+   ```
+
+ovms_infer_req_active
+   ```bash
+         name="resnet",version="1"
+   ```
+
+ovms_current_requests
+   ```bash
+         name="resnet",version="1"
+   ```
+
+ovms_inference_time_us 
+   ```bash
+         name="resnet",version="1"
+   ```
+
+ovms_wait_for_infer_req_time_us
+   ```bash
+         name="resnet",version="1"
    ```
 
 ## Enable metrics
@@ -153,9 +178,9 @@ To enable specific set of metrics you need to specify the metrics_list flag or j
 CLI
 
    ```bash
-         docker run --rm -d -v ${PWD}/models/resnet-50-tf:/opt/model -p 9001:9001 -p 9002:9002 openvino/model_server:latest \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --rest_port 9002 \
+         docker run --rm -d -p 9000:9000 -p 8000:8000 openvino/model_server:latest
+               --model_name resnet --model_path gs://ovms-public-eu/resnet50  --port 9000 \
+               --rest_port 8000 \
                --metrics_enabled
                --metrics_list ovms_requests_success,ovms_infer_req_queue_size
    ```
@@ -163,8 +188,8 @@ CLI
 CONFIG CMD
 
    ```bash
-         docker run --rm -d -v -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json -p 9001:9001 -p 9002:9002 openvino/model_server:latest \
-               --rest_port 9002
+         docker run --rm -d -v -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+               --rest_port 8000
    ```
 
 CONFIG JSON
@@ -194,7 +219,32 @@ CONFIG JSON
 
 ## Example response from metrics endpoint
 
-TODO
+To use data from metrics endpoint you can use the curl command:
+```bash
+    curl http://localhost:8000/metrics
+```
+
+The example output looks like this:
+```bash
+    # HELP ovms_requests_success Number of successful requests to a model or a DAG.
+    # TYPE ovms_requests_success counter
+    ovms_requests_success{api="KServe",interface="REST",method="ModelMetadata",name="resnet",version="1"} 0
+    ovms_requests_success{api="KServe",interface="gRPC",method="ModelReady",name="resnet"} 0
+    ovms_requests_success{api="KServe",interface="gRPC",method="ModelInfer",name="resnet",version="1"} 0
+    ovms_requests_success{api="KServe",interface="REST",method="ModelInfer",name="resnet",version="1"} 0
+    ovms_requests_success{api="KServe",interface="gRPC",method="ModelMetadata",name="resnet",version="1"} 0
+    ovms_requests_success{api="TensorFlowServing",interface="REST",method="Predict",name="resnet",version="1"} 0
+    ovms_requests_success{api="TensorFlowServing",interface="gRPC",method="GetModelStatus",name="resnet"} 0
+    ovms_requests_success{api="KServe",interface="REST",method="ModelReady",name="resnet"} 0
+    ovms_requests_success{api="TensorFlowServing",interface="REST",method="GetModelStatus",name="resnet"} 0
+    ovms_requests_success{api="TensorFlowServing",interface="gRPC",method="GetModelMetadata",name="resnet",version="1"} 0
+    ovms_requests_success{api="TensorFlowServing",interface="REST",method="GetModelMetadata",name="resnet",version="1"} 0
+    ovms_requests_success{api="TensorFlowServing",interface="gRPC",method="Predict",name="resnet",version="1"} 0
+```
+
+## Differences between metrics against model or a DAG
+
+
 
 ## Example graphics from Graphana
 
