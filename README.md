@@ -29,7 +29,7 @@ Key features:
 - [serving stateful models](https://docs.openvino.ai/2022.1/ovms_docs_stateful_models.html) - models that operate on sequences of data and maintain their state between inference requests
 - [binary format of the input data](https://docs.openvino.ai/2022.1/ovms_docs_binary_input.html) - data can be sent in JPEG or PNG formats to reduce traffic and offload the client applications
 - [model caching](https://docs.openvino.ai/2022.1/ovms_docs_model_cache.html) - cache the models on first load and re-use models from cache on subsequent loads
-- [Metrics](https://docs.openvino.ai/2022.2/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
+- [metrics](https://docs.openvino.ai/2022.2/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
 
 
 **Note:** OVMS has been tested on RedHat, CentOS, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.

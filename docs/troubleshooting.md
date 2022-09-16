@@ -72,6 +72,7 @@ It will be also included in the host system logs like `Memory cgroup out of memo
 
 
 ## Usage Monitoring<a name="usage-monitoring"></a>
+- Prometheus standard metrics are available via the REST /metrics endpoint.
 - It is possible to track the usage of the models including processing time while DEBUG mode is enabled.
 - With this setting model server logs will store information about all the incoming requests.
 - You can parse the logs to analyze: the volume of requests, processing statistics, and most used models.
