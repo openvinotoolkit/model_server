@@ -44,14 +44,14 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool fo
     const auto& v = metrics["metrics"].GetObject();
 
     if (v.HasMember("enable")) {
-        metricsEnabled = v["enable"].GetBool();
+        this->metricsEnabled = v["enable"].GetBool();
     } else {
-        metricsEnabled = false;
+        this->metricsEnabled = false;
     }
 
     if (metricsEnabled && forceFailureIfMetricsAreEnabled) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parameter rest_port is not defined. It must be set to enable metrics on the REST interface");
-        return StatusCode::CONFIG_FILE_INVALID;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "CLI parameter rest_port is not defined. It must be set to enable metrics on the REST interface");
+        return StatusCode::METRICS_REST_PORT_MISSING;
     }
 
     if (v.HasMember("endpoint_path")) {
@@ -66,7 +66,15 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool fo
     if (v.HasMember("metrics_list")) {
         status = parseMetricsArray(v["metrics_list"]);
     } else {
-        setDefaultMetricsTo(metricsEnabled);
+        setDefaultMetricsTo(this->metricsEnabled);
+    }
+
+    if (status == StatusCode::OK && this->metricsEnabled) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Metrics enabled.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Enabled metrics list: ");
+        for (const auto& family : this->enabledFamiliesList) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, family);
+        }
     }
 
     return status;
@@ -90,7 +98,7 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
             }
         }
 
-        if (listSize == this->enabledFamiliesList.size()) {
+        if (this->enabledFamiliesList.size() <= listSize) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Metrics family name not supported: {}", metric);
             return StatusCode::INVALID_METRICS_FAMILY_NAME;
         }

@@ -278,6 +278,7 @@ enum class StatusCode {
     // Metrics
     INVALID_METRICS_ENDPOINT,
     INVALID_METRICS_FAMILY_NAME,
+    METRICS_REST_PORT_MISSING,
 
     STATUS_CODE_END
 };

@@ -753,11 +753,6 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
     Status status;
     Status firstErrorStatus = StatusCode::OK;
-    // load the custom loader config, if available
-    status = loadCustomLoadersConfig(configJson);
-    if (!status.ok()) {
-        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
-    }
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
@@ -767,9 +762,16 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            return status;
         }
     } else {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric from config json file skipped. Settings already loaded.");
+    }
+
+    // load the custom loader config, if available
+    status = loadCustomLoadersConfig(configJson);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 
     std::vector<ModelConfig> gatedModelConfigs;

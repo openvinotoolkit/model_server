@@ -113,7 +113,7 @@ TEST_F(MetricsConfigNegativeTest, MissingPort) {
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(configFilePath);
-    ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
+    ASSERT_EQ(status, StatusCode::METRICS_REST_PORT_MISSING);
 }
 
 static const char* modelDefaultConfig = R"(
