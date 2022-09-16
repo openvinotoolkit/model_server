@@ -901,12 +901,12 @@ Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& model
     if (!pipelineDefinition) {
         return StatusCode::MODEL_MISSING;
     }
-    reporter = &pipelineDefinition->getMetricReporter();
     std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
     Status status = pipelineDefinition->waitForLoaded(unloadGuard);
     if (!status.ok()) {
         return status;
     }
+    reporter = &pipelineDefinition->getMetricReporter();
     inputs = pipelineDefinition->getInputsInfo();
     return StatusCode::OK;
 }
@@ -925,7 +925,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     auto status = getPipelineInputsAndReporter(modelName, inputs, reporterOut);
     if (!status.ok()) {
         if (reporterOut) {
-            INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
+            INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, false));
         }
         return status;
     }
@@ -933,7 +933,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     TFSRestParser requestParser(inputs);
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
-        INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
+        INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, false));
         return status;
     }
     requestOrder = requestParser.getOrder();
@@ -944,7 +944,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     requestProto.mutable_model_spec()->set_name(modelName);
     status = this->modelManager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
     if (!status.ok()) {
-        INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
+        INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, false));
         return status;
     }
     status = pipelinePtr->execute(executionContext);

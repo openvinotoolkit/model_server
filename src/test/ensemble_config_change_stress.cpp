@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <fstream>
 #include <regex>
 
 #include <gmock/gmock.h>
@@ -40,9 +41,6 @@ using namespace tensorflow::serving;
 using testing::_;
 using testing::Return;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-
 static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
 static const char* stressTestPipelineOneDummyConfig = R"(
@@ -50,7 +48,11 @@ static const char* stressTestPipelineOneDummyConfig = R"(
     "monitoring": {
         "metrics": {
             "enable": true,
-            "metrics_list": ["ovms_current_requests", "ovms_infer_req_active"]
+            "metrics_list": [
+                "ovms_current_requests",
+                "ovms_infer_req_active",
+                "ovms_requests_success",
+                "ovms_infer_req_queue_size"]
         }
     },
     "model_config_list": [
@@ -1025,8 +1027,8 @@ public:
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {"ovms", "--config_path", "/unused", "--rest_port", "8080"};  // Workaround to have rest_port parsed in order to enable metrics
-        int arg_count = 7;
+        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
+        int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         modelPath = directoryPath + "/dummy/";
         SetUpConfig(stressTestPipelineOneDummyConfig);
@@ -1122,19 +1124,46 @@ public:
     }
     void checkMetricGreaterThan(const std::string& metricName, double value) {
         std::string metricOutput = manager.getMetricRegistry()->collect();
-        ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric";
-        std::regex rgx(std::string{".*"} + metricName + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric\n"
+                                                                                                                     << metricOutput;
+        std::regex findActualMetricRgx(std::string{".*"} + metricName + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findRequestsSuccessMetricRgx(std::string{".*ovms_requests_success\\{api=\"TensorFlowServing\",interface=\"gRPC\",method=\"Predict\",name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
-        ASSERT_TRUE(std::regex_search(metricOutput, match, rgx)) << "cannot find dummys " << metricName << " metric";
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findActualMetricRgx)) << "cannot find dummys " << metricName << " metric\n"
+                                                                                 << metricOutput;
         auto actualVal = ovms::stoi64(match[1]);
-        // TODO: Probably try to run it multiple times in case of 0 to minimize chances of sporadic
-        ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number";
-        ASSERT_GT(actualVal.value(), value) << metricName << " metric needs to be greater than " << value;
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findRequestsSuccessMetricRgx)) << "cannot find dummys ovms_requests_success metric\n"
+                                                                                          << metricOutput;
+        auto requestsSuccessCounter = ovms::stoi64(match[1]);
+        ASSERT_TRUE(requestsSuccessCounter.has_value()) << "cannot parse ovms_requests_success\n"
+                                                        << metricOutput;
+        SPDLOG_DEBUG("ovms_requests_success value: {}", requestsSuccessCounter.value());
+        ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number\n"
+                                           << metricOutput;
+        // In case of sporadic error here consider checking ovms_requests_success value (if 0, it could mean the load did not start yet (could happen on slower machines))
+        ASSERT_GT(actualVal.value(), value) << metricName << " metric needs to be greater than " << value << std::endl
+                                            << metricOutput;
+    }
+    void checkActiveNireqSmallerThanTotal() {
+        std::string metricOutput = manager.getMetricRegistry()->collect();
+        std::regex findNireqTotalRgx(std::string{".*ovms_infer_req_queue_size\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findNireqActiveRgx(std::string{".*ovms_infer_req_active\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::smatch match;
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findNireqTotalRgx)) << "cannot find dummys total nireq in metric\n"
+                                                                               << metricOutput;
+        auto totalNireq = ovms::stoi64(match[1]);
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findNireqActiveRgx)) << "cannot find dummys active nireq in metric\n"
+                                                                                << metricOutput;
+        auto activeNireq = ovms::stoi64(match[1]);
+        ASSERT_TRUE(totalNireq.has_value()) << metricOutput;
+        ASSERT_TRUE(activeNireq.has_value()) << metricOutput;
+        ASSERT_LE(activeNireq.value(), totalNireq.value()) << metricOutput;
     }
     void testCurrentRequestsMetric() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         checkMetricGreaterThan("ovms_current_requests", 0);
         checkMetricGreaterThan("ovms_infer_req_active", 0);
+        checkActiveNireqSmallerThanTotal();
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void performStressTest(
@@ -1884,4 +1913,3 @@ TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
-#pragma GCC diagnostic pop

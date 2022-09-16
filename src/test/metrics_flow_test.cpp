@@ -40,8 +40,6 @@ using namespace ovms;
 using testing::HasSubstr;
 using testing::Not;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wwrite-strings"
 // This checks for counter to be present with exact value and other remaining metrics of the family to be 0.
 void checkRequestsCounter(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, std::optional<model_version_t> endpointVersion, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
     for (std::string _interface : std::set<std::string>{"gRPC", "REST"}) {
@@ -177,13 +175,13 @@ protected:
     const std::string modelName = "dummy";
     const std::string dagName = "dummy_demux";
 
-    std::optional<int64_t> modelVersion = std::nullopt;  // this is WA, overwrite to std::nullopt once Bartek's PR is merged
+    std::optional<int64_t> modelVersion = std::nullopt;
     std::optional<std::string_view> modelVersionLabel{std::nullopt};
 
     void SetUp() override {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {"ovms", "--config_path", "/unused", "--rest_port", "8080"};  // Workaround to have rest_port parsed in order to enable metrics
-        int arg_count = 7;
+        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
+        int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         std::string fileToReload = this->directoryPath + "/config.json";
         createConfigFileWithContent(pipelineDummyDemux, fileToReload);
@@ -561,7 +559,6 @@ TEST_F(MetricFlowTest, RestModelInfer) {
     EXPECT_THAT(server.collect(), Not(HasSubstr(std::string{"ovms_infer_req_queue_size{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
-// Fails until Bartek's fix is merged
 TEST_F(MetricFlowTest, RestModelMetadata) {
     HttpRestApiHandler handler(server, 0);
     HttpRequestComponents components;
@@ -582,7 +579,6 @@ TEST_F(MetricFlowTest, RestModelMetadata) {
     checkRequestsCounter(server.collect(), "ovms_requests_success", dagName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);    // ran by real request
 }
 
-// Fails until Bartek's fix is merged
 TEST_F(MetricFlowTest, ModelReady) {
     HttpRestApiHandler handler(server, 0);
     HttpRequestComponents components;
@@ -602,4 +598,3 @@ TEST_F(MetricFlowTest, ModelReady) {
     checkRequestsCounter(server.collect(), "ovms_requests_success", modelName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
     checkRequestsCounter(server.collect(), "ovms_requests_success", dagName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
 }
-#pragma GCC diagnostic pop

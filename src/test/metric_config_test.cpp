@@ -30,9 +30,6 @@ using namespace ovms;
 using testing::_;
 using testing::Return;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-
 class PublicMetricConfig : public MetricConfig {
 public:
     friend class MetricConfig;
@@ -56,8 +53,8 @@ public:
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--rest_port", "8080"};
-        int arg_count = 9;
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
+        int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
 
         // Prepare manager
@@ -545,5 +542,3 @@ TEST_F(MetricsCli, MetricsEnabledCliRestPortDefault) {
 
     ASSERT_EQ(status, StatusCode::OK);
 }
-
-#pragma GCC diagnostic pop
