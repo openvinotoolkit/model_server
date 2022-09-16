@@ -19,6 +19,7 @@
 #include <exception>
 
 #include "execution_context.hpp"
+#include "logging.hpp"
 #include "metric_config.hpp"
 #include "metric_family.hpp"
 #include "metric_registry.hpp"
@@ -29,9 +30,10 @@ constexpr int NUMBER_OF_BUCKETS = 33;
 constexpr double BUCKET_POWER_BASE = 1.8;
 constexpr double BUCKET_MULTIPLIER = 10;
 
-#define THROW_IF_NULL(VAR, MESSAGE)      \
-    if (VAR == nullptr) {                \
-        throw std::logic_error(MESSAGE); \
+#define THROW_IF_NULL(VAR, MESSAGE)                        \
+    if (VAR == nullptr) {                                  \
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, MESSAGE); \
+        throw std::logic_error(MESSAGE);                   \
     }
 
 ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion) :
