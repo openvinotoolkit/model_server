@@ -315,7 +315,7 @@ Classification accuracy: 100.00
 
 ### Run the Client to perform inference with binary encoded image <a name="grpc-model-infer-binary"></a>
 
-Using binary inputs feautre requires model to accept input in layout NHWC. The model used in other clients has native layout NCWH, therefore it must be adjusted on model server start up. For samples that use binary inputs, please start docker container with `--layout NHWC:NCHW` parameter:
+Using binary inputs feature with data encoded to jpeg/png format, requires model to accept input in layout NHWC. While the model has native layout NCWH, it must be adjusted on model server start up parameters. For samples that use binary inputs, please start docker container with `--layout NHWC:NCHW` parameter:
 
 ```Bash
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000 --rest_port 5000 --layout NHWC:NCHW
