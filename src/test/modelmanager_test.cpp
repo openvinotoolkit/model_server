@@ -125,21 +125,54 @@ TEST(ModelManager, WrongConfigFile) {
     EXPECT_EQ(status, ovms::StatusCode::CONFIG_FILE_INVALID);
 }
 
-class ModelManagerMetricsTest : public ::testing::Test {
+class ModelManagerMetricsTest : public TestWithTempDir {
 public:
+    std::string configFilePath;
+    std::string ovmsConfig;
+    std::string modelPath;
+    std::string dummyModelName;
+
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        dummyModelName = "dummy";
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+    }
+
     void SetUp() override {
         char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
         int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
+
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/ovms_config.json";
     }
 };
 
-class ModelManagerMetricsTestNoPort : public ::testing::Test {
+class ModelManagerMetricsTestNoPort : public TestWithTempDir {
 public:
+    std::string configFilePath;
+    std::string ovmsConfig;
+    std::string modelPath;
+    std::string dummyModelName;
+
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        dummyModelName = "dummy";
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+    }
+
     void SetUp() override {
+        TestWithTempDir::SetUp();
         char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name"};
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
+        
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/ovms_config.json";
     }
 };
 
@@ -168,10 +201,12 @@ static const char* modelMetricsBadEndpoint = R"(
 })";
 
 TEST_F(ModelManagerMetricsTest, DISABLED_WrongConfigFileEndpoint) {
-    std::string configFile = "/tmp/config.json";
-    createConfigFileWithContent(modelMetricsBadEndpoint, configFile);
+    SetUpConfig(modelMetricsBadEndpoint);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = manager.startFromFile(configFilePath);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_METRICS_ENDPOINT);
 }
 
@@ -200,10 +235,12 @@ static const char* modelMetricsInvalidMetricName = R"(
 })";
 
 TEST_F(ModelManagerMetricsTest, WrongConfigFileMetricName) {
-    std::string configFile = "/tmp/config.json";
-    createConfigFileWithContent(modelMetricsInvalidMetricName, configFile);
+    SetUpConfig(modelMetricsBadEndpoint);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(modelMetricsInvalidMetricName, configFilePath);
+
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = manager.startFromFile(configFilePath);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_METRICS_FAMILY_NAME);
 }
 
@@ -231,10 +268,12 @@ static const char* modelMetricsMissingPort = R"(
 })";
 
 TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
-    std::string configFile = "/tmp/config.json";
-    createConfigFileWithContent(modelMetricsMissingPort, configFile);
+    SetUpConfig(modelMetricsMissingPort);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+ 
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = manager.startFromFile(configFilePath);
     EXPECT_EQ(status, ovms::StatusCode::METRICS_REST_PORT_MISSING);
 }
 
