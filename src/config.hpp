@@ -282,7 +282,10 @@ public:
      * @return bool
      */
     bool metricsEnabled() const {
-        return result->operator[]("metrics_enabled").as<bool>();
+        if (!result->count("metrics_enable")) {
+            return false;
+        }
+        return result->operator[]("metrics_enable").as<bool>();
     }
 
     /**
@@ -291,6 +294,9 @@ public:
         * @return std::string
         */
     std::string metricsList() const {
+        if (!result->count("metrics_list")) {
+            return std::string("");
+        }
         return result->operator[]("metrics_list").as<std::string>();
     }
 
