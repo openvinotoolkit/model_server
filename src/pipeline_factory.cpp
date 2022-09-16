@@ -83,7 +83,7 @@ Status PipelineFactory::createInternal(std::unique_ptr<Pipeline>& pipeline,
     ResponseType* response,
     ModelManager& manager) const {
     if (!definitionExists(name)) {
-        SPDLOG_LOGGER_INFO(dag_executor_logger, "Pipeline with requested name: {} does not exist", name);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Pipeline with requested name: {} does not exist", name);
         return StatusCode::PIPELINE_DEFINITION_NAME_MISSING;
     }
     std::shared_lock lock(definitionsMtx);

@@ -14,9 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <regex>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../config.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
@@ -37,10 +40,19 @@ using namespace tensorflow::serving;
 using testing::_;
 using testing::Return;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+
 static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
 static const char* stressTestPipelineOneDummyConfig = R"(
 {
+    "monitoring": {
+        "metrics": {
+            "enable": true,
+            "metrics_list": ["ovms_current_requests", "ovms_infer_req_active"]
+        }
+    },
     "model_config_list": [
         {
             "config": {
@@ -996,6 +1008,8 @@ protected:
     // producess highest results
     const std::vector<float> requestData{1.1, 2., 3., 7., 5., 6., 4., 9., 10., 8.};
 
+    ConstructorEnabledModelManager manager;
+
 public:
     virtual std::string getServableName() {
         return pipelineName;
@@ -1011,6 +1025,9 @@ public:
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
+        char* n_argv[] = {"ovms", "--config_path", "/unused", "--rest_port", "8080"};  // Workaround to have rest_port parsed in order to enable metrics
+        int arg_count = 7;
+        ovms::Config::instance().parse(arg_count, n_argv);
         modelPath = directoryPath + "/dummy/";
         SetUpConfig(stressTestPipelineOneDummyConfig);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
@@ -1103,6 +1120,23 @@ public:
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
+    void checkMetricGreaterThan(const std::string& metricName, double value) {
+        std::string metricOutput = manager.getMetricRegistry()->collect();
+        ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric";
+        std::regex rgx(std::string{".*"} + metricName + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::smatch match;
+        ASSERT_TRUE(std::regex_search(metricOutput, match, rgx)) << "cannot find dummys " << metricName << " metric";
+        auto actualVal = ovms::stoi64(match[1]);
+        // TODO: Probably try to run it multiple times in case of 0 to minimize chances of sporadic
+        ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number";
+        ASSERT_GT(actualVal.value(), value) << metricName << " metric needs to be greater than " << value;
+    }
+    void testCurrentRequestsMetric() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        checkMetricGreaterThan("ovms_current_requests", 0);
+        checkMetricGreaterThan("ovms_infer_req_active", 0);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
     void performStressTest(
         void (StressPipelineConfigChanges::*triggerLoadInALoop)(
             std::future<void>&,
@@ -1115,7 +1149,6 @@ public:
         bool reloadWholeConfig,
         std::set<StatusCode> requiredLoadResults,
         std::set<StatusCode> allowedLoadResults) {
-        ConstructorEnabledModelManager manager;
         createConfigFileWithContent(ovmsConfig, configFilePath);
         auto status = manager.loadConfig(configFilePath);
         ASSERT_TRUE(status.ok());
@@ -1133,7 +1166,6 @@ public:
             stopSignals.end(),
             std::back_inserter(futureStopSignals),
             [](auto& p) { return p.get_future(); });
-
         std::unordered_map<StatusCode, std::atomic<uint64_t>> createPipelineRetCodesCounters;
         for (uint i = 0; i != static_cast<uint>(StatusCode::STATUS_CODE_END); ++i) {
             createPipelineRetCodesCounters[static_cast<StatusCode>(i)] = 0;
@@ -1146,14 +1178,13 @@ public:
                     &triggerLoadInALoop,
                     &futureStartSignals,
                     &futureStopSignals,
-                    &manager,
                     &requiredLoadResults,
                     &allowedLoadResults,
                     &createPipelineRetCodesCounters,
                     i]() {
                     ((*this).*triggerLoadInALoop)(futureStartSignals[i],
                         futureStopSignals[i],
-                        manager,
+                        this->manager,
                         requiredLoadResults,
                         allowedLoadResults,
                         createPipelineRetCodesCounters);
@@ -1435,6 +1466,17 @@ TEST_F(StressPipelineConfigChanges, AddNewVersionDuringPredictLoad) {
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop,
         &StressPipelineConfigChanges::defaultVersionAdd,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, GetMetricsDuringLoad) {
+    bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::testCurrentRequestsMetric,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
@@ -1842,3 +1884,4 @@ TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
+#pragma GCC diagnostic pop

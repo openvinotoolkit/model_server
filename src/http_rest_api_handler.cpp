@@ -496,15 +496,19 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     timer.start(PREPARE_GRPC_REQUEST);
     using std::chrono::microseconds;
     auto status = prepareGrpcRequest(modelName, request_components.model_version, request_body, grpc_request, request_components.inferenceHeaderContentLength);
+    ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};
     if (!status.ok()) {
+        auto pstatus = this->getReporter(request_components, reporter);
+        if (pstatus.ok()) {
+            INCREMENT_IF_ENABLED(reporter->getInferRequestMetric(executionContext, status.ok()));
+        }
         SPDLOG_DEBUG("REST to GRPC request conversion failed for model: {}", modelName);
         return status;
     }
     timer.stop(PREPARE_GRPC_REQUEST);
     SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>(PREPARE_GRPC_REQUEST) / 1000);
     ::inference::ModelInferResponse grpc_response;
-    const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer},
-        reporter);
+    const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, executionContext, reporter);
     if (!gstatus.ok()) {
         return gstatus;
     }
@@ -873,17 +877,36 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     return status;
 }
 
-Status HttpRestApiHandler::getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs) {
+Status HttpRestApiHandler::getReporter(const HttpRequestComponents& components, ovms::ServableMetricReporter*& reporter) {
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::Pipeline> pipelinePtr;
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    auto status = this->modelManager.getModelInstance(components.model_name, components.model_version.value_or(0), modelInstance, modelInstanceUnloadGuard);
+    if (status == StatusCode::MODEL_NAME_MISSING) {
+        auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(components.model_name);
+        if (!pipelineDefinition) {
+            return StatusCode::MODEL_MISSING;
+        }
+        reporter = &pipelineDefinition->getMetricReporter();
+    } else if (status.ok()) {
+        reporter = &modelInstance->getMetricReporter();
+    } else {
+        return StatusCode::MODEL_MISSING;
+    }
+    return StatusCode::OK;
+}
+
+Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& modelName, ovms::tensor_map_t& inputs, ovms::ServableMetricReporter*& reporter) {
     auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(modelName);
     if (!pipelineDefinition) {
         return StatusCode::MODEL_MISSING;
     }
+    reporter = &pipelineDefinition->getMetricReporter();
     std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
     Status status = pipelineDefinition->waitForLoaded(unloadGuard);
     if (!status.ok()) {
         return status;
     }
-
     inputs = pipelineDefinition->getInputsInfo();
     return StatusCode::OK;
 }
@@ -893,20 +916,24 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     Order& requestOrder,
     tensorflow::serving::PredictResponse& responseProto,
     ServableMetricReporter*& reporterOut) {
-
+    ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::Predict};
     std::unique_ptr<Pipeline> pipelinePtr;
 
     Timer<TIMER_END> timer;
     timer.start(TOTAL);
     ovms::tensor_map_t inputs;
-    auto status = getPipelineInputs(modelName, inputs);
+    auto status = getPipelineInputsAndReporter(modelName, inputs, reporterOut);
     if (!status.ok()) {
+        if (reporterOut) {
+            INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
+        }
         return status;
     }
 
     TFSRestParser requestParser(inputs);
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
+        INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
         return status;
     }
     requestOrder = requestParser.getOrder();
@@ -917,10 +944,9 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     requestProto.mutable_model_spec()->set_name(modelName);
     status = this->modelManager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
     if (!status.ok()) {
+        INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
         return status;
     }
-    ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::Predict};
-    reporterOut = &pipelinePtr->getMetricReporter();
     status = pipelinePtr->execute(executionContext);
     INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     return status;
