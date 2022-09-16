@@ -147,6 +147,7 @@ TEST_F(HttpRestApiHandlerTest, RegexParseInferWithImplicitVersion) {
     ASSERT_EQ(comp.model_version, std::nullopt);
     ASSERT_EQ(comp.model_name, "dummy");
 }
+
 TEST_F(HttpRestApiHandlerTest, RegexParseInfer) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
@@ -192,11 +193,24 @@ TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputs) {
     std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", "15"};
     headers.emplace_back(binaryInputsHeader);
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::OK);
+}
 
-    ASSERT_EQ(comp.type, ovms::KFS_Infer);
-    ASSERT_EQ(comp.model_version, 1);
-    ASSERT_EQ(comp.model_name, "dummy");
-    ASSERT_EQ(comp.inferenceHeaderContentLength.value_or(0), 15);
+TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputsSizeNegative) {
+    std::string request = "/v2/models/dummy/versions/1/infer";
+    ovms::HttpRequestComponents comp;
+    std::vector<std::pair<std::string, std::string>> headers;
+    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", "-15"};
+    headers.emplace_back(binaryInputsHeader);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID);
+}
+
+TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputsSizeNotInt) {
+    std::string request = "/v2/models/dummy/versions/1/infer";
+    ovms::HttpRequestComponents comp;
+    std::vector<std::pair<std::string, std::string>> headers;
+    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", "value"};
+    headers.emplace_back(binaryInputsHeader);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID);
 }
 
 TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {

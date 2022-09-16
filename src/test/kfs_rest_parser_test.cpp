@@ -596,7 +596,7 @@ TEST_F(KFSRestParserTest, parseValidRequestWithNoDataButBinaryInputsParameter) {
         "name" : "input0",
         "shape" : [ 2, 2 ],
         "datatype" : "BYTES",
-        "parameters" : {"binary_data_size" : 16}
+        "parameters" : {"binary_data_size" : 4}
         }
     ]
     })";
@@ -613,7 +613,7 @@ TEST_F(KFSRestParserTest, parseValidRequestWithNoDataButBinaryInputsParameter) {
     auto parameter = proto.inputs()[0].parameters().find("binary_data_size");
     ASSERT_NE(parameter, proto.inputs()[0].parameters().end());
     ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kInt64Param);
-    ASSERT_EQ(parameter->second.int64_param(), 16);
+    ASSERT_EQ(parameter->second.int64_param(), 4);
 }
 
 TEST_F(KFSRestParserTest, parseInValidRequestUINT32WithFloatingPointValues) {
