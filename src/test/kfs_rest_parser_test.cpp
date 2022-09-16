@@ -224,7 +224,7 @@ TEST_F(KFSRestParserTest, parseValidRequestFP64) {
     auto proto = parser.getProto();
     ASSERT_EQ(proto.inputs_size(), 1);
     ASSERT_EQ(proto.inputs()[0].name(), "input0");
-    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
     ASSERT_EQ(proto.inputs()[0].datatype(), "FP64");
     ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 4);
     ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre((float)1.1, (float)2.2, (float)3.3, (float)4.4));
