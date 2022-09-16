@@ -292,5 +292,3 @@ DAG METRICS
    ```
 
 ## Example graphics from Graphana
-
-TODO
