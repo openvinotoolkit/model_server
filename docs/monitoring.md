@@ -14,7 +14,7 @@ Built-in metrics allows tracking the performance without any extra logic on the 
 
 It also exposes metrics which are not related to the traffic. 
 
-For example statistics of the inference execution queue, model runtime parameters etc. They can also track the usage based on model version, API type or requested endpoint methods.
+For example, statistics of the inference execution queue, model runtime parameters etc. They can also track the usage based on model version, API type or requested endpoint methods.
 
 OpenVINO Model Server metrics are compatible with Prometheus standard [Prometheus metrics detailed description](https://prometheus.io/docs)
 
