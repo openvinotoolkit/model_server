@@ -27,7 +27,7 @@ using namespace ovms;
 
 using ::testing::ElementsAre;
 
-class RestParserBinaryInputs : public ::testing::Test {
+class TFSRestParserBinaryInputs : public ::testing::Test {
 protected:
     void SetUp() override {
         readRgbJpg(filesize, image_bytes);
@@ -41,7 +41,7 @@ protected:
     std::unique_ptr<char[]> image_bytes;
 };
 
-TEST_F(RestParserBinaryInputs, ColumnName) {
+TEST_F(TFSRestParserBinaryInputs, ColumnName) {
     std::string request = R"({"signature_name":"","inputs":{"k":[{"b64":")" + b64encoded + R"("}]}})";
 
     TFSRestParser parser(prepareTensors({{"k", {1, 1}}}));
@@ -52,7 +52,7 @@ TEST_F(RestParserBinaryInputs, ColumnName) {
     EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
-TEST_F(RestParserBinaryInputs, BatchSize2) {
+TEST_F(TFSRestParserBinaryInputs, BatchSize2) {
     std::string request = R"({"signature_name":"","instances":[{"k":[{"b64":")" + b64encoded + R"("}]},{"i":[{"b64":")" + b64encoded + R"("}]}]})";
 
     TFSRestParser parser(TFSRestParser(prepareTensors({{"i", {1, 1}}, {"k", {1, 1}}})));
@@ -66,7 +66,7 @@ TEST_F(RestParserBinaryInputs, BatchSize2) {
     EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
-TEST_F(RestParserBinaryInputs, RowName) {
+TEST_F(TFSRestParserBinaryInputs, RowName) {
     std::string request = R"({"signature_name":"","instances":[{"k":[{"b64":")" + b64encoded + R"("}]}]})";
 
     TFSRestParser parser(prepareTensors({{"k", {1, 1}}}));
@@ -77,14 +77,14 @@ TEST_F(RestParserBinaryInputs, RowName) {
     EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
-TEST_F(RestParserBinaryInputs, InvalidObject) {
+TEST_F(TFSRestParserBinaryInputs, InvalidObject) {
     std::string request = R"({"signature_name":"","inputs":{"k":[{"b64":")" + b64encoded + R"(", "AdditionalField":"someValue"}]}})";
 
     TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
     ASSERT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
-TEST_F(RestParserBinaryInputs, ColumnNoNamed) {
+TEST_F(TFSRestParserBinaryInputs, ColumnNoNamed) {
     std::string request = R"({"signature_name":"","inputs":[{"b64":")" + b64encoded + R"("}]})";
 
     TFSRestParser parser(prepareTensors({{"k", {1, 1}}}));
@@ -95,7 +95,7 @@ TEST_F(RestParserBinaryInputs, ColumnNoNamed) {
     EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
-TEST_F(RestParserBinaryInputs, RowNoNamed) {
+TEST_F(TFSRestParserBinaryInputs, RowNoNamed) {
     std::string request = R"({"signature_name":"","instances":[[{"b64":")" + b64encoded + R"("}]]})";
 
     TFSRestParser parser(prepareTensors({{"k", {1, 1}}}));
