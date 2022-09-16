@@ -32,7 +32,7 @@ Key features:
 - [metrics](https://docs.openvino.ai/2022.2/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
 
 
-**Note:** OVMS has been tested on RedHat, CentOS, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.
+**Note:** OVMS has been tested on RedHat, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.
 They are stored in:
 - [Dockerhub](https://hub.docker.com/r/openvino/model_server)
 - [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
