@@ -68,7 +68,7 @@ public:
     friend class MetricsConfigTest;
     void SetUp() override {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name"};
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name"};
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
 
