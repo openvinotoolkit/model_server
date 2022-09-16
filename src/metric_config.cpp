@@ -71,10 +71,12 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool fo
 
     if (status == StatusCode::OK && this->metricsEnabled) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Metrics enabled.");
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Enabled metrics list: ");
+
+        std::stringstream ss;
         for (const auto& family : this->enabledFamiliesList) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, family);
+            ss << family << ", ";
         }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Enabled metrics list: ", ss.str());
     }
 
     return status;
@@ -98,7 +100,7 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
             }
         }
 
-        if (this->enabledFamiliesList.size() <= listSize) {
+        if (this->enabledFamiliesList.size() == listSize) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Metrics family name not supported: {}", metric);
             return StatusCode::INVALID_METRICS_FAMILY_NAME;
         }

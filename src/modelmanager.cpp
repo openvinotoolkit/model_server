@@ -579,18 +579,16 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
 }
 
 Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
-    Status status = StatusCode::OK;
     const auto itr2 = configJson.FindMember("monitoring");
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
+        return StatusCode::OK;
     } else {
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
         bool forceFailureIfMetricsAreEnabled = ovms::Config::instance().restPort() == 0;
-        status = this->metricConfig.parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
+        return this->metricConfig.parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
     }
-
-    return status;
 }
 
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
@@ -751,21 +749,20 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         return lastLoadConfigStatus;
     }
     Status status;
-    Status firstErrorStatus = StatusCode::OK;
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
         status = loadMetricsConfig(configJson);
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start.");
-        this->metricConfigLoadedOnce = true;
-
         if (!status.ok()) {
-            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             return status;
         }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start.");
+        this->metricConfigLoadedOnce = true;
     } else {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric from config json file skipped. Settings already loaded.");
     }
+
+    Status firstErrorStatus = StatusCode::OK;
 
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);

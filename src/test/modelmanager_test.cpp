@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "../cleaner_utils.hpp"
+#include "../config.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
@@ -122,6 +123,119 @@ TEST(ModelManager, WrongConfigFile) {
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::CONFIG_FILE_INVALID);
+}
+
+class ModelManagerMetricsTest : public ::testing::Test {
+public:
+    void SetUp() override {
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
+        int arg_count = 7;
+        ovms::Config::instance().parse(arg_count, n_argv);
+    }
+};
+
+class ModelManagerMetricsTestNoPort : public ::testing::Test {
+public:
+    void SetUp() override {
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name"};
+        int arg_count = 5;
+        ovms::Config::instance().parse(arg_count, n_argv);
+    }
+};
+
+static const char* modelMetricsBadEndpoint = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "endpoint_path": "/new..metrics"
+            }
+        }
+})";
+
+TEST_F(ModelManagerMetricsTest, DISABLED_WrongConfigFileEndpoint) {
+    std::string configFile = "/tmp/config.json";
+    createConfigFileWithContent(modelMetricsBadEndpoint, configFile);
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    auto status = manager.startFromFile(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_METRICS_ENDPOINT);
+}
+
+static const char* modelMetricsInvalidMetricName = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "metrics_list": ["no_such_family"]
+            }
+        }
+})";
+
+TEST_F(ModelManagerMetricsTest, WrongConfigFileMetricName) {
+    std::string configFile = "/tmp/config.json";
+    createConfigFileWithContent(modelMetricsInvalidMetricName, configFile);
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    auto status = manager.startFromFile(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_METRICS_FAMILY_NAME);
+}
+
+static const char* modelMetricsMissingPort = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true
+            }
+        }
+})";
+
+TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
+    std::string configFile = "/tmp/config.json";
+    createConfigFileWithContent(modelMetricsMissingPort, configFile);
+    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
+    auto status = manager.startFromFile(configFile);
+    EXPECT_EQ(status, ovms::StatusCode::METRICS_REST_PORT_MISSING);
 }
 
 TEST(ModelManager, ConfigParseEmpty) {
