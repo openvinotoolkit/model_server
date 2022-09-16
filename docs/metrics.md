@@ -37,11 +37,11 @@ However, you can enable also additional metrics by listing all the metrics you w
    * - gauge
      - ovms_streams
      - name,version
-     - Number of OpenVINO execution streams.
+     - Number of OpenVINO execution streams
    * - gauge
      - ovms_current_requests
      - api,interface,method,name,version
-     - Number of inference requests currently in process.
+     - Number of inference requests currently in process
 
 ## Enable metrics
 
