@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,27 +14,25 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
-#include <future>
-#include <optional>
-
 namespace ovms {
+class Config;
+enum class ModuleState {
+    NOT_INITIALIZED,
+    STARTED_INITIALIZE,
+    INITIALIZED,
+    RELOADING,
+    STARTED_SHUTDOWN,
+    SHUTDOWN
+};
 
-class ModelMetricReporter;
-class OVInferRequestsQueue;
+class Module {
+protected:
+    ModuleState state = ModuleState::NOT_INITIALIZED;
 
-struct NodeStreamIdGuard {
-    NodeStreamIdGuard(OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter);
-    ~NodeStreamIdGuard();
-
-    std::optional<int> tryGetId(const uint microseconds = 1);
-    bool tryDisarm(const uint microseconds = 1);
-
-private:
-    OVInferRequestsQueue& inferRequestsQueue_;
-    std::future<int> futureStreamId;
-    std::optional<int> streamId = std::nullopt;
-    bool disarmed = false;
-    ModelMetricReporter& reporter;
+public:
+    virtual int start(const ovms::Config& config) = 0;
+    virtual void shutdown() = 0;
+    virtual ~Module() = default;
+    ModuleState getState() const;
 };
 }  // namespace ovms

@@ -32,6 +32,7 @@
 #include "status.hpp"
 
 namespace ovms {
+class ModelMetricReporter;
 class KFSInferenceServiceImpl;
 class GetModelMetadataImpl;
 class Server;
@@ -56,6 +57,7 @@ struct HttpRequestComponents {
     std::optional<std::string_view> model_version_label;
     std::string processing_method;
     std::string model_subresource;
+    std::optional<int> inferenceHeaderContentLength;
 };
 
 class HttpRestApiHandler {
@@ -83,12 +85,13 @@ public:
 
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
-        const std::string& request_path);
+        const std::string& request_path,
+        const std::vector<std::pair<std::string, std::string>>& headers = {});
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
     static void parseParams(rapidjson::Value&, rapidjson::Document&);
     static std::string preprocessInferRequest(std::string request_body);
-    static Status prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body, ::inference::ModelInferRequest& grpc_request);
+    static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
 
     void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>);
     void registerAll();
@@ -139,13 +142,15 @@ public:
         const std::optional<int64_t>& modelVersion,
         const std::string& request,
         Order& requestOrder,
-        tensorflow::serving::PredictResponse& responseProto);
+        tensorflow::serving::PredictResponse& responseProto,
+        ServableMetricReporter*& reporterOut);
 
     Status processPipelineRequest(
         const std::string& modelName,
         const std::string& request,
         Order& requestOrder,
-        tensorflow::serving::PredictResponse& responseProto);
+        tensorflow::serving::PredictResponse& responseProto,
+        ServableMetricReporter*& reporterOut);
 
     /**
      * @brief Process Model Metadata request
@@ -214,6 +219,7 @@ private:
     ovms::Server& ovmsServer;
     ovms::KFSInferenceServiceImpl& kfsGrpcImpl;
     const GetModelMetadataImpl& grpcGetModelMetadataImpl;
+    ovms::ModelManager& modelManager;
 
     Status getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs);
 };

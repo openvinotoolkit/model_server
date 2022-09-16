@@ -32,7 +32,7 @@ using DeferredNodeSessions = std::vector<std::pair<std::reference_wrapper<Node>,
 
 Pipeline::~Pipeline() = default;
 
-Pipeline::Pipeline(Node& entry, Node& exit, ModelMetricReporter& reporter, const std::string& name) :
+Pipeline::Pipeline(Node& entry, Node& exit, ServableMetricReporter& reporter, const std::string& name) :
     name(name),
     entry(entry),
     exit(exit),

@@ -336,6 +336,38 @@ TEST(MetricsGauge, DecrementNegativeAmount) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 24.43\n"));
 }
 
+TEST(MetricsGauge, Set) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->set(24.43);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 24.43\n"));
+    metric->set(-13.57);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -13.57\n"));
+}
+
+TEST(MetricsGauge, SetRemovedMetric) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    family->remove(metric);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
+    metric->set(24.43);
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+}
+
+TEST(MetricsGauge, SetRemovedFamily) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    registry.remove(family);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
+    metric->set(24.43);
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+}
+
 TEST(MetricsGauge, RemoveMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
@@ -776,6 +808,7 @@ TEST(MetricsFlow, Gauge) {
         {"model_name", "resnet"},
         {"model_version", "1"},
     });
+    metric->set(2);
     for (int i = 0; i < 30; i++) {
         metric->increment();
         metric->increment();
@@ -786,6 +819,7 @@ TEST(MetricsFlow, Gauge) {
         {"model_name", "dummy"},
         {"model_version", "2"},
     });
+    metric->set(3);
     for (int i = 0; i < 15; i++) {
         metric->increment();
         metric->decrement();
@@ -795,6 +829,7 @@ TEST(MetricsFlow, Gauge) {
     metric = pipe_family->addMetric({
         {"pipeline_name", "ocr"},
     });
+    metric->set(4);
     for (int i = 0; i < 12; i++) {
         metric->increment();
         metric->increment();
@@ -806,6 +841,7 @@ TEST(MetricsFlow, Gauge) {
     metric = pipe_family->addMetric({
         {"pipeline_name", "face_blur"},
     });
+    metric->set(5);
     for (int i = 0; i < 8; i++) {
         metric->increment();
         metric->increment();
@@ -817,10 +853,10 @@ TEST(MetricsFlow, Gauge) {
     EXPECT_THAT(registry.collect(), HasSubstr("# TYPE nireq_in_use gauge\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("# HELP pipelines_running number of pipelines currently being executed\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("# TYPE pipelines_running gauge\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("nireq_in_use{model_name=\"resnet\",model_version=\"1\"} 30\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("nireq_in_use{model_name=\"dummy\",model_version=\"2\"} 15\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("pipelines_running{pipeline_name=\"ocr\"} 12\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("pipelines_running{pipeline_name=\"face_blur\"} 16\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("nireq_in_use{model_name=\"resnet\",model_version=\"1\"} 32\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("nireq_in_use{model_name=\"dummy\",model_version=\"2\"} 18\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("pipelines_running{pipeline_name=\"ocr\"} 16\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("pipelines_running{pipeline_name=\"face_blur\"} 21\n"));
 }
 
 TEST(MetricsFlow, Histogram) {

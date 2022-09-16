@@ -1,5 +1,5 @@
-//*****************************************************************************
-// Copyright 2020 Intel Corporation
+//****************************************************************************
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,27 +14,24 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <memory>
+#include <utility>
 
-#include <future>
-#include <optional>
+#include "config.hpp"
+#include "logging.hpp"
+#include "module.hpp"
 
 namespace ovms {
+class Profiler;
+#ifdef MTR_ENABLED
+class ProfilerModule : public Module {
+    std::unique_ptr<Profiler> profiler;
 
-class ModelMetricReporter;
-class OVInferRequestsQueue;
-
-struct NodeStreamIdGuard {
-    NodeStreamIdGuard(OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter);
-    ~NodeStreamIdGuard();
-
-    std::optional<int> tryGetId(const uint microseconds = 1);
-    bool tryDisarm(const uint microseconds = 1);
-
-private:
-    OVInferRequestsQueue& inferRequestsQueue_;
-    std::future<int> futureStreamId;
-    std::optional<int> streamId = std::nullopt;
-    bool disarmed = false;
-    ModelMetricReporter& reporter;
+public:
+    ProfilerModule();
+    int start(const Config& config) override;
+    void shutdown() override;
+    ~ProfilerModule();
 };
+#endif
 }  // namespace ovms

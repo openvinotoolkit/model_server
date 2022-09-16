@@ -38,7 +38,7 @@ class Server;
 void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, model_version_t version, const ModelVersionStatus& model_version_status);
 
 class ModelServiceImpl final : public tensorflow::serving::ModelService::Service {
-    ovms::Server& ovmsServer;
+    ovms::ModelManager& modelManager;
 
 public:
     ModelServiceImpl(ovms::Server& ovmsServer);

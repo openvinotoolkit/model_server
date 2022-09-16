@@ -37,6 +37,7 @@ class Status;
 class PredictionServiceImpl final : public tensorflow::serving::PredictionService::Service {
     ovms::Server& ovmsServer;
     GetModelMetadataImpl getModelMetadataImpl;
+    ModelManager& modelManager;
 
 public:
     PredictionServiceImpl(ovms::Server& ovmsServer);

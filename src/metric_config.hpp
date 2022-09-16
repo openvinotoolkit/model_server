@@ -16,6 +16,8 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <rapidjson/document.h>
 
@@ -30,60 +32,44 @@ public:
     bool metricsEnabled;
     std::string endpointsPath;
 
-    // Request Success/Fail
-    // TFS
-    bool requestSuccessGrpcPredict;
-    bool requestSuccessGrpcGetModelMetadata;
-    bool requestSuccessGrpcGetModelStatus;
+    Status parseMetricsConfig(const rapidjson::Value& v, uint64_t restPort);
+    bool isFamilyEnabled(const std::string& family) const;
 
-    bool requestSuccessRestPredict;
-    bool requestSuccessRestGetModelMetadata;
-    bool requestSuccessRestGetModelStatus;
-
-    bool requestFailGrpcPredict;
-    bool requestFailGrpcGetModelMetadata;
-    bool requestFailGrpcGetModelStatus;
-
-    bool requestFailRestPredict;
-    bool requestFailRestGetModelMetadata;
-    bool requestFailRestGetModelStatus;
-
-    // KFS
-    bool requestSuccessGrpcModelInfer;
-    bool requestSuccessGrpcModelMetadata;
-    bool requestSuccessGrpcModelReady;
-
-    bool requestSuccessRestModelInfer;
-    bool requestSuccessRestModelMetadata;
-    bool requestSuccessRestModelReady;
-
-    bool requestFailGrpcModelInfer;
-    bool requestFailGrpcModelMetadata;
-    bool requestFailGrpcModelReady;
-
-    bool requestFailRestModelInfer;
-    bool requestFailRestModelMetadata;
-    bool requestFailRestModelReady;
-
-    Status parseMetricsArray(const rapidjson::Value& v);
-    Status parseMetricsConfig(const rapidjson::Value& v);
-    bool validateEndpointPath(std::string endpoint);
-
-    void setAllMetricsTo(bool enabled);
-    Status loadFromCLIString(bool isEnabled, const std::string& metricsList);
+    void setDefaultMetricsTo(bool enabled);
+    Status loadFromCLIString(bool isEnabled, const std::string& metricsList, uint64_t restPort = 0);
 
     MetricConfig() {
         metricsEnabled = false;
         endpointsPath = "/metrics";
 
-        setAllMetricsTo(metricsEnabled);
+        setDefaultMetricsTo(metricsEnabled);
     }
 
     MetricConfig(bool enabled) {
         metricsEnabled = enabled;
         endpointsPath = "/metrics";
 
-        setAllMetricsTo(metricsEnabled);
+        setDefaultMetricsTo(metricsEnabled);
     }
+
+protected:
+    std::unordered_set<std::string> enabledFamiliesList;
+
+private:
+    Status parseMetricsArray(const rapidjson::Value& v);
+    bool validateEndpointPath(const std::string& endpoint);
+
+    std::unordered_set<std::string> additionalMetricFamilies = {
+        {"ovms_infer_req_queue_size"},
+        {"ovms_infer_req_active"}};
+
+    std::unordered_set<std::string> defaultMetricFamilies = {
+        {"ovms_current_requests"},
+        {"ovms_requests_success"},
+        {"ovms_requests_fail"},
+        {"ovms_request_time_us"},
+        {"ovms_streams"},
+        {"ovms_inference_time_us"},
+        {"ovms_wait_for_infer_req_time_us"}};
 };
 }  // namespace ovms

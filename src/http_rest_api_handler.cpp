@@ -33,6 +33,7 @@
 #include "kfs_grpc_inference_service.hpp"
 #include "metric_module.hpp"
 #include "metric_registry.hpp"
+#include "model_metric_reporter.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "pipelinedefinition.hpp"
@@ -49,6 +50,15 @@ using tensorflow::serving::PredictResponse;
 using rapidjson::Document;
 using rapidjson::SizeType;
 using rapidjson::Value;
+
+namespace {
+enum : unsigned int {
+    TOTAL,
+    PREPARE_GRPC_REQUEST,
+    TIMER_END
+};
+const std::string DEFAULT_VERSION = "DEFAULT";
+}  // namespace
 
 namespace ovms {
 
@@ -90,7 +100,12 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     ovmsServer(ovmsServer),
 
     kfsGrpcImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getKFSGrpcImpl()),
-    grpcGetModelMetadataImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getTFSModelMetadataImpl()) {
+    grpcGetModelMetadataImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getTFSModelMetadataImpl()),
+    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))
+        throw std::logic_error("Tried to create http rest api handler without grpc server module");
+    if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))
+        throw std::logic_error("Tried to create http rest api handler without servable manager module");
     registerAll();
 }
 
@@ -99,7 +114,7 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
         try {
             model_version = std::stoll(model_version_str.c_str());
         } catch (std::exception& e) {
-            SPDLOG_ERROR("Couldn't parse model version {}", model_version_str);
+            SPDLOG_DEBUG("Couldn't parse model version {}", model_version_str);
             return StatusCode::REST_COULD_NOT_PARSE_VERSION;
         }
     }
@@ -130,26 +145,10 @@ void HttpRestApiHandler::registerAll() {
             request_components.model_version_label, &response);
     });
     registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
-        // TODO #KFS_CLEANUP
-        auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-        if (nullptr == module) {
-            return StatusCode::MODEL_NOT_LOADED;
-        }
-        auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-        // TODO #KFS_CLEANUP
-        auto& manager = servableManagerModule->getServableManager();
-        return processConfigReloadRequest(response, manager);
+        return processConfigReloadRequest(response, this->modelManager);
     });
     registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
-        // TODO #KFS_CLEANUP
-        auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-        if (nullptr == module) {
-            return StatusCode::MODEL_NOT_LOADED;
-        }
-        auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-        // TODO #KFS_CLEANUP
-        auto& manager = servableManagerModule->getServableManager();
-        return processConfigStatusRequest(response, manager);
+        return processConfigStatusRequest(response, this->modelManager);
     });
     registerHandler(KFS_GetModelReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
         return processModelReadyKFSRequest(request_components, response, request_body);
@@ -412,16 +411,20 @@ Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputT
     return StatusCode::OK;
 }
 
-Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char* binary_inputs, size_t binary_inputs_size) {
+Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
+    const char* binary_inputs = &(request_body[endOfJson]);
+    size_t binary_inputs_size = request_body.length() - endOfJson;
+
     size_t binary_input_offset = 0;
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
         auto input = grpc_request.mutable_inputs()->Mutable(i);
-        auto status = validateContentFieldsEmptiness(input);
-        if (!status.ok()) {
-            return status;
-        }
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
         if (binary_data_size_parameter != input->parameters().end()) {
+            auto status = validateContentFieldsEmptiness(input);
+            if (!status.ok()) {
+                SPDLOG_DEBUG("Request contains both data in json and binary inputs");
+                return status;
+            }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 auto binary_input_size = binary_data_size_parameter->second.int64_param();
                 if (binary_input_offset + binary_input_size > binary_inputs_size) {
@@ -430,6 +433,7 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
                 }
                 status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
                 if (!status.ok()) {
+                    SPDLOG_DEBUG("Parsing binary inputs failed");
                     return status;
                 }
                 binary_input_offset += binary_input_size;
@@ -446,6 +450,7 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
                     }
                     status = parseBinaryInput(input, size, binary_inputs + binary_input_offset);
                     if (!status.ok()) {
+                        SPDLOG_DEBUG("Parsing binary inputs failed");
                         return status;
                     }
                     binary_input_offset += size;
@@ -459,50 +464,61 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body, ::inference::ModelInferRequest& grpc_request) {
-    google::protobuf::util::JsonParseOptions opts;
-    opts.ignore_unknown_fields = true;
-    auto jsonClosingBracket = request_body.find_last_of("}");
-    bool dataAfterHeader = ((jsonClosingBracket != std::string::npos) && (jsonClosingBracket != (request_body.length() - 1)));
-    if (dataAfterHeader) {
-        size_t endOfJson = jsonClosingBracket + 1;
-        std::string request(preprocessInferRequest(request_body.substr(0, endOfJson).c_str()));
-        google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
-        auto status = addBinaryInputs(grpc_request, &(request_body[endOfJson]), request_body.length() - endOfJson);
-        if (!status.ok()) {
-            return status;
-        }
-        std::string req;
-        google::protobuf::util::MessageToJsonString(grpc_request, &req);
-    } else {
-        std::string request(preprocessInferRequest(request_body));
-        google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
+    KFSRestParser requestParser;
+
+    size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
+    auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Parsing http request failed");
+        return status;
     }
-    std::string req;
-    google::protobuf::util::MessageToJsonString(grpc_request, &req);
+    grpc_request = requestParser.getProto();
+    status = handleBinaryInputs(grpc_request, request_body, endOfJson);
+    if (!status.ok()) {
+        return status;
+    }
     grpc_request.set_model_name(modelName);
-    grpc_request.set_model_version(modelVersion);
+    if (modelVersion.has_value()) {
+        grpc_request.set_model_version(std::to_string(modelVersion.value()));
+    }
     return StatusCode::OK;
 }
 
 Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
+    ServableMetricReporter* reporter = nullptr;
     std::string modelName(request_components.model_name);
-    std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
-    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
+    std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
     ::inference::ModelInferRequest grpc_request;
-    prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
+    timer.start(PREPARE_GRPC_REQUEST);
+    using std::chrono::microseconds;
+    auto status = prepareGrpcRequest(modelName, request_components.model_version, request_body, grpc_request, request_components.inferenceHeaderContentLength);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("REST to GRPC request conversion failed for model: {}", modelName);
+        return status;
+    }
+    timer.stop(PREPARE_GRPC_REQUEST);
+    SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>(PREPARE_GRPC_REQUEST) / 1000);
     ::inference::ModelInferResponse grpc_response;
-    const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response);
+    const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer},
+        reporter);
     if (!gstatus.ok()) {
         return gstatus;
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts_out;
-    Status status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
+    status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
     if (!status.ok()) {
         return status;
     }
     response = output;
+    timer.stop(TOTAL);
+    double totalTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
+    SPDLOG_DEBUG("Total REST request processing time: {} ms", totalTime / 1000);
+    OBSERVE_IF_ENABLED(reporter->requestTimeRest, totalTime);
     return StatusCode::OK;
 }
 
@@ -523,17 +539,10 @@ Status HttpRestApiHandler::dispatchToProcessor(
 Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     auto module = this->ovmsServer.getModule(METRICS_MODULE_NAME);
     if (nullptr == module) {
-        return StatusCode::INTERNAL_ERROR;  // TODO: Return proper code when metric endpoint is disabled (missing module).
+        SPDLOG_ERROR("Failed to process metrics - metrics module is missing");
+        return StatusCode::INTERNAL_ERROR;
     }
-
-    auto managerModule = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == managerModule) {
-        return StatusCode::MODEL_NOT_LOADED;
-    }
-
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(managerModule);
-    auto& manager = servableManagerModule->getServableManager();
-    auto& metricConfig = manager.getMetricConfig();
+    auto& metricConfig = this->modelManager.getMetricConfig();
 
     if (!metricConfig.metricsEnabled) {
         return StatusCode::REST_INVALID_URL;
@@ -549,12 +558,14 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
     ::inference::ModelReadyRequest grpc_request;
     ::inference::ModelReadyResponse grpc_response;
     std::string modelName(request_components.model_name);
-    std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     grpc_request.set_name(modelName);
-    grpc_request.set_version(modelVersion);
-    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
+    if (request_components.model_version.has_value()) {
+        grpc_request.set_version(std::to_string(request_components.model_version.value()));
+    }
+    std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
 
-    Status status = kfsGrpcImpl.ModelReadyImpl(nullptr, &grpc_request, &grpc_response);
+    Status status = kfsGrpcImpl.ModelReadyImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelReady});
     if (!status.ok()) {
         return status;
     }
@@ -580,11 +591,13 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     ::inference::ModelMetadataRequest grpc_request;
     ::inference::ModelMetadataResponse grpc_response;
     std::string modelName(request_components.model_name);
-    std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     grpc_request.set_name(modelName);
-    grpc_request.set_version(modelVersion);
-    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
-    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response);
+    if (request_components.model_version.has_value()) {
+        grpc_request.set_version(std::to_string(request_components.model_version.value()));
+    }
+    std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
+    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata});
     if (!gstatus.ok()) {
         return gstatus;
     }
@@ -609,9 +622,23 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     return StatusCode::OK;
 }
 
+Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
+    const std::vector<std::pair<std::string, std::string>>& headers) {
+    for (auto header : headers) {
+        if (header.first == "Inference-Header-Content-Length") {
+            requestComponents.inferenceHeaderContentLength = stoi32(header.second);
+            if (!requestComponents.inferenceHeaderContentLength.has_value() || requestComponents.inferenceHeaderContentLength.value() < 0) {
+                return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID;
+            }
+        }
+    }
+    return StatusCode::OK;
+}
+
 Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
     const std::string_view http_method,
-    const std::string& request_path) {
+    const std::string& request_path,
+    const std::vector<std::pair<std::string, std::string>>& headers) {
     std::smatch sm;
     requestComponents.http_method = http_method;
     if (http_method != "POST" && http_method != "GET") {
@@ -619,7 +646,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     }
 
     if (FileSystem::isPathEscaped(request_path)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        SPDLOG_DEBUG("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
     }
 
@@ -639,10 +666,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             }
 
             requestComponents.processing_method = sm[5];
-            return StatusCode::OK;
-        }
-        if (std::regex_match(request_path, sm, configReloadRegex)) {
-            requestComponents.type = ConfigReload;
+
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, kfs_inferRegex, std::regex_constants::match_any)) {
@@ -652,6 +676,14 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
                 return status;
+
+            status = parseInferenceHeaderContentLength(requestComponents, headers);
+            if (!status.ok())
+                return status;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, configReloadRegex)) {
+            requestComponents.type = ConfigReload;
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, modelstatusRegex))
@@ -659,7 +691,6 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     } else if (http_method == "GET") {
         if (std::regex_match(request_path, sm, modelstatusRegex)) {
             requestComponents.model_name = sm[2];
-
             std::string model_version_str = sm[3];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -732,16 +763,17 @@ Status HttpRestApiHandler::processRequest(
     std::smatch sm;
     std::string request_path_str(request_path);
     if (FileSystem::isPathEscaped(request_path_str)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        SPDLOG_DEBUG("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
     }
+
+    HttpRequestComponents requestComponents;
+    auto status = parseRequestComponents(requestComponents, http_method, request_path_str, *headers);
 
     headers->clear();
     response->clear();
     headers->push_back({"Content-Type", "application/json"});
 
-    HttpRequestComponents requestComponents;
-    auto status = parseRequestComponents(requestComponents, http_method, request_path_str);
     if (!status.ok())
         return status;
     return dispatchToProcessor(request_body, response, requestComponents);
@@ -755,44 +787,43 @@ Status HttpRestApiHandler::processPredictRequest(
     std::string* response) {
     // model_version_label currently is not in use
 
-    Timer timer;
-    timer.start("total");
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
     using std::chrono::microseconds;
 
+    std::string modelVersionLog = modelVersion.has_value() ? std::to_string(modelVersion.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}",
-        modelName, modelVersion.value_or(0));
+        modelName, modelVersionLog);
 
-    // TODO #KFS_CLEANUP
-    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return StatusCode::MODEL_NOT_LOADED;
-    }
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-    // TODO #KFS_CLEANUP
-    auto& modelManager = servableManagerModule->getServableManager();
     Order requestOrder;
     tensorflow::serving::PredictResponse responseProto;
     Status status;
 
-    if (modelManager.modelExists(modelName)) {
+    ServableMetricReporter* reporterOut = nullptr;
+    if (this->modelManager.modelExists(modelName)) {
         SPDLOG_DEBUG("Found model with name: {}. Searching for requested version...", modelName);
-        status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto);
-    } else if (modelManager.pipelineDefinitionExists(modelName)) {
+        status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto, reporterOut);
+    } else if (this->modelManager.pipelineDefinitionExists(modelName)) {
         SPDLOG_DEBUG("Found pipeline with name: {}", modelName);
-        status = processPipelineRequest(modelName, request, requestOrder, responseProto);
+        status = processPipelineRequest(modelName, request, requestOrder, responseProto, reporterOut);
     } else {
-        SPDLOG_WARN("Model or pipeline matching request parameters not found - name: {}, version: {}", modelName, modelVersion.value_or(0));
+        SPDLOG_DEBUG("Model or pipeline matching request parameters not found - name: {}, version: {}", modelName, modelVersionLog);
         status = StatusCode::MODEL_NAME_MISSING;
     }
     if (!status.ok())
         return status;
+    if (!reporterOut) {
+        return StatusCode::INTERNAL_ERROR;  // should not happen
+    }
 
     status = makeJsonFromPredictResponse(responseProto, response, requestOrder);
     if (!status.ok())
         return status;
 
-    timer.stop("total");
-    SPDLOG_DEBUG("Total REST request processing time: {} ms", timer.elapsed<std::chrono::microseconds>("total") / 1000);
+    timer.stop(TOTAL);
+    double requestTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
+    OBSERVE_IF_ENABLED(reporterOut->requestTimeRest, requestTime);
+    SPDLOG_DEBUG("Total REST request processing time: {} ms", requestTime / 1000);
     return StatusCode::OK;
 }
 
@@ -800,19 +831,12 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     const std::optional<int64_t>& modelVersion,
     const std::string& request,
     Order& requestOrder,
-    tensorflow::serving::PredictResponse& responseProto) {
+    tensorflow::serving::PredictResponse& responseProto,
+    ServableMetricReporter*& reporterOut) {
 
     std::shared_ptr<ModelInstance> modelInstance;
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    // TODO #KFS_CLEANUP
-    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return StatusCode::MODEL_NOT_LOADED;
-    }
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-    // TODO #KFS_CLEANUP
-    auto& modelManager = servableManagerModule->getServableManager();
-    auto status = modelManager.getModelInstance(
+    auto status = this->modelManager.getModelInstance(
         modelName,
         modelVersion.value_or(0),
         modelInstance,
@@ -822,20 +846,22 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
         }
-        SPDLOG_WARN("Requested model instance - name: {}, version: {} - does not exist.", modelName, modelVersion.value_or(0));
+        std::string modelVersionLog = modelVersion.has_value() ? std::to_string(modelVersion.value()) : DEFAULT_VERSION;
+        SPDLOG_DEBUG("Requested model instance - name: {}, version: {} - does not exist.", modelName, modelVersionLog);
         return status;
     }
-    Timer timer;
-    timer.start("parse");
-    RestParser requestParser(modelInstance->getInputsInfo());
+    reporterOut = &modelInstance->getMetricReporter();
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
+    TFSRestParser requestParser(modelInstance->getInputsInfo());
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
-        modelInstance->getMetricReporter().requestFailRestPredict->increment();
+        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
         return status;
     }
     requestOrder = requestParser.getOrder();
-    timer.stop("parse");
-    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>("parse") / 1000);
+    timer.stop(TOTAL);
+    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>(TOTAL) / 1000);
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
@@ -843,24 +869,12 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
         requestProto.mutable_model_spec()->mutable_version()->set_value(modelVersion.value());
     }
     status = modelInstance->infer(&requestProto, &responseProto, modelInstanceUnloadGuard);
-    if (status.ok()) {
-        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestSuccessRestPredict);
-    } else {
-        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailRestPredict);
-    }
+    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::Predict}, status.ok()));
     return status;
 }
 
 Status HttpRestApiHandler::getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs) {
-    // TODO #KFS_CLEANUP
-    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return StatusCode::MODEL_NOT_LOADED;
-    }
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-    // TODO #KFS_CLEANUP
-    auto& modelManager = servableManagerModule->getServableManager();
-    auto pipelineDefinition = modelManager.getPipelineFactory().findDefinitionByName(modelName);
+    auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(modelName);
     if (!pipelineDefinition) {
         return StatusCode::MODEL_MISSING;
     }
@@ -877,49 +891,38 @@ Status HttpRestApiHandler::getPipelineInputs(const std::string& modelName, ovms:
 Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     const std::string& request,
     Order& requestOrder,
-    tensorflow::serving::PredictResponse& responseProto) {
+    tensorflow::serving::PredictResponse& responseProto,
+    ServableMetricReporter*& reporterOut) {
 
     std::unique_ptr<Pipeline> pipelinePtr;
 
-    Timer timer;
-    timer.start("parse");
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
     ovms::tensor_map_t inputs;
     auto status = getPipelineInputs(modelName, inputs);
     if (!status.ok()) {
         return status;
     }
 
-    RestParser requestParser(inputs);
+    TFSRestParser requestParser(inputs);
     status = requestParser.parse(request.c_str());
     if (!status.ok()) {
         return status;
     }
     requestOrder = requestParser.getOrder();
-    timer.stop("parse");
-    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>("parse") / 1000);
+    timer.stop(TOTAL);
+    SPDLOG_DEBUG("JSON request parsing time: {} ms", timer.elapsed<std::chrono::microseconds>(TOTAL) / 1000);
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    // TODO #KFS_CLEANUP
-    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return StatusCode::MODEL_NOT_LOADED;
-    }
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-    // TODO #KFS_CLEANUP
-    auto& manager = servableManagerModule->getServableManager();
-    status = manager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
+    status = this->modelManager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
     if (!status.ok()) {
         return status;
     }
-    status = pipelinePtr->execute(ExecutionContext(
-        ExecutionContext::Interface::REST,
-        ExecutionContext::Method::Predict));
-    if (status.ok()) {
-        INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestSuccessRestPredict);
-    } else {
-        INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().requestFailRestPredict);
-    }
+    ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::Predict};
+    reporterOut = &pipelinePtr->getMetricReporter();
+    status = pipelinePtr->execute(executionContext);
+    INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     return status;
 }
 
@@ -963,15 +966,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
     if (!status.ok()) {
         return status;
     }
-    // TODO #KFS_CLEANUP
-    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return StatusCode::MODEL_NOT_LOADED;
-    }
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-    // TODO #KFS_CLEANUP
-    auto& manager = servableManagerModule->getServableManager();
-    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, manager, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::GetModelStatus));
+    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, this->modelManager, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::GetModelStatus));
     if (!status.ok()) {
         return status;
     }
@@ -1029,8 +1024,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     }
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
-                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Have separate method for ConfigReload and do not increment
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::ConfigReload));
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed. Check server logs for more info.");
         return status;
@@ -1054,8 +1048,7 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
     Status status;
 
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST,
-                                                                                   ExecutionContext::Method::GetModelStatus));  // TODO: Have separate method for ConfigStatus and do not increment
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager, ExecutionContext(ExecutionContext::Interface::REST, ExecutionContext::Method::ConfigStatus));
     if (!status.ok()) {
         response = createErrorJsonWithMessage("Retrieving all model statuses failed.");
         return status;

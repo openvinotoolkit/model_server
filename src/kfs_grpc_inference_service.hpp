@@ -21,6 +21,7 @@
 
 #include <grpcpp/server_context.h>
 
+#include "execution_context.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
 #include "status.hpp"
@@ -30,6 +31,7 @@ namespace ovms {
 using inference::GRPCInferenceService;
 class Model;
 class ModelManager;
+class ServableMetricReporter;
 class ModelInstance;
 class ModelInstanceUnloadGuard;
 class Pipeline;
@@ -40,12 +42,13 @@ class PipelineDefinition;
 
 class KFSInferenceServiceImpl final : public GRPCInferenceService::Service {
     const Server& ovmsServer;
+    ModelManager& modelManager;
 
 public:
-    Status ModelReadyImpl(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response);
+    Status ModelReadyImpl(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ExecutionContext executionContext);
     Status ServerMetadataImpl(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response);
-    Status ModelMetadataImpl(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response);
-    Status ModelInferImpl(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response);
+    Status ModelMetadataImpl(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response, ExecutionContext executionContext);
+    Status ModelInferImpl(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut);
     KFSInferenceServiceImpl(const Server& server);
     ::grpc::Status ServerLive(::grpc::ServerContext* context, const ::inference::ServerLiveRequest* request, ::inference::ServerLiveResponse* response) override;
     ::grpc::Status ServerReady(::grpc::ServerContext* context, const ::inference::ServerReadyRequest* request, ::inference::ServerReadyResponse* response) override;
@@ -58,7 +61,7 @@ public:
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelReadyResponse* response);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelReadyResponse* response);
     static void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, ::inference::ModelMetadataResponse::TensorMetadata* to);
-    static Status getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, const ModelManager& manager);
+    static Status getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, const ModelManager& manager, ExecutionContext executionContext);
 
 protected:
     Status getModelInstance(const ::inference::ModelInferRequest* request,

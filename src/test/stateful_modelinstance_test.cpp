@@ -191,7 +191,16 @@ public:
             std::cout << "[WARNING] This method must be kept up to date with StatefulModelInstance::infer for tests to function properly." << std::endl;
             testWarningPrinted = true;
         }
-        ovms::Timer timer;
+        enum : unsigned int {
+            GET_INFER_REQUEST,
+            PREPROCESS,
+            DESERIALIZE,
+            PREDICTION,
+            SERIALIZE,
+            POSTPROCESS,
+            TIMER_END
+        };
+        ovms::Timer<TIMER_END> timer;
         using std::chrono::microseconds;
         ovms::SequenceProcessingSpec sequenceProcessingSpec;
         auto status = validate(requestProto, sequenceProcessingSpec);
@@ -219,42 +228,42 @@ public:
         std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
         sequenceManagerLock.unlock();
 
-        timer.start("get infer request");
-        ovms::ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+        timer.start(GET_INFER_REQUEST);
+        ovms::ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
         ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
-        timer.stop("get infer request");
+        timer.stop(GET_INFER_REQUEST);
 
-        timer.start("preprocess");
+        timer.start(PREPROCESS);
         status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
         if (!status.ok())
             return status;
-        timer.stop("preprocess");
+        timer.stop(PREPROCESS);
 
-        timer.start("deserialize");
+        timer.start(DESERIALIZE);
         ovms::InputSink<ov::InferRequest&> inputSink(inferRequest);
         (void)inputSink;
         bool isPipeline = false;
         status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
         if (!status.ok())
             return status;
-        timer.stop("deserialize");
+        timer.stop(DESERIALIZE);
 
-        timer.start("prediction");
+        timer.start(PREDICTION);
         status = performInference(inferRequest);
         if (!status.ok())
             return status;
-        timer.stop("prediction");
+        timer.stop(PREDICTION);
 
-        timer.start("serialize");
+        timer.start(SERIALIZE);
         ovms::OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
         status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, ovms::getTensorInfoName);
-        timer.stop("serialize");
+        timer.stop(SERIALIZE);
         if (!status.ok())
             return status;
 
-        timer.start("postprocess");
+        timer.start(POSTPROCESS);
         status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
-        timer.stop("postprocess");
+        timer.stop(POSTPROCESS);
         if (!status.ok())
             return status;
 

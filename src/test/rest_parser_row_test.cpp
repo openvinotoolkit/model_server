@@ -63,7 +63,7 @@ const char* predictRequestRowNamedJson = R"({
 })";
 
 TEST(RestParserRow, ParseValid2Inputs) {
-    RestParser parser(prepareTensors({{"inputA", {2, 2, 3, 2}},
+    TFSRestParser parser(prepareTensors({{"inputA", {2, 2, 3, 2}},
         {"inputB", {2, 2, 3}}}));
 
     auto status = parser.parse(predictRequestRowNamedJson);
@@ -107,7 +107,7 @@ TEST(RestParserRow, ParseValid2Inputs) {
 }
 
 TEST(RestParserRow, ValidShape_1x1) {
-    RestParser parser(prepareTensors({{"i", {1, 1}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[155.0]}
@@ -120,7 +120,7 @@ TEST(RestParserRow, ValidShape_1x1) {
 }
 
 TEST(RestParserRow, ValidShape_1x2) {
-    RestParser parser(prepareTensors({{"i", {1, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 2}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[155.0, 56.0]}
@@ -133,7 +133,7 @@ TEST(RestParserRow, ValidShape_1x2) {
 }
 
 TEST(RestParserRow, ValidShape_2x1) {
-    RestParser parser(prepareTensors({{"i", {2, 1}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 1}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[155.0]}, {"i":[513.0]}
@@ -146,7 +146,7 @@ TEST(RestParserRow, ValidShape_2x1) {
 }
 
 TEST(RestParserRow, ValidShape_2x2) {
-    RestParser parser(prepareTensors({{"i", {2, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 2}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[155.0, 9.0]}, {"i":[513.0, -5.0]}
@@ -159,7 +159,7 @@ TEST(RestParserRow, ValidShape_2x2) {
 }
 
 TEST(RestParserRow, ValidShape_2x1x3) {
-    RestParser parser(prepareTensors({{"i", {2, 1, 3}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 3}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[
@@ -177,7 +177,7 @@ TEST(RestParserRow, ValidShape_2x1x3) {
 }
 
 TEST(RestParserRow, ValidShape_2x3x1) {
-    RestParser parser(prepareTensors({{"i", {2, 3, 1}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 3, 1}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[
@@ -199,7 +199,7 @@ TEST(RestParserRow, ValidShape_2x3x1) {
 }
 
 TEST(RestParserRow, ValidShape_2x1x2x1) {
-    RestParser parser(prepareTensors({{"i", {2, 1, 2, 1}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 2, 1}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[
@@ -223,7 +223,7 @@ TEST(RestParserRow, ValidShape_2x1x2x1) {
 }
 
 TEST(RestParserRow, ValidShape_2x1x3x1x5) {
-    RestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 5}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 5}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[
@@ -255,7 +255,7 @@ TEST(RestParserRow, ValidShape_2x1x3x1x5) {
 }
 
 TEST(RestParserRow, MissingInputInBatch) {
-    RestParser parser(prepareTensors({{"i", {2, 1, 2, 2}},
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 2, 2}},
         {"j", {1, 1, 2, 2}}}));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
@@ -271,86 +271,86 @@ TEST(RestParserRow, MissingInputInBatch) {
 }
 
 TEST(RestParserRow, ParseUint8) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U8));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U8));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0,5,15,255]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<uint8_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, 5, 15, 255));
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U8));
+    parser = TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U8));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,15.0,255.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<uint8_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, 5, 15, 255));
 }
 
 TEST(RestParserRow, ParseInt8) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I8));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I8));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,127,-128]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<int8_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 127, -128));
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I8));
+    parser = TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I8));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,127.0,-128.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<int8_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 127, -128));
 }
 
 TEST(RestParserRow, ParseUint16) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U16));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U16));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0,5,128,65535]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector(parser.getProto().mutable_inputs()->at("i").mutable_int_val()), ElementsAre(0, 5, 128, 65535));
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U16));
+    parser = TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U16));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,128.0,65535.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector(parser.getProto().mutable_inputs()->at("i").mutable_int_val()), ElementsAre(0, 5, 128, 65535));
 }
 
 TEST(RestParserRow, ParseInt16) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I16));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I16));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,32768,-32767]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<int16_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 32768, -32767));
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I16));
+    parser = TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I16));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,32768.0,-32767.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<int16_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 32768, -32767));
 }
 
 TEST(RestParserRow, ParseInt32) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I32));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I32));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,2147483648,-2147483647]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<int32_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 2147483648, -2147483647));
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I32));
+    parser = TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I32));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,2147483648.0,-2147483647.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<int32_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 2147483648, -2147483647));
 }
 
 TEST(RestParserRow, ParseUint64) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U64));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U64));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0,5,128,18446744073709551615]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<uint64_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, 5, 128, 18446744073709551615UL));
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U64));
+    parser = TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U64));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0.0,5.0,128.0,555222.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<uint64_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, 5, 128, 555222));  // Can't looselessly cast large double to int64
 }
 
 TEST(RestParserRow, ParseInt64) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I64));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I64));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0,-5,5522,-9223372036854775807]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<int64_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 5522, -9223372036854775807));
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I64));
+    parser = TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I64));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[0.0,-5.0,5522.0,-55333.0]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<int64_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 5522, -55333));  // Can't looselessly cast double to int64
 }
 
 TEST(RestParserRow, ParseFloat) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP32));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP32));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[-5, 0, -4, 155234]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(-5, 0, -4, 155234));
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP32));
+    parser = TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP32));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[-5.12, 0.4344, -4.521, 155234.221]]}]})"), StatusCode::OK);
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(-5.12, 0.4344, -4.521, 155234.221));
 }
 
 TEST(RestParserRow, ParseHalf) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP16));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP16));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[-5, 0, -4, 155234]]}]})"), StatusCode::OK);
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP16));
+    parser = TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP16));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[-5.1222, 0.434422, -4.52122, 155234.22122]]}]})"), StatusCode::OK);
 }
 
 TEST(RestParserRow, InvalidJson) {
-    RestParser parser(prepareTensors({{"i", {1, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 3, 2}}}));
 
     EXPECT_EQ(parser.parse(""),
         StatusCode::JSON_INVALID);
@@ -373,7 +373,7 @@ TEST(RestParserRow, InvalidJson) {
 }
 
 TEST(RestParserRow, BodyNotAnObject) {
-    RestParser parser(prepareTensors({}, ovms::Precision::FP16));
+    TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
     EXPECT_EQ(parser.parse("[]"), StatusCode::REST_BODY_IS_NOT_AN_OBJECT);
     EXPECT_EQ(parser.parse("\"string\""), StatusCode::REST_BODY_IS_NOT_AN_OBJECT);
@@ -382,7 +382,7 @@ TEST(RestParserRow, BodyNotAnObject) {
 }
 
 TEST(RestParserRow, CouldNotDetectOrder) {
-    RestParser parser(prepareTensors({}, ovms::Precision::FP16));
+    TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":""})"), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","bad":[{"i":[1]}]})"), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
@@ -390,7 +390,7 @@ TEST(RestParserRow, CouldNotDetectOrder) {
 }
 
 TEST(RestParserRow, InstancesNotAnArray) {
-    RestParser parser(prepareTensors({}, ovms::Precision::FP16));
+    TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":{}})"), StatusCode::REST_INSTANCES_NOT_AN_ARRAY);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":"string"})"), StatusCode::REST_INSTANCES_NOT_AN_ARRAY);
@@ -398,27 +398,27 @@ TEST(RestParserRow, InstancesNotAnArray) {
 }
 
 TEST(RestParserRow, NamedInstanceNotAnObject) {
-    RestParser parser(prepareTensors({{"i", {2, 1}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 1}}}));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[5]},2,3]})"), StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[5]},null]})"), StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT);
 }
 
 TEST(RestParserRow, CouldNotDetectNamedOrNoNamed) {
-    RestParser parser(prepareTensors({}, ovms::Precision::FP16));
+    TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":["1", "2"]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[null, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
 }
 
 TEST(RestParserRow, NoInstancesFound) {
-    RestParser parser(prepareTensors({}, ovms::Precision::FP16));
+    TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[]})"), StatusCode::REST_NO_INSTANCES_FOUND);
 }
 
 TEST(RestParserRow, CannotParseInstance) {
-    RestParser parser(prepareTensors({{"i", {1, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 2}}}));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":2}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
@@ -428,7 +428,7 @@ TEST(RestParserRow, CannotParseInstance) {
 }
 
 TEST(RestParserRow, InputNotNdArray_1) {
-    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
 
     // [1, 4, 5] size is 3 instead of 2 to be valid
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
@@ -443,7 +443,7 @@ TEST(RestParserRow, InputNotNdArray_1) {
 }
 
 TEST(RestParserRow, InputNotNdArray_2) {
-    RestParser parser(prepareTensors({{"i", {1, 2, 3, 3}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 2, 3, 3}}}));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
         [[1, 2, [8]],
@@ -457,7 +457,7 @@ TEST(RestParserRow, InputNotNdArray_2) {
 }
 
 TEST(RestParserRow, InputNotNdArray_3) {
-    RestParser parser(prepareTensors({{"i", {1, 4, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 4, 3, 2}}}));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
         [[1, 2],
@@ -476,7 +476,7 @@ TEST(RestParserRow, InputNotNdArray_3) {
 }
 
 TEST(RestParserRow, InputNotNdArray_4) {
-    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
 
     // [5, 6] is not a number but array
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
@@ -491,7 +491,7 @@ TEST(RestParserRow, InputNotNdArray_4) {
 }
 
 TEST(RestParserRow, InputNotNdArray_5) {
-    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
 
     // [1] is of wrong shape
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
@@ -507,7 +507,7 @@ TEST(RestParserRow, InputNotNdArray_5) {
 }
 
 TEST(RestParserRow, InputNotNdArray_6) {
-    RestParser parser(prepareTensors({{"i", {1, 2, 2, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 2, 2, 2}}}));
 
     // [1, 1] missing - 2x2, 2x3
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
@@ -521,7 +521,7 @@ TEST(RestParserRow, InputNotNdArray_6) {
 }
 
 TEST(RestParserRow, InputNotNdArray_7) {
-    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
 
     // [1, 5] numbers are on wrong level
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
@@ -537,7 +537,7 @@ TEST(RestParserRow, InputNotNdArray_7) {
 }
 
 TEST(RestParserRow, InputNotNdArray_8) {
-    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
 
     // [1, 2], [9, 3] numbers are on wrong level
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
@@ -552,7 +552,7 @@ TEST(RestParserRow, InputNotNdArray_8) {
 }
 
 TEST(RestParserRow, InstancesShapeDiffer_1) {
-    RestParser parser(prepareTensors({{"i", {2, 2, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 2, 3, 2}}}));
 
     // 2x3x2 vs 2x2x2
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
@@ -575,7 +575,7 @@ TEST(RestParserRow, InstancesShapeDiffer_1) {
 }
 
 TEST(RestParserRow, InstancesShapeDiffer_2) {
-    RestParser parser(prepareTensors({{"i", {2, 2, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 2, 3, 2}}}));
 
     // 2x3x2 vs 2x3x3
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
@@ -600,7 +600,7 @@ TEST(RestParserRow, InstancesShapeDiffer_2) {
 }
 
 TEST(RestParserRow, InstancesShapeDiffer_3) {
-    RestParser parser(prepareTensors({{"i", {2, 2, 3, 2}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 2, 3, 2}}}));
 
     // 2x3x2 vs 1x2x3x2
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
@@ -625,7 +625,7 @@ TEST(RestParserRow, InstancesShapeDiffer_3) {
 }
 
 TEST(RestParserRow, RemoveUnnecessaryInputs) {
-    RestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}}, ovms::Precision::FP16));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}}, ovms::Precision::FP16));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"k":[155.0]}, {"l":[1.0]}

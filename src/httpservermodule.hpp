@@ -23,10 +23,6 @@
 
 namespace ovms {
 class Config;
-// TODO should replace all messages like
-// start REST Server with start HTTP Server
-// start Server with start gRPC server
-// this should be synchronized with validation tests changes
 class HTTPServerModule : public Module {
     std::unique_ptr<ovms::http_server> server;
     Server& ovmsServer;

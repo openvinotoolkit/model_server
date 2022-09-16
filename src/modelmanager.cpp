@@ -586,7 +586,7 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     } else {
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
-        firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics);
+        firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics, ovms::Config::instance().restPort());
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(firstErrorStatus);
     }
 
@@ -1342,7 +1342,7 @@ const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& na
 Status ModelManager::getModelInstance(const std::string& modelName,
     ovms::model_version_t modelVersionId,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const {
     SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
 
     auto model = findModelByName(modelName);

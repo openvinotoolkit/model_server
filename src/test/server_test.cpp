@@ -200,15 +200,6 @@ public:
 }  // namespace
 using ovms::SERVABLE_MANAGER_MODULE_NAME;
 
-void randomizePort(std::string& port) {
-    std::mt19937_64 eng{std::random_device{}()};
-    std::uniform_int_distribution<> dist{0, 9};
-    for (auto j : {1, 2, 3}) {
-        char* digitToRandomize = (char*)port.c_str() + j;
-        *digitToRandomize += dist(eng);
-    }
-}
-
 TEST(Server, ServerAliveBeforeLoadingModels) {
     // purpose of this test is to ensure that the server responds with alive=true before loading any models.
     // this is to make sure that eg. k8s won't restart container until all models are loaded because of not being alivea
@@ -319,8 +310,9 @@ TEST(Server, ServerMetadata) {
     std::string address = std::string("localhost:") + port;
     requestServerAlive(port.c_str(), grpc::StatusCode::OK, true);
     checkServerMetadata(port.c_str(), grpc::StatusCode::OK);
-    ovms::Server::instance().setShutdownRequest(1);
+    server.setShutdownRequest(1);
     t.join();
+    server.setShutdownRequest(0);
 }
 
 TEST(Server, ProperShutdownInCaseOfStartError) {

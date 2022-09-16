@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM registry.access.redhat.com/ubi8/ubi:8.5
+FROM registry.access.redhat.com/ubi8/ubi:8.6
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y gcc-c++ curl xz
 
 # OpenCV
@@ -25,6 +25,7 @@ RUN ./install_opencv.sh
 
 ARG OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv"
 ARG NODE_NAME=model_zoo_intel_object_detection
+ARG NODE_TYPE=cpp
 
 WORKDIR /
 COPY ./queue.hpp ./queue.hpp
@@ -35,6 +36,6 @@ WORKDIR /custom_nodes/common
 RUN g++ -c -std=c++17 *.cpp ${OPS} -I/opt/opencv/include/opencv4/
 WORKDIR /custom_nodes/${NODE_NAME}/
 RUN mkdir -p /custom_nodes/lib
-RUN g++ -c -std=c++17 ${NODE_NAME}.cpp ${OPS} -I/opt/opencv/include/opencv4/
+RUN g++ -c -std=c++17 ${NODE_NAME}.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4/
 RUN g++ -shared ${OPS} -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o /custom_nodes/common/*.o \
     -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
