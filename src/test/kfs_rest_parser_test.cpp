@@ -50,24 +50,24 @@ TEST_F(KFSRestParserTest, parseValidRequestTwoInputs) {
     auto proto = parser.getProto();
     ASSERT_EQ(proto.inputs_size(), 2);
     ASSERT_EQ(proto.inputs()[0].name(), "input0");
-    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2,2));
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
     ASSERT_EQ(proto.inputs()[0].datatype(), "UINT32");
     ASSERT_EQ(proto.inputs()[0].contents().uint_contents_size(), 4);
-    ASSERT_THAT(proto.inputs()[0].contents().uint_contents(), ElementsAre(1,2,3,4));
+    ASSERT_THAT(proto.inputs()[0].contents().uint_contents(), ElementsAre(1, 2, 3, 4));
 
     ASSERT_EQ(proto.inputs()[1].name(), "input1");
-    ASSERT_THAT(proto.inputs()[1].shape(),ElementsAre(3));
+    ASSERT_THAT(proto.inputs()[1].shape(), ElementsAre(3));
     ASSERT_EQ(proto.inputs()[1].datatype(), "BOOL");
     ASSERT_EQ(proto.inputs()[1].contents().bool_contents_size(), 1);
     ASSERT_THAT(proto.inputs()[1].contents().bool_contents(), ElementsAre(true));
 }
 
-#define VALIDATE_INPUT(DATATYPE, CONTENTS_SIZE, CONTENTS) \
-    auto proto = parser.getProto(); \
-    ASSERT_EQ(proto.inputs_size(), 1); \
-    ASSERT_EQ(proto.inputs()[0].name(), "input0"); \
-    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2)); \
-    ASSERT_EQ(proto.inputs()[0].datatype(), DATATYPE); \
+#define VALIDATE_INPUT(DATATYPE, CONTENTS_SIZE, CONTENTS)       \
+    auto proto = parser.getProto();                             \
+    ASSERT_EQ(proto.inputs_size(), 1);                          \
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");              \
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));  \
+    ASSERT_EQ(proto.inputs()[0].datatype(), DATATYPE);          \
     ASSERT_EQ(proto.inputs()[0].contents().CONTENTS_SIZE(), 4); \
     ASSERT_THAT(proto.inputs()[0].contents().CONTENTS(), ElementsAre(1, 2, 3, 4));
 
@@ -247,7 +247,7 @@ TEST_F(KFSRestParserTest, parseValidRequestFP32) {
     auto proto = parser.getProto();
     ASSERT_EQ(proto.inputs_size(), 1);
     ASSERT_EQ(proto.inputs()[0].name(), "input0");
-    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
     ASSERT_EQ(proto.inputs()[0].datatype(), "FP32");
     ASSERT_EQ(proto.inputs()[0].contents().fp32_contents_size(), 4);
     ASSERT_THAT(proto.inputs()[0].contents().fp32_contents(), ElementsAre(1.5, 2.9, 3.0, 4.1));
@@ -287,7 +287,7 @@ TEST_F(KFSRestParserTest, parseValidRequestBOOL) {
     auto proto = parser.getProto();
     ASSERT_EQ(proto.inputs_size(), 1);
     ASSERT_EQ(proto.inputs()[0].name(), "input0");
-    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
     ASSERT_EQ(proto.inputs()[0].datatype(), "BOOL");
     ASSERT_EQ(proto.inputs()[0].contents().bool_contents_size(), 4);
     ASSERT_THAT(proto.inputs()[0].contents().bool_contents(), ElementsAre(true, true, false, false));
@@ -310,12 +310,12 @@ TEST_F(KFSRestParserTest, parseValidRequestBYTES) {
     auto proto = parser.getProto();
     ASSERT_EQ(proto.inputs_size(), 1);
     ASSERT_EQ(proto.inputs()[0].name(), "input0");
-    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
     ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
     auto binary_data_size_parameter = proto.inputs()[0].parameters().find("binary_data_size");
     ASSERT_NE(binary_data_size_parameter, proto.inputs()[0].parameters().end());
-    ASSERT_EQ(binary_data_size_parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
-    ASSERT_EQ(binary_data_size_parameter->second.int64_param(),4);
+    ASSERT_EQ(binary_data_size_parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(binary_data_size_parameter->second.int64_param(), 4);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithStringRequestParameter) {
@@ -337,8 +337,8 @@ TEST_F(KFSRestParserTest, parseValidRequestWithStringRequestParameter) {
 
     auto parameter = proto.parameters().find("param");
     ASSERT_NE(parameter, proto.parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kStringParam);
-    ASSERT_EQ(parameter->second.string_param(),"value");
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kStringParam);
+    ASSERT_EQ(parameter->second.string_param(), "value");
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithIntRequestParameter) {
@@ -360,8 +360,8 @@ TEST_F(KFSRestParserTest, parseValidRequestWithIntRequestParameter) {
 
     auto parameter = proto.parameters().find("param");
     ASSERT_NE(parameter, proto.parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
-    ASSERT_EQ(parameter->second.int64_param(),5);
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(parameter->second.int64_param(), 5);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithBoolRequestParameter) {
@@ -383,8 +383,8 @@ TEST_F(KFSRestParserTest, parseValidRequestWithBoolRequestParameter) {
 
     auto parameter = proto.parameters().find("param");
     ASSERT_NE(parameter, proto.parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kBoolParam);
-    ASSERT_EQ(parameter->second.bool_param(),true);
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam);
+    ASSERT_EQ(parameter->second.bool_param(), true);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithId) {
@@ -456,8 +456,8 @@ TEST_F(KFSRestParserTest, parseValidRequestWithStringOutputParameter) {
 
     auto parameter = proto.outputs()[0].parameters().find("param");
     ASSERT_NE(parameter, proto.outputs()[0].parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kStringParam);
-    ASSERT_EQ(parameter->second.string_param(),"value");
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kStringParam);
+    ASSERT_EQ(parameter->second.string_param(), "value");
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithIntOutputParameter) {
@@ -486,8 +486,8 @@ TEST_F(KFSRestParserTest, parseValidRequestWithIntOutputParameter) {
 
     auto parameter = proto.outputs()[0].parameters().find("param");
     ASSERT_NE(parameter, proto.outputs()[0].parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
-    ASSERT_EQ(parameter->second.int64_param(),5);
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(parameter->second.int64_param(), 5);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithBoolOutputParameter) {
@@ -516,8 +516,8 @@ TEST_F(KFSRestParserTest, parseValidRequestWithBoolOutputParameter) {
 
     auto parameter = proto.outputs()[0].parameters().find("param");
     ASSERT_NE(parameter, proto.outputs()[0].parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kBoolParam);
-    ASSERT_EQ(parameter->second.bool_param(),true);
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam);
+    ASSERT_EQ(parameter->second.bool_param(), true);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithStringInputParameter) {
@@ -539,8 +539,8 @@ TEST_F(KFSRestParserTest, parseValidRequestWithStringInputParameter) {
 
     auto parameter = proto.inputs()[0].parameters().find("param");
     ASSERT_NE(parameter, proto.inputs()[0].parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kStringParam);
-    ASSERT_EQ(parameter->second.string_param(),"value");
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kStringParam);
+    ASSERT_EQ(parameter->second.string_param(), "value");
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithIntInputParameter) {
@@ -562,8 +562,8 @@ TEST_F(KFSRestParserTest, parseValidRequestWithIntInputParameter) {
 
     auto parameter = proto.inputs()[0].parameters().find("param");
     ASSERT_NE(parameter, proto.inputs()[0].parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
-    ASSERT_EQ(parameter->second.int64_param(),5);
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(parameter->second.int64_param(), 5);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithBoolInputParameter) {
@@ -585,8 +585,8 @@ TEST_F(KFSRestParserTest, parseValidRequestWithBoolInputParameter) {
 
     auto parameter = proto.inputs()[0].parameters().find("param");
     ASSERT_NE(parameter, proto.inputs()[0].parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kBoolParam);
-    ASSERT_EQ(parameter->second.bool_param(),true);
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam);
+    ASSERT_EQ(parameter->second.bool_param(), true);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestWithNoDataButBinaryInputsParameter) {
@@ -606,14 +606,14 @@ TEST_F(KFSRestParserTest, parseValidRequestWithNoDataButBinaryInputsParameter) {
     auto proto = parser.getProto();
     ASSERT_EQ(proto.inputs_size(), 1);
     ASSERT_EQ(proto.inputs()[0].name(), "input0");
-    ASSERT_THAT(proto.inputs()[0].shape(),ElementsAre(2, 2));
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
     ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
     ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 0);
 
     auto parameter = proto.inputs()[0].parameters().find("binary_data_size");
     ASSERT_NE(parameter, proto.inputs()[0].parameters().end());
-    ASSERT_EQ(parameter->second.parameter_choice_case(),inference::InferParameter::ParameterChoiceCase::kInt64Param);
-    ASSERT_EQ(parameter->second.int64_param(),16);
+    ASSERT_EQ(parameter->second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kInt64Param);
+    ASSERT_EQ(parameter->second.int64_param(), 16);
 }
 
 TEST_F(KFSRestParserTest, parseInValidRequestUINT32WithFloatingPointValues) {

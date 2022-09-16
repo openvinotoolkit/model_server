@@ -189,7 +189,7 @@ TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputs) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
     std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length","15"};
+    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", "15"};
     headers.emplace_back(binaryInputsHeader);
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::OK);
 
