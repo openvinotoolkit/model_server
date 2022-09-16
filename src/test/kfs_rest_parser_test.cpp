@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -227,7 +227,7 @@ TEST_F(KFSRestParserTest, parseValidRequestFP64) {
     ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
     ASSERT_EQ(proto.inputs()[0].datatype(), "FP64");
     ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 4);
-    ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre((float)1.1, (float)2.2, (float)3.3, (float)4.4));
+    ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre(1.1f, 2.2f, 3.3f, 4.4f));
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestFP32) {
