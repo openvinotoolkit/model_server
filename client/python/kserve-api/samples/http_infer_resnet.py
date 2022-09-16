@@ -117,10 +117,8 @@ if __name__ == '__main__':
             inputs[0].set_data_from_numpy(img, binary_data=False)
             start_time = datetime.datetime.now()
             results = triton_client.infer(
-                model_name="resnet", #args.get('pipeline_name') if is_pipeline_request else args.get('model_name'),
-                model_version="1",
-                inputs=inputs,
-                outputs=outputs)
+                model_name=args.get('pipeline_name') if is_pipeline_request else args.get('model_name'),
+                inputs=inputs)
             end_time = datetime.datetime.now()
             duration = (end_time - start_time).total_seconds() * 1000
             processing_times = np.append(processing_times,np.array([int(duration)]))
