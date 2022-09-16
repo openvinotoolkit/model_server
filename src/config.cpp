@@ -151,14 +151,12 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
             ("metrics_enabled",
-                "Flag indicating if metrics are enabled.",
+                "Flag enabling metrics endpoint.",
                 cxxopts::value<bool>()->default_value("false"),
                 "METRICS")
             ("metrics_list",
-                R"(List of metrics families to be enabled. If empty the default metrics are enabled:
-                ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us.
-                Additional families: ovms_infer_req_queue_size, ovms_infer_req_active.)",
-                cxxopts::value<std::string>()->default_value(""),
+                "List of metrics families to be enabled. If empty the default metrics are enabled: ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us. Additional families: ovms_infer_req_queue_size, ovms_infer_req_active.",
+                cxxopts::value<std::string>()->default_value("empty"),
                 "METRICS_LIST")
             ("idle_sequence_cleanup",
                 "Flag indicating if model is subject to sequence cleaner scans",
