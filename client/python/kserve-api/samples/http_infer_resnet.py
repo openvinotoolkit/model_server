@@ -53,6 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
     parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='Add demultiplexer dimension at front', dest='dag-batch-size-auto')
+    parser.add_argument('--binary_data', default=False, action='store_true', help='Send input data in binary format', dest='binary_data')
 
     args = vars(parser.parse_args())
 
@@ -114,7 +115,7 @@ if __name__ == '__main__':
             else:
                 inputs.append(httpclient.InferInput(args['input_name'], img.shape, "FP32"))
             outputs = []
-            inputs[0].set_data_from_numpy(img, binary_data=False)
+            inputs[0].set_data_from_numpy(img, binary_data=args.get('binary_data'))
             start_time = datetime.datetime.now()
             results = triton_client.infer(
                 model_name=args.get('pipeline_name') if is_pipeline_request else args.get('model_name'),

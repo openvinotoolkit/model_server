@@ -38,7 +38,9 @@ When sending data in the array format, all bytes are in the same sequence in `te
 
 TensorFlow Serving API also allows sending binary encoded data via HTTP interface. The binary data needs to be Base64 encoded and put into `inputs` or `instances` field as a map in form:
 
-```<input_name>: {"b64":<Base64 encoded data>}```
+```
+<input_name>: {"b64":<Base64 encoded data>}
+```
 
 On the server side, the Base64 encoded data is decoded to raw binary and loaded using OpenCV which then converts it to OpenVINO-friendly data format for inference.
    

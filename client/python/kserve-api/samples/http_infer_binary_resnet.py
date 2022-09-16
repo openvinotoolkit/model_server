@@ -44,6 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
 
+    error = False
     args = vars(parser.parse_args())
 
     address = "{}:{}".format(args['http_address'],args['http_port'])
@@ -72,9 +73,8 @@ if __name__ == '__main__':
     is_pipeline_request = bool(args.get('pipeline_name'))
 
     model_name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
-    model_version = 1
 
-    url = f"http://{address}/v2/models/{model_name}/versions/{model_version}/infer"
+    url = f"http://{address}/v2/models/{model_name}/infer"
     http_session = requests.session()
 
     batch_i = 0
@@ -100,6 +100,11 @@ if __name__ == '__main__':
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
         results_dict = json.loads(results.text)
+        if "error" in results_dict.keys():
+            print(f"Error: {results_dict['error']}")
+            error = True
+            break
+            
         output = np.array(json.loads(results.text)['outputs'][0]['data'])
         output_shape = tuple(results_dict['outputs'][0]['shape'])
         nu = np.reshape(output, output_shape)
@@ -132,8 +137,9 @@ if __name__ == '__main__':
         labels = []
         batch_i = 0
 
-    print_statistics(processing_times, batch_size)
+    if not error:
+        print_statistics(processing_times, batch_size)
 
-    if args.get('labels_numpy_path') is not None:
-        print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
+        if args.get('labels_numpy_path') is not None:
+            print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
 
