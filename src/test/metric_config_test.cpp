@@ -58,18 +58,63 @@ public:
         TestWithTempDir::SetUp();
         char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--rest_port", "8080"};
         int arg_count = 9;
-        static bool parseOnce = [&arg_count, &n_argv]() {
-            ovms::Config::instance().parse(arg_count, n_argv);
-            return true;
-        }();
+        ovms::Config::instance().parse(arg_count, n_argv);
 
-        if (parseOnce) {
-            // Prepare manager
-            modelPath = directoryPath + "/dummy/";
-            configFilePath = directoryPath + "/ovms_config.json";
-        }
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/ovms_config.json";
     }
 };
+
+class MetricsConfigNegativeTest : public MetricsConfigTest {
+public:
+    friend class MetricsConfigTest;
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name"};
+        int arg_count = 5;
+        ovms::Config::instance().parse(arg_count, n_argv);
+
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/ovms_config.json";
+    }
+};
+
+static const char* modelMetricsChangedConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "metrics_list": ["ovms_requests_success", "ovms_infer_req_queue_size"]
+            }
+        }
+})";
+
+TEST_F(MetricsConfigNegativeTest, MissingPort) {
+    SetUpConfig(modelMetricsChangedConfig);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
+}
 
 static const char* modelDefaultConfig = R"(
 {
@@ -102,30 +147,6 @@ TEST_F(MetricsConfigTest, DefaultValues) {
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
     ASSERT_EQ(metricConfig.getEnabledFamiliesList().size(), 0);
 }
-
-static const char* modelMetricsChangedConfig = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "monitoring":
-        {
-            "metrics":
-            {
-                "enable" : true,
-                "metrics_list": ["ovms_requests_success", "ovms_infer_req_queue_size"]
-            }
-        }
-})";
 
 TEST_F(MetricsConfigTest, ChangedValues) {
     SetUpConfig(modelMetricsChangedConfig);
@@ -190,10 +211,8 @@ TEST_F(MetricsConfigTest, InitOnce) {
 
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
-    TearDown();
-    SetUp();
     SetUpConfig(modelDefaultConfig);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     status = manager.loadConfig(configFilePath);
@@ -447,9 +466,6 @@ TEST_F(ModelMetricReporterTest, MetricReporterConstructorTest) {
 }
 
 class MetricsCli : public ::testing::Test {
-public:
-    // 1024-65536
-    uint64_t restPort = 10000;
 };
 
 TEST_F(MetricsCli, DefaultCliReading) {
@@ -460,7 +476,7 @@ TEST_F(MetricsCli, DefaultCliReading) {
     ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
     ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_fail"), false);
 
-    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_requests_fail", this->restPort);
+    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_requests_fail");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -472,7 +488,7 @@ TEST_F(MetricsCli, DefaultCliReading) {
 
 TEST_F(MetricsCli, WorkingCliReading) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_infer_req_queue_size", this->restPort);
+    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_infer_req_queue_size");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -488,7 +504,7 @@ TEST_F(MetricsCli, DefaultEmptyList) {
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
     ASSERT_EQ(metricConfig.getEnabledFamiliesList().size(), 0);
 
-    auto status = metricConfig.loadFromCLIString(true, "", this->restPort);
+    auto status = metricConfig.loadFromCLIString(true, "");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -503,7 +519,7 @@ TEST_F(MetricsCli, BadCliReading) {
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
 
-    auto status = metricConfig.loadFromCLIString(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready", this->restPort);
+    auto status = metricConfig.loadFromCLIString(true, "badrequest_success_grpc_predict, $$$_fail_rest_model_ready");
 
     ASSERT_EQ(status, StatusCode::INVALID_METRICS_FAMILY_NAME);
     ASSERT_EQ(metricConfig.metricsEnabled, true);
@@ -513,7 +529,7 @@ TEST_F(MetricsCli, BadCliReading) {
 
 TEST_F(MetricsCli, DisabledMetrics) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail", this->restPort);
+    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail");
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, false);
@@ -521,32 +537,13 @@ TEST_F(MetricsCli, DisabledMetrics) {
     ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_success"), false);
     ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
     ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
-}
-
-TEST_F(MetricsCli, MetricsDisabledCliRestPort) {
-    MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail", 0);
-
-    ASSERT_TRUE(status.ok());
-    ASSERT_EQ(metricConfig.metricsEnabled, false);
-    ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_success"), false);
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
-}
-
-TEST_F(MetricsCli, MetricsEnabledCliRestPort) {
-    MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(true, "ovms_infer_req_queue_size, ovms_requests_fail", 0);
-
-    ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
 }
 
 TEST_F(MetricsCli, MetricsEnabledCliRestPortDefault) {
     MetricConfig metricConfig;
     auto status = metricConfig.loadFromCLIString(true, "ovms_infer_req_queue_size, ovms_requests_fail");
 
-    ASSERT_EQ(status, StatusCode::CONFIG_FILE_INVALID);
+    ASSERT_EQ(status, StatusCode::OK);
 }
 
 #pragma GCC diagnostic pop
