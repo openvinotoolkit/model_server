@@ -150,7 +150,7 @@ Config& Config::parse(int argc, char** argv) {
                 "Flag indicating model is stateful",
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
-            ("metrics_enabled",
+            ("metrics_enable",
                 "Flag enabling metrics endpoint on rest_port.",
                 cxxopts::value<bool>()->default_value("false"),
                 "METRICS")
@@ -266,14 +266,20 @@ void Config::validate() {
     }
 
     // metrics on rest port
-    if (result->count("metrics_enabled") && !result->count("rest_port")) {
+    if (result->count("metrics_enable") && !result->count("rest_port")) {
         std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
         exit(EX_USAGE);
     }
 
     // metrics on rest port
-    if ((result->count("metrics_enabled") || result->count("metrics_list")) && result->count("config_path")) {
-        std::cerr << "metrics_enabled or metrics_list and config_path cant be used together. Use json config file to enable metrics when using config_path." << std::endl;
+    if ((result->count("metrics_enable") || result->count("metrics_list")) && result->count("config_path")) {
+        std::cerr << "metrics_enable or metrics_list and config_path cant be used together. Use json config file to enable metrics when using config_path." << std::endl;
+        exit(EX_USAGE);
+    }
+
+    // metrics_list without metrics_enable
+    if (!result->count("metrics_enable") && result->count("metrics_list")) {
+        std::cerr << "metrics_enable setting is missing, required when metrics_list is provided" << std::endl;
         exit(EX_USAGE);
     }
 
