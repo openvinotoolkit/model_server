@@ -5,10 +5,10 @@
 .. toctree::
    :maxdepth: 1
    :hidden:
-   
-   ovms_binary_input_layout_and_shape
-   ovms_binary_input_tfs
-   ovms_binary_input_kfs
+
+   ovms_docs_binary_input_layout_and_shape
+   ovms_docs_binary_input_tfs
+   ovms_docs_binary_input_kfs
    ovms_docs_demo_tensorflow_conversion
 
 @endsphinxdirective
