@@ -27,7 +27,7 @@ Metrics from default list are enabled with the `metrics_enabled` flag or json co
 However, you can enable also additional metrics by listing all the metrics you want to enable in the `metric_list` flag or json configuration.
 
 
-| Default metrics |
+Default metrics
 | Type      | Name | Labels | Description |
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_streams | name,version | Number of OpenVINO execution streams |
@@ -38,13 +38,13 @@ However, you can enable also additional metrics by listing all the metrics you w
 | histogram      | ovms_inference_time_us | name,version | Inference execution time in the OpenVINO backend. |
 | histogram      | ovms_wait_for_infer_req_time_us | name,version | Request waiting time in the scheduling queue. |
 
-| Optional metrics |
+Optional metrics
 | Type      | Name | Labels | Description |
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_infer_req_queue_size | name,version | Inference request queue size (nireq). |
 | gauge      | ovms_infer_req_active | ,name,version | Number of currently consumed inference request from the processing queue. |
 
-| Labels description |
+Labels description
 | Name      | Values |  Description |
 | :---    |    :----   |    :----   |
 | api      | KServe, TensorFlowServing  | Name of the serving API. |
@@ -202,7 +202,8 @@ To use data from metrics endpoint you can use the curl command:
 For [DAG pipeline](dag_scheduler.md) execution there are relevant 3 metrics listed below.
 They track the execution as a whole request processing all the pipeline nodes. 
 
-| DAG metrics |
+DAG metrics
+
 | Type      | Name  | Description |
 | :---    |    :----   |    :----   |
 | counter |    ovms_requests_success  |             Number of successful requests to a model or a DAG. |
