@@ -1,8 +1,9 @@
 # Model Repository {#ovms_docs_models_repository}
 
-The AI models served by OpenVINO&trade; Model Server must be in either of the two formats:
+The AI models served by OpenVINO&trade; Model Server must be in either of the three formats:
 - [OpenVINO IR](https://docs.openvino.ai/2022.1/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
 - [ONNX](https://onnx.ai/), using the .onnx file
+- [PaddlePaddle](https://www.paddlepaddle.org.cn/en), using .pdiparams and .pdmodel files
 
 To use models trained in other formats you need to convert them first. To do so, use 
 OpenVINO’s [Model Optimizer](https://docs.openvino.ai/2022.1/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) for IR, or different
@@ -20,21 +21,25 @@ models/
 │   └── 2
 │       ├── ir_model.bin
 │       └── ir_model.xml
-└── model2
+├── model2
 │   └── 1
 │       ├── ir_model.bin
 │       ├── ir_model.xml
 │       └── mapping_config.json
-└── model3
-    └── 1
-        └── model.onnx
+├── model3
+│    └── 1
+│        └── model.onnx
+└── model4
+     └── 1
+         ├── model.pdiparams
+         └── model.pdmodel
 ``` 
 
 - Each model should be stored in a dedicated directory, e.g. model1 and model2. 
 - Each model directory should include a sub-folder for each of its versions (1,2, etc). The versions and their folder names should be positive integer values.  
 **Note:** In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify 
 the version number in parameters, by default, the latest version is served.
-- Every version folder _must_ include model files, that is, .bin and .xml for IR and .onnx for ONNX. The file name can be arbitrary.
+- Every version folder _must_ include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name can be arbitrary.
 
 
 Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map. 
