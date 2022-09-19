@@ -12,7 +12,7 @@ This document describes how to use metrics endpoint in the OpenVINO Model Server
 
 Built-in metrics allow tracking the performance without any extra logic on the client side or using network traffic monitoring tools like load balancers or reverse-proxies.
 
-It also exposes metrics which are not related to the netowrk traffic. 
+It also exposes metrics which are not related to the network traffic. 
 
 For example, statistics of the inference execution queue, model runtime parameters etc. They can also track the usage based on model version, API type or requested endpoint methods.
 
