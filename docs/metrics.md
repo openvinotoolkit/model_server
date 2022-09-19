@@ -42,7 +42,7 @@ Optional metrics
 | Type      | Name | Labels | Description |
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_infer_req_queue_size | name,version | Inference request queue size (nireq). |
-| gauge      | ovms_infer_req_active | ,name,version | Number of currently consumed inference request from the processing queue. |
+| gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference request from the processing queue. |
 
 Labels description
 | Name      | Values |  Description |
