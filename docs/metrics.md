@@ -195,7 +195,7 @@ To use data from metrics endpoint you can use the curl command:
 ```bash
     curl http://localhost:8000/metrics
 ```
-[Example metrcis output](./metrics_output.log)
+[Example metrcis output](https://raw.githubusercontent.com/openvinotoolkit/model_server/CVS-89108_metrics_documentation/docs/metrics_output.log)
 
 ## Metrics implementation for DAG pipelines
 
