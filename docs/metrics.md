@@ -67,18 +67,18 @@ To enable default metrics set you need to specify the `metrics_enabled` flag or 
 CLI
 
    ```bash
-         docker run --rm -d -v ${PWD}/models/resnet-50-tf:/opt/model -p 9001:9001 -p 9002:9002 openvino/model_server:latest \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --rest_port 9002 \
-               --metrics_enabled
+         docker run --rm -d -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+                --model_name resnet --model_path gs://ovms-public-eu/resnet50  --port 9000 \
+                --rest_port 8000 \
+                --metrics_enabled
    ```
 
 CONFIG CMD
 
    ```bash
-         docker run --rm -d -v -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json -p 9001:9001 -p 9002:9002 openvino/model_server:latest \
-               --rest_port 9002
-               --port 9001
+         docker run --rm -d -v -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json -p 8000:8000 -p 9000:9000 openvino/model_server:latest \
+                --rest_port 8000
+                --port 9000
    ```
 
 CONFIG JSON
@@ -138,9 +138,7 @@ CONFIG JSON
         {
            "config": {
                 "name": "resnet",
-                "base_path": "/workspace/resnet-50-tf",
-                "layout": "NHWC:NCHW",
-                "shape": "(1,224,224,3)"
+                "base_path": "gs://ovms-public-eu/resnet50"
            }
         }
     ],
@@ -163,9 +161,7 @@ CONFIG JSON WITH ALL METRICS ENABLED
         {
            "config": {
                 "name": "resnet",
-                "base_path": "/workspace/resnet-50-tf",
-                "layout": "NHWC:NCHW",
-                "shape": "(1,224,224,3)"
+                "base_path": "/workspace/resnet-50-tf"
            }
         }
     ],
