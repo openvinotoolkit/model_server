@@ -51,7 +51,7 @@ Labels description
 | interface      | REST, gRPC | Name of the serving interface. |
 | method      | ModelMetadata, ModelReady, ModelInfer, Predict, GetModelStatus, GetModelMetadata | Interface methods. |
 | version      | 1, 2, ..., n | Model version. Note that GetModelStatus and ModelReady do not have the version label. |
-| name      | resnet, face_detection, ... | Model name. |
+| name      | As defined in model server config | Model name or DAG name. |
 
 
 ## Enable metrics
