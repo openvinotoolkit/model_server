@@ -200,7 +200,7 @@ To use data from metrics endpoint you can use the curl command:
 ## Metrics implementation for DAG pipelines
 
 For [DAG pipeline](dag_scheduler.md) execution there are relevant 3 metrics listed below.
-They track the execution as a whole request processing all the pipeline nodes. 
+They track the execution of the whole pipeline, gathering information from all pipeline nodes. 
 
 DAG metrics
 
