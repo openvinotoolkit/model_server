@@ -26,22 +26,10 @@ Metrics from default list are enabled with the `metrics_enabled` flag or json co
 
 However, you can enable also additional metrics by listing all the metrics you want to enable in the `metric_list` flag or json configuration.
 
-.. list-table:: DEFAULT
-   :widths: 20 40 30 80
-   :header-rows: 1
-
-   * - Type
-     - Name
-     - Labels
-     - Description
-   * - gauge
-     - ovms_streams
-     - name,version
-     - Number of OpenVINO execution streams
-   * - gauge
-     - ovms_current_requests
-     - api,interface,method,name,version
-     - Number of inference requests currently in process
+| Type      | Name | Labels | Description |
+| :---    |    :----   |    :----   |    :----       |
+| gauge      | ovms_streams | name,version | Number of OpenVINO execution streams |
+| gauge      | ovms_current_requests | api,interface,method,name,version | Number of inference requests currently in process |
 
 ## Enable metrics
 
