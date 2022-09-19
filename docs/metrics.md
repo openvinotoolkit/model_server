@@ -16,7 +16,7 @@ It also exposes metrics which are not related to the netowrk traffic.
 
 For example, statistics of the inference execution queue, model runtime parameters etc. They can also track the usage based on model version, API type or requested endpoint methods.
 
-OpenVINO Model Server metrics are compatible with Prometheus standard [Prometheus metrics detailed description](https://prometheus.io/docs)
+OpenVINO Model Server metrics are compatible with [Prometheus standard](https://prometheus.io/docs)
 
 They are exposed on the `/metrics` endpoint.
 
