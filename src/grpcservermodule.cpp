@@ -161,10 +161,7 @@ int GRPCServerModule::start(const ovms::Config& config) {
     }
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", GRPC_SERVER_MODULE_NAME);
-    // FIXME this should be reenabled when functional tests are switched to wait
-    // for servablemanager module start log
-    // #KFS_CLEANUP
-    // SPDLOG_INFO("Server started on port {}", config.port());
+    SPDLOG_INFO("Started gRPC server on port {}", config.port());
     return EXIT_SUCCESS;
 }
 

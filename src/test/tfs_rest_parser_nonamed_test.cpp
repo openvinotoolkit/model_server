@@ -25,8 +25,8 @@ using namespace ovms;
 using namespace testing;
 using ::testing::ElementsAre;
 
-TEST(RestParserNoNamed, RowOrder_2x1x3x1x5) {
-    RestParser parser(prepareTensors({{"my_input", {2, 1, 3, 1, 5}}}));
+TEST(TFSRestParserNoNamed, RowOrder_2x1x3x1x5) {
+    TFSRestParser parser(prepareTensors({{"my_input", {2, 1, 3, 1, 5}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         [
@@ -59,8 +59,8 @@ TEST(RestParserNoNamed, RowOrder_2x1x3x1x5) {
                                                                 1, 2, 3, 4, 5));
 }
 
-TEST(RestParserNoNamed, RowOrder_5) {
-    RestParser parser(prepareTensors({{"my_input", {5}}}));
+TEST(TFSRestParserNoNamed, RowOrder_5) {
+    TFSRestParser parser(prepareTensors({{"my_input", {5}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[1,2,3,4,5]})"),
         StatusCode::OK);
@@ -72,8 +72,8 @@ TEST(RestParserNoNamed, RowOrder_5) {
     EXPECT_THAT(asVector<float>(my_input.tensor_content()), ElementsAre(1, 2, 3, 4, 5));
 }
 
-TEST(RestParserNoNamed, ColumnOrder_2x1x3x1x5) {
-    RestParser parser(prepareTensors({{"my_input", {2, 1, 3, 1, 5}}}));
+TEST(TFSRestParserNoNamed, ColumnOrder_2x1x3x1x5) {
+    TFSRestParser parser(prepareTensors({{"my_input", {2, 1, 3, 1, 5}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[
         [
@@ -106,8 +106,8 @@ TEST(RestParserNoNamed, ColumnOrder_2x1x3x1x5) {
                                                                 1, 2, 3, 4, 5));
 }
 
-TEST(RestParserNoNamed, ColumnOrder_5) {
-    RestParser parser(prepareTensors({{"my_input", {5}}}));
+TEST(TFSRestParserNoNamed, ColumnOrder_5) {
+    TFSRestParser parser(prepareTensors({{"my_input", {5}}}));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[1,2,3,4,5]})"),
         StatusCode::OK);

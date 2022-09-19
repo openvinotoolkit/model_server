@@ -50,6 +50,7 @@ private:
     MetricCounter(prometheus::Counter& counterImpl);
     MetricCounter(const MetricCounter&) = delete;
     MetricCounter(MetricCounter&&) = delete;
+    MetricCounter& operator=(const MetricCounter&) = delete;
 
 public:
     void increment(double value = 1.0f);
@@ -65,6 +66,7 @@ public:
     MetricGauge(prometheus::Gauge& gaugeImpl);
     MetricGauge(const MetricGauge&) = delete;
     MetricGauge(MetricCounter&&) = delete;
+    MetricGauge& operator=(const MetricGauge&) = delete;
 
     void increment(double value = 1.0f);
     void decrement(double value = 1.0f);
@@ -81,6 +83,7 @@ public:
     MetricHistogram(prometheus::Histogram& histogramImpl);
     MetricHistogram(const MetricHistogram&) = delete;
     MetricHistogram(MetricCounter&&) = delete;
+    MetricHistogram& operator=(const MetricHistogram&) = delete;
 
     void observe(double value);
 

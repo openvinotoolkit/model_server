@@ -756,7 +756,7 @@ family_bucket{name="resnet",le="+Inf"} 2
     EXPECT_EQ(registry.collect(), expected);
 }
 
-TEST(MetricsFlow, Counter) {
+TEST(MetricsManyOps, Counter) {
     MetricRegistry registry;
     auto pass_family = registry.createFamily<MetricCounter>("infer_pass", "number of passed inferences");
     auto fail_family = registry.createFamily<MetricCounter>("infer_fail", "number of failed inferences");
@@ -799,7 +799,7 @@ TEST(MetricsFlow, Counter) {
     EXPECT_THAT(registry.collect(), HasSubstr("infer_fail{api=\"tfs\",protocol=\"grpc\"} 8\n"));
 }
 
-TEST(MetricsFlow, Gauge) {
+TEST(MetricsManyOps, Gauge) {
     MetricRegistry registry;
     auto nireq_family = registry.createFamily<MetricGauge>("nireq_in_use", "number of inference requests in use");
     auto pipe_family = registry.createFamily<MetricGauge>("pipelines_running", "number of pipelines currently being executed");
@@ -859,7 +859,7 @@ TEST(MetricsFlow, Gauge) {
     EXPECT_THAT(registry.collect(), HasSubstr("pipelines_running{pipeline_name=\"face_blur\"} 21\n"));
 }
 
-TEST(MetricsFlow, Histogram) {
+TEST(MetricsManyOps, Histogram) {
     MetricRegistry registry;
     auto deserialization_family = registry.createFamily<MetricHistogram>("deserialization", "time spent in deserialization");
 
@@ -893,7 +893,7 @@ TEST(MetricsFlow, Histogram) {
     EXPECT_THAT(registry.collect(), ContainsRegex("deserialization_sum\\{model_name=\"resnet\",model_version=\"1\"\\} 3156.3.*\\n"));
 }
 
-TEST(MetricsFlow, MultipleThreads) {
+TEST(MetricsManyOps, MultipleThreads) {
     // Preparation
     const int numberOfWorkers = 30;
     const int numberOfFamilies = 20;

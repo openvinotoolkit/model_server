@@ -32,7 +32,7 @@ public:
     bool metricsEnabled;
     std::string endpointsPath;
 
-    Status parseMetricsConfig(const rapidjson::Value& v);
+    Status parseMetricsConfig(const rapidjson::Value& v, bool forceFailureIfMetricsAreEnabled = false);
     bool isFamilyEnabled(const std::string& family) const;
 
     void setDefaultMetricsTo(bool enabled);

@@ -36,7 +36,7 @@ bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
 }
 
 // Getting the "monitoring" metrics config as input
-Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
+Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool forceFailureIfMetricsAreEnabled) {
     Status status = StatusCode::OK;
     if (!metrics.HasMember("metrics"))
         return status;
@@ -44,9 +44,14 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
     const auto& v = metrics["metrics"].GetObject();
 
     if (v.HasMember("enable")) {
-        metricsEnabled = v["enable"].GetBool();
+        this->metricsEnabled = v["enable"].GetBool();
     } else {
-        metricsEnabled = false;
+        this->metricsEnabled = false;
+    }
+
+    if (metricsEnabled && forceFailureIfMetricsAreEnabled) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "CLI parameter rest_port is not defined. It must be set to enable metrics on the REST interface");
+        return StatusCode::METRICS_REST_PORT_MISSING;
     }
 
     if (v.HasMember("endpoint_path")) {
@@ -61,7 +66,17 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics) {
     if (v.HasMember("metrics_list")) {
         status = parseMetricsArray(v["metrics_list"]);
     } else {
-        setDefaultMetricsTo(metricsEnabled);
+        setDefaultMetricsTo(this->metricsEnabled);
+    }
+
+    if (status == StatusCode::OK && this->metricsEnabled) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Metrics enabled.");
+
+        std::stringstream ss;
+        for (const auto& family : this->enabledFamiliesList) {
+            ss << family << ", ";
+        }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Enabled metrics list: ", ss.str());
     }
 
     return status;
@@ -85,7 +100,7 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
             }
         }
 
-        if (listSize == this->enabledFamiliesList.size()) {
+        if (this->enabledFamiliesList.size() == listSize) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Metrics family name not supported: {}", metric);
             return StatusCode::INVALID_METRICS_FAMILY_NAME;
         }

@@ -344,7 +344,6 @@ Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<
         cv::Mat image = convertStringToMat(getBinaryInput(src, i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
-
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
         auto status = validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
         if (status != StatusCode::OK) {
@@ -445,12 +444,10 @@ Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& t
     }
 
     std::vector<cv::Mat> images;
-
     status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
     if (!status.ok()) {
         return status;
     }
-
     tensor = convertMatsToTensor(images, tensorInfo);
     if (!tensor) {
         return StatusCode::IMAGE_PARSING_FAILED;

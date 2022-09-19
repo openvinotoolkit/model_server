@@ -59,7 +59,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     auto inputTensors = createCustomNodeTensorArray(tensorMap, tensorsDims);
     struct CustomNodeTensor* outputTensors = nullptr;
     int outputTensorsCount = 0;
-    this->timer->start("execution");
+    this->timer->start(EXECUTE);
     OVMS_PROFILE_SYNC_BEGIN("Custom Node Library execute()");
     int result = library.execute(
         inputTensors.get(),
@@ -70,11 +70,11 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         parametersCount,
         customNodeLibraryInternalManager);
     OVMS_PROFILE_SYNC_END("Custom Node Library execute()");
-    this->timer->stop("execution");
+    this->timer->stop(EXECUTE);
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Custom node execution processing time for node {}; session: {} - {} ms",
         this->getName(),
         this->getSessionKey(),
-        this->timer->elapsed<std::chrono::microseconds>("execution") / 1000);
+        this->timer->elapsed<std::chrono::microseconds>(EXECUTE) / 1000);
 
     // If result is not 0, it means execution has failed.
     // In this case shared library is responsible for cleaning up resources (memory).

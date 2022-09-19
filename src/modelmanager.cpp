@@ -270,7 +270,7 @@ Status ModelManager::startFromConfig() {
 
 Status ModelManager::startFromFile(const std::string& jsonFilename) {
     Status status = loadConfig(jsonFilename);
-    if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID) {
+    if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID || status == StatusCode::METRICS_REST_PORT_MISSING || status == StatusCode::INVALID_METRICS_ENDPOINT || status == StatusCode::INVALID_METRICS_FAMILY_NAME) {
         return status;
     }
 
@@ -579,18 +579,16 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
 }
 
 Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
-    Status firstErrorStatus = StatusCode::OK;
     const auto itr2 = configJson.FindMember("monitoring");
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
+        return StatusCode::OK;
     } else {
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
-        firstErrorStatus = this->metricConfig.parseMetricsConfig(metrics);
-        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(firstErrorStatus);
+        bool forceFailureIfMetricsAreEnabled = ovms::Config::instance().restPort() == 0;
+        return this->metricConfig.parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
     }
-
-    return firstErrorStatus;
 }
 
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
@@ -751,24 +749,25 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         return lastLoadConfigStatus;
     }
     Status status;
-    Status firstErrorStatus = StatusCode::OK;
-    // load the custom loader config, if available
-    status = loadCustomLoadersConfig(configJson);
-    if (!status.ok()) {
-        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
-    }
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
         status = loadMetricsConfig(configJson);
+        if (!status.ok()) {
+            return status;
+        }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start.");
         this->metricConfigLoadedOnce = true;
-
-        if (!status.ok()) {
-            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
-        }
     } else {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric from config json file skipped. Settings already loaded.");
+    }
+
+    Status firstErrorStatus = StatusCode::OK;
+
+    // load the custom loader config, if available
+    status = loadCustomLoadersConfig(configJson);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 
     std::vector<ModelConfig> gatedModelConfigs;

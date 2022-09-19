@@ -23,8 +23,6 @@
 #include "../server.hpp"
 #include "test_utils.hpp"
 
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-
 static const char* configWith1Dummy = R"(
 {
     "model_config_list": [
@@ -72,7 +70,7 @@ public:
     void SetUpConfig(const std::string& configContent) {
         configFilePath = directoryPath + "/ovms_config.json";
         createConfigFileWithContent(configContent, configFilePath);
-        char* n_argv[] = {"ovms", "--config_path", configFilePath.data(), "--file_system_poll_wait_seconds", "0"};
+        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)configFilePath.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0"};
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
     }
@@ -88,7 +86,7 @@ public:
     void SetUpSingleModel(std::string modelPath, std::string modelName) {
         this->modelPath = modelPath;
         this->modelName = modelName;
-        char* n_argv[] = {"ovms", "--model_path", this->modelPath.data(), "--model_name", this->modelName.data(), "--file_system_poll_wait_seconds", "0"};
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)this->modelPath.data(), (char*)"--model_name", (char*)this->modelName.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0"};
         int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
     }

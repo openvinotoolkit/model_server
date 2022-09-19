@@ -150,7 +150,8 @@ bool Server::isReady() const {
 }
 
 bool Server::isLive() const {
-    // TODO we might want at some time start REST only/ or respond with true only if both servers started if both are requested to start. This is to be resolved especially if we implement REST API for Kserver & potentially switch to check for starting specific module
+    // we might want at some time start REST only/ or respond with true only if both servers started if both are requested to start
+    // This is to be resolved especially if we implement REST API for Kserver & potentially switch to check for starting specific module
     std::shared_lock lock(modulesMtx);
     auto it = modules.find(GRPC_SERVER_MODULE_NAME);
     if (it == modules.end())
@@ -313,7 +314,7 @@ void Server::shutdownModules() {
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
-    // FIXME we need to be able to quickly start grpc or start it without port
+    // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     modules.clear();
 }

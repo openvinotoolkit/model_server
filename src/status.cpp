@@ -133,8 +133,10 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, "Could not parse instance content. Not valid ndarray detected"},
     {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, "Invalid JSON structure. Request inputs have different batch sizes"},
     {StatusCode::REST_INPUTS_NOT_AN_OBJECT, "Invalid JSON structure. One of inputs is not a JSON object."},
-    {StatusCode::REST_NO_INPUTS_FOUND, "Invalid JSON structure. Missing inputs in column format"},
+    {StatusCode::REST_NO_INPUTS_FOUND, "Invalid JSON structure, missing inputs"},
     {StatusCode::REST_COULD_NOT_PARSE_INPUT, "Could not parse input content. Not valid ndarray detected"},
+    {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, "Could not parse output content."},
+    {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, "Could not parse request parameters"},
     {StatusCode::REST_PROTO_TO_STRING_ERROR, "Response parsing to JSON error"},
     {StatusCode::REST_BASE64_DECODE_ERROR, "Decode Base64 to string error"},
     {StatusCode::REST_UNSUPPORTED_PRECISION, "Could not parse input content. Unsupported data precision detected"},
@@ -143,6 +145,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::REST_SERIALIZE_NO_DATA, "No data found in tensor_content or xxx_val field matching tensor dtype"},
     {StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID, "binary_data_size parameter is invalid and cannot be parsed"},
     {StatusCode::REST_BINARY_BUFFER_EXCEEDED, "Received buffer size is smaller than binary_data_size parameter indicates"},
+    {StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID, "Inference-Header-Content-Length header is invalid and couldn't be parsed"},
     {StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY, "Request contains values both in binary data and in content value"},
 
     // Pipeline validation errors
@@ -255,6 +258,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Metrics
     {StatusCode::INVALID_METRICS_ENDPOINT, "Metrics config endpoint path is invalid"},
     {StatusCode::INVALID_METRICS_FAMILY_NAME, "Invalid name in metrics_list"},
+    {StatusCode::METRICS_REST_PORT_MISSING, "Missing rest_port parameter in server CLI"},
 };
 
 const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
@@ -356,6 +360,8 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::REST_INPUTS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_NO_INPUTS_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_COULD_NOT_PARSE_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
     {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},

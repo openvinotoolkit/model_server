@@ -28,7 +28,13 @@ using google::protobuf::util::MessageToJsonString;
 
 namespace ovms {
 GetModelMetadataImpl::GetModelMetadataImpl(ovms::Server& ovmsServer) :
-    ovmsServer(ovmsServer) {}
+    modelManager(dynamic_cast<const ServableManagerModule*>(ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
+        const char* message = "Tried to create model metadata impl without servable manager module";
+        SPDLOG_ERROR(message);
+        throw std::logic_error(message);
+    }
+}
 
 Status GetModelMetadataImpl::getModelStatus(
     const tensorflow::serving::GetModelMetadataRequest* request,
@@ -38,14 +44,7 @@ Status GetModelMetadataImpl::getModelStatus(
     if (!status.ok()) {
         return status;
     }
-    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return StatusCode::MODEL_NOT_LOADED;
-    }
-    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
-    // TODO if not succeed then return error
-    auto& manager = servableManagerModule->getServableManager();
-    return getModelStatus(request, response, manager, context);
+    return getModelStatus(request, response, modelManager, context);
 }
 
 Status GetModelMetadataImpl::getModelStatus(

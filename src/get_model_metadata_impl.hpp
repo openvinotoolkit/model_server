@@ -39,7 +39,7 @@ class PipelineDefinition;
 class Server;
 
 class GetModelMetadataImpl {
-    ovms::Server& ovmsServer;
+    ModelManager& modelManager;
 
 public:
     GetModelMetadataImpl(ovms::Server& ovmsServer);
