@@ -69,7 +69,7 @@ CLI
    ```bash
          docker run --rm -d -v ${PWD}/models/resnet-50-tf:/opt/model -p 9001:9001 -p 9002:9002 openvino/model_server:latest \
                --model_path /opt/model --model_name resnet --port 9001 \
-               --rest_port 3002 \
+               --rest_port 9002 \
                --metrics_enabled
    ```
 
