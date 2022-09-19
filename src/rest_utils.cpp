@@ -202,7 +202,7 @@ Status makeJsonFromPredictResponse(
     return StatusCode::OK;
 }
 
-Status parseResponseParameters(const ::inference::ModelInferResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static Status parseResponseParameters(const ::inference::ModelInferResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     if (response_proto.parameters_size() > 0) {
         writer.Key("parameters");
         writer.StartObject();
@@ -229,7 +229,7 @@ Status parseResponseParameters(const ::inference::ModelInferResponse& response_p
     return StatusCode::OK;
 }
 
-Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTensor& output, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTensor& output, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     if (output.parameters_size() > 0) {
         writer.Key("parameters");
         writer.StartObject();
@@ -257,24 +257,24 @@ Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTens
 }
 
 template <typename ValueType>
-void fillTensorDataWithIntValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static void fillTensorDataWithIntValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
         writer.Int(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
 }
 
 template <typename ValueType>
-void fillTensorDataWithUintValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static void fillTensorDataWithUintValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
         writer.Int(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
 }
 
 template <typename ValueType>
-void fillTensorDataWithFloatValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static void fillTensorDataWithFloatValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
         writer.Double(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
 }
 
-Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     writer.Key("outputs");
     writer.StartArray();
 

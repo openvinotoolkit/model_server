@@ -282,7 +282,7 @@ Status KFSInferenceServiceImpl::buildResponse(
     return StatusCode::OK;
 }
 
-void addReadyVersions(Model& model,
+static void addReadyVersions(Model& model,
     ::inference::ModelMetadataResponse* response) {
     auto modelVersions = model.getModelVersionsMapCopy();
     for (auto& [modelVersion, modelInstance] : modelVersions) {

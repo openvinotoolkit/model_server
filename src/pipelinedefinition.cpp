@@ -1048,11 +1048,11 @@ const tensor_map_t PipelineDefinition::getOutputsInfo() const {
     return copy;
 }
 
-std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, int32_t demultiplyCount) {
+static std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, int32_t demultiplyCount) {
     return tensorInfo->createCopyWithDemultiplexerDimensionPrefix(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
 }
 
-std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
+static std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
     std::shared_ptr<TensorInfo> newOwnedTensorInfo;
     if (gatherShape.size() == 0) {
         newOwnedTensorInfo = std::make_shared<TensorInfo>(*tensorInfo);
@@ -1069,7 +1069,7 @@ std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string&
     return newOwnedTensorInfo;
 }
 
-Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const TensorInfo& tensorInfo, const std::string& alias) {
+static Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const TensorInfo& tensorInfo, const std::string& alias) {
     auto newTensorInfo = std::make_shared<TensorInfo>(alias, tensorInfo.getPrecision(), tensorInfo.getShape(), tensorInfo.getLayout());
     auto it = inputsInfo.find(alias);
     if (it != inputsInfo.end()) {
@@ -1092,7 +1092,7 @@ Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const Tensor
 }
 
 template <typename Extractor>
-Status updateInputsInfoWithNodeConnections(tensor_map_t& inputsInfo, const Aliases& specificDependencyMapping, Extractor extractor) {
+static Status updateInputsInfoWithNodeConnections(tensor_map_t& inputsInfo, const Aliases& specificDependencyMapping, Extractor extractor) {
     for (const auto& [alias, realName] : specificDependencyMapping) {
         auto status = updateInputsInfoWithNodeConnection(inputsInfo, extractor(realName), alias);
         if (!status.ok()) {

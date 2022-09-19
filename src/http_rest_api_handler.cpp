@@ -272,7 +272,7 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
     return buffer.GetString();
 }
 
-Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
+static Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
     std::stringstream streamData(comma_separated_numbers);
     std::vector<int> sizes_;
 
@@ -290,7 +290,7 @@ Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, 
     return StatusCode::OK;
 }
 
-Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, size_t binary_input_size, const char* buffer) {
+static Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, size_t binary_input_size, const char* buffer) {
     if (input->datatype() == "FP32") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(float)) {
             auto value = input->mutable_contents()->mutable_fp32_contents()->Add();
@@ -352,7 +352,7 @@ Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, 
 
 #define CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE " contents is not empty. Content field should be empty when using binary inputs extension."
 
-Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputTensor* input) {
+static Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputTensor* input) {
     if (input->datatype() == "FP32") {
         if (input->contents().fp32_contents_size() > 0) {
             SPDLOG_DEBUG("FP32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
@@ -415,7 +415,7 @@ Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputT
     return StatusCode::OK;
 }
 
-Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
+static Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
     const char* binary_inputs = &(request_body[endOfJson]);
     size_t binary_inputs_size = request_body.length() - endOfJson;
 
@@ -630,7 +630,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     return StatusCode::OK;
 }
 
-Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
+static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
     const std::vector<std::pair<std::string, std::string>>& headers) {
     for (auto header : headers) {
         if (header.first == "Inference-Header-Content-Length") {
@@ -1007,7 +1007,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
     return StatusCode::OK;
 }
 
-std::string createErrorJsonWithMessage(std::string message) {
+inline static std::string createErrorJsonWithMessage(std::string message) {
     return "{\n\t\"error\": \"" + message + "\"\n}";
 }
 

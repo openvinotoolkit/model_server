@@ -279,7 +279,7 @@ Status ModelManager::startFromFile(const std::string& jsonFilename) {
     return StatusCode::OK;
 }
 
-void processNodeInputs(const std::string nodeName, const rapidjson::Value::ConstMemberIterator& itro, pipeline_connections_t& connections) {
+static void processNodeInputs(const std::string nodeName, const rapidjson::Value::ConstMemberIterator& itro, pipeline_connections_t& connections) {
     for (const auto& nodeInput : itro->value.GetArray()) {
         for (const auto& objectNameValue : nodeInput.GetObject()) {
             const std::string inputName = objectNameValue.name.GetString();
@@ -303,7 +303,7 @@ void processNodeInputs(const std::string nodeName, const rapidjson::Value::Const
     }
 }
 
-void processPipelineInputs(const rapidjson::Value::ConstMemberIterator& pipelineInputsPtr, const std::string& nodeName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias, const std::string& pipelineName) {
+static void processPipelineInputs(const rapidjson::Value::ConstMemberIterator& pipelineInputsPtr, const std::string& nodeName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias, const std::string& pipelineName) {
     for (const auto& pipelineInput : pipelineInputsPtr->value.GetArray()) {
         const std::string pipelineInputName = pipelineInput.GetString();
         SPDLOG_DEBUG("Mapping node:{} output:{}, under alias:{}",
@@ -315,7 +315,7 @@ void processPipelineInputs(const rapidjson::Value::ConstMemberIterator& pipeline
     }
 }
 
-void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputsItr, const std::string& nodeName, const std::string& modelName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias) {
+static void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputsItr, const std::string& nodeName, const std::string& modelName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias) {
     for (const auto& nodeOutput : nodeOutputsItr->value.GetArray()) {
         const std::string modelOutputName = nodeOutput.GetObject()["data_item"].GetString();
         const std::string nodeOutputName = nodeOutput.GetObject()["alias"].GetString();
@@ -325,7 +325,7 @@ void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputs
     }
 }
 
-void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
+static void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
     info.modelName = nodeConfig["model_name"].GetString();
     if (nodeConfig.HasMember("version")) {
         info.modelVersion = nodeConfig["version"].GetUint64();
@@ -337,7 +337,7 @@ void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
         firstErrorStatus = status;                                 \
     }
 
-Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInfo& info, const std::string& pipelineName, ModelManager& manager) {
+static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInfo& info, const std::string& pipelineName, ModelManager& manager) {
     std::string libraryName = nodeConfig["library_name"].GetString();
     auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library);
     if (!status.ok()) {
@@ -351,7 +351,7 @@ Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInf
     return StatusCode::OK;
 }
 
-Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
+static Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
     if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated pipeline names: {} defined in config file. Only first definition will be loaded.", pipelineName);

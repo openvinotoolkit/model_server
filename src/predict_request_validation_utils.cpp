@@ -446,7 +446,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     return StatusCode::OK;
 }
 
-size_t getElementsCount(const KFSInputTensorType& proto, ovms::Precision expectedPrecision) {
+static size_t getElementsCount(const KFSInputTensorType& proto, ovms::Precision expectedPrecision) {
     switch (expectedPrecision) {
     case ovms::Precision::BOOL: {
         return proto.contents().bool_contents().size();
@@ -584,7 +584,7 @@ Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIterat
     return StatusCode::OK;
 }
 
-Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name) {
+static Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name) {
     if (shapeInfo.size() == 0) {
         return Mode::FIXED;
     }

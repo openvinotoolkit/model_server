@@ -28,7 +28,7 @@ std::shared_ptr<spdlog::logger> sequence_manager_logger = std::make_shared<spdlo
 
 const std::string default_pattern = "[%Y-%m-%d %T.%e][%t][%n][%l][%s:%#] %v";
 
-void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> logger) {
+static void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> logger) {
     logger->set_level(spdlog::level::info);
     if (!log_level.empty()) {
         if (log_level == "DEBUG") {
@@ -47,7 +47,7 @@ void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> 
     }
 }
 
-void register_loggers(const std::string log_level, std::vector<spdlog::sink_ptr> sinks) {
+static void register_loggers(const std::string log_level, std::vector<spdlog::sink_ptr> sinks) {
     auto serving_logger = std::make_shared<spdlog::logger>("serving", begin(sinks), end(sinks));
     serving_logger->set_pattern(default_pattern);
     gcs_logger->set_pattern(default_pattern);

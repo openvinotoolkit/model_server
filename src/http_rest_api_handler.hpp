@@ -31,7 +31,6 @@
 
 namespace ovms {
 class ServableMetricReporter;
-class ModelMetricReporter;
 class KFSInferenceServiceImpl;
 class GetModelMetadataImpl;
 class Server;

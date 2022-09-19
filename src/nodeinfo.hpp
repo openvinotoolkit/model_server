@@ -30,8 +30,6 @@
 
 namespace ovms {
 
-class ModelManager;
-class Pipeline;
 class Status;
 
 using pipeline_connections_t = std::unordered_map<std::string, std::unordered_map<std::string, Aliases>>;

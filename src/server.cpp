@@ -62,7 +62,7 @@ namespace {
 volatile sig_atomic_t shutdown_request = 0;
 }
 
-void logConfig(const Config& config) {
+static void logConfig(const Config& config) {
     std::string project_name(PROJECT_NAME);
     std::string project_version(PROJECT_VERSION);
     SPDLOG_INFO(project_name + " " + project_version);
@@ -99,19 +99,19 @@ void logConfig(const Config& config) {
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
 }
 
-void onInterrupt(int status) {
+static void onInterrupt(int status) {
     shutdown_request = 1;
 }
 
-void onTerminate(int status) {
+static void onTerminate(int status) {
     shutdown_request = 1;
 }
 
-void onIllegal(int status) {
+static void onIllegal(int status) {
     shutdown_request = 2;
 }
 
-void installSignalHandlers(ovms::Server& server) {
+static void installSignalHandlers(ovms::Server& server) {
     static struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = onInterrupt;
     sigemptyset(&sigIntHandler.sa_mask);
@@ -130,8 +130,6 @@ void installSignalHandlers(ovms::Server& server) {
     sigIllHandler.sa_flags = 0;
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
-
-static const int GIGABYTE = 1024 * 1024 * 1024;
 
 ModuleState Module::getState() const {
     return state;

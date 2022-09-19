@@ -42,7 +42,6 @@ const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 extern const std::string DEFAULT_MODEL_CACHE_DIRECTORY;
 
 class Config;
-class IVersionReader;
 class CNLIMWrapper;
 class CustomNodeLibraryManager;
 class MetricRegistry;
