@@ -583,7 +583,7 @@ optional arguments:
                         Add demultiplexer dimension at front
 ```
 
-- Usage Example
+- Usage Example #1 - Input data placed in JSON object.
 
 ```Bash
 python3 ./http_infer_resnet.py --http_port 5000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
@@ -634,6 +634,60 @@ time percentile 90: 206.40 ms; speed percentile 90: 4.84 fps
 time percentile 50: 191.00 ms; speed percentile 50: 5.24 fps
 time standard deviation: 9.58
 time variance: 91.76
+Classification accuracy: 100.00
+```
+
+- Usage Example #2 - Input data placed as binary, outside JSON object.
+
+```Bash
+python3 ./http_infer_resnet.py --http_port 5000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
+Image data range: 0.0 : 255.0
+Start processing:
+        Model name: resnet
+        Iterations: 10
+        Images numpy path: ../../imgs.npy
+        Numpy file shape: (10, 3, 224, 224)
+
+Iteration 1; Processing time: 36.58 ms; speed 27.34 fps
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+Iteration 2; Processing time: 33.76 ms; speed 29.62 fps
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 3; Processing time: 28.55 ms; speed 35.03 fps
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+Iteration 4; Processing time: 28.27 ms; speed 35.37 fps
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+Iteration 5; Processing time: 28.83 ms; speed 34.69 fps
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 6; Processing time: 26.80 ms; speed 37.31 fps
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+Iteration 7; Processing time: 27.20 ms; speed 36.76 fps
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+Iteration 8; Processing time: 26.46 ms; speed 37.80 fps
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+Iteration 9; Processing time: 29.52 ms; speed 33.87 fps
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+Iteration 10; Processing time: 27.49 ms; speed 36.37 fps
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
+
+processing time for all iterations
+average time: 28.80 ms; average speed: 34.72 fps
+median time: 28.00 ms; median speed: 35.71 fps
+max time: 36.00 ms; min speed: 27.78 fps
+min time: 26.00 ms; max speed: 38.46 fps
+time percentile 90: 33.30 ms; speed percentile 90: 30.03 fps
+time percentile 50: 28.00 ms; speed percentile 50: 35.71 fps
+time standard deviation: 3.06
+time variance: 9.36
 Classification accuracy: 100.00
 ```
 

@@ -1,4 +1,4 @@
-# Request Prediction on Binary Encoded Image via Kserve API {#ovms_docs_binary_input_kfs}
+# Request Prediction on Binary Encoded Image via KServe API {#ovms_docs_binary_input_kfs}
 
 ## GRPC
 
@@ -45,6 +45,8 @@ When sending data in the array format, the shape and datatype gives information 
 
 ## HTTP
 
+### JPEG / PNG encoded images
+
 KServe API also allows sending binary encoded data via HTTP interface. The tensor binary data is provided in the request body, after JSON object. While the JSON part contains information required to route the data to the target model and run inference properly, the data itself, in the binary format is placed right after the JSON. See the simple example:
 
 ```
@@ -90,13 +92,45 @@ Content-Length: <xx+(9821+12302+7889)>
 ]
 }
 <9821 bytes of the first image in the batch for model_input tensor>
-<12302 bytes of the first image in the batch for model_input tensor>
-<7889 bytes of the first image in the batch for model_input tensor>
+<12302 bytes of the second image in the batch for model_input tensor>
+<7889 bytes of the third image in the batch for model_input tensor>
 ```
 
 On the server side, the binary encoded data is loaded using OpenCV which then converts it to OpenVINO-friendly data format for inference.
 
 The structure of the response is specified [Inference Response specification](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-response-json-object).
+
+### Regular data
+
+Above section described how to send JPEG/PNG encoded image via REST interface. Data sent like this is processed by OpenCV to convert it to OpenVINO-friendly format. Many times, data is already available in OpenVINO-friendly format and all you want to do is to send it and get the prediction.
+
+With KServe API you can also send regular data in a binary representation via REST interface. **That way the request gets smaller and easier to process on the server side, therefore using this format is more effecient when working with RESTful API, than providing the input data in a JSON object**. To send regular data in the binary format, you need to specify `datatype` other than `BYTES` and data `shape`, should match the input `shape` (also the memory layout should be compatible). 
+
+Getting back to the example from the previous section with 3 images in a batch, let's assume they are not JPEGs or PNGs, but regular array with layout NHWC. The request with such data could look like this:
+
+```
+POST /v2/models/my_model/infer HTTP/1.1
+Host: localhost:5000
+Content-Type: application/octet-stream
+Inference-Header-Content-Length: <xx>
+Content-Length: <xx+(3 * 1080000)>
+{
+"model_name" : "my_model",
+"inputs" : [
+   {
+      "name" : "model_input",
+      "shape" : [ 3, 300, 300, 3 ],
+      "datatype" : "FLOAT32",
+      "parameters" : {
+         "binary_data_size" : "3240000"
+      }
+   },
+
+]
+}
+<3240000 bytes of the whole data batch for model_input tensor>
+```
+
 
 
 ## API Reference
@@ -123,33 +157,99 @@ pip install -r requirements.txt
 
 ### Run the gRPC client sending the binary input:
 ```bash
-python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:9000
-Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
-Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
-Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
-Image ../../../../demos/common/static/images/snail.jpeg has been classified as snail
-Image ../../../../demos/common/static/images/zebra.jpeg has been classified as zebra
-Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
-Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
-Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
-Image ../../../../demos/common/static/images/airliner.jpeg has been classified as airliner
-Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
+python3 ./grpc_infer_binary_resnet.py --grpc_port 9000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+Start processing:
+        Model name: resnet
+Iteration 0; Processing time: 13.36 ms; speed 74.82 fps
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+Iteration 1; Processing time: 14.51 ms; speed 68.92 fps
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 2; Processing time: 10.14 ms; speed 98.60 fps
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+Iteration 3; Processing time: 9.06 ms; speed 110.31 fps
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+Iteration 4; Processing time: 8.44 ms; speed 118.51 fps
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 5; Processing time: 19.27 ms; speed 51.89 fps
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+Iteration 6; Processing time: 11.48 ms; speed 87.12 fps
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+Iteration 7; Processing time: 10.64 ms; speed 94.03 fps
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+Iteration 8; Processing time: 11.89 ms; speed 84.10 fps
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+Iteration 9; Processing time: 11.35 ms; speed 88.11 fps
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
+
+processing time for all iterations
+average time: 11.60 ms; average speed: 86.21 fps
+median time: 11.00 ms; median speed: 90.91 fps
+max time: 19.00 ms; min speed: 52.63 fps
+min time: 8.00 ms; max speed: 125.00 fps
+time percentile 90: 14.50 ms; speed percentile 90: 68.97 fps
+time percentile 50: 11.00 ms; speed percentile 50: 90.91 fps
+time standard deviation: 2.97
+time variance: 8.84
+Classification accuracy: 100.00
 ```
 
 
 ### Run the REST client sending the binary input:
 ```bash
-python http_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:8000
-Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
-Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
-Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
-Image ../../../../demos/common/static/images/snail.jpeg has been classified as snail
-Image ../../../../demos/common/static/images/zebra.jpeg has been classified as zebra
-Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
-Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
-Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
-Image ../../../../demos/common/static/images/airliner.jpeg has been classified as airliner
-Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
+python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+Start processing:
+        Model name: resnet
+Iteration 0; Processing time: 16.70 ms; speed 59.89 fps
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+Iteration 1; Processing time: 16.03 ms; speed 62.39 fps
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 2; Processing time: 14.23 ms; speed 70.29 fps
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+Iteration 3; Processing time: 12.33 ms; speed 81.11 fps
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+Iteration 4; Processing time: 11.59 ms; speed 86.30 fps
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 5; Processing time: 11.67 ms; speed 85.69 fps
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+Iteration 6; Processing time: 12.51 ms; speed 79.92 fps
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+Iteration 7; Processing time: 10.98 ms; speed 91.07 fps
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+Iteration 8; Processing time: 10.59 ms; speed 94.44 fps
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+Iteration 9; Processing time: 14.45 ms; speed 69.22 fps
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
+
+processing time for all iterations
+average time: 12.60 ms; average speed: 79.37 fps
+median time: 12.00 ms; median speed: 83.33 fps
+max time: 16.00 ms; min speed: 62.50 fps
+min time: 10.00 ms; max speed: 100.00 fps
+time percentile 90: 16.00 ms; speed percentile 90: 62.50 fps
+time percentile 50: 12.00 ms; speed percentile 50: 83.33 fps
+time standard deviation: 2.15
+time variance: 4.64
+Classification accuracy: 100.00
 ```
 
 ## Error handling:

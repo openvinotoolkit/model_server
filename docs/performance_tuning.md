@@ -93,13 +93,12 @@ For example, with ~50 clients sending the requests to the server with 48 cores, 
 
 ## Input data in REST API calls
 
-While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. 
+While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. Here are some tips to effectively use REST interface when working with OpenVINO Model Server:
 
-While sending the input data for inference execution, try to adjust the numerical data type to reduce the message size.
-
-- reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 
-- use [binary data format](binary_input.md) encoded with base64 - sending compressed data will greatly reduce the traffic and speed up the communication.
-- with binary input format it is the most efficient to send the images with the resolution of the configured model. It will avoid image resizing on the server to fit the model.
+- try to adjust the numerical data type to reduce the message size i.e. reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 
+- use [binary data format](binary_input.md) when possible - binary data representation is smaller in terms of request size and easier to process on the server side. 
+- when working with images, consider sending JPEG/PNG directly - compressed data will greatly reduce the traffic and speed up the communication.
+- with JPEG/PNG it is the most efficient to send the images with the resolution of the configured model. It will avoid image resizing on the server to fit the model.
 
 ## Scalability
 
@@ -175,9 +174,9 @@ docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 
 Recommended steps to investigate achievable performance and discover bottlenecks:
 1. [Launch OV benchmark app](https://docs.openvino.ai/latest/openvino_inference_engine_tools_benchmark_tool_README.html?highlight=benchmark)
 
-**Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
+      **Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
 
-**Note:** When launching benchmark app use `-inference_only=false`. Otherwise OV avoids setting input tensor of inference each time which is not comparable flow to OVMS.
+      **Note:** When launching benchmark app use `-inference_only=false`. Otherwise OV avoids setting input tensor of inference each time which is not comparable flow to OVMS.
 2. [Launch OVMS benchmark client](https://docs.openvino.ai/latest/ovms_demo_benchmark_client.html) on the same machine as OVMS
 3. [Launch OVMS benchmark client](https://docs.openvino.ai/latest/ovms_demo_benchmark_client.html) from remote machine
 4. Measure achievable network bandwidth with tools such as [iperf](https://github.com/esnet/iperf)
