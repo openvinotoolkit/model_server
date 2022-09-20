@@ -16,6 +16,7 @@
 
 cmake_minimum_required(VERSION 3.17)
 
+<<<<<<< HEAD
 function(sample sample_name)
     add_executable(grpc_${sample_name} grpc_${sample_name}.cpp)
     add_dependencies(grpc_${sample_name} cc-clients)
@@ -32,3 +33,8 @@ sample(server_ready)
 sample(server_metadata)
 sample(model_ready)
 sample(model_metadata)
+=======
+add_executable(grpc_sample grpc.cc) # PLACEHOLDER
+add_dependencies(grpc_sample cc-clients)
+target_link_libraries(grpc_sample grpcclient libprotobuf.a)
+>>>>>>> added cmake lists
