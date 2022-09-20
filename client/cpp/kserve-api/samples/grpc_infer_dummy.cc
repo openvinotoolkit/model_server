@@ -66,11 +66,11 @@ int main(int argc, char** argv) {
     ("h,help", "Show this help message and exit")
     ("grpc_address", "Specify url to grpc service. default:localhost", cxxopts::value<std::string>()->default_value("localhost"))
     ("grpc_port", "Specify port to grpc service. default:9000", cxxopts::value<std::string>()->default_value("9000"))
-    ("input_name", "Specify input tensor name. default: input", cxxopts::value<std::string>()->default_value("input"))
-    ("output_name", "Specify input tensor name. default: output", cxxopts::value<std::string>()->default_value("output"))
+    ("input_name", "Specify input tensor name. default: input", cxxopts::value<std::string>()->default_value("b"))
+    ("output_name", "Specify input tensor name. default: output", cxxopts::value<std::string>()->default_value("a"))
     ("model_name", "Define model name, must be same as is in service. default: dummy", cxxopts::value<std::string>()->default_value("dummy"))
     ("model_version", "Define model version.")
-    ("timeout", "", cxxopts::value<int>()->default_value("0"))
+    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
     ;
     // clang-format on
 
@@ -80,6 +80,9 @@ int main(int argc, char** argv) {
         std::cout << opt.help() << std::endl;
         exit(0);
     }
+
+    std::string input_name(args["input_name"].as<std::string>());
+    std::string output_name(args["output_name"].as<std::string>());
 
     std::string url(args["grpc_address"].as<std::string>() + ":" + args["grpc_port"].as<std::string>());
     std::string model_name = args["model_name"].as<std::string>();
@@ -92,44 +95,44 @@ int main(int argc, char** argv) {
         tc::InferenceServerGrpcClient::Create(&client, url),
         err);
 
-    std::vector<float> inputb_data(10);
+    std::vector<float> input_data(10);
     for (size_t i = 0; i < 10; ++i) {
-        inputb_data[i] = i;
+        input_data[i] = i;
     }
 
     std::vector<int64_t> shape{1, 10};
 
     // Initialize the inputs with the data.
-    tc::InferInput* inputb;
+    tc::InferInput* input;
 
     FAIL_IF_ERR(
-        tc::InferInput::Create(&inputb, "b", shape, "FP32"),
-        "unable to get b");
-    std::shared_ptr<tc::InferInput> inputb_ptr;
-    inputb_ptr.reset(inputb);
+        tc::InferInput::Create(&input, input_name, shape, "FP32"),
+        "unable to get input");
+    std::shared_ptr<tc::InferInput> input_ptr;
+    input_ptr.reset(input);
 
     FAIL_IF_ERR(
-        inputb_ptr->AppendRaw(
-            reinterpret_cast<uint8_t*>(&inputb_data[0]),
-            inputb_data.size() * sizeof(float)),
-        "unable to set data for b");
+        input_ptr->AppendRaw(
+            reinterpret_cast<uint8_t*>(&input_data[0]),
+            input_data.size() * sizeof(float)),
+        "unable to set data for input");
 
     // Generate the outputs to be requested.
-    tc::InferRequestedOutput* outputa;
+    tc::InferRequestedOutput* output;
 
     FAIL_IF_ERR(
-        tc::InferRequestedOutput::Create(&outputa, "a"),
-        "unable to get 'a'");
-    std::shared_ptr<tc::InferRequestedOutput> outputa_ptr;
-    outputa_ptr.reset(outputa);
+        tc::InferRequestedOutput::Create(&output, output_name),
+        "unable to get output");
+    std::shared_ptr<tc::InferRequestedOutput> output_ptr;
+    output_ptr.reset(output);
 
     tc::InferOptions options(model_name);
     if (args.count("model_version"))
         options.model_version_ = args["model_version"].as<std::string>();
     options.client_timeout_ = args["timeout"].as<int>();
 
-    std::vector<tc::InferInput*> inputs = {inputb_ptr.get()};
-    std::vector<const tc::InferRequestedOutput*> outputs = {outputa_ptr.get()};
+    std::vector<tc::InferInput*> inputs = {input_ptr.get()};
+    std::vector<const tc::InferRequestedOutput*> outputs = {output_ptr.get()};
 
     tc::InferResult* results;
     FAIL_IF_ERR(
@@ -139,26 +142,26 @@ int main(int argc, char** argv) {
     results_ptr.reset(results);
 
     // Validate the results...
-    ValidateShapeAndDatatype("a", results_ptr);
+    ValidateShapeAndDatatype(output_name, results_ptr);
 
     // Get pointers to the result returned...
-    float* outputa_data;
-    size_t outputa_byte_size;
+    float* output_data;
+    size_t output_byte_size;
     FAIL_IF_ERR(
         results_ptr->RawData(
-            "a", (const uint8_t**)&outputa_data, &outputa_byte_size),
-        "unable to get result data for 'a'");
-    if (outputa_byte_size != 40) {
-        std::cerr << "error: received incorrect byte size for 'a': "
-                  << outputa_byte_size << std::endl;
+            output_name, (const uint8_t**)&output_data, &output_byte_size),
+        "unable to get result data for output");
+    if (output_byte_size != 40) {
+        std::cerr << "error: received incorrect byte size for output: "
+                  << output_byte_size << std::endl;
         exit(1);
     }
 
     for (size_t i = 0; i < 10; ++i) {
-        std::cout << inputb_data[i] << " => "
-                  << *(outputa_data + i) << std::endl;
+        std::cout << input_data[i] << " => "
+                  << *(output_data + i) << std::endl;
 
-        if ((inputb_data[i] + 1) != *(outputa_data + i)) {
+        if ((input_data[i] + 1) != *(output_data + i)) {
             std::cerr << "error: Incorrect sum" << std::endl;
         }
     }
