@@ -18,7 +18,7 @@ Let's see how the ModelInferRequest object may look like if you decide to send t
       model_name: "my_model"
       inputs: [
          {
-         datatype: "FLOAT32"
+         datatype: "FP32"
          shape: [3, 300, 300, 3]
          raw_input_contents : [\x11\x02\ ... \x75\x0a]
          }
@@ -101,27 +101,27 @@ On the server side, the binary encoded data is loaded using OpenCV which then co
 
 The structure of the response is specified [Inference Response specification](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-response-json-object).
 
-### Regular data
+### Raw data
 
 Above section described how to send JPEG/PNG encoded image via REST interface. Data sent like this is processed by OpenCV to convert it to OpenVINO-friendly format. Many times, data is already available in OpenVINO-friendly format and all you want to do is to send it and get the prediction.
 
-With KServe API you can also send regular data in a binary representation via REST interface. **That way the request gets smaller and easier to process on the server side, therefore using this format is more effecient when working with RESTful API, than providing the input data in a JSON object**. To send regular data in the binary format, you need to specify `datatype` other than `BYTES` and data `shape`, should match the input `shape` (also the memory layout should be compatible). 
+With KServe API you can also send raw data in a binary representation via REST interface. **That way the request gets smaller and easier to process on the server side, therefore using this format is more effecient when working with RESTful API, than providing the input data in a JSON object**. To send raw data in the binary format, you need to specify `datatype` other than `BYTES` and data `shape`, should match the input `shape` (also the memory layout should be compatible). 
 
-Getting back to the example from the previous section with 3 images in a batch, let's assume they are not JPEGs or PNGs, but regular array with layout NHWC. The request with such data could look like this:
+Getting back to the example from the previous section with 3 images in a batch, let's assume they are not JPEGs or PNGs, but raw array with layout NHWC. The request with such data could look like this:
 
 ```
 POST /v2/models/my_model/infer HTTP/1.1
 Host: localhost:5000
 Content-Type: application/octet-stream
 Inference-Header-Content-Length: <xx>
-Content-Length: <xx+(3*1080000)>
+Content-Length: <xx+(3 x 1080000)>
 {
 "model_name" : "my_model",
 "inputs" : [
    {
       "name" : "model_input",
       "shape" : [ 3, 300, 300, 3 ],
-      "datatype" : "FLOAT32",
+      "datatype" : "FP32",
       "parameters" : {
          "binary_data_size" : "3240000"
       }
@@ -156,7 +156,7 @@ cd model_server/client/python/kserve-api/samples
 pip install -r requirements.txt
 ```
 
-### Run the gRPC client sending JPEG images:
+### Run the [gRPC client sending JPEG images](https://github.com/openvinotoolkit/model_server/blob/mzeglars-kserve/client/python/kserve-api/samples/grpc_infer_binary_resnet.py):
 ```bash
 python3 ./grpc_infer_binary_resnet.py --grpc_port 9000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
@@ -205,7 +205,7 @@ Classification accuracy: 100.00
 ```
 
 
-### Run the REST client sending JPEG images:
+### Run the [REST client sending JPEG images](https://github.com/openvinotoolkit/model_server/blob/mzeglars-kserve/client/python/kserve-api/samples/http_infer_binary_resnet.py):
 ```bash
 python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
@@ -253,7 +253,7 @@ time variance: 4.64
 Classification accuracy: 100.00
 ```
 
-### Run the REST client with regular data sent in binary representation
+### Run the [REST client with raw data sent in binary representation](https://github.com/openvinotoolkit/model_server/blob/mzeglars-kserve/client/python/kserve-api/samples/http_infer_resnet.py)
 ```bash
 python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
 Image data range: 0.0 : 255.0
