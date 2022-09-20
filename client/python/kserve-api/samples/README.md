@@ -53,7 +53,7 @@ docker pull openvino/model_server:latest
 ### Start the Model Server Container with Downloaded Model
 Start the server container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 5000 --layout NHWC:NCHW
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
 > Note: The model default setting is to accept inputs in layout NCHW, but we change it to NHWC to make it work with samples using either regular, array-like input data or JPEG encoded images. 
@@ -416,13 +416,13 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
 ```
 
 - Usage Example
 
 ```Bash
-python3 ./http_server_live.py --http_port 5000 --http_address localhost
+python3 ./http_server_live.py --http_port 8000 --http_address localhost
 Server Live: True
 ```
 
@@ -441,14 +441,14 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
 
 ```
 
 - Usage Example
 
 ```Bash
-python3 ./http_server_ready.py --http_port 5000 --http_address localhost
+python3 ./http_server_ready.py --http_port 8000 --http_address localhost
 Server Ready: True
 ```
 
@@ -467,13 +467,13 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
 ```
 
 - Usage Example
 
 ```Bash
-python3 ./http_server_metadata.py --http_port 5000 --http_address localhost
+python3 ./http_server_metadata.py --http_port 8000 --http_address localhost
 {'name': 'OpenVINO Model Server', 'version': '2022.2.0.3bba1d3d'}
 ```
 
@@ -492,7 +492,7 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
   --model_name MODEL_NAME
                         Define model name, must be same as is in service. default: resnet
   --model_version MODEL_VERSION
@@ -502,7 +502,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_model_ready.py --http_port 5000 --http_address localhost --model_name resnet
+python3 ./http_model_ready.py --http_port 8000 --http_address localhost --model_name resnet
 Model Ready: True
 ```
 
@@ -521,7 +521,7 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
   --model_name MODEL_NAME
                         Define model name, must be same as is in service. default: resnet
   --model_version MODEL_VERSION
@@ -531,7 +531,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_model_metadata.py --http_port 5000 --http_address localhost --model_name resnet
+python3 ./http_model_metadata.py --http_port 8000 --http_address localhost --model_name resnet
 {'name': 'resnet', 'versions': ['1'], 'platform': 'OpenVINO', 'inputs': [{'name': '0', 'datatype': 'FP32', 'shape': [1, 224, 224, 3]}], 'outputs': [{'name': '1463', 'datatype': 'FP32', 'shape': [1, 1000]}]}
 ```
 
@@ -557,7 +557,7 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to http service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to http service. default: 5000
+                        Specify port to http service. default: 8000
   --input_name INPUT_NAME
                         Specify input tensor name. default: input
   --output_name OUTPUT_NAME
@@ -581,7 +581,7 @@ optional arguments:
 - Usage Example #1 - Input data placed in JSON object.
 
 ```Bash
-python3 ./http_infer_resnet.py --http_port 5000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -635,7 +635,7 @@ Classification accuracy: 100.00
 - Usage Example #2 - Input data placed as binary, outside JSON object.
 
 ```Bash
-python3 ./http_infer_resnet.py --http_port 5000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
+python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -707,7 +707,7 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to http service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to http service. default: 5000
+                        Specify port to http service. default: 8000
   --input_name INPUT_NAME
                         Specify input tensor name. default: input
   --output_name OUTPUT_NAME
@@ -723,7 +723,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_infer_binary_resnet.py --http_port 5000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 38.61 ms; speed 25.90 fps

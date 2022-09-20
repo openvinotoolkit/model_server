@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c] or [n,c,h,w]')
     parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
     parser.add_argument('--http_address',required=False, default='localhost',  help='Specify url to http service. default:localhost')
-    parser.add_argument('--http_port',required=False, default=5000, help='Specify port to http service. default: 5000')
+    parser.add_argument('--http_port',required=False, default=8000, help='Specify port to http service. default: 8000')
     parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
     parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1',
                         help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
