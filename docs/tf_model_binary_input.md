@@ -1,4 +1,4 @@
-# Convert TensorFlow Models to accept binary inputs {#ovms_docs_demo_tensorflow_conversion}
+# Convert TensorFlow Models to Accept Binary Inputs {#ovms_docs_demo_tensorflow_conversion}
 
 This guide shows how to convert TensorFlow models and deploy them with the OpenVINO Model Server. It also explains how to scale the input tensors and adjust to use binary JPEG or PNG input data.
 

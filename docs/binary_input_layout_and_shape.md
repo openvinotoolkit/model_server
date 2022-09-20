@@ -1,4 +1,4 @@
-# Input Shape and Layout considerations{#ovms_docs_binary_input_layout_and_shape}
+# Input Shape and Layout Considerations{#ovms_docs_binary_input_layout_and_shape}
 
 Before processing in the target AI model, binary image data is encoded by OVMS to a NHWC layout in BGR color format.
 It is also resized to the model or pipeline node resolution. When the model resolution supports range of values and image data shape is out of range it will be adjusted to the nearer border. For example, when model shape is: [1,100:200,200,3]:

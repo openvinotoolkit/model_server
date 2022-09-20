@@ -1,4 +1,4 @@
-# Request Prediction on Binary Encoded Image via TensorFlow Serving API {#ovms_docs_binary_input_tfs}
+# Predict on Binary Inputs via TensorFlow Serving API {#ovms_docs_binary_input_tfs}
 
 ## GRPC
 
