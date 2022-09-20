@@ -30,7 +30,6 @@ FetchContent_Declare(
   GIT_TAG main
 )
 FetchContent_MakeAvailable(triton-client)
-<<<<<<< HEAD
 FetchContent_Declare(
   cxxopts
   GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
@@ -40,10 +39,5 @@ FetchContent_MakeAvailable(cxxopts)
 link_directories("${triton-client_BINARY_DIR}/cc-clients/install/lib")
 include_directories("${triton-client_BINARY_DIR}/cc-clients/install/include")
 include_directories("${cxxopts_SOURCE_DIR}/include")
-=======
-
-link_directories("${triton-client_BINARY_DIR}/cc-clients/install/lib")
-include_directories("${triton-client_BINARY_DIR}/cc-clients/install/include")
->>>>>>> added cmake lists
 
 add_subdirectory(samples)
