@@ -64,11 +64,11 @@ int main(int argc, char** argv) {
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
-    ("grpc_address", "Specify url to grpc service. default:localhost", cxxopts::value<std::string>()->default_value("localhost"))
-    ("grpc_port", "Specify port to grpc service. default:9000", cxxopts::value<std::string>()->default_value("9000"))
-    ("input_name", "Specify input tensor name. default: input", cxxopts::value<std::string>()->default_value("b"))
-    ("output_name", "Specify input tensor name. default: output", cxxopts::value<std::string>()->default_value("a"))
-    ("model_name", "Define model name, must be same as is in service. default: dummy", cxxopts::value<std::string>()->default_value("dummy"))
+    ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"))
+    ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"))
+    ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("b"))
+    ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("a"))
+    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"))
     ("model_version", "Define model version.")
     ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
     ;
@@ -177,7 +177,6 @@ int main(int argc, char** argv) {
               << infer_stat.cumulative_send_time_ns << std::endl;
     std::cout << "cumulative_receive_time_ns "
               << infer_stat.cumulative_receive_time_ns << std::endl;
-
 
     return 0;
 }
