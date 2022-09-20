@@ -205,9 +205,9 @@ inputs {
   name: "0"
   datatype: "FP32"
   shape: 1
+  shape: 224
+  shape: 224
   shape: 3
-  shape: 224
-  shape: 224
 }
 outputs {
   name: "1463"
@@ -268,7 +268,7 @@ Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
         Iterations: 10
-        Images numpy path: ../../imgs.npy
+        Images numpy path: ../../imgs_nhwc.npy
         Numpy file shape: (10, 3, 224, 224)
 
 Iteration 1; Processing time: 29.98 ms; speed 33.36 fps
