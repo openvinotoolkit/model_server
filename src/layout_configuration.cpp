@@ -47,7 +47,7 @@ Status LayoutConfiguration::fromString(const std::string& configurationStr, Layo
 
     std::transform(configurationCopy.begin(), configurationCopy.end(), configurationCopy.begin(), ::toupper);
 
-    if (configurationCopy.find_first_not_of(ALLOWED_DIMENSION_LETTERS_AND_CHARS + LAYOUT_CONFIGURATION_DELIMETER) != std::string::npos)
+    if (configurationCopy.find_first_not_of(Layout::ALLOWED_DIMENSION_LETTERS_AND_CHARS + LAYOUT_CONFIGURATION_DELIMETER) != std::string::npos)
         return StatusCode::LAYOUT_WRONG_FORMAT;
 
     size_t delimCount = std::count(configurationCopy.begin(), configurationCopy.end(), LAYOUT_CONFIGURATION_DELIMETER);

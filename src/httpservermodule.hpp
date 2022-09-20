@@ -19,10 +19,11 @@
 #include <utility>
 
 #include "http_server.hpp"
-#include "server.hpp"
+#include "module.hpp"
 
 namespace ovms {
 class Config;
+class Server;
 class HTTPServerModule : public Module {
     std::unique_ptr<ovms::http_server> server;
     Server& ovmsServer;

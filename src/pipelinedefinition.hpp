@@ -31,17 +31,18 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "aliases.hpp"
-#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "kfs_grpc_inference_service.hpp"
-#include "model_metric_reporter.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
-
+class CNLIMWrapper;
+class MetricConfig;
+class MetricRegistry;
 class ModelManager;
+class ServableMetricReporter;
 class NodeValidator;
 class Pipeline;
 class PipelineDefinitionUnloadGuard;
@@ -107,12 +108,7 @@ public:
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
         MetricRegistry* registry = nullptr,
-        const MetricConfig* metricConfig = nullptr) :
-        pipelineName(pipelineName),
-        nodeInfos(nodeInfos),
-        connections(connections),
-        reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
-        status(this->pipelineName) {}
+        const MetricConfig* metricConfig = nullptr);
     template <typename RequestType, typename ResponseType>
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const RequestType* request,

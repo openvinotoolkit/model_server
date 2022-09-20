@@ -31,10 +31,13 @@
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
-#include "customloaders.hpp"
+//#include "customloaders.hpp"
 #include "global_sequences_viewer.hpp"
+#include "metric_config.hpp"
 #include "model.hpp"
+#include "modelconfig.hpp"
 #include "pipeline_factory.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
@@ -43,6 +46,7 @@ extern const std::string DEFAULT_MODEL_CACHE_DIRECTORY;
 
 class Config;
 class CNLIMWrapper;
+class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricRegistry;
 class FileSystem;
@@ -162,6 +166,8 @@ private:
      * 
      */
     std::unordered_map<std::string, ModelConfig> servedModelConfigs;
+    // TODO we should either dispose this member or at least keep it as a pointer
+    // so we do not disclose details about ModelConfig to all modelmanager users
 
     /**
      * @brief Retires models non existing in config file

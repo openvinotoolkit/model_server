@@ -21,6 +21,7 @@
 #include <string>
 #include <utility>
 
+#include "execution_context.hpp"
 #include "logging.hpp"
 #include "node.hpp"
 #include "nodesession.hpp"

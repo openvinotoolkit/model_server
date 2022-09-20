@@ -16,6 +16,7 @@
 #include "pipeline_factory.hpp"
 
 #include "logging.hpp"
+#include "model_metric_reporter.hpp"
 #include "modelmanager.hpp"
 #include "nodeinfo.hpp"
 #include "pipeline.hpp"

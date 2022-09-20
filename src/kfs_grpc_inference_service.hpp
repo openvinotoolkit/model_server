@@ -21,7 +21,6 @@
 
 #include <grpcpp/server_context.h>
 
-#include "execution_context.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
 
@@ -29,6 +28,7 @@ namespace ovms {
 class Status;
 
 using inference::GRPCInferenceService;
+class ExecutionContext;
 class Model;
 class ModelManager;
 class ServableMetricReporter;

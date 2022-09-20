@@ -17,6 +17,7 @@
 
 #include <utility>
 
+#include "session_id.hpp"
 #include "threadsafequeue.hpp"
 
 namespace ovms {

@@ -26,6 +26,12 @@ const char* DEFAULT_LAYOUT = "N...";
 const char* UNSPECIFIED_LAYOUT = "...";
 
 namespace ovms {
+const std::string Layout::ALLOWED_DIMENSION_LETTERS = "NCHWD";
+const char Layout::ETC_CHAR = '.';
+const char Layout::UNDEFINED_DIMENSION_CHAR = '?';
+const std::string Layout::ALLOWED_DIMENSION_LETTERS_AND_CHARS = ALLOWED_DIMENSION_LETTERS + ETC_CHAR + UNDEFINED_DIMENSION_CHAR;
+const std::string Layout::ETC_LAYOUT_DELIMETER = "...";
+const std::string Layout::BATCH_DIMENSION_LETTER = "N";
 const Layout& Layout::getDefaultLayout() {
     static const Layout defaultLayout{DEFAULT_LAYOUT};
     return defaultLayout;

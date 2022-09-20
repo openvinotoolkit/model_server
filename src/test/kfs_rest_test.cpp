@@ -24,6 +24,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
+#include "../status.hpp"
 #include "../version.hpp"
 
 using ovms::Config;

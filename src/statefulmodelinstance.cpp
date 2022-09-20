@@ -25,6 +25,7 @@
 #include "modelconfig.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "profiler.hpp"
+#include "sequence_processing_spec.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
 

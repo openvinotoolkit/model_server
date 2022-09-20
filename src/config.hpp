@@ -21,8 +21,6 @@
 
 #include <cxxopts.hpp>
 
-#include "modelconfig.hpp"
-
 namespace ovms {
 /**
      * @brief Provides all the configuration options from command line
@@ -59,6 +57,7 @@ public:
          * @brief Gets the instance of the config
          */
     static Config& instance() {
+        // TODO to remove singleton
         static Config instance;
 
         return instance;
@@ -323,12 +322,7 @@ public:
      *
      * @return uint
      */
-    uint32_t maxSequenceNumber() const {
-        if (!result->count("max_sequence_number")) {
-            return DEFAULT_MAX_SEQUENCE_NUMBER;
-        }
-        return result->operator[]("max_sequence_number").as<uint32_t>();
-    }
+    uint32_t maxSequenceNumber() const;
 
     /**
         * @brief Get the log level

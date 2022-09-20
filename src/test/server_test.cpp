@@ -26,6 +26,7 @@
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
 #include "../prediction_service_utils.hpp"

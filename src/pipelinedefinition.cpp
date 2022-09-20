@@ -20,11 +20,14 @@
 #include <thread>
 
 #include "custom_node.hpp"
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "dl_node.hpp"
 #include "entry_node.hpp"
 #include "exit_node.hpp"
 #include "logging.hpp"
+#include "modelinstance.hpp"
 #include "modelmanager.hpp"
+#include "model_metric_reporter.hpp"
 #include "node_library_utils.hpp"
 #include "nodeinfo.hpp"
 #include "nodestreamidguard.hpp"
@@ -48,6 +51,17 @@ Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unsupported node type: {}", str);
     return StatusCode::PIPELINE_NODE_WRONG_KIND_CONFIGURATION;
 }
+
+PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
+        const std::vector<NodeInfo>& nodeInfos,
+        const pipeline_connections_t& connections,
+        MetricRegistry* registry,
+        const MetricConfig* metricConfig) :
+        pipelineName(pipelineName),
+        nodeInfos(nodeInfos),
+        connections(connections),
+        reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
+        status(this->pipelineName) {}
 
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());

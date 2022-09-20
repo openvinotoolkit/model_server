@@ -22,11 +22,10 @@
 #include <vector>
 
 #include "aliases.hpp"
-#include "execution_context.hpp"
-#include "status.hpp"
 
 namespace ovms {
 
+        class ExecutionContext;
 class ServableMetricReporter;
 class Node;
 

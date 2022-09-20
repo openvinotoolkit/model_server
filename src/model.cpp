@@ -21,12 +21,14 @@
 #include <sstream>
 #include <utility>
 
+#include "customloaderinterface.hpp"
 #include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
 #include "modelinstance.hpp"
 #include "pipelinedefinition.hpp"
+#include "statefulmodelinstance.hpp"
 
 namespace ovms {
 

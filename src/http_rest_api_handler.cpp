@@ -23,6 +23,8 @@
 #include <utility>
 #include <vector>
 
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
@@ -35,6 +37,7 @@
 #include "metric_registry.hpp"
 #include "model_metric_reporter.hpp"
 #include "model_service.hpp"
+#include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "pipeline.hpp"
@@ -43,6 +46,7 @@
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
+#include "servablemanagermodule.hpp"
 #include "server.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
@@ -235,7 +239,7 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
 }
 
 std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body) {
-    static std::unordered_map<std::string, std::string> types = {
+    static const std::unordered_map<std::string, std::string> types = {
         {"BOOL", "bool_contents"},
         {"INT8", "int_contents"},
         {"INT16", "int_contents"},
@@ -255,7 +259,11 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
     for (SizeType i = 0; i < inputs.Size(); i++) {
         Value data = inputs[i].GetObject()["data"].GetArray();
         Value contents(rapidjson::kObjectType);
-        Value datatype(types[inputs[i].GetObject()["datatype"].GetString()].c_str(), doc.GetAllocator());
+        auto it = types.find(inputs[i].GetObject()["datatype"].GetString());
+        if (it == types.end())
+            return "";
+        // TODO confirm its not an issue
+        Value datatype(it->second.c_str(), doc.GetAllocator());
         contents.AddMember(datatype, data, doc.GetAllocator());
         inputs[i].AddMember("contents", contents, doc.GetAllocator());
         parseParams(inputs[i], doc);

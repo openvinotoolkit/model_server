@@ -17,6 +17,9 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "execution_context.hpp"
+#include "modelinstance.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
 #include "pipelinedefinitionstatus.hpp"

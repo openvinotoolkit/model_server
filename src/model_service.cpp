@@ -30,9 +30,12 @@
 #include "tensorflow_serving/apis/model_service.pb.h"
 #pragma GCC diagnostic pop
 
+#include "execution_context.hpp"
+#include "modelinstance.hpp"
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
 #include "servablemanagermodule.hpp"
+#include "server.hpp"
 #include "status.hpp"
 
 using google::protobuf::util::JsonPrintOptions;

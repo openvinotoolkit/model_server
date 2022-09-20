@@ -29,6 +29,7 @@
 #include <sys/types.h>
 
 #include "config.hpp"
+#include "customloaderinterface.hpp"
 #include "customloaders.hpp"
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
@@ -38,6 +39,8 @@
 #include "logging.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelconfig.hpp"
+#include "modelinstance.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"

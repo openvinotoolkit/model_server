@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 
 #include "../sequence_manager.hpp"
+#include "../sequence_processing_spec.hpp"
 #include "../status.hpp"
 #include "stateful_test_utils.hpp"
 

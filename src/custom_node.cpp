@@ -17,6 +17,8 @@
 
 #include <utility>
 
+#include "custom_node_interface.h"  // NOLINT
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "custom_node_output_allocator.hpp"
 #include "customnodesession.hpp"
 #include "logging.hpp"

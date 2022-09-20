@@ -39,6 +39,8 @@
 #include "config.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
 #include "custom_node_library_manager.hpp"
+#include "customloaderconfig.hpp"
+#include "customloaderinterface.hpp"
 #include "customloaders.hpp"
 #include "entry_node.hpp"  // need for ENTRY_NODE_NAME
 #include "exit_node.hpp"   // need for EXIT_NODE_NAME
@@ -48,6 +50,7 @@
 #include "logging.hpp"
 #include "metric_config.hpp"
 #include "metric_registry.hpp"
+#include "modelinstance.hpp"  // for logging
 #include "node_library.hpp"
 #include "openssl/md5.h"
 #include "ov_utils.hpp"
@@ -60,7 +63,7 @@
 
 namespace ovms {
 
-static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
+static constexpr uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry) :

@@ -23,7 +23,6 @@
 
 #include "modelversion.hpp"
 #include "sequence.hpp"
-#include "sequence_processing_spec.hpp"
 
 namespace ovms {
 

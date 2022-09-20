@@ -28,12 +28,10 @@
 #include "tensorflow_serving/apis/model_service.pb.h"
 #pragma GCC diagnostic pop
 
-#include "execution_context.hpp"
-#include "modelmanager.hpp"
 #include "modelversion.hpp"
-#include "status.hpp"
 
 namespace ovms {
+class ExecutionContext;
 class ModelManager;
 class ModelVersionStatus;
 class Server;

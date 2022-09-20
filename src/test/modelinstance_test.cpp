@@ -23,6 +23,7 @@
 
 #include "../get_model_metadata_impl.hpp"
 #include "../modelinstance.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "test_utils.hpp"
 
 using testing::Return;
