@@ -53,8 +53,10 @@ docker pull openvino/model_server:latest
 ### Start the Model Server Container with Downloaded Model
 Start the server container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 5000
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 5000 --layout NHWC:NCHW
 ```
+
+> Note: The model default setting is to accept inputs in layout NCHW, but we change it to NHWC to make it work with samples using either regular, array-like input data or JPEG encoded images. 
 
 Once you finish above steps, you are ready to run the samples.
 
@@ -261,7 +263,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+python3 grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -314,13 +316,6 @@ Classification accuracy: 100.00
 
 
 ### Run the Client to perform inference with binary encoded image <a name="grpc-model-infer-binary"></a>
-
-Using binary inputs feature with data encoded to jpeg/png format, requires model to accept input in layout NHWC. While the model has native layout NCWH, it must be adjusted on model server start up parameters. For samples that use binary inputs, please start docker container with `--layout NHWC:NCHW` parameter:
-
-```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000 --rest_port 5000 --layout NHWC:NCHW
-```
-
 - Command
 
 ```Bash
@@ -586,12 +581,12 @@ optional arguments:
 - Usage Example #1 - Input data placed in JSON object.
 
 ```Bash
-python3 ./http_infer_resnet.py --http_port 5000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+python3 ./http_infer_resnet.py --http_port 5000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
         Iterations: 10
-        Images numpy path: ../../imgs.npy
+        Images numpy path: ../../imgs_nhwc.npy
         Numpy file shape: (10, 3, 224, 224)
 
 Iteration 1; Processing time: 206.35 ms; speed 4.85 fps
@@ -640,12 +635,12 @@ Classification accuracy: 100.00
 - Usage Example #2 - Input data placed as binary, outside JSON object.
 
 ```Bash
-python3 ./http_infer_resnet.py --http_port 5000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
+python3 ./http_infer_resnet.py --http_port 5000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
         Iterations: 10
-        Images numpy path: ../../imgs.npy
+        Images numpy path: ../../imgs_nhwc.npy
         Numpy file shape: (10, 3, 224, 224)
 
 Iteration 1; Processing time: 36.58 ms; speed 27.34 fps
@@ -693,13 +688,6 @@ Classification accuracy: 100.00
 
 
 ### Run the Client to perform inference with binary encoded image <a name="http-model-infer-binary"></a>
-
-Using binary inputs feautre requires model to accept input in layout NHWC. The model used in other clients has native layout NCWH, therefore it must be adjusted on model server start up. For samples that use binary inputs, please start docker container with `--layout NHWC:NCHW` parameter:
-
-```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000 --rest_port 5000 --layout NHWC:NCHW
-```
-
 - Command
 
 ```Bash
