@@ -30,8 +30,14 @@ FetchContent_Declare(
   GIT_TAG main
 )
 FetchContent_MakeAvailable(triton-client)
-
+FetchContent_Declare(
+  cxxopts
+  GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
+  GIT_TAG v3.0.0  
+)
+FetchContent_MakeAvailable(cxxopts)
 link_directories("${triton-client_BINARY_DIR}/cc-clients/install/lib")
 include_directories("${triton-client_BINARY_DIR}/cc-clients/install/include")
+include_directories("${cxxopts_SOURCE_DIR}/include")
 
 add_subdirectory(samples)
