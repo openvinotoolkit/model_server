@@ -255,13 +255,13 @@ Classification accuracy: 100.00
 
 ### Run the REST client with regular data sent in binary representation
 ```bash
-python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
+python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
         Iterations: 10
-        Images numpy path: ../../imgs.npy
-        Numpy file shape: (10, 3, 224, 224)
+        Images numpy path: ../../imgs_nhwc.npy
+        Numpy file shape: (10, 224, 224, 3)
 
 Iteration 1; Processing time: 36.58 ms; speed 27.34 fps
 imagenet top results in a single batch:

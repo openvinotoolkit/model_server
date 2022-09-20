@@ -269,7 +269,7 @@ Start processing:
         Model name: resnet
         Iterations: 10
         Images numpy path: ../../imgs_nhwc.npy
-        Numpy file shape: (10, 3, 224, 224)
+        Numpy file shape: (10, 224, 224, 3)
 
 Iteration 1; Processing time: 29.98 ms; speed 33.36 fps
 imagenet top results in a single batch:
@@ -587,7 +587,7 @@ Start processing:
         Model name: resnet
         Iterations: 10
         Images numpy path: ../../imgs_nhwc.npy
-        Numpy file shape: (10, 3, 224, 224)
+        Numpy file shape: (10, 224, 224, 3)
 
 Iteration 1; Processing time: 206.35 ms; speed 4.85 fps
 imagenet top results in a single batch:
@@ -641,7 +641,7 @@ Start processing:
         Model name: resnet
         Iterations: 10
         Images numpy path: ../../imgs_nhwc.npy
-        Numpy file shape: (10, 3, 224, 224)
+        Numpy file shape: (10, 224, 224, 3)
 
 Iteration 1; Processing time: 36.58 ms; speed 27.34 fps
 imagenet top results in a single batch:
