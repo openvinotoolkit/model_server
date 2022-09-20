@@ -31,8 +31,6 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-//#include "customloaderconfig.hpp"
-//#include "customloaderinterface.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"

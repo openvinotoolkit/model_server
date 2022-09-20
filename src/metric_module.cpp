@@ -19,7 +19,7 @@
 
 namespace ovms {
 
-        MetricModule::~MetricModule() = default;
+MetricModule::~MetricModule() = default;
 
 MetricModule::MetricModule() :
     registry(std::make_unique<MetricRegistry>()) {}

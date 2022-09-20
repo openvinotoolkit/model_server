@@ -39,7 +39,6 @@
 #include "logging.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelconfig.hpp"
-#include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"

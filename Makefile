@@ -117,6 +117,8 @@ style: venv clang-format
 	@git diff --exit-code || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
 	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
 	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+	@echo "Checking cppclean..."
+	@. $(ACTIVATE); bash -c "./cppclean.sh"
 
 sdl-check: venv
 	@echo "Checking SDL requirements..."
@@ -149,9 +151,6 @@ sdl-check: venv
 		error Run python3 lib_search.py . functions - to see forbidden functions file list.;\
 	fi
 	@rm forbidden_functions.txt
-
-	@echo "Checking cppclean..."
-	@. $(ACTIVATE); bash -c "./cppclean.sh"
 
 clang-format: venv
 	@echo "Formatting files with clang-format.."
