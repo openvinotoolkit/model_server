@@ -53,8 +53,10 @@ docker pull openvino/model_server:latest
 ### Start the Model Server Container with Downloaded Model
 Start the server container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 5000
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
+
+> Note: The model default setting is to accept inputs in layout NCHW, but we change it to NHWC to make it work with samples using either regular, array-like input data or JPEG encoded images. 
 
 Once you finish above steps, you are ready to run the samples.
 
@@ -114,6 +116,31 @@ python3 ./grpc_server_ready.py --grpc_port 9000 --grpc_address localhost
 Server Ready: True
 ```
 
+### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
+
+- Command
+
+```Bash
+python3 ./grpc_server_metadata.py --help
+usage: grpc_server_metadata.py [-h] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT]
+
+Sends request via KServe gRPC API to get server metadata.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --grpc_address GRPC_ADDRESS
+                        Specify url to gRPC service. default:localhost
+  --grpc_port GRPC_PORT
+                        Specify port to gRPC service. default: 9000
+```
+
+- Usage Example
+
+```Bash
+python3 ./grpc_server_metadata.py --grpc_port 9000 --grpc_address localhost
+name: "OpenVINO Model Server"
+version: "2022.2.c290da85"
+```
 
 ### Run the Client to get model readiness <a name="grpc-model-ready"></a>
 
@@ -178,9 +205,9 @@ inputs {
   name: "0"
   datatype: "FP32"
   shape: 1
+  shape: 224
+  shape: 224
   shape: 3
-  shape: 224
-  shape: 224
 }
 outputs {
   name: "1463"
@@ -236,13 +263,13 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+python3 grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
         Iterations: 10
-        Images numpy path: ../../imgs.npy
-        Numpy file shape: (10, 3, 224, 224)
+        Images numpy path: ../../imgs_nhwc.npy
+        Numpy file shape: (10, 224, 224, 3)
 
 Iteration 1; Processing time: 29.98 ms; speed 33.36 fps
 imagenet top results in a single batch:
@@ -288,14 +315,7 @@ Classification accuracy: 100.00
 ```
 
 
-### Run the Client to perform inference <a name="grpc-model-infer-binary"></a>
-
-Using binary inputs feautre requires model to accept input in layout NHWC. The model used in other clients has native layout NCWH, therefore it must be adjusted on model server start up. For samples that use binary inputs, please start docker container with `--layout NHWC:NCHW` parameter:
-
-```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000 --rest_port 5000 --layout NHWC:NCHW
-```
-
+### Run the Client to perform inference with binary encoded image <a name="grpc-model-infer-binary"></a>
 - Command
 
 ```Bash
@@ -396,13 +416,13 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
 ```
 
 - Usage Example
 
 ```Bash
-python3 ./http_server_live.py --http_port 5000 --http_address localhost
+python3 ./http_server_live.py --http_port 8000 --http_address localhost
 Server Live: True
 ```
 
@@ -421,14 +441,14 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
 
 ```
 
 - Usage Example
 
 ```Bash
-python3 ./http_server_ready.py --http_port 5000 --http_address localhost
+python3 ./http_server_ready.py --http_port 8000 --http_address localhost
 Server Ready: True
 ```
 
@@ -447,22 +467,15 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
 ```
-
-<!---
-TO DO: Complete and uncomment when endpoint ready
 
 - Usage Example
 
 ```Bash
-python3 ./http_server_metadata.py --http_port 5000 --http_address localhost
-
-<command output>
-
+python3 ./http_server_metadata.py --http_port 8000 --http_address localhost
+{'name': 'OpenVINO Model Server', 'version': '2022.2.c290da85'}
 ```
-
---->
 
 ### Run the Client to get model readiness <a name="http-model-ready"></a>
 
@@ -479,7 +492,7 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
   --model_name MODEL_NAME
                         Define model name, must be same as is in service. default: resnet
   --model_version MODEL_VERSION
@@ -489,7 +502,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_model_ready.py --http_port 5000 --http_address localhost --model_name resnet
+python3 ./http_model_ready.py --http_port 8000 --http_address localhost --model_name resnet
 Model Ready: True
 ```
 
@@ -508,24 +521,20 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to HTTP service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to HTTP service. default: 5000
+                        Specify port to HTTP service. default: 8000
   --model_name MODEL_NAME
                         Define model name, must be same as is in service. default: resnet
   --model_version MODEL_VERSION
                         Define model version. If not specified, the default version will be taken from model server
 ```
-<!---
-TO DO: Complete and uncomment when endpoint ready
 
 - Usage Example
 
 ```Bash
-python3 ./http_model_metadata.py --http_port 5000 --http_address localhost --model_name resnet
-
-<command output>
+python3 ./http_model_metadata.py --http_port 8000 --http_address localhost --model_name resnet
+{'name': 'resnet', 'versions': ['1'], 'platform': 'OpenVINO', 'inputs': [{'name': '0', 'datatype': 'FP32', 'shape': [1, 224, 224, 3]}], 'outputs': [{'name': '1463', 'datatype': 'FP32', 'shape': [1, 1000]}]}
 ```
 
---->
 ### Run the Client to perform inference <a name="http-model-infer"></a>
 
 - Command
@@ -548,7 +557,7 @@ optional arguments:
   --http_address HTTP_ADDRESS
                         Specify url to http service. default:localhost
   --http_port HTTP_PORT
-                        Specify port to http service. default: 5000
+                        Specify port to http service. default: 8000
   --input_name INPUT_NAME
                         Specify input tensor name. default: input
   --output_name OUTPUT_NAME
@@ -569,13 +578,193 @@ optional arguments:
                         Add demultiplexer dimension at front
 ```
 
-<!---
-TO DO: Complete and uncomment when endpoint ready
+- Usage Example #1 - Input data placed in JSON object.
+
+```Bash
+python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+Image data range: 0.0 : 255.0
+Start processing:
+        Model name: resnet
+        Iterations: 10
+        Images numpy path: ../../imgs_nhwc.npy
+        Numpy file shape: (10, 224, 224, 3)
+
+Iteration 1; Processing time: 206.35 ms; speed 4.85 fps
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+Iteration 2; Processing time: 196.61 ms; speed 5.09 fps
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 3; Processing time: 184.16 ms; speed 5.43 fps
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+Iteration 4; Processing time: 189.03 ms; speed 5.29 fps
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+Iteration 5; Processing time: 188.47 ms; speed 5.31 fps
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 6; Processing time: 192.66 ms; speed 5.19 fps
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+Iteration 7; Processing time: 175.03 ms; speed 5.71 fps
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+Iteration 8; Processing time: 192.43 ms; speed 5.20 fps
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+Iteration 9; Processing time: 190.80 ms; speed 5.24 fps
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+Iteration 10; Processing time: 210.31 ms; speed 4.75 fps
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
+
+processing time for all iterations
+average time: 192.20 ms; average speed: 5.20 fps
+median time: 191.00 ms; median speed: 5.24 fps
+max time: 210.00 ms; min speed: 4.76 fps
+min time: 175.00 ms; max speed: 5.71 fps
+time percentile 90: 206.40 ms; speed percentile 90: 4.84 fps
+time percentile 50: 191.00 ms; speed percentile 50: 5.24 fps
+time standard deviation: 9.58
+time variance: 91.76
+Classification accuracy: 100.00
+```
+
+- Usage Example #2 - Input data placed as binary, outside JSON object.
+
+```Bash
+python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
+Image data range: 0.0 : 255.0
+Start processing:
+        Model name: resnet
+        Iterations: 10
+        Images numpy path: ../../imgs_nhwc.npy
+        Numpy file shape: (10, 224, 224, 3)
+
+Iteration 1; Processing time: 36.58 ms; speed 27.34 fps
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+Iteration 2; Processing time: 33.76 ms; speed 29.62 fps
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 3; Processing time: 28.55 ms; speed 35.03 fps
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+Iteration 4; Processing time: 28.27 ms; speed 35.37 fps
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+Iteration 5; Processing time: 28.83 ms; speed 34.69 fps
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 6; Processing time: 26.80 ms; speed 37.31 fps
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+Iteration 7; Processing time: 27.20 ms; speed 36.76 fps
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+Iteration 8; Processing time: 26.46 ms; speed 37.80 fps
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+Iteration 9; Processing time: 29.52 ms; speed 33.87 fps
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+Iteration 10; Processing time: 27.49 ms; speed 36.37 fps
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
+
+processing time for all iterations
+average time: 28.80 ms; average speed: 34.72 fps
+median time: 28.00 ms; median speed: 35.71 fps
+max time: 36.00 ms; min speed: 27.78 fps
+min time: 26.00 ms; max speed: 38.46 fps
+time percentile 90: 33.30 ms; speed percentile 90: 30.03 fps
+time percentile 50: 28.00 ms; speed percentile 50: 35.71 fps
+time standard deviation: 3.06
+time variance: 9.36
+Classification accuracy: 100.00
+```
+
+
+### Run the Client to perform inference with binary encoded image <a name="http-model-infer-binary"></a>
+- Command
+
+```Bash
+python3 ./http_infer_binary_resnet.py --help
+usage: http_infer_binary_resnet.py [-h] [--images_list IMAGES_LIST] [--labels_numpy_path LABELS_NUMPY_PATH] [--http_address HTTP_ADDRESS]
+                                   [--http_port HTTP_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--batchsize BATCHSIZE]
+                                   [--model_name MODEL_NAME] [--pipeline_name PIPELINE_NAME]
+
+Sends requests via KServe REST API using binary encoded images. It displays performance statistics and optionally the model accuracy
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --images_list IMAGES_LIST
+                        path to a file with a list of labeled images
+  --labels_numpy_path LABELS_NUMPY_PATH
+                        numpy in shape [n,1] - can be used to check model accuracy
+  --http_address HTTP_ADDRESS
+                        Specify url to http service. default:localhost
+  --http_port HTTP_PORT
+                        Specify port to http service. default: 8000
+  --input_name INPUT_NAME
+                        Specify input tensor name. default: input
+  --output_name OUTPUT_NAME
+                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service. default: resnet
+  --pipeline_name PIPELINE_NAME
+                        Define pipeline name, must be same as is in service
+```
 
 - Usage Example
 
 ```Bash
-TODO
-```
+python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+Start processing:
+        Model name: resnet
+Iteration 0; Processing time: 38.61 ms; speed 25.90 fps
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+Iteration 1; Processing time: 44.28 ms; speed 22.58 fps
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 2; Processing time: 30.81 ms; speed 32.45 fps
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+Iteration 3; Processing time: 31.36 ms; speed 31.89 fps
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+Iteration 4; Processing time: 30.21 ms; speed 33.10 fps
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 5; Processing time: 32.92 ms; speed 30.37 fps
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+Iteration 6; Processing time: 36.39 ms; speed 27.48 fps
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+Iteration 7; Processing time: 33.83 ms; speed 29.56 fps
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+Iteration 8; Processing time: 32.22 ms; speed 31.03 fps
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+Iteration 9; Processing time: 46.04 ms; speed 21.72 fps
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
 
---->
+processing time for all iterations
+average time: 35.20 ms; average speed: 28.41 fps
+median time: 32.50 ms; median speed: 30.77 fps
+max time: 46.00 ms; min speed: 21.74 fps
+min time: 30.00 ms; max speed: 33.33 fps
+time percentile 90: 44.20 ms; speed percentile 90: 22.62 fps
+time percentile 50: 32.50 ms; speed percentile 50: 30.77 fps
+time standard deviation: 5.47
+time variance: 29.96
+Classification accuracy: 100.00
+```

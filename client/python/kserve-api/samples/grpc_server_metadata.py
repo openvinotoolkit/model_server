@@ -15,17 +15,17 @@
 #
 
 import argparse
-import tritonclient.http as httpclient
+import tritonclient.grpc as grpcclient
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Sends request via KServe HTTP API to check if server is ready.')
-    parser.add_argument('--http_address',required=False, default='localhost',  help='Specify url to HTTP service. default:localhost')
-    parser.add_argument('--http_port',required=False, default=8000, help='Specify port to HTTP service. default: 8000')
+    parser = argparse.ArgumentParser(description='Sends request via KServe gRPC API to get server metadata.')
+    parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to gRPC service. default:localhost')
+    parser.add_argument('--grpc_port',required=False, default=5000, help='Specify port to gRPC service. default: 9000')
 
     args = vars(parser.parse_args())
 
-    address = "{}:{}".format(args['http_address'],args['http_port'])
+    address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
 
-    client = httpclient.InferenceServerClient(address)
-    print("Server Ready: {}".format(client.is_server_ready()))
+    client = grpcclient.InferenceServerClient(address)
+    print(client.get_server_metadata())
 

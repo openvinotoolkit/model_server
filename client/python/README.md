@@ -11,3 +11,6 @@ There are sample scripts for both solutions:
 - [ovmsclient samples](ovmsclient/samples)
 - [tensorflow-serving-api samples](tensorflow-serving-api/samples)
 
+Additionally, starting with the 2022.2 release, OpenVINO Model Server also supports [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md) calls. You can try it out with the:
+ - [KServe samples](kserve-api/samples)
+

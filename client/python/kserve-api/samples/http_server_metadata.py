@@ -20,7 +20,7 @@ import tritonclient.http as httpclient
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sends request via KServe HTTP API to get server metadata.')
     parser.add_argument('--http_address',required=False, default='localhost',  help='Specify url to HTTP service. default:localhost')
-    parser.add_argument('--http_port',required=False, default=5000, help='Specify port to HTTP service. default: 5000')
+    parser.add_argument('--http_port',required=False, default=8000, help='Specify port to HTTP service. default: 8000')
 
     args = vars(parser.parse_args())
 

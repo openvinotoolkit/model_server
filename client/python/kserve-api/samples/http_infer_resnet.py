@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c] or [n,c,h,w]')
     parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
     parser.add_argument('--http_address',required=False, default='localhost',  help='Specify url to http service. default:localhost')
-    parser.add_argument('--http_port',required=False, default=5000, help='Specify port to http service. default: 5000')
+    parser.add_argument('--http_port',required=False, default=8000, help='Specify port to http service. default: 8000')
     parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
     parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1',
                         help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
@@ -53,6 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
     parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='Add demultiplexer dimension at front', dest='dag-batch-size-auto')
+    parser.add_argument('--binary_data', default=False, action='store_true', help='Send input data in binary format', dest='binary_data')
 
     args = vars(parser.parse_args())
 
@@ -114,12 +115,11 @@ if __name__ == '__main__':
             else:
                 inputs.append(httpclient.InferInput(args['input_name'], img.shape, "FP32"))
             outputs = []
-            inputs[0].set_data_from_numpy(img, False)
+            inputs[0].set_data_from_numpy(img, binary_data=args.get('binary_data'))
             start_time = datetime.datetime.now()
             results = triton_client.infer(
-                model_name= args.get('pipeline_name') if is_pipeline_request else args.get('model_name'),
-                inputs=inputs,
-                outputs=outputs)
+                model_name=args.get('pipeline_name') if is_pipeline_request else args.get('model_name'),
+                inputs=inputs)
             end_time = datetime.datetime.now()
             duration = (end_time - start_time).total_seconds() * 1000
             processing_times = np.append(processing_times,np.array([int(duration)]))

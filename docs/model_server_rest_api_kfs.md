@@ -95,17 +95,11 @@ Else:
 }
 ```
 
-<!---
-TO DO: Complete and uncomment when endpoint ready
-
 **Usage Example**
 ```
 $ curl http://localhost:5000/v2
-
-<command output>
+{"name":"OpenVINO Model Server","version":"2022.2.0.fd742507"}
 ```
-
---->
 
 For detailed description of the response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#server-metadata).
 
@@ -182,17 +176,12 @@ Else:
 }
 ```
 
-<!---
-TO DO: Complete and uncomment when endpoint ready
 
 **Usage example**
 ```
-$ curl http://localhost:5000/v1/models/person-detection/versions/1/metadata
-
-<command output>
+$ curl http://localhost:8000/v2/models/resnet
+{"name":"resnet","versions":["1"],"platform":"OpenVINO","inputs":[{"name":"0","datatype":"FP32","shape":[1,224,224,3]}],"outputs":[{"name":"1463","datatype":"FP32","shape":[1,1000]}]}
 ```
-
---->
 
 For detailed description of the response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata).
 
@@ -271,5 +260,7 @@ Else:
 ```
 
 For detailed description of request and response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference).
+
+> Note: More efficient way of running inference via REST is sending data in a binary format outside of the JSON object, by using [binary data extension](./binary_input_kfs.md). 
 
 See also [code samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/python/kserve-api/samples) for running inference with KServe API on HTTP Inference endpoint.
