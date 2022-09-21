@@ -99,7 +99,8 @@ cd model_server/client/python/ovmsclient/samples
 pip install -r requirements.txt
 ```
 
-### Run the [gRPC client sending the binary input](https://github.com/openvinotoolkit/model_server/blob/mzeglars-kserve/client/python/ovmsclient/samples/grpc_predict_binary_resnet.py):
+### Run the gRPC client sending the binary input
+([see the code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/ovmsclient/samples/grpc_predict_binary_resnet.py))
 ```bash
 python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:9000
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
@@ -115,7 +116,8 @@ Image ../../../../demos/common/static/images/golden_retriever.jpeg has been clas
 ```
 
 
-### Run the [REST client sending the binary input](https://github.com/openvinotoolkit/model_server/blob/mzeglars-kserve/client/python/ovmsclient/samples/http_predict_binary_resnet.py):
+### Run the REST client sending the binary input
+([see the code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/ovmsclient/samples/http_predict_binary_resnet.py))
 ```bash
 python http_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:8000
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass

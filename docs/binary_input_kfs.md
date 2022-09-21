@@ -4,7 +4,7 @@
 
 KServe API allows sending the model input data in a variety of formats inside the [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#tensor-data-1) objects or in `raw_input_contents` field of [ModelInferRequest](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-1).
    
-When the data is sent in the `bytes_contents` field of `InferTensorContents` and input `datatype` is set to `BYTES`, such input is interpreted as a binary encoded image.
+When the data is sent in the `bytes_contents` field of `InferTensorContents` and input `datatype` is set to `BYTES`, such input is interpreted as a binary encoded image. The `BYTES` datatype is dedicated to binary encoded **images** and if it's set, the data **must** be placed in `bytes_contents`. Input placed in any other field, including `raw_input_contents` will be ignored, if the datatype is defined as `BYTES`. 
 
 Note, that while the model metadata reports the inputs shape with layout `NHWC`, the binary data must be sent with 
 shape: `[N]` with datatype: `BYTES`. Where `N` represents number of images converted to string bytes.
@@ -103,7 +103,7 @@ The structure of the response is specified [Inference Response specification](ht
 
 ### Raw data
 
-Above section described how to send JPEG/PNG encoded image via REST interface. Data sent like this is processed by OpenCV to convert it to OpenVINO-friendly format. Many times, data is already available in OpenVINO-friendly format and all you want to do is to send it and get the prediction.
+Above section described how to send JPEG/PNG encoded image via REST interface. Data sent like this is processed by OpenCV to convert it to OpenVINO-friendly format. Many times data is already available in OpenVINO-friendly format and all you want to do is to send it and get the prediction.
 
 With KServe API you can also send raw data in a binary representation via REST interface. **That way the request gets smaller and easier to process on the server side, therefore using this format is more effecient when working with RESTful API, than providing the input data in a JSON object**. To send raw data in the binary format, you need to specify `datatype` other than `BYTES` and data `shape`, should match the input `shape` (also the memory layout should be compatible). 
 
@@ -156,7 +156,8 @@ cd model_server/client/python/kserve-api/samples
 pip install -r requirements.txt
 ```
 
-### Run the [gRPC client sending JPEG images](https://github.com/openvinotoolkit/model_server/blob/mzeglars-kserve/client/python/kserve-api/samples/grpc_infer_binary_resnet.py):
+### Run the gRPC client sending JPEG images
+([see the code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/grpc_infer_binary_resnet.py))
 ```bash
 python3 ./grpc_infer_binary_resnet.py --grpc_port 9000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
@@ -205,7 +206,8 @@ Classification accuracy: 100.00
 ```
 
 
-### Run the [REST client sending JPEG images](https://github.com/openvinotoolkit/model_server/blob/mzeglars-kserve/client/python/kserve-api/samples/http_infer_binary_resnet.py):
+### Run the REST client sending JPEG images
+([see the code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_binary_resnet.py))
 ```bash
 python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
@@ -253,7 +255,8 @@ time variance: 4.64
 Classification accuracy: 100.00
 ```
 
-### Run the [REST client with raw data sent in binary representation](https://github.com/openvinotoolkit/model_server/blob/mzeglars-kserve/client/python/kserve-api/samples/http_infer_resnet.py)
+### Run the REST client with raw data sent in binary representation
+([see the code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_resnet.py))
 ```bash
 python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
 Image data range: 0.0 : 255.0

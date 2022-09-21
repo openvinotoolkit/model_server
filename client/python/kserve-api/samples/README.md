@@ -139,7 +139,7 @@ optional arguments:
 ```Bash
 python3 ./grpc_server_metadata.py --grpc_port 9000 --grpc_address localhost
 name: "OpenVINO Model Server"
-version: "2022.2.0.c83f8ca1"
+version: "2022.2.c290da85"
 ```
 
 ### Run the Client to get model readiness <a name="grpc-model-ready"></a>
@@ -474,7 +474,7 @@ optional arguments:
 
 ```Bash
 python3 ./http_server_metadata.py --http_port 8000 --http_address localhost
-{'name': 'OpenVINO Model Server', 'version': '2022.2.0.3bba1d3d'}
+{'name': 'OpenVINO Model Server', 'version': '2022.2.c290da85'}
 ```
 
 ### Run the Client to get model readiness <a name="http-model-ready"></a>
