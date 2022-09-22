@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <functional>
+#include <map>
 #include <regex>
 #include <string>
 #include <utility>
@@ -30,11 +32,24 @@
 #include "status.hpp"
 
 namespace ovms {
+class ServableMetricReporter;
+class ModelMetricReporter;
+class KFSInferenceServiceImpl;
+class GetModelMetadataImpl;
+class Server;
 enum RequestType { Predict,
     GetModelStatus,
     GetModelMetadata,
     ConfigReload,
-    ConfigStatus };
+    ConfigStatus,
+    KFS_GetModelReady,
+    KFS_Infer,
+    KFS_GetModelMetadata,
+    KFS_GetServerReady,
+    KFS_GetServerLive,
+    KFS_GetServerMetadata,
+    Metrics };
+
 struct HttpRequestComponents {
     RequestType type;
     std::string_view http_method;
@@ -43,6 +58,7 @@ struct HttpRequestComponents {
     std::optional<std::string_view> model_version_label;
     std::string processing_method;
     std::string model_subresource;
+    std::optional<int> inferenceHeaderContentLength;
 };
 
 class HttpRestApiHandler {
@@ -52,23 +68,34 @@ public:
     static const std::string configReloadRegexExp;
     static const std::string configStatusRegexExp;
 
+    static const std::string kfs_modelreadyRegexExp;
+    static const std::string kfs_modelmetadataRegexExp;
+    static const std::string kfs_inferRegexExp;
+
+    static const std::string metricsRegexExp;
+
+    static const std::string kfs_serverreadyRegexExp;
+    static const std::string kfs_serverliveRegexExp;
+    static const std::string kfs_servermetadataRegexExp;
     /**
      * @brief Construct a new HttpRest Api Handler
-     * 
-     * @param timeout_in_ms 
+     *
+     * @param timeout_in_ms
      */
-    HttpRestApiHandler(int timeout_in_ms) :
-        predictionRegex(predictionRegexExp),
-        modelstatusRegex(modelstatusRegexExp),
-        configReloadRegex(configReloadRegexExp),
-        configStatusRegex(configStatusRegexExp),
-        timeout_in_ms(timeout_in_ms) {}
+    HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms);
 
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
-        const std::string& request_path);
+        const std::string& request_path,
+        const std::vector<std::pair<std::string, std::string>>& headers = {});
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
+    static void parseParams(rapidjson::Value&, rapidjson::Document&);
+    static std::string preprocessInferRequest(std::string request_body);
+    static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
+
+    void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>);
+    void registerAll();
 
     Status dispatchToProcessor(
         const std::string& request_body,
@@ -77,14 +104,14 @@ public:
 
     /**
      * @brief Process Request
-     * 
-     * @param http_method 
-     * @param request_path 
-     * @param request_body 
-     * @param headers 
-     * @param resposnse 
      *
-     * @return StatusCode 
+     * @param http_method
+     * @param request_path
+     * @param request_body
+     * @param headers
+     * @param resposnse
+     *
+     * @return StatusCode
      */
     Status processRequest(
         const std::string_view http_method,
@@ -96,13 +123,13 @@ public:
     /**
      * @brief Process predict request
      *
-     * @param modelName 
-     * @param modelVersion 
-     * @param modelVersionLabel 
-     * @param request 
-     * @param response 
+     * @param modelName
+     * @param modelVersion
+     * @param modelVersionLabel
+     * @param request
+     * @param response
      *
-     * @return StatusCode 
+     * @return StatusCode
      */
     Status processPredictRequest(
         const std::string& modelName,
@@ -116,23 +143,25 @@ public:
         const std::optional<int64_t>& modelVersion,
         const std::string& request,
         Order& requestOrder,
-        tensorflow::serving::PredictResponse& responseProto);
+        tensorflow::serving::PredictResponse& responseProto,
+        ServableMetricReporter*& reporterOut);
 
     Status processPipelineRequest(
         const std::string& modelName,
         const std::string& request,
         Order& requestOrder,
-        tensorflow::serving::PredictResponse& responseProto);
+        tensorflow::serving::PredictResponse& responseProto,
+        ServableMetricReporter*& reporterOut);
 
     /**
      * @brief Process Model Metadata request
-     * 
-     * @param model_name 
-     * @param model_version 
-     * @param model_version_label 
+     *
+     * @param model_name
+     * @param model_version
+     * @param model_version_label
      * @param response
      *
-     * @return StatusCode 
+     * @return StatusCode
      */
     Status processModelMetadataRequest(
         const std::string_view model_name,
@@ -142,12 +171,12 @@ public:
 
     /**
      * @brief Process Model Status request
-     * 
-     * @param model_name 
-     * @param model_version 
-     * @param model_version_label 
-     * @param response 
-     * @return StatusCode 
+     *
+     * @param model_name
+     * @param model_version
+     * @param model_version_label
+     * @param response
+     * @return StatusCode
      */
     Status processModelStatusRequest(
         const std::string_view model_name,
@@ -157,7 +186,17 @@ public:
 
     Status processConfigReloadRequest(std::string& response, ModelManager& manager);
 
+    void convertShapeType(rapidjson::Value& scope, rapidjson::Document& doc);
+
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
+    Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+
+    Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
 private:
     const std::regex predictionRegex;
@@ -165,7 +204,26 @@ private:
     const std::regex configReloadRegex;
     const std::regex configStatusRegex;
 
+    const std::regex kfs_modelreadyRegex;
+    const std::regex kfs_modelmetadataRegex;
+
+    const std::regex kfs_inferRegex;
+    const std::regex kfs_serverreadyRegex;
+    const std::regex kfs_serverliveRegex;
+    const std::regex kfs_servermetadataRegex;
+
+    const std::regex metricsRegex;
+
+    std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>> handlers;
     int timeout_in_ms;
+
+    ovms::Server& ovmsServer;
+    ovms::KFSInferenceServiceImpl& kfsGrpcImpl;
+    const GetModelMetadataImpl& grpcGetModelMetadataImpl;
+    ovms::ModelManager& modelManager;
+
+    Status getReporter(const HttpRequestComponents& components, ovms::ServableMetricReporter*& reporter);
+    Status getPipelineInputsAndReporter(const std::string& modelName, ovms::tensor_map_t& inputs, ovms::ServableMetricReporter*& reporter);
 };
 
 }  // namespace ovms

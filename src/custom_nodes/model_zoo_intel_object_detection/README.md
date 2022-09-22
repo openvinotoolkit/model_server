@@ -22,17 +22,23 @@ All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/
 - vehicle-license-plate-detection
 - pedestrian-and-vehicle-detector
 
+Public [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public) object detection models with output tensor shape: `[1, 1, 100, 7]`:
+- ssdlite_mobilenet_v2
+
+**NOTE** Examplary configuration files are available in [vehicle analysis pipeline demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/horizontal_text_detection/python/config.json) and [multiple faces analysis demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/multi_faces_analysis_pipeline/python/config.json).
+
 # Building custom node library
 
-You can build the shared library of the custom node simply by running command in this custom node folder context:
+You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
 ```
-make
+git clone https://github.com/openvinotoolkit/model_server && cd model_server/src/custom_nodes
+make NODES=model_zoo_intel_object_detection
 ```
-It will compile the library inside a docker container and save the results in `lib` folder.
+It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.
 
-You can also select base OS between RH 8.4 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
+You can also select base OS between RH 8.5 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
 ```
-make BASE_OS=redhat
+make BASE_OS=redhat NODES=model_zoo_intel_object_detection
 ```
 
 # Custom node inputs
@@ -40,7 +46,7 @@ make BASE_OS=redhat
 | Input name       | Description           | Shape | Precision |
 | ------------- |:-------------:| -----:| -----:|
 | image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters `original_image_width` and `original_image_height`. Color data required only in BGR format. | `1,3,H,W` | FP32 |
-| detection      | object detection model output | `1,1,200,7` | FP32 |
+| detection      | object detection model output where `D` is the number of detected bounding boxes | `1,1,D,7` | FP32 |
 
 
 # Custom node outputs

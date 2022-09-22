@@ -51,7 +51,8 @@ processing using OpenCV, which is included in OVMS, or include other third-party
  by adding their definition to the pipeline configuration. The configuration includes a path to the compiled binary with the `.so` extension. 
 Custom nodes are not versioned, meaning one custom node library is bound to one name. To load another version, another name needs to be used.
 
-Learn more about developing custom node in the [custom node developer guide](custom_node_development.md)
+    OpenVINO Model Server docker image comes with prebuilt custom nodes that you can use out-of-the-box in your pipeline. See the list of built-in custom nodes and
+    learn more about developing custom nodes yourself in the [custom node developer guide](custom_node_development.md).
 
 ## Demultiplexing data
 
@@ -196,12 +197,12 @@ Pipelines can use the same API as the models. There are exactly the same calls f
 the predictions. The request format must match the pipeline definition inputs.
 
 
-The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api.md) calls and
-[REST Metadata](model_server_rest_api.md).
+The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_tfs.md) calls and
+[REST Metadata](model_server_rest_api_tfs.md).
 It returns the definition of the pipelines inputs and outputs. 
 
-Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api.md)
-and [REST Model Status](model_server_rest_api.md)
+Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_tfs.md)
+and [REST Model Status](model_server_rest_api_tfs.md)
 
 The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
 the version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.

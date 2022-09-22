@@ -25,6 +25,17 @@
 
 namespace ovms {
 
+NodeSessionMetadata::NodeSessionMetadata() :
+    context({ExecutionContext::Interface::GRPC, ExecutionContext::Method::Predict}) {}
+
+NodeSessionMetadata::NodeSessionMetadata(ExecutionContext context) :
+    context(context) {}
+
+NodeSessionMetadata::NodeSessionMetadata(const std::unordered_map<std::string, std::tuple<session_id_t, session_id_t>>& details, const std::vector<std::string>& sessionsLevels, ExecutionContext context) :
+    details(details),
+    sessionsLevels(sessionsLevels),
+    context(context) {}
+
 std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const {
     if (nodeName.size() == 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to generate subsession with empty node name");
@@ -37,13 +48,12 @@ std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const 
     if (subsessionSize == 0) {
         return {};
     }
-    std::vector<NodeSessionMetadata> metas(subsessionSize);
-    uint counter = 0;
+    std::vector<NodeSessionMetadata> metas(subsessionSize, *this);
+    uint32_t counter = 0;
     for (auto& meta : metas) {
-        meta.details = this->details;
         meta.details.insert({nodeName, {counter, subsessionSize}});
-        meta.sessionsLevels = this->sessionsLevels;
         meta.sessionsLevels.push_back(nodeName);
+        meta.cached = false;
         ++counter;
     }
     SPDLOG_LOGGER_TRACE(dag_executor_logger, "Generated subsession levels: {}",
@@ -56,7 +66,7 @@ std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const 
     return metas;
 }
 
-std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& ignoredNodeNames) const {
+std::string NodeSessionMetadata::createSessionKey(const std::set<std::string>& ignoredNodeNames) const {
     if (details.size() == 0) {
         return "";
     }
@@ -94,6 +104,20 @@ std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& igno
         }
     }
     return ss.str();
+}
+
+std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& ignoredNodeNames) const {
+    // if set not empty then we need to regenerate the cache and mark it as not cached
+    // we don't want to store previous set but we want to limit recreation of the key
+    if (ignoredNodeNames.size() != 0) {
+        return createSessionKey(ignoredNodeNames);
+    }
+    if (cached) {
+        return this->cachedSessionKey;
+    }
+    cached = true;
+    this->cachedSessionKey = createSessionKey(ignoredNodeNames);
+    return this->cachedSessionKey;
 }
 
 std::pair<NodeSessionMetadata, CollapseDetails> NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const {
@@ -194,4 +218,7 @@ session_id_t NodeSessionMetadata::getShardId(const std::set<std::string>& collap
     }
     return shardId;
 }
+
+ExecutionContext NodeSessionMetadata::getContext() const { return this->context; }
+
 }  // namespace ovms

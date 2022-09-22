@@ -17,6 +17,7 @@
 workspace(name = "ovms")
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # overriding tensorflow serving bazel dependency
@@ -65,6 +66,23 @@ git_repository(
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
     #                       make bind address configurable
+)
+
+# minitrace
+new_git_repository(
+    name = "minitrace",
+    remote = "https://github.com/hrydgard/minitrace.git",
+    commit = "020f42b189e8d6ad50e4d8f45d69edee0a6b3f23",
+    build_file_content = """
+cc_library(
+    name = "trace",
+    hdrs = ["minitrace.h"],
+    srcs = ["minitrace.c"],
+    visibility = ["//visibility:public"],
+    local_defines = [
+    ],
+)
+""",
 )
 
 load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
@@ -202,6 +220,15 @@ http_archive(
     build_file = "@//third_party/libevent:BUILD",
 )
 
+# prometheus-cpp
+http_archive(
+    name = "com_github_jupp0r_prometheus_cpp",
+    strip_prefix = "prometheus-cpp-1.0.1",
+    urls = ["https://github.com/jupp0r/prometheus-cpp/archive/refs/tags/v1.0.1.zip"],
+)
+load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
+prometheus_cpp_repositories()
+
 ##################### OPEN VINO ######################
 # OPENVINO DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
 new_local_repository(
@@ -212,10 +239,10 @@ new_local_repository(
 ################## END OF OPENVINO DEPENDENCY ##########
 
 ##################### OPEN CV ######################
-# OPENCV DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
+# OPENCV DEFINITION FOR ARTIFACTS BUILT FROM SOURCE: ##########################
 new_local_repository(
     name = "opencv",
     build_file = "@//third_party/opencv:BUILD",
-    path = "/opt/intel/openvino/extras/opencv",
+    path = "/opt/opencv",
 )
 ################## END OF OPENCV DEPENDENCY ##########

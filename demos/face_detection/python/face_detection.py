@@ -36,8 +36,8 @@ def load_image(file_path):
     # change shape to NCHW
     return img
 
-parser = argparse.ArgumentParser(description='Demo for face detection requests via TFS gRPC API analyses input images'
-                                             'and saves images with bounding boxes drawn around detected faces.'
+parser = argparse.ArgumentParser(description='Demo for face detection requests via TFS gRPC API analyses input images '
+                                             'and saves images with bounding boxes drawn around detected faces. '
                                              'It relies on face_detection model...')
 
 parser.add_argument('--input_images_dir', required=False, help='Directory with input images', default="../../common/static/images/people")

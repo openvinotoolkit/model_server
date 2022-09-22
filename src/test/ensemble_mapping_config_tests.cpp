@@ -19,7 +19,11 @@
 #include <gtest/gtest.h>
 
 #include "../entry_node.hpp"
+#include "../execution_context.hpp"
 #include "../exit_node.hpp"
+#include "../get_model_metadata_impl.hpp"
+#include "../kfs_grpc_inference_service.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelmanager.hpp"
 #include "../pipeline.hpp"
@@ -104,7 +108,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     // Execute pipeline
     factory.create(pipeline, "pipeline", &request, &response, managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
 
     // Compare response
     ASSERT_EQ(response.outputs_size(), 1);
@@ -297,7 +301,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
 
     // Execute pipeline
     pd.create(pipeline, &request, &response, managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
 
     // Compare response
     ASSERT_EQ(response.outputs_size(), 1);
@@ -354,4 +358,73 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReloadPipelineAfterRemovalOfModel
     status = pd.reload(managerWithDummyModel, std::move(info), std::move(connections));
     EXPECT_TRUE(status.getCode() == ovms::StatusCode::PIPELINE_CONNECTION_TO_MISSING_MODEL_INPUT)
         << status.string();
+}
+
+class ModelWithInputOutputNameMappedModel : public PipelineWithInputOutputNameMappedModel {
+public:
+    ::inference::ModelMetadataResponse kfsResponse;
+    tensorflow::serving::GetModelMetadataResponse tfsResponse;
+    std::shared_ptr<ModelInstance> instance;
+};
+
+TEST_F(ModelWithInputOutputNameMappedModel, GetModelMetadataOnKFSEndpoint) {
+    // Create mapping config for model
+    createConfigFileWithContent(R"({
+        "inputs": {"b": "input_tensor"},
+        "outputs": {"a": "output_tensor"}
+    })",
+        mappingConfigPath);
+
+    // Load models
+    auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setBasePath(modelPath);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
+
+    auto model = managerWithDummyModel.findModelByName("dummy");
+    ASSERT_NE(model, nullptr);
+    instance = model->getDefaultModelInstance();
+    ASSERT_NE(instance, nullptr);
+
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &kfsResponse), ovms::StatusCode::OK);
+
+    EXPECT_EQ(kfsResponse.inputs_size(), 1);
+    auto input = kfsResponse.inputs().at(0);
+    EXPECT_EQ(input.name(), "input_tensor");
+
+    EXPECT_EQ(kfsResponse.outputs_size(), 1);
+    auto output = kfsResponse.outputs().at(0);
+    EXPECT_EQ(output.name(), "output_tensor");
+}
+
+TEST_F(ModelWithInputOutputNameMappedModel, GetModelMetadataOnTfsEndpoint) {
+    // Create mapping config for model
+    createConfigFileWithContent(R"({
+        "inputs": {"b": "input_tensor"},
+        "outputs": {"a": "output_tensor"}
+    })",
+        mappingConfigPath);
+
+    // Load models
+    auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setBasePath(modelPath);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
+
+    auto model = managerWithDummyModel.findModelByName("dummy");
+    ASSERT_NE(model, nullptr);
+    instance = model->getDefaultModelInstance();
+    ASSERT_NE(instance, nullptr);
+
+    ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &tfsResponse), ovms::StatusCode::OK);
+
+    tensorflow::serving::SignatureDefMap def;
+    tfsResponse.metadata().at("signature_def").UnpackTo(&def);
+
+    const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
+    const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
+
+    EXPECT_EQ(inputs.size(), 1);
+    EXPECT_EQ(inputs.at("input_tensor").name(), "input_tensor");
+
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.at("output_tensor").name(), "output_tensor");
 }

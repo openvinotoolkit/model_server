@@ -16,6 +16,7 @@
 #include "pipeline_factory.hpp"
 
 #include "logging.hpp"
+#include "modelmanager.hpp"
 #include "pipeline.hpp"
 #include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
@@ -55,7 +56,7 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "pipeline definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections, manager.getMetricRegistry(), &manager.getMetricConfig());
 
     pipelineDefinition->makeSubscriptions(manager);
     Status validationResult = pipelineDefinition->validate(manager);
@@ -75,19 +76,34 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     return validationResult;
 }
 
-Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
+template <typename RequestType, typename ResponseType>
+Status PipelineFactory::createInternal(std::unique_ptr<Pipeline>& pipeline,
     const std::string& name,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
+    const RequestType* request,
+    ResponseType* response,
     ModelManager& manager) const {
     if (!definitionExists(name)) {
-        SPDLOG_LOGGER_INFO(dag_executor_logger, "Pipeline with requested name: {} does not exist", name);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Pipeline with requested name: {} does not exist", name);
         return StatusCode::PIPELINE_DEFINITION_NAME_MISSING;
     }
     std::shared_lock lock(definitionsMtx);
     auto& definition = *definitions.at(name);
     lock.unlock();
     return definition.create(pipeline, request, response, manager);
+}
+Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
+    const std::string& name,
+    const ::inference::ModelInferRequest* request,
+    ::inference::ModelInferResponse* response,
+    ModelManager& manager) const {
+    return this->createInternal(pipeline, name, request, response, manager);
+}
+Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
+    const std::string& name,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    ModelManager& manager) const {
+    return this->createInternal(pipeline, name, request, response, manager);
 }
 
 Status PipelineFactory::reloadDefinition(const std::string& pipelineName,

@@ -23,6 +23,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -33,12 +34,14 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
-
+#include "../execution_context.hpp"
+#include "../kfs_grpc_inference_service.hpp"
+#include "../metric_registry.hpp"
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
 #include "../tensorinfo.hpp"
 
-using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
+using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
 
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
 const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
@@ -127,67 +130,62 @@ constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
 
+static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
+
+using KFSRequestType = ::inference::ModelInferRequest;
+using KFSResponseType = ::inference::ModelInferResponse;
+using KFSInputTensorType = ::inference::ModelInferRequest_InferInputTensor;
+using KFSOutputTensorType = ::inference::ModelInferResponse_InferOutputTensor;
+using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
+using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
+using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
+using TFSRequestType = tensorflow::serving::PredictRequest;
+using TFSResponseType = tensorflow::serving::PredictResponse;
+using TFSInputTensorType = tensorflow::TensorProto;
+using TFSOutputTensorType = tensorflow::TensorProto;
+using TFSShapeType = tensorflow::TensorShapeProto;
+using TFSInputTensorIteratorType = google::protobuf::Map<std::string, TFSInputTensorType>::const_iterator;
+using TFSOutputTensorIteratorType = google::protobuf::Map<std::string, TFSOutputTensorType>::const_iterator;
+using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
+using KFSInterface = std::pair<KFSRequestType, KFSResponseType>;
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::Shape>&& tensors,
     ovms::Precision precision = ovms::Precision::FP32);
 
-static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t requestInputs, const std::vector<float>& data = {}) {
-    tensorflow::serving::PredictRequest request;
-    for (auto const& it : requestInputs) {
-        auto& name = it.first;
-        auto [shape, dtype] = it.second;
+void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {});
 
-        auto& input = (*request.mutable_inputs())[name];
-        input.set_dtype(dtype);
-        size_t numberOfElements = 1;
-        for (auto const& dim : shape) {
-            input.mutable_tensor_shape()->add_dim()->set_size(dim);
-            numberOfElements *= dim;
-        }
-        if (dtype == tensorflow::DataType::DT_HALF) {
-            if (data.size() == 0) {
-                for (size_t i = 0; i < numberOfElements; i++) {
-                    input.add_half_val('1');
-                }
-            } else {
-                for (size_t i = 0; i < data.size(); i++) {
-                    input.add_half_val(data[i]);
-                }
-            }
-            break;
-        }
-        if (dtype == tensorflow::DataType::DT_UINT16) {
-            if (data.size() == 0) {
-                for (size_t i = 0; i < numberOfElements; i++) {
-                    input.add_int_val('1');
-                }
-            } else {
-                for (size_t i = 0; i < data.size(); i++) {
-                    input.add_int_val(data[i]);
-                }
-            }
-            break;
-        }
-        if (data.size() == 0) {
-            *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(dtype), '1');
-        } else {
-            std::string content;
-            content.resize(numberOfElements * tensorflow::DataTypeSize(dtype));
-            std::memcpy(content.data(), data.data(), content.size());
-            *input.mutable_tensor_content() = content;
-        }
-    }
-    return request;
-}
+::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name);
+std::string* findKFSInferInputTensorContentInRawInputs(::inference::ModelInferRequest& request, const std::string& name);
 
-tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize = 1);
-tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize = 1);
+void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
+    const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
+void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+    const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
+
+void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
+
+void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
+void prepareBinaryPredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize);
+
+void prepareBinaryPredictRequestNoShape(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
+void prepareBinaryPredictRequestNoShape(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize);
+
+void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize = 1);
+void prepareBinary4x4PredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize = 1);
+
+template <typename TensorType>
+void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
+
+void checkDummyResponse(const std::string outputName,
+    const std::vector<float>& requestData,
+    ::inference::ModelInferRequest& request, ::inference::ModelInferResponse& response, int seriesLength, int batchSize = 1);
 
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
@@ -219,6 +217,31 @@ void checkIncrement4DimResponse(const std::string outputName,
     }
 
     T* actual_output = (T*)output_proto.tensor_content().data();
+    T* expected_output = (T*)expectedData.data();
+    const int dataLengthToCheck = elementsCount * sizeof(T);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+}
+
+template <typename T>
+void checkIncrement4DimResponse(const std::string outputName,
+    const std::vector<T>& expectedData,
+    ::inference::ModelInferRequest& request,
+    ::inference::ModelInferResponse& response,
+    const std::vector<size_t>& expectedShape) {
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.mutable_outputs(0)->name(), outputName);
+
+    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
+
+    ASSERT_EQ(response.raw_output_contents(0).size(), elementsCount * sizeof(T));
+    ASSERT_EQ(response.outputs(0).shape_size(), expectedShape.size());
+    for (size_t i = 0; i < expectedShape.size(); i++) {
+        ASSERT_EQ(response.outputs(0).shape(i), expectedShape[i]);
+    }
+
+    T* actual_output = (T*)response.raw_output_contents(0).data();
     T* expected_output = (T*)expectedData.data();
     const int dataLengthToCheck = elementsCount * sizeof(T);
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
@@ -259,9 +282,11 @@ static std::vector<T> asVector(const std::string& tensor_content) {
 }
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {
+    ovms::MetricRegistry registry;
+
 public:
     ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "") :
-        ovms::ModelManager(modelCacheDirectory) {}
+        ovms::ModelManager(modelCacheDirectory, &registry) {}
     ~ConstructorEnabledModelManager() {
         join();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
@@ -324,6 +349,7 @@ static ovms::NodeLibrary createLibraryMock() {
 }
 
 extern bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);
+extern bool isShapeTheSame(const google::protobuf::RepeatedField<int64_t>&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
@@ -364,3 +390,85 @@ static const std::vector<ovms::Precision> UNSUPPORTED_INPUT_PRECISIONS{
     ovms::Precision::BOOL
     // ovms::Precision::CUSTOM)
 };
+
+static const std::vector<ovms::Precision> SUPPORTED_KFS_INPUT_PRECISIONS{
+    // ovms::Precision::UNSPECIFIED,
+    // ovms::Precision::MIXED,
+    ovms::Precision::FP64,
+    ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    // InferenceEngine::Precision::Q78,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+    ovms::Precision::I64,
+    ovms::Precision::U32,
+    ovms::Precision::U64,
+    // ovms::Precision::BIN,
+    ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+static const std::vector<ovms::Precision> UNSUPPORTED_KFS_INPUT_PRECISIONS{
+    ovms::Precision::UNDEFINED,
+    ovms::Precision::MIXED,
+    // ovms::Precision::FP64,
+    // ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    ovms::Precision::Q78,
+    // ovms::Precision::I16,
+    // ovms::Precision::U8,
+    // ovms::Precision::I8,
+    // ovms::Precision::U16,
+    // ovms::Precision::I32,
+    // ovms::Precision::I64,
+    // ovms::Precision::U32,
+    // ovms::Precision::U64,
+    ovms::Precision::BIN,
+    // ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+static const std::vector<ovms::Precision> SUPPORTED_KFS_INPUT_PRECISIONS_TENSORINPUTCONTENT{
+    // ovms::Precision::UNSPECIFIED,
+    // ovms::Precision::MIXED,
+    ovms::Precision::FP64,
+    ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    // ovms::Precision::Q78,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+    ovms::Precision::I64,
+    ovms::Precision::U32,
+    ovms::Precision::U64,
+    // ovms::Precision::BIN,
+    ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+static const std::vector<ovms::Precision> UNSUPPORTED_KFS_INPUT_PRECISIONS_TENSORINPUTCONTENT{
+    ovms::Precision::UNDEFINED,
+    ovms::Precision::MIXED,
+    // ovms::Precision::FP64,
+    // ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    ovms::Precision::Q78,
+    // ovms::Precision::I16,
+    // ovms::Precision::U8,
+    // ovms::Precision::I8,
+    // ovms::Precision::U16,
+    // ovms::Precision::I32,
+    // ovms::Precision::I64,
+    // ovms::Precision::U32,
+    // ovms::Precision::U64,
+    ovms::Precision::BIN,
+    // ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+void randomizePort(std::string& port);

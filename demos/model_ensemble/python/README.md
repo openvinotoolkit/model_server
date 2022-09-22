@@ -17,6 +17,9 @@ cd model_server/demos/model_ensemble/python
 ```
 
 Repository preparation is simplified with `make` script, just run `make` in this repository.
+```bash
+make
+```
 
 The steps in `Makefile` are:
 
@@ -25,7 +28,7 @@ The steps in `Makefile` are:
 3. Prepare argmax model with `(1, 1001)` input shapes to match output of the googlenet and resnet output shapes. The generated model will sum inputs and calculate the index with the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset.
 4. Convert models to IR format and [prepare models repository](../../../docs/models_repository.md).
 
-```
+```bash
 ...
 models
 ├── argmax
@@ -52,8 +55,8 @@ models
 Pipelines need to be defined in the configuration file to use them. The same configuration file is used to define served models and served pipelines.
 
 Use the [config.json located here](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/model_ensemble/python/config.json), the content is as follows:
-```
-~$ cat config.json
+```bash
+cat config.json
 {
     "model_config_list": [
         {
@@ -117,7 +120,7 @@ Use the [config.json located here](https://github.com/openvinotoolkit/model_serv
                                     "data_item": "probability"}}
                     ], 
                     "outputs": [
-                        {"data_item": "argmax/Squeeze",
+                        {"data_item": "argmax:0",
                          "alias": "most_probable_label"}
                     ] 
                 }
@@ -135,21 +138,21 @@ In the `model_config_list` section, three models are defined as usual. We can re
 
 ## Step 3: Start the Model Server
 
-1. Run command to start the Model Server
-```
-$ docker run --rm -v $(pwd)/models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
+Run command to start the Model Server
+```bash
+docker run --rm -v $(pwd)/models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100 --log_level DEBUG
 ```
 
 ## Step 4: Requesting the service
 
 Input images can be sent to the service requesting resource name `image_classification_pipeline`. There is an example client doing that:
 
-1. Check accuracy of the pipeline by running the client in another terminal:
-```
-~$ cd model_server/client/python/tensorflow-serving-api/samples
-~/model_server/client/python/tensorflow-serving-api/samples$ virtualenv .venv
-~/model_server/client/python/tensorflow-serving-api/samples$ . .venv/bin/activate && pip3 install -r requirements.txt
-(.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_predict_resnet.py --pipeline_name image_classification_pipeline --images_numpy_path ../../imgs.npy \
+Check accuracy of the pipeline by running the client in another terminal:
+```bash
+cd ../../../client/python/tensorflow-serving-api/samples
+virtualenv .venv
+. .venv/bin/activate && pip3 install -r requirements.txt
+python3 grpc_predict_resnet.py --pipeline_name image_classification_pipeline --images_numpy_path ../../imgs.npy \
     --labels_numpy_path ../../lbs.npy --grpc_port 9100 --input_name image --output_name label --transpose_input True --transpose_method nchw2nhwc --iterations 10
 Image data range: 0.0 : 255.0
 Start processing:
@@ -214,10 +217,10 @@ Classification accuracy: 100.00
 ## Step 5: Analyze pipeline execution in server logs
 
 By analyzing debug logs and timestamps it is seen that GoogleNet and ResNet model inferences were started in parallel. Just after all inputs became ready - argmax node has started its job.
-```
+```bash
+docker logs <container_id>
 [2022-02-28 11:30:20.159][485][serving][debug][prediction_service.cpp:69] Processing gRPC request for model: image_classification_pipeline; version: 0
 [2022-02-28 11:30:20.159][485][serving][debug][prediction_service.cpp:80] Requested model: image_classification_pipeline does not exist. Searching for pipeline with that name...
-[2022-02-28 11:30:20.159][485][serving][debug][modelmanager.cpp:1305] Requesting pipeline: image_classification_pipeline;
 [2022-02-28 11:30:20.160][485][dag_executor][debug][pipeline.cpp:83] Started execution of pipeline: image_classification_pipeline
 [2022-02-28 11:30:20.160][485][serving][debug][modelmanager.cpp:1280] Requesting model: resnet; version: 0.
 [2022-02-28 11:30:20.160][485][serving][debug][modelmanager.cpp:1280] Requesting model: googlenet; version: 0.
@@ -227,8 +230,8 @@ By analyzing debug logs and timestamps it is seen that GoogleNet and ResNet mode
 ## Step 6: Requesting pipeline metadata
 
 We can use the same gRPC/REST example client as we use for requesting model metadata. The only difference is we specify pipeline name instead of the model name.
-```
-(.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_get_model_metadata.py --grpc_port 9100 --model_name image_classification_pipeline
+```bash
+python3 grpc_get_model_metadata.py --grpc_port 9100 --model_name image_classification_pipeline
 Getting model metadata for model: image_classification_pipeline
 Inputs metadata:
         Input name: image; shape: [1, 224, 224, 3]; dtype: DT_FLOAT

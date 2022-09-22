@@ -15,7 +15,11 @@
 #
 
 ovms_cpp_image_classification:
+	@cp ../../../third_party/opencv/install_opencv.sh ../../../third_party/opencv/opencv_cmake_flags.txt  third_party/opencv
 	@docker build -t ovms_cpp_image_classification:latest --build-arg CLIENT=ovms_cpp_image_classification --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .
+	@rm third_party/opencv/install_opencv.sh third_party/opencv/opencv_cmake_flags.txt
 
 ovms_cpp_benchmark:
+	@cp ../../../third_party/opencv/install_opencv.sh ../../../third_party/opencv/opencv_cmake_flags.txt  third_party/opencv
 	@docker build -t ovms_cpp_benchmark:latest --build-arg CLIENT=ovms_cpp_benchmark --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .
+	@rm third_party/opencv/install_opencv.sh third_party/opencv/opencv_cmake_flags.txt

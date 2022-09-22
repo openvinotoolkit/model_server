@@ -1,5 +1,6 @@
 .venv
 .pytest_cache
+.devcontainer
 .vscode
 .vs
 .idea
@@ -7,6 +8,7 @@
 version
 __pycache__/
 report.json
+trace.json
 bazel-bin
 bazel-out
 bazel-ovms

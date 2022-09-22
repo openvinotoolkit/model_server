@@ -15,11 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
 #include <set>
 #include <string>
 
@@ -33,12 +28,13 @@
 namespace ovms {
 namespace request_validation_utils {
 
+template <typename RequestType>
 Status validate(
-    const tensorflow::serving::PredictRequest& request,
+    const RequestType& request,
     const tensor_map_t& inputsInfo,
     const std::string& servableName,
     const model_version_t servableVersion,
-    const std::set<const char*>& optionalAllowedInputNames = {},
+    const std::set<std::string>& optionalAllowedInputNames = {},
     const Mode batchingMode = Mode::FIXED,
     const shapes_info_map_t& shapeInfo = shapes_info_map_t());
 

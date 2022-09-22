@@ -24,6 +24,7 @@
 #include <boost/algorithm/string.hpp>
 #include <sysexits.h>
 
+#include "logging.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -70,11 +71,16 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<uint>()->default_value(DEFAULT_REST_WORKERS_STRING.c_str()),
                 "REST_WORKERS")
             ("log_level",
-                "serving log level - one of DEBUG, INFO, WARNING, ERROR",
+                "serving log level - one of TRACE, DEBUG, INFO, WARNING, ERROR",
                 cxxopts::value<std::string>()->default_value("INFO"), "LOG_LEVEL")
             ("log_path",
                 "Optional path to the log file",
                 cxxopts::value<std::string>(), "LOG_PATH")
+#ifdef MTR_ENABLED
+            ("trace_path",
+                "Path to the trace file",
+                cxxopts::value<std::string>(), "TRACE_PATH")
+#endif
             ("grpc_channel_arguments",
                 "A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000)",
                 cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS")
@@ -144,6 +150,14 @@ Config& Config::parse(int argc, char** argv) {
                 "Flag indicating model is stateful",
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
+            ("metrics_enable",
+                "Flag enabling metrics endpoint on rest_port.",
+                cxxopts::value<bool>()->default_value("false"),
+                "METRICS")
+            ("metrics_list",
+                "Comma separated list of metrics. If unset, only default metrics will be enabled. Default metrics: ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us. When set, only the listed metrics will be enabled. Optional metrics: ovms_infer_req_queue_size, ovms_infer_req_active.",
+                cxxopts::value<std::string>()->default_value(""),
+                "METRICS_LIST")
             ("idle_sequence_cleanup",
                 "Flag indicating if model is subject to sequence cleaner scans",
                 cxxopts::value<bool>()->default_value("true"),
@@ -162,7 +176,9 @@ Config& Config::parse(int argc, char** argv) {
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         if (result->count("version")) {
-            std::cout << PROJECT_NAME << std::endl;
+            std::string project_name(PROJECT_NAME);
+            std::string project_version(PROJECT_VERSION);
+            std::cout << project_name + " " + project_version << std::endl;
             std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
             exit(EX_OK);
         }
@@ -249,6 +265,24 @@ void Config::validate() {
         exit(EX_USAGE);
     }
 
+    // metrics on rest port
+    if (result->count("metrics_enable") && !result->count("rest_port")) {
+        std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
+        exit(EX_USAGE);
+    }
+
+    // metrics on rest port
+    if ((result->count("metrics_enable") || result->count("metrics_list")) && result->count("config_path")) {
+        std::cerr << "metrics_enable or metrics_list and config_path cant be used together. Use json config file to enable metrics when using config_path." << std::endl;
+        exit(EX_USAGE);
+    }
+
+    // metrics_list without metrics_enable
+    if (!result->count("metrics_enable") && result->count("metrics_list")) {
+        std::cerr << "metrics_enable setting is missing, required when metrics_list is provided" << std::endl;
+        exit(EX_USAGE);
+    }
+
     // check bind addresses:
     if (result->count("rest_bind_address") && check_hostname_or_ip(this->restBindAddress()) == false) {
         std::cerr << "rest_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
@@ -277,9 +311,9 @@ void Config::validate() {
 
     // check log_level values
     if (result->count("log_level")) {
-        std::vector v({"DEBUG", "INFO", "WARNING", "ERROR"});
+        std::vector v({"TRACE", "DEBUG", "INFO", "WARNING", "ERROR"});
         if (std::find(v.begin(), v.end(), this->logLevel()) == v.end()) {
-            std::cerr << "log_level should be one of: DEBUG, INFO, WARNING, ERROR" << std::endl;
+            std::cerr << "log_level should be one of: TRACE, DEBUG, INFO, WARNING, ERROR" << std::endl;
             exit(EX_USAGE);
         }
     }

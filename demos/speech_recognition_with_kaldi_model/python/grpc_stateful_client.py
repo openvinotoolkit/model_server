@@ -50,7 +50,7 @@ def parse_arguments():
     # Example commands:
     # RM_LSTM4F
     # grpc_stateful_client.py --input_path rm_lstm4f/test_feat_1_10.ark --score_path rm_lstm4f/test_score_1_10.ark
-    #     --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_
+    #     --grpc_address localhost --grpc_port 9000 --input_name Parameter:0 --output_name affinetransform:0
     #     --model_name rm_lstm4f --debug
 
     # ASPIRE_TDNN
@@ -89,13 +89,13 @@ def parse_arguments():
     parser.add_argument(
         '--input_name',
         required=False,
-        default='Parameter',
-        help='Specify input tensor name. default: Parameter')
+        default='Parameter:0',
+        help='Specify input tensor name. default: Parameter:0')
     parser.add_argument(
         '--output_name',
         required=False,
-        default='affinetransform/Fused_Add_',
-        help='Specify output name. default: affinetransform/Fused_Add_')
+        default='affinetransform:0',
+        help='Specify output name. default: affinetransform:0')
     parser.add_argument(
         '--model_name',
         default='rm_lstm4f',

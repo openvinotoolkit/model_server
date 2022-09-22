@@ -95,14 +95,6 @@ TEST_F(ModelCacheTest, FlowTestOnlineModifications) {
     ASSERT_EQ(config.parseShapeParameter("(1,10)"), StatusCode::OK);
     ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
-    // TODO: Uncomment once bug is resolved.
-    // https://jira.devtools.intel.com/browse/CVS-68254
-    // Check below is disabled due to OpenVINO bug.
-    // OpenVINO caches 2 similar models even though underlying network is the same.
-    // 1. Model with no reshape operation executed
-    // 2. Model with reshape operation executed to original shape value.
-    // Therefore new cache files are created when we fall back to original (1,10) shape.
-
     // // Check if no new cache file was created.
     // previousCacheFileCount = currentCacheFileCount;
     // currentCacheFileCount = this->getCachedFileCount();

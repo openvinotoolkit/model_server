@@ -30,7 +30,13 @@
 
 #include "logging.hpp"
 #include "opencv2/opencv.hpp"
+#include "profiler.hpp"
 #include "status.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "kfs_grpc_inference_service.hpp"
+#pragma GCC diagnostic pop
 
 namespace ovms {
 
@@ -65,8 +71,9 @@ bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision) {
     return false;
 }
 
-cv::Mat convertStringValToMat(const std::string& stringVal) {
-    std::vector<unsigned char> data(stringVal.begin(), stringVal.end());
+cv::Mat convertStringToMat(const std::string& image) {
+    OVMS_PROFILE_FUNCTION();
+    std::vector<unsigned char> data(image.begin(), image.end());
     cv::Mat dataMat(data, true);
 
     try {
@@ -78,6 +85,7 @@ cv::Mat convertStringValToMat(const std::string& stringVal) {
 }
 
 Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision requestedPrecision) {
+    OVMS_PROFILE_FUNCTION();
     int type = getMatTypeFromTensorPrecision(requestedPrecision);
     if (type == -1) {
         SPDLOG_DEBUG("Error during binary input conversion: not supported precision: {}", toString(requestedPrecision));
@@ -89,6 +97,7 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision 
 }
 
 Status validateLayout(const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     static const std::string binarySupportedLayout = "N...HWC";
     if (!tensorInfo->getLayout().createIntersection(Layout(binarySupportedLayout), tensorInfo->getShape().size()).has_value()) {
         SPDLOG_DEBUG("Endpoint needs to be compatible with {} to support binary image inputs, actual: {}",
@@ -107,6 +116,7 @@ bool resizeNeeded(const cv::Mat& image, const dimension_value_t height, const di
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t height, const dimension_value_t width) {
+    OVMS_PROFILE_FUNCTION();
     cv::resize(src, dst, cv::Size(width, height));
     return StatusCode::OK;
 }
@@ -114,6 +124,7 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t heigh
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage) {
+    OVMS_PROFILE_FUNCTION();
 
     // At this point we can either have nhwc format or pretendant to be nhwc but with ANY layout in pipeline info
     Dimension numberOfChannels;
@@ -142,6 +153,7 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
 }
 
 Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage) {
+    OVMS_PROFILE_FUNCTION();
     if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
         return StatusCode::OK;
     }
@@ -152,6 +164,7 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
 
 bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
+    OVMS_PROFILE_FUNCTION();
     if (!tensorInfo->getBatchSize().has_value()) {
         return true;
     }
@@ -164,6 +177,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
     // This forces binary utility to create tensors with resolution inherited from first batch of binary input image (request).
     // In case of any dimension in endpoint shape is dynamic, we need to validate images against first image resolution.
     // Otherwise we can omit that, and proceed to image resize.
+    OVMS_PROFILE_FUNCTION();
     if (firstBatchImage && enforceResolutionAlignment) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
         if (!status.ok()) {
@@ -175,6 +189,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
+    OVMS_PROFILE_FUNCTION();
     auto status = validateLayout(tensorInfo);
     if (!status.ok()) {
         return status;
@@ -194,10 +209,45 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
-    for (size_t i = 0; i < src.string_val_size(); i++) {
+    for (int i = 0; i < src.string_val_size(); i++) {
         if (src.string_val(i).size() <= 0) {
             return StatusCode::STRING_VAL_EMPTY;
         }
+    }
+
+    return StatusCode::OK;
+}
+
+Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
+    const ::inference::ModelInferRequest::InferInputTensor& src) {
+    OVMS_PROFILE_FUNCTION();
+    auto status = validateLayout(tensorInfo);
+    if (!status.ok()) {
+        return status;
+    }
+    // 4 for default pipelines, 5 for pipelines with demultiplication at entry
+    bool isShapeLengthValid = tensorInfo->getShape().size() == 4 ||
+                              (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
+    if (!isShapeLengthValid) {
+        return StatusCode::INVALID_SHAPE;
+    }
+
+    if (checkBatchSizeMismatch(tensorInfo, src.contents().bytes_contents_size())) {
+        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
+            tensorInfo->getMappedName(),
+            tensorInfo->getBatchSize().has_value() ? tensorInfo->getBatchSize().value().toString() : std::string{"none"},
+            src.contents().bytes_contents_size());
+        return StatusCode::INVALID_BATCH_SIZE;
+    }
+
+    for (int i = 0; i < src.contents().bytes_contents_size(); i++) {
+        if (src.contents().bytes_contents(i).size() <= 0) {
+            return StatusCode::BYTES_CONTENTS_EMPTY;
+        }
+    }
+
+    if (src.contents().bytes_contents_size() <= 0) {
+        return StatusCode::BYTES_CONTENTS_EMPTY;
     }
 
     return StatusCode::OK;
@@ -264,7 +314,25 @@ bool isResizeSupported(const std::shared_ptr<TensorInfo>& tensorInfo) {
     return true;
 }
 
-Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+const std::string& getBinaryInput(const tensorflow::TensorProto& tensor, size_t i) {
+    return tensor.string_val(i);
+}
+
+const std::string& getBinaryInput(const ::inference::ModelInferRequest::InferInputTensor& tensor, size_t i) {
+    return tensor.contents().bytes_contents(i);
+}
+
+int getBinaryInputsSize(const tensorflow::TensorProto& tensor) {
+    return tensor.string_val_size();
+}
+
+int getBinaryInputsSize(const ::inference::ModelInferRequest::InferInputTensor& tensor) {
+    return tensor.contents().bytes_contents_size();
+}
+
+template <typename TensorType>
+Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     Dimension targetHeight = getTensorInfoHeightDim(tensorInfo);
     Dimension targetWidth = getTensorInfoWidthDim(tensorInfo);
 
@@ -272,11 +340,10 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
     bool resizeSupported = isResizeSupported(tensorInfo);
     bool enforceResolutionAlignment = !resizeSupported;
 
-    for (int i = 0; i < src.string_val_size(); i++) {
-        cv::Mat image = convertStringValToMat(src.string_val(i));
+    for (int i = 0; i < getBinaryInputsSize(src); i++) {
+        cv::Mat image = convertStringToMat(getBinaryInput(src, i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
-
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
         auto status = validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
         if (status != StatusCode::OK) {
@@ -311,18 +378,17 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             image = std::move(imageResized);
         }
 
-        if (i == 0 && src.string_val_size() > 1) {
-            // TODO: CVS-78796 Check if the total bytes for tensor will not exceed 1GB.
-            // Multiply src.string_val_size() * image resolution * precision size
-        }
+        // if (i == 0 && src.contents().bytes_contents_size() > 1) {
+        //     // Multiply src.string_val_size() * image resolution * precision size
+        // }
 
         images.push_back(image);
     }
 
     return StatusCode::OK;
 }
-
 shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     shape_t dims;
     dims.push_back(images.size());
     if (tensorInfo->isInfluencedByDemultiplexer()) {
@@ -335,6 +401,7 @@ shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared
 }
 
 ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     ov::Shape shape = getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::Tensor tensor(precision, shape);
@@ -347,6 +414,7 @@ ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::s
 }
 
 ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     switch (tensorInfo->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
@@ -367,23 +435,26 @@ ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_p
     }
 }
 
-Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo) {
+template <typename TensorType>
+Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;
     }
 
     std::vector<cv::Mat> images;
-
     status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
     if (!status.ok()) {
         return status;
     }
-
     tensor = convertMatsToTensor(images, tensorInfo);
     if (!tensor) {
         return StatusCode::IMAGE_PARSING_FAILED;
     }
     return StatusCode::OK;
 }
+
+template Status convertBinaryRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
+template Status convertBinaryRequestTensorToOVTensor<::inference::ModelInferRequest::InferInputTensor>(const ::inference::ModelInferRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
 }  // namespace ovms

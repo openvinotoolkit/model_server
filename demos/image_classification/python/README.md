@@ -20,6 +20,9 @@ docker run -d -v $PWD/model:/models -p 9000:9000 openvino/model_server:latest --
 
 ## Run the client:
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/image_classification/python
+
 python image_classification.py --help
 usage: image_classification.py [-h] [--images_list IMAGES_LIST]
                               [--grpc_address GRPC_ADDRESS]

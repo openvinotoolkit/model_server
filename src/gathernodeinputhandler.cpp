@@ -21,6 +21,7 @@
 #include "logging.hpp"
 #include "nodesessionmetadata.hpp"
 #include "ov_utils.hpp"
+#include "profiler.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
@@ -35,31 +36,36 @@ GatherNodeInputHandler::GatherNodeInputHandler(uint32_t inputsMissingCount, cons
         std::multiplies<session_id_t>());
 }
 
-Status GatherNodeInputHandler::setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId) {
+Status GatherNodeInputHandler::setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId) {
     auto inputsShardsIt = shardsStorage.find(inputName);
     if (inputsShardsIt == shardsStorage.end()) {
-        shard_map_t shardMap{{shardId, tensor}};
+        shard_map_t shardMap{{shardId, tensor.getActualTensor()}};
         auto itDidInsertPair = shardsStorage.emplace(inputName, std::move(shardMap));
         if (!itDidInsertPair.second) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to insert the same input: {} twice with the same shardId: {}", inputName, shardId);
             return StatusCode::INTERNAL_ERROR;
         }
     } else {
-        auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, tensor);
+        auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, tensor.getActualTensor());
         if (!itDidEmplacePair.second) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to put the same input: {} shard: {} twice", inputName, shardId);
             return StatusCode::INTERNAL_ERROR;
         }
     }
+    if (tensor.hasSource()) {
+        sourceTensorRefs.push_back(tensor.getSourceTensor());
+    }
     return StatusCode::OK;
 }
 
 Status GatherNodeInputHandler::notifyFinishedDependency() {
+    OVMS_PROFILE_FUNCTION();
     NodeInputHandler::notifyFinishedDependency();
     if (remainingDependencies > 0) {
         return StatusCode::OK;
     }
     for (auto& [inputName, shardMap] : shardsStorage) {
+        OVMS_PROFILE_SCOPE("Gather Tensor");
         const auto shardsCount = shardMap.size();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Consolidating: {} shards for input: {}", shardsCount, inputName);
         session_id_t firstShardId = 0;
@@ -71,11 +77,12 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
             collapsingDetails->collapsedSessionSizes.begin(),
             collapsingDetails->collapsedSessionSizes.end());
         ov::Tensor consolidatedTensor;
-        auto status = createSharedTensor(consolidatedTensor, precision, newDims);
+        auto status = prepareConsolidatedTensor(consolidatedTensor, inputName, precision, newDims);
         if (!status.ok()) {
             return status;
         }
         for (auto& [shardId, tensor] : shardMap) {
+            OVMS_PROFILE_SCOPE("Copy Shard");
             if ((tensor.get_element_type() != precision) ||
                 (tensor.get_shape() != firstShardDims)) {
                 std::stringstream firstShardShapeStream;
@@ -101,4 +108,9 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
     }
     return StatusCode::OK;
 }
+
+Status GatherNodeInputHandler::prepareConsolidatedTensor(ov::Tensor& tensorOut, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape) const {
+    return createSharedTensor(tensorOut, precision, shape);
+}
+
 }  // namespace ovms

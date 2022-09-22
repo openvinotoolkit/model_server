@@ -140,8 +140,12 @@ class RequestingThread(threading.Thread):
         while (True):
             self.wait_for_input()
             if force_exit:
+                print("Detected exit signal...")
                 break
             is_success, buffer = cv2.imencode(".jpg", self.input_frame)
+            if not is_success:
+                print("Encoding a frame as JPG failed")
+                continue
             request = predict_pb2.PredictRequest()
             request.model_spec.name = request.model_spec.name = 'detect_text_images' if args.use_case == 'ocr' else 'text'
             request.inputs['image'].CopyFrom(make_tensor_proto([buffer.tobytes()], shape=[1]))
@@ -151,6 +155,7 @@ class RequestingThread(threading.Thread):
             try:
                 result = stub.Predict(request, 10.0)
             except grpc.RpcError as err:
+                print("Encountered gRPC error")
                 if err.code() == grpc.StatusCode.ABORTED:
                     pass
                 else:
@@ -175,11 +180,22 @@ threads = [RequestingThread(i) for i in range(args.num_threads)]
 for thread in threads:
     thread.start()
 
+def finish():
+    global force_exit
+    force_exit = True
+    for thread in threads:
+        thread.notify_input_ready()
+        thread.join()
 
 def grab_frame(cap):
     WIDTH = 704
     HEIGHT = 704
-    ret, frame = cap.read()
+    success, frame = cap.read()
+    if not success:
+        print("[WARNING] No Input frame")
+        finish()
+        return None
+
     # crop and resize if original image is too small or too big for the model
     if frame.shape[0] > HEIGHT and frame.shape[1] > WIDTH:
         frame = frame[0:HEIGHT, 0:WIDTH]
@@ -195,7 +211,11 @@ frames_processed = 0
 last_display_time = time.time()
 app_start_time = time.time()
 
-while(True):
+if grab_frame(cap) is None:
+    print("[ERROR] Check camera input...")
+    force_exit = True
+
+while not force_exit:
     if not threads[i].is_initialized():
         threads[i].set_input(grab_frame(cap))
         i = (i + 1) % args.num_threads
@@ -218,15 +238,13 @@ while(True):
     
     print(f"ThreadID: {i:3}; Current FPS: {current_fps:8.2f}; Average FPS: {avg_fps:8.2f}; Average latency: {avg_latency_for_thread:8.2f}ms")
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        force_exit = True
-        for thread in threads:
-            thread.notify_input_ready()
-            thread.join()
+        finish()
         break
 
     i = (i + 1) % args.num_threads
 
-
+finish()
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
+print(f"Finished.")

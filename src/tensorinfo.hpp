@@ -23,15 +23,14 @@
 
 #include <openvino/openvino.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
 #include "layout.hpp"
 #include "precision.hpp"
 #include "shape.hpp"
+
+namespace google::protobuf {
+template <typename T>
+class RepeatedField;
+}
 
 namespace ovms {
 
@@ -167,14 +166,6 @@ public:
          */
     void setLayout(const Layout& layout);
 
-    /**
-         * @brief Get the Precision As DataType object
-         * 
-         * @return const tensorflow::DataType
-         */
-    tensorflow::DataType getPrecisionAsDataType() const;
-
-    static tensorflow::DataType getPrecisionAsDataType(Precision precision);
     ov::element::Type getOvPrecision() const;
 
     /**
@@ -182,7 +173,14 @@ public:
         *
         * @return const std::string
         */
-    std::string getPrecisionAsString() const;
+    const std::string& getPrecisionAsString() const;
+
+    /**
+        * @brief Get the Precision As String object representing KFS precision
+        *
+        * @return const std::string
+        */
+    const std::string& getPrecisionAsKFSPrecision() const;
 
     /**
         * @brief Get the string representation of TensorInfo object
@@ -191,9 +189,9 @@ public:
         */
     std::string asString() const;
 
-    static std::string getPrecisionAsString(Precision precision);
+    static const std::string& getPrecisionAsString(Precision precision);
 
-    static const std::string getDataTypeAsString(tensorflow::DataType dataType);
+    static const std::string& getPrecisionAsKFSPrecision(Precision precision);
 
     /**
          * @brief Get the layout name from Layout
@@ -201,7 +199,7 @@ public:
          * @param Layout
          * @return std::string
          */
-    static std::string getStringFromLayout(const Layout& layout);
+    static const std::string& getStringFromLayout(const Layout& layout);
 
     /**
          * @brief Get the Layout string
@@ -231,10 +229,10 @@ public:
 
     static std::string shapeToString(const shape_t& shape);
 
-    static std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
-
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
     const std::optional<Dimension> getBatchSize() const;
 };
+std::string tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& tensorShape);
+
 }  // namespace ovms

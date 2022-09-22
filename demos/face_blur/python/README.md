@@ -28,22 +28,22 @@ cd model_server/demos/face_blur/python
 
 You can prepare the workspace that contains all the above by just running
 
-```
+```bash
 make
 ```
 
 ### Final directory structure
 
 Once the `make` procedure is finished, you should have `workspace` directory ready with the following content.
-```
+```bash
 workspace
-|── config.json
-|── lib
-│   └── libcustom_node_face_blur.so
-└── face-detection-retail-0004
-    └── 1
-        ├── face-detection-retail-0004.bin
-        └── face-detection-retail-0004.xml
+├── config.json
+├── face-detection-retail-0004
+│   └── 1
+│       ├── face-detection-retail-0004.bin
+│       └── face-detection-retail-0004.xml
+└── lib
+    └── libcustom_node_face_blur.so
 ```
 
 ## Deploying OVMS

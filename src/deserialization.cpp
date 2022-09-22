@@ -19,6 +19,7 @@ namespace ovms {
 
 template <>
 Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     Status status;
     try {
         requester.set_tensor(name, tensor);
@@ -40,12 +41,37 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
-    for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+    for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         shape.push_back(requestInput.tensor_shape().dim(i).size());
     }
     ov::element::Type precision = tensorInfo->getOvPrecision();
     return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.tensor_content().data())));
+}
+
+ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::string& buffer) {
+    OVMS_PROFILE_FUNCTION();
+    ov::Shape shape;
+    for (int i = 0; i < requestInput.shape_size(); i++) {
+        shape.push_back(requestInput.shape().at(i));
+    }
+    ov::element::Type precision = tensorInfo->getOvPrecision();
+    ov::Tensor tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(buffer.data())));
+    return tensor;
+}
+ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
+    ov::Shape shape;
+    for (int i = 0; i < requestInput.shape_size(); i++) {
+        shape.push_back(requestInput.shape().at(i));
+    }
+    ov::element::Type precision = tensorInfo->getOvPrecision();
+    ov::Tensor tensor(precision, shape);
+    return tensor;
 }
 
 }  // namespace ovms

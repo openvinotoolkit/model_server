@@ -33,6 +33,7 @@
 
 #include "customloaderconfig.hpp"
 #include "customloaderinterface.hpp"
+#include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -42,9 +43,12 @@
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
-namespace ovms {
+namespace inference {
+class ModelInferRequest;
+class ModelInferResponse;
+}  // namespace inference
 
-using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
+namespace ovms {
 
 class DynamicModelParameter {
 public:
@@ -70,6 +74,7 @@ private:
 };
 
 class PipelineDefinition;
+class MetricRegistry;
 
 /**
      * @brief This class contains all the information about model
@@ -145,6 +150,11 @@ protected:
     static constexpr std::array<const char*, 1> ONNX_MODEL_FILES_EXTENSIONS{".onnx"};
 
     /**
+      * @brief Stores required paddlepaddle model files extensions to be able to load model
+      */
+    static constexpr std::array<const char*, 2> PADDLE_MODEL_FILES_EXTENSIONS{".pdmodel", ".pdiparams"};
+
+    /**
          * @brief Notifies model instance users who wait for loading
          */
     std::condition_variable modelLoadedNotify;
@@ -165,6 +175,8 @@ protected:
          * @brief Lock to disable concurrent modelinstance load/unload/reload
          */
     std::recursive_mutex loadingMutex;
+
+    std::unique_ptr<ModelMetricReporter> reporter;
 
     /**
          * @brief Load OV Engine
@@ -218,7 +230,8 @@ protected:
          */
     Status loadOVModelUsingCustomLoader();
 
-    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
+    template <typename RequestType>
+    const Status validate(const RequestType* request);
 
 private:
     /**
@@ -310,12 +323,7 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore) :
-        ieCore(ieCore),
-        name(name),
-        version(version),
-        subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)),
-        status(name, version) { isCustomLoaderConfigChanged = false; }
+    ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr);
 
     /**
          * @brief Destroy the Model Instance object
@@ -503,8 +511,10 @@ public:
          * 
          * @return Status
          */
-
-    Status reloadModelIfRequired(Status validationStatus, const tensorflow::serving::PredictRequest* requestProto,
+    Status reloadModelIfRequired(
+        Status validationStatus,
+        const std::optional<Dimension>& requestedBatchSize,
+        const std::map<std::string, shape_t>& requestedShapes,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     /**
@@ -543,5 +553,12 @@ public:
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+    virtual Status infer(const ::inference::ModelInferRequest* requestProto,
+        ::inference::ModelInferResponse* responseProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+
+    ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
+
+    uint32_t getNumOfStreams() const;
 };
 }  // namespace ovms

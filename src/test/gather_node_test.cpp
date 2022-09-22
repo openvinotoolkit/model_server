@@ -26,6 +26,7 @@
 #include "../dlnodesession.hpp"
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
+#include "../gatherexitnodeinputhandler.hpp"
 #include "../gathernodeinputhandler.hpp"
 #include "../logging.hpp"
 #include "../modelconfig.hpp"
@@ -53,8 +54,10 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
     std::vector<std::vector<size_t>> shapes{{1, 10}, {1, 2}};
     std::vector<ov::element::Type_t> precisions{ov::element::Type_t::f32, ov::element::Type_t::f32};
     std::vector<std::vector<float>> tensorsData{{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67}, {1., 3}};
-    std::vector<ov::Tensor> inputTensors{createSharedTensor(precisions[0], shapes[0], tensorsData[0].data()), createSharedTensor(precisions[1], shapes[1], tensorsData[1].data())};
-    NodeSessionMetadata meta;
+    std::vector<TensorWithSource> inputTensors{
+        TensorWithSource(createSharedTensor(precisions[0], shapes[0], tensorsData[0].data())),
+        TensorWithSource(createSharedTensor(precisions[1], shapes[1], tensorsData[1].data()))};
+    NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     const std::string demultiplexerName = "NOT_IMPORTANT_NAME";
     auto newMeta = meta.generateSubsessions(demultiplexerName, shardsCount)[0];
     auto [_, collapsingDetails] = newMeta.getCollapsedSessionMetadata({demultiplexerName});
@@ -92,7 +95,7 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     ov::element::Type_t precision{ov::element::Type_t::f32};
     const std::vector<session_id_t> demultiplyCounts{3, 5};  // 3 for first demultiply, 5 for second
     const std::vector<std::string> demultiplexerNodeNames{"firstDemultiplexer", "secondDemultiplexer"};
-    NodeSessionMetadata meta;
+    NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     auto firstLevelMetas = meta.generateSubsessions(demultiplexerNodeNames[0], demultiplyCounts[0]);
     std::vector<std::vector<NodeSessionMetadata>> metadatas(demultiplyCounts[0]);
     for (size_t i = 0; i < demultiplyCounts[0]; ++i) {
@@ -109,7 +112,7 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     for (size_t i = 0; i < demultiplyCounts[0]; ++i) {
         for (size_t j = 0; j < demultiplyCounts[1]; ++j) {
             auto index = i * demultiplyCounts[1] + j;
-            auto tensor = createSharedTensor(precision, shape, (void*)(tensorsData.data() + index * elementCountPerShard));
+            auto tensor = TensorWithSource(createSharedTensor(precision, shape, (void*)(tensorsData.data() + index * elementCountPerShard)));
             ASSERT_FALSE(gInputHandler.isReady());
             SPDLOG_DEBUG("i: {}, j: {}, metadatas.size: {}, metadatas[i].size() :{}", i, j, metadatas.size(), metadatas[i].size());
             auto shardId = metadatas[i][j].getShardId({demultiplexerNodeNames[0], demultiplexerNodeNames[1]});
@@ -134,7 +137,9 @@ TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShoul
     std::vector<std::vector<size_t>> shapes{{1, 10}, {1, 9}};
     ov::element::Type_t precision{ov::element::Type_t::f32};
     std::vector<float> tensorsData{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67};
-    std::vector<ov::Tensor> inputTensors{createSharedTensor(precision, shapes[0], tensorsData.data()), createSharedTensor(precision, shapes[1], tensorsData.data())};
+    std::vector<TensorWithSource> inputTensors{
+        TensorWithSource(createSharedTensor(precision, shapes[0], tensorsData.data())),
+        TensorWithSource(createSharedTensor(precision, shapes[1], tensorsData.data()))};
     const session_id_t shardsCount = 2;  // subsessionSize/demultiplyCount
     CollapseDetails collapsingDetails{{std::string("NOT_IMPORTANT_DEMULTIPLEXER_NAME")}, {shardsCount}};
     GatherNodeInputHandler gInputHandler(inputNames.size(), collapsingDetails);
@@ -233,9 +238,9 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     auto originalTensor1 = createSharedTensor(precision, shape, nodeRawResults1.data());
     auto originalTensor2 = createSharedTensor(precision, shape, nodeRawResults2.data());
     // prepare session results
-    TensorMap dummy1Result{{DUMMY_MODEL_OUTPUT_NAME, originalTensor1}};
-    TensorMap dummy2Result{{DUMMY_MODEL_OUTPUT_NAME, originalTensor2}};
-    NodeSessionMetadata meta;
+    TensorWithSourceMap dummy1Result{{DUMMY_MODEL_OUTPUT_NAME, TensorWithSource(originalTensor1)}};
+    TensorWithSourceMap dummy2Result{{DUMMY_MODEL_OUTPUT_NAME, TensorWithSource(originalTensor2)}};
+    NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     const session_id_t shardsCount = 2;
     auto subsessions = meta.generateSubsessions(demultiplexerNodeName, shardsCount);
     ASSERT_EQ(subsessions.size(), 2);
@@ -257,4 +262,103 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     std::copy(nodeRawResults1.begin(), nodeRawResults1.end(), resultTensorData.begin());
     std::copy(nodeRawResults2.begin(), nodeRawResults2.end(), resultTensorData.begin() + nodeRawResults1.size());
     EXPECT_EQ(memcmp((char*)((const void*)gatheredTensor.data()), resultTensorData.data(), resultTensorData.size() * sizeof(float)), 0);
+}
+
+class GatherExitNodeInputHandlerTest : public ::testing::Test {
+protected:
+    char* buffer = nullptr;
+    const std::string tensorName = "example_tensor_name";
+    size_t requestedBufferSize = 20;
+};
+
+class TFSGatherExitNodeInputHandlerTest : public GatherExitNodeInputHandlerTest {
+protected:
+    tensorflow::serving::PredictResponse response;
+};
+
+TEST_F(TFSGatherExitNodeInputHandlerTest, IsBufferSet) {
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    EXPECT_NE(buffer, nullptr);
+}
+
+TEST_F(TFSGatherExitNodeInputHandlerTest, BufferPointsToDataInProto) {
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    auto it = response.mutable_outputs()->find(tensorName);
+    ASSERT_NE(it, response.mutable_outputs()->end());
+    auto& proto = it->second;
+    EXPECT_EQ(proto.mutable_tensor_content()->data(), buffer);
+}
+
+TEST_F(TFSGatherExitNodeInputHandlerTest, BufferHasCorrectSize) {
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    auto it = response.mutable_outputs()->find(tensorName);
+    ASSERT_NE(it, response.mutable_outputs()->end());
+    auto& proto = it->second;
+    EXPECT_EQ(proto.mutable_tensor_content()->size(), requestedBufferSize);
+}
+
+TEST_F(TFSGatherExitNodeInputHandlerTest, TensorAlreadyExistsInProto) {
+    auto& existingProto = (*response.mutable_outputs())[tensorName];
+    (void)existingProto;
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::INTERNAL_ERROR);
+}
+
+class KFSGatherExitNodeInputHandlerTest : public GatherExitNodeInputHandlerTest {
+protected:
+    ::inference::ModelInferResponse response;
+
+    ::inference::ModelInferResponse_InferOutputTensor* getPreparedTensor() {
+        ::inference::ModelInferResponse_InferOutputTensor* ptr = nullptr;
+        for (int i = 0; i < response.outputs_size(); i++) {
+            auto* output = response.mutable_outputs(i);
+            if (output->name() == tensorName) {
+                ptr = output;
+                break;
+            }
+        }
+        return ptr;
+    }
+};
+
+TEST_F(KFSGatherExitNodeInputHandlerTest, IsBufferSet) {
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    EXPECT_NE(buffer, nullptr);
+}
+
+TEST_F(KFSGatherExitNodeInputHandlerTest, HasTensorWithExpectedName) {
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    bool hasExpectedTensor = false;
+    for (int i = 0; i < response.outputs_size(); i++) {
+        auto* output = response.mutable_outputs(i);
+        if (output->name() == tensorName) {
+            hasExpectedTensor = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(hasExpectedTensor);
+}
+
+TEST_F(KFSGatherExitNodeInputHandlerTest, HasOneTensor) {
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+}
+
+TEST_F(KFSGatherExitNodeInputHandlerTest, ReturnedBufferMatchesRawOutputContentPtr) {
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.mutable_raw_output_contents(0)->data(), buffer);
+}
+
+TEST_F(KFSGatherExitNodeInputHandlerTest, BufferHasCorrectSizeBufferHasCorrectSize) {
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.mutable_raw_output_contents(0)->size(), requestedBufferSize);
+}
+
+TEST_F(KFSGatherExitNodeInputHandlerTest, TensorAlreadyExistsInProto) {
+    auto* existingProto = response.add_outputs();
+    existingProto->set_name(tensorName);
+    response.add_raw_output_contents();
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::INTERNAL_ERROR);
 }

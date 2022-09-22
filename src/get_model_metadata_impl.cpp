@@ -17,26 +17,41 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
+#include "servablemanagermodule.hpp"
+#include "server.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 using google::protobuf::util::JsonPrintOptions;
 using google::protobuf::util::MessageToJsonString;
 
 namespace ovms {
-Status GetModelMetadataImpl::getModelStatus(
-    const tensorflow::serving::GetModelMetadataRequest* request,
-    tensorflow::serving::GetModelMetadataResponse* response) {
-    auto status = validate(request);
-    if (!status.ok()) {
-        return status;
+GetModelMetadataImpl::GetModelMetadataImpl(ovms::Server& ovmsServer) :
+    modelManager(dynamic_cast<const ServableManagerModule*>(ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
+        const char* message = "Tried to create model metadata impl without servable manager module";
+        SPDLOG_ERROR(message);
+        throw std::logic_error(message);
     }
-    return getModelStatus(request, response, ModelManager::getInstance());
 }
 
 Status GetModelMetadataImpl::getModelStatus(
     const tensorflow::serving::GetModelMetadataRequest* request,
     tensorflow::serving::GetModelMetadataResponse* response,
-    ModelManager& manager) {
+    ExecutionContext context) const {
+    auto status = validate(request);
+    if (!status.ok()) {
+        return status;
+    }
+    return getModelStatus(request, response, modelManager, context);
+}
+
+Status GetModelMetadataImpl::getModelStatus(
+    const tensorflow::serving::GetModelMetadataRequest* request,
+    tensorflow::serving::GetModelMetadataResponse* response,
+    ModelManager& manager,
+    ExecutionContext context) {
     const auto& name = request->model_spec().name();
     model_version_t version = request->model_spec().has_version() ? request->model_spec().version().value() : 0;
 
@@ -47,7 +62,9 @@ Status GetModelMetadataImpl::getModelStatus(
         if (!pipelineDefinition) {
             return StatusCode::MODEL_NAME_MISSING;
         }
-        return buildResponse(*pipelineDefinition, response, manager);
+        auto status = buildResponse(*pipelineDefinition, response, manager);
+        INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getGetModelMetadataRequestMetric(context, status.ok()));
+        return status;
     }
 
     std::shared_ptr<ModelInstance> instance = nullptr;
@@ -55,19 +72,21 @@ Status GetModelMetadataImpl::getModelStatus(
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
         instance = model->getModelInstanceByVersion(version);
         if (instance == nullptr) {
-            SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     } else {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
-            SPDLOG_WARN("GetModelMetadata requested model {}; default version is missing", name);
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; default version is missing", name);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     }
 
-    return buildResponse(instance, response);
+    auto status = buildResponse(instance, response);
+    INCREMENT_IF_ENABLED(instance->getMetricReporter().getGetModelMetadataRequestMetric(context, status.ok()));
+    return status;
 }
 
 Status GetModelMetadataImpl::validate(
@@ -96,7 +115,7 @@ void GetModelMetadataImpl::convert(
     for (const auto& [name, tensor] : from) {
         auto& input = (*to)[name];
 
-        input.set_dtype(tensor->getPrecisionAsDataType());
+        input.set_dtype(getPrecisionAsDataType(tensor->getPrecision()));
 
         // Since this method is used for models and pipelines we cannot rely on tensor getMappedName().
         // In both cases we can rely on tensor_map key values as final names.
@@ -107,10 +126,6 @@ void GetModelMetadataImpl::convert(
             if (dim.isStatic()) {
                 input.mutable_tensor_shape()->add_dim()->set_size(dim.getStaticValue());
             } else {
-                // TODO: Add more detailed information about dimension.
-                // Possible range and name of dimension.
-                // Use TensorShapeProto_Dim::name string field.
-                // JIRA: https://jira.devtools.intel.com/browse/CVS-74881
                 input.mutable_tensor_shape()->add_dim()->set_size(DYNAMIC_DIMENSION);
             }
         }

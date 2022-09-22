@@ -177,23 +177,29 @@ def exception_catcher(when: str, outcome):
 
 def get_docker_image_os_version_from_container():
     client = docker.from_env()
-
-    output = client.containers.run(image=image,
-                                   entrypoint=["/bin/bash", "-c"],
-                                   command="'cat /etc/*-release'")
-    output = output.decode("utf-8")
-    os_distname = re.search('^PRETTY_NAME="(.+)"\n', output, re.MULTILINE).group(1)
+    cmd = 'cat /etc/os-release'
+    os_distname = "__invalid__"
+    try:
+        output = client.containers.run(image=image, entrypoint=cmd)
+        output = output.decode("utf-8")
+        os_distname = re.search('^PRETTY_NAME="(.+)"\n', output, re.MULTILINE).group(1)
+    except AttributeError as e:
+        logger.error(f"Cannot find complete os version information.\n{cmd}\n{output}")
 
     return os_distname
 
 
 def get_ov_and_ovms_version_from_container():
     client = docker.from_env()
-    output = client.containers.run(image=image,
-                                   entrypoint=["/ovms/bin/ovms", "--version"])
-    output = output.decode("utf-8")
-    _ovms_version = re.search('OpenVINO Model Server (.+)\n', output, re.MULTILINE).group(1)
-    _ov_version = re.search('OpenVINO backend (.+)\n', output, re.MULTILINE).group(1)
+    cmd = "/ovms/bin/ovms --version"
+    _ov_version, _ovms_version = ["__invalid__"] * 2
+    try:
+        output = client.containers.run(image=image, entrypoint=cmd)
+        output = output.decode("utf-8")
+        _ovms_version = re.search('OpenVINO Model Server (.+)\n', output, re.MULTILINE).group(1)
+        _ov_version = re.search('OpenVINO backend (.+)\n', output, re.MULTILINE).group(1)
+    except AttributeError as e:
+        logger.error(f"Cannot find complete ovms version information.\n{cmd}\n{output}")
 
     return _ov_version, _ovms_version
 

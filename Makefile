@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2021 Intel Corporation
+# Copyright (c) 2020-2022 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ BASE_OS ?= ubuntu
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 20.04
-BASE_OS_TAG_REDHAT ?= 8.5
+BASE_OS_TAG_REDHAT ?= 8.6
 
 INSTALL_RPMS_FROM_URL ?=
 
@@ -47,14 +47,20 @@ OV_SOURCE_BRANCH ?= master
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
-APT_OVCV_PACKAGE ?= openvino-opencv-2022.1.0
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
+MINITRACE ?= OFF
 
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
   BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "
 else
   BAZEL_DEBUG_FLAGS=" --strip=never "
+endif
+
+ifeq ($(MINITRACE),ON)
+  MINITRACE_FLAGS="--copt=-DMTR_ENABLED"
+else
+  MINITRACE_FLAGS=""
 endif
 
 # Option to Override release image.
@@ -66,28 +72,28 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   INSTALL_DRIVER_VERSION ?= "21.48.21782"
-  DLDT_PACKAGE_URL ?=
-  OPENVINO_OPENCV_DOWNLOAD_SERVER ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_ubuntu20_2022.2.0.7713.af16ea1d79a_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "21.38.21026"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/l_openvino_toolkit_runtime_rhel8_p_2022.1.0.643.tgz
-  OPENVINO_OPENCV_DOWNLOAD_SERVER ?=
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_rhel8_2022.2.0.7713.af16ea1d79a_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2022.1"
+PRODUCT_VERSION ?= "2022.2"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
+
+BUILD_CUSTOM_NODES ?= true
 
 .PHONY: default docker_build \
 
@@ -100,9 +106,9 @@ venv:$(ACTIVATE)
 $(ACTIVATE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
-	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip
-	@. $(ACTIVATE); pip$(PY_VERSION) install -vUqq setuptools
-	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r tests/requirements.txt --use-deprecated=legacy-resolver
+	@. $(ACTIVATE); pip3 install --upgrade pip
+	@. $(ACTIVATE); pip3 install -vUqq setuptools
+	@. $(ACTIVATE); pip3 install -qq -r tests/requirements.txt --use-deprecated=legacy-resolver
 	@touch $(ACTIVATE)
 
 style: venv clang-format
@@ -149,14 +155,20 @@ clang-format: venv
 
 .PHONY: docker_build
 docker_build:
+ifeq ($(BUILD_CUSTOM_NODES),true)
+	@echo "Building custom nodes"
+	@cd src/custom_nodes && make BASE_OS=$(BASE_OS)
+endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
 	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
-	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME}\ ${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
+	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME})'
+	@bash -c '$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
+	@docker pull $(BASE_IMAGE)
 endif
 ifneq ($(OVMS_METADATA_FILE),)
 	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
@@ -169,11 +181,11 @@ endif
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
-		--build-arg APT_OVCV_PACKAGE=$(APT_OVCV_PACKAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
+		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg OPENVINO_OPENCV_DOWNLOAD_SERVER=$(OPENVINO_OPENCV_DOWNLOAD_SERVER) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg JOBS=$(JOBS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \

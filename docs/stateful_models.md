@@ -22,31 +22,39 @@ Some models might take the whole sequence of data as an input and iterate over t
 
 Serving stateful model in OpenVINO Model Server is very similar to serving stateless models. The only difference is that for stateful models you need to set `stateful` flag in the model configuration.
 
+* Download and prepare example model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
+
+```bash
+mkdir models && cd models
+wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/
+docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu20_dev:latest mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
+```
+
 * Starting OVMS with stateful model via command line:
 
-```
-docker run -d -u $(id -u):$(id -g) -v <host_model_path>:/models/stateful_model -p 9000:9000 openvino/model_server:latest \ 
---port 9000 --model_path /models/stateful_model --model_name stateful_model --stateful
+```bash
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -p 9000:9000 openvino/model_server:latest \
+--port 9000 --model_path /models/stateful_model --model_name rm_lstm4f --stateful
 ```
 
 * Starting OVMS with stateful model via config file:
 
-```
-{
+```bash
+echo '{
    "model_config_list":[
       {
          "config": {
-            "name":"stateful_model",
+            "name":"rm_lstm4f",
             "base_path":"/models/stateful_model",
             "stateful": true
          }
       }
    ]
-}
+}' >> config.json
 ```
 
-```
-docker run -d -u $(id -u):$(id -g) -v <host_model_path>:/models/stateful_model -v <host_config_path>:/models/config.json -p 9000:9000 openvino/model_server:latest \ 
+```bash
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v $(pwd)/config.json:/models/config.json -p 9000:9000 openvino/model_server:latest \
 --port 9000 --config_path /models/config.json
 ```
 
@@ -113,7 +121,7 @@ In order to successfully infer the sequence, perform these actions:
 
 ### Inference via gRPC <a name="stateful_grpc"></a>
 
-Inference on stateful models via gRPC is very similar to inference on stateless models (_see [gRPC API](model_server_grpc_api.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via gRPC is very similar to inference on stateless models (_see [gRPC API](model_server_grpc_api_tfs.md) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
 
 `sequence_id` and `sequence_control_input` must be added to gRPC request inputs as [TensorProtos](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto).
 
@@ -196,7 +204,7 @@ See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/bl
 
 ### Inference via HTTP <a name="stateful_http"></a>
 
-Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api_tfs.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
 
 `sequence_id` and `sequence_control_input` must be added to HTTP request by adding new `key:value` pair in `inputs` field of JSON body. 
 

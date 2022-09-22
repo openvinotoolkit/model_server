@@ -26,9 +26,9 @@ Pull an image from Docker or [RedHat Ecosystem Catalog](https://catalog.redhat.c
 
 ```bash
 docker pull openvino/model_server:latest
-
-# or, alternatively 
-
+```
+or, alternatively 
+```
 docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 ```
 
@@ -37,7 +37,7 @@ Start the container
 # start the container 
 docker run -p 9000:9000 openvino/model_server:latest \ 
 --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \ 
---layout NHWC --port 9000 
+--layout NHWC:NCHW --port 9000 
 
 # download input files, an image, and a label mapping file
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/static/images/zebra.jpeg
@@ -48,19 +48,22 @@ pip3 install ovmsclient
 ```
 
 Run prediction
-```python
-import numpy as np
+```bash
+echo 'import numpy as np
 from classes import imagenet_classes
 from ovmsclient import make_grpc_client
 
 client = make_grpc_client("localhost:9000")
 
-with open("path/to/img.jpeg", "rb") as f:
+with open("zebra.jpeg", "rb") as f:
    img = f.read()
 
 output = client.predict({"0": img}, "resnet")
 result_index = np.argmax(output[0])
-predicted_class = imagenet_classes[result_index]
+print(imagenet_classes[result_index])' >> predict.py
+
+python predict.py
+zebra
 ```
 
 To learn how to set up OpenVINO Model Server, refer to the [Quick Start guide](./ovms_quickstart.md).
@@ -73,7 +76,7 @@ You can build your own Docker image executing the `make docker_build` command in
 In the `./dist` directory it will generate: 
 
 - image tagged as openvino/model_server:latest - with CPU, NCS, and HDDL support
-- image tagged as openvino/model_server-gpu:latest - with CPU, NCS, HDDL, and iGPU support
+- image tagged as openvino/model_server:latest-gpu - with CPU, NCS, HDDL, and iGPU support
 - image tagged as openvino/model_server:latest-nginx-mtls - with CPU, NCS, and HDDL support and a reference nginx setup of mTLS integration
 - release package (.tar.gz, with ovms binary and necessary libraries)
 
@@ -96,6 +99,17 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 ```
 
 *Note:* The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
+
+### Model Server image with DG2 support (Ubuntu 20.04)
+
+Image with DG2 GPU support has not been published. To build the image yourself you need to have DG2 drivers installed on the host and NEO Runtime packages available. 
+
+Put NEO Runtime packages in the catalog `<model_server_dir>/release_files/drivers/dg2` and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
+
+Example:
+```
+make docker_build BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=ovms_dg2 INSTALL_DRIVER_VERSION=dg2
+```
 
 ## Using Multi-Device Plugin
 

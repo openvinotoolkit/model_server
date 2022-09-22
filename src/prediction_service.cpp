@@ -27,11 +27,15 @@
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
 
+#include "execution_context.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service_utils.hpp"
+#include "profiler.hpp"
+#include "servablemanagermodule.hpp"
+#include "server.hpp"
 #include "status.hpp"
 #include "timer.hpp"
 
@@ -43,28 +47,47 @@ using tensorflow::serving::PredictionService;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
-namespace ovms {
-
-Status getModelInstance(const PredictRequest* request,
-    std::shared_ptr<ovms::ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
-    ModelManager& manager = ModelManager::getInstance();
-    return manager.getModelInstance(request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
+namespace {
+enum : unsigned int {
+    TOTAL,
+    TIMER_END
+};
 }
 
-Status getPipeline(const PredictRequest* request,
+namespace ovms {
+
+PredictionServiceImpl::PredictionServiceImpl(ovms::Server& ovmsServer) :
+    ovmsServer(ovmsServer),
+    getModelMetadataImpl(ovmsServer),
+    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
+        const char* message = "Tried to create prediction service impl without servable manager module";
+        SPDLOG_ERROR(message);
+        throw std::logic_error(message);
+    }
+}
+
+Status PredictionServiceImpl::getModelInstance(const PredictRequest* request,
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
+    return this->modelManager.getModelInstance(request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
+}
+
+Status PredictionServiceImpl::getPipeline(const PredictRequest* request,
     PredictResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
-    ModelManager& manager = ModelManager::getInstance();
-    return manager.getPipeline(pipelinePtr, request, response);
+    OVMS_PROFILE_FUNCTION();
+    return this->modelManager.createPipeline(pipelinePtr, request->model_spec().name(), request, response);
 }
 
 grpc::Status ovms::PredictionServiceImpl::Predict(
     ServerContext* context,
     const PredictRequest* request,
     PredictResponse* response) {
-    Timer timer;
-    timer.start("total");
+    OVMS_PROFILE_FUNCTION();
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
     using std::chrono::microseconds;
     SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
         request->model_spec().name(),
@@ -81,22 +104,37 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         status = getPipeline(request, response, pipelinePtr);
     }
     if (!status.ok()) {
+        if (modelInstance) {
+            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);
+        }
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
         return status.grpc();
     }
 
+    ExecutionContext executionContext{
+        ExecutionContext::Interface::GRPC,
+        ExecutionContext::Method::Predict};
+
     if (pipelinePtr) {
-        status = pipelinePtr->execute();
+        status = pipelinePtr->execute(executionContext);
+        INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     } else {
         status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
+        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     }
 
     if (!status.ok()) {
         return status.grpc();
     }
 
-    timer.stop("total");
-    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
+    timer.stop(TOTAL);
+    double requestTotal = timer.elapsed<microseconds>(TOTAL);
+    if (pipelinePtr) {
+        OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().requestTimeGrpc, requestTotal);
+    } else {
+        OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().requestTimeGrpc, requestTotal);
+    }
+    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", requestTotal / 1000);
     return grpc::Status::OK;
 }
 
@@ -104,7 +142,12 @@ grpc::Status PredictionServiceImpl::GetModelMetadata(
     grpc::ServerContext* context,
     const tensorflow::serving::GetModelMetadataRequest* request,
     tensorflow::serving::GetModelMetadataResponse* response) {
-    return GetModelMetadataImpl::getModelStatus(request, response).grpc();
+    OVMS_PROFILE_FUNCTION();
+    return getModelMetadataImpl.getModelStatus(request, response, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelMetadata)).grpc();
+}
+
+const GetModelMetadataImpl& PredictionServiceImpl::getTFSModelMetadataImpl() const {
+    return this->getModelMetadataImpl;
 }
 
 }  // namespace ovms

@@ -18,6 +18,7 @@ ARG BUILD_IMAGE=ovms-redhat:latest
 
 FROM $BUILD_IMAGE
 
+ARG BASE_OS=ubuntu
 ARG ov_use_binary=1
 SHELL ["/bin/bash", "-c"]
 
@@ -30,7 +31,9 @@ RUN mkdir -vp /ovms_release/bin
 RUN mkdir -vp /ovms_release/deps
 RUN mkdir -vp /ovms_release/lib
 RUN mkdir -vp /ovms_release/lib/hddl/config
+RUN mkdir -vp /ovms_release/lib/custom_nodes
 
+RUN if [ -d /ovms/src/custom_nodes/lib/${BASE_OS} ] ; then true ; else exit 0 ; fi ; cp /ovms/src/custom_nodes/lib/${BASE_OS}/*.so /ovms_release/lib/custom_nodes/
 RUN cp /ovms/metadata.json /ovms_release/
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/lib/plugins.xml /ovms_release/lib/
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/runtime/3rdparty/hddl/config/* /ovms_release/lib/hddl/config/ || true
@@ -49,8 +52,8 @@ RUN rm -f /ovms_release/lib/libcustom_node*
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/runtime/3rdparty/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/extras/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \; && rm /ovms_release/lib/libopencv_highgui*
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/intel/openvino/extras/opencv/etc/licenses/* /ovms/release_files/thirdparty-licenses/;
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; if [ -f /opt/intel/openvino/docs/licensing/EULA.txt ] ; then true ; else exit 0; fi ; cp /opt/intel/openvino/docs/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt;
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt;
 

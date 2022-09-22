@@ -40,7 +40,17 @@ pip3 install -r requirements.txt
 Start the client
 ```bash
 python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000
-
+```
+You can also change the camera ID:
+```bash
+python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source 0
+```
+Or choose to work with video file as well:
+```bash
+python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source ~/video.mp4
+```
+Example output:
+```bash
 Initializing requesting thread index: 0
 Initializing requesting thread index: 1
 Initializing requesting thread index: 2
@@ -54,15 +64,6 @@ ThreadID:   1; Current FPS:    31.23; Average FPS:    25.67; Average latency:   
 ThreadID:   2; Current FPS:    29.41; Average FPS:    25.70; Average latency:   130.88ms
 ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   135.65ms
 ...
-```
-
-You can also change the camera ID:
-```
-python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source 0
-```
-Or choose to work with video file as well:
-```
-python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source ~/video.mp4
 ```
 
 > **NOTE**: Video source is cropped to 704x704 resolution to match model input size.
@@ -86,13 +87,40 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/horizontal_text_detection/python
 ```
 
-You can prepare the workspace that contains all the above by just running
+You can prepare the workspace that contains all the above by just running `make` command.
+Since custom node used in this demo is included in OpenVINO Model Server image you can either use the custom node from the image, or build one.
 
-```
+If you just want to quickly run this demo and use already compiled custom node, run: 
+
+```bash
 make
 ```
 
-### Final directory structure
+#### Directory structure (without custom node)
+
+Once the `make` procedure is finished, you should have `workspace` directory ready with the following content.
+
+```bash
+workspace/
+├── config.json
+├── horizontal-text-detection-0001
+│   └── 1
+│       ├── horizontal-text-detection-0001.bin
+│       └── horizontal-text-detection-0001.xml
+└── text-recognition-0014
+    └── 1
+        ├── text-recognition-0014.bin
+        └── text-recognition-0014.xml
+
+```
+
+If you modified the custom node or for some other reason, you want to have it compiled and then attached to the container, run:
+
+```bash
+ make BUILD_CUSTOM_NODE=true
+ ```
+
+#### Directory structure (with custom node)
 
 Once the `make` procedure is finished, you should have `workspace` directory ready with the following content.
 
@@ -111,7 +139,6 @@ workspace/
         └── text-recognition-0014.xml
 
 ```
-
 ## Deploying OVMS
 
 Deploy OVMS with faces analysis pipeline using the following command:
@@ -130,7 +157,17 @@ pip3 install -r requirements.txt
 Start the client
 ```bash
 python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr
-
+```
+You can also change the camera ID:
+```bash
+python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr --video_source 0
+```
+Or choose to work with video file as well:
+```bash
+python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr --video_source ~/video.mp4
+```
+Example output:
+```bash
 Initializing requesting thread index: 0
 Initializing requesting thread index: 1
 Initializing requesting thread index: 2
@@ -145,4 +182,3 @@ ThreadID:   2; Current FPS:    29.41; Average FPS:    25.70; Average latency:   
 ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   135.65ms
 ...
 ```
-

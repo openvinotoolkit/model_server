@@ -70,7 +70,7 @@ protected:
     virtual Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 
 public:
-    Status setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata);
+    Status setInputs(const Node& dependency, TensorWithSourceMap& inputs, NodeSessionMetadata& metadata);
     Status setInputs(const Node& dependency, SessionResults& inputs);
 
     virtual void addDependency(Node& node, const Aliases& tensorNamesMapping) {
@@ -93,8 +93,9 @@ public:
 
     static void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs);
 
-protected:
     NodeSession* getNodeSession(const NodeSessionMetadata& metadata);
+
+protected:
     NodeSession& getNodeSession(const session_key_t& sessionKey) const;
     virtual std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
 };

@@ -56,6 +56,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, "Pipeline is retired"},
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, "Pipeline is not loaded yet"},
     {StatusCode::MODEL_SPEC_MISSING, "model_spec missing in request"},
+    {StatusCode::MODEL_VERSION_INVALID_FORMAT, "invalid model version format in request"},
     {StatusCode::INVALID_SIGNATURE_DEF, "Invalid signature name"},
     {StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL, "Shape from config not found in model"},
     {StatusCode::CONFIG_LAYOUT_IS_NOT_IN_MODEL, "Layout from config not found in model"},
@@ -96,6 +97,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
     {StatusCode::INVALID_CONTENT_SIZE, "Invalid content size of tensor proto"},
+    {StatusCode::INVALID_MESSAGE_STRUCTURE, "Passing buffers both in ModelInferRequest::InferInputTensor::contents and in ModelInferRequest::raw_input_contents is not allowed"},
     {StatusCode::UNSUPPORTED_LAYOUT, "Received binary image input but resource not configured to accept NHWC layout"},
 
     // Deserialization
@@ -131,14 +133,20 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, "Could not parse instance content. Not valid ndarray detected"},
     {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, "Invalid JSON structure. Request inputs have different batch sizes"},
     {StatusCode::REST_INPUTS_NOT_AN_OBJECT, "Invalid JSON structure. One of inputs is not a JSON object."},
-    {StatusCode::REST_NO_INPUTS_FOUND, "Invalid JSON structure. Missing inputs in column format"},
+    {StatusCode::REST_NO_INPUTS_FOUND, "Invalid JSON structure, missing inputs"},
     {StatusCode::REST_COULD_NOT_PARSE_INPUT, "Could not parse input content. Not valid ndarray detected"},
+    {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, "Could not parse output content."},
+    {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, "Could not parse request parameters"},
     {StatusCode::REST_PROTO_TO_STRING_ERROR, "Response parsing to JSON error"},
     {StatusCode::REST_BASE64_DECODE_ERROR, "Decode Base64 to string error"},
     {StatusCode::REST_UNSUPPORTED_PRECISION, "Could not parse input content. Unsupported data precision detected"},
     {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, "Size of data in tensor_content does not match declared tensor shape"},
     {StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE, "Number of elements in xxx_val field does not match declared tensor shape"},
     {StatusCode::REST_SERIALIZE_NO_DATA, "No data found in tensor_content or xxx_val field matching tensor dtype"},
+    {StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID, "binary_data_size parameter is invalid and cannot be parsed"},
+    {StatusCode::REST_BINARY_BUFFER_EXCEEDED, "Received buffer size is smaller than binary_data_size parameter indicates"},
+    {StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID, "Inference-Header-Content-Length header is invalid and couldn't be parsed"},
+    {StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY, "Request contains values both in binary data and in content value"},
 
     // Pipeline validation errors
     {StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST, "Pipeline definition with the same name already exists"},
@@ -240,11 +248,17 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_NO_OF_CHANNELS, "Invalid number of channels in binary input"},
     {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, "Binary input images for this endpoint are required to have the same resolution"},
     {StatusCode::STRING_VAL_EMPTY, "String val is empty"},
+    {StatusCode::BYTES_CONTENTS_EMPTY, "Bytes contents is empty"},
     {StatusCode::NODE_LIBRARY_INITIALIZE_FAILED, "Failure during custom node library initialization"},
 
     // Model control API
     {StatusCode::OK_NOT_RELOADED, "Config reload was not needed"},
     {StatusCode::OK_RELOADED, "Config reload successful"},
+
+    // Metrics
+    {StatusCode::INVALID_METRICS_ENDPOINT, "Metrics config endpoint path is invalid"},
+    {StatusCode::INVALID_METRICS_FAMILY_NAME, "Invalid name in metrics_list"},
+    {StatusCode::METRICS_REST_PORT_MISSING, "Missing rest_port parameter in server CLI"},
 };
 
 const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
@@ -270,6 +284,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::NOT_FOUND},
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::MODEL_VERSION_INVALID_FORMAT, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, grpc::StatusCode::ABORTED},
     {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
@@ -294,6 +309,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::INVALID_PRECISION, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_VALUE_COUNT, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_CONTENT_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_MESSAGE_STRUCTURE, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::UNSUPPORTED_LAYOUT, grpc::StatusCode::INVALID_ARGUMENT},
 
     // Deserialization
@@ -318,6 +334,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::INVALID_NO_OF_CHANNELS, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::STRING_VAL_EMPTY, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::BYTES_CONTENTS_EMPTY, grpc::StatusCode::INVALID_ARGUMENT},
 };
 
 const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
@@ -328,6 +345,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     // REST handler failure
     {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_UNSUPPORTED_METHOD, net_http::HTTPStatusCode::NONE_ACC},
+    {StatusCode::REST_NOT_FOUND, net_http::HTTPStatusCode::NOT_FOUND},
 
     // REST parser failure
     {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
@@ -342,6 +360,8 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::REST_INPUTS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_NO_INPUTS_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_COULD_NOT_PARSE_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
     {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
@@ -390,6 +410,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_MESSAGE_STRUCTURE, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::UNSUPPORTED_LAYOUT, net_http::HTTPStatusCode::BAD_REQUEST},
 
     // Deserialization

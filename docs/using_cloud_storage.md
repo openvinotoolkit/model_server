@@ -22,7 +22,7 @@ AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=azur
 ```
 
 Example command with blob storage `az://<container_name>/<model_path>:`
-```
+```bash
 docker run --rm -d -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING="${AZURE_STORAGE_CONNECTION_STRING}" \
 openvino/model_server:latest \
@@ -31,7 +31,7 @@ openvino/model_server:latest \
 
 Example command with file storage `azfs://<share>/<model_path>:`
 
-```
+```bash
 docker run --rm -d -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING="${AZURE_STORAGE_CONNECTION_STRING}" \
 openvino/model_server:latest \
@@ -55,7 +55,7 @@ Exception: This is not required if you use GKE Kubernetes cluster. GKE Kubernete
 To start a Docker container with support for Google Cloud Storage paths to your model use the GOOGLE_APPLICATION_CREDENTIALS variable. This variable contains the path to the GCP authentication key.
 
 Example command with `gs://<bucket>/<model_path>:`
-```
+```bash
 docker run --rm -d -p 9001:9001 \
 -e GOOGLE_APPLICATION_CREDENTIALS="${GOOGLE_APPLICATION_CREDENTIALS}" \
 -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
@@ -76,7 +76,7 @@ Add the S3 path as the model_path and pass the credentials as environment variab
 
 Example command with `s3://<bucket>/<model_path>:`
 
-```
+```bash
 docker run --rm -d -p 9001:9001 \
 -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
 -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
@@ -90,7 +90,7 @@ You can also use anonymous access to public S3 paths.
 
 Example command with `s3://<public_bucket>/<model_path>:`
 
-```
+```bash
 docker run --rm -d -p 9001:9001 \
 openvino/model_server:latest \
 --model_path s3://public_bucket/model_path --model_name s3_model --port 9001
@@ -101,9 +101,11 @@ or set up a profile credentials file in the docker image described here
 
 Example command with `s3://<bucket>/<model_path>:`
 
-```
+```bash
 docker run --rm -d -p 9001:9001 \
 -e AWS_PROFILE="${AWS_PROFILE}" \
+-e AWS_REGION="${AWS_REGION}" \
+-e S3_ENDPOINT="${S3_ENDPOINT}" \
 -v ${HOME}/.aws/credentials:/home/ovms/.aws/credentials \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001

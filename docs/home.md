@@ -15,6 +15,7 @@
    ovms_docs_dag
    ovms_docs_binary_input
    ovms_docs_model_cache
+   ovms_docs_metrics
    ovms_sample_cpu_extension
    ovms_docs_dynamic_input
    ovms_docs_stateful_models
@@ -56,7 +57,7 @@ Key features:
 - [serving stateful models](stateful_models.md) - models that operate on sequences of data and maintain their state between inference requests
 - [binary format of the input data](binary_input.md) - data can be sent in JPEG or PNG formats to reduce traffic and offload the client applications
 - [model caching](model_cache.md) - cache the models on first load and re-use models from cache on subsequent loads
-
+- [metrics](metrics.md) - metrics compatible with Prometheus standard
 
 **Note:** OVMS has been tested on RedHat, CentOS, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.
 They are stored in:

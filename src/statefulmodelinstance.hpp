@@ -26,15 +26,18 @@
 
 namespace ovms {
 
+class MetricRegistry;
+class MetricConfig;
+
 class StatefulModelInstance : public ModelInstance {
-    static const std::set<const char*> SPECIAL_INPUT_NAMES;
+    static const std::set<std::string> SPECIAL_INPUT_NAMES;
 
 public:
     /**
          * @brief A default constructor
          */
-    StatefulModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, GlobalSequencesViewer* globalSequencesViewer) :
-        ModelInstance(name, version, ieCore),
+    StatefulModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricsConfig = nullptr, GlobalSequencesViewer* globalSequencesViewer = nullptr) :
+        ModelInstance(name, version, ieCore, registry, metricsConfig),
         globalSequencesViewer(globalSequencesViewer) {
         sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), name, version);
     }
@@ -87,13 +90,15 @@ protected:
 
     GlobalSequencesViewer* globalSequencesViewer;
 
-    const Status validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
+    template <typename RequestType>
+    const Status validate(const RequestType* request, SequenceProcessingSpec& processingSpec);
 
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
     Status loadOVCompiledModel(const ModelConfig& config) override;
 
 private:
-    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec);
+    template <typename RequestType>
+    const Status validateSpecialKeys(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec);
 };
 }  // namespace ovms

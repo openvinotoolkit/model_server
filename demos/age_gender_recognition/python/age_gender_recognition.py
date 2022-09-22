@@ -21,8 +21,8 @@ import requests
 import argparse
 
 parser = argparse.ArgumentParser(description='Client for age gender recognition')
-parser.add_argument('--grpc_address', required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port', required=False, default=9001, help='Specify port to grpc service. default: 9178')
+parser.add_argument('--rest_address', required=False, default='localhost',  help='Specify url to REST API service. default:localhost')
+parser.add_argument('--rest_port', required=False, default=9001, help='Specify port to REST API service. default: 9178')
 parser.add_argument('--model_name', required=False, default='age_gender', help='Model name to request. default: age_gender')
 parser.add_argument('--image_input_path', required=True, help='Input image path.')
 parser.add_argument('--image_width', required=False, default=62, help='Pipeline input image width. default: 62')
@@ -45,6 +45,6 @@ my_image = getJpeg(args["image_input_path"])
 data_obj = {'inputs':  my_image.tolist()}
 data_json = json.dumps(data_obj)
 
-result = requests.post(f'http://{args["grpc_address"]}:{args["grpc_port"]}/v1/models/{args["model_name"]}:predict', data=data_json)
+result = requests.post(f'http://{args["rest_address"]}:{args["rest_port"]}/v1/models/{args["model_name"]}:predict', data=data_json)
 result_dict = json.loads(result.text)
 print(result_dict)

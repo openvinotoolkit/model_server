@@ -45,8 +45,11 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
+#include "metric_config.hpp"
+#include "metric_registry.hpp"
 #include "node_library.hpp"
 #include "openssl/md5.h"
+#include "ov_utils.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
 #include "pipelinedefinition.hpp"
@@ -57,13 +60,12 @@
 namespace ovms {
 
 static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
-static bool watcherStarted = false;
-static bool cleanerStarted = false;
 
-ModelManager::ModelManager(const std::string& modelCacheDirectory) :
+ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry) :
     ieCore(std::make_unique<ov::Core>()),
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
-    modelCacheDirectory(modelCacheDirectory) {
+    modelCacheDirectory(modelCacheDirectory),
+    metricRegistry(registry) {
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {
         this->modelCacheDirectory = ovms::Config::instance().cacheDir();
@@ -140,8 +142,7 @@ void ModelManager::logPluginConfiguration() {
 
 ModelManager::~ModelManager() = default;
 
-Status ModelManager::start() {
-    auto& config = ovms::Config::instance();
+Status ModelManager::start(const Config& config) {
     watcherIntervalSec = config.filesystemPollWaitSeconds();
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
@@ -150,7 +151,8 @@ Status ModelManager::start() {
         resourcesCleanupIntervalSec = 1;
     }
     Status status;
-    if (config.configPath() != "") {
+    bool startFromConfigFile = (config.configPath() != "");
+    if (startFromConfigFile) {
         status = startFromFile(config.configPath());
     } else {
         status = startFromConfig();
@@ -159,15 +161,15 @@ Status ModelManager::start() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
         return status;
     }
-    startWatcher();
+    startWatcher(startFromConfigFile);
     startCleaner();
     return status;
 }
 
-void ModelManager::startWatcher() {
+void ModelManager::startWatcher(bool watchConfigFile) {
     if ((!watcherStarted) && (watcherIntervalSec > 0)) {
         std::future<void> exitSignal = exitTrigger.get_future();
-        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
+        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal), watchConfigFile));
         watcherStarted = true;
         monitor = std::move(t);
     }
@@ -203,11 +205,35 @@ Status ModelManager::startFromConfig() {
         return StatusCode::UNKNOWN_ERROR;
     }
 
+    Status status = StatusCode::OK;
+
+    // Reading metric config only once per server start
+    if (!this->metricConfigLoadedOnce) {
+        status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
+
+        this->metricConfigLoadedOnce = true;
+    } else {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metric cli settings already loaded error.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't load metrics settings");
+        return status;
+    }
+
     ModelConfig& modelConfig = it->second;
 
-    auto status = modelConfig.parsePluginConfig(config.pluginConfig());
+    status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse plugin config");
+        return status;
+    }
+
+    status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *ieCore.get());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
         return status;
     }
 
@@ -244,7 +270,7 @@ Status ModelManager::startFromConfig() {
 
 Status ModelManager::startFromFile(const std::string& jsonFilename) {
     Status status = loadConfig(jsonFilename);
-    if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID) {
+    if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID || status == StatusCode::METRICS_REST_PORT_MISSING || status == StatusCode::INVALID_METRICS_ENDPOINT || status == StatusCode::INVALID_METRICS_FAMILY_NAME) {
         return status;
     }
 
@@ -552,13 +578,29 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     return firstErrorStatus;
 }
 
+Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
+    const auto itr2 = configJson.FindMember("monitoring");
+    if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
+        return StatusCode::OK;
+    } else {
+        const auto& metrics = itr2->value.GetObject();
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
+        bool forceFailureIfMetricsAreEnabled = ovms::Config::instance().restPort() == 0;
+        return this->metricConfig.parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
+    }
+}
+
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
+    Status firstErrorStatus = StatusCode::OK;
+
     const auto itr = configJson.FindMember("model_config_list");
+
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
-    Status firstErrorStatus = StatusCode::OK;
+
     std::set<std::string> modelsInConfigFile;
     std::set<std::string> modelsWithInvalidConfig;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
@@ -570,6 +612,12 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed due to error: {}", modelConfig.getName(), status.string());
             modelsWithInvalidConfig.emplace(modelConfig.getName());
             continue;
+        }
+
+        status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *ieCore.get());
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
+            return status;
         }
         modelConfig.setCacheDir(this->modelCacheDirectory);
 
@@ -701,12 +749,27 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         return lastLoadConfigStatus;
     }
     Status status;
+
+    // Reading metric config only once per server start
+    if (!this->metricConfigLoadedOnce) {
+        status = loadMetricsConfig(configJson);
+        if (!status.ok()) {
+            return status;
+        }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start.");
+        this->metricConfigLoadedOnce = true;
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric from config json file skipped. Settings already loaded.");
+    }
+
     Status firstErrorStatus = StatusCode::OK;
+
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
+
     std::vector<ModelConfig> gatedModelConfigs;
     status = loadModelsConfig(configJson, gatedModelConfigs);
     if (!status.ok()) {
@@ -761,7 +824,7 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
 
 Status ModelManager::updateConfigurationWithoutConfigFile() {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
+    SPDLOG_LOGGER_TRACE(modelmanager_logger, "Checking if something changed with model versions");
     bool reloadNeeded = false;
     Status firstErrorStatus = StatusCode::OK;
     Status status;
@@ -828,20 +891,22 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     return StatusCode::OK;
 }
 
-void ModelManager::watcher(std::future<void> exitSignal) {
+void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
 
     while (exitSignal.wait_for(std::chrono::seconds(watcherIntervalSec)) == std::future_status::timeout) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Models configuration and filesystem check cycle begin");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
         std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-        bool isNeeded;
-        configFileReloadNeeded(isNeeded);
-        if (isNeeded) {
-            loadConfig(configFilename);
+        if (watchConfigFile) {
+            bool isNeeded;
+            configFileReloadNeeded(isNeeded);
+            if (isNeeded) {
+                loadConfig(configFilename);
+            }
         }
         updateConfigurationWithoutConfigFile();
 
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Models configuration and filesystem check cycle end");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
@@ -867,7 +932,7 @@ void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& 
     uint32_t currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
 
     while (cleanerExitSignal.wait_for(std::chrono::milliseconds(currentWaitTime)) == std::future_status::timeout) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle begin");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cleanup check cycle begin");
 
         currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
         if (shouldCheckForSequenceCleanup)
@@ -879,7 +944,7 @@ void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& 
         if (currentSequenceWaitTime == sequenceCleanerInterval && shouldCheckForSequenceCleanup)
             functorSequenceCleaner.cleanup();
 
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle end");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cleanup check cycle end");
     }
 }
 
@@ -903,8 +968,12 @@ void ModelManager::cleanupResources() {
 }
 
 void ModelManager::join() {
-    if (watcherStarted) {
+    if (watcherStarted)
         exitTrigger.set_value();
+    if (cleanerStarted)
+        cleanerExitTrigger.set_value();
+
+    if (watcherStarted) {
         if (monitor.joinable()) {
             monitor.join();
             watcherStarted = false;
@@ -913,7 +982,6 @@ void ModelManager::join() {
     }
 
     if (cleanerStarted) {
-        cleanerExitTrigger.set_value();
         if (cleanerThread.joinable()) {
             cleanerThread.join();
             cleanerStarted = false;
@@ -931,9 +999,9 @@ void ModelManager::getVersionsToChange(
     std::shared_ptr<model_versions_t>& versionsToRetireIn) {
     std::sort(requestedVersions.begin(), requestedVersions.end());
     model_versions_t registeredModelVersions;
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Currently registered model: {} versions count: {}", newModelConfig.getName(), modelVersionsInstances.size());
+    SPDLOG_LOGGER_TRACE(modelmanager_logger, "Currently registered model: {} versions count: {}", newModelConfig.getName(), modelVersionsInstances.size());
     for (const auto& [version, versionInstance] : modelVersionsInstances) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {} version: {} state: {}", newModelConfig.getName(), version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "model: {} version: {} state: {}", newModelConfig.getName(), version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
         registeredModelVersions.push_back(version);
     }
 
@@ -1076,7 +1144,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     }
 
     for (const auto& entry : dirs) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Detected version folder: {}", entry);
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Detected version folder: {}", entry);
         try {
             ovms::model_version_t version = std::stoll(entry);
             if (version <= 0) {
@@ -1101,7 +1169,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed);
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry, &this->metricConfig);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -1134,7 +1202,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 }
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
+    SPDLOG_LOGGER_TRACE(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
 
     if (config.isStateful() && config.isDynamicParameterEnabled()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for stateful model {}. Dynamic shape and dynamic batch size not supported for stateful models.", config.getName());
@@ -1273,7 +1341,7 @@ const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& na
 Status ModelManager::getModelInstance(const std::string& modelName,
     ovms::model_version_t modelVersionId,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const {
     SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
 
     auto model = findModelByName(modelName);
@@ -1293,15 +1361,6 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     }
 
     return modelInstance->waitForLoaded(waitForModelLoadedTimeoutMs, modelInstanceUnloadGuardPtr);
-}
-
-Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response) {
-
-    SPDLOG_DEBUG("Requesting pipeline: {};", request->model_spec().name());
-    auto status = createPipeline(pipelinePtr, request->model_spec().name(), request, response);
-    return status;
 }
 
 const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() const {

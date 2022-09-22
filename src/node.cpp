@@ -23,6 +23,7 @@
 #include "logging.hpp"
 #include "nodesession.hpp"
 #include "ov_utils.hpp"
+#include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -56,6 +57,7 @@ Node::Node(const std::string& nodeName, std::optional<int32_t> demultiplyCount, 
 }
 
 Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
     auto it = nodeSessions.find(sessionId);
 
     auto& nodeSession = it->second;
@@ -83,6 +85,7 @@ void Node::printNodeConnections(const std::string& nodeName, const std::string& 
 }
 
 Status Node::setInputs(const Node& dependency, SessionResults& sessionResults) {
+    OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} set inputs from node: {}", getName(), dependency.getName());
     for (auto& [sessionKey, metadataInputsPair] : sessionResults) {
         auto& [metadata, inputs] = metadataInputsPair;
@@ -94,7 +97,7 @@ Status Node::setInputs(const Node& dependency, SessionResults& sessionResults) {
     return StatusCode::OK;
 }
 
-Status Node::setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata) {
+Status Node::setInputs(const Node& dependency, TensorWithSourceMap& inputs, NodeSessionMetadata& metadata) {
     // mapping for dependency - keeps mapping between dependency output name and this node input name
     const auto& mapping_for_dependency = this->getMappingByDependency(dependency);
     NodeSession* nodeSession = getNodeSession(metadata);
@@ -165,7 +168,7 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will create new session: {} for node: {}",
         sessionKey, getName());
-    NodeSessionMetadata newSessionMetadata;
+    NodeSessionMetadata newSessionMetadata = metadata;
     CollapseDetails collapsingDetails;
     if (gatherFrom) {
         try {
@@ -174,8 +177,6 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create collapsed metadata for node: {}", getName());
             return nullptr;
         }
-    } else {
-        newSessionMetadata = metadata;
     }
     std::unique_ptr<NodeSession> nodeSession = createNodeSession(newSessionMetadata, collapsingDetails);
     auto emplacePair = nodeSessions.emplace(sessionKey, std::move(nodeSession));
@@ -198,12 +199,13 @@ std::vector<session_key_t> Node::getReadySessions() const {
 }
 
 Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
     if (!demultiplexCount) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} called demultiplyOutputs but node does not have demultiplexCount set", getName());
         return StatusCode::INTERNAL_ERROR;
     }
     auto& [metadata, tensorMap] = nodeSessionOutputs.begin()->second;
-    auto firstTensorShape = tensorMap.begin()->second.get_shape();
+    auto firstTensorShape = tensorMap.begin()->second.getActualTensor().get_shape();
     uint32_t resultsDemultiplyCount = firstTensorShape[0];
     if (firstTensorShape[0] > DEMULTIPLY_LIMIT) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[0] size: {} of tensor: {}. Maximum allowed is: {}",
@@ -218,14 +220,16 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} failed to generate subsessions due to error: {}", getName(), e.what());
         return StatusCode::INTERNAL_ERROR;
     }
-    for (auto& [tensorName, tensor] : tensorMap) {
+    for (auto& [tensorName, tensorWithSource] : tensorMap) {
+        auto& tensor = tensorWithSource.getActualTensor();
+        OVMS_PROFILE_SCOPE("Demultiply Tensor");
         auto newDims = tensor.get_shape();
         if (newDims.size() < 3) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
             return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
         }
         if ((demultiplexCount.value() != -1) &&
-            (newDims[0] != demultiplexCount.value())) {
+            (newDims[0] != static_cast<size_t>(demultiplexCount.value()))) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[0] size: {} of tensor: {} expected: {} to demultiply",
                 newDims[0], tensorName, demultiplexCount.value());
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
@@ -239,17 +243,21 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         newDims.erase(newDims.begin());
         const auto step = tensor.get_byte_size() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
+            OVMS_PROFILE_SCOPE("Create Shard");
             ov::Tensor dividedTensor;
             this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
-            std::stringstream ss;
-            ss << "Node: " << getName() << " input demultiplied: " << tensorName
-               << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
-            auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
+            if (dag_executor_logger->level() <= spdlog::level::debug) {
+                std::stringstream ss;
+                ss << "Node: " << getName() << " input demultiplied: " << tensorName
+                   << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
+            }
+            auto sessionKey = newSessionMetadatas[i].getSessionKey();
+            auto it = nodeSessionOutputs.find(sessionKey);
             if (it == nodeSessionOutputs.end()) {
-                nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], TensorMap{{tensorName, dividedTensor}}});
+                nodeSessionOutputs.emplace(sessionKey, SessionResult{newSessionMetadatas[i], TensorWithSourceMap{{tensorName, TensorWithSource{dividedTensor, tensor}}}});
             } else {
-                it->second.second.emplace(tensorName, dividedTensor);
+                it->second.second.emplace(tensorName, TensorWithSource{dividedTensor, tensor});
             }
         }
     }
@@ -258,16 +266,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
 }
 
 Status Node::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
-    auto status = createSharedTensor(dividedTensor, ovmsPrecisionToIE2Precision(precision), shape);
-    if (!status.ok()) {
-        return status;
-    }
-    if (dividedTensor.get_byte_size() != step) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created tensor: {} have wrong byte size: {}, expected: {}",
-            getName(), metadata.getSessionKey(), tensorName, dividedTensor.get_byte_size(), step);
-        return StatusCode::UNKNOWN_ERROR;
-    }
-    memcpy(dividedTensor.data(), (char*)(tensor.data()) + i * step, step);
+    dividedTensor = createSharedTensor(tensor.get_element_type(), shape, (char*)(tensor.data()) + i * step);
     return StatusCode::OK;
 }
 }  // namespace ovms

@@ -16,11 +16,17 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
 
 #include <openvino/openvino.hpp>
 
+using KFSDataType = std::string;
+namespace tensorflow {
+enum DataType : int;
+}
+
 namespace ovms {
+
+using TFSDataType = tensorflow::DataType;
 
 enum class Precision {
     BF16,
@@ -47,143 +53,18 @@ enum class Precision {
     BIN
 };
 
-inline static std::string toString(Precision precision) {
-    static std::unordered_map<Precision, const char*> precisionMap{
-        {Precision::BF16, "BF16"},
-        {Precision::FP64, "FP64"},
-        {Precision::FP32, "FP32"},
-        {Precision::FP16, "FP16"},
-        {Precision::I64, "I64"},
-        {Precision::I32, "I32"},
-        {Precision::I16, "I16"},
-        {Precision::I8, "I8"},
-        {Precision::I4, "I4"},
-        {Precision::U64, "U64"},
-        {Precision::U32, "U32"},
-        {Precision::U16, "U16"},
-        {Precision::U8, "U8"},
-        {Precision::U4, "U4"},
-        {Precision::U1, "U1"},
-        {Precision::MIXED, "MIXED"},
-        {Precision::Q78, "Q78"},
-        {Precision::BIN, "BIN"},
-        {Precision::BOOL, "BOOL"},
-        {Precision::UNDEFINED, "UNDEFINED"},
-        {Precision::CUSTOM, "CUSTOM"}};
-    auto it = precisionMap.find(precision);
-    if (it == precisionMap.end()) {
-        return "DT_INVALID";  // TODO other way? why translate it to TF equivalent maybe UNDEFINED?
-    }
-    return it->second;
-}
+const std::string& toString(Precision precision);
 
-inline static Precision fromString(const std::string& s) {
-    static std::unordered_map<std::string, Precision> precisionMap{
-        {"BF16", Precision::BF16},
-        {"FP64", Precision::FP64},
-        {"FP32", Precision::FP32},
-        {"FP16", Precision::FP16},
-        {"I64", Precision::I64},
-        {"I32", Precision::I32},
-        {"I16", Precision::I16},
-        {"I8", Precision::I8},
-        {"I4", Precision::I4},
-        {"U64", Precision::U64},
-        {"U32", Precision::U32},
-        {"U16", Precision::U16},
-        {"U8", Precision::U8},
-        {"U4", Precision::U4},
-        {"U1", Precision::U1},
-        {"MIXED", Precision::MIXED},
-        {"Q78", Precision::Q78},
-        {"BIN", Precision::BIN},
-        {"BOOL", Precision::BOOL},
-        {"UNDEFINED", Precision::UNDEFINED},
-        {"CUSTOM", Precision::CUSTOM}};
-    auto it = precisionMap.find(s);
-    if (it == precisionMap.end()) {
-        return Precision::UNDEFINED;
-    }
-    return it->second;
-}
+Precision fromString(const std::string& s);
 
-inline static ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
-    static std::unordered_map<Precision, ov::element::Type_t> precisionMap{
-        {Precision::FP64, ov::element::Type_t::f64},
-        {Precision::FP32, ov::element::Type_t::f32},
-        {Precision::FP16, ov::element::Type_t::f16},
-        {Precision::I64, ov::element::Type_t::i64},
-        {Precision::I32, ov::element::Type_t::i32},
-        {Precision::I16, ov::element::Type_t::i16},
-        {Precision::I8, ov::element::Type_t::i8},
-        {Precision::I4, ov::element::Type_t::i4},
-        {Precision::U64, ov::element::Type_t::u64},
-        {Precision::U16, ov::element::Type_t::u16},
-        {Precision::U8, ov::element::Type_t::u8},
-        {Precision::U4, ov::element::Type_t::u4},
-        {Precision::U1, ov::element::Type_t::u1},
-        {Precision::BOOL, ov::element::Type_t::boolean},
-        {Precision::UNDEFINED, ov::element::Type_t::undefined},  // TODO
-        {Precision::DYNAMIC, ov::element::Type_t::dynamic}       // TODO
-        //    {Precision::MIXED, ov::element::Type_t::MIXED}, // TODO
-        //    {Precision::Q78, ov::element::Type_t::Q78}, // TODO
-        //    {Precision::BIN, ov::element::Type_t::BIN}, // TODO
-        //    {Precision::CUSTOM, ov::element::Type_t::CUSTOM // TODO
-    };
-    auto it = precisionMap.find(precision);
-    if (it == precisionMap.end()) {
-        return ov::element::Type_t::undefined;  // TODO other way?
-    }
-    return it->second;
-}
-inline static Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type) {
-    static std::unordered_map<ov::element::Type_t, Precision> precisionMap{
-        {ov::element::Type_t::f64, Precision::FP64},
-        {ov::element::Type_t::f32, Precision::FP32},
-        {ov::element::Type_t::f16, Precision::FP16},
-        {ov::element::Type_t::bf16, Precision::BF16},
-        {ov::element::Type_t::i64, Precision::I64},
-        {ov::element::Type_t::i32, Precision::I32},
-        {ov::element::Type_t::i16, Precision::I16},
-        {ov::element::Type_t::i8, Precision::I8},
-        {ov::element::Type_t::i4, Precision::I4},
-        {ov::element::Type_t::u64, Precision::U64},
-        {ov::element::Type_t::u32, Precision::U32},
-        {ov::element::Type_t::u16, Precision::U16},
-        {ov::element::Type_t::u8, Precision::U8},
-        {ov::element::Type_t::u4, Precision::U4},
-        {ov::element::Type_t::u1, Precision::U1},
-        {ov::element::Type_t::undefined, Precision::UNDEFINED},
-        {ov::element::Type_t::dynamic, Precision::DYNAMIC},
-        //    {ov::element::Type_t::???, Precision::MIXED}, // TODO
-        //    {ov::element::Type_t::???, Precision::Q78}, // TODO
-        //    {ov::element::Type_t::???, Precision::BIN}, // TODO
-        {ov::element::Type_t::boolean, Precision::BOOL}
-        //    {ov::element::Type_t::CUSTOM, Precision::CUSTOM} // TODO
-        /*
-    undefined,
-    dynamic,
-    boolean,
-    bf16,
-    f16,
-    f32,
-    f64,
-    i4,
-    i8,
-    i16,
-    i32,
-    i64,
-    u1,
-    u4,
-    u8,
-    u16,
-    u32,
-*/
-    };
-    auto it = precisionMap.find(type);
-    if (it == precisionMap.end()) {
-        return Precision::UNDEFINED;  // TODO other way?
-    }
-    return it->second;
-}
+Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s);
+Precision TFSPrecisionToOvmsPrecision(const TFSDataType& s);
+
+size_t KFSDataTypeSize(const KFSDataType& datatype);
+
+const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision);
+
+ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision);
+
+Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type);
 }  // namespace ovms

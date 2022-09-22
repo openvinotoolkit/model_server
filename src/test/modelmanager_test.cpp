@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "../cleaner_utils.hpp"
+#include "../config.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
@@ -96,7 +97,7 @@ class MockModel : public ovms::Model {
 public:
     MockModel() :
         Model("MOCK_NAME", false, nullptr) {}
-    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::Core&), (override));
+    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::Core&, ovms::MetricRegistry*, const ovms::MetricConfig*), (override));
 };
 
 std::shared_ptr<MockModel> modelMock;
@@ -122,6 +123,159 @@ TEST(ModelManager, WrongConfigFile) {
     ovms::ModelManager& manager = ovms::ModelManager::getInstance();
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::CONFIG_FILE_INVALID);
+}
+
+class ModelManagerMetricsTest : public TestWithTempDir {
+public:
+    std::string configFilePath;
+    std::string ovmsConfig;
+    std::string modelPath;
+    std::string dummyModelName;
+
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        dummyModelName = "dummy";
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+    }
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
+        int arg_count = 7;
+        ovms::Config::instance().parse(arg_count, n_argv);
+
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/ovms_config2.json";
+    }
+};
+
+class ModelManagerMetricsTestNoPort : public TestWithTempDir {
+public:
+    std::string configFilePath;
+    std::string ovmsConfig;
+    std::string modelPath;
+    std::string dummyModelName;
+
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        dummyModelName = "dummy";
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+    }
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name"};
+        int arg_count = 5;
+        ovms::Config::instance().parse(arg_count, n_argv);
+
+        // Prepare manager
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/ovms_config.json";
+    }
+};
+
+static const char* modelMetricsBadEndpoint = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "endpoint_path": "/new..metrics"
+            }
+        }
+})";
+
+TEST_F(ModelManagerMetricsTest, DISABLED_WrongConfigFileEndpoint) {
+    SetUpConfig(modelMetricsBadEndpoint);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_METRICS_ENDPOINT);
+}
+
+static const char* modelMetricsInvalidMetricName = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true,
+                "metrics_list": ["no_such_family"]
+            }
+        }
+})";
+
+TEST_F(ModelManagerMetricsTest, WrongConfigFileMetricName) {
+    SetUpConfig(modelMetricsBadEndpoint);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(modelMetricsInvalidMetricName, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_METRICS_FAMILY_NAME);
+}
+
+static const char* modelMetricsMissingPort = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : true
+            }
+        }
+})";
+
+TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
+    SetUpConfig(modelMetricsMissingPort);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::METRICS_REST_PORT_MISSING);
 }
 
 TEST(ModelManager, ConfigParseEmpty) {
@@ -475,7 +629,7 @@ TEST(ModelManager, StartFromFile) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    EXPECT_CALL(*modelMock, addVersion(_, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
     auto status = manager.startFromFile(fileToReload);
@@ -502,11 +656,11 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     createConfigFileWithContent(config_1_model, fileToReload);
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
-    EXPECT_CALL(*modelMock, addVersion(_, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
 
     auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    manager.startWatcher(true);
     auto models = manager.getModels().size();
     EXPECT_EQ(models, 1);
     EXPECT_EQ(status, ovms::StatusCode::OK);
@@ -617,8 +771,8 @@ public:
 };
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenResourcesIntervalIsShorterAndWaitTimeIsGreaterThanSequenceWaitTime) {
-    uint32_t resourcesIntervalMiliseconds = 29;
-    uint32_t sequenceIntervalMiliseconds = 37;
+    uint32_t resourcesIntervalMiliseconds = 200;
+    uint32_t sequenceIntervalMiliseconds = 252;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
@@ -636,8 +790,8 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenRe
 }
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesIntervalIsShorterAndWaitTimeIsShorterThanSequenceInterval) {
-    uint32_t resourcesIntervalMiliseconds = 29;
-    uint32_t sequenceIntervalMiliseconds = 37;
+    uint32_t resourcesIntervalMiliseconds = 229;
+    uint32_t sequenceIntervalMiliseconds = 367;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(0);
@@ -655,8 +809,8 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesInte
 }
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSequenceIntervalIsShorterAndWaitTimeIsGreaterThanResurcesInterval) {
-    uint32_t resourcesIntervalMiliseconds = 37;
-    uint32_t sequenceIntervalMiliseconds = 29;
+    uint32_t resourcesIntervalMiliseconds = 237;
+    uint32_t sequenceIntervalMiliseconds = 229;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
@@ -674,8 +828,8 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSe
 }
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupSequenceWhenSequenceIntervalIsShorterAndWaitTimeIsShorterThanResourcesInterval) {
-    uint32_t resourcesIntervalMiliseconds = 37;
-    uint32_t sequenceIntervalMiliseconds = 29;
+    uint32_t resourcesIntervalMiliseconds = 337;
+    uint32_t sequenceIntervalMiliseconds = 229;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
@@ -693,8 +847,8 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupSequenceWhenSequenceInterv
 }
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIntervalsAreEqualAndWaitTimeIsGreaterThanInterval) {
-    uint32_t resourcesIntervalMiliseconds = 29;
-    uint32_t sequenceIntervalMiliseconds = 29;
+    uint32_t resourcesIntervalMiliseconds = 290;
+    uint32_t sequenceIntervalMiliseconds = 290;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
@@ -906,7 +1060,7 @@ TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    EXPECT_CALL(*modelMock, addVersion(_, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
     auto status = manager.startFromFile(fileToReload);
@@ -948,7 +1102,7 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     manager.registerVersionToLoad(1);
     manager.registerVersionToLoad(2);
     auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    manager.startWatcher(true);
     auto models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -1478,7 +1632,7 @@ class ModelWithModelInstanceFakeLoad : public ovms::Model {
 public:
     ModelWithModelInstanceFakeLoad(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<MockModelInstanceFakeLoad>(ieCore);
     }
 };
@@ -1530,7 +1684,7 @@ class ModelWithModelInstanceLoadedStuckInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<ModelInstanceLoadedStuckInLoadingState>(ieCore);
     }
 };
@@ -1574,7 +1728,7 @@ public:
     ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint modelInstanceLoadDelayInMilliseconds) :
         Model(name, false, nullptr),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, ov::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<ModelInstanceLoadedWaitInLoadingState>(ieCore, modelInstanceLoadDelayInMilliseconds);
     }
 

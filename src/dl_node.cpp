@@ -20,6 +20,7 @@
 
 #include "dlnodesession.hpp"
 #include "logging.hpp"
+#include "metric.hpp"
 #include "modelmanager.hpp"
 #include "ov_utils.hpp"
 #include "ovinferrequestsqueue.hpp"
@@ -53,10 +54,11 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& inferRequest = dlNodeSession.getInferRequest(waitTimeMicroseconds);
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(tensorResults, inferRequest, model, nodeSession.getSessionKey());
+    INCREMENT_IF_ENABLED(model.getMetricReporter().getInferRequestMetric(sessionMetadata.getContext()));
     return status;
 }
 
-Status DLNode::fetchResults(TensorMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
+Status DLNode::fetchResults(TensorWithSourceMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
     ReleaseSessionGuard releaseSessionGuard(this->getNodeSession(sessionKey));
     // Wait for tensor results
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Waiting for infer request to finish", getName(), sessionKey);
@@ -69,12 +71,14 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::InferRequest& inferRequest, 
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} exception occured during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     }
+    double ovInferTime = this->getNodeSession(sessionKey).getTimer().elapsed<std::chrono::microseconds>(EXECUTE);
+    OBSERVE_IF_ENABLED(model.getMetricReporter().inferenceTime, ovInferTime);
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} infer request finished", getName(), sessionKey);
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Inference processing time for node {}; model name: {}; session: {} - {} ms",
         this->getName(),
         model.getName(),
         sessionKey,
-        this->getNodeSession(sessionKey).getTimer().elapsed<std::chrono::microseconds>("inference") / 1000);
+        ovInferTime / 1000);
 
     static_cast<DLNodeSession&>(this->getNodeSession(sessionKey)).clearInputs();
 
@@ -106,7 +110,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::InferRequest& inferRequest, 
                         realModelOutputName);
                     return status;
                 }
-                outputs.emplace(std::make_pair(output_name, std::move(copiedTensor)));
+                outputs.emplace(std::make_pair(output_name, TensorWithSource(std::move(copiedTensor))));
             } catch (const ov::Exception& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting tensor {}; exception message: {}", getName(), sessionKey, status.string(), e.what());

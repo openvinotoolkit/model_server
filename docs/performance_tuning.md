@@ -4,6 +4,17 @@
 
 This document gives an overview of various parameters that can be configured to achieve maximum performance efficiency. 
 
+## Example model
+
+Download ResNet50 model
+
+```bash
+mkdir models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
+```
+
 ## Performance Hints
 The `PERFORMANCE_HINT` plugin config property enables you to specify a performance mode for the plugin to be more efficient for particular use cases.
 
@@ -11,56 +22,50 @@ The `PERFORMANCE_HINT` plugin config property enables you to specify a performan
 This mode prioritizes high throughput, balancing between latency and power. It is best suited for tasks involving multiple jobs, like inference of video feeds or large numbers of images.
 
 To enable Performance Hints for your application, use the following command:
-@sphinxdirective
 
-.. tab:: CPU  
+CPU
 
-   .. code-block:: sh
+   ```bash
+         docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+               --model_path /opt/model --model_name resnet --port 9001 \
+               --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+               --target_device CPU
+   ```
 
-        docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name my_model --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
-            --target_device CPU
+GPU
 
-.. tab:: GPU
-
-   .. code-block:: sh  
-   
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name my_model --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
-            --target_device GPU
-
-@endsphinxdirective
+   ```bash
+         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+               -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+               --model_path /opt/model --model_name resnet --port 9001 \
+               --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+               --target_device GPU
+   ```
 
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
 Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/2022.1/openvino_docs_IE_DG_supported_plugins_AUTO.html#performance-hints).
 
 To enable Performance Hints for your application, use the following command:
-@sphinxdirective
 
-.. tab:: CPU  
+CPU
 
-   .. code-block:: sh
+   ```bash
+         docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+               --model_path /opt/model --model_name resnet --port 9001 \
+               --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+               --target_device CPU
+   ```
 
-        docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name my_model --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-            --target_device CPU
-
-.. tab:: GPU
-
-   .. code-block:: sh  
+GPU
    
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name my_model --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-            --target_device GPU
-
-@endsphinxdirective
+   ```bash
+         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+               -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+               --model_path /opt/model --model_name resnet --port 9001 \
+               --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+               --target_device GPU
+   ```
 
 > **NOTE**: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
 
@@ -70,7 +75,7 @@ OpenVINO&trade; Model Server can be tuned to a single client use case or a high 
 execution streams. They split the available resources to perform parallel execution of multiple requests.
 It is particularly efficient for models which cannot effectively consume all CPU cores or for CPUs with high number of cores.
 
-By default, for `CPU` target device, OpenVINO Model Server sets the value CPU_THROUGHPUT_AUTO and GPU_THROUGHTPUT_AUTO for `GPU` target device. It calculates the number of streams based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
+By default, for `CPU` target device, OpenVINO Model Server sets the value CPU_THROUGHPUT_AUTO and GPU_THROUGHPUT_AUTO for `GPU` target device. It calculates the number of streams based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
 
 If this default configuration is not suitable, adjust it with the `CPU_THROUGHPUT_STREAMS` parameter defined as part 
 of the device plugin configuration. 
@@ -88,13 +93,12 @@ For example, with ~50 clients sending the requests to the server with 48 cores, 
 
 ## Input data in REST API calls
 
-While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. 
+While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. Here are some tips to effectively use REST interface when working with OpenVINO Model Server:
 
-While sending the input data for inference execution, try to adjust the numerical data type to reduce the message size.
-
-- reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 
-- use [binary data format](binary_input.md) encoded with base64 - sending compressed data will greatly reduce the traffic and speed up the communication.
-- with binary input format it is the most efficient to send the images with the resolution of the configured model. It will avoid image resizing on the server to fit the model.
+- use [binary data format](binary_input.md) when possible - binary data representation is smaller in terms of request size and easier to process on the server side. 
+- when working with images, consider sending JPEG/PNG directly - compressed data will greatly reduce the traffic and speed up the communication.
+- with JPEG/PNG it is the most efficient to send the images with the resolution of the configured model. It will avoid image resizing on the server to fit the model.
+- if you decide to send data inside JSON object, try to adjust the numerical data type to reduce the message size i.e. reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 
 
 ## Scalability
 
@@ -120,9 +124,9 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 1. While passing the plugin configuration, omit the `KEY_` phase. 
 2. Following docker command will set `KEY_CPU_THROUGHPUT_STREAMS` parameter to a value `KEY_CPU_THROUGHPUT_NUMA`:
 
-```
-docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest\
---model_path /opt/model --model_name my_model --port 9001 \
+```bash
+docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+--model_path /opt/model --model_name resnet --port 9001 \
 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}'
 
 ```
@@ -159,8 +163,20 @@ Model's plugin configuration is a dictionary of param:value pairs passed to Open
 
 Following docker command sets a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `32` and `KEY_CPU_BIND_THREAD` to `NUMA`.
 
-```
-docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
---model_path /opt/model --model_name my_model --port 9001 --grpc_workers 8  --nireq 32 \
+```bash
+docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+--model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "32", "CPU_BIND_THREAD": "NUMA"}'
 ```
+
+## Analyzing performance issues
+
+Recommended steps to investigate achievable performance and discover bottlenecks:
+1. [Launch OV benchmark app](https://docs.openvino.ai/latest/openvino_inference_engine_tools_benchmark_tool_README.html?highlight=benchmark)
+
+      **Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
+
+      **Note:** When launching benchmark app use `-inference_only=false`. Otherwise OV avoids setting input tensor of inference each time which is not comparable flow to OVMS.
+2. [Launch OVMS benchmark client](https://docs.openvino.ai/latest/ovms_demo_benchmark_client.html) on the same machine as OVMS
+3. [Launch OVMS benchmark client](https://docs.openvino.ai/latest/ovms_demo_benchmark_client.html) from remote machine
+4. Measure achievable network bandwidth with tools such as [iperf](https://github.com/esnet/iperf)

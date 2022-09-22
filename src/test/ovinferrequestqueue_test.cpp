@@ -52,8 +52,13 @@ void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
     requestsQueue.returnStream(3);
 }
 
+enum : unsigned int {
+    QUEUE,
+    TIMER_END
+};
+
 TEST(OVInferRequestQueue, FullQueue) {
-    ovms::Timer timer;
+    ovms::Timer<TIMER_END> timer;
     ov::Core ieCore;
     auto model = ieCore.read_model(DUMMY_MODEL_PATH);
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
@@ -62,13 +67,13 @@ TEST(OVInferRequestQueue, FullQueue) {
     for (int i = 0; i < 50; i++) {
         reqid = inferRequestsQueue.getIdleStream().get();
     }
-    timer.start("queue");
+    timer.start(QUEUE);
     std::thread th(&releaseStream, std::ref(inferRequestsQueue));
     th.detach();
     reqid = inferRequestsQueue.getIdleStream().get();  // it should wait 1s for released request
-    timer.stop("queue");
+    timer.stop(QUEUE);
 
-    EXPECT_GT(timer.elapsed<std::chrono::microseconds>("queue"), 1'000'000);
+    EXPECT_GT(timer.elapsed<std::chrono::microseconds>(QUEUE), 1'000'000);
     EXPECT_EQ(reqid, 3);
 }
 

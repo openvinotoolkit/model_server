@@ -8,7 +8,7 @@ Create a asr_demo directory in your home catalog with the following 3 subdirecto
 - workspace (used to hold intermediate files)
 - models (used to hold Aspire files for the model server)
 
-```
+```bash
 export WORKSPACE_DIR=$HOME/asr_demo/workspace
 export MODELS_DIR=$HOME/asr_demo/models
 mkdir -p $WORKSPACE_DIR $MODELS_DIR
@@ -22,14 +22,14 @@ To successfully run this demo, you will need 3 docker images:
 - [Kaldi](https://kaldi-asr.org/) image
 
 Pull OpenVINO and OpenVINO Model Server images:
-```
+```bash
 docker pull openvino/model_server
-docker pull openvino/ubuntu18_dev
+docker pull openvino/ubuntu20_dev
 ```
 
 Download Kaldi dockerfile and modify it to contain necessary dependencies:
 
-```
+```bash
 cd $WORKSPACE_DIR
 
 wget https://raw.githubusercontent.com/kaldi-asr/kaldi/e28927fd17b22318e73faf2cf903a7566fa1b724/docker/debian10-cpu/Dockerfile
@@ -55,7 +55,8 @@ RUN git clone https://github.com/openvinotoolkit/model_server.git /opt/model_ser
 
 WORKDIR /opt/workspace/
 ' >> Dockerfile
-
+```
+```bash
 docker build -t kaldi:latest .
 ```
 
@@ -65,7 +66,7 @@ Model server container will be used as an inference service and Kaldi container 
 ### 3. Prepare ASpIRE TDNN model
 
 Download and unpack the model to `WORKSPACE_DIR`:
-```
+```bash
 cd $WORKSPACE_DIR
 wget https://kaldi-asr.org/models/1/0001_aspire_chain_model.tar.gz
 mkdir aspire_kaldi
@@ -74,8 +75,8 @@ tar -xvf 0001_aspire_chain_model.tar.gz -C $WORKSPACE_DIR/aspire_kaldi
 
 Use temporary OpenVINO development container with model optimizer to convert model to IR format:
 
-```
-docker run --rm -it -u 0 -v $WORKSPACE_DIR:/opt/workspace openvino/ubuntu18_dev mo --input_model /opt/workspace/aspire_kaldi/exp/chain/tdnn_7b/final.mdl --output output --output_dir /opt/workspace
+```bash
+docker run --rm -it -u 0 -v $WORKSPACE_DIR:/opt/workspace openvino/ubuntu20_dev mo --input_model /opt/workspace/aspire_kaldi/exp/chain/tdnn_7b/final.mdl --output output --output_dir /opt/workspace
 ```
 
 After running this command you should have `final.xml` and `final.bin` files in your `WORKSPACE_DIR` directory.
@@ -84,13 +85,13 @@ After running this command you should have `final.xml` and `final.bin` files in 
 
 Now that you have the model, you need to create correct directory structure for model server to read the model. First create `aspire` model directory with version `1` in `MODELS_DIR`:
 
-```
+```bash
 mkdir -p $MODELS_DIR/aspire/1
 ```
 
 Then copy `final.xml` and `final.bin` from the `WORKSPACE_DIR` to newly created directory:
 
-```
+```bash
 cp $WORKSPACE_DIR/final.xml $WORKSPACE_DIR/final.bin $MODELS_DIR/aspire/1
 ```
 
@@ -98,7 +99,7 @@ cp $WORKSPACE_DIR/final.xml $WORKSPACE_DIR/final.bin $MODELS_DIR/aspire/1
 
 When models directory is ready you can start OVMS with a command:
 
-```
+```bash
 docker run --rm -d -p 9000:9000 -v $MODELS_DIR:/opt/models openvino/model_server:latest --model_name aspire --model_path /opt/models/aspire --port 9000 --stateful
 ```
 
@@ -107,7 +108,7 @@ docker run --rm -d -p 9000:9000 -v $MODELS_DIR:/opt/models openvino/model_server
 As OVMS is already running in the background, you need to start another container that will be the client.
 Start kaldi container built in the step 2 in interactive mode:
 
-```
+```bash
 docker run --rm -it --network="host" kaldi:latest bash
 ```
 
@@ -117,12 +118,12 @@ As you start the container, the working directory is `/opt/workspace`
 
 Download the sample audio file for speech recognition:
 
-```
+```bash
 wget https://github.com/openvinotoolkit/model_server/raw/releases/2022/1/demos/speech_recognition_with_kaldi_model/python/asr_demo/sample.wav
 ```
 
 Run speech recognition:
-```
+```bash
 /opt/model_server/demos/speech_recognition_with_kaldi_model/python/asr_demo/run.sh /opt/workspace/sample.wav localhost 9000
 ```
 
@@ -130,8 +131,10 @@ The `run.sh` script takes 3 arguments, first is the absolute path to the `wav` f
 At the beginning the MFCC features and ivectors are extracted, then they are sent to the model server via [grpc_stateful_client](../grpc_stateful_client.py). At the end the results are decoded and parsed into text.
 
 When the command finishes successfully you should see the `txt` file in the same directory as the `wav` one:
-```
+```bash
 cat /opt/workspace/sample.wav.txt
+```
+```bash
 /opt/workspace/sample.wav today we have a very nice weather
 ```
 
@@ -141,34 +144,34 @@ You can also run the live-demo.py client on windows machine to record wav files 
 On server side run the instructions steps from 1 to 5 but instead of commands in step 6, run the following commands:
 
 Create the data directory as wav files input directory.
-```
+```bash
 export DATA_DIR=$HOME/asr_demo/data
 mkdir -p $DATA_DIR
 ```
 
 Start kaldi container built in the step 2 in interactive mode with $DATA_DIR mounted as /opt/data:
-```
+```bash
 docker run --rm -it --network="host" -v $DATA_DIR:/opt/data kaldi:latest bash
 ```
 
 The run_auto.sh script works as the run.sh script from step 6. However instead of taking the wav file from the command line argument 
 it detects wav files in $DATA_DIR and then runs the speech recognition on them.
 Run speech recognition loop on the server:
-```
+```bash
 /opt/model_server/demos/speech_recognition_with_kaldi_model/python/asr_demo/run_auto.sh localhost 9000
 ```
 
 Install the required packages on client side.
 PyAudio will be used to record audio from microphone and paramiko is used as scp client to copy recorded files to $DATA_DIR on the server.:
-```
-CLIENT SIDE:
+```bash
+#CLIENT SIDE:
 python -m pip install PyAudio
 python -m pip install paramiko
 ```
 
 Checkout the repository with demo script:
-```
-CLIENT SIDE:
+```bash
+#CLIENT SIDE:
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/speech_recognition_with_kaldi_model/python/asr_demo
 ```
@@ -178,15 +181,14 @@ Run the live-demo.py script to record and send audio files to the server:
 <SERVER_IP> - IP of the unix server with the running ovms and kaldi containers from steps 1 to 5.
 <SERVER_HOME_PATH> - is the path of the $HOME directory from steps 1 to 5.
 <SERVER_USER_NAME> - is the owner of the $HOME path and a user of the server used to run steps 1 to 5.
-```
-CLIENT SIDE:
-python live-demo.py <SERVER_IP> <SERVER_HOME_PATH>/asr_demo/data <SERVER_USER_NAME>
+```bash
+python live-demo.py localhost $HOME/asr_demo/data $USER
 ```
 
 The script will ask you to provide password for the user to connect to the server with scp.
 Once connected you can start to record audio by pressing 'r' key and stop it with the same 'r' key to see the detection results.
 Below is the example console output:
-```
+```bash
 Password:
 Connection success.
 Press r key to toggle recording

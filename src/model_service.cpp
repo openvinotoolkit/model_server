@@ -32,6 +32,7 @@
 
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
+#include "servablemanagermodule.hpp"
 #include "status.hpp"
 
 using google::protobuf::util::JsonPrintOptions;
@@ -63,7 +64,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
 ::grpc::Status ModelServiceImpl::GetModelStatus(
     ::grpc::ServerContext* context, const tensorflow::serving::GetModelStatusRequest* request,
     tensorflow::serving::GetModelStatusResponse* response) {
-    return GetModelStatusImpl::getModelStatus(request, response, ModelManager::getInstance()).grpc();
+    return GetModelStatusImpl::getModelStatus(request, response, modelManager, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelStatus)).grpc();
 }
 
 Status GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
@@ -89,7 +90,8 @@ Status GetModelStatusImpl::serializeResponse2Json(const tensorflow::serving::Get
 Status GetModelStatusImpl::getModelStatus(
     const tensorflow::serving::GetModelStatusRequest* request,
     tensorflow::serving::GetModelStatusResponse* response,
-    ModelManager& manager) {
+    ModelManager& manager,
+    ExecutionContext context) {
     SPDLOG_DEBUG("model_service: request: {}", request->DebugString());
 
     bool has_requested_version = request->model_spec().has_version();
@@ -102,6 +104,7 @@ Status GetModelStatusImpl::getModelStatus(
         if (!pipelineDefinition) {
             return StatusCode::MODEL_NAME_MISSING;
         }
+        INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
 
         addStatusToResponse(response, pipelineDefinition->getVersion(), pipelineDefinition->getStatus());
         SPDLOG_DEBUG("model_service: response: {}", response->DebugString());
@@ -112,18 +115,25 @@ Status GetModelStatusImpl::getModelStatus(
     SPDLOG_DEBUG("requested model: {}, has_version: {} (version: {})", requested_model_name, has_requested_version, requested_version);
     if (has_requested_version && requested_version != 0) {
         // return details only for a specific version of requested model; NOT_FOUND otherwise. If requested_version == 0, default is returned.
-        std::shared_ptr<ModelInstance> model_instance = model_ptr->getModelInstanceByVersion(requested_version);
-        if (!model_instance) {
-            SPDLOG_WARN("requested model {} in version {} was not found.", requested_model_name, requested_version);
+        std::shared_ptr<ModelInstance> modelInstance = model_ptr->getModelInstanceByVersion(requested_version);
+        if (!modelInstance) {
+            SPDLOG_DEBUG("requested model {} in version {} was not found.", requested_model_name, requested_version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
-        const auto& status = model_instance->getStatus();
+        INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
+        const auto& status = modelInstance->getStatus();
         SPDLOG_DEBUG("adding model {} - {} :: {} to response", requested_model_name, requested_version, status.getStateString());
         addStatusToResponse(response, requested_version, status);
     } else {
         // return status details of all versions of a requested model.
         auto modelVersionsInstances = model_ptr->getModelVersionsMapCopy();
+        bool reported = false;
         for (const auto& [modelVersion, modelInstance] : modelVersionsInstances) {
+            // GetModelStatus is tracked once for all versions (no version label) - this is why we only report once in a loop (each model instance metric refer to the same metric)
+            if (!reported) {
+                INCREMENT_IF_ENABLED(modelInstance.getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
+                reported = true;
+            }
             const auto& status = modelInstance.getStatus();
             SPDLOG_DEBUG("adding model {} - {} :: {} to response", requested_model_name, modelVersion, status.getStateString());
             addStatusToResponse(response, modelVersion, status);
@@ -134,7 +144,7 @@ Status GetModelStatusImpl::getModelStatus(
     return StatusCode::OK;
 }
 
-Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager) {
+Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager, ExecutionContext context) {
     std::shared_lock lock(manager.modelsMtx);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
 
@@ -144,7 +154,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         tensorflow::serving::GetModelStatusRequest request;
         GetModelStatusImpl::createGrpcRequest(model.first, noValueModelVersion, &request);
         tensorflow::serving::GetModelStatusResponse response;
-        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
+        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager, context);
         if (status != StatusCode::OK) {
             // For now situation when getModelStatus return status other than OK cannot occur because we never remove models and pipelines from model manager.
             // However, if something in this matter will change we should handle this somehow.
@@ -160,7 +170,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         tensorflow::serving::GetModelStatusRequest request;
         GetModelStatusImpl::createGrpcRequest(pipelineName, noValueModelVersion, &request);
         tensorflow::serving::GetModelStatusResponse response;
-        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager);
+        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager, context);
         if (status != StatusCode::OK) {
             // Same situation like with models.
             continue;
@@ -197,6 +207,15 @@ Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::stri
     output = outputTmp;
 
     return StatusCode::OK;
+}
+
+ModelServiceImpl::ModelServiceImpl(ovms::Server& ovmsServer) :
+    modelManager(dynamic_cast<const ServableManagerModule*>(ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    if (nullptr == ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
+        const char* message = "Tried to create model service impl without servable manager module";
+        SPDLOG_ERROR(message);
+        throw std::logic_error(message);
+    }
 }
 
 ::grpc::Status ModelServiceImpl::HandleReloadConfigRequest(

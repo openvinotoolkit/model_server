@@ -30,9 +30,10 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
-
 #include "aliases.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
+#include "kfs_grpc_inference_service.hpp"
+#include "model_metric_reporter.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
@@ -44,9 +45,6 @@ namespace ovms {
 
 class ModelManager;
 class Pipeline;
-// TODO dispose multiple using
-using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
-
 class NodeValidator;
 
 class PipelineDefinition {
@@ -90,6 +88,8 @@ private:
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
 
+    std::unique_ptr<ServableMetricReporter> reporter;
+
 protected:
     PipelineDefinitionStatus status;
 
@@ -105,16 +105,28 @@ public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
     PipelineDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
-        const pipeline_connections_t& connections) :
+        const pipeline_connections_t& connections,
+        MetricRegistry* registry = nullptr,
+        const MetricConfig* metricConfig = nullptr) :
         pipelineName(pipelineName),
         nodeInfos(nodeInfos),
         connections(connections),
+        reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
         status(this->pipelineName) {}
-
+    template <typename RequestType, typename ResponseType>
     Status create(std::unique_ptr<Pipeline>& pipeline,
-        const tensorflow::serving::PredictRequest* request,
-        tensorflow::serving::PredictResponse* response,
+        const RequestType* request,
+        ResponseType* response,
         ModelManager& manager);
+
+private:
+    template <typename RequestType, typename ResponseType>
+    Status createPrivate(std::unique_ptr<Pipeline>& pipeline,
+        const RequestType* request,
+        ResponseType* response,
+        ModelManager& manager);
+
+public:
     Status reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
     void retire(ModelManager& manager);
     Status validate(ModelManager& manager);
@@ -143,6 +155,8 @@ public:
 
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
+
+    ServableMetricReporter& getMetricReporter() const { return *this->reporter; }
 
 protected:
     virtual Status updateInputsInfo(const ModelManager& manager);

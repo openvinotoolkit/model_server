@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
+
 #include <grpcpp/server_context.h>
 
 #pragma GCC diagnostic push
@@ -22,9 +24,23 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "get_model_metadata_impl.hpp"
+
 namespace ovms {
+class ModelInstance;
+class ModelInstanceUnloadGuard;
+class ModelManager;
+class Pipeline;
+class Server;
+class Status;
 
 class PredictionServiceImpl final : public tensorflow::serving::PredictionService::Service {
+    ovms::Server& ovmsServer;
+    GetModelMetadataImpl getModelMetadataImpl;
+    ModelManager& modelManager;
+
+public:
+    PredictionServiceImpl(ovms::Server& ovmsServer);
     grpc::Status Predict(
         grpc::ServerContext* context,
         const tensorflow::serving::PredictRequest* request,
@@ -34,6 +50,16 @@ class PredictionServiceImpl final : public tensorflow::serving::PredictionServic
         grpc::ServerContext* context,
         const tensorflow::serving::GetModelMetadataRequest* request,
         tensorflow::serving::GetModelMetadataResponse* response) override;
+
+    const GetModelMetadataImpl& getTFSModelMetadataImpl() const;
+
+protected:
+    Status getModelInstance(const tensorflow::serving::PredictRequest* request,
+        std::shared_ptr<ovms::ModelInstance>& modelInstance,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
+    Status getPipeline(const tensorflow::serving::PredictRequest* request,
+        tensorflow::serving::PredictResponse* response,
+        std::unique_ptr<ovms::Pipeline>& pipelinePtr);
 };
 
 }  // namespace ovms

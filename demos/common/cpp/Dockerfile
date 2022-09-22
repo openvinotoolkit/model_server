@@ -88,7 +88,7 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN mkdir -p /opt/intel/openvino && cd /opt/intel/openvino && curl -s https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv/openvino_opencv_ubuntu20.tgz | tar -xzf - && cd /build
+RUN cp /build/third_party/opencv/install_opencv.sh /build/third_party/opencv/opencv_cmake_flags.txt . && ./install_opencv.sh
 
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
@@ -115,4 +115,5 @@ COPY --from=base_build \
     /clients
 COPY --from=base_build /input/images/*.jpeg /clients/images/
 COPY --from=base_build /input/input_images.txt /clients/
-COPY --from=base_build /opt/intel/openvino/extras/opencv/lib/* /lib/x86_64-linux-gnu/
+COPY --from=base_build /usr/lib/x86_64-linux-gnu/libpng* /lib/x86_64-linux-gnu/
+COPY --from=base_build /opt/opencv/lib/* /lib/x86_64-linux-gnu/

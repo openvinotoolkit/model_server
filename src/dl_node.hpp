@@ -24,9 +24,9 @@
 #include <openvino/openvino.hpp>
 
 #include "executingstreamidguard.hpp"
-#include "model_version_policy.hpp"  // for model_version_t typename
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
+#include "modelversion.hpp"
 #include "node.hpp"
 #include "nodestreamidguard.hpp"
 
@@ -62,7 +62,7 @@ public:
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
 private:
-    Status fetchResults(TensorMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
+    Status fetchResults(TensorWithSourceMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
 
 public:
     void release(session_key_t sessionId) override;

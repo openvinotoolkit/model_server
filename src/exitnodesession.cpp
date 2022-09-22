@@ -1,10 +1,11 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2021-2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,23 +15,32 @@
 //*****************************************************************************
 #include "exitnodesession.hpp"
 
-#include <utility>
+#include <memory>
 
-#include "logging.hpp"
-#include "nodeinputhandler.hpp"
+#include "gatherexitnodeinputhandler.hpp"
 
 namespace ovms {
-ExitNodeSession::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
-    NodeSession(metadata, nodeName, inputsCount, collapsingDetails) {}
 
-ExitNodeSession::ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
-    NodeSession(std::move(metadata), nodeName, inputsCount, collapsingDetails) {}
+template <typename ResponseType>
+ExitNodeSession<ResponseType>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ResponseType* response) :
+    NodeSession(metadata, nodeName, inputsCount, collapsingDetails) {
+    if (collapsingDetails.collapsedSessionNames.size() != 0) {
+        this->inputHandler = std::make_unique<GatherExitNodeInputHandler<ResponseType>>(inputsCount, collapsingDetails, response);
+    }
+}
 
-ExitNodeSession::~ExitNodeSession() = default;
-
-void ExitNodeSession::release() {}
-
-const TensorMap& ExitNodeSession::getInputTensors() const {
+template <typename ResponseType>
+const TensorMap& ExitNodeSession<ResponseType>::getInputTensors() const {
     return this->inputHandler->getInputs();
 }
+
+template <typename ResponseType>
+ExitNodeSession<ResponseType>::~ExitNodeSession() = default;
+
+template ExitNodeSession<tensorflow::serving::PredictResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, tensorflow::serving::PredictResponse* response);
+template ExitNodeSession<::inference::ModelInferResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ::inference::ModelInferResponse* response);
+
+template const TensorMap& ExitNodeSession<tensorflow::serving::PredictResponse>::getInputTensors() const;
+template const TensorMap& ExitNodeSession<::inference::ModelInferResponse>::getInputTensors() const;
+
 }  // namespace ovms

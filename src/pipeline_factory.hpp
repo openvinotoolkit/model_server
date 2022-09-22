@@ -28,7 +28,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
-
+#include "kfs_grpc_inference_service.hpp"
 #include "nodeinfo.hpp"
 #include "status.hpp"
 
@@ -37,6 +37,7 @@ namespace ovms {
 class ModelManager;
 class Pipeline;
 class PipelineDefinition;
+class MetricRegistry;
 
 class PipelineFactory {
     std::map<std::string, std::unique_ptr<PipelineDefinition>> definitions;
@@ -50,6 +51,20 @@ public:
 
     bool definitionExists(const std::string& name) const;
 
+private:
+    template <typename RequestType, typename ResponseType>
+    Status createInternal(std::unique_ptr<Pipeline>& pipeline,
+        const std::string& name,
+        const RequestType* request,
+        ResponseType* response,
+        ModelManager& manager) const;
+
+public:
+    Status create(std::unique_ptr<Pipeline>& pipeline,
+        const std::string& name,
+        const ::inference::ModelInferRequest* request,
+        ::inference::ModelInferResponse* response,
+        ModelManager& manager) const;
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const std::string& name,
         const tensorflow::serving::PredictRequest* request,

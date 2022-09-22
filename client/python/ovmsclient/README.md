@@ -4,7 +4,9 @@ The [ovmsclient](https://pypi.org/project/ovmsclient/) package is a lightweight 
 
 Download ovmsclient with:
 
-```pip3 install ovmsclient```
+```bash
+pip3 install ovmsclient
+```
 
 [Learn more about the client package...](lib)
 
@@ -19,3 +21,12 @@ There are also Dockerfiles available that prepare Docker image with `ovmsclient`
 Simply run `docker build` with the Dockerfile of your choice to get the minimal image:
 - [Ubuntu 20.04 based image](Dockerfile.ubuntu)
 - [UBI 8.4 based image](Dockerfile.redhat)
+
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/client/python/ovmsclient
+
+docker build --no-cache -f Dockerfile.ubuntu .
+
+docker build --no-cache -f Dockerfile.redhat .
+```

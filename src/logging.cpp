@@ -37,6 +37,12 @@ void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> 
         } else if (log_level == "ERROR") {
             logger->set_level(spdlog::level::err);
             logger->flush_on(spdlog::level::err);
+        } else if (log_level == "WARNING") {
+            logger->set_level(spdlog::level::warn);
+            logger->flush_on(spdlog::level::warn);
+        } else if (log_level == "TRACE") {
+            logger->set_level(spdlog::level::trace);
+            logger->flush_on(spdlog::level::trace);
         }
     }
 }
@@ -69,6 +75,10 @@ void register_loggers(const std::string log_level, std::vector<spdlog::sink_ptr>
 }
 
 void configure_logger(const std::string log_level, const std::string log_path) {
+    static bool wasRun = false;
+    if (wasRun)
+        return;
+    wasRun = true;
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_sink_st>());
     if (!log_path.empty()) {

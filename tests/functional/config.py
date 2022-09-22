@@ -45,7 +45,7 @@ start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 
 """CONTAINER_LOG_LINE - log line to check in container"""
 # For multiple log lines, pass them separated with ':'
-container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Server started on port:Started REST server at")
+container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Started model manager thread")
 container_log_line = container_log_line.split(":")
 
 """OVMS_BINARY_PATH - path to ovms binary file; when specified, tests are executed against provided binary."""
@@ -85,6 +85,9 @@ rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", 18001)
 
 """ TT_PORTS_POOL_SIZE- Ports pool size"""
 ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 5000)
+
+""" TT_CONVERTED_MODELS_EXPIRE_TIME - Time after converted models are not up-to-date and needs to be refreshed(s) """
+converted_models_expire_time = get_int("TT_CONVERTED_MODELS_EXPIRE_TIME", 7*24*3600)  # Set default to one week
 
 """ TT_DEFAULT_INFER_TIMEOUT - Timeout for CPU target device"""
 default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)

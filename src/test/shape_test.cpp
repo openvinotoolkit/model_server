@@ -31,7 +31,7 @@ TEST(Dimension, Match) {
     EXPECT_TRUE(Dimension::any().match(-1));
     EXPECT_TRUE(Dimension::any().match(1));
     EXPECT_TRUE(Dimension::any().match(42));
-    EXPECT_TRUE(Dimension::any().match(-42));  // TODO
+    EXPECT_FALSE(Dimension::any().match(-42));
     EXPECT_FALSE(Dimension(10, 20).match(2));
     EXPECT_FALSE(Dimension(10, 20).match(22));
     EXPECT_FALSE(Dimension(10, 20).match(-12));
@@ -63,6 +63,27 @@ TEST(Dimension, CreateIntersection) {
     EXPECT_EQ(Dimension(1, 2).createIntersection(Dimension(3)), std::nullopt);
     EXPECT_EQ(Dimension(1, 2).createIntersection(Dimension(3, 4)), std::nullopt);
 }
+
+TEST(Dimension, Constructor) {
+    EXPECT_THROW(Dimension(-2, -2), std::invalid_argument);
+    EXPECT_THROW(Dimension(-2, -1), std::invalid_argument);
+    EXPECT_THROW(Dimension(-1, -2), std::invalid_argument);
+    EXPECT_THROW(Dimension(-2, 2), std::invalid_argument);
+    EXPECT_THROW(Dimension(2, -2), std::invalid_argument);
+    EXPECT_THROW(Dimension(2, 1), std::invalid_argument);
+    EXPECT_THROW(Dimension(-6, -2), std::invalid_argument);
+    EXPECT_THROW(Dimension(5, 4), std::invalid_argument);
+    EXPECT_THROW(Dimension(-1, 0), std::invalid_argument);
+    EXPECT_THROW(Dimension(-1, 1), std::invalid_argument);
+    EXPECT_THROW(Dimension(1, -1), std::invalid_argument);
+}
+
+TEST(Dimension, Equals) {
+    EXPECT_TRUE(Dimension(0, 0) == Dimension(0));
+    EXPECT_TRUE(Dimension(1, 1) == Dimension(1));
+    EXPECT_TRUE(Dimension(-1, -1) == Dimension(-1));
+}
+
 TEST(Shape, CreateIntersection) {
     EXPECT_EQ(Shape({1, 6, 8}).createIntersection(Shape({1, 6})), std::nullopt);
     EXPECT_EQ(Shape({1, 6, 8}).createIntersection(Shape({1, 6, 8})), Shape({1, 6, 8}));

@@ -20,11 +20,6 @@
 
 #include <openvino/openvino.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
 #include "logging.hpp"
 #include "node.hpp"
 #include "tensorinfo.hpp"
@@ -33,12 +28,13 @@ namespace ovms {
 
 const std::string ENTRY_NODE_NAME = "request";
 
+template <typename RequestType>
 class EntryNode : public Node {
-    const tensorflow::serving::PredictRequest* request;
+    const RequestType* request;
     const tensor_map_t inputsInfo;
 
 public:
-    EntryNode(const tensorflow::serving::PredictRequest* request,
+    EntryNode(const RequestType* request,
         const tensor_map_t& inputsInfo,
         std::optional<int32_t> demultiplyCount = std::nullopt) :
         Node(ENTRY_NODE_NAME, demultiplyCount),
@@ -50,7 +46,7 @@ public:
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
 protected:
-    Status fetchResults(TensorMap& outputs);
+    Status fetchResults(TensorWithSourceMap& outputs);
     Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) override;
 
 public:

@@ -275,7 +275,7 @@ release "ovms-app" uninstalled
 | aws_secret_access_key      | S3 storage secret key, use it with S3 storage for models |-  | - |
 | s3_compat_api_endpoint      | S3 compatibility api endpoint, use it with Minio storage for models |  | - |
 | azure_storage_connection_string   | Connection string to the Azure Storage authentication account, use it with Azure storage for models | - | - |
-| log_level      | OVMS log level, one of ERROR,INFO,DEBUG| - |  INFO |
+| log_level      | OVMS log level, one of ERROR, WARNING, INFO, DEBUG, TRACE| - |  INFO |
 | service_type      | k8s service type | - | LoadBalancer |
 | resources      | Compute resource limits | - | All CPU and memory on the node |
 | node_selector      | Target node label condition | - | All available nodes |

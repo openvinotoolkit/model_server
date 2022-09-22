@@ -31,8 +31,6 @@
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-
 #include "custom_node_library_internal_manager_wrapper.hpp"
 #include "customloaders.hpp"
 #include "filesystem.hpp"
@@ -46,20 +44,23 @@ namespace ovms {
 const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
+class Config;
 class IVersionReader;
 class CustomNodeLibraryManager;
+class MetricRegistry;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
 class ModelManager {
-protected:
+public:
     /**
      * @brief A default constructor is private
      */
-    ModelManager(const std::string& modelCacheDirectory = "");
+    ModelManager(const std::string& modelCacheDirectory = "", MetricRegistry* registry = nullptr);
 
+protected:
     void logPluginConfiguration();
 
     Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
@@ -81,10 +82,13 @@ protected:
 
     GlobalSequencesViewer globalSequencesViewer;
     uint32_t waitForModelLoadedTimeoutMs;
+    bool watcherStarted = false;
+    bool cleanerStarted = false;
 
 private:
     /**
-     * @brief Private copying constructor
+     * @brief 
+     * 
      */
     ModelManager(const ModelManager&) = delete;
 
@@ -108,7 +112,7 @@ private:
     /**
      * @brief Watcher thread for monitor changes in config
      */
-    void watcher(std::future<void> exitSignal);
+    void watcher(std::future<void> exitSignal, bool watchConfigFile);
 
     /**
      * @brief Cleaner thread for sequence and resources cleanup
@@ -118,7 +122,7 @@ private:
     /**
      * @brief Mutex for blocking concurrent add & remove of resources
      */
-    std::shared_mutex resourcesMtx;
+    mutable std::shared_mutex resourcesMtx;
 
     /**
      * @brief A JSON configuration filename
@@ -134,6 +138,16 @@ private:
      * @brief A thread object used for cleanup
      */
     std::thread cleanerThread;
+
+    /**
+         * @brief Metrics config
+         */
+    MetricConfig metricConfig;
+
+    /**
+         * @brief Metrics config was loaded flag
+         */
+    bool metricConfigLoadedOnce = false;
 
     /**
      * @brief An exit trigger to notify watcher thread to exit
@@ -187,6 +201,8 @@ private:
      * @brief Directory for OpenVINO to store cache files.
      */
     std::string modelCacheDirectory;
+
+    MetricRegistry* metricRegistry;
 
 public:
     /**
@@ -271,11 +287,7 @@ public:
     Status getModelInstance(const std::string& modelName,
         ovms::model_version_t modelVersionId,
         std::shared_ptr<ovms::ModelInstance>& modelInstance,
-        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
-
-    Status getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
-        const tensorflow::serving::PredictRequest* request,
-        tensorflow::serving::PredictResponse* response);
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const;
 
     const bool modelExists(const std::string& name) const {
         if (findModelByName(name) == nullptr)
@@ -305,10 +317,11 @@ public:
         }
     }
 
+    template <typename RequestType, typename ResponseType>
     Status createPipeline(std::unique_ptr<Pipeline>& pipeline,
         const std::string name,
-        const tensorflow::serving::PredictRequest* request,
-        tensorflow::serving::PredictResponse* response) {
+        const RequestType* request,
+        ResponseType* response) {
         return pipelineFactory.create(pipeline, name, request, response, *this);
     }
 
@@ -332,6 +345,26 @@ public:
     Status startFromConfig();
 
     /**
+         * @brief Get the metric config
+         * 
+         * @return const std::string&
+         */
+    const MetricConfig& getMetricConfig() const {
+        return this->metricConfig;
+    }
+
+    Status loadMetricsConfig(rapidjson::Document& configJson);
+
+    /**
+         * @brief Set the metric config
+         * 
+         * @param metricConfig 
+         */
+    void setMetricConfig(const MetricConfig& metricConfig) {
+        this->metricConfig = metricConfig;
+    }
+
+    /**
      * @brief Reload model versions located in base path
      * 
      * @param ModelConfig config
@@ -345,13 +378,13 @@ public:
      * 
      * @return status
      */
-    Status start();
+    Status start(const Config& config);
 
     /**
      * @brief Starts monitoring as new thread
      * 
      */
-    void startWatcher();
+    void startWatcher(bool watchConfigFile);
 
     /**
      * @brief Gracefully finish the thread
@@ -421,6 +454,8 @@ public:
      * @brief Cleaner thread procedure to cleanup resources that are not used
      */
     void cleanupResources();
+
+    MetricRegistry* getMetricRegistry() const { return this->metricRegistry; }
 };
 
 void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);

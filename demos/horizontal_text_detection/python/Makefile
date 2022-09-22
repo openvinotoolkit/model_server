@@ -18,6 +18,8 @@
 
 default: setup_repository
 
+BUILD_CUSTOM_NODE=false
+
 setup_repository:
 # Download horizontal text detection model
 	mkdir -p workspace/horizontal-text-detection-0001/1
@@ -27,12 +29,17 @@ setup_repository:
 	mkdir -p workspace/text-recognition-0014/1
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.bin -o workspace/text-recognition-0014/1/text-recognition-0014.bin
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.xml -o workspace/text-recognition-0014/1/text-recognition-0014.xml
+ifeq ($(BUILD_CUSTOM_NODE),true)
 # Build custom node
-	cd ../../../src/custom_nodes/horizontal_ocr && \
-	make && \
-	mv lib ../../../demos/horizontal_text_detection/python/workspace/lib
+	cd ../../../src/custom_nodes && \
+	make BASE_OS=ubuntu NODES=horizontal_ocr && \
+	mkdir -p ../../demos/horizontal_text_detection/python/workspace/lib && \
+	mv lib/ubuntu/libcustom_node_horizontal_ocr.so ../../demos/horizontal_text_detection/python/workspace/lib/libcustom_node_horizontal_ocr.so
+endif
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
-
+ifeq ($(BUILD_CUSTOM_NODE),false)
+	sed -i 's:\/workspace\/lib\/libcustom_node_horizontal_ocr.so:\/ovms\/lib\/custom_nodes\/libcustom_node_horizontal_ocr.so:g' workspace/config.json
+endif
 clean:
 	@rm -rf workspace

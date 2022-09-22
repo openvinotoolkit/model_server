@@ -19,15 +19,21 @@
 #include <string>
 #include <utility>
 
-#include <openvino/openvino.hpp>
-
 #include "nodesessionmetadata.hpp"
 #include "status.hpp"
 
 namespace ovms {
 struct NodeInputHandler;
 struct NodeOutputHandler;
+class TensorWithSource;
+template <unsigned int N>
 class Timer;
+
+enum : unsigned int {
+    GET_INFER_REQUEST,
+    EXECUTE,
+    TIMER_END
+};
 
 class NodeSession {
     NodeSessionMetadata metadata;
@@ -35,23 +41,22 @@ class NodeSession {
     const std::string& nodeName;
 
 protected:
-    std::unique_ptr<Timer> timer;
+    std::unique_ptr<Timer<TIMER_END>> timer;
     std::unique_ptr<NodeInputHandler> inputHandler;
     std::unique_ptr<NodeOutputHandler> outputHandler;
 
 public:
     NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
-    NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
     virtual ~NodeSession();
     const std::string& getName() const { return nodeName; }
-    Status setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId);
+    Status setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId);
     const NodeSessionMetadata& getNodeSessionMetadata() const;
     const session_key_t& getSessionKey() const { return sessionKey; }
     bool isReady() const;
     virtual void release() {}
     virtual bool tryDisarm(uint microseconds) { return true; }
     Status notifyFinishedDependency();
-    Timer& getTimer() const;
+    Timer<TIMER_END>& getTimer() const;
 };
 
 class ReleaseSessionGuard {

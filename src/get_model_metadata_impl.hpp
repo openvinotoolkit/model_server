@@ -21,20 +21,28 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/get_model_metadata.pb.h"
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "modelmanager.hpp"
+#include "execution_context.hpp"
 #include "status.hpp"
+#include "tensorinfo.hpp"
 
 namespace ovms {
 
 using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
 
+class ModelInstance;
+class ModelManager;
 class PipelineDefinition;
+class Server;
 
 class GetModelMetadataImpl {
+    ModelManager& modelManager;
+
 public:
+    GetModelMetadataImpl(ovms::Server& ovmsServer);
     static Status validate(
         const tensorflow::serving::GetModelMetadataRequest* request);
 
@@ -50,13 +58,15 @@ public:
         tensorflow::serving::GetModelMetadataResponse* response,
         const ModelManager& manager);
 
-    static Status getModelStatus(
+    Status getModelStatus(
         const tensorflow::serving::GetModelMetadataRequest* request,
-        tensorflow::serving::GetModelMetadataResponse* response);
+        tensorflow::serving::GetModelMetadataResponse* response, ExecutionContext context) const;
+
     static Status getModelStatus(
         const tensorflow::serving::GetModelMetadataRequest* request,
         tensorflow::serving::GetModelMetadataResponse* response,
-        ModelManager& manager);
+        ModelManager& manager,
+        ExecutionContext context);
     static Status createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request);
     static Status serializeResponse2Json(const tensorflow::serving::GetModelMetadataResponse* response, std::string* output);
 };

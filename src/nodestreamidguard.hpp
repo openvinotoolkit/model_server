@@ -18,51 +18,23 @@
 #include <future>
 #include <optional>
 
-#include <spdlog/spdlog.h>
-
-#include "ovinferrequestsqueue.hpp"
-
 namespace ovms {
 
+class ModelMetricReporter;
+class OVInferRequestsQueue;
+
 struct NodeStreamIdGuard {
-    NodeStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
-        inferRequestsQueue_(inferRequestsQueue),
-        futureStreamId(inferRequestsQueue_.getIdleStream()) {}
+    NodeStreamIdGuard(OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter);
+    ~NodeStreamIdGuard();
 
-    ~NodeStreamIdGuard() {
-        if (!disarmed) {
-            if (!streamId) {
-                SPDLOG_DEBUG("Trying to disarm stream Id that is not needed anymore...");
-                streamId = futureStreamId.get();
-            }
-            SPDLOG_DEBUG("Returning streamId: {}", streamId.value());
-            inferRequestsQueue_.returnStream(streamId.value());
-        }
-    }
-
-    std::optional<int> tryGetId(const uint microseconds = 1) {
-        if (!streamId) {
-            if (std::future_status::ready == futureStreamId.wait_for(std::chrono::microseconds(microseconds))) {
-                streamId = futureStreamId.get();
-            }
-        }
-        return streamId;
-    }
-
-    bool tryDisarm(const uint microseconds = 1) {
-        if (std::future_status::ready == futureStreamId.wait_for(std::chrono::microseconds(microseconds))) {
-            streamId = futureStreamId.get();
-            SPDLOG_DEBUG("Returning streamId:", streamId.value());
-            inferRequestsQueue_.returnStream(streamId.value());
-            disarmed = true;
-        }
-        return disarmed;
-    }
+    std::optional<int> tryGetId(const uint microseconds = 1);
+    bool tryDisarm(const uint microseconds = 1);
 
 private:
-    ovms::OVInferRequestsQueue& inferRequestsQueue_;
+    OVInferRequestsQueue& inferRequestsQueue_;
     std::future<int> futureStreamId;
     std::optional<int> streamId = std::nullopt;
     bool disarmed = false;
+    ModelMetricReporter& reporter;
 };
 }  // namespace ovms

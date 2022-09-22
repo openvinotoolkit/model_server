@@ -14,9 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <regex>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../config.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
@@ -41,6 +44,16 @@ static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
 static const char* stressTestPipelineOneDummyConfig = R"(
 {
+    "monitoring": {
+        "metrics": {
+            "enable": true,
+            "metrics_list": [
+                "ovms_current_requests",
+                "ovms_infer_req_active",
+                "ovms_requests_success",
+                "ovms_infer_req_queue_size"]
+        }
+    },
     "model_config_list": [
         {
             "config": {
@@ -996,6 +1009,8 @@ protected:
     // producess highest results
     const std::vector<float> requestData{1.1, 2., 3., 7., 5., 6., 4., 9., 10., 8.};
 
+    ConstructorEnabledModelManager manager;
+
 public:
     virtual std::string getServableName() {
         return pipelineName;
@@ -1011,6 +1026,9 @@ public:
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
+        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
+        int arg_count = 5;
+        ovms::Config::instance().parse(arg_count, n_argv);
         modelPath = directoryPath + "/dummy/";
         SetUpConfig(stressTestPipelineOneDummyConfig);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
@@ -1103,6 +1121,50 @@ public:
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
+    void checkMetricGreaterThan(const std::string& metricName, double value) {
+        std::string metricOutput = manager.getMetricRegistry()->collect();
+        ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric\n"
+                                                                                                                     << metricOutput;
+        std::regex findActualMetricRgx(std::string{".*"} + metricName + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findRequestsSuccessMetricRgx(std::string{".*ovms_requests_success\\{api=\"TensorFlowServing\",interface=\"gRPC\",method=\"Predict\",name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::smatch match;
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findActualMetricRgx)) << "cannot find dummys " << metricName << " metric\n"
+                                                                                 << metricOutput;
+        auto actualVal = ovms::stoi64(match[1]);
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findRequestsSuccessMetricRgx)) << "cannot find dummys ovms_requests_success metric\n"
+                                                                                          << metricOutput;
+        auto requestsSuccessCounter = ovms::stoi64(match[1]);
+        ASSERT_TRUE(requestsSuccessCounter.has_value()) << "cannot parse ovms_requests_success\n"
+                                                        << metricOutput;
+        SPDLOG_DEBUG("ovms_requests_success value: {}", requestsSuccessCounter.value());
+        ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number\n"
+                                           << metricOutput;
+        // In case of sporadic error here consider checking ovms_requests_success value (if 0, it could mean the load did not start yet (could happen on slower machines))
+        ASSERT_GT(actualVal.value(), value) << metricName << " metric needs to be greater than " << value << std::endl
+                                            << metricOutput;
+    }
+    void checkActiveNireqSmallerThanTotal() {
+        std::string metricOutput = manager.getMetricRegistry()->collect();
+        std::regex findNireqTotalRgx(std::string{".*ovms_infer_req_queue_size\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findNireqActiveRgx(std::string{".*ovms_infer_req_active\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::smatch match;
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findNireqTotalRgx)) << "cannot find dummys total nireq in metric\n"
+                                                                               << metricOutput;
+        auto totalNireq = ovms::stoi64(match[1]);
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findNireqActiveRgx)) << "cannot find dummys active nireq in metric\n"
+                                                                                << metricOutput;
+        auto activeNireq = ovms::stoi64(match[1]);
+        ASSERT_TRUE(totalNireq.has_value()) << metricOutput;
+        ASSERT_TRUE(activeNireq.has_value()) << metricOutput;
+        ASSERT_LE(activeNireq.value(), totalNireq.value()) << metricOutput;
+    }
+    void testCurrentRequestsMetric() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        checkMetricGreaterThan("ovms_current_requests", 0);
+        checkMetricGreaterThan("ovms_infer_req_active", 0);
+        checkActiveNireqSmallerThanTotal();
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
     void performStressTest(
         void (StressPipelineConfigChanges::*triggerLoadInALoop)(
             std::future<void>&,
@@ -1115,7 +1177,6 @@ public:
         bool reloadWholeConfig,
         std::set<StatusCode> requiredLoadResults,
         std::set<StatusCode> allowedLoadResults) {
-        ConstructorEnabledModelManager manager;
         createConfigFileWithContent(ovmsConfig, configFilePath);
         auto status = manager.loadConfig(configFilePath);
         ASSERT_TRUE(status.ok());
@@ -1133,14 +1194,9 @@ public:
             stopSignals.end(),
             std::back_inserter(futureStopSignals),
             [](auto& p) { return p.get_future(); });
-
         std::unordered_map<StatusCode, std::atomic<uint64_t>> createPipelineRetCodesCounters;
-        std::unordered_map<StatusCode, std::atomic<uint64_t>> executePipelineRetCodesCounters;
         for (uint i = 0; i != static_cast<uint>(StatusCode::STATUS_CODE_END); ++i) {
             createPipelineRetCodesCounters[static_cast<StatusCode>(i)] = 0;
-        }
-        for (uint i = 0; i != static_cast<uint>(StatusCode::STATUS_CODE_END); ++i) {
-            executePipelineRetCodesCounters[static_cast<StatusCode>(i)] = 0;
         }
         // create worker threads
         std::vector<std::unique_ptr<std::thread>> workerThreads;
@@ -1150,14 +1206,13 @@ public:
                     &triggerLoadInALoop,
                     &futureStartSignals,
                     &futureStopSignals,
-                    &manager,
                     &requiredLoadResults,
                     &allowedLoadResults,
                     &createPipelineRetCodesCounters,
                     i]() {
                     ((*this).*triggerLoadInALoop)(futureStartSignals[i],
                         futureStopSignals[i],
-                        manager,
+                        this->manager,
                         requiredLoadResults,
                         allowedLoadResults,
                         createPipelineRetCodesCounters);
@@ -1281,7 +1336,7 @@ public:
                 break;
             }
             auto status = ovms::GetModelMetadataImpl::createGrpcRequest(pipelineName, 1, &request);
-            status = ovms::GetModelMetadataImpl::getModelStatus(&request, &response, manager);
+            status = ovms::GetModelMetadataImpl::getModelStatus(&request, &response, manager, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata));
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
@@ -1318,7 +1373,7 @@ public:
                 break;
             }
             auto status = ovms::GetModelStatusImpl::createGrpcRequest(getServableName(), 1, &request);
-            status = ovms::GetModelStatusImpl::getModelStatus(&request, &response, manager);
+            status = ovms::GetModelStatusImpl::getModelStatus(&request, &response, manager, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelStatus));
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
@@ -1334,11 +1389,12 @@ public:
     }
     virtual inputs_info_t getExpectedInputsInfo() {
         return {{pipelineInputName,
-            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}};
+            std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
     }
 
     virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest() {
-        tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
+        tensorflow::serving::PredictRequest request;
+        preparePredictRequest(request, getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         return request;
@@ -1381,7 +1437,9 @@ public:
             }
 
             ovms::Status executePipelineStatus = StatusCode::UNKNOWN_ERROR;
-            executePipelineStatus = pipelinePtr->execute();
+            executePipelineStatus = pipelinePtr->execute(ovms::ExecutionContext(
+                ovms::ExecutionContext::Interface::GRPC,
+                ovms::ExecutionContext::Method::Predict));
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(executePipelineStatus.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(executePipelineStatus.getCode()) != allowedLoadResults.end()))
@@ -1436,6 +1494,17 @@ TEST_F(StressPipelineConfigChanges, AddNewVersionDuringPredictLoad) {
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop,
         &StressPipelineConfigChanges::defaultVersionAdd,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, GetMetricsDuringLoad) {
+    bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::testCurrentRequestsMetric,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
@@ -1753,7 +1822,8 @@ class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChange
 
 public:
     tensorflow::serving::PredictRequest preparePipelinePredictRequest() override {
-        tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
+        tensorflow::serving::PredictRequest request;
+        preparePredictRequest(request, getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         auto& factors = (*request.mutable_inputs())[pipelineFactorsInputName];
@@ -1762,9 +1832,9 @@ public:
     }
     inputs_info_t getExpectedInputsInfo() override {
         return {{pipelineInputName,
-                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}},
+                    std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
             {pipelineFactorsInputName,
-                std::tuple<ovms::shape_t, tensorflow::DataType>{{1, differentOpsFactorsInputSize}, tensorflow::DataType::DT_FLOAT}}};
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
     }
     void checkPipelineResponse(const std::string& pipelineOutputName,
         tensorflow::serving::PredictRequest& request,

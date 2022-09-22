@@ -30,38 +30,49 @@
 #include "exitnodesession.hpp"
 
 namespace ovms {
-Status ExitNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
-    auto& exitNodeSession = static_cast<ExitNodeSession&>(nodeSession);
+template <typename ResponseType>
+Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
+    auto& exitNodeSession = static_cast<ExitNodeSession<ResponseType>&>(nodeSession);
     return this->fetchResults(exitNodeSession.getInputTensors());
 }
 
-Status ExitNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
+template <typename ResponseType>
+Status ExitNode<ResponseType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
+    OVMS_PROFILE_FUNCTION();
     notifyEndQueue.push(NodeSessionKeyPair(*this, sessionId));
     return StatusCode::OK;
 }
 
 template <>
 Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     auto it = outputSource.find(name);
     if (it == outputSource.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
         return StatusCode::INTERNAL_ERROR;
     }
-    ov::Tensor finalTensor;
-    auto status = tensorClone(finalTensor, it->second);
-    if (!status.ok()) {
-        return status;
-    }
-    tensor = finalTensor;
+    tensor = it->second;
     return StatusCode::OK;
 }
 
-Status ExitNode::fetchResults(const TensorMap& inputTensors) {
+template <typename ResponseType>
+Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
     OutputGetter<const TensorMap&> outputGetter(inputTensors);
-    return serializePredictResponse(outputGetter, this->outputsInfo, this->response);
+    return serializePredictResponse(outputGetter, this->outputsInfo, this->response, getOutputMapKeyName);
 }
 
-std::unique_ptr<NodeSession> ExitNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
-    return std::make_unique<ExitNodeSession>(metadata, getName(), previous.size(), collapsingDetails);
+template <typename ResponseType>
+std::unique_ptr<NodeSession> ExitNode<ResponseType>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
+    return std::make_unique<ExitNodeSession<ResponseType>>(metadata, getName(), previous.size(), collapsingDetails, response);
 }
+
+template Status ExitNode<::inference::ModelInferResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status ExitNode<::inference::ModelInferResponse>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
+template Status ExitNode<tensorflow::serving::PredictResponse>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
+template Status ExitNode<::inference::ModelInferResponse>::fetchResults(const TensorMap& inputTensors);
+template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(const TensorMap& inputTensors);
+template std::unique_ptr<NodeSession> ExitNode<::inference::ModelInferResponse>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
+template std::unique_ptr<NodeSession> ExitNode<tensorflow::serving::PredictResponse>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
 }  // namespace ovms

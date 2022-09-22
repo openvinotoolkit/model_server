@@ -17,33 +17,34 @@ More information about this feature can be found in [dynamic batch size in demul
 
 ## Steps
 Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
-```
+```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 #### Download the pretrained model
 Download model files and store them in the `models` directory
-```Bash
-curl --create_dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+```bash
+mkdir -p models/resnet/1
+curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
 
 chmod -R 755 ./models
 ```
 
 #### Pull the latest OVMS image from dockerhub
 Pull the latest version of OpenVINO&trade; Model Server from Dockerhub :
-```Bash
+```bash
 docker pull openvino/model_server:latest
 ```
 
 #### OVMS configuration file
 Go to the `models` directory:
-```
+```bash
 cd models
 ```
 
 Create a new file named `config.json` there:
-```json
-{
+```bash
+echo '{
    "model_config_list": [
        {
            "config": {
@@ -90,17 +91,17 @@ Create a new file named `config.json` there:
            ]
        }
    ]
-}
+}' >> config.json
 ```
 
 #### Start ovms docker container with downloaded model
 Start ovms container with image pulled in previous step and mount `models` directory :
-```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config.json --port 9000
+```bash
+docker run --rm -d -v $(pwd):/models -p 9000:9000 openvino/model_server:latest --config_path /models/config.json --port 9000
 ```
 
 #### Checking metadata
-```Bash
+```bash
 cd ../client/python/tensorflow-serving-api/samples
 virtualenv .venv
 . .venv/bin/activate
@@ -109,7 +110,7 @@ pip install -r requirements.txt
 python grpc_get_model_metadata.py --grpc_port 9000 --model_name resnet50DAG
 ```
 
-```Bash
+```bash
 ...
 Getting model metadata for model: resnet50DAG
 Inputs metadata:
@@ -121,19 +122,20 @@ Outputs metadata:
 > **NOTE**: While using the dynamic batching feature both input and output shape has an additional dimension, which represents split batch size. Setting batch size parameter to `--batchsize 8` would set input shape to `[8,1,3,244,244]` and output shape to `[8,1,1000]`.
 
 #### Run the client
-```Bash
+```bash
 python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 1 > b1.txt && python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 8 > b8.txt;
 ```
 *Note:* Results of running the client will be available in .txt files in the current directory.
 
 #### Output of the script
 Output with `batchsize 1` stored in `b1.txt`:
-```Bash
+```bash
+cat b1.txt
 Image data range: 0.0 : 255.0
 Start processing:
 	Model name: resnet50DAG
 	Iterations: 10
-	Images numpy path: imgs.npy
+	Images numpy path: ../../imgs.npy
 	Numpy file shape: (10, 3, 224, 224)
 
 Iteration 1; Processing time: 21.16 ms; speed 47.25 fps
@@ -180,12 +182,13 @@ Classification accuracy: 100.00
 
 ```
 Output with `batchsize 8` stored in `b8.txt`:
-```Bash
+```bash
+cat b8.txt
 Image data range: 0.0 : 255.0
 Start processing:
 	Model name: resnet50DAG
 	Iterations: 1
-	Images numpy path: imgs.npy
+	Images numpy path: ../../imgs.npy
 	Numpy file shape: (10, 3, 224, 224)
 
 Iteration 1; Processing time: 121.12 ms; speed 66.05 fps

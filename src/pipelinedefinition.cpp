@@ -210,9 +210,10 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
     return StatusCode::OK;
 }
 
+template <typename RequestType, typename ResponseType>
 Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
+    const RequestType* request,
+    ResponseType* response,
     ModelManager& manager) {
     std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
@@ -221,15 +222,15 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     }
 
     std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
-    EntryNode* entry = nullptr;
-    ExitNode* exit = nullptr;
+    EntryNode<RequestType>* entry = nullptr;
+    ExitNode<ResponseType>* exit = nullptr;
 
     for (const auto& info : nodeInfos) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
             getName(), info.nodeName, info.modelName);
         switch (info.kind) {
         case NodeKind::ENTRY: {
-            auto node = std::make_unique<EntryNode>(request, getInputsInfo(), info.demultiplyCount);
+            auto node = std::make_unique<EntryNode<RequestType>>(request, getInputsInfo(), info.demultiplyCount);
             entry = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -255,7 +256,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              nodeResources.at(info.nodeName)));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode>(response, getOutputsInfo(), info.gatherFromNode);
+            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode);
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -273,7 +274,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             Pipeline::connect(*dependencyNode, *dependantNode, pair.second);
         }
     }
-    pipeline = std::make_unique<Pipeline>(*entry, *exit, pipelineName);
+    pipeline = std::make_unique<Pipeline>(*entry, *exit, *this->reporter, pipelineName);
     for (auto& kv : nodes) {
         pipeline->push(std::move(kv.second));
     }
@@ -411,7 +412,7 @@ public:
     Status checkForForbiddenDynamicParameters() {
         const auto& config = dependantModelInstance->getModelConfig();
         if (config.getBatchingMode() == Mode::AUTO || config.anyShapeSetToAuto()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Node name: {} used model name: {} with dynamic batch/shape parameter which is forbidden.",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Node name: {} used model name: {} with batch/shape parameter set to 'auto' which is forbidden. Use dynamic shape.",
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 dependantNodeInfo.modelName);
@@ -1352,5 +1353,15 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
     std::reverse(shape.begin(), shape.end());
     return shape;
 }
+template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
+    std::unique_ptr<Pipeline>& pipeline,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    ModelManager& manager);
+template Status PipelineDefinition::create<::inference::ModelInferRequest, ::inference::ModelInferResponse>(
+    std::unique_ptr<Pipeline>& pipeline,
+    const ::inference::ModelInferRequest* request,
+    ::inference::ModelInferResponse* response,
+    ModelManager& manager);
 
 }  // namespace ovms

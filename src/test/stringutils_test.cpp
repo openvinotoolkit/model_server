@@ -158,3 +158,43 @@ TEST(StringUtils, stoi32) {
     EXPECT_TRUE(result);
     EXPECT_EQ(result.value(), -2147483648);
 }
+
+TEST(StringUtils, stoi64) {
+    auto result = ovms::stoi64("0");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 0);
+
+    result = ovms::stoi64("100");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 100);
+
+    result = ovms::stoi64("-100");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), -100);
+
+    result = ovms::stoi64("2147483647");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 2147483647);
+
+    result = ovms::stoi64("0.01");
+    EXPECT_FALSE(result) << result.value();
+
+    result = ovms::stoi64("1 1");
+    EXPECT_FALSE(result) << result.value();
+
+    result = ovms::stoi64("0018");
+    EXPECT_FALSE(result) << result.value();
+
+    result = ovms::stoi64("zero");
+    EXPECT_FALSE(result);
+
+    result = ovms::stoi64("9223372036854775807");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 9223372036854775807);
+
+    result = ovms::stoi64("9223372036854775808");
+    EXPECT_FALSE(result);
+
+    result = ovms::stoi64("");
+    EXPECT_FALSE(result);
+}

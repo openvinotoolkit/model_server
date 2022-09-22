@@ -18,12 +18,12 @@ cd model_server/demos/using_onnx_model/python
 ```
 
 Prepare workspace with the model by running: 
-```
+```bash
 make client_preprocessing
 ```
 
 You should see `workspace` directory created with the following content:
-```
+```bash
 workspace/
 └── resnet50-onnx
     └── 1
@@ -56,12 +56,12 @@ Detected class name: bee
 ## Option 2: Adding preprocessing to the server side (building a DAG) <a name="server-side"></a>
 
 Prepare workspace with the model, preprocessing node library and configuration file by running:
-```
+```bash
 make server_preprocessing
 ```
 
 You should see `workspace` directory created with the following content:
-```
+```bash
 workspace/
 ├── config.json
 ├── lib

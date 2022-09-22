@@ -33,15 +33,15 @@ To select pre and post processing routines that will be run on video stream you 
 While creating IOProcessor instance, you have to provide a class that implements [use case interface](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/real_time_stream_analysis/python/use_cases/use_case.py) and runs routines specific to your use case. 
 Simply change the first argument to the use case you want in the IOProcessor constructor in [this one line](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/real_time_stream_analysis/python/real_time_stream_analysis.py#L78):
 
-```
+`
 io_processor = IOProcessor(<use_case_class>, visualizer_frames_queue)
-```
+`
 
 The use case class must first be imported. Examplary use cases can be imported from `use_cases` module like:
 
-```
+`
 from use_cases import PersonVehicleBikeDetection
-```
+`
 
 > **NOTE**: You can use your custom use cases the same way. Implement use case interface and add it to use_cases catalog. For simpler imports from the main script consider adding you class in use_cases package [init file](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/real_time_stream_analysis/python/use_cases/__init__.py) 
 
@@ -52,10 +52,14 @@ Clone the repository and enter real_time_stream_analysis directory
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/real_time_stream_analysis/python
 ```
+Install required packages:
+```bash
+pip3 install -r requirements.txt
+```
 
 Once you adjusted the main script to your use case, got RTSP source and OVMS up and running, you can launch the stream analysis app.
 
-```
+```bash
 python3 real_time_stream_analysis.py -h
 usage: real_time_stream_analysis.py [-h] --stream_url STREAM_URL --ovms_url
                                     OVMS_URL --model_name MODEL_NAME
@@ -98,13 +102,32 @@ optional arguments:
 
 __Examplary command:__
 
-```
-python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream --ovms_url localhost:9000 --model_name person-vehicle-detection
+```bash
+python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream --ovms_url localhost:9000 --model_name person-vehicle-bike-detection
 ```
 
 __Console output:__
 
-![minimal example](assets/minimal_example.jpg)
+```bash
+2022-07-25 10:49:46,216 - stream_reader - INFO - Initializing Stream Reader for stream: rtsp://localhost:8001/mystream ...
+2022-07-25 10:49:49,639 - stream_reader - INFO - Stream Reader initialized successfully
+2022-07-25 10:49:49,640 - inference_manager - INFO - OVMS Endpoint spec - ovms_url: localhost:9001; model_name: person-vehicle-bike-detection; model_version: latest
+2022-07-25 10:49:49,640 - inference_manager - INFO - Input buffer capacity set to: 100 frames
+2022-07-25 10:49:49,640 - inference_manager - INFO - Number of Inference Executors: 4
+2022-07-25 10:49:49,655 - io_processor - INFO - Initializing IO Processor
+2022-07-25 10:49:49,655 - io_processor - INFO - IO Processor initialized successfully
+2022-07-25 10:49:49,656 - stream_analyzer - INFO - Starting Stream Analyzer
+2022-07-25 10:49:49,656 - inference_manager - INFO - Initializing Inference Manager...
+2022-07-25 10:49:49,656 - inference_manager - INFO - Starting Inference Executors...
+2022-07-25 10:49:49,668 - inference_manager - INFO - Starting inference pipeline thread
+2022-07-25 10:49:49,670 - inference_manager - INFO - Starting inference executors monitoring thread
+2022-07-25 10:49:49,680 - inference_manager - INFO - Inference Manager initialized successfully
+2022-07-25 10:49:52,806 - stream_analyzer - INFO - For 100 received frames - FPS: 22; Frames dropped: 0;
+2022-07-25 10:49:56,973 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
+2022-07-25 10:50:01,142 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
+2022-07-25 10:50:05,307 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
+2022-07-25 10:50:09,470 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
+```
 
 ### Running with visualizer
 
@@ -115,13 +138,35 @@ Enabling visualizer is done by providing `--visualizer_port` parameter that spec
 
 __Examplary command:__
 
-```
-python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream --ovms_url localhost:9000 --model_name person-vehicle-detection --visualizer_port 5000
+```bash
+python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream --ovms_url localhost:9000 --model_name person-vehicle-bike-detection --visualizer_port 5000
 ```
 
 __Console output:__
 
-![visualizer example console](assets/visualizer_example_console.jpg)
+```bash
+2022-07-25 10:50:50,401 - stream_reader - INFO - Initializing Stream Reader for stream: rtsp://localhost:8001/mystream ...
+2022-07-25 10:50:52,318 - stream_reader - INFO - Stream Reader initialized successfully
+2022-07-25 10:50:52,319 - inference_manager - INFO - OVMS Endpoint spec - ovms_url: localhost:9001; model_name: person-vehicle-bike-detection; model_version: latest
+2022-07-25 10:50:52,319 - inference_manager - INFO - Input buffer capacity set to: 100 frames
+2022-07-25 10:50:52,319 - inference_manager - INFO - Number of Inference Executors: 4
+2022-07-25 10:50:52,339 - http_visualizer - INFO - Visualizer frames buffer capacity set to 100 frames
+2022-07-25 10:50:52,340 - io_processor - INFO - Initializing IO Processor
+2022-07-25 10:50:52,340 - io_processor - INFO - IO Processor initialized successfully
+2022-07-25 10:50:52,340 - stream_analyzer - INFO - Starting Stream Analyzer
+2022-07-25 10:50:52,340 - inference_manager - INFO - Initializing Inference Manager...
+2022-07-25 10:50:52,340 - inference_manager - INFO - Starting Inference Executors...
+2022-07-25 10:50:52,351 - inference_manager - INFO - Starting inference pipeline thread
+2022-07-25 10:50:52,352 - inference_manager - INFO - Starting inference executors monitoring thread
+2022-07-25 10:50:52,360 - inference_manager - INFO - Inference Manager initialized successfully
+2022-07-25 10:50:52,360 - http_visualizer - INFO - Starting Flask webserver...
+ * Running on http://localhost:5000
+2022-07-25 10:50:55,239 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
+2022-07-25 10:50:59,413 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
+2022-07-25 10:51:03,571 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
+2022-07-25 10:51:07,919 - stream_analyzer - INFO - For 100 received frames - FPS: 22; Frames dropped: 0;
+2022-07-25 10:51:12,086 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
+```
 
 __Browser preview:__
 
@@ -162,14 +207,14 @@ All this data is kept in application memory. The `buffer_size` parameter allows 
 In [deploy catalog](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/real_time_stream_analysis/python/deploy) you can find set of helm charts that simplify application deployment. 
 Steps for deployment are following:
 1. Build Docker image with the application using provided [Dockerfile](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/real_time_stream_analysis/python/Dockerfile)
-```
+```bash
 docker build . -t real-time-stream-analysis:latest
 ```
 
 2. Put the image in a repository accessible from your cluster
 3. Deploy with helm
 ```
-helm install rt-stream-analyzer ./deploy --set stream_url=rtsp://localhost:8554/mystream,ovms_url=localhost:9000,model_name=person-vehicle-detection,visualizer_service.port=5000
+helm install rt-stream-analyzer ./deploy --set stream_url=rtsp://localhost:8554/mystream,ovms_url=localhost:9000,model_name=person-vehicle-bike-detection,visualizer_service.port=5000
 ```
 
 To learn about all available parameters check out [values.yaml](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/real_time_stream_analysis/python/deploy/values.yaml)

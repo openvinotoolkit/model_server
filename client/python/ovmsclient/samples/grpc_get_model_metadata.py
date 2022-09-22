@@ -26,7 +26,7 @@ parser.add_argument('--model_version', default=0, type=int,
                     help='Model version to query. If ommited or set to 0 returns result for latest version',
                     dest='model_version')
 parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
-                    dest='timeout')
+                    dest='timeout', type=float)
 args = vars(parser.parse_args())
 
 # configuration

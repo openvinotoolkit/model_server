@@ -28,9 +28,10 @@ setup_repository:
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-attributes-recognition-barrier-0042/FP32/vehicle-attributes-recognition-barrier-0042.xml -o workspace/vehicle-attributes-recognition-barrier-0042/1/vehicle-attributes-recognition-barrier-0042.xml
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-attributes-recognition-barrier-0042/FP32/vehicle-attributes-recognition-barrier-0042.bin -o workspace/vehicle-attributes-recognition-barrier-0042/1/vehicle-attributes-recognition-barrier-0042.bin
 # Build custom node
-	cd ../../../src/custom_nodes/model_zoo_intel_object_detection && \
-	make && \
-	mv lib ../../../demos/vehicle_analysis_pipeline/python/workspace/lib
+	cd ../../../src/custom_nodes && \
+	make BASE_OS=ubuntu NODES=model_zoo_intel_object_detection && \
+	mkdir -p ../../demos/vehicle_analysis_pipeline/python/workspace/lib && \
+	mv lib/ubuntu/libcustom_node_model_zoo_intel_object_detection.so ../../demos/vehicle_analysis_pipeline/python/workspace/lib/libcustom_node_model_zoo_intel_object_detection.so
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
 

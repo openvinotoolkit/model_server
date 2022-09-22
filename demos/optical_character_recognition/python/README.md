@@ -40,9 +40,9 @@ Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed i
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
-Inside the EAST folder add a file `freeze_east_model.py` with the following content:
-```python
-from tensorflow.python.framework import graph_util
+Inside the EAST folder add a file `freeze_east_model.py`:
+```bash
+echo "from tensorflow.python.framework import graph_util
 import tensorflow as tf
 import model
 
@@ -63,25 +63,27 @@ def export_model(input_checkpoint, output_graph):
         with tf.gfile.GFile(output_graph, 'wb') as f:
             f.write(output_graph_def.SerializeToString())
 
-export_model('./east_icdar2015_resnet_v1_50_rbox/model.ckpt-49491','./model.pb')
+export_model('./east_icdar2015_resnet_v1_50_rbox/model.ckpt-49491','./model.pb')" >> freeze_east_model.py
+cd ..
 ```
 Freeze the model in checkpoint format and save it in proto buffer format in `model.pb`:
 
 ```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST tensorflow/tensorflow:1.15.5 python3 freeze_east_model.py
+docker run -u $(id -u):$(id -g) -v ${PWD}/EAST/:/EAST:rw -w /EAST tensorflow/tensorflow:1.15.5 python3 freeze_east_model.py
 ```
 
 Convert the TensorFlow frozen model to Intermediate Representation format using the model_optimizer tool:
 ```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu20_dev:2022.1 mo \
+docker run -u $(id -u):$(id -g) -v ${PWD}/EAST/:/EAST:rw openvino/ubuntu20_dev:2022.1.0 mo \
 --framework=tf --input_shape=[1,1024,1920,3] --input=input_images --output=feature_fusion/Conv_7/Sigmoid,feature_fusion/concat_3 \
 --input_model /EAST/model.pb --output_dir /EAST/IR/1/
 ```
-It will create model files in `${PWD}/IR/1/` folder.
+It will create model files in `${PWD}/EAST/IR/1/` folder.
 ```bash
-model.bin
-model.mapping
-model.xml
+EAST/IR/1/
+├── model.bin
+├── model.mapping
+└── model.xml
 ```
 Converted east-reasnet50 model will have the following interface:
 - Input name: `input_images` ; shape: `[1 1024 1920 3]` ; precision: `FP32` ; layout: `N...`
@@ -105,29 +107,47 @@ Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from 
 It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
 
 The custom node east_ocr can be built inside a docker container via the following procedure:
-- go to the custom node source code folder [src/custom_nodes/east_ocr](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/src/custom_nodes/east_ocr)
-- run `make` command
+- go to the directory with custom node examples [src/custom_node](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/src/custom_nodes)
+- run `make` command:
+
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/src/custom_nodes
+export BASE_OS=ubuntu  # replace to 'redhat` if using UBI base image
+make NODES=east_ocr BASE_OS=${BASE_OS}
+cd ../../../
+```
 
 This command will export the compiled library in `./lib` folder.
 Copy this `lib` folder to the same location with `text-recognition` and `east_icdar2015_resnet_v1_50_rbox`.
+
+```bash
+mkdir -p OCR/east_fp32 OCR/lib
+cp -R model_server/src/custom_nodes/lib/${BASE_OS}/libcustom_node_east_ocr.so OCR/lib/
+cp -R text-recognition OCR/text-recognition
+cp -R EAST/IR/1 OCR/east_fp32/1
+```
 
 ## OVMS Configuration File
 
 The configuration file for running the OCR demo is stored in [config.json](config.json)
 Copy this file along with the model files and the custom node library like presented below:
 ```bash
+cp model_server/demos/optical_character_recognition/python/config.json OCR
+```
+```bash
 OCR
 ├── config.json
-├── text-recognition
-│   └── 1
-│       ├── model.bin
-│       └── model.xml
 ├── east_fp32
 │   └── 1
 │       ├── model.bin
 │       └── model.xml
-└── lib
-    └── libcustom_node_east_ocr.so
+├── lib
+│   └── libcustom_node_east_ocr.so
+└── text-recognition
+    └── 1
+        ├── model.bin
+        └── model.xml
 ```
 
 **NOTE:** east_fp32 model created before 2022.1 requires additional parameters in config.json:
@@ -143,9 +163,8 @@ docker run -p 9000:9000 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_pat
 
 ## Requesting the Service
 
-Clone the repository and enter optical_character_recognition directory
+Enter optical_character_recognition directory
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/optical_character_recognition/python
 ```
 

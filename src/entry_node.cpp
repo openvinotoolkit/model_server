@@ -26,30 +26,27 @@
 #include "logging.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
+#include "profiler.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
 namespace ovms {
 
-Status EntryNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
-    // this should be created in EntryNode::SetInputs, or special method for entry node called
-    // in event loop can be done in future release while implementing dynamic demultiplexing at
-    // entry node
-    NodeSessionMetadata metadata;
-    auto nodeSession = getNodeSession(metadata);  // call to create session
-    if (!nodeSession) {
-        notifyEndQueue.push(NodeSessionKeyPair(*this, nodeSession->getSessionKey()));
-        return StatusCode::INTERNAL_ERROR;
-    }
-    notifyEndQueue.push(NodeSessionKeyPair(*this, nodeSession->getSessionKey()));
+template <typename RequestType>
+Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
+    OVMS_PROFILE_FUNCTION();
+    notifyEndQueue.push(NodeSessionKeyPair(*this, sessionId));
     return StatusCode::OK;
 }
 
-Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
-    TensorMap outputs;
+template <typename RequestType>
+Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
+    TensorWithSourceMap outputs;
     auto status = fetchResults(outputs);
     if (!status.ok()) {
         return status;
@@ -63,23 +60,25 @@ Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSes
     return StatusCode::OK;
 }
 
-Status EntryNode::fetchResults(TensorMap& outputs) {
+template <typename RequestType>
+Status EntryNode<RequestType>::fetchResults(TensorWithSourceMap& outputs) {
     auto status = validate();
     if (!status.ok()) {
         return status;
     }
-    InputSink<TensorMap&> inputSink(outputs);
+    InputSink<TensorWithSourceMap&> inputSink(outputs);
     bool isPipeline = true;
     return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
 }
 
 template <>
-Status InputSink<TensorMap&>::give(const std::string& name, ov::Tensor& tensor) {
-    requester[name] = tensor;
+Status InputSink<TensorWithSourceMap&>::give(const std::string& name, ov::Tensor& tensor) {
+    requester.emplace(std::make_pair(name, TensorWithSource(tensor)));
     return StatusCode::OK;
 }
 
-Status EntryNode::isInputBinary(const std::string& name, bool& isBinary) const {
+template <>
+Status EntryNode<tensorflow::serving::PredictRequest>::isInputBinary(const std::string& name, bool& isBinary) const {
     auto it = request->inputs().find(name);
     if (it == request->inputs().end()) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Error during checking binary input; input: {} does not exist", name);
@@ -88,8 +87,25 @@ Status EntryNode::isInputBinary(const std::string& name, bool& isBinary) const {
     isBinary = it->second.string_val_size() > 0;
     return StatusCode::OK;
 }
+template <>
+Status EntryNode<::inference::ModelInferRequest>::isInputBinary(const std::string& name, bool& isBinary) const {
+    auto it = request->inputs().begin();
+    while (it != request->inputs().end()) {
+        if (it->name() == name) {
+            break;
+        }
+        ++it;
+    }
+    if (it == request->inputs().end()) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Error during checking binary input; input: {} does not exist", name);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    isBinary = it->contents().bytes_contents_size() > 0;
+    return StatusCode::OK;
+}
 
-Status EntryNode::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
+template <typename RequestType>
+Status EntryNode<RequestType>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     bool isBinary = false;
     auto status = this->isInputBinary(tensorName, isBinary);
     if (!status.ok()) {
@@ -116,8 +132,9 @@ Status EntryNode::createShardedTensor(ov::Tensor& dividedTensor, Precision preci
     return StatusCode::OK;
 }
 
-const Status EntryNode::validate() {
-    static const std::set<const char*> optionalInputNames = {};
+template <>
+const Status EntryNode<tensorflow::serving::PredictRequest>::validate() {
+    static const std::set<std::string> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
         inputsInfo,
@@ -125,5 +142,27 @@ const Status EntryNode::validate() {
         1,
         optionalInputNames);  // Pipelines are not versioned and always reports version 1
 }
+template <>
+const Status EntryNode<::inference::ModelInferRequest>::validate() {
+    static const std::set<std::string> optionalInputNames = {};
+    return request_validation_utils::validate(
+        *request,
+        inputsInfo,
+        request->model_name(),
+        1,
+        optionalInputNames);  // Pipelines are not versioned and always reports version 1
+}
 
-}  // namespace ovms
+template Status EntryNode<tensorflow::serving::PredictRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
+template Status EntryNode<::inference::ModelInferRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
+template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status EntryNode<::inference::ModelInferRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(TensorWithSourceMap& outputs);
+template Status EntryNode<::inference::ModelInferRequest>::fetchResults(TensorWithSourceMap& outputs);
+template Status EntryNode<tensorflow::serving::PredictRequest>::isInputBinary(const std::string& name, bool& isBinary) const;
+template Status EntryNode<::inference::ModelInferRequest>::isInputBinary(const std::string& name, bool& isBinary) const;
+template Status EntryNode<tensorflow::serving::PredictRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
+template Status EntryNode<::inference::ModelInferRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
+template const Status EntryNode<tensorflow::serving::PredictRequest>::validate();
+template const Status EntryNode<::inference::ModelInferRequest>::validate();
+}  //  namespace ovms

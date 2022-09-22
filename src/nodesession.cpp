@@ -19,6 +19,7 @@
 #include "logging.hpp"
 #include "nodeinputhandler.hpp"
 #include "nodeoutputhandler.hpp"
+#include "tensor_utils.hpp"
 #include "timer.hpp"
 
 namespace ovms {
@@ -28,7 +29,7 @@ const NodeSessionMetadata& NodeSession::getNodeSessionMetadata() const {
     return this->metadata;
 }
 
-Status NodeSession::setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId) {
+Status NodeSession::setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId) {
     return inputHandler->setInput(inputName, tensor, shardId);
 }
 
@@ -44,16 +45,8 @@ NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string&
     metadata(metadata),
     sessionKey(metadata.getSessionKey()),
     nodeName(nodeName),
-    timer(std::make_unique<Timer>()),
+    timer(std::make_unique<Timer<TIMER_END>>()),
     inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)),
-    outputHandler(std::make_unique<NodeOutputHandler>()) {}
-
-NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
-    metadata(std::move(metadata)),
-    sessionKey(this->metadata.getSessionKey()),
-    nodeName(nodeName),
-    timer(std::make_unique<Timer>()),
-    inputHandler(std::make_unique<NodeInputHandler>(inputsCount)),
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
 bool NodeSession::isReady() const {
@@ -66,7 +59,7 @@ Status NodeSession::notifyFinishedDependency() {
     return this->inputHandler->notifyFinishedDependency();
 }
 
-Timer& NodeSession::getTimer() const {
+Timer<TIMER_END>& NodeSession::getTimer() const {
     return *this->timer;
 }
 

@@ -286,6 +286,30 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 			"items": {
 				"$ref": "#/definitions/custom_node_library_config"
 			}
+		},
+		"monitoring": {
+			"type": "object",
+			"required": ["metrics"],
+			"properties":{
+				"metrics": {
+					"type": "object",
+					"required": ["enable"],
+					"properties": {
+						"enable": {
+							"type": "boolean"
+						},
+						"metrics_list": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							}
+						}
+					},
+					"additionalProperties": false
+				},
+				"additionalProperties": false
+			},
+			"additionalProperties": false
 		}
 	},
 	"additionalProperties": false

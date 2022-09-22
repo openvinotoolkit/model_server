@@ -17,11 +17,11 @@
 import os
 
 import pytest
-import requests
 import shutil
 
 import config
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2, FaceDetection, PVBFaceDetectionV1, ResnetONNX
+from utils.model_management import download_missing_file
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,12 +40,7 @@ def download_file(model_url_base, model_name, directory, extension, model_versio
 
     local_model_full_path = os.path.join(local_model_path, model_name + extension)
 
-    if not os.path.exists(local_model_full_path):
-        logger.info("Downloading {} file to directory: {}...".format(model_name + extension, local_model_path))
-        response = requests.get(model_url_base + extension, stream=True)
-        assert response.status_code == 200, f"Unable to reach location: {model_url_base}{extension} (status code: {response.status_code})!"
-        with open(local_model_full_path, 'wb') as output:
-            output.write(response.content)
+    download_missing_file(model_url_base + extension, local_model_full_path)
 
     if full_path:
         return local_model_full_path
