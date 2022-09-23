@@ -61,5 +61,5 @@ setuptools.setup(
         "build_apis": BuildApis,
      },
      packages=setuptools.find_namespace_packages(include=["ovmsclient*", "tensorflow*", "tensorflow_serving*"]),
-     install_requires=["grpcio==1.47.0", "protobuf==3.19.4", "numpy>=1.16.6,<=1.23.1", "requests==2.27.1"],
+     install_requires=["grpcio==1.47.0", "protobuf==3.19.5", "numpy>=1.16.6,<=1.23.1", "requests==2.27.1"],
  )
