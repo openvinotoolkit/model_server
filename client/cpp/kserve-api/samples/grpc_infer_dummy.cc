@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("b"))
     ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("a"))
     ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"))
-    ("model_version", "Define model version.")
+    ("model_version", "Define model version.", cxxopts::value<std::string>())
     ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
     ;
     // clang-format on
