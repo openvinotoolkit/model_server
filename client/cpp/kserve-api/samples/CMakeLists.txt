@@ -16,6 +16,11 @@
 
 cmake_minimum_required(VERSION 3.17)
 
-add_executable(grpc_infer_dummy grpc_infer_dummy.cc)
-add_dependencies(grpc_infer_dummy cc-clients)
-target_link_libraries(grpc_infer_dummy grpcclient libprotobuf.a)
+function(sample sample_name)
+    add_executable(${sample_name} ${sample_name}.cc)
+    add_dependencies(${sample_name} cc-clients)
+    target_link_libraries(${sample_name} grpcclient libprotobuf.a)
+endfunction()
+
+sample(grpc_infer_dummy)
+sample(grpc_server_live)
