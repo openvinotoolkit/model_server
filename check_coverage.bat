@@ -1,5 +1,5 @@
 #!/bin/bash
-MIN_LINES_COV=74.9
+MIN_LINES_COV=94.9
 MIN_FUNCTION_COV=86.5
 
 LINES_COV=`cat genhtml/index.html | grep headerCovTableEntryLo | grep -oP  ">\K(\d*.\d*)"`
