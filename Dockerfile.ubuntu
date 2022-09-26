@@ -43,13 +43,16 @@ RUN apt update && apt install -y \
             libboost-thread1.71.0 \
             libboost-system1.71.0 \
             libboost-date-time1.71.0 \
+            bc \
             build-essential \
             cmake \
             automake \
             autoconf \
             curl \
+            default-jdk \
             gdb \
             git \
+            lcov \
             libusb-dev \
             libusb-1.0-0-dev \
             libcurl4-openssl-dev \
@@ -221,6 +224,11 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
 RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
+
+# Test Coverage
+RUN bazel coverage --combined_report=lcov //src:ovms_test
+RUN genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
+RUN check_coverage.bat
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
