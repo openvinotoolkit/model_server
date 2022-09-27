@@ -27,6 +27,8 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
+ARG CHECK_COVERAGE=1
+
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
@@ -41,11 +43,13 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             boost169-thread \
             boost169-system \
             boost169-date-time \
+            bc \
             cmake \
-            gcc-c++ \
             curl \
+            gcc-c++ \
             gdb \
             git \
+            java-11-openjdk-devel \
             libgusb.x86_64 \
             libusbx \
             libcurl-devel \
@@ -178,6 +182,14 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
 RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed  //src:ovms_test
+
+COPY check_coverage.bat /ovms/
+# Test Coverage
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; wget https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
+    yum install -y lcov-1.16-1.noarch.rpm &&\
+    bazel coverage --combined_report=lcov //src:ovms_test &&\
+    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
+    ./check_coverage.bat
 
 COPY ${ovms_metadata_file} metadata.json
 

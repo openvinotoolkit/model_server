@@ -26,6 +26,7 @@ ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
 ARG APT_OV_PACKAGE=openvino-2022.1.0
+ARG CHECK_COVERAGE=1
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
@@ -225,10 +226,11 @@ RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
 RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
 
+COPY check_coverage.bat /ovms/
 # Test Coverage
-RUN bazel coverage --combined_report=lcov //src:ovms_test
-RUN genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
-RUN check_coverage.bat
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; bazel coverage --combined_report=lcov //src:ovms_test &&\
+    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
+    ./check_coverage.bat
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
