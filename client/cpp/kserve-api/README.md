@@ -22,7 +22,11 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
 
 ## Before you run the samples
 
+<<<<<<< HEAD
 ### Clone OpenVINO&trade; Model Server GitHub repository and go to the top directory.
+=======
+### Clone OpenVINO&trade; Model Server GitHub repository and go to the directory with the samples.
+>>>>>>> Apply suggestions from code review
 ```Bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
