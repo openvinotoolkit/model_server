@@ -162,9 +162,7 @@ Request prediction on provided inputs.
     | Key | Value type |
     |---|---|
     | input_name | string |
-    | input_data | python scalar, python list, numpy scalar, numpy array, TensorProto |        
-
-    If provided **input_data** is not TensorProto, the `make_tensor_proto` function with default parameters will be called internally. 
+    | input_data | python scalar, python list, numpy scalar, numpy array |
 
  - <b>`model_name`</b>:  name of the requested model. Accepted types: `string`.
  - <b>`model_version`</b> <i>(optional)</i>: version of the requested model. Accepted types: `positive integer`. Value 0 is special and means the latest served version will be chosen <i>(only in OVMS, TFS requires specific version number provided)</i>. Default value: 0.
