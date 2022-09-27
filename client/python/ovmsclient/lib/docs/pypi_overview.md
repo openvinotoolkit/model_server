@@ -9,7 +9,7 @@ The `ovmsclient` package works both with OpenVINO&trade; Model Server and Tensor
 The `ovmsclient` can replace `tensorflow-serving-api` package with reduced footprint and simplified interface.
 
 
-See [API reference](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/ovmsclient/lib/docs/README.md) for usage details.
+See [API reference](https://github.com/openvinotoolkit/model_server/blob/releases/2022/2/client/python/ovmsclient/lib/docs/README.md) for usage details.
 
 
 ## Usage example
@@ -23,7 +23,7 @@ client = ovmsclient.make_grpc_client("localhost:9000")
 # Get model metadata to learn about model inputs
 model_metadata = client.get_model_metadata(model_name="model")
 
-# If model has only one input, get its name like that
+# If model has only one input, get its name
 input_name = next(iter(model_metadata["inputs"]))
 
 # Read the image file
@@ -38,4 +38,4 @@ results = client.predict(inputs=inputs, model_name="model")
 
 ```
 
-Learn more on `ovmsclient` [documentation site](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/client/python/ovmsclient/lib).
+Learn more on `ovmsclient` [documentation site](https://github.com/openvinotoolkit/model_server/tree/releases/2022/2/client/python/ovmsclient/lib).
