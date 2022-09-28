@@ -167,14 +167,14 @@ int main(int argc, char** argv) {
     tc::InferStat infer_stat;
     client->ClientInferStat(&infer_stat);
     std::cout << "======Client Statistics======" << std::endl;
-    std::cout << "completed_request_count "
+    std::cout << "Completed request count "
               << infer_stat.completed_request_count << std::endl;
-    std::cout << "cumulative_total_request_time_ns "
-              << infer_stat.cumulative_total_request_time_ns << std::endl;
-    std::cout << "cumulative_send_time_ns "
-              << infer_stat.cumulative_send_time_ns << std::endl;
-    std::cout << "cumulative_receive_time_ns "
-              << infer_stat.cumulative_receive_time_ns << std::endl;
+    std::cout << "Cumulative total request time "
+              << double(infer_stat.cumulative_total_request_time_ns)/1000000 << " ms" << std::endl;
+    std::cout << "Cumulative send time "
+              << double(infer_stat.cumulative_send_time_ns)/1000000 << " ms" << std::endl;
+    std::cout << "Cumulative receive time "
+              << double(infer_stat.cumulative_receive_time_ns)/1000000 << " ms" << std::endl;
 
     return 0;
 }
