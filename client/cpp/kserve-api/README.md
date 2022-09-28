@@ -60,7 +60,7 @@ Usage:
 9 => 10
 ======Client Statistics======
 completed_request_count 1
-cumulative_total_request_time_ns 5207356
-cumulative_send_time_ns 46654
-cumulative_receive_time_ns 5312
+Cumulative total request time 6.70928 ms
+Cumulative send time 0.039253 ms
+Cumulative receive time 0.005686 ms
 ```
