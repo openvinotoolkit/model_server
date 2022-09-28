@@ -13,19 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include <cxxopts.hpp>
-
-#include "grpc_client.h"
-
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "grpc_client.h"
+
 namespace tc = triton::client;
+
+#define IMG_HEIGHT 224
+#define IMG_WIDTH 224
+#define IMG_C 3
 
 #define FAIL_IF_ERR(X, MSG)                                              \
     {                                                                    \
@@ -36,9 +39,8 @@ namespace tc = triton::client;
         }                                                                \
     }
 
-void Load(std::string fileName, uint8_t* input){
+void Load(std::string fileName, uint8_t* input) {
     std::vector<uint8_t> data;
-
 
     cv::Mat img = cv::imread(fileName, cv::IMREAD_COLOR);
     if (img.empty()) {
@@ -46,9 +48,8 @@ void Load(std::string fileName, uint8_t* input){
         exit(1);
     }
     img.convertTo(img, CV_32FC3);
-    std::cout<<img.size();
-    cv::resize(img, img, cv::Size(224,224));
-    memcpy(input, img.data, img.total()*sizeof(float));
+    cv::resize(img, img, cv::Size(IMG_HEIGHT, IMG_WIDTH));
+    memcpy(input, img.data, img.total() * sizeof(float) * IMG_C);
 }
 
 int main(int argc, char** argv) {
@@ -57,12 +58,13 @@ int main(int argc, char** argv) {
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
-    ("images_list", "Path to a file with a list of labeled images", cxxopts::value<std::string>())
+    ("images_list", "Path to a file with a list of labeled images. ", cxxopts::value<std::string>())
+    ("labels_list", "Path to a file with a list of labels. ", cxxopts::value<std::string>())
     ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"))
     ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"))
-    ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("b"))
-    ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("a"))
-    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"))
+    ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("0"))
+    ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("1463"))
+    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("resnet"))
     ("model_version", "Define model version.", cxxopts::value<std::string>())
     ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
     ;
@@ -95,15 +97,14 @@ int main(int argc, char** argv) {
     std::vector<std::string> imgs;
     std::vector<int> labels;
     std::ifstream images(args["images_list"].as<std::string>());
-    while(images>>img>>label){
+    while (images >> img >> label) {
         imgs.push_back(img);
         labels.push_back(label);
     }
-    
-    input_data.resize(224*224 * 4*3);
 
+    input_data.resize(IMG_HEIGHT * IMG_WIDTH * sizeof(float) * IMG_C);
 
-    std::vector<int64_t> shape{1, 224, 224, 3};
+    std::vector<int64_t> shape{1, IMG_HEIGHT, IMG_WIDTH, IMG_C};
 
     // Initialize the inputs with the data.
     tc::InferInput* input;
@@ -114,39 +115,35 @@ int main(int argc, char** argv) {
     std::shared_ptr<tc::InferInput> input_ptr;
     input_ptr.reset(input);
 
-
-    // Generate the outputs to be requested.
-    tc::InferRequestedOutput* output;
-
-    FAIL_IF_ERR(
-        tc::InferRequestedOutput::Create(&output, output_name),
-        "unable to get output");
-    std::shared_ptr<tc::InferRequestedOutput> output_ptr;
-    output_ptr.reset(output);
-
     tc::InferOptions options(model_name);
     if (args.count("model_version"))
         options.model_version_ = args["model_version"].as<std::string>();
     options.client_timeout_ = args["timeout"].as<int>();
 
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
-    std::vector<const tc::InferRequestedOutput*> outputs = {output_ptr.get()};
 
     std::vector<tc::InferResult*> results;
-    results.resize(10);
-    for(int i = 0; i < imgs.size();i++){
+    results.resize(imgs.size());
+    for (int i = 0; i < imgs.size(); i++) {
         Load(imgs[i], input_data.data());
         FAIL_IF_ERR(
             input_ptr->AppendRaw(input_data),
             "unable to set data for input");
         FAIL_IF_ERR(
-            client->Infer(&(results[i]), options, inputs, outputs),
+            client->Infer(&(results[i]), options, inputs),
             "unable to run model");
-        //input_ptr.reset(input);
         input->Reset();
     }
 
-    for(int i = 0; i < imgs.size(); i++){
+    std::vector<std::string> classes;
+    std::ifstream lb_f(args["labels_list"].as<std::string>());
+    std::string tmp;
+    while (std::getline(lb_f, tmp)) {
+        classes.push_back(tmp);
+    }
+
+    float acc = 0;
+    for (int i = 0; i < imgs.size(); i++) {
         std::shared_ptr<tc::InferResult> results_ptr;
         results_ptr.reset(results[i]);
         // Get pointers to the result returned...
@@ -157,12 +154,18 @@ int main(int argc, char** argv) {
                 output_name, (const uint8_t**)&output_data, &output_byte_size),
             "unable to get result data for output");
 
-        std::cout << "Index of max element: "
-        << std::distance(output_data, std::max_element(output_data, output_data + 1001))
-        << " <=>" << labels[i]
-        << std::endl;
+        int lb = std::distance(output_data, std::max_element(output_data, output_data + 1000));
+        std::cout << imgs[i] << " classified as "
+                  << lb << " " << classes[lb] << " ";
+        if (lb != labels[i]) {
+            std::cout << "should be " << labels[i] << " " << classes[labels[i]];
+        } else {
+            acc++;
+        }
+        std::cout << std::endl;
     }
 
+    std::cout << "Accuracy " << acc / imgs.size() * 100 << "%\n";
 
     tc::InferStat infer_stat;
     client->ClientInferStat(&infer_stat);
@@ -170,11 +173,11 @@ int main(int argc, char** argv) {
     std::cout << "Completed request count "
               << infer_stat.completed_request_count << std::endl;
     std::cout << "Cumulative total request time "
-              << double(infer_stat.cumulative_total_request_time_ns)/1000000 << " ms" << std::endl;
+              << double(infer_stat.cumulative_total_request_time_ns) / 1000000 << " ms" << std::endl;
     std::cout << "Cumulative send time "
-              << double(infer_stat.cumulative_send_time_ns)/1000000 << " ms" << std::endl;
+              << double(infer_stat.cumulative_send_time_ns) / 1000000 << " ms" << std::endl;
     std::cout << "Cumulative receive time "
-              << double(infer_stat.cumulative_receive_time_ns)/1000000 << " ms" << std::endl;
+              << double(infer_stat.cumulative_receive_time_ns) / 1000000 << " ms" << std::endl;
 
     return 0;
 }

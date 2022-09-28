@@ -76,6 +76,10 @@ Usage:
 Server Live: True
 ```
 
+
+
+## GRPC Examples with Dummy Model
+
 ### Run the Client to get server readiness <a name="grpc-server-ready"></a>
 
 - Command
@@ -248,6 +252,37 @@ Number of requests: 1
 Total processing time: 5.28986 ms
 Latency: 5.28986 ms
 Requests per second: 189.041
+```
+
+## GRPC Examples with Resnet Model
+
+### Start the Model Server Container with Dummy Model
+```Bash
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 
+```
+
+Once you finish above steps, you are ready to run the samples.
+
+### Run the Client to perform inference
+
+```Bash
+./grpc_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --grpc_port 9000  
+../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
+../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
+../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
+../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
+../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
+../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass 
+../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock 
+../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
+../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
+Accuracy 100%
+======Client Statistics======
+Completed request count 10
+Cumulative total request time 264.314 ms
+Cumulative send time 1.09484 ms
+Cumulative receive time 0.024284 ms
 ```
 
 ## HTTP Examples <a name="http-api"></a>
