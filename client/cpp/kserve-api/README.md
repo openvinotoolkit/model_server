@@ -15,6 +15,32 @@ cd model_server/client/cpp/kserve-api
 cmake . && make
 ```
 
+## GRPC Examples <a name="grpc-api"></a>
+
+### Run the Client to get server liveness <a name="grpc-server-live"></a>
+
+- Command
+
+```Bash
+./grpc_server_live --help
+Sends requests via KServe gRPC API to check if server is alive.
+Usage:
+  grpc_infer_dummy [OPTION...]
+
+  -h, --help              Show this help message and exit
+      --grpc_address arg  Specify url to grpc service.  (default: 
+                          localhost)
+      --grpc_port arg     Specify port to grpc service.  (default: 9000)
+      --timeout arg       Request timeout. (default: 0)
+```
+
+- Usage Example 
+
+```Bash
+./grpc_server_live --grpc_port 9000 --grpc_address localhost
+Server Live: True
+```
+
 ## GRPC Examples with Dummy Model
 
 ### Start the Model Server Container with Dummy Model

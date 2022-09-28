@@ -33,7 +33,7 @@ namespace tc = triton::client;
 
 
 int main(int argc, char** argv) {
-    cxxopts::Options opt("grpc_infer_dummy", "Sends requests via KServe gRPC API.");
+    cxxopts::Options opt("grpc_infer_dummy", "Sends requests via KServe gRPC API to check if server is alive.");
 
     // clang-format off
     opt.add_options()
