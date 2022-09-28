@@ -118,13 +118,7 @@ int main(int argc, char** argv) {
         "unable to set data for input");
 
     // Generate the outputs to be requested.
-    tc::InferRequestedOutput* output;
 
-    FAIL_IF_ERR(
-        tc::InferRequestedOutput::Create(&output, output_name),
-        "unable to get output");
-    std::shared_ptr<tc::InferRequestedOutput> output_ptr;
-    output_ptr.reset(output);
 
     tc::InferOptions options(model_name);
     if (args.count("model_version"))
@@ -132,11 +126,10 @@ int main(int argc, char** argv) {
     options.client_timeout_ = args["timeout"].as<int>();
 
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
-    std::vector<const tc::InferRequestedOutput*> outputs = {output_ptr.get()};
 
     tc::InferResult* results;
     FAIL_IF_ERR(
-        client->Infer(&results, options, inputs, outputs),
+        client->Infer(&results, options, inputs),
         "unable to run model");
     std::shared_ptr<tc::InferResult> results_ptr;
     results_ptr.reset(results);
