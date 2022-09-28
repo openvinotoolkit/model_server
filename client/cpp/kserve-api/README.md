@@ -256,7 +256,7 @@ Requests per second: 189.041
 
 ## GRPC Examples with Resnet Model
 
-### Start the Model Server Container with Dummy Model
+### Start the Model Server Container with Resnet Model
 ```Bash
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 
 ```
