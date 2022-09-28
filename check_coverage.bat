@@ -5,12 +5,12 @@
 #MIN_FUNCTION_COV=86.5
 
 #Rhel
-#MIN_LINES_COV=73.3
-#MIN_FUNCTION_COV=73.6
+MIN_LINES_COV=73.3
+MIN_FUNCTION_COV=73.6
 
 
-LINES_COV=`cat genhtml/index.html | grep headerCovTableEntryLo | grep -oP  ">\K(\d*.\d*)" | head -n 1`
-FUNC_COV=`cat genhtml/index.html | grep headerCovTableEntryLo | grep -oP  ">\K(\d*.\d*)" | tail -n 1`
+LINES_COV=`cat genhtml/index.html | grep headerCovTableEntry | grep -oP  ">\K(\d*.\d*)" | head -n 1`
+FUNC_COV=`cat genhtml/index.html | grep headerCovTableEntry | grep -oP  ">\K(\d*.\d*)" | tail -n 1`
 
 if (( $(echo "$MIN_LINES_COV > $LINES_COV" | bc -l) )); then
     echo "Error: $LINES_COV % Lines coverage is lower than minimal $MIN_LINES_COV %"
