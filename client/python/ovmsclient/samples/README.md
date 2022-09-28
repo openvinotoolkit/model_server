@@ -376,12 +376,6 @@ Image #8 has been classified as snail
 Image #9 has been classified as zebra
 ```
 
-To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be acheived by starting the OVMS container with `--layout NHWC:NCHW` parameter.
-new OVMS instance with `--layout NHWC:NCHW` parameter.
-```bash
-docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC:NCHW
-```
-
 ### Predict binary format<a name="http-predict-binary">
 
 #### **Make prediction using images in binary format:**
