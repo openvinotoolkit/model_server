@@ -230,7 +230,7 @@ COPY check_coverage.bat /ovms/
 # Test Coverage
 RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; bazel coverage --combined_report=lcov //src:ovms_test &&\
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
-    ./check_coverage.bat
+    ./check_coverage.bat && exit $?
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json

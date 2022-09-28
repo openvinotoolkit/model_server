@@ -189,8 +189,10 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; wget https:
     yum install -y lcov-1.16-1.noarch.rpm &&\
     bazel coverage --combined_report=lcov //src:ovms_test &&\
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
-    ./check_coverage.bat
+    ./check_coverage.bat && exit $?
 
+RUN echo "Not working"
+RUN exit 1
 COPY ${ovms_metadata_file} metadata.json
 
 RUN ./bazel-bin/src/./ovms
