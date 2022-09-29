@@ -203,13 +203,13 @@ LATENCY
             --target_device AUTO
 ```
 
-THROUGHTPUT
+THROUGHPUT
 
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
             -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
+            --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
             --target_device AUTO
 ```
 
