@@ -22,11 +22,11 @@ pip3 install -r requirements.txt
 ### Getting ready with rm_lstm4f stateful model
 
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
-- Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
+- Download the model from [rm_lstm4f](https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/)
 
 ```bash
 mkdir models && cd models
-wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ 
+wget -r -np -nH --cut-dirs=5 -R *index.html* (https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/ 
 ```
 
 This command downloads following files:
@@ -49,7 +49,7 @@ test_score_1_10.ark
 
 [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with reference model results
 
-- [Convert model to IR](https://docs.openvino.ai/2022.1/openvino_inference_engine_samples_speech_sample_README.html)
+- [Convert model to IR](https://docs.openvino.ai/2022.2/openvino_inference_engine_samples_speech_sample_README.html)
  
 ```bash
 docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu20_dev:latest mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1

@@ -20,11 +20,7 @@ import numpy as np
 
 import config
 
-MODEL_REPOSITORY_SERVER = "https://download.01.org"
-OPENCV_OPENVINO_TOOLKIT = "opencv/2020/openvinotoolkit"
-OPENCV_PUBLIC = "opencv/public_models"
-OPENVINO_VERSION = "2020.2"
-OPEN_MODEL_ZOO_BIN = "open_model_zoo/models_bin"
+MODEL_REPOSITORY_SERVER = "https://storage.openvinotoolkit.org/repositories/open_model_zoo/public/2022.1/"
 BUILD_DIR = "1"
 BUILD_012020 = "012020"
 PRECISION = "FP32"
@@ -34,9 +30,6 @@ PERSON_VEHICLE_BIKE_DETECTION_MODEL = "person-vehicle-bike-detection-crossroad-0
 RESNET_50 = "resnet-50-tf"
 RESNET_V1_50 = "resnet_v1-50"
 OPEN_MODEL_ZOO_MODELS_LOCATION = "{repo}/{opencv}/{version}/{bin}/{build}".format(repo=MODEL_REPOSITORY_SERVER,
-                                                                                  opencv=OPENCV_OPENVINO_TOOLKIT,
-                                                                                  version=OPENVINO_VERSION,
-                                                                                  bin=OPEN_MODEL_ZOO_BIN,
                                                                                   build=BUILD_DIR)
 URL_OPEN_MODEL_ZOO_FORMAT = "{model_location}/{model}/{precision}/{model}"
 URL_PUBLIC_MODEL_FORMAT = "{repo}/{opencv}/{build}/{model}/{model_version}"
