@@ -143,6 +143,8 @@ Currently, the following versions are available:
 
 Example:
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
 make docker_build INSTALL_DRIVER_VERSION=21.38.21026
 ```
 If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
