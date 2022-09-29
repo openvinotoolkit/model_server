@@ -26,7 +26,7 @@ To run this example you will need to download the rm_lstm4f model with input and
 
 ```bash
 mkdir models && cd models
-wget -r -np -nH --cut-dirs=5 -R *index.html* (https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/ 
+wget -r -np -nH --cut-dirs=5 -R *index.html* https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/ 
 ```
 
 This command downloads following files:
