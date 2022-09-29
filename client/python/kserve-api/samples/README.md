@@ -544,7 +544,7 @@ python3 ./http_infer_resnet.py --help
 usage: http_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--http_address HTTP_ADDRESS]
                             [--http_port HTTP_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--transpose_input {False,True}]
                             [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
-                            [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto]
+                            [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto] [--binary_data]
 
 Sends requests via KServe REST API using images in numpy format. It displays performance statistics and optionally the model accuracy
 
@@ -576,6 +576,7 @@ optional arguments:
                         Define pipeline name, must be same as is in service
   --dag-batch-size-auto
                         Add demultiplexer dimension at front
+  --binary_data         Send input data in binary format
 ```
 
 - Usage Example #1 - Input data placed in JSON object.
