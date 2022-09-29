@@ -94,8 +94,8 @@ The default account in the docker image is already preconfigured. In case you ch
 to start the ovms container:
 ```bash
 docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
---model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+-p 9001:9001 openvino/model_server:latest-gpu \
+--model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --port 9001 --target_device GPU
 ```
 
 *Note:* The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
