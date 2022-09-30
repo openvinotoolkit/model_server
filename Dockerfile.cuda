@@ -49,9 +49,10 @@ RUN set -exuo pipefail ; \
 		software-properties-common \
 	; \
 	if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
-	apt-key adv --keyserver-options http-proxy=http://proxy-us.intel.com:911 --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub ; \
+	apt-key adv --keyserver-options http-proxy=http://proxy-us.intel.com:911 --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub ; \
 	add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /" ; \
 	apt update && apt install -y \
+	cuda \
 	./libcudnn*.deb \
 	libboost-atomic1.71.0 \
 	libboost-chrono1.71.0 \
@@ -92,7 +93,6 @@ RUN set -exuo pipefail ; \
 	xz-utils \
 	ca-certificates \
 	clang-format-9 \
-	cuda \
 	g++-multilib \
 	gcc-multilib \
 	git-lfs \
@@ -119,7 +119,7 @@ RUN set -exuo pipefail ; \
 	curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin ; \
 	curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
 	chmod a+x /usr/local/bin/sccache ; \
-	curl https://github.com/Kitware/CMake/releases/download/v3.15.0/cmake-3.15.0-Linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 ; \
+	curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 ; \
 	curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv ; \
 	cd ccache-4.3 ; \
 	mkdir build ; \
@@ -129,6 +129,8 @@ RUN set -exuo pipefail ; \
 	cd / ; \
 	rm -r *.deb ccache*
 
+RUN pip install protobuf==3.20.0
+RUN rm -f /*deb
 ENV CUDA_PATH=/usr/local/cuda
 ENV PATH=${CUDA_PATH}/bin:$PATH
 
@@ -185,6 +187,11 @@ RUN make --jobs=$JOBS
 
 ####### End of AWS S3 SDK
 
+####### Build OpenCV
+WORKDIR /ovms/third_party/opencv
+RUN ./install_opencv.sh
+####### End of OpenCV
+
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
@@ -192,94 +199,100 @@ ARG ov_source_branch=master
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-RUN git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout 2021.4.1; git submodule update --init --recursive
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout $ov_source_branch; git submodule update --init --recursive
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake3 -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
-    mkdir -p /opt/intel/openvino/deployment_tools/inference_engine && \
-    ln -s /openvino/bin/intel64/Release/lib/* /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
-    ln -s /openvino/inference-engine/include/ /opt/intel/openvino/deployment_tools/inference_engine/
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
+    mkdir -p /opt/intel/openvino/extras && \
+    mkdir -p /opt/intel/openvino && \
+    ln -s /openvino/inference-engine/temp/opencv_*_ubuntu20/opencv /opt/intel/openvino/extras && \
+    ln -s /usr/local/runtime /opt/intel/openvino && \
+    ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR /
 # OV toolkit package
-RUN apt install -y cpio
-RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
-    wget $DLDT_PACKAGE_URL && \
-    tar -zxf l_openvino_toolkit*.tgz && \
-    cd l_openvino_toolkit*/ && \
-    sed -i 's/decline/accept/g' silent.cfg && \
-    ./install.sh -s silent.cfg --ignore-signature && \
-    rm -Rf $TEMP_DIR $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
+# RUN apt install -y cpio
+# RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+#     wget $DLDT_PACKAGE_URL && \
+#     tar -zxf l_openvino_toolkit*.tgz && \
+#     cd l_openvino_toolkit*/ && \
+#     sed -i 's/decline/accept/g' silent.cfg && \
+#     ./install.sh -s silent.cfg --ignore-signature && \
+#     rm -Rf $TEMP_DIR $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
 # apt package
 RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; else exit 0 ; fi ; \
     echo "installing apt package" && \
-    wget https://apt.repos.intel.com/openvino/2021/GPG-PUB-KEY-INTEL-OPENVINO-2021 && \
-    apt-key add GPG-PUB-KEY-INTEL-OPENVINO-2021 && \
-    echo "deb https://apt.repos.intel.com/openvino/2021 all main" | tee /etc/apt/sources.list.d/intel-openvino-2021.list && \
+    wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
+    apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
+    echo "deb https://apt.repos.intel.com/openvino/2022 focal main" | tee /etc/apt/sources.list.d/intel-openvino-2022.list && \
     apt update && \
-    apt install -y $APT_OV_PACKAGE
-
-RUN ln -s /opt/intel/openvino_2021 /opt/intel/openvino
+    apt install -y $APT_OV_PACKAGE && \
+    ln -s /opt/intel/openvino_2022 /opt/intel/openvino
 
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
 
 # Build CUDA plugin
-RUN git clone --recurse-submodules --single-branch --branch=releases/2021/4 https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git submodule update --recursive
+RUN git clone --recurse-submodules --single-branch --branch=master https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git submodule update --recursive
 
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
 ENV OPENVINO_HOME=/openvino
 ENV OPENVINO_CONTRIB=/openvino_contrib
 
 RUN mkdir ${OPENVINO_BUILD_PATH}
+#RUN cd ${OPENVINO_CONTRIB}/modules/nvidia_plugin && mkdir build && cd build && ../build.sh --build
 RUN cd "${OPENVINO_BUILD_PATH}" && \
 	  cmake "${OPENVINO_HOME}" \
-      -DENABLE_CUDA=ON \
+      -DENABLE_NVIDIA=ON \
       -DENABLE_TESTS=ON \
       -DBUILD_arm_plugin=OFF \
       -DBUILD_java_api=OFF \
       -DIE_EXTRA_MODULES="${OPENVINO_CONTRIB}/modules" \
-      -DWHEEL_VERSION=2021.3.0 \
+      -DWHEEL_VERSION=2022.1.0 \
       -DVERBOSE_BUILD=ON \
-      -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
-RUN cmake --build "${OPENVINO_BUILD_PATH}" --target CUDAPlugin
+      -DCMAKE_BUILD_TYPE="Release"
+RUN cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
+# since bazel does not have easy way to pass if down the dependencies to have select the sources
+# for libcurl & ssl we hack it this way
+RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
+COPY third_party /ovms/third_party/
 
-ENV BAZEL_LINKLIBS=-l%:libstdc++.a
-RUN apt install -y python-is-python3
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
-
+# Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
-COPY example_client/cpp/ /example_cpp_client/cpp
+COPY demos/common/cpp /example_cpp_client/cpp
+COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
 
 WORKDIR /ovms
 
-COPY src/ /ovms/src/
+RUN git clone --recurse-submodules --single-branch --branch=v2022.1 https://github.com/openvinotoolkit/model_server.git /repo && cd /repo && git submodule update --recursive
+RUN cp -r /repo/src/ /ovms/src/
 
-ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
+ARG PROJECT_VERSION="2022.2"
+ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
-RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -type d | grep openvino | cut -d'_' -f2`#g" /ovms/src/version.hpp
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/:/opt/intel/openvino/opencv/lib/
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp"
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+'`#g" /ovms/src/version.hpp
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12`#g" /ovms/src/version.hpp
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
+RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
-RUN cd /ovms/src/test/cpu_extension/ && make
-
-RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
