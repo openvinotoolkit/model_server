@@ -47,9 +47,6 @@ cd samples
 
 This section demonstrates inference on a simple model, which increments each provided value. 
 
-
-Once you finish above steps, you are ready to run the samples.
-
 ### Run the Client to get server liveness <a name="grpc-server-live"></a>
 
 - Command
@@ -75,10 +72,6 @@ Usage:
 ./grpc_server_live --grpc_port 9000 --grpc_address localhost
 Server Live: True
 ```
-
-
-
-## GRPC Examples with Dummy Model
 
 ### Run the Client to get server readiness <a name="grpc-server-ready"></a>
 
@@ -255,6 +248,13 @@ Requests per second: 189.041
 ```
 
 ## GRPC Examples with Resnet Model
+
+### Download the Pretrained Model
+Download the model files and store them in the `models` directory
+```Bash
+mkdir -p models/resnet/1
+curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+```
 
 ### Start the Model Server Container with Resnet Model
 ```Bash
