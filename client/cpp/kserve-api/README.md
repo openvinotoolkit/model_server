@@ -43,9 +43,11 @@ Server Live: True
 
 ## GRPC Examples with Dummy Model
 
+This section demonstrates request to simple model, which increments each provided value. 
+
 ### Start the Model Server Container with Dummy Model
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /models/dummy --port 9000 
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /src/test/dummy --port 9000 
 ```
 
 Once you finish above steps, you are ready to run the samples.
