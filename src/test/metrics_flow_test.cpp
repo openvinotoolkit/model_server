@@ -73,7 +73,7 @@ void checkRequestsCounter(const std::string& collectedMetricData, const std::str
     }
 }
 
-const char* pipelineDummyDemux = R"({
+std::string pipelineDummyDemux = R"({
     "monitoring": {
         "metrics": {
             "enable": true,
@@ -84,7 +84,8 @@ const char* pipelineDummyDemux = R"({
                 "ovms_requests_success",
                 "ovms_requests_fail",
                 "ovms_request_time_us",
-                "ovms_streams",
+                ")" + METRIC_NAME_STREAMS +
+                                 R"(",
                 "ovms_inference_time_us",
                 "ovms_wait_for_infer_req_time_us"
             ]

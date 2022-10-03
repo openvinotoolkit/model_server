@@ -280,7 +280,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         THROW_IF_NULL(this->waitForInferReqTime, "cannot create metric");
     }
 
-    familyName = "ovms_streams";
+    familyName = METRIC_NAME_STREAMS;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricGauge>(familyName,
             "Number of OpenVINO execution streams.");
