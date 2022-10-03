@@ -73,21 +73,21 @@ void checkRequestsCounter(const std::string& collectedMetricData, const std::str
     }
 }
 
-std::string pipelineDummyDemux = R"({
+std::string pipelineDummyDemux = std::string{R"({
     "monitoring": {
         "metrics": {
             "enable": true,
-            "metrics_list": [
-                "ovms_infer_req_queue_size",
-                "ovms_infer_req_active",
-                "ovms_current_requests",
-                "ovms_requests_success",
-                "ovms_requests_fail",
-                "ovms_request_time_us",")" +
-                                 METRIC_NAME_STREAMS +
+            "metrics_list": [)"} +
+                                 R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
+                                 R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+                                 R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
+                                 R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+                                 R"(",")" + METRIC_NAME_REQUESTS_FAIL +
+                                 R"(",")" + METRIC_NAME_REQUEST_TIME +
+                                 R"(",")" + METRIC_NAME_STREAMS +
                                  R"(",")" + METRIC_NAME_INFERENCE_TIME +
-                                 R"(", "ovms_wait_for_infer_req_time_us"
-            ]
+                                 R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
+                                 R"("]
         }
     },
     "model_config_list": [
@@ -238,8 +238,8 @@ TEST_F(MetricFlowTest, GrpcPredict) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "Predict", "TensorFlowServing", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfSuccessRequests);                                             // ran by real request
 
-    checkRequestsCounter(server.collect(), "ovms_requests_fail", modelName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfFailedRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), "ovms_requests_fail", dagName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfFailedRequests);    // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfFailedRequests);  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfFailedRequests);    // ran by real request
 
     EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
     EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
@@ -255,8 +255,8 @@ TEST_F(MetricFlowTest, GrpcPredict) {
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_infer_req_queue_size{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(std::string{"ovms_infer_req_queue_size{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
+    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
 TEST_F(MetricFlowTest, GrpcGetModelMetadata) {
@@ -351,8 +351,8 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelInfer", "KServe", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelInfer", "KServe", numberOfSuccessRequests);                                             // ran by real request
 
-    checkRequestsCounter(server.collect(), "ovms_requests_fail", modelName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), "ovms_requests_fail", dagName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
 
     EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
     EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
@@ -368,8 +368,8 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_infer_req_queue_size{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(std::string{"ovms_infer_req_queue_size{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
+    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
 TEST_F(MetricFlowTest, GrpcModelMetadata) {
@@ -448,8 +448,8 @@ TEST_F(MetricFlowTest, RestPredict) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "Predict", "TensorFlowServing", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "Predict", "TensorFlowServing", numberOfSuccessRequests);                                             // ran by real request
 
-    checkRequestsCounter(server.collect(), "ovms_requests_fail", modelName, 1, "REST", "Predict", "TensorFlowServing", numberOfFailedRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), "ovms_requests_fail", dagName, 1, "REST", "Predict", "TensorFlowServing", numberOfFailedRequests);    // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "REST", "Predict", "TensorFlowServing", numberOfFailedRequests);  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "REST", "Predict", "TensorFlowServing", numberOfFailedRequests);    // ran by real request
 
     EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
     EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
@@ -465,8 +465,8 @@ TEST_F(MetricFlowTest, RestPredict) {
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_infer_req_queue_size{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(std::string{"ovms_infer_req_queue_size{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
+    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
 TEST_F(MetricFlowTest, RestGetModelMetadata) {
@@ -538,8 +538,8 @@ TEST_F(MetricFlowTest, RestModelInfer) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelInfer", "KServe", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelInfer", "KServe", numberOfSuccessRequests);                                             // ran by real request
 
-    checkRequestsCounter(server.collect(), "ovms_requests_fail", modelName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), "ovms_requests_fail", dagName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
 
     EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
     EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
@@ -555,8 +555,8 @@ TEST_F(MetricFlowTest, RestModelInfer) {
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_infer_req_queue_size{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(std::string{"ovms_infer_req_queue_size{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
+    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
 TEST_F(MetricFlowTest, RestModelMetadata) {

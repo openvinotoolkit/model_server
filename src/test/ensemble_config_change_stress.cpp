@@ -1126,17 +1126,17 @@ public:
         ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric\n"
                                                                                                                      << metricOutput;
         std::regex findActualMetricRgx(std::string{".*"} + metricName + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
-        std::regex findRequestsSuccessMetricRgx(std::string{".*ovms_requests_success\\{api=\"TensorFlowServing\",interface=\"gRPC\",method=\"Predict\",name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findRequestsSuccessMetricRgx(std::string{".*"} + METRIC_NAME_REQUESTS_SUCCESS + std::string{"\\{api=\"TensorFlowServing\",interface=\"gRPC\",method=\"Predict\",name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
         ASSERT_TRUE(std::regex_search(metricOutput, match, findActualMetricRgx)) << "cannot find dummys " << metricName << " metric\n"
                                                                                  << metricOutput;
         auto actualVal = ovms::stoi64(match[1]);
-        ASSERT_TRUE(std::regex_search(metricOutput, match, findRequestsSuccessMetricRgx)) << "cannot find dummys ovms_requests_success metric\n"
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findRequestsSuccessMetricRgx)) << "cannot find dummys " << METRIC_NAME_REQUESTS_SUCCESS << " metric\n"
                                                                                           << metricOutput;
         auto requestsSuccessCounter = ovms::stoi64(match[1]);
-        ASSERT_TRUE(requestsSuccessCounter.has_value()) << "cannot parse ovms_requests_success\n"
+        ASSERT_TRUE(requestsSuccessCounter.has_value()) << "cannot parse " << METRIC_NAME_REQUESTS_SUCCESS << "\n"
                                                         << metricOutput;
-        SPDLOG_DEBUG("ovms_requests_success value: {}", requestsSuccessCounter.value());
+        SPDLOG_DEBUG("{} value: {}", METRIC_NAME_REQUESTS_SUCCESS, requestsSuccessCounter.value());
         ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number\n"
                                            << metricOutput;
         // In case of sporadic error here consider checking ovms_requests_success value (if 0, it could mean the load did not start yet (could happen on slower machines))
@@ -1145,7 +1145,7 @@ public:
     }
     void checkActiveNireqSmallerThanTotal() {
         std::string metricOutput = manager.getMetricRegistry()->collect();
-        std::regex findNireqTotalRgx(std::string{".*ovms_infer_req_queue_size\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findNireqTotalRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::regex findNireqActiveRgx(std::string{".*ovms_infer_req_active\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
         ASSERT_TRUE(std::regex_search(metricOutput, match, findNireqTotalRgx)) << "cannot find dummys total nireq in metric\n"

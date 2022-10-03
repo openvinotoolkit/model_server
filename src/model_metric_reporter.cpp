@@ -139,7 +139,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         THROW_IF_NULL(this->requestSuccessRestModelReady, "cannot create metric");
     }
 
-    familyName = "ovms_requests_fail";
+    familyName = METRIC_NAME_REQUESTS_FAIL;
     family = registry->createFamily<MetricCounter>(familyName,
         "Number of failed requests to a model or a DAG.");
     THROW_IF_NULL(family, "cannot create family");
@@ -290,7 +290,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         THROW_IF_NULL(this->streams, "cannot create metric");
     }
 
-    familyName = "ovms_infer_req_queue_size";
+    familyName = METRIC_NAME_INFER_REQ_QUEUE_SIZE;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricGauge>(familyName,
             "Inference request queue size (nireq).");
