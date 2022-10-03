@@ -50,7 +50,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         this->buckets.emplace_back(floor(BUCKET_MULTIPLIER * pow(BUCKET_POWER_BASE, i)));
     }
 
-    std::string familyName = "ovms_requests_success";
+    std::string familyName = METRIC_NAME_REQUESTS_SUCCESS;
     auto family = registry->createFamily<MetricCounter>(familyName,
         "Number of successful requests to a model or a DAG.");
     THROW_IF_NULL(family, "cannot create family");
@@ -258,7 +258,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         return;
     }
 
-    std::string familyName = "ovms_inference_time_us";
+    std::string familyName = METRIC_NAME_INFERENCE_TIME;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricHistogram>(familyName,
             "Inference execution time in the OpenVINO backend.");

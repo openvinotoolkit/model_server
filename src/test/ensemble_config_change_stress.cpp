@@ -42,16 +42,16 @@ using testing::Return;
 
 static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
-static const char* stressTestPipelineOneDummyConfig = R"(
+static std::string stressTestPipelineOneDummyConfig = R"(
 {
     "monitoring": {
         "metrics": {
             "enable": true,
             "metrics_list": [
-                "ovms_current_requests",
-                "ovms_infer_req_active",
-                "ovms_requests_success",
-                "ovms_infer_req_queue_size"]
+                ")" + METRIC_NAME_CURRENT_REQUESTS +
+                                                      R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+                                                      R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+                                                      R"(",")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
         }
     },
     "model_config_list": [
