@@ -22,7 +22,7 @@ Some models might take the whole sequence of data as an input and iterate over t
 
 Serving stateful model in OpenVINO Model Server is very similar to serving stateless models. The only difference is that for stateful models you need to set `stateful` flag in the model configuration.
 
-* Download and prepare example model from [rm_lstm4f]((https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/)
+* Download and prepare example model from [rm_lstm4f](https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/)
 
 ```bash
 mkdir models && cd models
