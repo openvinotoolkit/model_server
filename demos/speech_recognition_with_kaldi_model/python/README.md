@@ -24,27 +24,25 @@ pip3 install -r requirements.txt
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
 - Download the model from [rm_lstm4f](https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/)
 
+
+This commands will download nessesary files:
+
 ```bash
-mkdir models && cd models
-wget -rkpN -e robots=off -np -nH --cut-dirs=4 -R *index.html* https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/ 
-```
-
-This command downloads following files:
-
-```
-rm_lstm4f.counts rm_lstm4f.nnet rm_lstm4f.mapping rm_lstm4f.md
+wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/rm_lstm4f.counts
+wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/rm_lstm4f.nnet
+wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/rm_lstm4f.mapping
 ```
 
 rm_lstm4f model files in Kaldi format.
 
-```
-test_feat_1_10.ark
+```bash
+wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/test_feat_1_10.ark
 ```
 
 [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with input data for the model
 
 ```
-test_score_1_10.ark
+wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/test_score_1_10.ark
 ```
 
 [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with reference model results
