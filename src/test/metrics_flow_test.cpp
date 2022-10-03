@@ -241,16 +241,16 @@ TEST_F(MetricFlowTest, GrpcPredict) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfFailedRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfFailedRequests);    // ran by real request
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_wait_for_infer_req_time_us_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(std::string{"ovms_wait_for_infer_req_time_us_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
@@ -354,16 +354,16 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_wait_for_infer_req_time_us_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(std::string{"ovms_wait_for_infer_req_time_us_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
@@ -451,16 +451,16 @@ TEST_F(MetricFlowTest, RestPredict) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "REST", "Predict", "TensorFlowServing", numberOfFailedRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "REST", "Predict", "TensorFlowServing", numberOfFailedRequests);    // ran by real request
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_wait_for_infer_req_time_us_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(std::string{"ovms_wait_for_infer_req_time_us_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
@@ -541,16 +541,16 @@ TEST_F(MetricFlowTest, RestModelInfer) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_request_time_us_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(std::string{"ovms_wait_for_infer_req_time_us_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(std::string{"ovms_wait_for_infer_req_time_us_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
+    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));

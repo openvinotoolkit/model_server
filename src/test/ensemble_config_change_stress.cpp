@@ -1146,7 +1146,7 @@ public:
     void checkActiveNireqSmallerThanTotal() {
         std::string metricOutput = manager.getMetricRegistry()->collect();
         std::regex findNireqTotalRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
-        std::regex findNireqActiveRgx(std::string{".*ovms_infer_req_active\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findNireqActiveRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_ACTIVE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
         ASSERT_TRUE(std::regex_search(metricOutput, match, findNireqTotalRgx)) << "cannot find dummys total nireq in metric\n"
                                                                                << metricOutput;
@@ -1160,8 +1160,8 @@ public:
     }
     void testCurrentRequestsMetric() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        checkMetricGreaterThan("ovms_current_requests", 0);
-        checkMetricGreaterThan("ovms_infer_req_active", 0);
+        checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0);
+        checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0);
         checkActiveNireqSmallerThanTotal();
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
