@@ -22,11 +22,13 @@ Some models might take the whole sequence of data as an input and iterate over t
 
 Serving stateful model in OpenVINO Model Server is very similar to serving stateless models. The only difference is that for stateful models you need to set `stateful` flag in the model configuration.
 
-* Download and prepare example model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
+* Download and prepare example model from [rm_lstm4f](https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/)
 
 ```bash
 mkdir models && cd models
-wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/
+wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/rm_lstm4f.counts
+wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/rm_lstm4f.nnet
+wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/rm_lstm4f.mapping
 docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu20_dev:latest mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
 ```
 
@@ -69,7 +71,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v
 | `stateful` | `bool` | If set to true, model is loaded as stateful. | false |
 | `idle_sequence_cleanup` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans. <br> See [idle sequence cleanup](#stateful_cleanup). | true |
 | `max_sequence_number` | `uint32` | Determines how many sequences can be  handled concurrently by a model instance. | 500 |
-| `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2022.1/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. | false |
+| `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. | false |
 
 **Note:** Setting `idle_sequence_cleanup`, `max_sequence_number` and `low_latency_transformation` require setting `stateful` to true.
 
@@ -307,7 +309,7 @@ If set to `true` sequence cleaner will check that model. Otherwise, sequence cle
 There are limitations for using stateful models with OVMS:
 
  - Support inference execution only using CPU as the target device.
- - Support Kaldi models with memory layers and non-Kaldi models with Tensor Iterator. See this [docs about stateful networks](https://docs.openvino.ai/2022.1/openvino_docs_IE_DG_network_state_intro.html) to learn about stateful networks representation in OpenVINO.
+ - Support Kaldi models with memory layers and non-Kaldi models with Tensor Iterator. See this [docs about stateful networks](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_network_state_intro.html) to learn about stateful networks representation in OpenVINO.
  - [Auto batch size and shape](shape_batch_size_and_layout.md) are **not** available in stateful models.
  - Stateful model instances **cannot** be used in [DAGs](dag_scheduler.md).
  - Requests ordering is guaranteed only when a single client sends subsequent requests in a synchronous manner. Concurrent interaction with the same sequence might negatively affect the accuracy of the results.
