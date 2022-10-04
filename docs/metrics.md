@@ -214,3 +214,23 @@ DAG metrics
 
 The remaining metrics track the execution for the individual models in the pipeline separately.
 It means that each request to the DAG pipeline will update also the metrics for all individual models used as the execution nodes.
+
+## Visualize with Grafana
+
+With server metrics being scraped by Prometheus it is possible to integrate Grafana to visualize them on the dashboards. Once you have Grafana configured with Prometheus as a data source, you can create your own dashboard or import one. 
+
+In OpenVINO Model Server repository you can find [grafana_dashboard.json](http://example.com) file that can be used to visualize per model metrics like:
+- Throughput [RPS] - number of requests being processed by the model per second.
+- Mean Latency [ms] - latency averaged across all requests processed by the model in a certain timeframe.
+- Latency Quantile [ms] - value of latency for quantiles [0.75, 0.90, 0.99], meaning the latency that has NOT been exceeded by 75%, 80% and 99% of the requests.
+- Latency Distribution [%] - distribution of the latencies across the buckets.
+- Mean Inference Time [ms] - time of inference execution, averaged across all requests processed by the model in a certain timeframe.
+- Mean Time in Queue [ms] - time of a request waiting in for the inference execution, averaged across all requests processed by the model in a certain timeframe.
+- Active Inference Requests - number of requests being concurrently processed by the model
+
+The dashboard works with three variables: `model_name`, `model_version` and `interface` that determine the model instance and interface (gRPC or REST) of interest. The `interface` value is ignored for panels with: `Mean Inference Time`, `Mean Time in Queue`, `Active Inference Request` as they concern only backend performance and are interface agnostic.
+
+![Service Performance Metrics](service_performance.jpg)
+![Backend Performance Metrics](backend_performance.jpg)
+
+
