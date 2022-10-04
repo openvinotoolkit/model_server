@@ -219,10 +219,10 @@ It means that each request to the DAG pipeline will update also the metrics for 
 
 With server metrics being scraped by Prometheus it is possible to integrate Grafana to visualize them on the dashboards. Once you have Grafana configured with Prometheus as a data source, you can create your own dashboard or import one. 
 
-In OpenVINO Model Server repository you can find [grafana_dashboard.json](https://github.com/openvinotoolkit/model_server/blob/grafana-dashboards/deploy/grafana_dashboard.json) file that can be used to visualize per model metrics like:
+In OpenVINO Model Server repository you can find [grafana_dashboard.json](https://github.com/openvinotoolkit/model_server/blob/develop/deploy/grafana_dashboard.json) file that can be used to visualize per model metrics like:
 - Throughput [RPS] - number of requests being processed by the model per second.
 - Mean Latency [ms] - latency averaged across all requests processed by the model in a certain timeframe.
-- Latency Quantile [ms] - value of latency for quantiles [0.75, 0.90, 0.99], meaning the latency that has NOT been exceeded by 75%, 80% and 99% of the requests.
+- Latency Quantile [ms] - value of latency for quantiles [0.75, 0.90, 0.99], meaning the latency that has NOT been exceeded by 75%, 90% and 99% of the requests.
 - Latency Distribution [%] - distribution of the latencies across the buckets.
 - Mean Inference Time [ms] - time of inference execution, averaged across all requests processed by the model in a certain timeframe.
 - Mean Time in Queue [ms] - time of a request waiting in for the inference execution, averaged across all requests processed by the model in a certain timeframe.
