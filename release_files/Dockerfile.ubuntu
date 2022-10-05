@@ -62,6 +62,8 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
              --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
     chown -R ovms:ovms /ovms
 
+COPY *.deb  /
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM $BASE_IMAGE as release
@@ -149,41 +151,31 @@ RUN apt-get update && \
         libboost-atomic1.71.0 \
         libjson-c4 && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
 # for NCS
 RUN if [ -f /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules ]; then mkdir -p /etc/udev/rules.d/ && cp /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules /etc/udev/rules.d/ && ldconfig ; fi
 
 ADD https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
-COPY *.deb  /
 
-# for CUDA
-ARG build_type=dbg
-ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
-ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TF_SYSTEM_LIBS="curl"
+COPY --from=base_build /*.deb /
 SHELL ["/bin/bash", "-c"]
 RUN set -exuo pipefail ; \
 	rm -f /etc/apt/apt.conf.d/docker-clean ; \
-	echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache ; \
 	apt update ; \
 	apt install -y \
 		gnupg2 \
 		software-properties-common \
 	; \
-	if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
 	apt-key adv --keyserver-options http-proxy=http://proxy-us.intel.com:911 --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub ; \
 	add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /" ; \
-	apt update && apt install -y \
-	./libcudnn*.deb \
+	apt install -y --no-install-recommends\
+	libcudnn8 \
 	cuda \
-	libavcodec-dev \
-	libavformat-dev \
-	libcairo2-dev \
-	libcutensor1 \
-	libcutensor-dev && \
-	apt clean ;
-
-RUN rm -f /*deb
+	libcutensor1 ; \
+    apt purge -y gnupg2 \
+    software-properties-common ; \
+	apt clean -y && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;\
+    apt autoremove -y;
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms

@@ -43,7 +43,7 @@ INSTALL_RPMS_FROM_URL ?=
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 2022.1.0
+OV_SOURCE_BRANCH ?= 2022.2.0
 
 OV_USE_BINARY ?= 0
 APT_OV_PACKAGE ?= openvino-2022.1.0

@@ -195,7 +195,7 @@ RUN ./install_opencv.sh
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
-ARG ov_source_branch=master
+ARG ov_source_branch=2022.2.0
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
@@ -275,8 +275,7 @@ COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classi
 
 WORKDIR /ovms
 
-RUN git clone --recurse-submodules --single-branch --branch=v2022.1 https://github.com/openvinotoolkit/model_server.git /repo && cd /repo && git submodule update --recursive
-RUN cp -r /repo/src/ /ovms/src/
+COPY src/ /ovms/src/
 
 ARG PROJECT_VERSION="2022.2"
 ARG PROJECT_NAME="OpenVINO Model Server"
