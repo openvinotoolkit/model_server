@@ -87,15 +87,15 @@ To do so, use either of these commands:
 
 Running the inference operation on GPU requires the ovms process security context account to have correct permissions.
 It has to belong to the render group identified by the command:
-```
+```bash
 stat -c "group_name=%G group_id=%g" /dev/dri/render*
 ```
 The default account in the docker image is already preconfigured. In case you change the security context, use the following command
 to start the ovms container:
-```
+```bash
 docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
---model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+-p 9001:9001 openvino/model_server:latest-gpu \
+--model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --port 9001 --target_device GPU
 ```
 
 *Note:* The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
@@ -123,7 +123,15 @@ Set target_device for the model in configuration json file to MULTI:DEVICE_1,DEV
 
 Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
 ```
-make docker_build BASE_OS=ubuntu
+{
+   "model_config_list": [
+   {"config": {
+      "name": "resnet",
+      "base_path": "/opt/model",
+      "batch_size": "1",
+      "target_device": "MULTI:MYRIAD,CPU"}
+   }]
+}
 ```
 
 Additionally, you can use the `INSTALL_DRIVER_VERSION` argument command to choose which GPU driver version is used by the produced image. 
@@ -135,6 +143,8 @@ Currently, the following versions are available:
 
 Example:
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
 make docker_build INSTALL_DRIVER_VERSION=21.38.21026
 ```
 If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
