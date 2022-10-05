@@ -9,7 +9,7 @@ OpenVINO Model Server can be hosted on a bare metal server, virtual machine, or 
 
 OpenVINO Model Server execution on baremetal is tested on Ubuntu 20.04.x. For other operating systems we recommend using [OVMS docker containers](./docker_container.md).
 
-For supported hardware, refer to [supported configurations](https://docs.openvino.ai/2022.1/_docs_IE_DG_supported_plugins_Supported_Devices.html).   
+For supported hardware, refer to [supported configurations](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html).   
 Always verify if your model is supported by the VPU Plugins and convert it to the OpenVINO format, using [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer).
 
 ## Installing Model Server <a name="model-server-installation"></a>
@@ -47,4 +47,4 @@ Refer to [Running Model Server using Docker Container](./docker_container.md) to
 
 > **NOTE**:
 > When AI accelerators are used for inference execution, additional steps may be required to install their drivers and dependencies. Learn more about it 
-> Learn more about it on [OpenVINO installation guide](https://docs.openvino.ai/2022.1/openvino_docs_install_guides_installing_openvino_linux.html).
+> Learn more about it on [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_linux.html).

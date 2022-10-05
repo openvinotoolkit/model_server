@@ -47,9 +47,9 @@ Key features:
 - online deployment of new [model versions](model_version_policy.md)
 - [configuration updates in runtime](online_config_changes.md)
 - support for AI accelerators, such as 
-[Intel Movidius Myriad VPUs](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_MYRIAD.html), 
-[GPU](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_GPU.html), and 
-[HDDL](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_HDDL.html) 
+[Intel Movidius Myriad VPUs](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_MYRIAD.html), 
+[GPU](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html), and 
+[HDDL](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_HDDL.html) 
 - works with [Bare Metal Hosts](host.md) as well as [Docker containers](docker_container.md) 
 - [model reshaping](shape_batch_size_and_layout.md) in runtime
 - [directed Acyclic Graph Scheduler](dag_scheduler.md) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
