@@ -18,9 +18,11 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/segmentation_using_paddlepaddle_model/python
 ```
 
-Install [paddlepaddle](https://pypi.org/project/paddlepaddle/) package required to export the model to deployable format
+Install [paddlepaddle](https://pypi.org/project/paddlepaddle/) and other packages required to export the model to deployable format
 ```bash
 pip3 install paddlepaddle
+pip3 install pyyaml
+pip3 install scipy
 ```
 
 You can prepare the workspace by just running
