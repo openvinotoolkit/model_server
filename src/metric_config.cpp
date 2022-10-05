@@ -38,6 +38,7 @@ bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
 // Getting the "monitoring" metrics config as input
 Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool forceFailureIfMetricsAreEnabled) {
     Status status = StatusCode::OK;
+    *this = MetricConfig();
     if (!metrics.HasMember("metrics"))
         return status;
 

@@ -751,16 +751,16 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     Status status;
 
     // Reading metric config only once per server start
-    if (!this->metricConfigLoadedOnce) {
+    //if (!this->metricConfigLoadedOnce) {
         status = loadMetricsConfig(configJson);
         if (!status.ok()) {
             return status;
         }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start.");
         this->metricConfigLoadedOnce = true;
-    } else {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric from config json file skipped. Settings already loaded.");
-    }
+    //} else {
+    //    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric from config json file skipped. Settings already loaded.");
+    //}
 
     Status firstErrorStatus = StatusCode::OK;
 
