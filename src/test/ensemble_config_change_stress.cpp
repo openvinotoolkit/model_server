@@ -1325,7 +1325,6 @@ public:
         const std::set<StatusCode>& allowedLoadResults,
         std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
         tensorflow::serving::GetModelMetadataRequest request;
-        tensorflow::serving::GetModelMetadataResponse response;
         startSignal.get();
         // stressIterationsCounter is additional safety measure
         auto stressIterationsCounter = stressIterationsLimit;
@@ -1336,6 +1335,7 @@ public:
                 break;
             }
             auto status = ovms::GetModelMetadataImpl::createGrpcRequest(pipelineName, 1, &request);
+            tensorflow::serving::GetModelMetadataResponse response;
             status = ovms::GetModelMetadataImpl::getModelStatus(&request, &response, manager, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata));
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
@@ -1360,7 +1360,6 @@ public:
         const std::set<StatusCode>& allowedLoadResults,
         std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
         tensorflow::serving::GetModelStatusRequest request;
-        tensorflow::serving::GetModelStatusResponse response;
         startSignal.get();
         // stressIterationsCounter is additional safety measure
         // for getModelStatus requests it must be much higher since the response time is much lower
@@ -1373,6 +1372,7 @@ public:
                 break;
             }
             auto status = ovms::GetModelStatusImpl::createGrpcRequest(getServableName(), 1, &request);
+            tensorflow::serving::GetModelStatusResponse response;
             status = ovms::GetModelStatusImpl::getModelStatus(&request, &response, manager, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelStatus));
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
@@ -1901,10 +1901,11 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringGet
 TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
-        StatusCode::MODEL_NAME_MISSING,     // until first model is loaded
-        StatusCode::MODEL_VERSION_MISSING,  // this should be hit if test is stressing enough, pottentially to be moved to allowed
-        StatusCode::OK};                    // we expect full continuouity of operation
-    std::set<StatusCode> allowedLoadResults = {};
+        StatusCode::MODEL_NAME_MISSING,  // until first model is loaded
+        StatusCode::OK};                 // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MODEL_VERSION_MISSING  // this should be hit if test is stressing enough, sporadically does not happen
+    };
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
         &StressPipelineConfigChanges::addFirstModel,
