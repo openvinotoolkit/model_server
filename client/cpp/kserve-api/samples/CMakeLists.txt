@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 3.17)
 
 function(sample sample_name)
-    add_executable(${sample_name} ${sample_name}.cc)
+    add_executable(${sample_name} ${sample_name}.cpp)
     add_dependencies(${sample_name} cc-clients)
     target_link_libraries(${sample_name} grpcclient libprotobuf.a)
 endfunction()
