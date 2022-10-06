@@ -330,6 +330,11 @@ public:
          */
     virtual ~ModelInstance() = default;
 
+    void updateMetricConfiguration(MetricRegistry* registry, const MetricConfig* metricConfig) {
+        this->reporter.reset();
+        this->reporter = std::make_unique<ModelMetricReporter>(metricConfig, registry, name, version);
+    }
+
     /**
          * @brief Increases predict requests usage count
          */

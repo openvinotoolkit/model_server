@@ -29,15 +29,16 @@ class MetricRegistry;
 class MetricConfig;
 
 class ServableMetricReporter {
-    MetricRegistry* registry;
-
 protected:
+    MetricRegistry* registry;
     std::vector<double> buckets;
 
 public:
     ServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
+    ~ServableMetricReporter();
 
     // TFS
+    std::shared_ptr<MetricFamily<MetricCounter>> requestSuccessFamily;
     std::unique_ptr<MetricCounter> requestSuccessGrpcPredict;
     std::unique_ptr<MetricCounter> requestSuccessGrpcGetModelMetadata;
     std::unique_ptr<MetricCounter> requestSuccessGrpcGetModelStatus;
@@ -46,6 +47,7 @@ public:
     std::unique_ptr<MetricCounter> requestSuccessRestGetModelMetadata;
     std::unique_ptr<MetricCounter> requestSuccessRestGetModelStatus;
 
+    std::shared_ptr<MetricFamily<MetricCounter>> requestFailFamily;
     std::unique_ptr<MetricCounter> requestFailGrpcPredict;
     std::unique_ptr<MetricCounter> requestFailGrpcGetModelMetadata;
     std::unique_ptr<MetricCounter> requestFailGrpcGetModelStatus;
@@ -71,6 +73,7 @@ public:
     std::unique_ptr<MetricCounter> requestFailRestModelMetadata;
     std::unique_ptr<MetricCounter> requestFailRestModelReady;
 
+    std::shared_ptr<MetricFamily<MetricHistogram>> requestTimeFamily;
     std::unique_ptr<MetricHistogram> requestTimeGrpc;
     std::unique_ptr<MetricHistogram> requestTimeRest;
 
@@ -139,15 +142,26 @@ public:
 
 class ModelMetricReporter : public ServableMetricReporter {
 public:
+    std::shared_ptr<MetricFamily<MetricHistogram>> inferenceTimeFamily;
     std::unique_ptr<MetricHistogram> inferenceTime;
+
+    std::shared_ptr<MetricFamily<MetricHistogram>> waitForInferReqTimeFamily;
     std::unique_ptr<MetricHistogram> waitForInferReqTime;
 
+    std::shared_ptr<MetricFamily<MetricGauge>> streamsFamily;
     std::unique_ptr<MetricGauge> streams;
+
+    std::shared_ptr<MetricFamily<MetricGauge>> inferReqQueueSizeFamily;
     std::unique_ptr<MetricGauge> inferReqQueueSize;
+
+    std::shared_ptr<MetricFamily<MetricGauge>> inferReqActiveFamily;
     std::unique_ptr<MetricGauge> inferReqActive;
+
+    std::shared_ptr<MetricFamily<MetricGauge>> currentRequestsFamily;
     std::unique_ptr<MetricGauge> currentRequests;
 
     ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
+    ~ModelMetricReporter();
 };
 
 }  // namespace ovms

@@ -591,6 +591,17 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     }
 }
 
+void ModelManager::updateModelsMetricConfig() {
+    SPDLOG_INFO("Updating models metric config");
+    for (auto& [name, model] : this->models) {
+        SPDLOG_INFO("Updating model [{}] metric config", model->getName());
+        for (auto& [v, version] : model->getModelVersions()) {
+            SPDLOG_INFO("Updating model [{}] v[{}] metric config", model->getName(), version->getVersion());
+            version->updateMetricConfiguration(this->metricRegistry, &this->getMetricConfig());
+        }
+    }
+}
+
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
     Status firstErrorStatus = StatusCode::OK;
 
@@ -752,13 +763,19 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 
     // Reading metric config only once per server start
     //if (!this->metricConfigLoadedOnce) {
-        status = loadMetricsConfig(configJson);
-        if (!status.ok()) {
-            return status;
-        }
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start.");
-        this->metricConfigLoadedOnce = true;
-    //} else {
+    status = loadMetricsConfig(configJson);
+    if (!status.ok()) {
+        return status;
+    }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start.");
+    this->metricConfigLoadedOnce = true;
+
+    // TODO: if new metric config is different from old one
+    // re-create reporters (not thread safe)
+    this->updateModelsMetricConfig();    
+
+    
+    //else {
     //    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric from config json file skipped. Settings already loaded.");
     //}
 
