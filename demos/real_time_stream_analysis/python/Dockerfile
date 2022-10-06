@@ -16,7 +16,9 @@
 
 FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND="noninteractive"
-RUN apt -y update && apt install -y libopencv-dev python3-opencv python3-pip
+RUN apt -y update && apt install -y --no-install-recommends libgl1 libglib2.0-0 python3-pip
+COPY install_opencv.sh /real_time_stream_analysis/
+RUN bash /real_time_stream_analysis/install_opencv.sh
 COPY requirements.txt /real_time_stream_analysis/
 RUN pip3 install -r /real_time_stream_analysis/requirements.txt
 COPY templates /real_time_stream_analysis/templates
