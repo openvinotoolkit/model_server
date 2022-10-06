@@ -26,6 +26,7 @@ ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
 ARG APT_OV_PACKAGE=openvino-2022.1.0
+ARG CHECK_COVERAGE=1
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
@@ -43,13 +44,16 @@ RUN apt update && apt install -y \
             libboost-thread1.71.0 \
             libboost-system1.71.0 \
             libboost-date-time1.71.0 \
+            bc \
             build-essential \
             cmake \
             automake \
             autoconf \
             curl \
+            default-jdk \
             gdb \
             git \
+            lcov \
             libusb-dev \
             libusb-1.0-0-dev \
             libcurl4-openssl-dev \
@@ -214,6 +218,12 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/sr
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+'`#g" /ovms/src/version.hpp
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12`#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+
+COPY check_coverage.bat /ovms/
+# Test Coverage
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; bazel coverage --combined_report=lcov //src:ovms_test &&\
+    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
+    ./check_coverage.bat && exit $?
 
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so

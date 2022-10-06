@@ -64,7 +64,7 @@ def check_dir(start_dir):
                      'add.xml', 'tftext.patch', 'net_http.patch', 'clang-format', 'missing_headers.txt', 'listen.patch', 'Doxyfile',
                      'increment_1x3x4x5.xml', 'rest_sdk_v2.10.16.patch', 'azure_sdk.patch', 'model.xml', 'ovms-c/dist',
                      'client_requirements.txt', 'REST_age_gender.ipynb', 'libevent/BUILD', 'forbidden_functions.txt',
-                     'resnet_images.txt', 'vehicle_images.txt', 'opencv_cmake_flags.txt', 'metrics_output.out']
+                     'resnet_images.txt', 'vehicle_images.txt', 'opencv_cmake_flags.txt', 'metrics_output.out', 'check_coverage.bat']
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
 
@@ -99,7 +99,7 @@ def check_func(start_dir):
                      'openvino.LICENSE.txt', 'c-ares.LICENSE.txt', 'zlib.LICENSE.txt', 'boost.LICENSE.txt',
                      'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml', 'listen.patch', 'add.xml',
                      'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch',
-                     'forbidden_functions.txt', 'missing_headers.txt', 'metrics_output.out', 'summator.xml']
+                     'forbidden_functions.txt', 'missing_headers.txt', 'metrics_output.out', 'summator.xml', 'check_coverage.bat']
 
     exclude_directories = ['/dist/', 'extras/ovms-operator']
 
