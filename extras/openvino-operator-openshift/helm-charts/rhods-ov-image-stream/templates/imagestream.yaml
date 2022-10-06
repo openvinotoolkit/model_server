@@ -21,6 +21,7 @@ metadata:
   labels:
     application: openvino-notebook
     opendatahub.io/notebook-image: "true"
+    opendatahub.io/build_type: "notebook_image"
   annotations:
     opendatahub.io/notebook-image-desc: >-
       Jupyter notebook image with OpenVINO Toolkit
