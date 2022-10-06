@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
+<<<<<<< HEAD
     ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"), "GRPC_ADDRESS")
     ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"), "PORT")
     ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("b"), "INPUT_NAME")
@@ -71,6 +72,15 @@ int main(int argc, char** argv) {
     ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"), "MODEL_NAME")
     ("model_version", "Define model version.", cxxopts::value<std::string>(), "MODEL_VERSION")
     ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"), "TIMEOUT")
+=======
+    ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"))
+    ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"))
+    ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("b"))
+    ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("a"))
+    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"))
+    ("model_version", "Define model version.", cxxopts::value<std::string>())
+    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
+>>>>>>> changed file extensions from .cc to .cpp
     ;
     // clang-format on
 
@@ -117,6 +127,11 @@ int main(int argc, char** argv) {
             input_data.size() * sizeof(float)),
         "unable to set data for input");
 
+<<<<<<< HEAD
+=======
+    // Generate the outputs to be requested.
+
+>>>>>>> changed file extensions from .cc to .cpp
 
     tc::InferOptions options(model_name);
     if (args.count("model_version"))
@@ -135,7 +150,11 @@ int main(int argc, char** argv) {
     // Validate the results...
     ValidateShapeAndDatatype(output_name, results_ptr);
 
+<<<<<<< HEAD
     // Get pointer to the result returned...
+=======
+    // Get pointers to the result returned...
+>>>>>>> changed file extensions from .cc to .cpp
     float* output_data;
     size_t output_byte_size;
     FAIL_IF_ERR(
@@ -160,6 +179,7 @@ int main(int argc, char** argv) {
     tc::InferStat infer_stat;
     client->ClientInferStat(&infer_stat);
     std::cout << "======Client Statistics======" << std::endl;
+<<<<<<< HEAD
     std::cout << "Number of requests: "
               << infer_stat.completed_request_count << std::endl;
     std::cout << "Total processing time: "
@@ -168,6 +188,16 @@ int main(int argc, char** argv) {
               << double(infer_stat.cumulative_total_request_time_ns/infer_stat.completed_request_count)/1.0e+6 << " ms" << std::endl;
     std::cout << "Requests per second: "
               << double(1.0e+9/infer_stat.cumulative_total_request_time_ns/infer_stat.completed_request_count) << std::endl;
+=======
+    std::cout << "Completed request count "
+              << infer_stat.completed_request_count << std::endl;
+    std::cout << "Cumulative total request time "
+              << double(infer_stat.cumulative_total_request_time_ns)/1000000 << " ms" << std::endl;
+    std::cout << "Cumulative send time "
+              << double(infer_stat.cumulative_send_time_ns)/1000000 << " ms" << std::endl;
+    std::cout << "Cumulative receive time "
+              << double(infer_stat.cumulative_receive_time_ns)/1000000 << " ms" << std::endl;
+>>>>>>> changed file extensions from .cc to .cpp
 
     return 0;
 }

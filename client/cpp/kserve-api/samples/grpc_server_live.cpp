@@ -33,14 +33,24 @@ namespace tc = triton::client;
 
 
 int main(int argc, char** argv) {
+<<<<<<< HEAD
     cxxopts::Options opt("grpc_server_live", "Sends requests via KServe gRPC API to check if server is alive.");
+=======
+    cxxopts::Options opt("grpc_infer_dummy", "Sends requests via KServe gRPC API to check if server is alive.");
+>>>>>>> changed file extensions from .cc to .cpp
 
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
+<<<<<<< HEAD
     ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"), "GRPC_ADDRESS")
     ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"), "PORT")
     ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"), "TIMEOUT")
+=======
+    ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"))
+    ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"))
+    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
+>>>>>>> changed file extensions from .cc to .cpp
     ;
     // clang-format on
 
