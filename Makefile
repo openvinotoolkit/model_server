@@ -244,7 +244,7 @@ endif
 		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04 \
 		--build-arg OPENVINO_OPENCV_DOWNLOAD_SERVER=$(OPENVINO_OPENCV_DOWNLOAD_SERVER) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg JOBS=$(JOBS)
@@ -271,7 +271,7 @@ endif
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg GPU=0 \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04 \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
     	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
@@ -279,7 +279,7 @@ endif
     	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
     	--build-arg GPU=1 \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04 \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) && \
     	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu
 	cd extras/nginx-mtls-auth && \

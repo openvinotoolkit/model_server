@@ -159,23 +159,10 @@ ADD https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/c
 
 COPY --from=base_build /*.deb /
 SHELL ["/bin/bash", "-c"]
-RUN set -exuo pipefail ; \
-	rm -f /etc/apt/apt.conf.d/docker-clean ; \
-	apt update ; \
-	apt install -y \
-		gnupg2 \
-		software-properties-common \
-	; \
-	apt-key adv --keyserver-options http-proxy=http://proxy-us.intel.com:911 --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub ; \
-	add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /" ; \
-	apt install -y --no-install-recommends\
-	libcudnn8 \
-	cuda \
-	libcutensor1 ; \
-    apt purge -y gnupg2 \
-    software-properties-common ; \
-	apt clean -y && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;\
-    apt autoremove -y;
+
+RUN echo "installing cuda apt package" && \
+    apt update && apt install -y --no-install-recommends libcudnn8 libcutensor1 libpng16-16 &&  \
+    apt clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms

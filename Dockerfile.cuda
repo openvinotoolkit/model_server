@@ -53,7 +53,8 @@ RUN set -exuo pipefail ; \
 	add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /" ; \
 	apt update && apt install -y \
 	cuda \
-	./libcudnn*.deb \
+	libcudnn8 \
+	libcudnn8-dev \
 	libboost-atomic1.71.0 \
 	libboost-chrono1.71.0 \
 	libboost-filesystem1.71.0 \
