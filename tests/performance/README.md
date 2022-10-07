@@ -1,20 +1,37 @@
 # Measure performance
 ## Prerequisites
+
+Clone OVMS repository.
+```bash
+$ git clone https://github.com/openvinotoolkit/model_server.git
+$ cd model_server/tests/performance
+```
+
 Enable virtualenv in project root directory, install requirements.txt.
 ```bash
 $ virtualenv .venv
 $ . .venv/bin/activate
-$ pip3 install -r requirements.txt
+$ pip3 install -r ../requirements.txt
+```
+
+```bash
+$ docker run -p 9000:9000 openvino/model_server:latest \
+--model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \
+--layout NHWC:NCHW --port 9000
 ```
 
 ## Latency
 ```bash
 $ python3 grpc_latency.py --help
 usage: grpc_latency.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
+                       [--labels_numpy_path LABELS_NUMPY_PATH]
                        [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT]
-                       [--input_name INPUT_NAME] [--iterations ITERATIONS]
-                       [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
-                       [--report_every REPORT_EVERY] [--id ID]
+                       [--input_name INPUT_NAME] [--output_name OUTPUT_NAME]
+                       [--iterations ITERATIONS] [--batchsize BATCHSIZE]
+                       [--model_name MODEL_NAME]
+                       [--model_version MODEL_VERSION]
+                       [--report_every REPORT_EVERY] [--precision PRECISION]
+                       [--id ID]
 
 Sends requests via TFS gRPC API using images in numpy format. It measures
 performance statistics.
@@ -22,13 +39,17 @@ performance statistics.
 optional arguments:
   -h, --help            show this help message and exit
   --images_numpy_path IMAGES_NUMPY_PATH
-                        numpy in shape [n,w,h,c] or [n,c,h,w]
+                        image in numpy format
+  --labels_numpy_path LABELS_NUMPY_PATH
+                        labels in numpy format
   --grpc_address GRPC_ADDRESS
                         Specify url to grpc service. default:localhost
   --grpc_port GRPC_PORT
-                        Specify port to grpc service. default: 9000
+                        Specify port to grpc service. default: 9178
   --input_name INPUT_NAME
                         Specify input tensor name. default: input
+  --output_name OUTPUT_NAME
+                        Specify output tensor name. default: prob
   --iterations ITERATIONS
                         Number of requests iterations, as default use number
                         of images in numpy memmap. default: 0 (consume all
@@ -37,8 +58,12 @@ optional arguments:
                         Number of images in a single request. default: 1
   --model_name MODEL_NAME
                         Define model name in payload. default: resnet
+  --model_version MODEL_VERSION
+                        Model version number. default: 1
   --report_every REPORT_EVERY
                         Report performance every X iterations
+  --precision PRECISION
+                        input precision
   --id ID               Helps identifying client
 
 ```
