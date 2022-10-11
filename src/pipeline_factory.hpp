@@ -31,6 +31,8 @@
 #include "kfs_grpc_inference_service.hpp"
 #include "nodeinfo.hpp"
 #include "status.hpp"
+#include "metric_config.hpp"
+#include "metric_registry.hpp"
 
 namespace ovms {
 
@@ -76,6 +78,7 @@ public:
         const std::vector<NodeInfo>&& nodeInfos,
         const pipeline_connections_t&& connections,
         ModelManager& manager);
+    void updateMetricConfiguration(MetricRegistry* registry, const MetricConfig* metricConfig);
 
     void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
     Status revalidatePipelines(ModelManager&);

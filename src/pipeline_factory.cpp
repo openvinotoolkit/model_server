@@ -118,6 +118,12 @@ Status PipelineFactory::reloadDefinition(const std::string& pipelineName,
     return pd->reload(manager, std::move(nodeInfos), std::move(connections));
 }
 
+void PipelineFactory::updateMetricConfiguration(MetricRegistry* registry, const MetricConfig* metricConfig) {
+    for (auto& [name, pd] : definitions) {
+        pd->updateMetricConfiguration(registry, metricConfig);
+    }
+}
+
 Status PipelineFactory::revalidatePipelines(ModelManager& manager) {
     Status firstErrorStatus = StatusCode::OK;
     for (auto& [name, definition] : definitions) {

@@ -145,6 +145,11 @@ public:
         this->status.handle(UsedModelChangedEvent(ownerDetails));
     }
 
+    void updateMetricConfiguration(MetricRegistry* registry, const MetricConfig* metricConfig) {
+        this->reporter.reset();
+        this->reporter = std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION);
+    }
+
     const PipelineDefinitionStatus& getStatus() const {
         return this->status;
     }

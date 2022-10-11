@@ -602,6 +602,11 @@ void ModelManager::updateModelsMetricConfig() {
     }
 }
 
+void ModelManager::updatePipelinesMetricConfig() {
+    SPDLOG_INFO("Updating pipelines metric config");
+    this->pipelineFactory.updateMetricConfiguration(this->metricRegistry, &this->getMetricConfig());
+}
+
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
     Status firstErrorStatus = StatusCode::OK;
 
@@ -773,6 +778,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     // TODO: if new metric config is different from old one
     // re-create reporters (not thread safe)
     this->updateModelsMetricConfig();    
+    this->updatePipelinesMetricConfig();    
 
     
     //else {
