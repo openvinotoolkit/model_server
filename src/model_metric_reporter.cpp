@@ -42,13 +42,36 @@ ServableMetricReporter::~ServableMetricReporter() {
     }
 
     if (this->requestSuccessFamily) {
-        this->registry->remove(this->requestSuccessFamily);
+        this->requestSuccessFamily->remove(this->requestSuccessGrpcPredict);
+        this->requestSuccessFamily->remove(this->requestSuccessGrpcGetModelMetadata);
+        this->requestSuccessFamily->remove(this->requestSuccessGrpcGetModelStatus);
+        this->requestSuccessFamily->remove(this->requestSuccessRestPredict);
+        this->requestSuccessFamily->remove(this->requestSuccessRestGetModelMetadata);
+        this->requestSuccessFamily->remove(this->requestSuccessRestGetModelStatus);
+        this->requestSuccessFamily->remove(this->requestSuccessGrpcModelInfer);
+        this->requestSuccessFamily->remove(this->requestSuccessGrpcModelMetadata);
+        this->requestSuccessFamily->remove(this->requestSuccessGrpcModelReady);
+        this->requestSuccessFamily->remove(this->requestSuccessRestModelInfer);
+        this->requestSuccessFamily->remove(this->requestSuccessRestModelMetadata);
+        this->requestSuccessFamily->remove(this->requestSuccessRestModelReady);
     }
     if (this->requestFailFamily) {
-        this->registry->remove(this->requestFailFamily);
+        this->requestFailFamily->remove(this->requestFailGrpcPredict);
+        this->requestFailFamily->remove(this->requestFailGrpcGetModelMetadata);
+        this->requestFailFamily->remove(this->requestFailGrpcGetModelStatus);
+        this->requestFailFamily->remove(this->requestFailRestPredict);
+        this->requestFailFamily->remove(this->requestFailRestGetModelMetadata);
+        this->requestFailFamily->remove(this->requestFailRestGetModelStatus);
+        this->requestFailFamily->remove(this->requestFailGrpcModelInfer);
+        this->requestFailFamily->remove(this->requestFailGrpcModelMetadata);
+        this->requestFailFamily->remove(this->requestFailGrpcModelReady);
+        this->requestFailFamily->remove(this->requestFailRestModelInfer);
+        this->requestFailFamily->remove(this->requestFailRestModelMetadata);
+        this->requestFailFamily->remove(this->requestFailRestModelReady);
     }
     if (this->requestTimeFamily) {
-        this->registry->remove(this->requestTimeFamily);
+        this->requestTimeFamily->remove(this->requestTimeGrpc);
+        this->requestTimeFamily->remove(this->requestTimeRest);
     }
 }
 
@@ -67,12 +90,14 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     }
 
     std::string familyName = "ovms_requests_success";
-    this->requestSuccessFamily = registry->createFamily<MetricCounter>(familyName,
-        "Number of successful requests to a model or a DAG.");
-    THROW_IF_NULL(this->requestSuccessFamily, "cannot create family");
 
     if (metricConfig->isFamilyEnabled(familyName)) {
         SPDLOG_INFO("Creating ovms_requests_success");
+
+        this->requestSuccessFamily = registry->createFamily<MetricCounter>(familyName,
+            "Number of successful requests to a model or a DAG.");
+        THROW_IF_NULL(this->requestSuccessFamily, "cannot create family");
+
         // TFS
         this->requestSuccessGrpcPredict = this->requestSuccessFamily->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
@@ -157,12 +182,12 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     }
 
     familyName = "ovms_requests_fail";
-    this->requestFailFamily = registry->createFamily<MetricCounter>(familyName,
-        "Number of failed requests to a model or a DAG.");
-    THROW_IF_NULL(this->requestFailFamily, "cannot create family");
 
     if (metricConfig->isFamilyEnabled(familyName)) {
         SPDLOG_INFO("Creating ovms_requests_fail");
+        this->requestFailFamily = registry->createFamily<MetricCounter>(familyName,
+            "Number of failed requests to a model or a DAG.");
+        THROW_IF_NULL(this->requestFailFamily, "cannot create family");
         // TFS
         this->requestFailGrpcPredict = this->requestFailFamily->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
@@ -247,11 +272,12 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     }
 
     familyName = "ovms_request_time_us";
-    this->requestTimeFamily = registry->createFamily<MetricHistogram>(familyName,
-        "Processing time of requests to a model or a DAG.");
-    THROW_IF_NULL(this->requestTimeFamily, "cannot create family");
 
     if (metricConfig->isFamilyEnabled(familyName)) {
+        this->requestTimeFamily = registry->createFamily<MetricHistogram>(familyName,
+            "Processing time of requests to a model or a DAG.");
+        THROW_IF_NULL(this->requestTimeFamily, "cannot create family");
+
         this->requestTimeGrpc = this->requestTimeFamily->addMetric({{"name", modelName},
                                                                  {"version", std::to_string(modelVersion)},
                                                                  {"interface", "gRPC"}},
@@ -272,22 +298,22 @@ ModelMetricReporter::~ModelMetricReporter() {
     }
 
     if (this->inferenceTimeFamily) {
-        this->registry->remove(this->inferenceTimeFamily);
+        this->inferenceTimeFamily->remove(this->inferenceTime);
     }
     if (this->waitForInferReqTimeFamily) {
-        this->registry->remove(this->waitForInferReqTimeFamily);
+        this->waitForInferReqTimeFamily->remove(this->waitForInferReqTime);
     }
     if (this->streamsFamily) {
-        this->registry->remove(this->streamsFamily);
+        this->streamsFamily->remove(this->streams);
     }
     if (this->inferReqQueueSizeFamily) {
-        this->registry->remove(this->inferReqQueueSizeFamily);
+        this->inferReqQueueSizeFamily->remove(this->inferReqQueueSize);
     }
     if (this->inferReqActiveFamily) {
-        this->registry->remove(this->inferReqActiveFamily);
+        this->inferReqActiveFamily->remove(this->inferReqActive);
     }
     if (this->currentRequestsFamily) {
-        this->registry->remove(this->currentRequestsFamily);
+        this->currentRequestsFamily->remove(this->currentRequests);
     }
 }
 
