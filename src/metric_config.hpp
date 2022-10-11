@@ -25,18 +25,18 @@
 
 namespace ovms {
 
-const std::string METRIC_NAME_REQUESTS_SUCCESS = "ovms_requests_success";
-const std::string METRIC_NAME_REQUESTS_FAIL = "ovms_requests_fail";
+extern const std::string METRIC_NAME_REQUESTS_SUCCESS;
+extern const std::string METRIC_NAME_REQUESTS_FAIL;
 
-const std::string METRIC_NAME_STREAMS = "ovms_streams";
-const std::string METRIC_NAME_INFER_REQ_QUEUE_SIZE = "ovms_infer_req_queue_size";
+extern const std::string METRIC_NAME_STREAMS;
+extern const std::string METRIC_NAME_INFER_REQ_QUEUE_SIZE;
 
-const std::string METRIC_NAME_INFER_REQ_ACTIVE = "ovms_infer_req_active";
+extern const std::string METRIC_NAME_INFER_REQ_ACTIVE;
 
-const std::string METRIC_NAME_INFERENCE_TIME = "ovms_inference_time_us";
-const std::string METRIC_NAME_CURRENT_REQUESTS = "ovms_current_requests";
-const std::string METRIC_NAME_REQUEST_TIME = "ovms_request_time_us";
-const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME = "ovms_wait_for_infer_req_time_us";
+extern const std::string METRIC_NAME_INFERENCE_TIME;
+extern const std::string METRIC_NAME_CURRENT_REQUESTS;
+extern const std::string METRIC_NAME_REQUEST_TIME;
+extern const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME;
 
 /**
      * @brief This class represents metrics configuration

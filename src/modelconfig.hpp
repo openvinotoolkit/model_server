@@ -38,8 +38,8 @@ using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
 
-const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
-const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
+extern const std::string ANONYMOUS_INPUT_NAME;
+extern const std::string MAPPING_CONFIG_JSON;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
 /**

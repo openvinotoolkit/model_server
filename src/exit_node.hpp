@@ -28,7 +28,7 @@
 
 namespace ovms {
 
-const std::string EXIT_NODE_NAME = "response";
+extern const std::string EXIT_NODE_NAME;
 
 template <typename ResponseType>
 class ExitNode : public Node {
