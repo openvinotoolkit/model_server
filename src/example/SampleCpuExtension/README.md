@@ -12,6 +12,14 @@ Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root direc
 
 Shared library will be generated in the `lib` folder. Such library can be used to run Model Server, using `--cpu_extension` argument.
 
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+# replace to 'redhat` if using UBI base image
+export BASE_OS=ubuntu
+make cpu_extension BASE_OS=${BASE_OS}
+```
+
 ## Preparing resnet50 model
 
 In order to demonstrate the usage of cpu_extension library some small modifications in resnet model are needed.
@@ -28,7 +36,7 @@ sed -i '0,/ReLU/s//CustomReLU/' resnet50-binary-0001/1/resnet50-binary-0001.xml
 ## Deploying OVMS
 
 ```bash
-$ docker run -it --rm -p 9000:9000 -v `pwd`/lib/ubuntu:/extension:ro -v `pwd`/resnet50-binary-0001:/resnet openvino/model_server \
+$ docker run -it --rm -p 9000:9000 -v `pwd`/lib/${BASE_OS}:/extension:ro -v `pwd`/resnet50-binary-0001:/resnet openvino/model_server \
  --port 9000 --model_name resnet --model_path /resnet --cpu_extension /extension/libcustom_relu_cpu_extension.so
 ```
 
