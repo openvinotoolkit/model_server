@@ -73,61 +73,6 @@ void checkRequestsCounter(const std::string& collectedMetricData, const std::str
     }
 }
 
-std::string pipelineDummyDemux = std::string{R"({
-    "monitoring": {
-        "metrics": {
-            "enable": true,
-            "metrics_list": [)"} +
-                                 R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
-                                 R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
-                                 R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
-                                 R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
-                                 R"(",")" + METRIC_NAME_REQUESTS_FAIL +
-                                 R"(",")" + METRIC_NAME_REQUEST_TIME +
-                                 R"(",")" + METRIC_NAME_STREAMS +
-                                 R"(",")" + METRIC_NAME_INFERENCE_TIME +
-                                 R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
-                                 R"("]
-        }
-    },
-    "model_config_list": [
-        {"config": {
-                "name": "dummy",
-                "nireq": 2,
-                "plugin_config": {"CPU_THROUGHPUT_STREAMS": 4},
-                "base_path": "/ovms/src/test/dummy"}}
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "dummy_demux",
-            "inputs": [
-                "b"
-            ],
-            "demultiply_count": 0,
-            "nodes": [
-                {
-                    "name": "dummy-node",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {
-                                "node_name": "request",
-                                "data_item": "b"}}],
-                    "outputs": [
-                        {"data_item": "a",
-                            "alias": "a"}]
-                }
-            ],
-            "outputs": [
-                {"a": {
-                        "node_name": "dummy-node",
-                        "data_item": "a"}}
-            ]
-        }
-    ]
-}
-)";
-
 class ServableManagerModuleWithMockedManager : public ServableManagerModule {
     ConstructorEnabledModelManager& mockedManager;
 
@@ -178,13 +123,15 @@ protected:
     std::optional<int64_t> modelVersion = std::nullopt;
     std::optional<std::string_view> modelVersionLabel{std::nullopt};
 
+    std::string prepareConfigContent();
+
     void SetUp() override {
         TestWithTempDir::SetUp();
         char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         std::string fileToReload = this->directoryPath + "/config.json";
-        createConfigFileWithContent(pipelineDummyDemux, fileToReload);
+        createConfigFileWithContent(this->prepareConfigContent(), fileToReload);
         ASSERT_EQ(server.getManager().loadConfig(fileToReload), StatusCode::OK);
     }
 };
@@ -597,4 +544,61 @@ TEST_F(MetricFlowTest, ModelReady) {
 
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
+}
+
+std::string MetricFlowTest::prepareConfigContent() {
+    return std::string{R"({
+        "monitoring": {
+            "metrics": {
+                "enable": true,
+                "metrics_list": [)"} +
+           R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
+           R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+           R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
+           R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+           R"(",")" + METRIC_NAME_REQUESTS_FAIL +
+           R"(",")" + METRIC_NAME_REQUEST_TIME +
+           R"(",")" + METRIC_NAME_STREAMS +
+           R"(",")" + METRIC_NAME_INFERENCE_TIME +
+           R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
+           R"("]
+            }
+        },
+        "model_config_list": [
+            {"config": {
+                    "name": "dummy",
+                    "nireq": 2,
+                    "plugin_config": {"CPU_THROUGHPUT_STREAMS": 4},
+                    "base_path": "/ovms/src/test/dummy"}}
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "dummy_demux",
+                "inputs": [
+                    "b"
+                ],
+                "demultiply_count": 0,
+                "nodes": [
+                    {
+                        "name": "dummy-node",
+                        "model_name": "dummy",
+                        "type": "DL model",
+                        "inputs": [
+                            {"b": {
+                                    "node_name": "request",
+                                    "data_item": "b"}}],
+                        "outputs": [
+                            {"data_item": "a",
+                                "alias": "a"}]
+                    }
+                ],
+                "outputs": [
+                    {"a": {
+                            "node_name": "dummy-node",
+                            "data_item": "a"}}
+                ]
+            }
+        ]
+    }
+    )";
 }

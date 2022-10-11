@@ -42,16 +42,18 @@ using testing::Return;
 
 static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
-static std::string stressTestPipelineOneDummyConfig = R"(
+std::string createStressTestPipelineOneDummyConfig() {
+    return R"(
 {
     "monitoring": {
         "metrics": {
             "enable": true,
             "metrics_list": [
-                ")" + METRIC_NAME_CURRENT_REQUESTS +
-                                                      R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
-                                                      R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
-                                                      R"(",")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
+                ")" +
+           METRIC_NAME_CURRENT_REQUESTS +
+           R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+           R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+           R"(",")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
         }
     },
     "model_config_list": [
@@ -93,6 +95,7 @@ static std::string stressTestPipelineOneDummyConfig = R"(
         }
     ]
 })";
+}
 static const char* stressTestPipelineOneDummyRemovedConfig = R"(
 {
     "model_config_list": [
@@ -1030,7 +1033,7 @@ public:
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         modelPath = directoryPath + "/dummy/";
-        SetUpConfig(stressTestPipelineOneDummyConfig);
+        SetUpConfig(createStressTestPipelineOneDummyConfig());
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     }
     void defaultVersionRemove() {

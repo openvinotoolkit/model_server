@@ -82,7 +82,8 @@ public:
     }
 };
 
-static std::string modelMetricsChangedConfig = R"(
+std::string createModelMetricsChangedConfig() {
+    return R"(
 {
     "model_config_list": [
         {
@@ -101,14 +102,16 @@ static std::string modelMetricsChangedConfig = R"(
             "metrics":
             {
                 "enable" : true,
-                "metrics_list": [")" + METRIC_NAME_REQUESTS_SUCCESS +
-                                               std::string{"\", \""} + METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
+                "metrics_list": [")" +
+           METRIC_NAME_REQUESTS_SUCCESS +
+           std::string{"\", \""} + METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
             }
         }
 })";
+}
 
 TEST_F(MetricsConfigNegativeTest, MissingPort) {
-    SetUpConfig(modelMetricsChangedConfig);
+    SetUpConfig(createModelMetricsChangedConfig());
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
@@ -151,7 +154,7 @@ TEST_F(MetricsConfigTest, DefaultValues) {
 }
 
 TEST_F(MetricsConfigTest, ChangedValues) {
-    SetUpConfig(modelMetricsChangedConfig);
+    SetUpConfig(createModelMetricsChangedConfig());
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
@@ -169,7 +172,8 @@ TEST_F(MetricsConfigTest, ChangedValues) {
     ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL), false);
 }
 
-static std::string modelMetricsBadListConfig = R"(
+std::string createModelMetricsBadListConfig() {
+    return R"(
 {
     "model_config_list": [
         {
@@ -189,13 +193,14 @@ static std::string modelMetricsBadListConfig = R"(
             {
                 "enable" : true,
                 "metrics_list": ["bad_name", ")" +
-                                               METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
+           METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
             }
         }
 })";
+}
 
 TEST_F(MetricsConfigTest, BadFamilyConfig) {
-    SetUpConfig(modelMetricsBadListConfig);
+    SetUpConfig(createModelMetricsBadListConfig());
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
@@ -206,7 +211,7 @@ TEST_F(MetricsConfigTest, BadFamilyConfig) {
 }
 
 TEST_F(MetricsConfigTest, InitOnce) {
-    SetUpConfig(modelMetricsChangedConfig);
+    SetUpConfig(createModelMetricsChangedConfig());
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
