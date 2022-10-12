@@ -23,6 +23,7 @@ Install [paddlepaddle](https://pypi.org/project/paddlepaddle/) and other package
 pip3 install paddlepaddle
 pip3 install pyyaml
 pip3 install scipy
+pip3 install opencv-python
 ```
 
 You can prepare the workspace by just running
