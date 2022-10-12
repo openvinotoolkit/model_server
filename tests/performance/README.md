@@ -15,9 +15,8 @@ $ pip3 install -r ../requirements.txt
 ```
 
 ```bash
-$ docker run -p 9000:9000 openvino/model_server:latest \
---model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \
---layout NHWC:NCHW --port 9000
+$ docker run -p 9000:9000 openvino/model_server:latest --model_name resnet \
+--model_path gs://ovms-public-eu/resnet50 --port 9178 --batch_size 2
 ```
 
 ## Latency
@@ -70,7 +69,7 @@ optional arguments:
 
 ### Example usage:
 ```bash
-$ python3 grpc_latency.py --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 1000 --batchsize 1 --report_every 100 --input_name "data"
+$ python3 grpc_latency.py --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 1000 --batchsize 2 --report_every 100 --input_name "data"
 ```
 ```bash
 [--] Starting iterations
