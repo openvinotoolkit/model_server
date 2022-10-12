@@ -24,6 +24,20 @@
 #include "status.hpp"
 
 namespace ovms {
+
+extern const std::string METRIC_NAME_REQUESTS_SUCCESS;
+extern const std::string METRIC_NAME_REQUESTS_FAIL;
+
+extern const std::string METRIC_NAME_STREAMS;
+extern const std::string METRIC_NAME_INFER_REQ_QUEUE_SIZE;
+
+extern const std::string METRIC_NAME_INFER_REQ_ACTIVE;
+
+extern const std::string METRIC_NAME_INFERENCE_TIME;
+extern const std::string METRIC_NAME_CURRENT_REQUESTS;
+extern const std::string METRIC_NAME_REQUEST_TIME;
+extern const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME;
+
 /**
      * @brief This class represents metrics configuration
      */
@@ -60,16 +74,16 @@ private:
     bool validateEndpointPath(const std::string& endpoint);
 
     std::unordered_set<std::string> additionalMetricFamilies = {
-        {"ovms_infer_req_queue_size"},
-        {"ovms_infer_req_active"}};
+        {METRIC_NAME_INFER_REQ_QUEUE_SIZE},
+        {METRIC_NAME_INFER_REQ_ACTIVE}};
 
     std::unordered_set<std::string> defaultMetricFamilies = {
-        {"ovms_current_requests"},
-        {"ovms_requests_success"},
-        {"ovms_requests_fail"},
-        {"ovms_request_time_us"},
-        {"ovms_streams"},
-        {"ovms_inference_time_us"},
-        {"ovms_wait_for_infer_req_time_us"}};
+        {METRIC_NAME_CURRENT_REQUESTS},
+        {METRIC_NAME_REQUESTS_SUCCESS},
+        {METRIC_NAME_REQUESTS_FAIL},
+        {METRIC_NAME_REQUEST_TIME},
+        {METRIC_NAME_STREAMS},
+        {METRIC_NAME_INFERENCE_TIME},
+        {METRIC_NAME_WAIT_FOR_INFER_REQ_TIME}};
 };
 }  // namespace ovms

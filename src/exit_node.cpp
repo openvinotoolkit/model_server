@@ -30,6 +30,9 @@
 #include "exitnodesession.hpp"
 
 namespace ovms {
+
+const std::string EXIT_NODE_NAME = "response";
+
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
     OVMS_PROFILE_FUNCTION();

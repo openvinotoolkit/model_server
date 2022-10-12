@@ -60,6 +60,7 @@
 namespace ovms {
 
 static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
+const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry) :
     ieCore(std::make_unique<ov::Core>()),

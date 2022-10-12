@@ -42,16 +42,18 @@ using testing::Return;
 
 static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
-static const char* stressTestPipelineOneDummyConfig = R"(
+std::string createStressTestPipelineOneDummyConfig() {
+    return R"(
 {
     "monitoring": {
         "metrics": {
             "enable": true,
             "metrics_list": [
-                "ovms_current_requests",
-                "ovms_infer_req_active",
-                "ovms_requests_success",
-                "ovms_infer_req_queue_size"]
+                ")" +
+           METRIC_NAME_CURRENT_REQUESTS +
+           R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+           R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+           R"(",")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
         }
     },
     "model_config_list": [
@@ -93,6 +95,7 @@ static const char* stressTestPipelineOneDummyConfig = R"(
         }
     ]
 })";
+}
 static const char* stressTestPipelineOneDummyRemovedConfig = R"(
 {
     "model_config_list": [
@@ -1030,7 +1033,7 @@ public:
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         modelPath = directoryPath + "/dummy/";
-        SetUpConfig(stressTestPipelineOneDummyConfig);
+        SetUpConfig(createStressTestPipelineOneDummyConfig());
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     }
     void defaultVersionRemove() {
@@ -1126,17 +1129,17 @@ public:
         ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric\n"
                                                                                                                      << metricOutput;
         std::regex findActualMetricRgx(std::string{".*"} + metricName + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
-        std::regex findRequestsSuccessMetricRgx(std::string{".*ovms_requests_success\\{api=\"TensorFlowServing\",interface=\"gRPC\",method=\"Predict\",name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findRequestsSuccessMetricRgx(std::string{".*"} + METRIC_NAME_REQUESTS_SUCCESS + std::string{"\\{api=\"TensorFlowServing\",interface=\"gRPC\",method=\"Predict\",name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
         ASSERT_TRUE(std::regex_search(metricOutput, match, findActualMetricRgx)) << "cannot find dummys " << metricName << " metric\n"
                                                                                  << metricOutput;
         auto actualVal = ovms::stoi64(match[1]);
-        ASSERT_TRUE(std::regex_search(metricOutput, match, findRequestsSuccessMetricRgx)) << "cannot find dummys ovms_requests_success metric\n"
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findRequestsSuccessMetricRgx)) << "cannot find dummys " << METRIC_NAME_REQUESTS_SUCCESS << " metric\n"
                                                                                           << metricOutput;
         auto requestsSuccessCounter = ovms::stoi64(match[1]);
-        ASSERT_TRUE(requestsSuccessCounter.has_value()) << "cannot parse ovms_requests_success\n"
+        ASSERT_TRUE(requestsSuccessCounter.has_value()) << "cannot parse " << METRIC_NAME_REQUESTS_SUCCESS << "\n"
                                                         << metricOutput;
-        SPDLOG_DEBUG("ovms_requests_success value: {}", requestsSuccessCounter.value());
+        SPDLOG_DEBUG("{} value: {}", METRIC_NAME_REQUESTS_SUCCESS, requestsSuccessCounter.value());
         ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number\n"
                                            << metricOutput;
         // In case of sporadic error here consider checking ovms_requests_success value (if 0, it could mean the load did not start yet (could happen on slower machines))
@@ -1145,8 +1148,8 @@ public:
     }
     void checkActiveNireqSmallerThanTotal() {
         std::string metricOutput = manager.getMetricRegistry()->collect();
-        std::regex findNireqTotalRgx(std::string{".*ovms_infer_req_queue_size\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
-        std::regex findNireqActiveRgx(std::string{".*ovms_infer_req_active\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findNireqTotalRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findNireqActiveRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_ACTIVE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
         ASSERT_TRUE(std::regex_search(metricOutput, match, findNireqTotalRgx)) << "cannot find dummys total nireq in metric\n"
                                                                                << metricOutput;
@@ -1160,8 +1163,8 @@ public:
     }
     void testCurrentRequestsMetric() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        checkMetricGreaterThan("ovms_current_requests", 0);
-        checkMetricGreaterThan("ovms_infer_req_active", 0);
+        checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0);
+        checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0);
         checkActiveNireqSmallerThanTotal();
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
