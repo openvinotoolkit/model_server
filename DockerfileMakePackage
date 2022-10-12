@@ -20,6 +20,7 @@ FROM $BUILD_IMAGE
 
 ARG BASE_OS=ubuntu
 ARG ov_use_binary=1
+ARG NVIDIA=0
 SHELL ["/bin/bash", "-c"]
 
 RUN mkdir /patchelf && cd /patchelf && \
@@ -35,6 +36,8 @@ RUN mkdir -vp /ovms_release/lib/custom_nodes
 
 RUN if [ -d /ovms/src/custom_nodes/lib/${BASE_OS} ] ; then true ; else exit 0 ; fi ; cp /ovms/src/custom_nodes/lib/${BASE_OS}/*.so /ovms_release/lib/custom_nodes/
 RUN cp /ovms/metadata.json /ovms_release/
+
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/lib/libopenvino_nvidia_gpu_plugin.so /ovms_release/lib/
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/lib/plugins.xml /ovms_release/lib/
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/runtime/3rdparty/hddl/config/* /ovms_release/lib/hddl/config/ || true
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -vr /opt/intel/openvino/runtime/3rdparty/hddl/etc/* /ovms_release/lib/hddl/etc/ || true
@@ -57,11 +60,11 @@ libjavajpeg.so libjava.so libjawt.so libjdwp.so libjimage.so libjli.so libjsig.s
 liblcms.so libmanagement_agent.so libmanagement_ext.so libmanagement.so libmlib_image.so libnet.so libnio.so \
 libprefs.so librmi.so libsaproc.so libsctp.so libsplashscreen.so libsunec.so libsystemconf.so libunpack.so libverify.so libzip.so
 
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/runtime/3rdparty/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
+RUN find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+RUN find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
+RUN find /opt/intel/openvino/runtime/3rdparty/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+RUN find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+RUN cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; if [ -f /opt/intel/openvino/docs/licensing/EULA.txt ] ; then true ; else exit 0; fi ; cp /opt/intel/openvino/docs/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt;
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt;
 
