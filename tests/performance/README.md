@@ -15,7 +15,7 @@ $ pip3 install -r ../requirements.txt
 ```
 
 ```bash
-$ docker run -p 9000:9000 openvino/model_server:latest --model_name resnet \
+$ docker run -p 9178:9178 openvino/model_server:latest --model_name resnet \
 --model_path gs://ovms-public-eu/resnet50 --port 9178 --batch_size 2
 ```
 
