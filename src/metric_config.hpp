@@ -52,7 +52,7 @@ public:
     Status loadFromCLIString(bool isEnabled, const std::string& metricsList);
 
     MetricConfig() {
-        metricsEnabled = false;
+        metricsEnabled = true;
         endpointsPath = "/metrics";
 
         setDefaultMetricsTo(metricsEnabled);
@@ -72,17 +72,17 @@ private:
     Status parseMetricsArray(const rapidjson::Value& v);
     bool validateEndpointPath(const std::string& endpoint);
 
-    std::unordered_set<std::string> additionalMetricFamilies = {
-        {METRIC_NAME_INFER_REQ_QUEUE_SIZE},
-        {METRIC_NAME_INFER_REQ_ACTIVE}};
+    std::unordered_set<std::string> additionalMetricFamilies = {};
 
     std::unordered_set<std::string> defaultMetricFamilies = {
-        {METRIC_NAME_CURRENT_REQUESTS},
-        {METRIC_NAME_REQUESTS_SUCCESS},
-        {METRIC_NAME_REQUESTS_FAIL},
-        {METRIC_NAME_REQUEST_TIME},
-        {METRIC_NAME_STREAMS},
-        {METRIC_NAME_INFERENCE_TIME},
-        {METRIC_NAME_WAIT_FOR_INFER_REQ_TIME}};
+        METRIC_NAME_CURRENT_REQUESTS,
+        METRIC_NAME_REQUESTS_SUCCESS,
+        METRIC_NAME_REQUESTS_FAIL,
+        METRIC_NAME_REQUEST_TIME,
+        METRIC_NAME_STREAMS,
+        METRIC_NAME_INFERENCE_TIME,
+        METRIC_NAME_WAIT_FOR_INFER_REQ_TIME,
+        METRIC_NAME_INFER_REQ_QUEUE_SIZE,
+        METRIC_NAME_INFER_REQ_ACTIVE};
 };
 }  // namespace ovms
