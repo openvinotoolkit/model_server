@@ -53,6 +53,7 @@ cc_library(
         "azurestorage.cpp",
         "azurefilesystem.cpp",
         "azurefilesystem.hpp",
+        "cleaner_utils.cpp",
         "cleaner_utils.hpp",
         "config.cpp",
         "config.hpp",

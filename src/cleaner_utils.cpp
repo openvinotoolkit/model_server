@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,14 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 
-#include <memory>
+#include "cleaner_utils.hpp"
 
-#include "tensorinfo.hpp"
+#include "global_sequences_viewer.hpp"
+#include "modelmanager.hpp"
 
 namespace ovms {
-class Status;
-template <typename TensorType>
-Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
+FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
+    globalSequencesViewer(globalSequencesViewer) {}
+
+void FunctorSequenceCleaner::cleanup() {
+    globalSequencesViewer.removeIdleSequences();
+}
+
+FunctorResourcesCleaner::FunctorResourcesCleaner(ModelManager& modelManager) :
+    modelManager(modelManager) {}
+
+void FunctorResourcesCleaner::cleanup() {
+    modelManager.cleanupResources();
+}
 }  // namespace ovms

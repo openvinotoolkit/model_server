@@ -18,6 +18,7 @@
 #include <memory>
 
 #include "gatherexitnodeinputhandler.hpp"
+#include "nodesessionmetadata.hpp"
 
 namespace ovms {
 

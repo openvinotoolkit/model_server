@@ -18,6 +18,7 @@
 
 #include "../logging.hpp"
 #include "../rest_utils.hpp"
+#include "../status.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

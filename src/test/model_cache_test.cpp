@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "../modelconfig.hpp"
+#include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
 #include "test_utils.hpp"
 

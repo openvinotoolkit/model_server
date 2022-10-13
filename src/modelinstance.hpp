@@ -31,16 +31,12 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "customloaderconfig.hpp"
-#include "customloaderinterface.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
-#include "sequence_processing_spec.hpp"
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace inference {
@@ -49,6 +45,11 @@ class ModelInferResponse;
 }  // namespace inference
 
 namespace ovms {
+class MetricRegistry;
+class ModelConfig;
+class ModelInstanceUnloadGuard;
+class PipelineDefinition;
+class Status;
 
 class DynamicModelParameter {
 public:
@@ -72,9 +73,6 @@ private:
     int batchSize;
     std::map<std::string, shape_t> shapes;
 };
-
-class PipelineDefinition;
-class MetricRegistry;
 
 /**
      * @brief This class contains all the information about model

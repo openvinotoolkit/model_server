@@ -177,11 +177,11 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPref
     copy->influencedByDemultiplexer = true;
     copy->shape.emplace(copy->shape.begin(), dim);
     copy->layout = this->getLayout();
-    auto batchPosition = copy->layout.find(BATCH_DIMENSION_LETTER);
+    auto batchPosition = copy->layout.find(Layout::BATCH_DIMENSION_LETTER);
     if (batchPosition != std::string::npos) {
-        copy->layout.replace(batchPosition, 1, std::string(1, UNDEFINED_DIMENSION_CHAR));
+        copy->layout.replace(batchPosition, 1, std::string(1, Layout::UNDEFINED_DIMENSION_CHAR));
     }
-    copy->layout = std::string(1, BATCH_DIMENSION_LETTER[0]) + copy->layout;
+    copy->layout = std::string(1, Layout::BATCH_DIMENSION_LETTER[0]) + copy->layout;
     return copy;
 }
 

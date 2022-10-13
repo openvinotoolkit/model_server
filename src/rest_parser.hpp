@@ -28,10 +28,10 @@
 #include "kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
+class Status;
 
 /**
  * @brief Request order types

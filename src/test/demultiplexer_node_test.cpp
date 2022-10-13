@@ -20,8 +20,12 @@
 #include "../dlnodesession.hpp"
 #include "../gathernodeinputhandler.hpp"
 #include "../logging.hpp"
+#include "../modelinstance.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../node.hpp"
 #include "../nodeinputhandler.hpp"
+#include "../nodestreamidguard.hpp"
+#include "../ov_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

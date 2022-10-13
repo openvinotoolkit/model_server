@@ -21,7 +21,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "modelconfig.hpp"
+#include "modelversion.hpp"
 
 // note: think about using https://github.com/Neargye/magic_enum when compatible compiler is supported.
 

@@ -22,18 +22,15 @@
 #include <vector>
 
 #include "aliases.hpp"
-#include "execution_context.hpp"
-#include "status.hpp"
 
 namespace ovms {
 
+class ExecutionContext;
 class ServableMetricReporter;
+class Node;
 
 class Node;
-template <typename PredictRequest>
-class EntryNode;
-template <typename PredictResponse>
-class ExitNode;
+class Status;
 
 void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs);
 

@@ -33,6 +33,7 @@
 
 #include "logging.hpp"
 #include "profiler.hpp"
+#include "status.hpp"
 
 namespace ovms {
 

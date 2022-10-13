@@ -19,9 +19,13 @@
 #include <utility>
 
 #include "dlnodesession.hpp"
+#include "executingstreamidguard.hpp"
 #include "logging.hpp"
 #include "metric.hpp"
+#include "modelinstance.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
+#include "nodestreamidguard.hpp"
 #include "ov_utils.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service_utils.hpp"
@@ -30,6 +34,39 @@
 namespace ovms {
 
 const uint WAIT_FOR_STREAM_ID_TIMEOUT_MICROSECONDS = 1;
+
+Status DLNode::getRealInputName(ModelInstance& model, const std::string& alias, std::string* result) const {
+    auto it = model.getInputsInfo().find(alias);
+    if (it == model.getInputsInfo().end()) {
+        return StatusCode::INVALID_MISSING_INPUT;
+    }
+    *result = it->second->getName();
+    return StatusCode::OK;
+}
+
+Status DLNode::getRealOutputName(ModelInstance& model, const std::string& alias, std::string* result) const {
+    auto it = nodeOutputNameAlias.find(alias);
+    const auto& modelOutputName = it != nodeOutputNameAlias.end() ? it->second : alias;
+    auto jt = model.getOutputsInfo().find(modelOutputName);
+    if (jt == model.getOutputsInfo().end()) {
+        return StatusCode::INVALID_MISSING_OUTPUT;
+    }
+    *result = jt->second->getName();
+    return StatusCode::OK;
+}
+
+DLNode::DLNode(const std::string& nodeName,
+    const std::string& modelName,
+    std::optional<model_version_t> modelVersion,
+    ModelManager& modelManager,
+    std::unordered_map<std::string, std::string> nodeOutputNameAlias,
+    std::optional<int32_t> demultiplyCount, std::set<std::string> gatherFromNode) :
+    Node(nodeName, demultiplyCount, gatherFromNode),
+    modelName(modelName),
+    modelVersion(modelVersion),
+    modelManager(modelManager),
+    nodeOutputNameAlias(nodeOutputNameAlias) {
+}
 
 Status DLNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {
     auto& nodeSession = getNodeSession(sessionKey);

@@ -25,6 +25,7 @@
 #include <sysexits.h>
 
 #include "logging.hpp"
+#include "modelconfig.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -35,6 +36,13 @@ const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
 const std::string DEFAULT_REST_WORKERS_STRING{std::to_string(DEFAULT_REST_WORKERS)};
 const uint64_t MAX_REST_WORKERS = 10'000;
+
+uint32_t Config::maxSequenceNumber() const {
+    if (!result->count("max_sequence_number")) {
+        return DEFAULT_MAX_SEQUENCE_NUMBER;
+    }
+    return result->operator[]("max_sequence_number").as<uint32_t>();
+}
 
 Config& Config::parse(int argc, char** argv) {
     try {

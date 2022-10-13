@@ -22,6 +22,7 @@
 #include "logging.hpp"
 #include "metric_module.hpp"
 #include "modelmanager.hpp"
+#include "server.hpp"
 
 namespace ovms {
 

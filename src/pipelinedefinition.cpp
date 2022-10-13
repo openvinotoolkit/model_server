@@ -20,15 +20,22 @@
 #include <thread>
 
 #include "custom_node.hpp"
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "dl_node.hpp"
 #include "entry_node.hpp"
 #include "exit_node.hpp"
 #include "logging.hpp"
+#include "model_metric_reporter.hpp"
+#include "modelinstance.hpp"
 #include "modelmanager.hpp"
 #include "node_library_utils.hpp"
+#include "nodeinfo.hpp"
+#include "nodestreamidguard.hpp"
+#include "ov_utils.hpp"
 #include "pipeline.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
@@ -44,6 +51,17 @@ Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unsupported node type: {}", str);
     return StatusCode::PIPELINE_NODE_WRONG_KIND_CONFIGURATION;
 }
+
+PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
+    const std::vector<NodeInfo>& nodeInfos,
+    const pipeline_connections_t& connections,
+    MetricRegistry* registry,
+    const MetricConfig* metricConfig) :
+    pipelineName(pipelineName),
+    nodeInfos(nodeInfos),
+    connections(connections),
+    reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
+    status(this->pipelineName) {}
 
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
@@ -1044,11 +1062,11 @@ const tensor_map_t PipelineDefinition::getOutputsInfo() const {
     return copy;
 }
 
-std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, int32_t demultiplyCount) {
+static std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, int32_t demultiplyCount) {
     return tensorInfo->createCopyWithDemultiplexerDimensionPrefix(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
 }
 
-std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
+static std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
     std::shared_ptr<TensorInfo> newOwnedTensorInfo;
     if (gatherShape.size() == 0) {
         newOwnedTensorInfo = std::make_shared<TensorInfo>(*tensorInfo);
@@ -1065,7 +1083,7 @@ std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string&
     return newOwnedTensorInfo;
 }
 
-Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const TensorInfo& tensorInfo, const std::string& alias) {
+static Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const TensorInfo& tensorInfo, const std::string& alias) {
     auto newTensorInfo = std::make_shared<TensorInfo>(alias, tensorInfo.getPrecision(), tensorInfo.getShape(), tensorInfo.getLayout());
     auto it = inputsInfo.find(alias);
     if (it != inputsInfo.end()) {
@@ -1088,7 +1106,7 @@ Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const Tensor
 }
 
 template <typename Extractor>
-Status updateInputsInfoWithNodeConnections(tensor_map_t& inputsInfo, const Aliases& specificDependencyMapping, Extractor extractor) {
+static Status updateInputsInfoWithNodeConnections(tensor_map_t& inputsInfo, const Aliases& specificDependencyMapping, Extractor extractor) {
     for (const auto& [alias, realName] : specificDependencyMapping) {
         auto status = updateInputsInfoWithNodeConnection(inputsInfo, extractor(realName), alias);
         if (!status.ok()) {

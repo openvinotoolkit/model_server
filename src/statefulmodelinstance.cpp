@@ -22,8 +22,10 @@
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"
 #include "model_metric_reporter.hpp"
+#include "modelconfig.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "profiler.hpp"
+#include "sequence_processing_spec.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
 

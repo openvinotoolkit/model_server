@@ -27,10 +27,43 @@
 #include <spdlog/spdlog.h>
 
 #include "logging.hpp"
+#include "model_version_policy.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
 
 namespace ovms {
+ModelConfig::ModelConfig(const std::string& name,
+    const std::string& basePath,
+    const std::string& targetDevice,
+    const std::string& configBatchSize,
+    uint64_t nireq,
+    bool stateful,
+    bool idleSequenceCleanup,
+    bool lowLatencyTransformation,
+    uint32_t maxSequenceNumber,
+    const std::string& cacheDir,
+    model_version_t version,
+    const std::string& localPath) :
+    name(name),
+    basePath(basePath),
+    localPath(localPath),
+    targetDevice(targetDevice),
+    modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
+    nireq(nireq),
+    stateful(stateful),
+    idleSequenceCleanup(idleSequenceCleanup),
+    lowLatencyTransformation(lowLatencyTransformation),
+    maxSequenceNumber(maxSequenceNumber),
+    cacheDir(cacheDir),
+    version(version),
+    pluginConfig({}),
+    layout(""),
+    shapes({}),
+    layouts({}),
+    mappingInputs({}),
+    mappingOutputs({}) {
+    setBatchingParams(configBatchSize);
+}
 
 const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";

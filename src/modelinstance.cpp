@@ -29,6 +29,7 @@
 #include <sys/types.h>
 
 #include "config.hpp"
+#include "customloaderinterface.hpp"
 #include "customloaders.hpp"
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
@@ -37,12 +38,15 @@
 #include "layout_configuration.hpp"
 #include "logging.hpp"
 #include "model_metric_reporter.hpp"
+#include "modelconfig.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "serialization.hpp"
 #include "shape.hpp"
+#include "status.hpp"
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
@@ -86,7 +90,7 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
     subscriptionManager.unsubscribe(pd);
 }
 
-Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
+static Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
     Shape shape;
     auto mappedName = config.getMappingInputByKey(name);
     if (config.getBatchSize().has_value() || parameter.isBatchSizeRequested()) {
@@ -107,7 +111,7 @@ Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter&
     return StatusCode::OK;
 }
 
-bool hasInputWithName(std::shared_ptr<ov::Model>& model, const std::string& name) {
+static bool hasInputWithName(std::shared_ptr<ov::Model>& model, const std::string& name) {
     try {
         model->input(name);
         return true;
@@ -116,7 +120,7 @@ bool hasInputWithName(std::shared_ptr<ov::Model>& model, const std::string& name
     }
 }
 
-bool hasOutputWithName(std::shared_ptr<ov::Model>& model, const std::string& name) {
+static bool hasOutputWithName(std::shared_ptr<ov::Model>& model, const std::string& name) {
     try {
         model->output(name);
         return true;
@@ -125,7 +129,7 @@ bool hasOutputWithName(std::shared_ptr<ov::Model>& model, const std::string& nam
     }
 }
 
-Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::shared_ptr<ov::Model>& model) {
+static Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::shared_ptr<ov::Model>& model) {
     if (config.isShapeAnonymousFixed() && model->inputs().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
         SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
@@ -197,7 +201,7 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
     return layout;
 }
 
-Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
+static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
     ov::preprocess::PrePostProcessor preproc(model);
 
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration: {}", config.layoutConfigurationToString());
@@ -503,7 +507,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
 }
 
 // Temporary methods. To be replaces with proper storage class.
-bool dirExists(const std::string& path) {
+static bool dirExists(const std::string& path) {
     if (FileSystem::isPathEscaped(path)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
         return false;
@@ -517,7 +521,7 @@ bool dirExists(const std::string& path) {
     return false;
 }
 
-std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
+static std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
     struct dirent* entry;
     if (FileSystem::isPathEscaped(path)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);

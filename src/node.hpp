@@ -25,18 +25,20 @@
 #include <openvino/openvino.hpp>
 
 #include "aliases.hpp"
-#include "nodesession.hpp"
 #include "nodesessionresult.hpp"
 #include "pipelineeventqueue.hpp"
 #include "precision.hpp"
 #include "shape.hpp"
-#include "status.hpp"
 #include "tensormap.hpp"
 
 namespace ovms {
 
 using TensorNames = std::vector<std::string>;
 using session_key_t = std::string;
+
+class NodeSession;
+class NodeSessionMetadata;
+class Status;
 
 class Node {
 protected:
@@ -57,7 +59,7 @@ protected:
 public:
     Node(const std::string& nodeName, std::optional<int32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {});
 
-    virtual ~Node() = default;
+    virtual ~Node();
 
     const std::string& getName() const { return this->nodeName; }
 

@@ -26,6 +26,7 @@
 
 #include "logging.hpp"
 #include "profiler.hpp"
+#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
@@ -83,7 +84,7 @@ std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap) {
     return std::nullopt;
 }
 
-void insertSupportedKeys(std::set<std::string>& aggregatedPluginSupportedConfigKeys, const std::string& pluginName, const ov::Core& ieCore) {
+static void insertSupportedKeys(std::set<std::string>& aggregatedPluginSupportedConfigKeys, const std::string& pluginName, const ov::Core& ieCore) {
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
     try {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validating plugin: {}; configuration", pluginName);

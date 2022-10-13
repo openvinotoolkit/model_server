@@ -17,11 +17,14 @@
 
 #include <utility>
 
+#include "custom_node_interface.h"  // NOLINT
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "custom_node_output_allocator.hpp"
 #include "customnodesession.hpp"
 #include "logging.hpp"
-#include "node_library.hpp"
 #include "node_library_utils.hpp"
+#include "pipelineeventqueue.hpp"
+#include "status.hpp"
 
 namespace ovms {
 

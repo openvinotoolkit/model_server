@@ -31,21 +31,22 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "aliases.hpp"
-#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "kfs_grpc_inference_service.hpp"
-#include "model_metric_reporter.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
-#include "pipelinedefinitionunloadguard.hpp"
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
-
+class CNLIMWrapper;
+class MetricConfig;
+class MetricRegistry;
 class ModelManager;
-class Pipeline;
+class ServableMetricReporter;
 class NodeValidator;
+class Pipeline;
+class PipelineDefinitionUnloadGuard;
+class Status;
 
 class PipelineDefinition {
     friend NodeValidator;
@@ -107,12 +108,7 @@ public:
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
         MetricRegistry* registry = nullptr,
-        const MetricConfig* metricConfig = nullptr) :
-        pipelineName(pipelineName),
-        nodeInfos(nodeInfos),
-        connections(connections),
-        reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
-        status(this->pipelineName) {}
+        const MetricConfig* metricConfig = nullptr);
     template <typename RequestType, typename ResponseType>
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const RequestType* request,
@@ -159,8 +155,8 @@ public:
     ServableMetricReporter& getMetricReporter() const { return *this->reporter; }
 
 protected:
-    virtual Status updateInputsInfo(const ModelManager& manager);
-    virtual Status updateOutputsInfo(const ModelManager& manager);
+    Status updateInputsInfo(const ModelManager& manager);
+    Status updateOutputsInfo(const ModelManager& manager);
 
 public:
     const tensor_map_t getInputsInfo() const;

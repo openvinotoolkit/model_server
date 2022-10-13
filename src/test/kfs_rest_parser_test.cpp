@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "../rest_parser.hpp"
+#include "../status.hpp"
 
 using namespace ovms;
 

@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "../get_model_metadata_impl.hpp"
+#include "../status.hpp"
 
 class GetModelMetadataValidation : public ::testing::Test {
 protected:

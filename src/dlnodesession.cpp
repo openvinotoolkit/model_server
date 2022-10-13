@@ -29,6 +29,7 @@
 #include "ov_utils.hpp"
 #include "profiler.hpp"
 #include "shape.hpp"
+#include "status.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
 

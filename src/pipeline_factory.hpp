@@ -30,14 +30,14 @@
 #pragma GCC diagnostic pop
 #include "kfs_grpc_inference_service.hpp"
 #include "nodeinfo.hpp"
-#include "status.hpp"
 
 namespace ovms {
 
 class ModelManager;
+class NodeInfo;
 class Pipeline;
 class PipelineDefinition;
-class MetricRegistry;
+class Status;
 
 class PipelineFactory {
     std::map<std::string, std::unique_ptr<PipelineDefinition>> definitions;

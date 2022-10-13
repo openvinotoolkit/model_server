@@ -17,11 +17,11 @@
 #include <memory>
 #include <utility>
 
-#include "config.hpp"
 #include "logging.hpp"
 #include "module.hpp"
 
 namespace ovms {
+class Config;
 class Profiler;
 #ifdef MTR_ENABLED
 class ProfilerModule : public Module {

@@ -21,9 +21,8 @@
 
 #include <openvino/openvino.hpp>
 
-#include "status.hpp"
-
 namespace ovms {
+class Status;
 
 using dimension_value_t = std::int64_t;
 

@@ -29,6 +29,7 @@
 #include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
 #include "../modelinstance.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"

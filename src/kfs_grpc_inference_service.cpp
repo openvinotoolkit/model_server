@@ -20,15 +20,22 @@
 #include <string>
 
 #include "deserialization.hpp"
+#include "execution_context.hpp"
 #include "metric.hpp"
 #include "modelinstance.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
+#include "pipeline.hpp"
 #include "pipelinedefinition.hpp"
+#include "pipelinedefinitionstatus.hpp"
+#include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
 #include "serialization.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
+#include "status.hpp"
+#include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
 #include "version.hpp"
@@ -278,7 +285,7 @@ Status KFSInferenceServiceImpl::buildResponse(
     return StatusCode::OK;
 }
 
-void addReadyVersions(Model& model,
+static void addReadyVersions(Model& model,
     ::inference::ModelMetadataResponse* response) {
     auto modelVersions = model.getModelVersionsMapCopy();
     for (auto& [modelVersion, modelInstance] : modelVersions) {

@@ -29,6 +29,7 @@
 #include "../executingstreamidguard.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../global_sequences_viewer.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../ov_utils.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"

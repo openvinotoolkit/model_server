@@ -15,10 +15,11 @@
 //*****************************************************************************
 #include "metric_module.hpp"
 
-#include "config.hpp"
 #include "metric_registry.hpp"
 
 namespace ovms {
+
+MetricModule::~MetricModule() = default;
 
 MetricModule::MetricModule() :
     registry(std::make_unique<MetricRegistry>()) {}

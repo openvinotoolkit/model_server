@@ -20,11 +20,11 @@
 #include <utility>
 
 #include "nodesessionmetadata.hpp"
-#include "status.hpp"
 
 namespace ovms {
 struct NodeInputHandler;
 struct NodeOutputHandler;
+class Status;
 class TensorWithSource;
 template <unsigned int N>
 class Timer;
