@@ -83,6 +83,7 @@ def check_dir(start_dir):
         'azure_sdk.patch',
         'bazel-',
         'check_coverage.bat',
+        'genhtml',
         'clang-format',
         'client_requirements.txt',
         'cppclean_src',
@@ -158,7 +159,8 @@ def check_func(start_dir):
         'bazel-',
         'boost.LICENSE.txt',
         'c-ares.LICENSE.txt',
-        'check_coverage.bat'
+        'check_coverage.bat',
+        'genhtml',
         'clang-format',
         'client_requirements.txt',
         'docx',
