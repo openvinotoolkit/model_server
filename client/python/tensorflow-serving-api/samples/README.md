@@ -217,7 +217,7 @@ Classification accuracy: 100.00
 
 Using binary inputs feature requires loading model with layout set to `--layout NHWC:NCHW`:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000 --layout NHWC:NCHW
+docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://gs://ovms-public-eu/resnet50-binary --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 ```bash
 python grpc_predict_binary_resnet.py --help
