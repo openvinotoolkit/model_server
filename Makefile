@@ -229,12 +229,14 @@ get_coverage:
 
 check_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
-	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
-	@docker cp $(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG):/ovms/genhtml/ . 2>/dev/null
-	@docker run $(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
+	@export tmp_image_name=$(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG)$(date +%Y-%m-%d-%H.%M.%S)
+	@docker create -ti --name $(tmp_image_name) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(tmp_image_name):/ovms/genhtml/ . 2>/dev/null
+	@docker run $(tmp_image_name) ./check_coverage.bat | grep success
+	@docker rm -f $(tmp_image_name)
 
 coverage_cleanup:
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG)
+	@docker rm -f $(tmp_image_name)
 
 test_checksec:
 	@echo "Running checksec on ovms binary..."
