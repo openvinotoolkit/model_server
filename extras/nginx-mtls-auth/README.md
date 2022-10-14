@@ -1,7 +1,7 @@
 # Securing Model Server with NGINX {#ovms_extras_nginx-mtls-auth-readme}
 
 Clone the OpenVINO Model Server repository and enter the NGINX directory:
-```
+```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/extras/nginx-mtls-auth
 ```
@@ -23,10 +23,35 @@ WARNING: Please follow [security considerations for containers](../../docs/secur
 ## Quick Start
 
 1. Ensure you have `openvino/model_server` image available. This could be one from official releases or a local one.
+
+```bash
+docker pull openvino/model_server:latest
+```
+
 2. Run `./build.sh` to build NGINX image extra layer.
+
+```bash
+./build.sh
+```
+
 3. Run `./generate_certs.sh`  script. It will generate self-signed certificates (for testing only - follow your organization process for requesting and generating the server and client certificates).
+
+```bash
+./generate_certs.sh
+```
+
 3. In terminal 1, execute `./start_secure_model_server.sh` script. It will download sample model and start the container.
+
+```bash
+./start_secure_model_server.sh
+```
+
 4. In terminal 2, execute `./test_grpc.sh` or `./test_rest.sh`. Those will try to connect to mentioned above container and use our example python client to test the system.
+
+```bash
+./test_grpc.sh
+./test_rest.sh
+```
 
 NOTE: Please ensure that your proxy setting are correct, both during model download and during `docker build` operation - adjust build.sh if needed.
 
