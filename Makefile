@@ -89,7 +89,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 PRODUCT_NAME = "OpenVINO Model Server"
 PRODUCT_VERSION ?= "2022.2"
 
-OVMS_CPP_CONTAINTER_NAME ?= server-test
+OVMS_CPP_CONTAINTER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
 OVMS_CPP_CONTAINTER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
@@ -226,20 +226,18 @@ endif
 # Ci build expects index.html in genhtml directory
 get_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
-	@export tmp_image_name=$(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG)$(date +%Y-%m-%d-%H.%M.%S)
-	$(MAKE) check_coverage || $(MAKE) coverage_cleanup
+	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms/genhtml/ . 2>/dev/null
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
+	$(MAKE) check_coverage
 
 check_coverage:
-	@docker create -ti --name $(tmp_image_name) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
-	@docker cp $(tmp_image_name):/ovms/genhtml/ . 2>/dev/null
-	@docker run $(tmp_image_name) ./check_coverage.bat | grep success
-	@docker rm -f $(tmp_image_name)
-
-coverage_cleanup:
-	@docker rm -f $(tmp_image_name)
-
+	@echo "Checking if coverage is above threshold..."
+	@docker run $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
+	
 test_checksec:
 	@echo "Running checksec on ovms binary..."
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
