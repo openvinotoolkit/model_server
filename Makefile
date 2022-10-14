@@ -225,7 +225,7 @@ endif
 
 # Ci build expects index.html in genhtml directory
 get_coverage:
-	$(MAKE) check_coverage || $(MAKE) failed_coverage
+	$(MAKE) check_coverage || $(MAKE) coverage_cleanup
 
 check_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
