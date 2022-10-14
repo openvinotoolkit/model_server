@@ -225,9 +225,15 @@ endif
 
 # Ci build expects index.html in genhtml directory
 get_coverage:
+	$(MAKE) check_coverage || $(MAKE) failed_coverage
+
+check_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG):/ovms/genhtml/ . 2>/dev/null
+	@docker run $(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
+
+coverage_cleanup:
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)$(OVMS_CPP_IMAGE_TAG)
 
 test_checksec:
