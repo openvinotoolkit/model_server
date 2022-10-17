@@ -35,12 +35,9 @@
 #include <gmock/gmock-generated-function-mockers.h>
 
 using TFTensorProto = tensorflow::TensorProto;
-using KFSTensorProto = ::inference::ModelInferRequest::InferInputTensor;
 
 using TFPredictRequest = tensorflow::serving::PredictRequest;
 using TFPredictResponse = tensorflow::serving::PredictResponse;
-
-using KFSPredictRequest = ::inference::ModelInferRequest;
 
 using namespace ovms;
 
@@ -308,7 +305,7 @@ protected:
         }
     }
 
-    KFSTensorProto tensorProto;
+    KFSTensorInputProto tensorProto;
     std::string buffer;
     const char* tensorName = DUMMY_MODEL_INPUT_NAME;
     ovms::tensor_map_t tensorMap;
@@ -365,7 +362,7 @@ public:
     }
 
 public:
-    KFSPredictRequest request;
+    KFSRequest request;
 };
 
 TEST_F(KserveGRPCPredictRequest, ShouldSuccessForSupportedPrecision) {

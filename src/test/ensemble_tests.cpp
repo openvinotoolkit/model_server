@@ -82,7 +82,7 @@ public:
         preparePredictRequest(request, inputs_info_t{{customPipelineInputName, {shape, ovms::Precision::FP32}}}, requestData);
     }
 
-    void prepareRequest(const std::vector<float>& requestData, KFSRequestType& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+    void prepareRequest(const std::vector<float>& requestData, KFSRequest& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
         request.Clear();
         prepareKFSInferInputTensor(request, customPipelineInputName, std::make_tuple(shape, ovmsPrecisionToKFSPrecision(ovms::Precision::FP32)), requestData);
     }

@@ -645,9 +645,9 @@ TEST_F(TFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Column
 
 class KFSMakeJsonFromPredictResponseRawTest : public ::testing::Test {
 protected:
-    KFSResponseType proto;
+    KFSResponse proto;
     std::string json;
-    KFSOutputTensorType *output1, *output2;
+    KFSTensorOutputProto *output1, *output2;
 
     void SetUp() override {
         proto.set_model_name("model");
@@ -721,9 +721,9 @@ TEST_F(KFSMakeJsonFromPredictResponseRawTest, ErrorWhenNoOutputs) {
 
 class KFSMakeJsonFromPredictResponsePrecisionTest : public ::testing::Test {
 protected:
-    KFSResponseType proto;
+    KFSResponse proto;
     std::string json;
-    KFSOutputTensorType* output;
+    KFSTensorOutputProto* output;
 
     void SetUp() override {
         proto.set_model_name("model");
@@ -900,9 +900,9 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint64) {
 
 class KFSMakeJsonFromPredictResponseValTest : public ::testing::Test {
 protected:
-    KFSResponseType proto;
+    KFSResponse proto;
     std::string json;
-    KFSOutputTensorType *single_uint64_val, *two_uint32_vals;
+    KFSTensorOutputProto *single_uint64_val, *two_uint32_vals;
 
     void SetUp() override {
         proto.set_model_name("model");

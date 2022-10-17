@@ -40,8 +40,6 @@ using namespace ovms;
 using TFSGetModelStatusRequest = tensorflow::serving::GetModelStatusRequest;
 using TFSGetModelStatusResponse = tensorflow::serving::GetModelStatusResponse;
 using TFSGetModelStatusInterface = std::pair<TFSGetModelStatusRequest, TFSGetModelStatusResponse>;
-using KFSGetModelStatusRequest = ::inference::ModelReadyRequest;
-using KFSGetModelStatusResponse = ::inference::ModelReadyResponse;
 using KFSGetModelStatusInterface = std::pair<KFSGetModelStatusRequest, KFSGetModelStatusResponse>;
 
 template <typename Pair,

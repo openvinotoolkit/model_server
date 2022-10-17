@@ -59,6 +59,7 @@ Precision fromString(const std::string& s);
 
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s);
 Precision TFSPrecisionToOvmsPrecision(const TFSDataType& s);
+Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type);
 
 size_t KFSDataTypeSize(const KFSDataType& datatype);
 
@@ -66,5 +67,4 @@ const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision);
 
 ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision);
 
-Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type);
 }  // namespace ovms

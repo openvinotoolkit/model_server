@@ -132,13 +132,6 @@ constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to t
 
 static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
 
-using KFSRequestType = ::inference::ModelInferRequest;
-using KFSResponseType = ::inference::ModelInferResponse;
-using KFSInputTensorType = ::inference::ModelInferRequest_InferInputTensor;
-using KFSOutputTensorType = ::inference::ModelInferResponse_InferOutputTensor;
-using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
-using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
-using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
 using TFSRequestType = tensorflow::serving::PredictRequest;
 using TFSResponseType = tensorflow::serving::PredictResponse;
 using TFSInputTensorType = tensorflow::TensorProto;
@@ -147,7 +140,7 @@ using TFSShapeType = tensorflow::TensorShapeProto;
 using TFSInputTensorIteratorType = google::protobuf::Map<std::string, TFSInputTensorType>::const_iterator;
 using TFSOutputTensorIteratorType = google::protobuf::Map<std::string, TFSOutputTensorType>::const_iterator;
 using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
-using KFSInterface = std::pair<KFSRequestType, KFSResponseType>;
+using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
