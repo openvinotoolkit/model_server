@@ -307,10 +307,10 @@ TEST_F(TFSGatherExitNodeInputHandlerTest, TensorAlreadyExistsInProto) {
 
 class KFSGatherExitNodeInputHandlerTest : public GatherExitNodeInputHandlerTest {
 protected:
-    ::inference::ModelInferResponse response;
+    ::KFSResponse response;
 
-    ::inference::ModelInferResponse_InferOutputTensor* getPreparedTensor() {
-        ::inference::ModelInferResponse_InferOutputTensor* ptr = nullptr;
+    KFSTensorOutputProto* getPreparedTensor() {
+        KFSTensorOutputProto* ptr = nullptr;
         for (int i = 0; i < response.outputs_size(); i++) {
             auto* output = response.mutable_outputs(i);
             if (output->name() == tensorName) {

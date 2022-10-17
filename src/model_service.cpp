@@ -31,6 +31,7 @@
 #pragma GCC diagnostic pop
 
 #include "execution_context.hpp"
+#include "grpc_utils.hpp"
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
@@ -67,7 +68,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
 ::grpc::Status ModelServiceImpl::GetModelStatus(
     ::grpc::ServerContext* context, const tensorflow::serving::GetModelStatusRequest* request,
     tensorflow::serving::GetModelStatusResponse* response) {
-    return GetModelStatusImpl::getModelStatus(request, response, modelManager, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelStatus)).grpc();
+    return grpc(GetModelStatusImpl::getModelStatus(request, response, modelManager, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelStatus)));
 }
 
 Status GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {

@@ -62,8 +62,8 @@ private:
 public:
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const std::string& name,
-        const ::inference::ModelInferRequest* request,
-        ::inference::ModelInferResponse* response,
+        const ::KFSRequest* request,
+        ::KFSResponse* response,
         ModelManager& manager) const;
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const std::string& name,

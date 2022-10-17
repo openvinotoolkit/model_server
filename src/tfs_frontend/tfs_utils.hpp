@@ -25,9 +25,12 @@
 
 #include "../precision.hpp"
 
+using TFSDataType = tensorflow::DataType;
+
 namespace ovms {
-tensorflow::DataType getPrecisionAsDataType(Precision precision);
-std::string getDataTypeAsString(tensorflow::DataType dataType);
+Precision TFSPrecisionToOvmsPrecision(const TFSDataType& s);
+TFSDataType getPrecisionAsDataType(Precision precision);
+std::string getDataTypeAsString(TFSDataType dataType);
+
 std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
-//   static std::string tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& tensorShape);
 }  // namespace ovms

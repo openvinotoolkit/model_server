@@ -28,11 +28,13 @@
 
 #include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 
 using testing::Each;

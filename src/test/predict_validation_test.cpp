@@ -42,7 +42,7 @@ public:
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
     }
-    const ovms::Status mockValidate(const ::inference::ModelInferRequest* request) {
+    const ovms::Status mockValidate(const ::KFSRequest* request) {
         return validate(request);
     }
 };
@@ -679,7 +679,7 @@ class KFSPredictValidation : public ::testing::Test {
 protected:
     std::unique_ptr<ov::Core> ieCore;
     std::unique_ptr<NiceMock<MockModelInstance>> instance;
-    ::inference::ModelInferRequest request;
+    ::KFSRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
@@ -776,7 +776,7 @@ TEST_F(KFSPredictValidation, RequestWrongBatchSizeAuto) {
 TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
     modelConfig.setBatchingParams("auto");
     std::string inputName = "Binary_Input";
-    ::inference::ModelInferRequest binaryInputRequest;
+    ::KFSRequest binaryInputRequest;
 
     auto input = binaryInputRequest.add_inputs();
     input->set_name(inputName);
@@ -802,7 +802,7 @@ TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
 
 TEST_F(KFSPredictValidation, RequestWrongBatchSizeBinaryInputs) {
     std::string inputName = "Binary_Input";
-    ::inference::ModelInferRequest binaryInputRequest;
+    ::KFSRequest binaryInputRequest;
 
     auto input = binaryInputRequest.add_inputs();
     input->set_name(inputName);
@@ -829,7 +829,7 @@ TEST_F(KFSPredictValidation, RequestWrongBatchSizeBinaryInputs) {
 TEST_F(KFSPredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     modelConfig.setBatchingParams("auto");
     std::string inputName = "Binary_Input";
-    ::inference::ModelInferRequest binaryInputRequest;
+    ::KFSRequest binaryInputRequest;
 
     auto input = binaryInputRequest.add_inputs();
     input->set_name(inputName);
@@ -1003,7 +1003,7 @@ class KFSPredictValidationInputTensorContent : public ::testing::TestWithParam<o
 protected:
     std::unique_ptr<ov::Core> ieCore;
     std::unique_ptr<NiceMock<MockModelInstance>> instance;
-    ::inference::ModelInferRequest request;
+    ::KFSRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
@@ -1059,7 +1059,7 @@ class KFSPredictValidationInputTensorContentNegative : public ::testing::Test {
 protected:
     std::unique_ptr<ov::Core> ieCore;
     std::unique_ptr<NiceMock<MockModelInstance>> instance;
-    ::inference::ModelInferRequest request;
+    ::KFSRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
@@ -1258,7 +1258,7 @@ protected:
         auto precision = ovms::Precision::FP32;
         mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(tensorName, precision, ovms::shape_t{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Layout{"NC"});
     }
-    ::inference::ModelInferRequest request;
+    ::KFSRequest request;
     const char* tensorName = DUMMY_MODEL_INPUT_NAME;
     ovms::tensor_map_t mockedInputsInfo;
 };

@@ -29,6 +29,7 @@
 #pragma GCC diagnostic pop
 
 #include "../deserialization.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 
@@ -130,7 +131,7 @@ public:
 
     MOCK_METHOD(ov::Tensor,
         deserializeTensorProto,
-        (const ::inference::ModelInferRequest::InferInputTensor&,
+        (const ::KFSRequest::InferInputTensor&,
             const std::shared_ptr<ovms::TensorInfo>&,
             const std::string* buffer));
 };
@@ -146,7 +147,7 @@ public:
     }
 
     static ov::Tensor deserializeTensorProto(
-        const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+        const ::KFSRequest::InferInputTensor& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo,
         const std::string* buffer) {
         return mock->deserializeTensorProto(requestInput, tensorInfo, buffer);

@@ -27,6 +27,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/util/json_tensor.h"
 #pragma GCC diagnostic pop
+#include "kfs_frontend/kfs_utils.hpp"
 #include "precision.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "status.hpp"
@@ -202,7 +203,7 @@ Status makeJsonFromPredictResponse(
     return StatusCode::OK;
 }
 
-static Status parseResponseParameters(const ::inference::ModelInferResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static Status parseResponseParameters(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     if (response_proto.parameters_size() > 0) {
         writer.Key("parameters");
         writer.StartObject();
@@ -257,24 +258,24 @@ static Status parseOutputParameters(const inference::ModelInferResponse_InferOut
 }
 
 template <typename ValueType>
-static void fillTensorDataWithIntValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static void fillTensorDataWithIntValuesFromRawContents(const ::KFSResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
         writer.Int(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
 }
 
 template <typename ValueType>
-static void fillTensorDataWithUintValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static void fillTensorDataWithUintValuesFromRawContents(const ::KFSResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
         writer.Int(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
 }
 
 template <typename ValueType>
-static void fillTensorDataWithFloatValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static void fillTensorDataWithFloatValuesFromRawContents(const ::KFSResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
         writer.Double(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
 }
 
-static Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     writer.Key("outputs");
     writer.StartArray();
 
@@ -437,7 +438,7 @@ static Status parseOutputs(const ::inference::ModelInferResponse& response_proto
 }
 
 Status makeJsonFromPredictResponse(
-    const ::inference::ModelInferResponse& response_proto,
+    const ::KFSResponse& response_proto,
     std::string* response_json) {
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;

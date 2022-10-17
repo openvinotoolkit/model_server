@@ -21,6 +21,8 @@
 
 #include "deserialization.hpp"
 #include "execution_context.hpp"
+#include "grpc_utils.hpp"
+#include "kfs_frontend/kfs_utils.hpp"
 #include "metric.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -49,7 +51,7 @@ enum : unsigned int {
 
 namespace ovms {
 
-Status KFSInferenceServiceImpl::getModelInstance(const ::inference::ModelInferRequest* request,
+Status KFSInferenceServiceImpl::getModelInstance(const KFSRequest* request,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
@@ -66,8 +68,8 @@ Status KFSInferenceServiceImpl::getModelInstance(const ::inference::ModelInferRe
     return this->modelManager.getModelInstance(request->model_name(), requestedVersion, modelInstance, modelInstanceUnloadGuardPtr);
 }
 
-Status KFSInferenceServiceImpl::getPipeline(const ::inference::ModelInferRequest* request,
-    ::inference::ModelInferResponse* response,
+Status KFSInferenceServiceImpl::getPipeline(const KFSRequest* request,
+    KFSResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     OVMS_PROFILE_FUNCTION();
     return this->modelManager.createPipeline(pipelinePtr, request->model_name(), request, response);
@@ -95,7 +97,7 @@ const std::string PLATFORM = "OpenVINO";
     return grpc::Status::OK;
 }
 
-Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, const ModelManager& manager, ExecutionContext executionContext) {
+Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response, const ModelManager& manager, ExecutionContext executionContext) {
     // Return in response true/false
     // if no version requested give response for default version
     const auto& name = request->name();
@@ -141,20 +143,20 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
     return status;
 }
 
-::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
-    return ModelReadyImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelReady}).grpc();
+::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response) {
+    return grpc(ModelReadyImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelReady}));
 }
 
-Status KFSInferenceServiceImpl::ModelReadyImpl(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ExecutionContext executionContext) {
+Status KFSInferenceServiceImpl::ModelReadyImpl(::grpc::ServerContext* context, const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response, ExecutionContext executionContext) {
     (void)context;
     return this->getModelReady(request, response, this->modelManager, executionContext);
 }
 
-::grpc::Status KFSInferenceServiceImpl::ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) {
-    return ServerMetadataImpl(context, request, response).grpc();
+::grpc::Status KFSInferenceServiceImpl::ServerMetadata(::grpc::ServerContext* context, const KFSServerMetadataRequest* request, KFSServerMetadataResponse* response) {
+    return grpc(ServerMetadataImpl(context, request, response));
 }
 
-Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) {
+Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* context, const KFSServerMetadataRequest* request, KFSServerMetadataResponse* response) {
     (void)context;
     (void)request;
     (void)response;
@@ -163,11 +165,11 @@ Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* contex
     return StatusCode::OK;
 }
 
-::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
-    return ModelMetadataImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelMetadata}).grpc();
+::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response) {
+    return grpc(ModelMetadataImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelMetadata}));
 }
 
-Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response, ExecutionContext executionContext) {
+Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext) {
     const auto& name = request->name();
     const auto& versionString = request->version();
 
@@ -212,7 +214,7 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     return status;
 }
 
-::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
+::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response) {
     OVMS_PROFILE_FUNCTION();
     Timer<TIMER_END> timer;
     timer.start(TOTAL);
@@ -223,18 +225,18 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     auto status = this->ModelInferImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer}, reporter);
     timer.stop(TOTAL);
     if (!status.ok()) {
-        return status.grpc();
+        return grpc(status);
     }
     if (!reporter) {
-        return Status(StatusCode::INTERNAL_ERROR).grpc();  // should not happen
+        return grpc(Status(StatusCode::INTERNAL_ERROR));  // should not happen
     }
     double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total gRPC request processing time: {} ms", requestTotal / 1000);
     OBSERVE_IF_ENABLED(reporter->requestTimeGrpc, requestTotal);
-    return status.grpc();
+    return grpc(status);
 }
 
-Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
+Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
     OVMS_PROFILE_FUNCTION();
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::Pipeline> pipelinePtr;
@@ -252,7 +254,6 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return status;
     }
-
     if (pipelinePtr) {
         reporterOut = &pipelinePtr->getMetricReporter();
         status = pipelinePtr->execute(executionContext);
@@ -260,33 +261,30 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         reporterOut = &modelInstance->getMetricReporter();
         status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
     }
-
     INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
-
     if (!status.ok()) {
         return status;
     }
-
     response->set_id(request->id());
     return StatusCode::OK;
 }
 
 Status KFSInferenceServiceImpl::buildResponse(
     std::shared_ptr<ModelInstance> instance,
-    ::inference::ModelReadyResponse* response) {
+    KFSGetModelStatusResponse* response) {
     response->set_ready(instance->getStatus().getState() == ModelVersionState::AVAILABLE);
     return StatusCode::OK;
 }
 
 Status KFSInferenceServiceImpl::buildResponse(
     PipelineDefinition& pipelineDefinition,
-    ::inference::ModelReadyResponse* response) {
+    KFSGetModelStatusResponse* response) {
     response->set_ready(pipelineDefinition.getStatus().isAvailable());
     return StatusCode::OK;
 }
 
 static void addReadyVersions(Model& model,
-    ::inference::ModelMetadataResponse* response) {
+    KFSModelMetadataResponse* response) {
     auto modelVersions = model.getModelVersionsMapCopy();
     for (auto& [modelVersion, modelInstance] : modelVersions) {
         if (modelInstance.getStatus().getState() == ModelVersionState::AVAILABLE)
@@ -297,7 +295,7 @@ static void addReadyVersions(Model& model,
 Status KFSInferenceServiceImpl::buildResponse(
     Model& model,
     ModelInstance& instance,
-    ::inference::ModelMetadataResponse* response) {
+    KFSModelMetadataResponse* response) {
 
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
 
@@ -335,7 +333,7 @@ KFSInferenceServiceImpl::KFSInferenceServiceImpl(const Server& server) :
 
 Status KFSInferenceServiceImpl::buildResponse(
     PipelineDefinition& pipelineDefinition,
-    ::inference::ModelMetadataResponse* response) {
+    KFSModelMetadataResponse* response) {
 
     std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
 
@@ -363,9 +361,9 @@ Status KFSInferenceServiceImpl::buildResponse(
 
 void KFSInferenceServiceImpl::convert(
     const std::pair<std::string, std::shared_ptr<TensorInfo>>& from,
-    ::inference::ModelMetadataResponse::TensorMetadata* to) {
+    KFSModelMetadataResponse::TensorMetadata* to) {
     to->set_name(from.first);
-    to->set_datatype(from.second->getPrecisionAsKFSPrecision());
+    to->set_datatype(ovmsPrecisionToKFSPrecision(from.second->getPrecision()));
     for (auto dim : from.second->getShape()) {
         if (dim.isStatic()) {
             to->add_shape(dim.getStaticValue());

@@ -26,11 +26,10 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-
-#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
-#include "src/kfserving_api/grpc_predict_v2.pb.h"
 #pragma GCC diagnostic pop
 
+#include "kfs_frontend/kfs_utils.hpp"
+#include "kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
@@ -38,7 +37,7 @@
 namespace ovms {
 
 Status prepareConsolidatedTensorImpl(tensorflow::serving::PredictResponse* response, char*& tensorOut, const std::string& name, size_t size);
-Status prepareConsolidatedTensorImpl(::inference::ModelInferResponse* response, char*& tensorOut, const std::string& name, size_t size);
+Status prepareConsolidatedTensorImpl(KFSResponse* response, char*& tensorOut, const std::string& name, size_t size);
 
 template <class ResponseType>
 class GatherExitNodeInputHandler : public GatherNodeInputHandler {

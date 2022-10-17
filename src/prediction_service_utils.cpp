@@ -31,7 +31,7 @@ using tensorflow::serving::PredictResponse;
 
 namespace ovms {
 
-std::optional<Dimension> getRequestBatchSize(const ::inference::ModelInferRequest* request, const size_t batchSizeIndex) {
+std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const size_t batchSizeIndex) {
     auto requestInputItr = request->inputs().begin();
     if (requestInputItr == request->inputs().end()) {
         SPDLOG_DEBUG("Failed to get batch size of a request. Validation of request failed");
@@ -49,7 +49,7 @@ std::optional<Dimension> getRequestBatchSize(const ::inference::ModelInferReques
     return Dimension(requestInput->shape()[batchSizeIndex]);
 }
 
-std::map<std::string, shape_t> getRequestShapes(const ::inference::ModelInferRequest* request) {
+std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request) {
     std::map<std::string, shape_t> requestShapes;
     for (auto& it : request->inputs()) {
         shape_t requestShape;

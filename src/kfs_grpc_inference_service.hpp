@@ -27,8 +27,8 @@
 using inference::GRPCInferenceService;
 using KFSServerMetadataRequest = inference::ServerMetadataRequest;
 using KFSServerMetadataResponse = inference::ServerMetadataResponse;
-using KFSServerModelMetadataRequest = inference::ModelMetadataRequest;
-using KFSServerModelMetadataResponse = inference::ModelMetadataResponse;
+using KFSModelMetadataRequest = inference::ModelMetadataRequest;
+using KFSModelMetadataResponse = inference::ModelMetadataResponse;
 using KFSRequest = inference::ModelInferRequest;
 using KFSResponse = inference::ModelInferResponse;
 using KFSTensorInputProto = inference::ModelInferRequest::InferInputTensor;
@@ -58,30 +58,30 @@ class KFSInferenceServiceImpl final : public GRPCInferenceService::Service {
     ModelManager& modelManager;
 
 public:
-    Status ModelReadyImpl(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ExecutionContext executionContext);
-    Status ServerMetadataImpl(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response);
-    Status ModelMetadataImpl(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response, ExecutionContext executionContext);
-    Status ModelInferImpl(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut);
+    Status ModelReadyImpl(::grpc::ServerContext* context, const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response, ExecutionContext executionContext);
+    Status ServerMetadataImpl(::grpc::ServerContext* context, const KFSServerMetadataRequest* request, KFSServerMetadataResponse* response);
+    Status ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext);
+    Status ModelInferImpl(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut);
     KFSInferenceServiceImpl(const Server& server);
     ::grpc::Status ServerLive(::grpc::ServerContext* context, const ::inference::ServerLiveRequest* request, ::inference::ServerLiveResponse* response) override;
     ::grpc::Status ServerReady(::grpc::ServerContext* context, const ::inference::ServerReadyRequest* request, ::inference::ServerReadyResponse* response) override;
-    ::grpc::Status ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) override;
-    ::grpc::Status ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) override;
-    ::grpc::Status ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) override;
-    ::grpc::Status ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) override;
-    static Status buildResponse(Model& model, ModelInstance& instance, ::inference::ModelMetadataResponse* response);
-    static Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelMetadataResponse* response);
-    static Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelReadyResponse* response);
-    static Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelReadyResponse* response);
-    static void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, ::inference::ModelMetadataResponse::TensorMetadata* to);
-    static Status getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, const ModelManager& manager, ExecutionContext executionContext);
+    ::grpc::Status ModelReady(::grpc::ServerContext* context, const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response) override;
+    ::grpc::Status ServerMetadata(::grpc::ServerContext* context, const KFSServerMetadataRequest* request, KFSServerMetadataResponse* response) override;
+    ::grpc::Status ModelMetadata(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response) override;
+    ::grpc::Status ModelInfer(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response) override;
+    static Status buildResponse(Model& model, ModelInstance& instance, KFSModelMetadataResponse* response);
+    static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSModelMetadataResponse* response);
+    static Status buildResponse(std::shared_ptr<ModelInstance> instance, KFSGetModelStatusResponse* response);
+    static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSGetModelStatusResponse* response);
+    static void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, KFSModelMetadataResponse::TensorMetadata* to);
+    static Status getModelReady(const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response, const ModelManager& manager, ExecutionContext executionContext);
 
 protected:
-    Status getModelInstance(const ::inference::ModelInferRequest* request,
+    Status getModelInstance(const KFSRequest* request,
         std::shared_ptr<ovms::ModelInstance>& modelInstance,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
-    Status getPipeline(const ::inference::ModelInferRequest* request,
-        ::inference::ModelInferResponse* response,
+    Status getPipeline(const KFSRequest* request,
+        KFSResponse* response,
         std::unique_ptr<ovms::Pipeline>& pipelinePtr);
 };
 

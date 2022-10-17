@@ -256,8 +256,8 @@ TEST_F(MetricFlowTest, GrpcGetModelStatus) {
 
 TEST_F(MetricFlowTest, GrpcModelInfer) {
     KFSInferenceServiceImpl impl(server);
-    ::inference::ModelInferRequest request;
-    ::inference::ModelInferResponse response;
+    ::KFSRequest request;
+    ::KFSResponse response;
 
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();
@@ -321,8 +321,8 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
 
 TEST_F(MetricFlowTest, GrpcModelMetadata) {
     KFSInferenceServiceImpl impl(server);
-    ::inference::ModelMetadataRequest request;
-    ::inference::ModelMetadataResponse response;
+    ::KFSModelMetadataRequest request;
+    KFSModelMetadataResponse response;
 
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();
@@ -344,8 +344,8 @@ TEST_F(MetricFlowTest, GrpcModelMetadata) {
 
 TEST_F(MetricFlowTest, GrpcModelReady) {
     KFSInferenceServiceImpl impl(server);
-    ::inference::ModelReadyRequest request;
-    ::inference::ModelReadyResponse response;
+    ::KFSGetModelStatusRequest request;
+    ::KFSGetModelStatusResponse response;
 
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();

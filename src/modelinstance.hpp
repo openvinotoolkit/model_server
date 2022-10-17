@@ -31,6 +31,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "kfs_grpc_inference_service.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
@@ -38,11 +39,6 @@
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "tensorinfo.hpp"
-
-namespace inference {
-class ModelInferRequest;
-class ModelInferResponse;
-}  // namespace inference
 
 namespace ovms {
 class MetricRegistry;
@@ -551,8 +547,8 @@ public:
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-    virtual Status infer(const ::inference::ModelInferRequest* requestProto,
-        ::inference::ModelInferResponse* responseProto,
+    virtual Status infer(const ::KFSRequest* requestProto,
+        ::KFSResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }

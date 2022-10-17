@@ -502,10 +502,10 @@ Status KFSRestParser::parseId(rapidjson::Value& node) {
 Status KFSRestParser::parseRequestParameters(rapidjson::Value& node){
     PARSE_PARAMETER(requestProto)}
 
-Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor& input){
+Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input){
     PARSE_PARAMETER(input)}
 
-Status KFSRestParser::parseOutputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferRequestedOutputTensor& output){
+Status KFSRestParser::parseOutputParameters(rapidjson::Value& node, ::KFSRequest::InferRequestedOutputTensor& output){
     PARSE_PARAMETER(output)}
 
 Status KFSRestParser::parseOutput(rapidjson::Value& node) {
@@ -560,7 +560,7 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
         input->mutable_contents()->CONTENTS()->Add(value.TYPE_GETTER()); \
     }
 
-Status KFSRestParser::parseData(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input) {
+Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInputTensor* input) {
     if (input->datatype() == "FP32") {
         HANDLE_VALUE(mutable_fp32_contents, GetFloat, IsNumber)
     } else if (input->datatype() == "INT64") {

@@ -362,7 +362,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReloadPipelineAfterRemovalOfModel
 
 class ModelWithInputOutputNameMappedModel : public PipelineWithInputOutputNameMappedModel {
 public:
-    ::inference::ModelMetadataResponse kfsResponse;
+    KFSModelMetadataResponse kfsResponse;
     tensorflow::serving::GetModelMetadataResponse tfsResponse;
     std::shared_ptr<ModelInstance> instance;
 };

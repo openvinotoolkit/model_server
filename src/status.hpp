@@ -21,16 +21,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include <grpcpp/server_context.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
-#pragma GCC diagnostic pop
-
 namespace ovms {
-
-namespace net_http = tensorflow::serving::net_http;
 
 enum class StatusCode {
     OK, /*!< Success */
@@ -288,8 +279,6 @@ class Status {
     std::unique_ptr<std::string> message;
 
     static const std::unordered_map<const StatusCode, const std::string> statusMessageMap;
-    static const std::unordered_map<const StatusCode, grpc::StatusCode> grpcStatusMap;
-    static const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap;
 
     void appendDetails(const std::string& details) {
         ensureMessageAllocated();
@@ -357,35 +346,12 @@ public:
         return this->code != status.code;
     }
 
-    const grpc::Status grpc() const {
-        auto it = grpcStatusMap.find(code);
-        if (it != grpcStatusMap.end()) {
-            return grpc::Status(it->second,
-                this->message ? *this->message : "");
-        } else {
-            return grpc::Status(grpc::StatusCode::UNKNOWN, "Unknown error");
-        }
-    }
-
-    operator grpc::Status() const {
-        return this->grpc();
-    }
-
     const std::string& string() const {
         return this->message ? *this->message : statusMessageMap.at(code);
     }
 
     operator const std::string&() const {
         return this->string();
-    }
-
-    const net_http::HTTPStatusCode http() const {
-        auto it = httpStatusMap.find(code);
-        if (it != httpStatusMap.end()) {
-            return it->second;
-        } else {
-            return net_http::HTTPStatusCode::ERROR;
-        }
     }
 };
 

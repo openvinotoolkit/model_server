@@ -133,14 +133,6 @@ const std::string& TensorInfo::getPrecisionAsString() const {
     return getPrecisionAsString(precision);
 }
 
-const std::string& TensorInfo::getPrecisionAsKFSPrecision(Precision precision) {
-    return ovmsPrecisionToKFSPrecision(precision);
-}
-
-const std::string& TensorInfo::getPrecisionAsKFSPrecision() const {
-    return getPrecisionAsKFSPrecision(precision);
-}
-
 const std::string& TensorInfo::getStringFromLayout(const Layout& layout) {
     return layout;
 }
@@ -235,21 +227,6 @@ std::string TensorInfo::shapeToString(const shape_t& shape) {
     std::ostringstream oss;
     oss << "(";
     size_t i = 0;
-    if (shape.size() > 0) {
-        for (; i < shape.size() - 1; i++) {
-            oss << shape[i] << ",";
-        }
-        oss << shape[i];
-    }
-    oss << ")";
-
-    return oss.str();
-}
-
-std::string tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& shape) {
-    std::ostringstream oss;
-    oss << "(";
-    int i = 0;
     if (shape.size() > 0) {
         for (; i < shape.size() - 1; i++) {
             oss << shape[i] << ",";

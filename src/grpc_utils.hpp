@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,25 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <map>
-#include <memory>
-#include <string>
-#include <utility>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#include "kfs_grpc_inference_service.hpp"
-#include "shape.hpp"
+#include <grpcpp/server_context.h>
 
 namespace ovms {
+class Status;
 
-std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const size_t batchSizeIndex);
-
-std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request);
-
-std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request, const size_t batchSizeIndex);
-std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
-
+const grpc::Status grpc(const Status& status);
 }  // namespace ovms

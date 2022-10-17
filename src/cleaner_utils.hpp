@@ -23,6 +23,7 @@ struct FunctorSequenceCleaner {
 
     FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer);
     virtual void cleanup();
+    virtual ~FunctorSequenceCleaner();
 };
 
 struct FunctorResourcesCleaner {
@@ -30,5 +31,6 @@ struct FunctorResourcesCleaner {
 
     FunctorResourcesCleaner(ModelManager& modelManager);
     virtual void cleanup();
+    ~FunctorResourcesCleaner();
 };
 }  // namespace ovms

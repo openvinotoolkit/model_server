@@ -150,24 +150,24 @@ ovms::tensor_map_t prepareTensors(
 
 void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {});
 
-::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name);
-std::string* findKFSInferInputTensorContentInRawInputs(::inference::ModelInferRequest& request, const std::string& name);
+KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
+std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
 
-void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
+void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
     const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
-void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
-void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
+void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
-void prepareBinaryPredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize);
+void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize);
 
 void prepareBinaryPredictRequestNoShape(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
-void prepareBinaryPredictRequestNoShape(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize);
+void prepareBinaryPredictRequestNoShape(::KFSRequest& request, const std::string& inputName, const int batchSize);
 
 void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize = 1);
-void prepareBinary4x4PredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize = 1);
+void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
 
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
@@ -178,7 +178,7 @@ void checkDummyResponse(const std::string outputName,
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    ::inference::ModelInferRequest& request, ::inference::ModelInferResponse& response, int seriesLength, int batchSize = 1);
+    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1);
 
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
@@ -219,8 +219,8 @@ void checkIncrement4DimResponse(const std::string outputName,
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
-    ::inference::ModelInferRequest& request,
-    ::inference::ModelInferResponse& response,
+    ::KFSRequest& request,
+    ::KFSResponse& response,
     const std::vector<size_t>& expectedShape) {
     ASSERT_EQ(response.outputs_size(), 1);
     ASSERT_EQ(response.raw_output_contents_size(), 1);
@@ -341,8 +341,8 @@ static ovms::NodeLibrary createLibraryMock() {
         T::release};
 }
 
-extern bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);
-extern bool isShapeTheSame(const google::protobuf::RepeatedField<int64_t>&, const std::vector<int64_t>&&);
+bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);
+bool isShapeTheSame(const KFSShapeType&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);

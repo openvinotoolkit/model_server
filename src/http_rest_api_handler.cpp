@@ -200,8 +200,8 @@ Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponen
 }
 
 Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ServerMetadataRequest grpc_request;
-    ::inference::ServerMetadataResponse grpc_response;
+    ::KFSServerMetadataRequest grpc_request;
+    ::KFSServerMetadataResponse grpc_response;
     Status gstatus = kfsGrpcImpl.ServerMetadataImpl(nullptr, &grpc_request, &grpc_response);
     if (!gstatus.ok()) {
         return gstatus;
@@ -298,7 +298,7 @@ static Status convertStringToVectorOfSizes(const std::string& comma_separated_nu
     return StatusCode::OK;
 }
 
-static Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, size_t binary_input_size, const char* buffer) {
+static Status parseBinaryInput(KFSTensorInputProto* input, size_t binary_input_size, const char* buffer) {
     if (input->datatype() == "FP32") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(float)) {
             auto value = input->mutable_contents()->mutable_fp32_contents()->Add();
@@ -360,7 +360,7 @@ static Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* 
 
 #define CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE " contents is not empty. Content field should be empty when using binary inputs extension."
 
-static Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputTensor* input) {
+static Status validateContentFieldsEmptiness(KFSTensorInputProto* input) {
     if (input->datatype() == "FP32") {
         if (input->contents().fp32_contents_size() > 0) {
             SPDLOG_DEBUG("FP32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
@@ -423,7 +423,7 @@ static Status validateContentFieldsEmptiness(::inference::ModelInferRequest_Infe
     return StatusCode::OK;
 }
 
-static Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
+static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
     const char* binary_inputs = &(request_body[endOfJson]);
     size_t binary_inputs_size = request_body.length() - endOfJson;
 
@@ -476,7 +476,7 @@ static Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, c
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
@@ -504,7 +504,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     std::string modelName(request_components.model_name);
     std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
-    ::inference::ModelInferRequest grpc_request;
+    ::KFSRequest grpc_request;
     timer.start(PREPARE_GRPC_REQUEST);
     using std::chrono::microseconds;
     auto status = prepareGrpcRequest(modelName, request_components.model_version, request_body, grpc_request, request_components.inferenceHeaderContentLength);
@@ -519,7 +519,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     }
     timer.stop(PREPARE_GRPC_REQUEST);
     SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>(PREPARE_GRPC_REQUEST) / 1000);
-    ::inference::ModelInferResponse grpc_response;
+    ::KFSResponse grpc_response;
     const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, executionContext, reporter);
     if (!gstatus.ok()) {
         return gstatus;
@@ -571,8 +571,8 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
 }
 
 Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ModelReadyRequest grpc_request;
-    ::inference::ModelReadyResponse grpc_response;
+    ::KFSGetModelStatusRequest grpc_request;
+    ::KFSGetModelStatusResponse grpc_response;
     std::string modelName(request_components.model_name);
     grpc_request.set_name(modelName);
     if (request_components.model_version.has_value()) {
@@ -604,8 +604,8 @@ void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
 }
 
 Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ModelMetadataRequest grpc_request;
-    ::inference::ModelMetadataResponse grpc_response;
+    ::KFSModelMetadataRequest grpc_request;
+    ::KFSModelMetadataResponse grpc_response;
     std::string modelName(request_components.model_name);
     grpc_request.set_name(modelName);
     if (request_components.model_version.has_value()) {

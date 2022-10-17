@@ -62,7 +62,7 @@ Status serializeTensorToTensorProto(
     ov::Tensor& tensor);
 
 Status serializeTensorToTensorProto(
-    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    ::KFSResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor);
@@ -105,11 +105,11 @@ template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
     const tensor_map_t& outputMap,
-    ::inference::ModelInferResponse* response,
+    ::KFSResponse* response,
     outputNameChooser_t outputNameChooser) {
     OVMS_PROFILE_FUNCTION();
     Status status;
-    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(response);
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(response);
     for (const auto& [outputName, outputInfo] : outputMap) {
         ov::Tensor tensor;
         status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);

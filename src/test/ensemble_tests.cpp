@@ -25,6 +25,7 @@
 #include "../dl_node.hpp"
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../metric_registry.hpp"

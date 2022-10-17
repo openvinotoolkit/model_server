@@ -23,6 +23,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "kfs_frontend/kfs_utils.hpp"
 #include "kfs_grpc_inference_service.hpp"
 #include "modelconfig.hpp"
 #include "profiler.hpp"
@@ -568,7 +569,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
 
 template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validatePrecision(const ovms::TensorInfo& inputInfo, const KFSTensorInputProto& proto) const {
-    if (proto.datatype() != inputInfo.getPrecisionAsKFSPrecision()) {
+    if (proto.datatype() != ovmsPrecisionToKFSPrecision(inputInfo.getPrecision())) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()
            << "; Actual: " << proto.datatype()

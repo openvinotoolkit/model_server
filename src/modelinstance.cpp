@@ -1135,7 +1135,7 @@ const Status ModelInstance::validate(const RequestType* request) {
         getModelConfig().getShapes());
 }
 
-template const Status ModelInstance::validate(const ::inference::ModelInferRequest* request);
+template const Status ModelInstance::validate(const ::KFSRequest* request);
 template const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request);
 
 Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
@@ -1220,8 +1220,8 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     return StatusCode::OK;
 }
 
-Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
-    ::inference::ModelInferResponse* responseProto,
+Status ModelInstance::infer(const ::KFSRequest* requestProto,
+    ::KFSResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
     Timer<TIMER_END> timer;
