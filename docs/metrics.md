@@ -31,20 +31,20 @@ Default metrics
 | Type      | Name | Labels | Description |
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_streams | name,version | Number of OpenVINO execution streams |
-| gauge      | ovms_current_requests | name,version | Number of inference requests currently in process |
+| gauge      | ovms_current_requests | name,version | Number of requests being currently processed by the model server |
 | counter      | ovms_requests_success | api,interface,method,name,version | Number of successful requests to a model or a DAG. |
 | counter      | ovms_requests_fail | api,interface,method,name,version | Number of failed requests to a model or a DAG. |
 | histogram      | ovms_request_time_us | interface,name,version | Processing time of requests to a model or a DAG. |
 | histogram      | ovms_inference_time_us | name,version | Inference execution time in the OpenVINO backend. |
-| histogram      | ovms_wait_for_infer_req_time_us | name,version | Request waiting time in the scheduling queue. Indicates how long the request had to wait before required resources got been assigned to it |
+| histogram      | ovms_wait_for_infer_req_time_us | name,version | Request waiting time in the scheduling queue. Indicates how long the request has to wait before required resources are assigned to it. |
 
 Optional metrics
 | Type      | Name | Labels | Description |
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_infer_req_queue_size | name,version | Inference request queue size (nireq). |
-| gauge      | ovms_infer_req_active | name,version | Number of in-progress inferences. Equivalent of the number of currently consumed inference request from the processing queue. |
+| gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference requests from the processing queue that are now either in the data loading or inference process. |
 
-> **Note**: While `ovms_current_requests` and `ovms_infer_req_active` both indicate how much resources are engaged in the requests processing, they are quite distinct. A request is counted in `ovms_current_requests` metric starting as soon as it's received by the server and stays there until the response is sent back to the user. The `ovms_infer_req_active` counter informs about the number of inferences being actively processed by the OpenVINO Runtime. 
+> **Note**: While `ovms_current_requests` and `ovms_infer_req_active` both indicate how much resources are engaged in the requests processing, they are quite distinct. A request is counted in `ovms_current_requests` metric starting as soon as it's received by the server and stays there until the response is sent back to the user. The `ovms_infer_req_active` counter informs about the number of OpenVINO Infer Requests that are bound to user requests and are either loading the data or already running inference. 
 
 Labels description
 | Name      | Values |  Description |
