@@ -44,6 +44,8 @@ Optional metrics
 | gauge      | ovms_infer_req_queue_size | name,version | Inference request queue size (nireq). |
 | gauge      | ovms_infer_req_active | name,version | Number of in-progress inferences. Equivalent of the number of currently consumed inference request from the processing queue. |
 
+> **Note**: While `ovms_current_requests` and `ovms_infer_req_active` both indicate how much resources are engaged in the requests processing, they are quite distinct. A request is counted in `ovms_current_requests` metric starting as soon as it's received by the server and stays there until the response is sent back to the user. The `ovms_infer_req_active` counter informs about the number of inferences being actively processed by the OpenVINO Runtime. 
+
 Labels description
 | Name      | Values |  Description |
 | :---    |    :----   |    :----   |
@@ -226,7 +228,7 @@ In OpenVINO Model Server repository you can find [grafana_dashboard.json](https:
 - Latency Distribution [%] - distribution of the latencies across the buckets.
 - Mean Inference Time [ms] - time of inference execution, averaged across all requests processed by the model in a certain timeframe.
 - Mean Time of Request Waiting For Inference [ms] - time of a request waiting for the inference execution, averaged across all requests processed by the model in a certain timeframe.
-- Currently Processed Requests - Number of requests being currently processed by the model server
+- Currently Processed Requests - Number of requests being currently processed by the model server.
 
 The dashboard works with three variables: `model_name`, `model_version` and `interface` that determine the model instance and interface (gRPC or REST) of interest. The `interface` value is ignored for panels with: `Mean Inference Time`, `Mean Time of Request Waiting For Inference`, `Currently Processed Requests` as they concern only backend performance and are interface agnostic.
 
