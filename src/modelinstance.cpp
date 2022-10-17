@@ -1147,39 +1147,38 @@ Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
 #include <cstring>
 Status ModelInstance::infer(float* data, float* output) {
     OVMS_PROFILE_FUNCTION();
-    Timer timer;
+    Timer<TIMER_END> timer;
     using std::chrono::microseconds;
-    timer.start("get infer request");
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    timer.start(GET_INFER_REQUEST);
+    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
     int executingInferId = executingStreamIdGuard.getId();
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
-    timer.stop("get infer request");
+    timer.stop(GET_INFER_REQUEST);
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
-    timer.start("deserialize");
-    static ov::Shape shape{1,10};
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(GET_INFER_REQUEST) / 1000);
+    timer.start(DESERIALIZE);
+    static ov::Shape shape{1, 10};
     ov::element::Type precision = ov::element::Type_t::f32;
     ov::Tensor tensor(precision,
-                      shape,
-                      (void*)data);
+        shape,
+        (void*)data);
     inferRequest.set_tensor("b", tensor);
-    timer.stop("deserialize");
+    timer.stop(DESERIALIZE);
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
-    timer.start("prediction");
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
+    timer.start(PREDICTION);
     auto status = performInference(inferRequest);
-    timer.stop("prediction");
+    timer.stop(PREDICTION);
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
-    timer.start("serialize");
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
+    timer.start(SERIALIZE);
     auto otensor = inferRequest.get_tensor("a");
     std::memcpy((void*)output, otensor.data(), otensor.get_byte_size());
-    timer.stop("serialize");
+    timer.stop(SERIALIZE);
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
-    SPDLOG_ERROR("ER");
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
     return StatusCode::OK;
 }
 

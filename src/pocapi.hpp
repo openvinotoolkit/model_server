@@ -1,5 +1,6 @@
+#pragma once
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,17 +14,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "modelinstanceunloadguard.hpp"
-
-#include "modelinstance.hpp"
-
-namespace ovms {
-ModelInstanceUnloadGuard::ModelInstanceUnloadGuard(ModelInstance& modelInstance) :
-    modelInstance(modelInstance) {
-    modelInstance.increasePredictRequestsHandlesCount();
-}
-
-ModelInstanceUnloadGuard::~ModelInstanceUnloadGuard() {
-    modelInstance.decreasePredictRequestsHandlesCount();
-}
-}  // namespace ovms
+int OVMS_Start(int argc, char** argv);
+void OVMS_Infer(char* name, float* data, float* output);
