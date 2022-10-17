@@ -60,7 +60,7 @@ cc_library(
     name = "ovms_lib",
     linkstatic = True,
  #   linkshared = True,
-    hdrs = ["server.hpp"],
+    hdrs = ["pocapi.hpp"],
     srcs = [
         "aliases.hpp",
         "azurestorage.hpp",
@@ -191,6 +191,8 @@ cc_library(
         "pipelineeventqueue.hpp",
         "pipeline_factory.cpp",
         "pipeline_factory.hpp",
+        "pocapi.hpp",
+        "pocapi.cpp",
         "precision.cpp",
         "precision.hpp",
         "prediction_service.cpp",
@@ -539,7 +541,8 @@ cc_binary(
         "-Werror",
     ],
     deps = [
-        "//src/ovms_lib:ovms_lib",
+        "//src:ovms_lib",
+        #"//src/ovms_lib:ovms_lib",
     ],
     linkstatic = True,
     linkshared = True,
