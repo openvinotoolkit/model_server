@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 2,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -42,11 +42,8 @@
       "type": "row"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "czgrlG4Vk"
-      },
-      "description": "",
+      "datasource": {},
+      "description": "Number of requests being processed by the model per second",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -100,7 +97,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "9.1.0",
+      "pluginVersion": "9.1.8",
       "targets": [
         {
           "datasource": {
@@ -118,10 +115,8 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "czgrlG4Vk"
-      },
+      "datasource": {},
+      "description": "Latency averaged across all requests processed by the model in a certain timeframe",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -175,7 +170,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "9.1.0",
+      "pluginVersion": "9.1.8",
       "targets": [
         {
           "datasource": {
@@ -193,10 +188,8 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "czgrlG4Vk"
-      },
+      "datasource": {},
+      "description": "Value of latency for quantiles [0.75, 0.90, 0.99], meaning the latency that has NOT been exceeded by 75%, 90% and 99% of the requests",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -309,10 +302,8 @@
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "czgrlG4Vk"
-      },
+      "datasource": {},
+      "description": "Distribution of the latencies across the buckets",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -360,7 +351,7 @@
         },
         "showUnfilled": true
       },
-      "pluginVersion": "9.1.0",
+      "pluginVersion": "9.1.8",
       "targets": [
         {
           "datasource": {
@@ -452,10 +443,7 @@
       "type": "bargauge"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "czgrlG4Vk"
-      },
+      "datasource": {},
       "description": "Apdex score calculated as:\n(num_samples < 0,t1>  +  num_samples < t1,t2> / 2) / num_samples",
       "fieldConfig": {
         "defaults": {
@@ -547,10 +535,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "czgrlG4Vk"
-      },
+      "datasource": {},
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -592,7 +577,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "9.1.0",
+      "pluginVersion": "9.1.8",
       "targets": [
         {
           "datasource": {
@@ -623,11 +608,8 @@
       "type": "row"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "czgrlG4Vk"
-      },
-      "description": "Mean time of inference execution",
+      "datasource": {},
+      "description": "Time of inference execution, averaged across all requests processed by the model in a certain timeframe",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -684,7 +666,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "9.1.0",
+      "pluginVersion": "9.1.8",
       "targets": [
         {
           "datasource": {
@@ -702,11 +684,8 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "czgrlG4Vk"
-      },
-      "description": "Mean time of a request waiting for inference execution",
+      "datasource": {},
+      "description": "Time of a request waiting for the inference execution, averaged across all requests processed by the model in a certain timeframe",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -763,7 +742,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "9.1.0",
+      "pluginVersion": "9.1.8",
       "targets": [
         {
           "datasource": {
@@ -777,15 +756,12 @@
           "refId": "A"
         }
       ],
-      "title": "Mean Time in Queue [ms]",
+      "title": "Mean Time of Request Waiting For Inference [ms]",
       "type": "gauge"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "czgrlG4Vk"
-      },
-      "description": "Number of inference requests to the model being actively processed by the model server",
+      "datasource": {},
+      "description": "Number of requests being currently processed by the model server",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -822,7 +798,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "9.1.0",
+      "pluginVersion": "9.1.8",
       "targets": [
         {
           "datasource": {
@@ -836,7 +812,7 @@
           "refId": "A"
         }
       ],
-      "title": "Active Inference Requests",
+      "title": "Currently Processed Requests",
       "type": "gauge"
     }
   ],
@@ -920,8 +896,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "OpenVINO Model Server - Model Metrics",
-  "uid": "Bdb-6G4Vk",
-  "version": 26,
+  "title": "OpenVINO Model Server - Model Metrics - github",
+  "uid": "Bdb-6G4Vk-github",
+  "version": 2,
   "weekStart": ""
 }
