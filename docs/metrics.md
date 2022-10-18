@@ -31,18 +31,20 @@ Default metrics
 | Type      | Name | Labels | Description |
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_streams | name,version | Number of OpenVINO execution streams |
-| gauge      | ovms_current_requests | name,version | Number of inference requests currently in process |
+| gauge      | ovms_current_requests | name,version | Number of requests being currently processed by the model server |
 | counter      | ovms_requests_success | api,interface,method,name,version | Number of successful requests to a model or a DAG. |
 | counter      | ovms_requests_fail | api,interface,method,name,version | Number of failed requests to a model or a DAG. |
 | histogram      | ovms_request_time_us | interface,name,version | Processing time of requests to a model or a DAG. |
 | histogram      | ovms_inference_time_us | name,version | Inference execution time in the OpenVINO backend. |
-| histogram      | ovms_wait_for_infer_req_time_us | name,version | Request waiting time in the scheduling queue. |
+| histogram      | ovms_wait_for_infer_req_time_us | name,version | Request waiting time in the scheduling queue. Indicates how long the request has to wait before required resources are assigned to it. |
 
 Optional metrics
 | Type      | Name | Labels | Description |
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_infer_req_queue_size | name,version | Inference request queue size (nireq). |
-| gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference request from the processing queue. |
+| gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference requests from the processing queue that are now either in the data loading or inference process. |
+
+> **Note**: While `ovms_current_requests` and `ovms_infer_req_active` both indicate how much resources are engaged in the requests processing, they are quite distinct. A request is counted in `ovms_current_requests` metric starting as soon as it's received by the server and stays there until the response is sent back to the user. The `ovms_infer_req_active` counter informs about the number of OpenVINO Infer Requests that are bound to user requests and are either loading the data or already running inference. 
 
 Labels description
 | Name      | Values |  Description |
@@ -214,3 +216,21 @@ DAG metrics
 
 The remaining metrics track the execution for the individual models in the pipeline separately.
 It means that each request to the DAG pipeline will update also the metrics for all individual models used as the execution nodes.
+
+## Visualize with Grafana
+
+With server metrics being scraped by [Prometheus](https://prometheus.io/) it is possible to integrate [Grafana](https://grafana.com/) to visualize them on the dashboards. Once you have Grafana configured with Prometheus as a data source, you can create your own dashboard or import one. 
+
+In OpenVINO Model Server repository you can find [grafana_dashboard.json](https://github.com/openvinotoolkit/model_server/blob/develop/deploy/grafana_dashboard.json) file that can be used to visualize per model metrics like:
+- Throughput [RPS] - number of requests being processed by the model per second.
+- Mean Latency [ms] - latency averaged across all requests processed by the model in a certain timeframe.
+- Latency Quantile [ms] - value of latency for quantiles [0.75, 0.90, 0.99], meaning the latency that has NOT been exceeded by 75%, 90% and 99% of the requests.
+- Latency Distribution [%] - distribution of the latencies across the buckets.
+- Mean Inference Time [ms] - time of inference execution, averaged across all requests processed by the model in a certain timeframe.
+- Mean Time of Request Waiting For Inference [ms] - time of a request waiting for the inference execution, averaged across all requests processed by the model in a certain timeframe.
+- Currently Processed Requests - Number of requests being currently processed by the model server.
+
+The dashboard works with three variables: `model_name`, `model_version` and `interface` that determine the model instance and interface (gRPC or REST) of interest. The `interface` value is ignored for panels with: `Mean Inference Time`, `Mean Time of Request Waiting For Inference`, `Currently Processed Requests` as they concern only backend performance and are interface agnostic.
+
+![Service Performance Metrics](service_performance.png)
+![Backend Performance Metrics](backend_performance.png)
