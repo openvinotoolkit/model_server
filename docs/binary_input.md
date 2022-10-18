@@ -1,4 +1,4 @@
-# Support for Binary Input Data {#ovms_docs_binary_input}
+# Processing Raw Data {#ovms_docs_binary_input}
 
 @sphinxdirective
 

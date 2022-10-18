@@ -1,4 +1,4 @@
-# Bare Metal and Virtual Hosts {#ovms_docs_baremetal}
+# Starting Model Server Locally {#ovms_docs_baremetal}
 
 OpenVINO™ Model Server includes a C++ implementation of gRPC and RESTful API interfaces defined by TensorFlow Serving. 
 In the backend, it uses OpenVINO&trade; Runtime libraries from OpenVINO&trade; toolkit, which speeds up the execution on CPU, and enables it on iGPU and Movidius devices.

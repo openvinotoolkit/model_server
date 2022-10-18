@@ -1,4 +1,4 @@
-# Serving Stateful Models {#ovms_docs_stateful_models}
+# Working with Stateful Models {#ovms_docs_stateful_models}
 
 ## Stateless vs Stateful Models <a name="stateful_models"></a>
 

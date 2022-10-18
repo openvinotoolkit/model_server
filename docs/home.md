@@ -7,21 +7,13 @@
    :hidden:
 
    ovms_docs_quick_start_guide
-   ovms_docs_architecture
-   ovms_docs_models_repository
    ovms_docs_starting_server
-   ovms_docs_server_api
-   ovms_docs_clients
+   ovms_docs_server_app
    ovms_docs_dag
-   ovms_docs_binary_input
-   ovms_docs_model_cache
-   ovms_docs_metrics
-   ovms_sample_cpu_extension
-   ovms_docs_dynamic_input
    ovms_docs_stateful_models
-   ovms_docs_custom_loader
+   ovms_docs_binary_input
    ovms_docs_performance_tuning
-   ovms_docs_kubernetes
+   ovms_docs_advanced
    ovms_docs_demos
    ovms_docs_troubleshooting
 

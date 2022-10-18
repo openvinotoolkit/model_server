@@ -1,4 +1,4 @@
-# Directed Acyclic Graph (DAG) Scheduler {#ovms_docs_dag}
+# Serving Pipelines {#ovms_docs_dag}
 
 @sphinxdirective
 

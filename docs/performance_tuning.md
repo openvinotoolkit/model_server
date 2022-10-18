@@ -1,4 +1,4 @@
-# Performance tuning {#ovms_docs_performance_tuning}
+# Tuning Performance {#ovms_docs_performance_tuning}
 
 ## Introduction
 
