@@ -246,7 +246,7 @@ usage: grpc_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
 
 - Usage example
 ```bash
-python grpc_predict_binary_resnet.py --grpc_address localhost --model_name resnet --input_name data --output_name prob --grpc_port 9000 --images input_images.txt
+python grpc_predict_binary_resnet.py --grpc_address localhost --model_name resnet --input_name 0 --output_name 1463 --grpc_port 9000 --images input_images.txt
 
 Start processing:
         Model name: resnet
