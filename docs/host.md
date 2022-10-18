@@ -26,13 +26,16 @@ Here is an example of this process:
 git clone https://github.com/openvinotoolkit/model_server.git
 
 cd model_server   
-   
+
+# replace to 'redhat` if using UBI base image
+export BASE_OS=ubuntu
+
 # automatically build a container from source
 # it will also place a copy of the binary package in the `dist` subfolder in the Model Server root directory
-make docker_build
+make docker_build BASE_OS=${BASE_OS}
 
 # unpack the `tar.gz` file
-cd dist/ubuntu && tar -xzvf ovms.tar.gz
+cd dist/${BASE_OS} && tar -xzvf ovms.tar.gz
 
 ```
 
