@@ -61,7 +61,7 @@ cc_library(
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.5.1",
+    tag = "2.10.0",
     patch_args = ["-p1"],
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
@@ -102,7 +102,7 @@ load(
     "@org_tensorflow//tensorflow:version_check.bzl",
     "check_bazel_version_at_least"
 )
-check_bazel_version_at_least("3.7.2")
+check_bazel_version_at_least("5.1.1")
 
 # Initialize TensorFlow's external dependencies.
 load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")

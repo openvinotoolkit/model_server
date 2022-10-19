@@ -81,7 +81,7 @@ RUN apt update && apt install -y \
             apt clean
 
 # Set up Bazel
-ENV BAZEL_VERSION 3.7.2
+ENV BAZEL_VERSION 5.1.1
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
@@ -197,6 +197,10 @@ COPY external /ovms/external/
 ENV BAZEL_LINKLIBS=-l%:libstdc++.a
 RUN apt install -y python-is-python3
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+# Patch apple build scripts
+RUN cp -rf /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch $(bazel info output_base)/external/build_bazel_rules_apple/
+RUN cd $(bazel info output_base)/external/build_bazel_rules_apple/ && patch -p1 < bazel_rules_apple.patch
+
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 # Copy example clients into build image for static analysis
@@ -221,11 +225,10 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:
 
 COPY check_coverage.bat /ovms/
 # Test Coverage
-RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; bazel coverage --combined_report=lcov //src:ovms_test &&\
-    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
-    ./check_coverage.bat && exit $?
+#RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; bazel coverage --combined_report=lcov //src:ovms_test &&\
+#    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
 
-RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
+#RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && make

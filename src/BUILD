@@ -51,16 +51,32 @@ my_cc_combine(
     genstatic = True,
     output = "libcombined.so",
     deps = [
-        "//src:libovms_shared.so",
-  #      "//src:ovms_lib",
+        #"//src:libovms_shared.so",
+        "//src:ovms_lib",
         ],
+)
+
+cc_binary(
+    name = "diamond_inheritance",
+    srcs = ["main2.cpp"],
+    dynamic_deps = [
+        ":diamond_so",
+    ],
+    deps = [
+    ],
+)
+
+cc_shared_library(
+    name = "diamond_so",
+    dynamic_deps = [],
+    features = [],
+    roots = ["//src:ovms_lib"],
 )
 
 cc_library(
     name = "ovms_lib",
-    linkstatic = True,
- #   linkshared = True,
     hdrs = ["pocapi.hpp"],
+    linkstatic = True,
     srcs = [
         "aliases.hpp",
         "azurestorage.hpp",
