@@ -387,6 +387,8 @@ Status deserializePredictRequest(
     return status;
 }
 
+Status convertBinaryRequestTensorToOVTensorI(const ::inference::ModelInferRequest& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
+
 template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const ::KFSRequest& request,
@@ -408,7 +410,7 @@ Status deserializePredictRequest(
 
             if (requestInputItr->datatype() == "BYTES") {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
-                status = convertBinaryRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo);
+                status = convertBinaryRequestTensorToOVTensorI(request, tensor, tensorInfo);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
                     return status;
