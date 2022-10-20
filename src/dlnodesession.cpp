@@ -90,11 +90,9 @@ Status DLNodeSession::requestExecuteRequiredResources() {
 
 Status DLNodeSession::prepareInputsAndModelForInference() {
     OVMS_PROFILE_FUNCTION();
-    std::optional<Dimension> requestedBatchSize = std::nullopt;
-    std::map<std::string, shape_t> requestedReshapes;
-
     // Validate each tensor against its OV tensor info
     const auto& inputsInfo = this->model->getInputsInfo();
+    Status status;
     for (const auto& kv : this->inputHandler->getInputs()) {
         const auto& name = kv.first;
         auto& tensor = kv.second;
@@ -108,47 +106,22 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
             return Status(StatusCode::INVALID_MISSING_INPUT, details);
         }
         auto& inputInfo = *it->second;
-        auto status = validate(tensor, inputInfo);
+        status = validate(tensor, inputInfo);
         if (status.ok()) {
             continue;
         }
 
-        // If precision is incorrect, perform conversion
         if (status == StatusCode::INVALID_PRECISION) {
             return status;
         }
-
-        // If batch size is incorrect, perform model batch size change if allowed (shape mode=auto or batch size=auto)
         if (status == StatusCode::INVALID_BATCH_SIZE) {
-            if (this->model->getModelConfig().getBatchingMode() == Mode::AUTO) {
-                requestedBatchSize = tensor.get_shape()[0];
-            } else if (this->model->getModelConfig().isShapeAuto(name)) {
-                requestedReshapes[name] = tensor.get_shape();
-            } else {
-                return status;
-            }
+            return status;
         }
-
-        // If shape is incorrect, perform reshape if allowed (mode=auto)
         if (status == StatusCode::INVALID_SHAPE) {
-            if (!this->model->getModelConfig().isShapeAuto(name)) {
-                return status;
-            }
-            requestedReshapes[name] = tensor.get_shape();
-        }
-    }
-    if (requestedReshapes.size() > 0) {
-        auto status = this->model->reloadModel(std::nullopt, requestedReshapes, this->modelUnloadGuard);
-        if (!status.ok()) {
-            return status;
-        }
-    } else if (requestedBatchSize.has_value()) {
-        auto status = this->model->reloadModel(requestedBatchSize, {}, this->modelUnloadGuard);
-        if (!status.ok()) {
             return status;
         }
     }
-    return StatusCode::OK;
+    return status;
 }
 
 Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tensorInfo) {
