@@ -14,5 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+int main(int argc, char** argv);
 int OVMS_Start(int argc, char** argv);
 void OVMS_Infer(char* name, float* data, float* output);

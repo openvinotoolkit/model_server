@@ -26,6 +26,10 @@
 
 using ovms::Server;
 
+int main(int argc, char** argv){
+    return 0;
+}
+
 int OVMS_Start(int argc, char** argv) {
     Server& server = Server::instance();
     return server.start(argc, argv);
