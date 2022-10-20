@@ -28,7 +28,7 @@ index 36c925a..86a5ba9 100644
    // we have to manually turn OPTIONS and PATCH flag on documentation:
    // (http://www.wangafu.net/~nickm/libevent-2.0/doxygen/html/http_8h.html)
 diff --git a/tensorflow_serving/util/net_http/server/public/BUILD b/tensorflow_serving/util/net_http/server/public/BUILD
-index e7f96d9..905ab4e 100644
+index e7f96d9..89d1a9c 100644
 --- a/tensorflow_serving/util/net_http/server/public/BUILD
 +++ b/tensorflow_serving/util/net_http/server/public/BUILD
 @@ -2,9 +2,7 @@
@@ -38,8 +38,7 @@ index e7f96d9..905ab4e 100644
 -        ":http_server_clients",
 -        "//tensorflow_serving:internal",
 -        "//tensorflow_serving/util/net_http:__subpackages__",
-+        "//visibility:public"
++        "//visibility:public",
      ],
  )
 
- 
