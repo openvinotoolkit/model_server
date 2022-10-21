@@ -109,7 +109,6 @@ cc_shared_library(
 cc_library(
     name = "ovms_lib",
     hdrs = ["pocapi.hpp"],
-    linkstatic = True,
     srcs = [
         "aliases.hpp",
         "azurestorage.hpp",
@@ -334,6 +333,12 @@ cc_library(
     visibility = [
         "//visibility:public",
     ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+    ]
 )
 
 cc_binary(
