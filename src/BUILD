@@ -43,30 +43,9 @@ cc_library(
 )
 
 load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
-load(":my_cc_combine.bzl", "my_cc_combine")
-
-my_cc_combine(
-    name = "hello_combined",
-    # Here merge all the static libraries into one static library
-    genstatic = True,
-    output = "libcombined.so",
-    deps = [
-        #"//src:libovms_shared.so",
-        "//src:ovms_lib",
-        ],
-)
-
-cc_binary(
-    name = "diamond_inheritance",
-    srcs = [],
-    dynamic_deps = [
-        ":diamond_so",
-    ],
-    deps = [],
-)
 
 cc_shared_library(
-    name = "diamond_so",
+    name = "libovms_shared.so",
     dynamic_deps = [],
     static_deps = ["@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
@@ -552,7 +531,6 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
- #       "//src:libovms_shared.so",
     ],
     linkstatic = True,
 )
@@ -575,31 +553,8 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
- #       "//src:libovms_shared.so",
     ],
     linkstatic = False,
-)
-
-cc_binary(
-    name = "libovms_shared.so",
-    srcs = [
-    ],
-    linkopts = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-    ],
-    copts = [
-        "-Wconversion",
-        "-Werror",
-    ],
-    deps = [
-        "//src:ovms_lib",
-        #"//src/ovms_lib:ovms_lib",
-    ],
-    linkstatic = True,
-    linkshared = True,
 )
 
 cc_test(
