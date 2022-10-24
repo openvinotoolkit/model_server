@@ -54,7 +54,6 @@ OpenVINO&trade; Model Server works with [Bare Metal Hosts](host.md) as well as [
 - [metrics](metrics.md) - metrics compatible with Prometheus standard
 
 A demonstration on how to use OpenVINO Model Server can be found in the [Quickstart guide](ovms_quickstart.md). 
-For more information on using Model Server in various scenarios you can check the following guides:
 
 ## Additional Resources
 
