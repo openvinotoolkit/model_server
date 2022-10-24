@@ -1,4 +1,4 @@
-# Preparing Model Storage {#ovms_docs_models_repository}
+# Creating Model Repository {#ovms_docs_models_repository}
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the three formats:
 - [OpenVINO IR](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
