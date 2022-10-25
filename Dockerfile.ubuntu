@@ -194,7 +194,6 @@ WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 
-ENV BAZEL_LINKLIBS=-l%:libstdc++.a
 RUN apt install -y python-is-python3
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
@@ -222,9 +221,9 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:
 
 COPY check_coverage.bat /ovms/
 # Test Coverage
-#RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; bazel coverage --combined_report=lcov //src:ovms_test &&\
-#    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
-#    ./check_coverage.bat && exit $?
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; bazel coverage --combined_report=lcov //src:ovms_test &&\
+    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
+    ./check_coverage.bat && exit $?
 
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
