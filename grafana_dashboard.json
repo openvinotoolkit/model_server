@@ -1,0 +1,903 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 2,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 16,
+      "panels": [],
+      "title": "Service Performance",
+      "type": "row"
+    },
+    {
+      "datasource": {},
+      "description": "Number of requests being processed by the model per second",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "RPS"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "9.1.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(ovms_requests_success{method=~\"ModelInfer|Predict\", name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m]))",
+          "legendFormat": "RPS",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Throughput [RPS]",
+      "type": "gauge"
+    },
+    {
+      "datasource": {},
+      "description": "Latency averaged across all requests processed by the model in a certain timeframe",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mean_latency"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 6,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "9.1.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "((sum(rate(ovms_request_time_us_sum{name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m])) / 1000) / sum(rate(ovms_request_time_us_count{name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m])))",
+          "legendFormat": "mean_latency",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Mean Latency [ms]",
+      "type": "gauge"
+    },
+    {
+      "datasource": {},
+      "description": "Value of latency for quantiles [0.75, 0.90, 0.99], meaning the latency that has NOT been exceeded by 75%, 90% and 99% of the requests",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.75, sum by(le) (rate(ovms_request_time_us_bucket{name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m]))) / 1000",
+          "legendFormat": "quantile==0.75",
+          "range": true,
+          "refId": "quantile=0.75"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.90, sum by (le) (rate(ovms_request_time_us_bucket{name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m]))) / 1000",
+          "hide": false,
+          "legendFormat": "quantile==0.90",
+          "range": true,
+          "refId": "quantile=0.90"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(ovms_request_time_us_bucket{name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m]))) / 1000",
+          "hide": false,
+          "legendFormat": "quantile==0.99",
+          "range": true,
+          "refId": "quantile=0.99"
+        }
+      ],
+      "title": "Latency Quantile [ms] (q=0.75, 0.90, 0.99)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {},
+      "description": "Distribution of the latencies across the buckets",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 25
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 27,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "pluginVersion": "9.1.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "(sum by (le) (rate(ovms_request_time_us_bucket{name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m])) / scalar((sum by (le) (rate(ovms_request_time_us_count{name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m])))) * 100)",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Latency Distribution [%]",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "10": true,
+              "18": true,
+              "32": true,
+              "58": true,
+              "104": true,
+              "188": true,
+              "340": true,
+              "612": true,
+              "1101": true,
+              "1983": true,
+              "3570": false,
+              "2294682": false,
+              "4130428": true,
+              "7434771": true,
+              "13382588": true,
+              "24088659": true,
+              "43359586": true,
+              "78047255": true,
+              "140485060": true,
+              "252873108": true,
+              "455171596": true,
+              "819308872": true,
+              "1474755971": true,
+              "+Inf": true,
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "10": "10 us",
+              "18": "18 us",
+              "32": "32 us",
+              "58": "58 us",
+              "104": "104 us",
+              "188": "108 us ",
+              "340": "340 us ",
+              "612": "612 us",
+              "1101": "1 ms",
+              "1983": "2 ms",
+              "3570": "3 ms",
+              "6426": "6 ms",
+              "11568": "11 ms",
+              "20822": "21 ms",
+              "37481": "37 ms",
+              "67466": "67 ms",
+              "121439": "121 ms",
+              "218591": "218 ms",
+              "393464": "393 ms",
+              "708235": "708 ms",
+              "1274823": "1 s",
+              "2294682": "2 s",
+              "4130428": "4 s",
+              "7434771": "7 s",
+              "13382588": "13 s",
+              "24088659": "24 s",
+              "43359586": "43 s",
+              "78047255": "78 s",
+              "140485060": "140 s",
+              "252873108": "252 s",
+              "455171596": "455 s",
+              "819308872": "819 s ",
+              "1474755971": "1474 s"
+            }
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {},
+      "description": "Apdex score calculated as:\n(num_samples < 0,t1>  +  num_samples < t1,t2> / 2) / num_samples",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "(\r\n  sum(rate(ovms_request_time_us_bucket{le=\"67466\", name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m])) +\r\n  ((sum(rate(ovms_request_time_us_bucket{le=\"218591\", name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m])) - \r\n  sum(rate(ovms_request_time_us_bucket{le=\"67466\", name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m]))) / 2)\r\n) / sum(rate(ovms_request_time_us_count{name=\"$model_name\", version=\"$model_version\", interface=\"$interface\"}[1m]))",
+          "legendFormat": "apdex_score",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Apdex Score ( t1=67ms, t2=218 ms )",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {},
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "id": 31,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "9.1.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "count_values(\"pod\", ovms_streams{name=\"$model_name\", version=\"$model_version\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Number of replicas",
+      "type": "gauge"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 2,
+      "panels": [],
+      "title": "Backend Performance",
+      "type": "row"
+    },
+    {
+      "datasource": {},
+      "description": "Time of inference execution, averaged across all requests processed by the model in a certain timeframe",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "inference_time"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 22,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "9.1.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(ovms_inference_time_us_sum{name=\"$model_name\", version=\"$model_version\"}[1m])) / 1000) / sum(rate(ovms_inference_time_us_count{name=\"$model_name\", version=\"$model_version\"}[1m]))",
+          "legendFormat": "inference_time",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Mean Inference Time [ms]",
+      "type": "gauge"
+    },
+    {
+      "datasource": {},
+      "description": "Time of a request waiting for the inference execution, averaged across all requests processed by the model in a certain timeframe",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "queue_time"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 23,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "9.1.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(ovms_wait_for_infer_req_time_us_sum{name=\"$model_name\", version=\"$model_version\"}[1m])) / 1000) / sum(rate(ovms_wait_for_infer_req_time_us_count{name=\"$model_name\", version=\"$model_version\"}[1m]))",
+          "legendFormat": "queue_time",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Mean Time of Request Waiting For Inference [ms]",
+      "type": "gauge"
+    },
+    {
+      "datasource": {},
+      "description": "Number of requests being currently processed by the model server",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 34
+      },
+      "id": 25,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "9.1.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "czgrlG4Vk"
+          },
+          "editorMode": "code",
+          "expr": "sum(ovms_current_requests{name=\"$model_name\", version=\"$model_version\"})",
+          "legendFormat": "active_requests",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Currently Processed Requests",
+      "type": "gauge"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "hide": 0,
+        "label": "",
+        "name": "model_name",
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "1",
+          "value": "1"
+        },
+        "hide": 0,
+        "name": "model_version",
+        "options": [
+          {
+            "selected": true,
+            "text": "1",
+            "value": "1"
+          }
+        ],
+        "query": "1",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "gRPC",
+          "value": "gRPC"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "interface",
+        "options": [
+          {
+            "selected": true,
+            "text": "gRPC",
+            "value": "gRPC"
+          },
+          {
+            "selected": false,
+            "text": "REST",
+            "value": "REST"
+          }
+        ],
+        "query": "gRPC,REST",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "OpenVINO Model Server - Model Metrics - github",
+  "uid": "Bdb-6G4Vk-github",
+  "version": 2,
+  "weekStart": ""
+}
