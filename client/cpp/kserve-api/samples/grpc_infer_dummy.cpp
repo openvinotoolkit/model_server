@@ -117,8 +117,6 @@ int main(int argc, char** argv) {
             input_data.size() * sizeof(float)),
         "unable to set data for input");
 
-    // Generate the outputs to be requested.
-
 
     tc::InferOptions options(model_name);
     if (args.count("model_version"))
@@ -162,14 +160,14 @@ int main(int argc, char** argv) {
     tc::InferStat infer_stat;
     client->ClientInferStat(&infer_stat);
     std::cout << "======Client Statistics======" << std::endl;
-    std::cout << "Completed request count "
+    std::cout << "Number of requests: "
               << infer_stat.completed_request_count << std::endl;
-    std::cout << "Cumulative total request time "
-              << double(infer_stat.cumulative_total_request_time_ns)/1000000 << " ms" << std::endl;
-    std::cout << "Cumulative send time "
-              << double(infer_stat.cumulative_send_time_ns)/1000000 << " ms" << std::endl;
-    std::cout << "Cumulative receive time "
-              << double(infer_stat.cumulative_receive_time_ns)/1000000 << " ms" << std::endl;
+    std::cout << "Total processing time: "
+              << double(infer_stat.cumulative_total_request_time_ns)/1.0e+6 << " ms" << std::endl;
+    std::cout << "Latency: "
+              << double(infer_stat.cumulative_total_request_time_ns/infer_stat.completed_request_count)/1.0e+6 << " ms" << std::endl;
+    std::cout << "Requests per second: "
+              << double(1.0e+10/infer_stat.cumulative_total_request_time_ns) << std::endl;
 
     return 0;
 }

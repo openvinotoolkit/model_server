@@ -17,6 +17,18 @@ cmake . && make
 
 ## GRPC Examples <a name="grpc-api"></a>
 
+
+## GRPC Examples with Dummy Model
+
+This section demonstrates inference on a simple model, which increments each provided value. 
+
+### Start the Model Server Container with Dummy Model
+```Bash
+docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 
+```
+
+Once you finish above steps, you are ready to run the samples.
+
 ### Run the Client to get server liveness <a name="grpc-server-live"></a>
 
 - Command
@@ -25,7 +37,7 @@ cmake . && make
 ./grpc_server_live --help
 Sends requests via KServe gRPC API to check if server is alive.
 Usage:
-  grpc_infer_dummy [OPTION...]
+  grpc_server_live [OPTION...]
 
   -h, --help              Show this help message and exit
       --grpc_address arg  Specify url to grpc service.  (default: 
@@ -40,17 +52,6 @@ Usage:
 ./grpc_server_live --grpc_port 9000 --grpc_address localhost
 Server Live: True
 ```
-
-## GRPC Examples with Dummy Model
-
-This section demonstrates inference on a simple model, which increments each provided value. 
-
-### Start the Model Server Container with Dummy Model
-```Bash
-docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 
-```
-
-Once you finish above steps, you are ready to run the samples.
 
 ### Run the Client to perform inference
 
