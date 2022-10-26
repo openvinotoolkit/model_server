@@ -43,7 +43,7 @@ Server Live: True
 
 ## GRPC Examples with Dummy Model
 
-This section demonstrates request to simple model, which increments each provided value. 
+This section demonstrates inference on a simple model, which increments each provided value. 
 
 ### Start the Model Server Container with Dummy Model
 ```Bash
