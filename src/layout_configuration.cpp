@@ -24,6 +24,8 @@
 
 namespace ovms {
 
+const char LayoutConfiguration::LAYOUT_CONFIGURATION_DELIMETER = ':';
+
 LayoutConfiguration::LayoutConfiguration(const char* layout) :
     LayoutConfiguration(std::string(layout)) {
 }
