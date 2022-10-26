@@ -43,23 +43,50 @@ cc_library(
 )
 
 load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
-load(":my_cc_combine.bzl", "my_cc_combine")
 
-my_cc_combine(
-    name = "hello_combined",
-    # Here merge all the static libraries into one static library
-    genstatic = True,
-    output = "libcombined.so",
-    deps = [
-        "//src:libovms_shared.so",
-  #      "//src:ovms_lib",
-        ],
+cc_shared_library(
+    name = "libovms_shared.so",
+    dynamic_deps = [],
+    static_deps = ["@tensorflow_serving//:__subpackages__",
+        "@minitrace//:__subpackages__",
+        "@rapidjson//:__subpackages__",
+        "@spdlog//:__subpackages__",
+        "@fmtlib//:__subpackages__",
+        "@cxxopts//:__subpackages__",
+        "@awssdk//:__subpackages__",
+        "@boost//:__subpackages__",
+        "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
+        "@curl//:__subpackages__",
+        "@com_github_google_crc32c//:__subpackages__",
+        "@com_github_googleapis_google_cloud_cpp_common//:__subpackages__",
+        "@com_github_libevent_libevent//:__subpackages__",
+        "@com_google_protobuf//:__subpackages__",
+        "@com_github_tencent_rapidjson//:__subpackages__",
+        "@org_tensorflow//:__subpackages__",
+        "@com_google_absl//:__subpackages__",
+        "@gif//:__subpackages__",
+        "@libjpeg_turbo//:__subpackages__",
+        "@farmhash_archive//:__subpackages__",
+        "@fft2d//:__subpackages__",
+        "@highwayhash//:__subpackages__",
+        "@com_googlesource_code_re2//:__subpackages__",
+        "@snappy//:__subpackages__",
+        "@double_conversion//:__subpackages__",
+        "@nsync//:__subpackages__",
+        "@eigen_archive//:__subpackages__",
+        "@openvino//:__subpackages__",
+        "@com_github_jupp0r_prometheus_cpp//:__subpackages__",
+        "@//:__subpackages__",
+        "@com_github_grpc_grpc//:__subpackages__",
+        "@upb//:__subpackages__",
+        "@zlib//:__subpackages__",
+    ],
+    features = [],
+    roots = ["//src:ovms_lib"],
 )
 
 cc_library(
     name = "ovms_lib",
-    linkstatic = True,
- #   linkshared = True,
     hdrs = ["pocapi.hpp"],
     srcs = [
         "aliases.hpp",
@@ -285,6 +312,12 @@ cc_library(
     visibility = [
         "//visibility:public",
     ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+    ]
 )
 
 cc_binary(
@@ -498,7 +531,6 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
- #       "//src:libovms_shared.so",
     ],
     linkstatic = True,
 )
@@ -521,31 +553,8 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
- #       "//src:libovms_shared.so",
     ],
     linkstatic = False,
-)
-
-cc_binary(
-    name = "libovms_shared.so",
-    srcs = [
-    ],
-    linkopts = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-    ],
-    copts = [
-        "-Wconversion",
-        "-Werror",
-    ],
-    deps = [
-        "//src:ovms_lib",
-        #"//src/ovms_lib:ovms_lib",
-    ],
-    linkstatic = True,
-    linkshared = True,
 )
 
 cc_test(

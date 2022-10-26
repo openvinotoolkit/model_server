@@ -81,7 +81,7 @@ RUN apt update && apt install -y \
             apt clean
 
 # Set up Bazel
-ENV BAZEL_VERSION 3.7.2
+ENV BAZEL_VERSION 5.3.1
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
@@ -194,9 +194,9 @@ WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 
-ENV BAZEL_LINKLIBS=-l%:libstdc++.a
 RUN apt install -y python-is-python3
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 # Copy example clients into build image for static analysis
@@ -231,6 +231,9 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
 RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
+
+# C api shared library
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libovms_shared.so
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
