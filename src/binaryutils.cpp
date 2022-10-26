@@ -75,9 +75,11 @@ static cv::Mat convertStringToMat(const std::string& image) {
     OVMS_PROFILE_FUNCTION();
     std::vector<unsigned char> data(image.begin(), image.end());
     cv::Mat dataMat(data, true);
+    cv::cvtColor(dataMat,dataMat,cv::COLOR_GRAY2BGR);
+    return dataMat;
 
     try {
-        return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
+        return cv::imdecode(dataMat, 1);
     } catch (const cv::Exception& e) {
         SPDLOG_DEBUG("Error during string_val to mat conversion: {}", e.what());
         return cv::Mat{};
@@ -353,6 +355,7 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
 
     for (int i = 0; i < getBinaryInputsSize(src); i++) {
         cv::Mat image = convertStringToMat(getBinaryInput(src, i));
+        SPDLOG_DEBUG("-----");
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
