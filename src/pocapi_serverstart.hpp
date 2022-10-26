@@ -19,11 +19,6 @@
 struct OVMS_Server;
 
 struct OVMS_ServerGeneralOptions;
-struct OVMS_ServerMultiModelOptions;    
-
-struct OVMS_ServerMetricOption;         // TODO: This will might be out of scope for POC, multi model would be used instead.
-struct OVMS_ServerPluginConfigOption;   // TODO: This will might be out of scope for POC, multi model would be used instead.
-struct OVMS_ServerSingleModelOptions;   // TODO: This will might be out of scope for POC, multi model would be used instead.
 
 typedef enum OVMSSERVER_loglevel_enum {
   OVMSSERVER_LOG_TRACE,
@@ -74,109 +69,6 @@ void OVMS_ServerGeneralOptionsSetCpuExtensionPath(OVMS_ServerGeneralOptions* opt
 
 
 ////
-//// OVMS_ServerPluginConfigOption (Optional for POC)
-//// Structure for plugin config map
-////
-// Allocates memory for plugin config container and returns ptr
-void OVMS_ServerPluginConfigOptionNew(OVMS_ServerPluginConfigOption** options);
-// Deallocates plugin config container for given ptr
-void OVMS_ServerPluginConfigOptionDelete(OVMS_ServerPluginConfigOption* options);
-// Adds new option with key and value
-void OVMS_ServerPluginConfigOptionAdd(OVMS_ServerPluginConfigOption* option,
-    const char* key,
-    const char* value);
-
-
-////
-//// OVMS_ServerMetricOption (Optional for POC)
-//// Structure for metric configuration
-////
-// Allocates memory for metric options and returns ptr
-void OVMS_ServerMetricOptionNew(OVMS_ServerMetricOption** option);
-// Deallocates metric options for given ptr
-void OVMS_ServerMetricOptionDelete(OVMS_ServerMetricOption* option);
-// Enables or disables the metrics
-// By default disabled
-void OVMS_ServerMetricOptionEnable(OVMS_ServerMetricOption* option,
-    bool enable);
-// When enabled, allows switching family name on and off by adding desired names
-// When not specified only default group is enabled
-void OVMS_ServerMetricOptionAddFamily(OVMS_ServerMetricOption* option,
-    const char* metric_family_name);  // TODO: Possibly use enum?
-
-
-////
-//// OVMS_ServerSingleModelOptions (Optional for POC)
-//// Options for single model server without config.json file
-////
-// Allocates memory for single model server options and returns ptr
-void OVMS_ServerSingleModelOptionsNew(OVMS_ServerSingleModelOptions** options);
-// Deallocates options memory for given ptr
-void OVMS_ServerSingleModelOptionsDelete(OVMS_ServerSingleModelOptions* options);
-
-// --model_name
-void OVMS_ServerSingleModelOptionsSetModelName(OVMS_ServerSingleModelOptions* options,
-    const char* model_name);
-// --model_path
-void OVMS_ServerSingleModelOptionsSetModelPath(OVMS_ServerSingleModelOptions* options,
-    const char* model_path);
-
-// --batch_size
-// accepting only range positive numbers
-void OVMS_ServerSingleModelOptionsSetStaticBatchSize(OVMS_ServerSingleModelOptions* options,
-    uint64_t batch_size);
-// Allows accepting range of batch size (only positive numbers)
-// min must be lower than max
-void OVMS_ServerSingleModelOptionsSetBatchSizeRange(OVMS_ServerSingleModelOptions* options,
-    uint64_t min,
-    uint64_t max);
-// Allows accepting dynamic batch size (-1 in OVMS)
-void OVMS_ServerSingleModelOptionsSetDynamicBatchSize(OVMS_ServerSingleModelOptions* options);
-// Accepts automatic reloading to meet requests batch size (auto)
-void OVMS_ServerSingleModelOptionsSetAutoBatchSize(OVMS_ServerSingleModelOptions* options);
-
-// --layout
-// Allows transforming the accepted input layout (alter the model) or override deduced one 
-void OVMS_ServerSingleModelOptionsSetLayout(OVMS_ServerSingleModelOptions* options,
-    const char* layout);
-
-// --model_version_policy
-// Sets model version policy to latest N models
-void OVMS_ServerSingleModelOptionsSetModelVersionPolicyLatestVersionsNum(OVMS_ServerSingleModelOptions* options,
-    uint64_t num);
-// Sets model version policy to all
-void OVMS_ServerSingleModelOptionsSetModelVersionPolicyAll(OVMS_ServerSingleModelOptions* options);
-// Sets model version policy to specific and adds given specific versions to the list
-void OVMS_ServerSingleModelOptionsSetModelVersionPolicyLatestSpecificAndAdd(OVMS_ServerSingleModelOptions* options,
-    uint64_t specific_version);
-
-// --nireq
-void OVMS_ServerSingleModelOptionsSetNireq(OVMS_ServerSingleModelOptions* options,
-    uint64_t nireq);
-// --target_device
-void OVMS_ServerSingleModelOptionsSetTargetDevice(OVMS_ServerSingleModelOptions* options,
-    const char* target_device);
-// --plugin_config
-void OVMS_ServerSingleModelOptionsSetPluginConfig(OVMS_ServerSingleModelOptions* options,
-    OVMS_ServerPluginConfigOption* plugin_config);
-// --stateful
-void OVMS_ServerSingleModelOptionsSetStateful(OVMS_ServerSingleModelOptions* options,
-    bool is_stateful);
-// --metrics_enable/--metrics_list
-void OVMS_ServerSingleModelOptionsSetMetricConfig(OVMS_ServerSingleModelOptions* options,
-    OVMS_ServerMetricOption* metric_config);
-// --idle_sequence_cleanup
-void OVMS_ServerSingleModelOptionsEnableIdleSequenceCleanup(OVMS_ServerSingleModelOptions* options,
-    bool enable);
-// --low_latency_transformation
-void OVMS_ServerSingleModelOptionsEnableLowLatencyTransformation(OVMS_ServerSingleModelOptions* options,
-    bool enable);
-// --max_sequence_number
-void OVMS_ServerSingleModelOptionsSetMaxSequenceNumber(OVMS_ServerSingleModelOptions* options,
-    int64_t max_sequence_number);
-
-
-////
 //// OVMS_ServerMultiModelOptions
 //// Options for starting multi model server controlled by config.json file
 ////
@@ -199,11 +91,6 @@ void OVMS_ServerNew(OVMS_Server** server);
 // Deallocates server memory for given ptr
 void OVMS_ServerDelete(OVMS_Server* server);
 
-// Start with single model directory (Optional for POC)
-// Return error if already started
-void OVMS_ServerStartSingleModel(OVMS_Server* server,
-    OVMS_ServerGeneralOptions* general_options,
-    OVMS_ServerSingleModelOptions* single_model_specific_options);
 // Start with configuration file config.json
 // Return error if already started
 void OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
