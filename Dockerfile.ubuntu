@@ -195,6 +195,7 @@ COPY external /ovms/external/
 
 RUN apt install -y python-is-python3
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 # Copy example clients into build image for static analysis
@@ -229,6 +230,9 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
 RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
+
+# C api shared library
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libovms_shared.so
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
