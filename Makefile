@@ -227,10 +227,11 @@ endif
 get_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
-	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms/genhtml/ . 2>/dev/null
+	#@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms/genhtml/ . 2>/dev/null
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
-	$(MAKE) check_coverage
-
+	@if [ -d genhtml/src ]; then $(MAKE) check_coverage; \
+	else echo "ERROR: genhtml/src was not generated during build"; \
+	fi
 check_coverage:
 	@echo "Checking if coverage is above threshold..."
 	@docker run $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
