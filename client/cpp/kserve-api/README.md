@@ -4,10 +4,10 @@ OpenVINO Model Server 2022.2 release introduced support for [KServe API](https:/
 
 ## Before you run the samples
 
-### Clone OpenVINO&trade; Model Server GitHub repository and go to the directory with the samples.
+### Clone OpenVINO&trade; Model Server GitHub repository and go to the top directory.
 ```Bash
 git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/client/cpp/kserve-api
+cd model_server
 ```
 
 ### Start the Model Server Container with Dummy Model
