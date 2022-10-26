@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
     std::cout << "Latency: "
               << double(infer_stat.cumulative_total_request_time_ns/infer_stat.completed_request_count)/1.0e+6 << " ms" << std::endl;
     std::cout << "Requests per second: "
-              << double(1.0e+10/infer_stat.cumulative_total_request_time_ns) << std::endl;
+              << double(1.0e+9/infer_stat.cumulative_total_request_time_ns/infer_stat.completed_request_count) << std::endl;
 
     return 0;
 }

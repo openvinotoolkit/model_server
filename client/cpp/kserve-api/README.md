@@ -88,8 +88,8 @@ Usage:
 8 => 9
 9 => 10
 ======Client Statistics======
-completed_request_count 1
-Cumulative total request time 6.70928 ms
-Cumulative send time 0.039253 ms
-Cumulative receive time 0.005686 ms
+Number of requests: 1
+Total processing time: 5.28986 ms
+Latency: 5.28986 ms
+Requests per second: 189.041
 ```
