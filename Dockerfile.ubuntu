@@ -298,6 +298,9 @@ RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && OPENVINO_PATH=/opt/intel/openvino make
 
+# C api shared library
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libovms_shared.so
+
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
 
