@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include <fstream>
 #include <iostream>
+#include <iterator>
+#include <vector>
 #include <string>
 
 #include <cxxopts.hpp>
@@ -39,17 +41,15 @@ namespace tc = triton::client;
         }                                                                \
     }
 
-void Load(std::string fileName, uint8_t* input) {
-    std::vector<uint8_t> data;
+std::vector<uint8_t> Load(std::string fileName) {
+    std::ifstream input(fileName, std::ios::binary);
 
-    cv::Mat img = cv::imread(fileName, cv::IMREAD_COLOR);
-    if (img.empty()) {
-        std::cerr << "error: unable to decode image " << fileName << std::endl;
-        exit(1);
-    }
-    img.convertTo(img, CV_32FC3);
-    cv::resize(img, img, cv::Size(IMG_HEIGHT, IMG_WIDTH));
-    memcpy(input, img.data, img.total() * sizeof(float) * IMG_C);
+    std::vector<uint8_t> bytes(
+         (std::istream_iterator<uint8_t>(input)),
+         (std::istream_iterator<uint8_t>()));
+
+    input.close();
+    return bytes;
 }
 
 int main(int argc, char** argv) {
@@ -91,7 +91,6 @@ int main(int argc, char** argv) {
         tc::InferenceServerGrpcClient::Create(&client, url),
         err);
 
-    std::vector<uint8_t> input_data;
     std::string img;
     int label;
     std::vector<std::string> imgs;
@@ -102,15 +101,14 @@ int main(int argc, char** argv) {
         labels.push_back(label);
     }
 
-    input_data.resize(IMG_HEIGHT * IMG_WIDTH * sizeof(float) * IMG_C);
 
-    std::vector<int64_t> shape{1, IMG_HEIGHT, IMG_WIDTH, IMG_C};
+    std::vector<int64_t> shape{1};
 
     // Initialize the inputs with the data.
     tc::InferInput* input;
 
     FAIL_IF_ERR(
-        tc::InferInput::Create(&input, input_name, shape, "FP32"),
+        tc::InferInput::Create(&input, input_name, shape, "BYTES"),
         "unable to get input");
     std::shared_ptr<tc::InferInput> input_ptr;
     input_ptr.reset(input);
@@ -125,7 +123,7 @@ int main(int argc, char** argv) {
     std::vector<tc::InferResult*> results;
     results.resize(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
-        Load(imgs[i], input_data.data());
+        std::vector<uint8_t> input_data = Load(imgs[i]);
         FAIL_IF_ERR(
             input_ptr->AppendRaw(input_data),
             "unable to set data for input");
