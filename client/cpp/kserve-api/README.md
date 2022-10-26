@@ -10,8 +10,14 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/client/cpp/kserve-api
 ```
 
+### Start the Model Server Container with Dummy Model
+```Bash
+docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 
+```
+
 ### Build client library and samples
 ```Bash
+cd client/cpp/kserve-api
 cmake . && make
 ```
 
@@ -22,10 +28,6 @@ cmake . && make
 
 This section demonstrates inference on a simple model, which increments each provided value. 
 
-### Start the Model Server Container with Dummy Model
-```Bash
-docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 
-```
 
 Once you finish above steps, you are ready to run the samples.
 
