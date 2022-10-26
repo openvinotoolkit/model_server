@@ -36,14 +36,10 @@ class Server {
 
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
-    Server() = default;
     virtual std::unique_ptr<Module> createModule(const std::string& name);
 
 public:
-    static Server& instance() {
-        static Server global;
-        return global;
-    }
+    Server() = default;
     int start(int argc, char** argv);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;

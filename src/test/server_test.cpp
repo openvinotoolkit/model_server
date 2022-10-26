@@ -181,10 +181,8 @@ public:
 };
 
 class MockedServer : public Server {
-protected:
-    MockedServer() = default;
-
 public:
+    MockedServer() = default;
     static MockedServer& instance() {
         static MockedServer global;
         return global;
@@ -221,7 +219,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
 
     SPDLOG_INFO("server should not respond with live when not started");
     requestServerAlive(argv[8], grpc::StatusCode::UNAVAILABLE, false);
-    MockedServer& server = MockedServer::instance();
+    MockedServer server;
     std::thread t([&argv, &server]() {
         ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
     });
@@ -298,12 +296,12 @@ TEST(Server, ServerMetadata) {
         (char*)port.c_str(),
         nullptr};
 
-    ovms::Server& server = ovms::Server::instance();
+    ovms::Server server;
     std::thread t([&argv, &server]() {
         ASSERT_EQ(EXIT_SUCCESS, server.start(7, argv));
     });
     auto start = std::chrono::high_resolution_clock::now();
-    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
+    while ((server.getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
     }
 
@@ -334,7 +332,7 @@ TEST(Server, ProperShutdownInCaseOfStartError) {
         (char*)"--log_level",
         (char*)"DEBUG",
         nullptr};
-    ovms::Server& server = ovms::Server::instance();
+    ovms::Server server;
     std::thread t([&argv, &server]() {
         ASSERT_EQ(EXIT_FAILURE, server.start(11, argv));
     });

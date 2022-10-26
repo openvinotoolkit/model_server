@@ -316,8 +316,7 @@ void Server::shutdownModules() {
 }
 
 int Server::start(int argc, char** argv) {
-    ovms::Server& server = ovms::Server::instance();
-    installSignalHandlers(server);
+    installSignalHandlers(*this);
     try {
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());

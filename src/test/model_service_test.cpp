@@ -367,7 +367,7 @@ TEST_F(TFSModelServiceTest, config_reload) {
         (char*)"--port",
         (char*)port.c_str(),
         nullptr};
-    ovms::Server& server = ovms::Server::instance();
+    ovms::Server server;
     std::thread t([&argv, &server]() {
         ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
     });
