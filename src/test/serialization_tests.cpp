@@ -283,7 +283,7 @@ TEST_F(KFServingGRPCPredict, ValidSerialization) {
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
-    auto status = serializeTensorToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
         content,
         tensorMap[tensorName],
         tensor);
@@ -303,7 +303,7 @@ TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorPrecision
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
-    auto status = serializeTensorToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
         content,
         tensorMap[tensorName],
         tensor);
@@ -316,7 +316,7 @@ TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorShape) {
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
-    auto status = serializeTensorToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
         content,
         tensorMap[tensorName],
         tensor);
@@ -349,7 +349,7 @@ TEST_P(SerializeKFSInferOutputTensor, SerializeTensorProtoShouldSucceedForPrecis
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
     ov::Tensor mockTensor = std::get<1>(inputs);
-    auto status = serializeTensorToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
         content,
         std::get<0>(inputs),
         mockTensor);
@@ -368,7 +368,7 @@ TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldSucceedF
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
-    auto status = serializeTensorToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
         content,
         std::get<0>(inputs),
         std::get<1>(inputs));

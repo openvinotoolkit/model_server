@@ -159,6 +159,63 @@ static void serializeContent(std::string* content, ov::Tensor& tensor) {
     }
 }
 
+static void serializeContent(::inference::ModelInferResponse::InferOutputTensor& responseOutput, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
+    if (responseOutput.datatype() == "FP32") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(float)) {
+            auto value = responseOutput.mutable_contents()->mutable_fp32_contents()->Add();
+            *value = (*(reinterpret_cast<const float*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "INT64") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(int64_t)) {
+            auto value = responseOutput.mutable_contents()->mutable_int64_contents()->Add();
+            *value = (*(reinterpret_cast<const int64_t*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "INT32") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(int32_t)) {
+            auto value = responseOutput.mutable_contents()->mutable_int_contents()->Add();
+            *value = (*(reinterpret_cast<const int32_t*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "INT16") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(int16_t)) {
+            auto value = responseOutput.mutable_contents()->mutable_int_contents()->Add();
+            *value = (*(reinterpret_cast<const int16_t*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "INT8") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(int8_t)) {
+            auto value = responseOutput.mutable_contents()->mutable_int_contents()->Add();
+            *value = (*(reinterpret_cast<const int8_t*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "UINT64") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(uint64_t)) {
+            auto value = responseOutput.mutable_contents()->mutable_uint64_contents()->Add();
+            *value = (*(reinterpret_cast<const uint64_t*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "UINT32") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(uint32_t)) {
+            auto value = responseOutput.mutable_contents()->mutable_uint_contents()->Add();
+            *value = (*(reinterpret_cast<const uint32_t*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "UINT16") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(uint16_t)) {
+            auto value = responseOutput.mutable_contents()->mutable_uint_contents()->Add();
+            *value = (*(reinterpret_cast<const uint16_t*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "UINT8") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(uint8_t)) {
+            auto value = responseOutput.mutable_contents()->mutable_uint_contents()->Add();
+            *value = (*(reinterpret_cast<const uint8_t*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "FP64") {
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(double)) {
+            auto value = responseOutput.mutable_contents()->mutable_fp64_contents()->Add();
+            *value = (*(reinterpret_cast<const double*>((char*)tensor.data() + i)));
+        }
+    } else if (responseOutput.datatype() == "BYTES") {
+        responseOutput.mutable_contents()->add_bytes_contents((char*)tensor.data(), tensor.get_byte_size());
+    }
+}
+
 Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
@@ -176,8 +233,8 @@ Status serializeTensorToTensorProto(
     return StatusCode::OK;
 }
 
-Status serializeTensorToTensorProto(
-    ::KFSResponse::InferOutputTensor& responseOutput,
+Status serializeTensorToTensorProtoRaw(
+    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
@@ -191,6 +248,24 @@ Status serializeTensorToTensorProto(
         return status;
     }
     serializeContent(rawOutputContents, tensor);
+    return StatusCode::OK;
+}
+
+Status serializeTensorToTensorProto(
+    ::KFSResponse::InferOutputTensor& responseOutput,
+    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
+    auto status = serializePrecision(responseOutput, servableOutput, tensor);
+    if (!status.ok()) {
+        return status;
+    }
+    status = serializeShape(responseOutput, servableOutput, tensor);
+    if (!status.ok()) {
+        return status;
+    }
+    serializeContent(responseOutput, tensor);
     return StatusCode::OK;
 }
 
