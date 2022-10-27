@@ -21,12 +21,12 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
 
 #include "tensorinfo.hpp"
-
+#pragma GCC diagnostic pop
 namespace ovms {
 
 using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
