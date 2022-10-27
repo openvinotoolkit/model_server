@@ -175,6 +175,7 @@ cc_library(
         "pipeline.hpp",
         "pipelinedefinition.cpp",
         "pipelinedefinition.hpp",
+        "pipelinedefinitionstatus.cpp",
         "pipelinedefinitionstatus.hpp",
         "pipelinedefinitionunloadguard.cpp",
         "pipelinedefinitionunloadguard.hpp",
