@@ -76,7 +76,8 @@ Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response,
-    outputNameChooser_t outputNameChooser) {
+    outputNameChooser_t outputNameChooser,
+    bool sharedInputContentsUsed = true) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&> protoGetter(response);
