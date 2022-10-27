@@ -73,12 +73,8 @@ static bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision) 
 
 static cv::Mat convertStringToMat(const std::string& image) {
     OVMS_PROFILE_FUNCTION();
-    std::vector<unsigned char> data(image.begin(), image.end());
-    cv::Mat dataMat(data, true);
-    cv::cvtColor(dataMat,dataMat,cv::COLOR_GRAY2BGR);
-    dataMat = cv::imdecode(dataMat, 1);
-    cv::imwrite("test.jpg", dataMat);
-    return dataMat;
+    std::vector<uint8_t> data(image.begin(), image.end());
+    cv::Mat dataMat(data);
 
     try {
         return cv::imdecode(dataMat, 1);
