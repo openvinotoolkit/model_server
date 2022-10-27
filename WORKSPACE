@@ -61,7 +61,7 @@ cc_library(
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.10.0",
+    tag = "2.6.0",
     patch_args = ["-p1"],
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
@@ -88,8 +88,8 @@ cc_library(
 load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
 tensorflow_http_archive(
     name = "org_tensorflow",
-    sha256 = "bc4e9bbeb0136163f283ab8b695bec747cad738963e153ce3b7e414ebffe408f",
-    git_commit = "359c3cdfc5fabac82b3c70b3b6de2b0a8c16874f",
+    sha256 = "70a865814b9d773024126a6ce6fea68fefe907b7ae6f9ac7e656613de93abf87",
+    git_commit = "919f693420e35d00c8d0a42100837ae3718f7927",
     patch = "tf.patch",
     repo_mapping = {"@curl" : "@curl"}
 )
@@ -102,7 +102,7 @@ load(
     "@org_tensorflow//tensorflow:version_check.bzl",
     "check_bazel_version_at_least"
 )
-check_bazel_version_at_least("5.3.1")
+check_bazel_version_at_least("3.7.2")
 
 # Initialize TensorFlow's external dependencies.
 load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
