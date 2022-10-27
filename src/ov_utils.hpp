@@ -21,6 +21,7 @@
 #include <utility>
 
 #include <openvino/openvino.hpp>
+#include <ie_plugin_config.hpp>
 #include <spdlog/spdlog.h>
 
 #include "modelconfig.hpp"
