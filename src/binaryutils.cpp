@@ -76,6 +76,8 @@ static cv::Mat convertStringToMat(const std::string& image) {
     std::vector<unsigned char> data(image.begin(), image.end());
     cv::Mat dataMat(data, true);
     cv::cvtColor(dataMat,dataMat,cv::COLOR_GRAY2BGR);
+    dataMat = cv::imdecode(dataMat, 1);
+    cv::imwrite("test.jpg", dataMat);
     return dataMat;
 
     try {
