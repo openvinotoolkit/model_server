@@ -172,7 +172,7 @@ LABEL description=${PROJECT_NAME}
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp"
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+'`#g" /ovms/src/version.hpp
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; if [ "$build_type" == "dbg" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+'`-debug#g" /ovms/src/version.hpp ; else sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+'`#g" /ovms/src/version.hpp ; fi ;
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
