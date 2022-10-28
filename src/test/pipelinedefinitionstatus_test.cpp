@@ -281,3 +281,23 @@ TEST(PipelineDefinitionStatus, ValidationFailFromFailedRequiredRevalidation) {
     pds.handle(ValidationFailedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
+TEST(PipelineDefinitionStatus, ConvertToModelStatus) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::LOADING, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::AVAILABLE, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::AVAILABLE, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+    pds.handle(ValidationFailedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::LOADING, ModelVersionStatusErrorCode::FAILED_PRECONDITION)), pds.convertToModelStatus());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::LOADING, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+    pds.handle(RetireEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::END, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+}
