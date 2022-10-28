@@ -1,4 +1,4 @@
-# Advanced Topics {#ovms_docs_advanced}
+# Advanced Features {#ovms_docs_advanced}
 
 @sphinxdirective
 

@@ -1,4 +1,4 @@
-# Writing application to use serving {#ovms_docs_server_app}
+# Writing Application {#ovms_docs_server_app}
 
 @sphinxdirective
 

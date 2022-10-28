@@ -13,8 +13,8 @@
    ovms_docs_multiple_models
    ovms_docs_parameters
    ovms_docs_cloud_storage
-   ovms_docs_kubernetes
    ovms_docs_target_devices
+   ovms_docs_kubernetes
    ovms_docs_security
    
 
@@ -72,20 +72,6 @@ that are easy to use and manage, for example, in Kubernetes deployments.
 
 [Learn more](using_cloud_storage.md)
 
-## Setting Model Versioning Policies for served models
-
-Take advantage of the model repository structure. Add or delete version directories and Model Server will automatically adjust. 
-Take full control over the served model versions by setting a model version policy and serving all, the chosen, or just the latest version of the model.
-
-[Learn more](model_version_policy.md)
-
-## Modifying Model Configuration in Runtime
-
-OpenVINO Model Server tracks changes to the configuration file and applies them in runtime. It means that you can change model configurations 
-(for example serve the model on a different device), add a new model or completely remove one that is no longer needed. All changes will be applied with no 
-disruption to the service and no restart will berequired.
-
-[Learn more](online_config_changes.md)
 
 ## Keeping Deployments Secure
 

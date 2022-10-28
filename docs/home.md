@@ -20,6 +20,7 @@
 @endsphinxdirective
 
 OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. Model server uses the same architecture and API as [TensorFlow Serving](https://github.com/tensorflow/serving) and [KServe](https://github.com/kserve/kserve) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
+Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md)
 
 ![OVMS diagram](ovms_draft_diagram.png)
 
@@ -29,15 +30,14 @@ A model server hosts models and makes them accessible to software components ove
 
 ![OVMS picture](clientserver.png)
 
-Model Server Advantages: 
+Model server advantages: 
 
-- Ability to process several client requests simultaneously so that the model uses less device memory. 
-- Inference can be run remotely, creating a lightweight client with only the necessary functions to perform API calls for edge or cloud deployments. Bringing high execution performance even on low-end client hosts.
-- Application can be written in any language which supports REST or gRPC calls and is independent of the model framework, hardware, or infrastructure. 
+- Remote inference allows creating a lightweight client with only the necessary functions to perform API calls for edge or cloud deployments and getting high execution performance even on low-end client hosts.
+- Application is independent of the model framework, hardware, or infrastructure. It can be written in any programming language that supports REST or gRPC calls.
 - Model topology and weight are not exposed directly to the client application, making it easier to control access to its IP.
-- Model server is suitable for application architecture based on microservices.
-- It is easy to deploy in cloud, Kubernetes, and OpenShift. 
-- Inference can be easily scaled horizontally or vertically, making it easy to add more loads without any changes in the application.
+- Suitable for application architecture based on microservices.
+- Easy to deploy in cloud, Kubernetes, and OpenShift. 
+- Inference can be scaled horizontally or vertically, providing efficient resource utilization without any changes in the application.
 
 ## OpenVINO Model Server Key Features: 
 
@@ -60,7 +60,7 @@ OpenVINO&trade; Model Server works with [Bare Metal Hosts](host.md) as well as [
 - [model caching](model_cache.md) - cache the models on first load and re-use models from cache on subsequent loads
 - [metrics](metrics.md) - metrics compatible with Prometheus standard
 
-Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md). 
+Follow an example from the [Quickstart guide](ovms_quickstart.md) or try the model server [features](features.md) for your application. 
 
 ## Additional Resources
 
@@ -72,7 +72,7 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - watch OVMS demo recording
 
-* [Release Notes](https://github.com/openvinotoolkit/model_server/releases) - find out what’s new in the latest OpenVINO Model Server Release
+* [Release Notes](https://github.com/openvinotoolkit/model_server/releases) - find out what’s new in the latest OpenVINO Model Server release
 
 ## Contributing
 
