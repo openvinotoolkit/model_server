@@ -27,18 +27,17 @@ OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving mod
 
 A model server hosts models and makes them accessible to software components over standart network protocols. Functionally it works similarly to a web server: user sends a request and receives a response. 
 
-![OVMS picture](ovms.png)
+![OVMS picture](clientserver.png)
 
 Model Server Advantages: 
 
 - Ability to process several client requests simultaneously so that the model uses less device memory. 
-- Inference can be run remotely, create a lightweight client with only the necessary functions to perform API calls for edge or cloud deployments. Bringing high execution performance even on low-end client hosts.
-- Application can be written in any language which supports REST or gRPC calls and is independent from model framework, hardware or infrastructure. 
-- Model topology and weight is not exposed directly to the client application, making it easier to control access to its IP.
-- Model server is suitable for application architecture based on microservice.
-- It is easy to deploy in cloud, Kubernetes and OpenShift. 
+- Inference can be run remotely, creating a lightweight client with only the necessary functions to perform API calls for edge or cloud deployments. Bringing high execution performance even on low-end client hosts.
+- Application can be written in any language which supports REST or gRPC calls and is independent of the model framework, hardware, or infrastructure. 
+- Model topology and weight are not exposed directly to the client application, making it easier to control access to its IP.
+- Model server is suitable for application architecture based on microservices.
+- It is easy to deploy in cloud, Kubernetes, and OpenShift. 
 - Inference can be easily scaled horizontally or vertically, making it easy to add more loads without any changes in the application.
-
 
 ## OpenVINO Model Server Key Features: 
 
@@ -61,7 +60,7 @@ OpenVINO&trade; Model Server works with [Bare Metal Hosts](host.md) as well as [
 - [model caching](model_cache.md) - cache the models on first load and re-use models from cache on subsequent loads
 - [metrics](metrics.md) - metrics compatible with Prometheus standard
 
-A demonstration on how to use OpenVINO Model Server can be found in the [Quickstart guide](ovms_quickstart.md). 
+Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md). 
 
 ## Additional Resources
 
@@ -75,6 +74,6 @@ A demonstration on how to use OpenVINO Model Server can be found in the [Quickst
 
 * [Release Notes](https://github.com/openvinotoolkit/model_server/releases) - find out what’s new in the latest OpenVINO Model Server Release
 
-## Contact OpenVINO Model Server Team
+## Contributing
 
 If you have a question, a feature request, or a bug report, feel free to submit a [Github issue](https://github.com/openvinotoolkit/model_server).
