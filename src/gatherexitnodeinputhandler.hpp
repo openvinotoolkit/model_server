@@ -37,7 +37,6 @@
 namespace ovms {
 
 Status prepareConsolidatedTensorImpl(tensorflow::serving::PredictResponse* response, char*& tensorOut, const std::string& name, size_t size);
-Status prepareConsolidatedTensorImpl(KFSResponse* response, char*& tensorOut, const std::string& name, size_t size);
 
 template <class ResponseType>
 class GatherExitNodeInputHandler : public GatherNodeInputHandler {
