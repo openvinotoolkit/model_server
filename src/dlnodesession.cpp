@@ -107,18 +107,8 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
         }
         auto& inputInfo = *it->second;
         status = validate(tensor, inputInfo);
-        if (status.ok()) {
-            continue;
-        }
-
-        if (status == StatusCode::INVALID_PRECISION) {
-            return status;
-        }
-        if (status == StatusCode::INVALID_BATCH_SIZE) {
-            return status;
-        }
-        if (status == StatusCode::INVALID_SHAPE) {
-            return status;
+        if (!status.ok()) {
+            break;
         }
     }
     return status;
