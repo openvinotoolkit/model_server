@@ -2,11 +2,11 @@
 
 #Ubuntu
 #MIN_LINES_COV=74.9
-#MIN_FUNCTION_COV=86.5
+#MIN_FUNCTION_COV=87
 
 #Rhel
-MIN_LINES_COV=72.4
-MIN_FUNCTION_COV=73.2
+MIN_LINES_COV=73.2
+MIN_FUNCTION_COV=73.3
 
 
 LINES_COV=`cat genhtml/index.html | grep "headerCovTableEntry.*%" | grep -oP  ">\K(\d*.\d*) " | head -n 1`
