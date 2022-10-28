@@ -9,9 +9,6 @@
    ovms_sample_cpu_extension
    ovms_docs_model_cache
    ovms_docs_custom_loader
-   ovms_docs_metrics
-   ovms_docs_dynamic_input
-   ovms_docs_kubernetes
 
 @endsphinxdirective
 

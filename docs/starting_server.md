@@ -7,16 +7,14 @@
    :hidden:
 
    ovms_docs_models_repository
-   ovms_docs_baremetal
    ovms_docs_docker_container
+   ovms_docs_baremetal
    ovms_docs_single_model
    ovms_docs_multiple_models
    ovms_docs_parameters
    ovms_docs_cloud_storage
+   ovms_docs_kubernetes
    ovms_docs_target_devices
-   ovms_docs_model_version_policy
-   ovms_docs_shape_batch_layout
-   ovms_docs_online_config_changes
    ovms_docs_security
    
 
