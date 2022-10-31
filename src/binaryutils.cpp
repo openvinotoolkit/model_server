@@ -35,7 +35,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
 namespace ovms {

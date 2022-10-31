@@ -35,7 +35,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "../execution_context.hpp"
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric_registry.hpp"
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"

@@ -23,8 +23,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
-#include "kfs_grpc_inference_service.hpp"
 #include "modelconfig.hpp"
 #include "profiler.hpp"
 #include "status.hpp"

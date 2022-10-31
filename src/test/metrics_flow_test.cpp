@@ -24,7 +24,7 @@
 #include "../config.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../http_rest_api_handler.hpp"
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"

@@ -22,7 +22,7 @@
 #include "../execution_context.hpp"
 #include "../exit_node.hpp"
 #include "../get_model_metadata_impl.hpp"
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelmanager.hpp"

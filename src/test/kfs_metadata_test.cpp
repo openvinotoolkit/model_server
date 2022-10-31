@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include <gtest/gtest.h>
 
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../modelversionstatus.hpp"
 #include "../pipelinedefinition.hpp"
 #include "mockmodelinstancechangingstates.hpp"

@@ -19,7 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../predict_request_validation_utils.hpp"

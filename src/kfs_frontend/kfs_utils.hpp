@@ -16,8 +16,8 @@
 #pragma once
 #include <string>
 
-#include "../kfs_grpc_inference_service.hpp"
 #include "../precision.hpp"
+#include "kfs_grpc_inference_service.hpp"
 
 namespace ovms {
 class Status;

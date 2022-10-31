@@ -22,7 +22,7 @@
 #include <gtest/gtest.h>
 
 #include "../cleaner_utils.hpp"
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
