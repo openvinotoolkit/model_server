@@ -77,7 +77,7 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response,
     outputNameChooser_t outputNameChooser,
-    bool sharedInputContentsUsed = true) {
+    bool useSharedOutputContent = true) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&> protoGetter(response);
@@ -102,7 +102,7 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     ::KFSResponse* response,
     outputNameChooser_t outputNameChooser,
-    bool sharedInputContentsUsed = true) {
+    bool useSharedOutputContent  = true) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(response);

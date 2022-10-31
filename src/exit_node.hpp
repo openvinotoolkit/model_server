@@ -37,11 +37,11 @@ class ExitNode : public Node {
     bool sharedInputContentsUsed;
 
 public:
-    ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool sharedInputContentsUsed = true) :
+    ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool useSharedOutputContent = true) :
         Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode),
         response(response),
         outputsInfo(outputsInfo),
-        sharedInputContentsUsed(sharedInputContentsUsed) {
+        useSharedOutputContent(useSharedOutputContent) {
     }
 
     // Exit node does not have execute logic.
