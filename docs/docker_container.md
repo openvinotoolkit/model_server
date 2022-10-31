@@ -1,11 +1,19 @@
 # Model Server in Docker Containers {#ovms_docs_docker_container}
 
-OpenVINO™ Model Server includes a C++ implementation of gRPC and RESTful API interfaces defined by TensorFlow Serving. 
-In the backend, it uses OpenVINO&trade; Runtime libraries from OpenVINO&trade; toolkit, which speeds up the execution on CPU, and enables it on iGPU and Movidius devices.
-
 OpenVINO Model Server can be hosted on a bare metal server, virtual machine, or inside a docker container. It is also suitable for landing in the Kubernetes environment.
 
 This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Linux, using a Docker Container. 
+
+@sphinxdirective
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   ovms_docs_baremetal
+   ovms_docs_kubernetes
+
+@endsphinxdirective
 
 **Before you start, make sure you have:**
 
