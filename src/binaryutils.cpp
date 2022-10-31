@@ -218,7 +218,6 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     return StatusCode::OK;
 }
 
-
 static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const ::KFSRequest::InferInputTensor& src) {
     OVMS_PROFILE_FUNCTION();
@@ -344,7 +343,7 @@ inline static const std::string& getBinaryInput(const ::KFSRequest::InferInputTe
     return tensor.contents().bytes_contents(i);
 }
 
-const std::string getBinaryInput(const ::inference::ModelInferRequest& tensor, size_t i) {
+inline static const std::string getBinaryInput(const ::inference::ModelInferRequest& tensor, size_t i) {
     return tensor.raw_input_contents()[0];
 }
 
@@ -360,7 +359,7 @@ inline static int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tens
     return tensor.contents().bytes_contents_size();
 }
 
-int getBinaryInputsSize(const ::inference::ModelInferRequest& tensor) {
+inline static int getBinaryInputsSize(const ::inference::ModelInferRequest& tensor) {
     return 1;
 }
 

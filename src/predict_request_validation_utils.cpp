@@ -852,7 +852,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 return status;
 
             const KFSRequestType* r = dynamic_cast<const KFSRequestType*>(&request);
-            if (r == nullptr || r->raw_input_contents().size() <= 0){
+            if (r == nullptr || r->raw_input_contents().size() <= 0) {
                 status = checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
                 if (!status.ok())
                     return status;
