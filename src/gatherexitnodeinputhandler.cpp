@@ -21,17 +21,4 @@
 #include "status.hpp"
 
 namespace ovms {
-
-Status prepareConsolidatedTensorImpl(tensorflow::serving::PredictResponse* response, char*& bufferOut, const std::string& name, size_t size) {
-    OVMS_PROFILE_FUNCTION();
-    tensorflow::TensorProto tensorProto;
-    auto [it, isInserted] = response->mutable_outputs()->insert(google::protobuf::MapPair<std::string, tensorflow::TensorProto>(name, std::move(tensorProto)));
-    if (!isInserted) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to prepare consolidated tensor, tensor with name {} already prepared", name);
-        return StatusCode::INTERNAL_ERROR;
-    }
-    it->second.mutable_tensor_content()->resize(size);
-    bufferOut = it->second.mutable_tensor_content()->data();
-    return StatusCode::OK;
-}
 }  // namespace ovms

@@ -28,9 +28,12 @@
 using TFSDataType = tensorflow::DataType;
 
 namespace ovms {
+class Status;
+
 Precision TFSPrecisionToOvmsPrecision(const TFSDataType& s);
 TFSDataType getPrecisionAsDataType(Precision precision);
 std::string getDataTypeAsString(TFSDataType dataType);
 
 std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
+Status prepareConsolidatedTensorImpl(tensorflow::serving::PredictResponse* response, char*& tensorOut, const std::string& name, size_t size);
 }  // namespace ovms
