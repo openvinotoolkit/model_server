@@ -1,8 +1,7 @@
-# Multiple-Model mode with a Config File {#ovms_docs_multiple_models}
+# Surving Multiple Models {#ovms_docs_multiple_models}
 
-To use a container that has several models, you need an additional JSON configuration file defining each of them. In the file, provide an array, 
-`model_config_list`, that includes a collection of config objects for each served model. Every such config object needs the minimum of 
-the name and the base_path attribute values provided.
+To use a container with several models, you need an additional JSON configuration file defining each model. In the file, provide a 
+`model_config_list` array that includes a collection of config objects for each served model. The `name` and the `base_path` values of the model are required for every config object.
 
 An example of the configuration file:
 ```json

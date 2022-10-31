@@ -1,4 +1,14 @@
-# Creating Model Repository {#ovms_docs_models_repository}
+# Prepare Model for Serving {#ovms_docs_models_repository}
+
+@sphinxdirective
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   ovms_docs_cloud_storage
+
+@endsphinxdirective
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the three formats:
 - [OpenVINO IR](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
@@ -6,7 +16,7 @@ The AI models served by OpenVINO&trade; Model Server must be in either of the th
 - [PaddlePaddle](https://www.paddlepaddle.org.cn/en), using .pdiparams and .pdmodel files
 
 To use models trained in other formats you need to convert them first. To do so, use 
-OpenVINO’s [Model Optimizer](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) for IR, or different
+OpenVINO [Model Optimizer](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) for IR, or different
 [converters](https://onnx.ai/supported-tools.html) for ONNX.
 
 The models need to be placed and mounted in a particular directory structure and according to the following rules:
@@ -37,10 +47,15 @@ models/
 
 - Each model should be stored in a dedicated directory, e.g. model1 and model2. 
 - Each model directory should include a sub-folder for each of its versions (1,2, etc). The versions and their folder names should be positive integer values.  
-**Note:** In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify 
+> **NOTE**: In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify 
 the version number in parameters, by default, the latest version is served.
-- Every version folder _must_ include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name can be arbitrary.
+- Every version folder must include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name is arbitrary.
 
+The models also can be hosted remotely by cloud storages, including Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage. Learn how to [use cloud storage as a model repository](using_cloud_storage.md)
+
+After the model is ready for serving, proceed to [launch the model server container](docker_container.md).
+
+## Request-Response 
 
 Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map. 
 Prediction results can be read from the response output map. By default, OpenVINO™ Model Server uses model tensor names as input and output names in 

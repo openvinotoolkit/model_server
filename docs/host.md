@@ -1,25 +1,21 @@
 # Starting Model Server Locally {#ovms_docs_baremetal}
 
-OpenVINO™ Model Server includes a C++ implementation of gRPC and RESTful API interfaces defined by TensorFlow Serving. 
-In the backend, it uses OpenVINO&trade; Runtime libraries from OpenVINO&trade; toolkit, which speeds up the execution on CPU, and enables it on iGPU and Movidius devices.
-
-OpenVINO Model Server can be hosted on a bare metal server, virtual machine, or inside a docker container. It is also suitable for landing in the Kubernetes environment.
-
-**Before you start:**
-
 OpenVINO Model Server execution on baremetal is tested on Ubuntu 20.04.x. For other operating systems we recommend using [OVMS docker containers](./docker_container.md).
 
-For supported hardware, refer to [supported configurations](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html).   
+For supported hardware, refer to [supported configurations](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html).
+   
 Always verify if your model is supported by the VPU Plugins and convert it to the OpenVINO format, using [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer).
 
 ## Installing Model Server <a name="model-server-installation"></a>
 
-- Clone model server git repository.
-- Navigate to the model server directory.
-- To install Model Server, you can either use a precompiled binary or build it on your own, in a Docker container.
-- Navigate to the folder containing the binary package and unpack the included `tar.gz` file.
+1. Clone model server git repository.
+2. Navigate to the model server directory.
+3. To install Model Server, you can either use a precompiled binary or build it on your own, in a Docker container.
+4. Navigate to the folder containing the binary package and unpack the included `tar.gz` file.
 
-Here is an example of this process:
+You can build your own Docker image executing the `make docker_build` command in the [git repository root folder](https://github.com/openvinotoolkit/model_server).
+
+Run the following commands to build model server:
 
 ```bash
 
@@ -36,6 +32,15 @@ cd dist/ubuntu && tar -xzvf ovms.tar.gz
 
 ```
 
+In the `./dist` directory it will generate: 
+
+- image tagged as openvino/model_server:latest - with CPU, NCS, and HDDL support
+- image tagged as openvino/model_server:latest-gpu - with CPU, NCS, HDDL, and iGPU support
+- image tagged as openvino/model_server:latest-nginx-mtls - with CPU, NCS, and HDDL support and a reference nginx setup of mTLS integration
+- release package (.tar.gz, with ovms binary and necessary libraries)
+
+> **NOTE**: Model Server docker image can be created with ubi8-minimal base image or the default ubuntu20. Model Server with the ubi base image does not support NCS and HDDL accelerators.
+
 ## Running the Server
 
 The server can be started in two ways:
@@ -48,3 +53,60 @@ Refer to [Running Model Server using Docker Container](./docker_container.md) to
 > **NOTE**:
 > When AI accelerators are used for inference execution, additional steps may be required to install their drivers and dependencies. Learn more about it 
 > Learn more about it on [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_linux.html).
+
+## Building an OpenVINO&trade; Model Server Docker Image from Source <a name="sourcecode"></a>
+
+Running the inference operation on GPU requires the ovms process security context account to have correct permissions.
+It has to belong to the render group identified by the command:
+```
+stat -c "group_name=%G group_id=%g" /dev/dri/render*
+```
+The default account in the docker image is already preconfigured. In case you change the security context, use the following command
+to start the ovms container:
+```
+docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+-v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+--model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+```
+
+> **NOTE**: The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
+
+### Model Server image with DG2 support (Ubuntu 20.04)
+
+Image with DG2 GPU support has not been published. To build the image yourself you need to have DG2 drivers installed on the host and NEO Runtime packages available. 
+
+Put NEO Runtime packages in the catalog `<model_server_dir>/release_files/drivers/dg2` and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
+
+Example:
+```
+make docker_build BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=ovms_dg2 INSTALL_DRIVER_VERSION=dg2
+```
+
+## Using Multi-Device Plugin
+
+If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
+With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
+For more detailed information read [OpenVINO Multi-Device plugin documentation](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_Running_on_multiple_devices.html).
+
+In order to use this feature in OpenVino™ Model Server, following steps are required:
+
+Set target_device for the model in configuration json file to MULTI:DEVICE_1,DEVICE_2 (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
+
+Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
+```
+make docker_build BASE_OS=ubuntu
+```
+
+Additionally, you can use the `INSTALL_DRIVER_VERSION` argument command to choose which GPU driver version is used by the produced image. 
+If not provided, most recent version is used.
+
+Currently, the following versions are available:
+- 21.38.21026 - Redhat
+- 21.48.21782 - Ubuntu
+
+Example:
+```bash
+make docker_build INSTALL_DRIVER_VERSION=21.38.21026
+```
+If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
+

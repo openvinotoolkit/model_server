@@ -1,6 +1,6 @@
-# Single-Model Mode {#ovms_docs_single_model}
+# Serving Single Model {#ovms_docs_single_model}
 
-Learn about the structure of a [Model Repository](models_repository.md) before running the Docker image. 
+Before launching the container, make sure you [prepared the model for serving](model_repository.md).
 
 Launch Model Server by running the following command: 
 
@@ -9,7 +9,7 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 open
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 9001 --log_level DEBUG
 ```
 
-Example:
+Example using resnet model:
 
 ```bash
 mkdir -p models/resnet/1
@@ -20,6 +20,10 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 --model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 9001 --log_level DEBUG
 ```
 
+
+- Publish the container's port to your host's **open ports**. 
+- In the command above, port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
+- Add model_name for the client gRPC/REST API calls.
 
 **Configuration Arguments for Running Model Server:**
 
@@ -50,9 +54,3 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
 @endsphinxdirective
 
-
-### Notes
-- Publish the container's port to your host's **open ports**.
-- In the command above, port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
-- For preparing and saving models to serve with OpenVINO&trade; Model Server refer to the [Model Repository](models_repository.md) article.
-- Add model_name for the client gRPC/REST API calls.
