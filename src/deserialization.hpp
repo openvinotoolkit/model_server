@@ -345,7 +345,6 @@ Status deserializePredictRequest(
     return status;
 }
 
-
 template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const ::KFSRequest& request,
@@ -367,9 +366,9 @@ Status deserializePredictRequest(
 
             if (requestInputItr->datatype() == "BYTES") {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
-                if(request.raw_input_contents().size() > 0)
+                if (request.raw_input_contents().size() > 0)
                     status = convertBinaryRequestTensorToOVTensor(request, tensor, tensorInfo);
-                else    
+                else
                     status = convertBinaryRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
