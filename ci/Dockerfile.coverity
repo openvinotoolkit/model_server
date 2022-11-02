@@ -1,0 +1,40 @@
+#
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+ARG BUILD_IMAGE=openvino/model_server-build:latest
+FROM $BUILD_IMAGE
+
+ADD ./cov-analysis-linux64-2022.6.0 /cov
+
+RUN /cov/bin/cov-configure --gcc --config coverity_config.xml && \
+    /cov/bin/cov-configure --comptype gcc --compiler /usr/bin/gcc && \
+    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:ovms' && \
+    /cov/bin/cov-configure --python && \
+    /cov/bin/cov-build --dir /ovms/cov-int/ --no-command --fs-capture-search /client/python/ --fs-capture-search /demos
+
+WORKDIR /ovms/
+RUN tar czvf /model_server.tgz cov-int 
+
+ARG ENV_COVERITY_PROJECT
+ARG ENV_COVERITY_TOKEN
+WORKDIR /
+RUN curl --form token=$ENV_COVERITY_TOKEN \
+  --form email=dariusz.trawinski@intel.com \
+  --form file=@model_server.tgz \
+  --form version="1" \
+  --form description="SDL build" \
+  https://scan.coverity.com/builds?project=$ENV_COVERITY_PROJECT
+
