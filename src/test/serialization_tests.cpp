@@ -35,12 +35,9 @@
 #include <gmock/gmock-generated-function-mockers.h>
 
 using TFTensorProto = tensorflow::TensorProto;
-using KFSTensorProto = ::inference::ModelInferResponse::InferOutputTensor;
 
 using TFPredictRequest = tensorflow::serving::PredictRequest;
 using TFPredictResponse = tensorflow::serving::PredictResponse;
-using KFSPredictRequest = ::inference::ModelInferRequest;
-using KFSPredictResponse = ::inference::ModelInferResponse;
 
 using namespace ovms;
 
@@ -277,13 +274,13 @@ protected:
     }
     const char* tensorName = "Input_PRECISION_1_3_1_1_NHWC";
     ovms::tensor_map_t tensorMap;
-    ::inference::ModelInferResponse response;
+    ::KFSResponse response;
 };
 
 TEST_F(KFServingGRPCPredict, ValidSerialization) {
     ov::Tensor tensor(ov::element::f32, shape_t{1, 3, 1, 1});
-    KFSPredictResponse response;
-    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
@@ -302,8 +299,8 @@ TEST_F(KFServingGRPCPredict, ValidSerialization) {
 
 TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
     ov::Tensor tensor(ov::element::i32, shape_t{1, 3, 1, 1});
-    KFSPredictResponse response;
-    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
@@ -315,8 +312,8 @@ TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorPrecision
 
 TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorShape) {
     ov::Tensor tensor(ov::element::i32, shape_t{2, 3, 1, 1});
-    KFSPredictResponse response;
-    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
@@ -347,8 +344,8 @@ public:
 TEST_P(SerializeKFSInferOutputTensor, SerializeTensorProtoShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
-    KFSPredictResponse response;
-    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
     ov::Tensor mockTensor = std::get<1>(inputs);
@@ -367,8 +364,8 @@ class SerializeKFSInferOutputTensorNegative : public SerializeKFSInferOutputTens
 TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
-    KFSPredictResponse response;
-    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
@@ -382,7 +379,7 @@ TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldSucceedF
 }
 
 TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
-    KFSPredictResponse response;
+    KFSResponse response;
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");

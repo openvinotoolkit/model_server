@@ -13,12 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "gatherexitnodeinputhandler.hpp"
+#pragma once
+#include <string>
 
-#include <utility>
-
-#include "logging.hpp"
-#include "status.hpp"
+#include "../precision.hpp"
+#include "kfs_grpc_inference_service.hpp"
 
 namespace ovms {
+class Status;
+std::string tensorShapeToString(const KFSShapeType& tensorShape);
+
+Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s);
+const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision);
+
+size_t KFSDataTypeSize(const KFSDataType& datatype);
+Status prepareConsolidatedTensorImpl(KFSResponse* response, char*& tensorOut, const std::string& name, size_t size);
 }  // namespace ovms

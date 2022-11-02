@@ -13,12 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "gatherexitnodeinputhandler.hpp"
-
-#include <utility>
-
-#include "logging.hpp"
-#include "status.hpp"
+#pragma once
+#include <grpcpp/server_context.h>
 
 namespace ovms {
+class Status;
+
+const grpc::Status grpc(const Status& status);
 }  // namespace ovms

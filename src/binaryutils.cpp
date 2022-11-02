@@ -35,7 +35,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
 namespace ovms {
@@ -219,7 +219,7 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
 }
 
 static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
-    const ::inference::ModelInferRequest::InferInputTensor& src) {
+    const ::KFSRequest::InferInputTensor& src) {
     OVMS_PROFILE_FUNCTION();
     auto status = validateLayout(tensorInfo);
     if (!status.ok()) {
@@ -318,7 +318,7 @@ inline static const std::string& getBinaryInput(const tensorflow::TensorProto& t
     return tensor.string_val(i);
 }
 
-inline static const std::string& getBinaryInput(const ::inference::ModelInferRequest::InferInputTensor& tensor, size_t i) {
+inline static const std::string& getBinaryInput(const ::KFSRequest::InferInputTensor& tensor, size_t i) {
     return tensor.contents().bytes_contents(i);
 }
 
@@ -326,7 +326,7 @@ inline static int getBinaryInputsSize(const tensorflow::TensorProto& tensor) {
     return tensor.string_val_size();
 }
 
-inline static int getBinaryInputsSize(const ::inference::ModelInferRequest::InferInputTensor& tensor) {
+inline static int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor) {
     return tensor.contents().bytes_contents_size();
 }
 
@@ -457,5 +457,5 @@ static Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Te
 }
 
 template Status convertBinaryRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
-template Status convertBinaryRequestTensorToOVTensor<::inference::ModelInferRequest::InferInputTensor>(const ::inference::ModelInferRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
+template Status convertBinaryRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
 }  // namespace ovms

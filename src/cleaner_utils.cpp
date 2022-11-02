@@ -27,6 +27,10 @@ void FunctorSequenceCleaner::cleanup() {
     globalSequencesViewer.removeIdleSequences();
 }
 
+FunctorSequenceCleaner::~FunctorSequenceCleaner() = default;
+
+FunctorResourcesCleaner::~FunctorResourcesCleaner() = default;
+
 FunctorResourcesCleaner::FunctorResourcesCleaner(ModelManager& modelManager) :
     modelManager(modelManager) {}
 

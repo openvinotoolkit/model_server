@@ -29,18 +29,16 @@
 #pragma GCC diagnostic pop
 
 #include "../deserialization.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
 
 using TFTensorProto = tensorflow::TensorProto;
-using KFSTensorProto = ::inference::ModelInferRequest::InferInputTensor;
 
 using TFPredictRequest = tensorflow::serving::PredictRequest;
 using TFPredictResponse = tensorflow::serving::PredictResponse;
-
-using KFSPredictRequest = ::inference::ModelInferRequest;
 
 using namespace ovms;
 
@@ -133,7 +131,7 @@ public:
 
     MOCK_METHOD(ov::Tensor,
         deserializeTensorProto,
-        (const ::inference::ModelInferRequest::InferInputTensor&,
+        (const ::KFSRequest::InferInputTensor&,
             const std::shared_ptr<ovms::TensorInfo>&,
             const std::string* buffer));
 };
@@ -149,7 +147,7 @@ public:
     }
 
     static ov::Tensor deserializeTensorProto(
-        const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+        const ::KFSRequest::InferInputTensor& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo,
         const std::string* buffer) {
         return mock->deserializeTensorProto(requestInput, tensorInfo, buffer);
@@ -308,7 +306,7 @@ protected:
         }
     }
 
-    KFSTensorProto tensorProto;
+    KFSTensorInputProto tensorProto;
     std::string buffer;
     const char* tensorName = DUMMY_MODEL_INPUT_NAME;
     ovms::tensor_map_t tensorMap;
@@ -365,7 +363,7 @@ public:
     }
 
 public:
-    KFSPredictRequest request;
+    KFSRequest request;
 };
 
 TEST_F(KserveGRPCPredictRequest, ShouldSuccessForSupportedPrecision) {

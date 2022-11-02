@@ -24,10 +24,6 @@
 
 #include "rest_parser.hpp"
 
-namespace inference {
-class ModelInferResponse;
-}  // namespace inference
-
 namespace ovms {
 class Status;
 Status makeJsonFromPredictResponse(
@@ -36,7 +32,7 @@ Status makeJsonFromPredictResponse(
     Order order);
 
 Status makeJsonFromPredictResponse(
-    const ::inference::ModelInferResponse& response_proto,
+    const ::KFSResponse& response_proto,
     std::string* response_json);
 
 Status decodeBase64(std::string& bytes, std::string& decodedBytes);

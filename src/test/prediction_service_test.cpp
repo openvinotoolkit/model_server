@@ -28,11 +28,13 @@
 
 #include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 
 using testing::Each;
@@ -53,7 +55,7 @@ void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std
     EXPECT_THAT(output, Each(Eq(1.)));
 }
 
-ovms::Status getOutput(const KFSResponseType& response, const std::string& name, KFSOutputTensorIteratorType& it, size_t& bufferId) {
+ovms::Status getOutput(const KFSResponse& response, const std::string& name, KFSOutputTensorIteratorType& it, size_t& bufferId) {
     it = response.outputs().begin();
     bufferId = 0;
     while (it != response.outputs().end()) {
@@ -189,7 +191,7 @@ public:
         ASSERT_EQ(0, std::memcmp(actualValues.data(), expectedValues.data(), expectedValues.size() * sizeof(float)))
             << readableError(expectedValues.data(), actualValues.data(), expectedValues.size() * sizeof(float));
     }
-    static void checkOutputValues(const KFSResponseType& response, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+    static void checkOutputValues(const KFSResponse& response, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
         KFSOutputTensorIteratorType it;
         size_t bufferId;
         auto status = getOutput(response, outputName, it, bufferId);
@@ -259,7 +261,7 @@ void TestPredict<TFSInterface>::checkOutputShape(const TFSResponseType& response
 }
 
 template <>
-void TestPredict<KFSInterface>::checkOutputShape(const KFSResponseType& response, const ovms::shape_t& shape, const std::string& outputName) {
+void TestPredict<KFSInterface>::checkOutputShape(const KFSResponse& response, const ovms::shape_t& shape, const std::string& outputName) {
     auto it = response.outputs().begin();
     size_t bufferId;
     auto status = getOutput(response, outputName, it, bufferId);
@@ -1131,7 +1133,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
  * 2. Do the inferences with (3, 10) shape, expect correct output shapes and precision
 */
 
-ovms::Precision getPrecisionFromResponse(KFSResponseType& response, const std::string& name) {
+ovms::Precision getPrecisionFromResponse(KFSResponse& response, const std::string& name) {
     KFSOutputTensorIteratorType it;
     size_t bufferId;
     auto status = getOutput(response, name, it, bufferId);
