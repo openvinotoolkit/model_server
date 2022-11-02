@@ -259,5 +259,15 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_METRICS_ENDPOINT, "Metrics config endpoint path is invalid"},
     {StatusCode::INVALID_METRICS_FAMILY_NAME, "Invalid name in metrics_list"},
     {StatusCode::METRICS_REST_PORT_MISSING, "Missing rest_port parameter in server CLI"},
+
+    // C-API
+    {StatusCode::DOUBLE_PARAMETER_INSERT, "Cannot more than one parameter with the same name"},
+    {StatusCode::DOUBLE_INPUT_INSERT, "Cannot more than one input with the same name"},
+    {StatusCode::NONEXISTENT_INPUT, "Tried to get nonexisting input"},
+    {StatusCode::NONEXISTENT_INPUT_FOR_SET_BUFFER, "Tried to set buffer for nonexisting input"},
+    {StatusCode::NONEXISTENT_INPUT_FOR_REMOVE_BUFFER, "Tried to remove buffer for nonexisting input"},
+    {StatusCode::NONEXISTENT_INPUT_FOR_REMOVAL, "Tried to remove nonexisting input"},
+    {StatusCode::NONEXISTENT_BUFFER_FOR_REMOVAL, "Tried to remove nonexisting buffer"},
+    {StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL, "Tried to remove nonexisting parameter"},
 };
 }  // namespace ovms
