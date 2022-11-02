@@ -61,7 +61,7 @@ cc_library(
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.6.0",
+    tag = "2.6.5",
     patch_args = ["-p1"],
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
