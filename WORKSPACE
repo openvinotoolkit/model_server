@@ -88,8 +88,8 @@ cc_library(
 load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
 tensorflow_http_archive(
     name = "org_tensorflow",
-    sha256 = "70a865814b9d773024126a6ce6fea68fefe907b7ae6f9ac7e656613de93abf87",
-    git_commit = "919f693420e35d00c8d0a42100837ae3718f7927",
+    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
+    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
     patch = "tf.patch",
     repo_mapping = {"@curl" : "@curl"}
 )
