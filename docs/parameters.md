@@ -1,5 +1,4 @@
-# Model Server Parameters {#ovms_docs_parameters}
-
+# Configuring Deployment {#ovms_docs_parameters}
 
 ## Model Configuration Options
 
@@ -38,5 +37,3 @@ Configuration options for the server are defined only via command-line options a
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
 | `log_path` | `string` | Optional path to the log file. |
 | `cache_dir` | `string` | Path to the model cache storage. Caching will be enabled if this parameter is defined or the default path /opt/cache exists |
-
-

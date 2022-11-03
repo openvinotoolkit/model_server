@@ -1,4 +1,4 @@
-# Launch Model Server {#ovms_docs_docker_container}
+# Launching Model Server {#ovms_docs_docker_container}
 
 OpenVINO Model Server can be hosted inside a docker container, on a [bare metal server or virtual machine](host.md). It is also suitable for landing in the [Kubernetes environment](installations_kubernetes.md).
 
@@ -22,7 +22,7 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 - Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/) 
 - (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html)
 
-> **NOTE**: Accelerators are only tested on bare-metal Linux hosts.
+> **NOTE**: Accelerators are tested only on bare-metal Linux hosts.
 
 
 ## Launch Model Server Container <a name="quickstart"></a>
@@ -58,7 +58,7 @@ docker run -p 9000:9000 openvino/model_server:latest \
 --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \ 
 --layout NHWC:NCHW --port 9000 
 
-# download input files, an image, and a label mapping file
+# download input files: an image and a label mapping file
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/static/images/zebra.jpeg
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/classes.py
 
@@ -66,7 +66,7 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/202
 pip3 install ovmsclient
 ```
 
-### Step 3. Run prediction
+### Step 3. Run Prediction
 
 
 ```bash
@@ -95,4 +95,5 @@ If everything is set up correctly, you will see 'zebra' prediction in the output
 
 ## Additional Resources
 
+- [Model Server starting parameters](parameters.md).
 - [Troubleshooting](troubleshooting.md)

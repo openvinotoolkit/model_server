@@ -106,6 +106,17 @@ cd model_server
 make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 ```
 
+## Model Server image with DG2 support (Ubuntu 20.04)
+
+Image with DG2 GPU support has not been published. To build the image yourself you need to have DG2 drivers installed on the host and NEO Runtime packages available. 
+
+Put NEO Runtime packages in the catalog `<model_server_dir>/release_files/drivers/dg2` and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
+
+Example:
+```
+make docker_build BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=ovms_dg2 INSTALL_DRIVER_VERSION=dg2
+```
+
 ## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
@@ -213,4 +224,4 @@ THROUGHTPUT
             --target_device AUTO
 ```
 
-> **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
+> **NOTE**: Currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.

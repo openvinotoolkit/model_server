@@ -1,4 +1,4 @@
-# Prepare Model for Serving {#ovms_docs_models_repository}
+# Preparing Model for Serving {#ovms_docs_models_repository}
 
 @sphinxdirective
 
@@ -15,11 +15,11 @@ The AI models served by OpenVINO&trade; Model Server must be in either of the th
 - [ONNX](https://onnx.ai/), using the .onnx file
 - [PaddlePaddle](https://www.paddlepaddle.org.cn/en), using .pdiparams and .pdmodel files
 
-To use models trained in other formats you need to convert them first. To do so, use 
+To use models trained in other frameworks you need to convert them first. To do so, use 
 OpenVINO [Model Optimizer](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) for IR, or different
 [converters](https://onnx.ai/supported-tools.html) for ONNX.
 
-The models need to be placed and mounted in a particular directory structure and according to the following rules:
+The models need to be placed and mounted in a particular directory structure according to the following rules:
 
 ```
 tree models/
@@ -45,15 +45,12 @@ models/
          └── model.pdmodel
 ``` 
 
-- Each model should be stored in a dedicated directory, e.g. model1 and model2. 
-- Each model directory should include a sub-folder for each of its versions (1,2, etc). The versions and their folder names should be positive integer values.  
-> **NOTE**: In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify 
-the version number in parameters, by default, the latest version is served.
-- Every version folder must include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name is arbitrary.
+- Each model should be stored in a dedicated directory, for example, model1 and model2. 
+- Each model directory should include a sub-folder for each of its versions (1,2, and so on). The versions and their folder names should be positive integer values.  
+> **NOTE**: In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify the version number in the parameters, by default, the latest version is served.
+- Every version folder must include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for PaddlePaddle. The file name is arbitrary.
 
-The models also can be hosted remotely by cloud storages, including Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage. Learn how to [use cloud storage as a model repository](using_cloud_storage.md)
-
-After the model is ready for serving, proceed to [launch the model server container](docker_container.md).
+The models also can be hosted remotely by cloud storages, including Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage. Learn how to [use cloud storage as a model repository](using_cloud_storage.md).
 
 ## Request-Response 
 
@@ -74,7 +71,7 @@ predictions = make_ndarray(result.outputs[output_tensorname])
 ```
 
 
-- It is possible to adjust this behavior by adding an optional .json file named `mapping_config.json`. 
+It is possible to adjust this behavior by adding an optional .json file named `mapping_config.json`. 
 It can map the input and output keys to the appropriate tensors. This extra mapping can be used to enable user-friendly names for models with difficult tensor names.
 Here is an example of mapping_config.json:
 
@@ -90,3 +87,14 @@ Here is an example of mapping_config.json:
 }
 ```
 
+## Next Steps
+
+- After the model is ready for serving, proceed to [launch the model server](docker_container.md).
+- Learn how to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
+
+## Additional Resources
+
+- [Cloud storage as a model repository](using_cloud_storage.md)
+- [Quickstart guide](./ovms_quickstart.md)
+- [Model Server starting parameters](parameters.md).
+- [Troubleshooting](troubleshooting.md)
