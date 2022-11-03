@@ -59,6 +59,7 @@ enum BufferType {
 struct OVMS_Status;
 struct OVMS_InferenceRequest;
 struct OVMS_InferenceResponse;
+
 typedef enum OVMSSERVER_loglevel_enum {
     OVMSSERVER_LOG_TRACE,
     OVMSSERVER_LOG_DEBUG,
@@ -75,6 +76,14 @@ typedef enum OVMSSERVER_loglevel_enum {
 OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options);
 // Deallocates server general options memory for given ptr
 OVMS_Status* OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options);
+
+// --port
+OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
+    uint64_t grpcPort);
+
+// --rest_port
+OVMS_Status* OVMS_ServerGeneralOptionsSetRestPort(OVMS_ServerGeneralOptions* options,
+    uint64_t restPort);
 
 // --log_level
 OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* options,

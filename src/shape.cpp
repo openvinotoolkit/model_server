@@ -294,7 +294,7 @@ Shape::Shape(const shape_t& s) {
 Status Shape::fromFlatShape(const shape_t& shapeIn, Shape& shapeOut) {
     Shape shape;
     for (size_t dim : shapeIn) {
-        if (dim > std::numeric_limits<dimension_value_t>::max()) {
+        if (dim > (size_t)std::numeric_limits<dimension_value_t>::max()) {
             return StatusCode::CANNOT_CONVERT_FLAT_SHAPE;
         } else {
             shape.add(Dimension{static_cast<dimension_value_t>(dim)});

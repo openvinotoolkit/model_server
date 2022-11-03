@@ -232,7 +232,7 @@ RUN cd /ovms/src/example/SampleCpuExtension/ && make
 RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
 
 # C api shared library
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libovms_shared.so
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json

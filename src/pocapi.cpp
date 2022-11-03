@@ -15,34 +15,99 @@
 //*****************************************************************************
 #include "pocapi.hpp"
 
-#include <future>
-#include <iostream>
-#include <memory>
-#include <utility>
+#include <string>
 
-#include "modelinstance.hpp"
-#include "modelinstanceunloadguard.hpp"
-#include "modelmanager.hpp"
-#include "servablemanagermodule.hpp"
-#include "server.hpp"
+#include "poc_api_impl.hpp"
 
-using ovms::Server;
+// #include <future>
+// #include <iostream>
+// #include <memory>
+// #include <utility>
 
-int OVMS_Start(int argc, char** argv) {
-    Server& server = Server::instance();
-    return server.start(argc, argv);
+// #include "modelinstance.hpp"
+// #include "modelinstanceunloadguard.hpp"
+// #include "modelmanager.hpp"
+// #include "servablemanagermodule.hpp"
+// #include "server.hpp"
+
+// using ovms::Server;
+
+// int OVMS_Start(int argc, char** argv) {
+//     Server& server = Server::instance();
+//     return server.start(argc, argv);
+// }
+
+// void OVMS_Infer(char* name, float* data, float* output) {
+//     Server& server = Server::instance();
+//     std::shared_ptr<ovms::ModelInstance> instance;
+//     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+//     auto module = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+//     if (nullptr == module) {
+//         return;
+//     }
+//     auto servableManagerModule = dynamic_cast<const ovms::ServableManagerModule*>(module);
+//     auto& manager = servableManagerModule->getServableManager();
+//     manager.getModelInstance(name, 0, instance, modelInstanceUnloadGuardPtr);
+//     instance->infer(data, output);
+// }
+
+OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options) {
+    *options = (OVMS_ServerGeneralOptions*)new ovms::GeneralOptionsImpl;
+    return 0;
 }
 
-void OVMS_Infer(char* name, float* data, float* output) {
-    Server& server = Server::instance();
-    std::shared_ptr<ovms::ModelInstance> instance;
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
-    auto module = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
-    if (nullptr == module) {
-        return;
-    }
-    auto servableManagerModule = dynamic_cast<const ovms::ServableManagerModule*>(module);
-    auto& manager = servableManagerModule->getServableManager();
-    manager.getModelInstance(name, 0, instance, modelInstanceUnloadGuardPtr);
-    instance->infer(data, output);
+OVMS_Status* OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options) {
+    delete (ovms::GeneralOptionsImpl*)options;
+    return 0;
+}
+
+OVMS_Status* OVMS_ServerMultiModelOptionsNew(OVMS_ServerMultiModelOptions** options) {
+    *options = (OVMS_ServerMultiModelOptions*)new ovms::MultiModelOptionsImpl;
+    return 0;
+}
+
+OVMS_Status* OVMS_ServerMultiModelOptionsDelete(OVMS_ServerMultiModelOptions* options) {
+    delete (ovms::MultiModelOptionsImpl*)options;
+    return 0;
+}
+
+OVMS_Status* OVMS_ServerNew(OVMS_Server** server) {
+    *server = (OVMS_Server*)new ovms::ServerImpl;
+    return 0;
+}
+
+OVMS_Status* OVMS_ServerDelete(OVMS_Server* server) {
+    delete (ovms::ServerImpl*)server;
+    return 0;
+}
+
+OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
+    OVMS_ServerGeneralOptions* general_options,
+    OVMS_ServerMultiModelOptions* multi_model_specific_options) {
+    ovms::ServerImpl* srv = (ovms::ServerImpl*)server;
+    ovms::GeneralOptionsImpl* go = (ovms::GeneralOptionsImpl*)general_options;
+    ovms::MultiModelOptionsImpl* mmo = (ovms::MultiModelOptionsImpl*)multi_model_specific_options;
+    srv->start(go, mmo);
+    return 0;
+}
+
+OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
+    uint64_t grpcPort) {
+    ovms::GeneralOptionsImpl* go = (ovms::GeneralOptionsImpl*)options;
+    go->grpcPort = grpcPort;
+    return 0;
+}
+
+OVMS_Status* OVMS_ServerGeneralOptionsSetRestPort(OVMS_ServerGeneralOptions* options,
+    uint64_t restPort) {
+    ovms::GeneralOptionsImpl* go = (ovms::GeneralOptionsImpl*)options;
+    go->restPort = restPort;
+    return 0;
+}
+
+OVMS_Status* OVMS_ServerMultiModelOptionsSetConfigPath(OVMS_ServerMultiModelOptions* options,
+    const char* config_path) {
+    ovms::MultiModelOptionsImpl* mmo = (ovms::MultiModelOptionsImpl*)options;
+    mmo->configPath = std::string(config_path);
+    return 0;
 }

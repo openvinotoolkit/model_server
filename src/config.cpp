@@ -26,6 +26,7 @@
 
 #include "logging.hpp"
 #include "modelconfig.hpp"
+#include "poc_api_impl.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -37,12 +38,13 @@ const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
 const std::string DEFAULT_REST_WORKERS_STRING{std::to_string(DEFAULT_REST_WORKERS)};
 const uint64_t MAX_REST_WORKERS = 10'000;
 
-uint32_t Config::maxSequenceNumber() const {
+uint32_t Config::__maxSequenceNumber() const {
     if (!result->count("max_sequence_number")) {
         return DEFAULT_MAX_SEQUENCE_NUMBER;
     }
     return result->operator[]("max_sequence_number").as<uint32_t>();
 }
+uint32_t Config::maxSequenceNumber() const { return _maxSequenceNumber; }
 
 Config& Config::parse(int argc, char** argv) {
     try {
@@ -196,12 +198,54 @@ Config& Config::parse(int argc, char** argv) {
             exit(EX_OK);
         }
 
+        this->_configPath = __configPath();
+        this->_port = __port();
+        this->_cpuExtensionLibraryPath = __cpuExtensionLibraryPath();
+        this->_grpcBindAddress = __grpcBindAddress();
+        this->_restPort = __restPort();
+        this->_restBindAddress = __restBindAddress();
+        this->_grpcWorkers = __grpcWorkers();
+        this->_restWorkers = __restWorkers();
+        this->_modelName = __modelName();
+        this->_modelPath = __modelPath();
+        this->_batchSize = __batchSize();
+        this->_shape = __shape();
+        this->_layout = __layout();
+        this->_modelVersionPolicy = __modelVersionPolicy();
+        this->_nireq = __nireq();
+        this->_targetDevice = __targetDevice();
+        this->_pluginConfig = __pluginConfig();
+        this->_stateful = __stateful();
+        this->_metricsEnabled = __metricsEnabled();
+        this->_metricsList = __metricsList();
+        this->_idleSequenceCleanup = __idleSequenceCleanup();
+        this->_lowLatencyTransformation = __lowLatencyTransformation();
+        this->_maxSequenceNumber = __maxSequenceNumber();
+        this->_logLevel = __logLevel();
+        this->_logPath = __logPath();
+#ifdef MTR_ENABLED
+        this->_tracePath = __tracePath();
+#endif
+        this->_grpcChannelArguments = __grpcChannelArguments();
+        this->_filesystemPollWaitSeconds = __filesystemPollWaitSeconds();
+        this->_sequenceCleanerPollWaitMinutes = __sequenceCleanerPollWaitMinutes();
+        this->_resourcesCleanerPollWaitSeconds = __resourcesCleanerPollWaitSeconds();
+        this->_cacheDir = __cacheDir();
+
         validate();
     } catch (const cxxopts::OptionException& e) {
         std::cerr << "error parsing options: " << e.what() << std::endl;
         exit(EX_USAGE);
     }
 
+    return instance();
+}
+
+Config& Config::parse(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
+    // TODO: Implement
+    this->_port = go->grpcPort;
+    this->_restPort = go->restPort;
+    this->_configPath = mmo->configPath;
     return instance();
 }
 
