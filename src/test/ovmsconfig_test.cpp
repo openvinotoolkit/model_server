@@ -230,6 +230,36 @@ TEST_F(OvmsConfigDeathTest, negativeGrpcWorkersMax) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "grpc_workers count should be from 1");
 }
 
+TEST_F(OvmsConfigDeathTest, cpuExtensionMissingPath) {
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--cpu_extension", "/wrong/dir"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "File path provided as an --cpu_extension parameter does not exists in the filesystem");
+}
+
+TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--log_level", "WRONG"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "log_level should be one of");
+}
+
+TEST_F(OvmsConfigDeathTest, lowLatencyUsedForNonStateful) {
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--low_latency_transformation"};
+    int arg_count = 6;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "require setting stateful flag for the model");
+}
+
+TEST_F(OvmsConfigDeathTest, maxSequenceNumberUsedForNonStateful) {
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--max_sequence_number", "325"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "require setting stateful flag for the model");
+}
+
+TEST_F(OvmsConfigDeathTest, idleSequenceCleanupUsedForNonStateful) {
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--idle_sequence_cleanup"};
+    int arg_count = 6;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "require setting stateful flag for the model");
+}
+
 TEST_F(OvmsConfigDeathTest, negativeUint64Max) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
     int arg_count = 5;

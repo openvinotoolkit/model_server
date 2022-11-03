@@ -344,10 +344,6 @@ void Config::validate() {
         std::cerr << "grpc_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
         exit(EX_USAGE);
     }
-    if (result->count("rest_port") && ((this->restPort() > MAX_PORT_NUMBER) || (this->restPort() < 0))) {
-        std::cerr << "rest_port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
-        exit(EX_USAGE);
-    }
 
     // port and rest_port cannot be the same
     if (this->port() == this->restPort()) {
