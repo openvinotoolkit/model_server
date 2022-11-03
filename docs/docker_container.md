@@ -1,6 +1,6 @@
-# Model Server in Docker Containers {#ovms_docs_docker_container}
+# Launch Model Server {#ovms_docs_docker_container}
 
-OpenVINO Model Server can be hosted on a bare metal server, virtual machine, or inside a docker container. It is also suitable for landing in the Kubernetes environment.
+OpenVINO Model Server can be hosted inside a docker container, on a [bare metal server or virtual machine](host.md). It is also suitable for landing in the [Kubernetes environment](installations_kubernetes.md).
 
 This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Linux, using a Docker Container. 
 
@@ -21,6 +21,7 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 - Intel® Core™ processor (6-12th gen.) or Intel® Xeon® processor
 - Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/) 
 - (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html)
+
 > **NOTE**: Accelerators are only tested on bare-metal Linux hosts.
 
 
@@ -28,12 +29,12 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 
 1. Pull OpenVINO&trade; Model Server Image.
 2. Prepare data for serving:
-   - Start a Docker Container with OVMS and your chosen model from cloud storage.
+   - Start a Docker Container with OVMS and your model.
    - Provide the input files.
    - Prepare a client package.
 3. Run the prediction using ovmsclient.
 
-Here is an example of launching the model server using a ResNet50 model for image classification:
+Here is an example of launching the model server using a ResNet50 image classification model from a cloud storage:
 
 ### Step 1. Pull Model Server Image
 
@@ -52,7 +53,7 @@ docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 ### Step 2. Prepare Data for Serving
 
 ```bash
-# start the container 
+# start the container with the model
 docker run -p 9000:9000 openvino/model_server:latest \ 
 --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \ 
 --layout NHWC:NCHW --port 9000 
@@ -61,13 +62,13 @@ docker run -p 9000:9000 openvino/model_server:latest \
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/static/images/zebra.jpeg
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/classes.py
 
-# Install the Python-based ovmsclient package
+# install the Python-based ovmsclient package
 pip3 install ovmsclient
 ```
 
 ### Step 3. Run prediction
 
-Run prediction
+
 ```bash
 echo 'import numpy as np
 from classes import imagenet_classes
@@ -86,6 +87,12 @@ python predict.py
 ```
 If everything is set up correctly, you will see 'zebra' prediction in the output.
 
-To see another example of setting up the model server with a face-detection model, refer to the [Quickstart guide](./ovms_quickstart.md).
+## Next Steps
 
-To serve your own model, [prepare it for serving](model_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
+- To serve your own model, [prepare it for serving](model_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
+- To see another example of setting up the model server with a face-detection model, refer to the [Quickstart guide](./ovms_quickstart.md).
+- Learn more about model server [starting parameters](parameters.md).
+
+## Additional Resources
+
+- [Troubleshooting](troubleshooting.md)

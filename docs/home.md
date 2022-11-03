@@ -19,27 +19,29 @@
 
 @endsphinxdirective
 
-OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. Model server uses the same architecture and API as [TensorFlow Serving](https://github.com/tensorflow/serving) and [KServe](https://github.com/kserve/kserve) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
-Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md)
+OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures, model server uses the same architecture and API as [TensorFlow Serving](https://github.com/tensorflow/serving) and [KServe](https://github.com/kserve/kserve) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
 
-![OVMS diagram](ovms_draft_diagram.png)
+Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md).
+
+![OVMS diagram](ovms_diagram.png)
 
 ## Model Serving
 
 A model server hosts models and makes them accessible to software components over standart network protocols. Functionally it works similarly to a web server: user sends a request and receives a response. 
 
-![OVMS picture](clientserver.png)
+Model server offers many advantages: 
 
-Model server advantages: 
+- Remote inference enables using lightweight clients with only the necessary functions to perform API calls to edge or cloud deployments.
+- Applications are independent from the model framework, hardware device and infrastructure.
+- Any programming language that supports REST or gRPC calls can be used to integrate with an application.
+- Model topology and weights are not exposed directly to client applications, making it easier to control access to the model.
+- Ideal architecture for microservices-based applications and deployments in cloud environments – including Kubernetes and OpenShift clusters.
+- Efficient resource utilization with horizontal and vertical inference scaling.
 
-- Remote inference allows creating a lightweight client with only the necessary functions to perform API calls for edge or cloud deployments and getting high execution performance even on low-end client hosts.
-- Application is independent of the model framework, hardware, or infrastructure. It can be written in any programming language that supports REST or gRPC calls.
-- Model topology and weight are not exposed directly to the client application, making it easier to control access to its IP.
-- Suitable for application architecture based on microservices.
-- Easy to deploy in cloud, Kubernetes, and OpenShift. 
-- Inference can be scaled horizontally or vertically, providing efficient resource utilization without any changes in the application.
+![OVMS picture](ovms_high_level.png)
 
-## OpenVINO Model Server Key Features: 
+
+## OpenVINO Model Server Key Features
 
 The models used by OpenVINO Model Server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Storage](./models_repository.md) documentation.  
 
@@ -70,7 +72,7 @@ Follow an example from the [Quickstart guide](ovms_quickstart.md) or try the mod
 
 * [Benchmarking results](https://docs.openvino.ai/2022.1/openvino_docs_performance_benchmarks_ovms.html) - see high performance gains on several public neural networks on multiple Intel® CPUs, GPUs and VPUs 
 
-* [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - watch OVMS demo recording
+* [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - watch model server demo recording
 
 * [Release Notes](https://github.com/openvinotoolkit/model_server/releases) - find out what’s new in the latest OpenVINO Model Server release
 

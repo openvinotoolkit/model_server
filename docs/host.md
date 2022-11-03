@@ -1,21 +1,17 @@
 # Starting Model Server Locally {#ovms_docs_baremetal}
 
-OpenVINO Model Server execution on baremetal is tested on Ubuntu 20.04.x. For other operating systems we recommend using [OVMS docker containers](./docker_container.md).
+Before starting the server, make sure your hardware is in the list of [supported configurations](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html).
 
-For supported hardware, refer to [supported configurations](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html).
+> **NOTE**: OpenVINO Model Server execution on baremetal is tested on Ubuntu 20.04.x. For other operating systems, starting model server in a [docker container](./docker_container.md) is recommended.
    
-Always verify if your model is supported by the VPU Plugins and convert it to the OpenVINO format, using [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer).
-
 ## Installing Model Server <a name="model-server-installation"></a>
 
 1. Clone model server git repository.
 2. Navigate to the model server directory.
-3. To install Model Server, you can either use a precompiled binary or build it on your own, in a Docker container.
-4. Navigate to the folder containing the binary package and unpack the included `tar.gz` file.
+3. Use a precompiled binary or build it in a Docker container-.
+4. Navigate to the folder containing the binary package and unpack the `tar.gz` file.
 
-You can build your own Docker image executing the `make docker_build` command in the [git repository root folder](https://github.com/openvinotoolkit/model_server).
-
-Run the following commands to build model server:
+Run the following commands to build a model server Docker image:
 
 ```bash
 
@@ -24,7 +20,7 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server   
    
 # automatically build a container from source
-# it will also place a copy of the binary package in the `dist` subfolder in the Model Server root directory
+# it places a copy of the binary package in the `dist` subfolder in the Model Server root directory
 make docker_build
 
 # unpack the `tar.gz` file
@@ -48,10 +44,11 @@ The server can be started in two ways:
 - using the ```./ovms/bin/ovms --help``` command in the folder, where OVMS was is installed
 - in the interactive mode - as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements
 
-Refer to [Running Model Server using Docker Container](./docker_container.md) to get more details on the OpenVINO Model Server parameters and configuration.
+Refer to [Running Model Server using Docker Container](./docker_container.md) to get more details on the OpenVINO Model Server parameters and configuration. 
+
 
 > **NOTE**:
-> When AI accelerators are used for inference execution, additional steps may be required to install their drivers and dependencies. Learn more about it 
+> When AI accelerators are used for inference execution, additional steps may be required to install their drivers and dependencies. 
 > Learn more about it on [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_linux.html).
 
 ## Building an OpenVINO&trade; Model Server Docker Image from Source <a name="sourcecode"></a>
@@ -90,7 +87,8 @@ For more detailed information read [OpenVINO Multi-Device plugin documentation](
 
 In order to use this feature in OpenVino™ Model Server, following steps are required:
 
-Set target_device for the model in configuration json file to MULTI:DEVICE_1,DEVICE_2 (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
+Set target_device for the model in configuration json file to MULTI:DEVICE_1,DEVICE_2 (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example).
+
 
 Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
 ```
@@ -110,3 +108,6 @@ make docker_build INSTALL_DRIVER_VERSION=21.38.21026
 ```
 If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
 
+
+
+Always verify if your model is supported by the VPU Plugins and convert it to the OpenVINO format, using [OpenVINO Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer).
