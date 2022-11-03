@@ -286,4 +286,13 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip(too_long), false);
 }
 
+TEST(OvmsConfigTest, positive) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "44", "--rest_port", "45"};
+    int arg_count = 7;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    EXPECT_EQ(ovms::Config::instance().port(), 44);
+    EXPECT_EQ(ovms::Config::instance().restPort(), 45);
+    EXPECT_EQ(ovms::Config::instance().configPath(), "/path1");
+}
+
 #pragma GCC diagnostic pop
