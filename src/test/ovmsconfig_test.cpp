@@ -73,11 +73,17 @@ TEST_F(OvmsConfigDeathTest, emptyInput) {
 }
 
 TEST_F(OvmsConfigDeathTest, helpInput) {
-    char* n_argv[] = {"ovms", "help"};
+    char* n_argv[] = {"ovms", "--help"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_OK), "");
 
     // EXPECT_TRUE(AssertRegexMessageInOutput(std::string("config_path")));
+}
+
+TEST_F(OvmsConfigDeathTest, versionInput) {
+    char* n_argv[] = {"ovms", "--version"};
+    int arg_count = 2;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_OK), "");
 }
 
 TEST_F(OvmsConfigDeathTest, badInput) {
