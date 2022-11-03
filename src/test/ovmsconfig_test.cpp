@@ -152,22 +152,28 @@ TEST_F(OvmsConfigDeathTest, negativeSamePorts) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "port and rest_port cannot");
 }
 
-TEST_F(OvmsConfigDeathTest, restWorkersTooSmall) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080", "--rest_workers", "1"};
-    int arg_count = 9;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_workers count should be from 2 to ");
-}
-
 TEST_F(OvmsConfigDeathTest, restWorkersTooLarge) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080", "--rest_workers", "100001"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_workers count should be from 2 to ");
 }
 
-TEST_F(OvmsConfigDeathTest, wrongRestWorkers) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080", "--rest_workers", "1"};
+TEST_F(OvmsConfigDeathTest, restWorkersDefinedRestPortUndefined) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--rest_workers", "60"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_workers is set but rest_port is not set");
+}
+
+TEST_F(OvmsConfigDeathTest, invalidRestBindAddress) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8081", "--port", "8080", "--rest_bind_address", "192.0.2"};
     int arg_count = 9;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_workers count should be from 2 to ");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_bind_address has invalid format");
+}
+
+TEST_F(OvmsConfigDeathTest, invalidGrpcBindAddress) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--grpc_bind_address", "192.0.2"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "grpc_bind_address has invalid format");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMultiParams) {

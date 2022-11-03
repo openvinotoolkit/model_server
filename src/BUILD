@@ -590,6 +590,7 @@ cc_test(
     srcs = [
         "test/azurefilesystem_test.cpp",
         "test/binaryutils_test.cpp",
+        "test/c_api_tests.cpp",
         "test/custom_loader_test.cpp",
         "test/custom_node_output_allocator_test.cpp",
         "test/custom_node_buffersqueue_test.cpp",

@@ -19,38 +19,6 @@
 
 #include "poc_api_impl.hpp"
 
-// #include <future>
-// #include <iostream>
-// #include <memory>
-// #include <utility>
-
-// #include "modelinstance.hpp"
-// #include "modelinstanceunloadguard.hpp"
-// #include "modelmanager.hpp"
-// #include "servablemanagermodule.hpp"
-// #include "server.hpp"
-
-// using ovms::Server;
-
-// int OVMS_Start(int argc, char** argv) {
-//     Server& server = Server::instance();
-//     return server.start(argc, argv);
-// }
-
-// void OVMS_Infer(char* name, float* data, float* output) {
-//     Server& server = Server::instance();
-//     std::shared_ptr<ovms::ModelInstance> instance;
-//     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
-//     auto module = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
-//     if (nullptr == module) {
-//         return;
-//     }
-//     auto servableManagerModule = dynamic_cast<const ovms::ServableManagerModule*>(module);
-//     auto& manager = servableManagerModule->getServableManager();
-//     manager.getModelInstance(name, 0, instance, modelInstanceUnloadGuardPtr);
-//     instance->infer(data, output);
-// }
-
 OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options) {
     *options = (OVMS_ServerGeneralOptions*)new ovms::GeneralOptionsImpl;
     return 0;

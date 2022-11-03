@@ -13,29 +13,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
 
-#include "pocapi.hpp"
+#include <gtest/gtest.h>
 
-int main(int argc, char** argv) {
-    OVMS_ServerGeneralOptions* go = 0;
-    OVMS_ServerMultiModelOptions* mmo = 0;
-    OVMS_Server* srv;
+#include "../config.hpp"
+#include "../poc_api_impl.hpp"
 
-    OVMS_ServerGeneralOptionsNew(&go);
-    OVMS_ServerMultiModelOptionsNew(&mmo);
-    OVMS_ServerNew(&srv);
+using namespace ovms;
 
-    OVMS_ServerGeneralOptionsSetGrpcPort(go, 11337);
-    OVMS_ServerGeneralOptionsSetRestPort(go, 11338);
-    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config.json");
+class CapiConfigTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+    }
+};
 
-    OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
+TEST_F(CapiConfigTest, Parse) {
+    GeneralOptionsImpl go;
+    MultiModelOptionsImpl mmo;
 
-    OVMS_ServerDelete(srv);
-    OVMS_ServerMultiModelOptionsDelete(mmo);
-    OVMS_ServerGeneralOptionsDelete(go);
+    go.grpcPort = 123;
+    go.restPort = 234;
+    mmo.configPath = "/path/config.json";
 
-    std::cout << "Finish" << std::endl;
-    return 0;
+    ovms::Config::instance().parse(&go, &mmo);
+    EXPECT_EQ(ovms::Config::instance().port(), 123);
+    EXPECT_EQ(ovms::Config::instance().restPort(), 234);
+    EXPECT_EQ(ovms::Config::instance().configPath(), "/path/config.json");
 }

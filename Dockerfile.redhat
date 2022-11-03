@@ -192,6 +192,7 @@ RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_
 
 # C api shared library
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
 
 COPY ${ovms_metadata_file} metadata.json
 
