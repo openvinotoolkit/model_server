@@ -228,6 +228,15 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
     return StatusCode::OK;
 }
 
+static bool useSharedOutputContent(const tensorflow::serving::PredictRequest* request){
+    return true;
+}
+
+static bool useSharedOutputContent(const ::inference::ModelInferRequest* request){
+    return request->raw_input_contents().size() > 0;
+}
+
+
 template <typename RequestType, typename ResponseType>
 Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     const RequestType* request,
@@ -274,7 +283,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              nodeResources.at(info.nodeName)));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode);
+            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode, useSharedOutputContent(request));
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;

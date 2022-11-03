@@ -1246,7 +1246,6 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    bool sharedInputContentsUsed = requestProto->raw_input_contents().size() > 0;
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop(DESERIALIZE);
     if (!status.ok())
@@ -1264,7 +1263,8 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName, sharedInputContentsUsed);
+    bool useSharedOutputContent = requestProto->raw_input_contents().size() > 0;
+    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContent);
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;

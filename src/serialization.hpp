@@ -113,7 +113,7 @@ Status serializePredictResponse(
             return status;
         }
         auto& inferOutputTensor = protoGetter.createOutput(outputInfo->getMappedName());
-        if(sharedInputContentsUsed) {
+        if(useSharedOutputContent) {
             status = serializeTensorToTensorProtoRaw(inferOutputTensor, protoGetter.createContent(outputInfo->getMappedName()), outputInfo, tensor);
         }
         else

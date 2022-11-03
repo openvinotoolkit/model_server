@@ -159,58 +159,34 @@ static void serializeContent(std::string* content, ov::Tensor& tensor) {
     }
 }
 
+#define serializeByDatatype(contents, datatype)                                            \
+        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(datatype)) {            \
+            auto value = responseOutput.mutable_contents()->contents()->Add();             \
+            *value = (*(reinterpret_cast<const datatype*>((char*)tensor.data() + i)));     \
+        }                                                                                  \
+
 static void serializeContent(::inference::ModelInferResponse::InferOutputTensor& responseOutput, ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     if (responseOutput.datatype() == "FP32") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(float)) {
-            auto value = responseOutput.mutable_contents()->mutable_fp32_contents()->Add();
-            *value = (*(reinterpret_cast<const float*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_fp32_contents, float)
     } else if (responseOutput.datatype() == "INT64") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(int64_t)) {
-            auto value = responseOutput.mutable_contents()->mutable_int64_contents()->Add();
-            *value = (*(reinterpret_cast<const int64_t*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_int64_contents, int64_t)
     } else if (responseOutput.datatype() == "INT32") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(int32_t)) {
-            auto value = responseOutput.mutable_contents()->mutable_int_contents()->Add();
-            *value = (*(reinterpret_cast<const int32_t*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_int_contents, int32_t)
     } else if (responseOutput.datatype() == "INT16") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(int16_t)) {
-            auto value = responseOutput.mutable_contents()->mutable_int_contents()->Add();
-            *value = (*(reinterpret_cast<const int16_t*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_int_contents, int16_t)
     } else if (responseOutput.datatype() == "INT8") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(int8_t)) {
-            auto value = responseOutput.mutable_contents()->mutable_int_contents()->Add();
-            *value = (*(reinterpret_cast<const int8_t*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_int_contents, int8_t)
     } else if (responseOutput.datatype() == "UINT64") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(uint64_t)) {
-            auto value = responseOutput.mutable_contents()->mutable_uint64_contents()->Add();
-            *value = (*(reinterpret_cast<const uint64_t*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_uint64_contents, uint64_t)
     } else if (responseOutput.datatype() == "UINT32") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(uint32_t)) {
-            auto value = responseOutput.mutable_contents()->mutable_uint_contents()->Add();
-            *value = (*(reinterpret_cast<const uint32_t*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_uint_contents, uint32_t)
     } else if (responseOutput.datatype() == "UINT16") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(uint16_t)) {
-            auto value = responseOutput.mutable_contents()->mutable_uint_contents()->Add();
-            *value = (*(reinterpret_cast<const uint16_t*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_uint_contents, uint16_t)
     } else if (responseOutput.datatype() == "UINT8") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(uint8_t)) {
-            auto value = responseOutput.mutable_contents()->mutable_uint_contents()->Add();
-            *value = (*(reinterpret_cast<const uint8_t*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_uint_contents, uint8_t)
     } else if (responseOutput.datatype() == "FP64") {
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(double)) {
-            auto value = responseOutput.mutable_contents()->mutable_fp64_contents()->Add();
-            *value = (*(reinterpret_cast<const double*>((char*)tensor.data() + i)));
-        }
+        serializeByDatatype(mutable_fp64_contents, double)
     } else if (responseOutput.datatype() == "BYTES") {
         responseOutput.mutable_contents()->add_bytes_contents((char*)tensor.data(), tensor.get_byte_size());
     }

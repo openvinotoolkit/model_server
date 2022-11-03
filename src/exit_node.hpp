@@ -34,7 +34,7 @@ template <typename ResponseType>
 class ExitNode : public Node {
     ResponseType* response;
     const tensor_map_t outputsInfo;
-    bool sharedInputContentsUsed;
+    bool useSharedOutputContent;
 
 public:
     ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool useSharedOutputContent = true) :
