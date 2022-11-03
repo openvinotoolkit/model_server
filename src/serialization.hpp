@@ -102,7 +102,7 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     ::KFSResponse* response,
     outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent  = true) {
+    bool useSharedOutputContent = true) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(response);
@@ -113,14 +113,12 @@ Status serializePredictResponse(
             return status;
         }
         auto& inferOutputTensor = protoGetter.createOutput(outputInfo->getMappedName());
-        if(useSharedOutputContent) {
+        if (useSharedOutputContent) {
             status = serializeTensorToTensorProtoRaw(inferOutputTensor, protoGetter.createContent(outputInfo->getMappedName()), outputInfo, tensor);
-        }
-        else
-        {
+        } else {
             status = serializeTensorToTensorProto(inferOutputTensor, outputInfo, tensor);
         }
-        
+
         if (!status.ok()) {
             return status;
         }

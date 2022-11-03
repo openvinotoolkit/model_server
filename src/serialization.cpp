@@ -159,11 +159,11 @@ static void serializeContent(std::string* content, ov::Tensor& tensor) {
     }
 }
 
-#define serializeByDatatype(contents, datatype)                                            \
-        for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(datatype)) {            \
-            auto value = responseOutput.mutable_contents()->contents()->Add();             \
-            *value = (*(reinterpret_cast<const datatype*>((char*)tensor.data() + i)));     \
-        }                                                                                  \
+#define serializeByDatatype(contents, datatype)                                    \
+    for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(datatype)) {        \
+        auto value = responseOutput.mutable_contents()->contents()->Add();         \
+        *value = (*(reinterpret_cast<const datatype*>((char*)tensor.data() + i))); \
+    }
 
 static void serializeContent(::inference::ModelInferResponse::InferOutputTensor& responseOutput, ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
