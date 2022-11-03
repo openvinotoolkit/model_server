@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <stdint.h>  //  For precise data types
 #include <stddef.h>
+#include <stdint.h>  //  For precise data types
 
 struct OVMS_Server;
 struct OVMS_Status;
