@@ -26,7 +26,6 @@ ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
 ARG APT_OV_PACKAGE=openvino-2022.1.0
-ARG CHECK_COVERAGE=1
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
@@ -217,17 +216,20 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12`#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-RUN bazel coverage --combined_report=lcov //src:ovms_test
-
 COPY check_coverage.bat /ovms/
-# Test Coverage
-RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
+
+# Test coverage and unit tests in one layer
+RUN bazel coverage --combined_report=lcov //src:ovms_test &&\
+    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
+    bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
     
 
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
+
+RUN 
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
