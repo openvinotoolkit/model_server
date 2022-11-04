@@ -31,9 +31,9 @@ Default metrics
 | Type      | Name | Labels | Description |
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_streams | name,version | Number of OpenVINO execution streams |
-| gauge      | ovms_current_requests | api,interface,method,name,version | Number of inference requests currently in process |
-| counter      | ovms_requests_success | name,version | Number of successful requests to a model or a DAG. |
-| counter      | ovms_requests_fail | name,version | Number of failed requests to a model or a DAG. |
+| gauge      | ovms_current_requests | name,version | Number of inference requests currently in process |
+| counter      | ovms_requests_success | api,interface,method,name,version | Number of successful requests to a model or a DAG. |
+| counter      | ovms_requests_fail | api,interface,method,name,version | Number of failed requests to a model or a DAG. |
 | histogram      | ovms_request_time_us | interface,name,version | Processing time of requests to a model or a DAG. |
 | histogram      | ovms_inference_time_us | name,version | Inference execution time in the OpenVINO backend. |
 | histogram      | ovms_wait_for_infer_req_time_us | name,version | Request waiting time in the scheduling queue. |
