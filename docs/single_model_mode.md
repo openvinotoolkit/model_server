@@ -65,4 +65,3 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 - [Using Cloud Storage](using_cloud_storage.md)
 - [Troubleshooting](troubleshooting.md)
 - [Model server parameters](parameters.md)
-

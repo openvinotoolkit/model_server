@@ -16,7 +16,6 @@
 
 Implement any CPU layer, unsupported by OpenVINO, as a shared library.
 
-[Learn more](README.md)
 
 ## Model Cache
 
@@ -25,5 +24,3 @@ Leverage an [OpenVINO&trade; model cache functionality](https://docs.openvino.ai
 ## Custom Model Loader 
 
 Write your own custom model loader based on the predefine interface and load the same as a dynamic library. 
-
-[Learn more](custom_model_loader.md)
