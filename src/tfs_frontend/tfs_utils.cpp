@@ -13,11 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 #include "tfs_utils.hpp"
-#pragma GCC diagnostic pop
+
 #include <map>
 #include <memory>
 #include <sstream>

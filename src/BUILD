@@ -37,6 +37,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror",
         "-Wno-sign-compare",
     ],
 )
@@ -268,6 +269,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror",
     ],
 )
 
@@ -361,6 +363,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -379,6 +382,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -399,6 +403,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -422,6 +427,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -440,6 +446,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -458,6 +465,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -474,6 +482,7 @@ cc_binary(
     ],
     copts = [
         "-Wconversion",
+        "-Werror",
     ],
     deps = [
         "//src:ovms_lib",
@@ -593,6 +602,7 @@ cc_test(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror",
     ],
 )
 
