@@ -120,8 +120,7 @@ RUN	set -e ; \
                         apt-get update && \
                         apt-get install -y \
                         intel-opencl-icd \
-                        intel-level-zero-gpu level-zero \
-                        intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 && \
+                        intel-level-zero-gpu level-zero && \
                         apt clean ; \
                         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
                 ;; \
