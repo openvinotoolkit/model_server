@@ -537,7 +537,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                     for (auto& sh : s.value.GetArray()) {
                         if (sh.IsUint64()) {
                             size_t dim = sh.GetUint64();
-                            if (dim > std::numeric_limits<dimension_value_t>::max()) {
+                            if (dim > static_cast<size_t>(std::numeric_limits<dimension_value_t>::max())) {
                                 SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
                                 if (!firstErrorStatus.ok()) {
                                     firstErrorStatus = StatusCode::SHAPE_WRONG_FORMAT;
