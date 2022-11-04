@@ -48,7 +48,10 @@ public:
         tensor.mutable_shape()->Add(batchSize);
         tensor.set_datatype("BYTES");
     }
-
+    void prepareBinaryRequest(::KFSRequest& tensor, std::string& image_bytes) {
+        if (image_bytes.size() > 0)
+            tensor.add_raw_input_contents()->append(image_bytes);
+    }
     void prepareBinaryTensor(tensorflow::TensorProto& tensor) {
         size_t filesize;
         std::unique_ptr<char[]> image_bytes;
@@ -109,6 +112,17 @@ TYPED_TEST(BinaryUtilsTest, tensorWithEmptyTensor) {
         EXPECT_EQ(convertBinaryRequestTensorToOVTensor(requestTensorEmptyInput, tensor, tensorInfo), ovms::StatusCode::STRING_VAL_EMPTY);
     else
         EXPECT_EQ(convertBinaryRequestTensorToOVTensor(requestTensorEmptyInput, tensor, tensorInfo), StatusCode::BYTES_CONTENTS_EMPTY);
+}
+
+TYPED_TEST(BinaryUtilsTest, requestWithEmptyTensor) {
+    ::KFSRequest requestTensorEmptyInput;
+    std::string emptyInput = "";
+    this->prepareBinaryRequest(requestTensorEmptyInput, emptyInput);
+
+    ov::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
+    EXPECT_EQ(convertBinaryRequestTensorToOVTensor(requestTensorEmptyInput, tensor, tensorInfo), StatusCode::BYTES_CONTENTS_EMPTY);
 }
 
 TYPED_TEST(BinaryUtilsTest, tensorWithNonSupportedLayout) {
