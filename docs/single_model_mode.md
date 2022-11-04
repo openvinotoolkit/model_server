@@ -1,6 +1,6 @@
 # Serving Single Model {#ovms_docs_single_model}
 
-Before launching the container, make sure you [prepared the model for serving](model_repository.md).
+Before launching the container, make sure you [prepared the model for serving](models_repository.md).
 
 Launch Model Server by running the following command: 
 

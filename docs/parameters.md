@@ -1,4 +1,4 @@
-# Configuring Deployment {#ovms_docs_parameters}
+# Model Server Parameters {#ovms_docs_parameters}
 
 ## Model Configuration Options
 

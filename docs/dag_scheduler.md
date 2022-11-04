@@ -1,4 +1,4 @@
-# Serving Pipelines {#ovms_docs_dag}
+# Serving Pipelines of Models {#ovms_docs_dag}
 
 @sphinxdirective
 

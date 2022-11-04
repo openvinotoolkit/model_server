@@ -1,4 +1,4 @@
-# Preparing Model for Serving {#ovms_docs_models_repository}
+# Preparing Model Repository {#ovms_docs_models_repository}
 
 @sphinxdirective
 
@@ -47,8 +47,10 @@ models/
 
 - Each model should be stored in a dedicated directory, for example, model1 and model2. 
 - Each model directory should include a sub-folder for each of its versions (1,2, and so on). The versions and their folder names should be positive integer values.  
-> **NOTE**: In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify the version number in the parameters, by default, the latest version is served.
 - Every version folder must include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for PaddlePaddle. The file name is arbitrary.
+
+> **NOTE**: In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify the version number in the parameters, by default, the latest version is served.
+
 
 The models also can be hosted remotely by cloud storages, including Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage. Learn how to [use cloud storage as a model repository](using_cloud_storage.md).
 

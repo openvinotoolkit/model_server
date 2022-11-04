@@ -1,6 +1,6 @@
-# Starting Model Server Locally {#ovms_docs_baremetal}
+# Bare Metal and Virtual Hosts {#ovms_docs_baremetal}
 
-Before starting the server, make sure your hardware is [supported](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html) by OpenVINO.
+Before starting the server on bare metal, make sure your hardware is [supported](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html) by OpenVINO.
 
 > **NOTE**: OpenVINO Model Server execution on baremetal is tested on Ubuntu 20.04.x. For other operating systems, starting model server in a [docker container](./docker_container.md) is recommended.
    
@@ -50,7 +50,7 @@ The server can be started in two ways:
 
 ## Next Steps
 
-- To serve your own model, [prepare it for serving](model_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
+- To serve your own model, [prepare it for serving](models_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
 - Learn more about model server [parameters](parameters.md).
 
 ## Additional Resources

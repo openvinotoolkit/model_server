@@ -1,4 +1,4 @@
-# Launching Model Server {#ovms_docs_docker_container}
+# Starting Model Server {#ovms_docs_docker_container}
 
 OpenVINO Model Server can be hosted inside a docker container, on a [bare metal server or virtual machine](host.md). It is also suitable for landing in the [Kubernetes environment](installations_kubernetes.md).
 
@@ -89,11 +89,11 @@ If everything is set up correctly, you will see 'zebra' prediction in the output
 
 ## Next Steps
 
-- To serve your own model, [prepare it for serving](model_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
+- To serve your own model, [prepare it for serving](models_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
 - To see another example of setting up the model server with a face-detection model, refer to the [Quickstart guide](./ovms_quickstart.md).
 - Learn more about model server [starting parameters](parameters.md).
 
 ## Additional Resources
 
-- [Model Server starting parameters](parameters.md).
+- [Model Server starting parameters](parameters.md)
 - [Troubleshooting](troubleshooting.md)

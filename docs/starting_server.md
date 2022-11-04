@@ -20,7 +20,7 @@
 ## Preparing Model for Serving
 
 The models used by OpenVINO Model Server need to be stored locally or hosted remotely by object storage services. 
-Learn how to [prepare your model for serving](model_repository.md). 
+Learn how to [prepare your model for serving](models_repository.md). 
 
 Leverage remote storages, compatible with Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage, to create more flexible model repositories 
 that are easy to use and manage, for example, in Kubernetes deployments. [Learn more](using_cloud_storage.md)
@@ -63,7 +63,7 @@ Read [model server parameters](parameters.md) to get more details on the model s
 
 ## Using AI Accelerators
 
-Learn how to configure [AI accelerators](accelerators.md), such as Intel Movidius Myriad VPUs, 
+Learn how to [configure AI accelerators](accelerators.md), such as Intel Movidius Myriad VPUs, 
 GPU, and HDDL, as well as Multi-Device, Heterogeneous and Auto Device Plugins for inference execution. 
 
 ## Keeping Deployments Secure

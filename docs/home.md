@@ -7,13 +7,10 @@
    :hidden:
 
    ovms_docs_quick_start_guide
-   ovms_docs_starting_server
    ovms_docs_features
+   ovms_docs_starting_server
    ovms_docs_server_app
-   ovms_docs_dag
-   ovms_docs_binary_input
    ovms_docs_performance_tuning
-   ovms_docs_advanced
    ovms_docs_demos
    ovms_docs_troubleshooting
 
