@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "inferencetensor.hpp"
 
+#include <utility>
+
 #include "buffer.hpp"
 #include "pocapi.hpp"
 #include "status.hpp"
