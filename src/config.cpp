@@ -374,4 +374,230 @@ void Config::validate() {
     return;
 }
 
+const std::string& Config::__configPath() const {
+    if (result->count("config_path"))
+        return result->operator[]("config_path").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::configPath() const { return _configPath; }
+
+uint64_t Config::__port() const {
+    return result->operator[]("port").as<uint64_t>();
+}
+
+uint64_t Config::port() const { return _port; }
+
+const std::string Config::__cpuExtensionLibraryPath() const {
+    if (result != nullptr && result->count("cpu_extension")) {
+        return result->operator[]("cpu_extension").as<std::string>();
+    }
+    return "";
+}
+
+const std::string Config::cpuExtensionLibraryPath() const { return _cpuExtensionLibraryPath; }
+
+const std::string Config::__grpcBindAddress() const {
+    if (result->count("grpc_bind_address"))
+        return result->operator[]("grpc_bind_address").as<std::string>();
+    return "0.0.0.0";
+}
+
+const std::string Config::grpcBindAddress() const { return _grpcBindAddress; }
+
+uint64_t Config::__restPort() const {
+    return result->operator[]("rest_port").as<uint64_t>();
+}
+
+uint64_t Config::restPort() const { return _restPort; }
+
+const std::string Config::__restBindAddress() const {
+    if (result->count("rest_bind_address"))
+        return result->operator[]("rest_bind_address").as<std::string>();
+    return "0.0.0.0";
+}
+
+const std::string Config::restBindAddress() const { return _restBindAddress; }
+
+uint Config::__grpcWorkers() const {
+    return result->operator[]("grpc_workers").as<uint>();
+}
+
+uint Config::grpcWorkers() const { return _grpcWorkers; }
+
+uint Config::__restWorkers() const {
+    return result->operator[]("rest_workers").as<uint>();
+}
+
+uint Config::restWorkers() const { return _restWorkers; }
+
+const std::string& Config::__modelName() const {
+    if (result->count("model_name"))
+        return result->operator[]("model_name").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::modelName() const { return _modelName; }
+
+const std::string& Config::__modelPath() const {
+    if (result->count("model_path"))
+        return result->operator[]("model_path").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::modelPath() const { return _modelPath; }
+
+const std::string& Config::__batchSize() const {
+    if (!result->count("batch_size")) {
+        static const std::string d = "0";
+        return d;
+    }
+    return result->operator[]("batch_size").as<std::string>();
+}
+
+const std::string& Config::batchSize() const { return _batchSize; }
+
+const std::string& Config::__shape() const {
+    if (result->count("shape"))
+        return result->operator[]("shape").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::Config::shape() const { return _shape; }
+
+const std::string& Config::__layout() const {
+    if (result->count("layout"))
+        return result->operator[]("layout").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::layout() const { return _layout; }
+
+const std::string& Config::__modelVersionPolicy() const {
+    if (result->count("model_version_policy"))
+        return result->operator[]("model_version_policy").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::modelVersionPolicy() const { return _modelVersionPolicy; }
+
+uint32_t Config::__nireq() const {
+    if (!result->count("nireq")) {
+        return 0;
+    }
+    return result->operator[]("nireq").as<uint32_t>();
+}
+
+uint32_t Config::nireq() const { return _nireq; }
+
+const std::string& Config::__targetDevice() const {
+    return result->operator[]("target_device").as<std::string>();
+}
+
+const std::string& Config::targetDevice() const { return _targetDevice; }
+
+const std::string& Config::__pluginConfig() const {
+    if (result->count("plugin_config"))
+        return result->operator[]("plugin_config").as<std::string>();
+    return empty;
+}
+const std::string& Config::Config::pluginConfig() const { return _pluginConfig; }
+
+bool Config::__stateful() const {
+    return result->operator[]("stateful").as<bool>();
+}
+
+bool Config::stateful() const { return _stateful; }
+
+bool Config::__metricsEnabled() const {
+    if (!result->count("metrics_enable")) {
+        return false;
+    }
+    return result->operator[]("metrics_enable").as<bool>();
+}
+
+bool Config::metricsEnabled() const { return _metricsEnabled; }
+
+std::string Config::__metricsList() const {
+    if (!result->count("metrics_list")) {
+        return std::string("");
+    }
+    return result->operator[]("metrics_list").as<std::string>();
+}
+
+std::string Config::metricsList() const { return _metricsList; }
+
+bool Config::__idleSequenceCleanup() const {
+    return result->operator[]("idle_sequence_cleanup").as<bool>();
+}
+
+bool Config::idleSequenceCleanup() const { return _idleSequenceCleanup; }
+
+bool Config::__lowLatencyTransformation() const {
+    return result->operator[]("low_latency_transformation").as<bool>();
+}
+
+bool Config::lowLatencyTransformation() const { return _lowLatencyTransformation; }
+
+const std::string& Config::__logLevel() const {
+    if (result->count("log_level"))
+        return result->operator[]("log_level").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::logLevel() const { return _logLevel; }
+
+const std::string& Config::__logPath() const {
+    if (result->count("log_path"))
+        return result->operator[]("log_path").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::logPath() const { return _logPath; }
+
+#ifdef MTR_ENABLED
+const std::string& Config::__tracePath() const {
+    if (result->count("trace_path"))
+        return result->operator[]("trace_path").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::tracePath() const { return _tracePath; }
+#endif
+
+const std::string& Config::__grpcChannelArguments() const {
+    if (result->count("grpc_channel_arguments"))
+        return result->operator[]("grpc_channel_arguments").as<std::string>();
+    return empty;
+}
+
+const std::string& Config::grpcChannelArguments() const { return _grpcChannelArguments; }
+
+uint Config::__filesystemPollWaitSeconds() const {
+    return result->operator[]("file_system_poll_wait_seconds").as<uint>();
+}
+
+uint Config::filesystemPollWaitSeconds() const { return _filesystemPollWaitSeconds; }
+
+uint32_t Config::__sequenceCleanerPollWaitMinutes() const {
+    return result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
+}
+
+uint32_t Config::sequenceCleanerPollWaitMinutes() const { return _sequenceCleanerPollWaitMinutes; }
+
+uint32_t Config::__resourcesCleanerPollWaitSeconds() const {
+    return result->operator[]("custom_node_resources_cleaner_interval").as<uint32_t>();
+}
+
+uint32_t Config::resourcesCleanerPollWaitSeconds() const { return _resourcesCleanerPollWaitSeconds; }
+
+const std::string Config::__cacheDir() const {
+    if (result != nullptr && result->count("cache_dir")) {
+        return result->operator[]("cache_dir").as<std::string>();
+    }
+    return empty;
+}
+
+const std::string Config::cacheDir() const { return _cacheDir; }
+
 }  // namespace ovms
