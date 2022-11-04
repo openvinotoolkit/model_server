@@ -45,7 +45,7 @@ cc_library(
 load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
 
 cc_shared_library(
-    name = "libovms_shared.so",
+    name = "ovms_shared",
     dynamic_deps = [],
     static_deps = ["@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
@@ -223,6 +223,8 @@ cc_library(
         "pipelineeventqueue.hpp",
         "pipeline_factory.cpp",
         "pipeline_factory.hpp",
+        "poc_api_impl.cpp",
+        "poc_api_impl.hpp",
         "pocapi.hpp",
         "pocapi.cpp",
         "precision.cpp",
@@ -540,6 +542,26 @@ cc_binary(
     linkstatic = True,
 )
 
+# POC which can start OVMS with C-API built by bazel
+# Standalone example for building outside of bazel (with bare g++ is inside MakefileCapi)
+cc_binary(
+    name = "poc3",
+    srcs = [
+        "main3.cpp",
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+    ],
+    copts = [
+    ],
+    deps = [
+        "//src:ovms_lib",
+    ],
+    linkstatic = True,
+)
 
 cc_binary(
     name = "ovms",
@@ -568,6 +590,7 @@ cc_test(
     srcs = [
         "test/azurefilesystem_test.cpp",
         "test/binaryutils_test.cpp",
+        "test/c_api_tests.cpp",
         "test/custom_loader_test.cpp",
         "test/custom_node_output_allocator_test.cpp",
         "test/custom_node_buffersqueue_test.cpp",
