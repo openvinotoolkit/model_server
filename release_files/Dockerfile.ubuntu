@@ -68,7 +68,7 @@ FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
-ARG INSTALL_DRIVER_VERSION="22.28.23726"
+ARG INSTALL_DRIVER_VERSION="22.35.24055"
 ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
 ENV GPU=$GPU
@@ -113,7 +113,7 @@ RUN	set -e ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-level-zero-gpu_1.3.22597_amd64.deb ; \
                         dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
-                "22.28.23726") \
+                "22.35.24055") \
                         apt-get update && apt-get install -y gpg-agent && \
                         curl https://repositories.intel.com/graphics/intel-graphics.key |gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
                         echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
