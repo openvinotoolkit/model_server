@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include <gtest/gtest.h>
 
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../modelversionstatus.hpp"
 #include "../pipelinedefinition.hpp"
 #include "mockmodelinstancechangingstates.hpp"
@@ -128,7 +128,7 @@ protected:
 
     std::shared_ptr<NiceMock<MockModelInstance>> instance;
     std::unique_ptr<MockModel> model;
-    ::inference::ModelMetadataResponse response;
+    KFSModelMetadataResponse response;
     std::unique_ptr<ov::Core> ieCore;
 
     void SetUp() override {
@@ -274,7 +274,7 @@ protected:
     };
 
     MockPipelineDefinitionGetInputsOutputsInfo pipelineDefinition;
-    ::inference::ModelMetadataResponse response;
+    KFSModelMetadataResponse response;
     ConstructorEnabledModelManager manager;
 
 public:

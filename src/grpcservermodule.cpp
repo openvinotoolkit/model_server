@@ -32,7 +32,7 @@
 #include <unistd.h>
 
 #include "config.hpp"
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"

@@ -25,7 +25,7 @@ namespace ovms {
 class Status;
 
 class LayoutConfiguration {
-    static const char LAYOUT_CONFIGURATION_DELIMETER = ':';
+    static const char LAYOUT_CONFIGURATION_DELIMETER;
     Layout tensor;
     Layout model;
 

@@ -37,6 +37,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror",
         "-Wno-sign-compare",
     ],
 )
@@ -109,10 +110,14 @@ cc_library(
         "gatherexitnodeinputhandler.hpp",
         "gcsfilesystem.cpp",
         "gcsfilesystem.hpp",
+        "grpc_utils.cpp",
+        "grpc_utils.hpp",
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
-        "kfs_grpc_inference_service.cpp",
-        "kfs_grpc_inference_service.hpp",
+        "kfs_frontend/kfs_grpc_inference_service.cpp",
+        "kfs_frontend/kfs_grpc_inference_service.hpp",
+        "kfs_frontend/kfs_utils.cpp",
+        "kfs_frontend/kfs_utils.hpp",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",
@@ -170,6 +175,7 @@ cc_library(
         "pipeline.hpp",
         "pipelinedefinition.cpp",
         "pipelinedefinition.hpp",
+        "pipelinedefinitionstatus.cpp",
         "pipelinedefinitionstatus.hpp",
         "pipelinedefinitionunloadguard.cpp",
         "pipelinedefinitionunloadguard.hpp",
@@ -263,6 +269,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror",
     ],
 )
 
@@ -356,6 +363,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -374,6 +382,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -394,6 +403,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -417,6 +427,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -435,6 +446,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -453,6 +465,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror"
     ]
 )
 
@@ -469,6 +482,7 @@ cc_binary(
     ],
     copts = [
         "-Wconversion",
+        "-Werror",
     ],
     deps = [
         "//src:ovms_lib",
@@ -588,6 +602,7 @@ cc_test(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Werror",
     ],
 )
 

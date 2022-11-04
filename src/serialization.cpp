@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "serialization.hpp"
 
+#include "kfs_frontend/kfs_utils.hpp"
 #include "ov_utils.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
@@ -60,7 +61,7 @@ static Status serializePrecision(
 }
 
 static Status serializePrecision(
-    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    ::KFSResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
@@ -84,7 +85,7 @@ static Status serializePrecision(
     case ovms::Precision::U16:
     case ovms::Precision::U8:
     case ovms::Precision::BOOL:
-        responseOutput.set_datatype(servableOutput->getPrecisionAsKFSPrecision());
+        responseOutput.set_datatype(ovmsPrecisionToKFSPrecision(servableOutput->getPrecision()));
         break;
     case ovms::Precision::UNDEFINED:
     case ovms::Precision::MIXED:
@@ -125,7 +126,7 @@ static Status serializeShape(
 }
 
 static Status serializeShape(
-    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    ::KFSResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
@@ -176,7 +177,7 @@ Status serializeTensorToTensorProto(
 }
 
 Status serializeTensorToTensorProto(
-    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    ::KFSResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
@@ -219,7 +220,7 @@ std::string* ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::Tens
 }
 
 template <>
-::inference::ModelInferResponse::InferOutputTensor& ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::createOutput(const std::string& name) {
+::KFSResponse::InferOutputTensor& ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&>::createOutput(const std::string& name) {
     OVMS_PROFILE_FUNCTION();
     for (int i = 0; i < protoStorage->outputs_size(); i++) {
         auto& tensor = *protoStorage->mutable_outputs(i);
@@ -233,7 +234,7 @@ template <>
 }
 
 template <>
-std::string* ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::createContent(const std::string& name) {
+std::string* ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&>::createContent(const std::string& name) {
     OVMS_PROFILE_FUNCTION();
     for (int i = 0; i < protoStorage->outputs_size(); i++) {
         auto& tensor = *protoStorage->mutable_outputs(i);
