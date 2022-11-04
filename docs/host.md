@@ -45,16 +45,17 @@ The server can be started in two ways:
 
 
 > **NOTE**:
-> When AI accelerators are used for inference execution, additional steps may be required to install their drivers and dependencies. 
+> When [AI accelerators](accelerators.md)are used for inference execution, additional steps may be required to install their drivers and dependencies. 
 > Learn more in the [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_linux.html).
 
 ## Next Steps
 
 - To serve your own model, [prepare it for serving](models_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
-- Learn more about model server [parameters](parameters.md).
+- Learn more about the model server [parameters](parameters.md).
 
 ## Additional Resources
 
-- [Troubleshooting](troubleshooting.md)
+- [Configure AI accelerators](accelerators.md)
 - [Model server parameters](parameters.md)
 - [Quickstart guide](./ovms_quickstart.md)
+- [Troubleshooting](troubleshooting.md)

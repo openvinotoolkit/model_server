@@ -16,7 +16,7 @@
 
 @endsphinxdirective
 
-OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures, model server uses the same architecture and API as [TensorFlow Serving](https://github.com/tensorflow/serving) and [KServe](https://github.com/kserve/kserve) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
+OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures, the model server uses the same architecture and API as [TensorFlow Serving](https://github.com/tensorflow/serving) and [KServe](https://github.com/kserve/kserve) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
 
 Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md).
 
@@ -24,12 +24,10 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 
 ## Model Serving
 
-A model server hosts models and makes them accessible to software components over standart network protocols. Functionally it works similarly to a web server: user sends a request and receives a response. 
-
-Model server offers many advantages: 
+The model server hosts models and makes them accessible to software components over standart network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. The model server offers many advantages for efficient model deployment: 
 
 - Remote inference enables using lightweight clients with only the necessary functions to perform API calls to edge or cloud deployments.
-- Applications are independent from the model framework, hardware device and infrastructure.
+- Applications are independent of the model framework, hardware device, and infrastructure.
 - Any programming language that supports REST or gRPC calls can be used to integrate with an application.
 - Model topology and weights are not exposed directly to client applications, making it easier to control access to the model.
 - Ideal architecture for microservices-based applications and deployments in cloud environments – including Kubernetes and OpenShift clusters.
@@ -39,10 +37,6 @@ Model server offers many advantages:
 
 
 ## OpenVINO Model Server Key Features
-
-The models used by OpenVINO Model Server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Storage](./models_repository.md) documentation.  
-
-OpenVINO&trade; Model Server works with [Bare Metal Hosts](host.md) as well as [Docker containers](docker_container.md). It is also suitable for landing in the [Kubernetes environment](../deploy/README.md).
 
 - Support for AI accelerators, such as 
 [Intel Movidius Myriad VPUs](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_MYRIAD.html), 
@@ -59,20 +53,18 @@ OpenVINO&trade; Model Server works with [Bare Metal Hosts](host.md) as well as [
 - [model caching](model_cache.md) - cache the models on first load and re-use models from cache on subsequent loads
 - [metrics](metrics.md) - metrics compatible with Prometheus standard
 
-Follow an example from the [Quickstart guide](ovms_quickstart.md) or try the model server [features](features.md) for your application. 
+The models used by OpenVINO Model Server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](./models_repository.md) documentation. Model server works with [Bare Metal Hosts](host.md) as well as [Docker containers](docker_container.md). It is also suitable for landing in the [Kubernetes environment](../deploy/README.md).
+
+Follow an example from the [Quickstart guide](ovms_quickstart.md) or [start the model server](docker_container.md) and try its [features](features.md) for your application. 
 
 ## Additional Resources
 
 * [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218) - learn how to perform inference on JPEG images using the gRPC API in OpenVINO Model Server
-
 * [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html) - scale inferencing with OpenVINO in Kubernetes and OpenShift using OpenVINO Model Server
-
 * [Benchmarking results](https://docs.openvino.ai/2022.1/openvino_docs_performance_benchmarks_ovms.html) - see high performance gains on several public neural networks on multiple Intel® CPUs, GPUs and VPUs 
-
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - watch model server demo recording
-
 * [Release Notes](https://github.com/openvinotoolkit/model_server/releases) - find out what’s new in the latest OpenVINO Model Server release
 
 ## Contributing
 
-If you have a question, a feature request, or a bug report, feel free to submit a [Github issue](https://github.com/openvinotoolkit/model_server).
+As an open source project, we welcome community contributions to OpenVINO&trade; Model Server. If you have a question, a feature request, or a bug report, feel free to submit a [Github issue](https://github.com/openvinotoolkit/model_server) in the repository.

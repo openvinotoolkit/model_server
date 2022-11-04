@@ -1,15 +1,15 @@
 # Serving Single Model {#ovms_docs_single_model}
 
-Before launching the container, make sure you [prepared the model for serving](models_repository.md).
+Before starting the container, make sure you [prepared the model for serving](models_repository.md).
 
-Launch Model Server by running the following command: 
+Start the model server by running the following command: 
 
 ```
 docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 9001 --log_level DEBUG
 ```
 
-Example using resnet model:
+Example using a resnet model:
 
 ```bash
 mkdir -p models/resnet/1
@@ -25,7 +25,7 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 - In the command above, port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.
 
-**Configuration Arguments for Running Model Server:**
+## Configuration Arguments for Running Model Server
 
 @sphinxdirective
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
@@ -53,4 +53,16 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 | `--rest_port`                  | | the REST server port                                                                                                          |
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
 @endsphinxdirective
+
+
+## Next Step
+
+- Try the model server [features](features.md).
+
+## Additional Resources
+
+- [Preparing Model Repository](models_repository.md)
+- [Using Cloud Storage](using_cloud_storage.md)
+- [Troubleshooting](troubleshooting.md)
+- [Model server parameters](parameters.md)
 

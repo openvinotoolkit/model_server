@@ -64,6 +64,13 @@ docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.j
 
 ```
 
-For additional details, refer to:
-- [Model Repository](models_repository.md)
+## Next Step
+
+- Try the model server [features](features.md).
+
+## Additional Resources
+
+- [Preparing Model Repository](models_repository.md)
 - [Using Cloud Storage](using_cloud_storage.md)
+- [Troubleshooting](troubleshooting.md)
+- [Model server parameters](parameters.md)

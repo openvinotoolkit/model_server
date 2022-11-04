@@ -59,7 +59,7 @@ configuration for each of the served models:
 - the model version policy
 - inference related options
 
-Read [model server parameters](parameters.md) to get more details on the model server configuration. 
+Read about the [model server parameters](parameters.md) to get more details on the model server configuration. 
 
 ## Using AI Accelerators
 

@@ -1,4 +1,4 @@
-# Batch, Shape and Layout {#ovms_docs_shape_batch_layout}
+# Changing Batch, Shape and Layout {#ovms_docs_shape_batch_layout}
 
 ## Batch Processing in OpenVINO&trade; Model Server
 

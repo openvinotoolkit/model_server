@@ -95,5 +95,5 @@ If everything is set up correctly, you will see 'zebra' prediction in the output
 
 ## Additional Resources
 
-- [Model Server starting parameters](parameters.md)
+- [Configure AI accelerators](accelerators.md)
 - [Troubleshooting](troubleshooting.md)

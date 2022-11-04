@@ -54,7 +54,7 @@ models/
 
 The models also can be hosted remotely by cloud storages, including Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage. Learn how to [use cloud storage as a model repository](using_cloud_storage.md).
 
-## Request-Response 
+## Setting Input and Output Tensors
 
 Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map. 
 Prediction results can be read from the response output map. By default, OpenVINO™ Model Server uses model tensor names as input and output names in 
@@ -91,12 +91,12 @@ Here is an example of mapping_config.json:
 
 ## Next Steps
 
-- After the model is ready for serving, proceed to [launch the model server](docker_container.md).
+- After the model is ready for serving, proceed to [start the model server](docker_container.md).
 - Learn how to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
 
 ## Additional Resources
 
 - [Cloud storage as a model repository](using_cloud_storage.md)
 - [Quickstart guide](./ovms_quickstart.md)
-- [Model Server starting parameters](parameters.md).
+- [Model server starting parameters](parameters.md).
 - [Troubleshooting](troubleshooting.md)
