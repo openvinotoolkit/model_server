@@ -205,7 +205,8 @@ RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 RUN cd /ovms/src/example/SampleCpuExtension/ && make 
 
 # C api shared library
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libovms_shared.so
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
 
 COPY ${ovms_metadata_file} metadata.json
 
