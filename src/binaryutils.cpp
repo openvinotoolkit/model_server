@@ -343,12 +343,8 @@ inline static const std::string& getBinaryInput(const ::KFSRequest::InferInputTe
     return tensor.contents().bytes_contents(i);
 }
 
-inline static const std::string getBinaryInput(const ::inference::ModelInferRequest& tensor, size_t i) {
+inline static const std::string getBinaryInput(const ::KFSRequest& tensor, size_t i) {
     return tensor.raw_input_contents()[0];
-}
-
-inline static const std::string& getBinaryInput(const ::inference::ModelInferRequest::InferInputTensor& tensor, size_t i) {
-    return tensor.contents().bytes_contents(i);
 }
 
 inline static int getBinaryInputsSize(const tensorflow::TensorProto& tensor) {
@@ -359,12 +355,8 @@ inline static int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tens
     return tensor.contents().bytes_contents_size();
 }
 
-inline static int getBinaryInputsSize(const ::inference::ModelInferRequest& tensor) {
+inline static int getBinaryInputsSize(const ::KFSRequest& tensor) {
     return 1;
-}
-
-inline static int getBinaryInputsSize(const ::inference::ModelInferRequest::InferInputTensor& tensor) {
-    return tensor.contents().bytes_contents_size();
 }
 
 template <typename TensorType>

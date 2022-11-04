@@ -318,19 +318,9 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     return StatusCode::OK;
 }
 template <>
-<<<<<<< HEAD
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::checkBinaryBatchSizeMismatch(const KFSTensorInputProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
     RequestShapeInfo<KFSTensorInputProto, KFSShapeType> rsi(proto);
     if (proto.contents().bytes_contents_size() <= 0) {
-=======
-Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::checkBinaryBatchSizeMismatch(const KFSInputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    RequestShapeInfo<KFSInputTensorType, KFSShapeType> rsi(proto);
-<<<<<<< HEAD
-    if (proto.contents().bytes_contents_size() <= 0 && false) { // TEMP
->>>>>>> wip
-=======
-    if (proto.contents().bytes_contents_size() <= 0) {
->>>>>>> restored request validation
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
@@ -663,7 +653,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
             if (!status.ok())
                 return status;
 
-            const KFSRequestType* r = dynamic_cast<const KFSRequestType*>(&request);
+            const KFSRequest* r = dynamic_cast<const KFSRequest*>(&request);
             if (r == nullptr || r->raw_input_contents().size() <= 0) {
                 status = checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
                 if (!status.ok())
