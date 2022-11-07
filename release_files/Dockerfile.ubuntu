@@ -121,7 +121,8 @@ RUN	set -e ; \
                         apt-get install -y \
                         intel-opencl-icd=22.35.24055+i815~u20.04 \
                         intel-level-zero-gpu=1.3.24055+i815~u20.04 \
-                        level-zero=1.8.5+i815~u20.04 &&
+                        level-zero=1.8.5+i815~u20.04 && \
+                        apt purge gpg-agent && apt autoremove && \
                         apt clean ; \
                         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
                 ;; \

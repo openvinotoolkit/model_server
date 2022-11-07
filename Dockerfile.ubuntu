@@ -26,7 +26,6 @@ ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
 ARG APT_OV_PACKAGE=openvino-2022.1.0
-ARG CHECK_COVERAGE=1
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
@@ -153,7 +152,8 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino && \
     ln -s /openvino/inference-engine/temp/opencv_*_ubuntu20/opencv /opt/intel/openvino/extras && \
     ln -s /usr/local/runtime /opt/intel/openvino && \
-    ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh
+    ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
+    ln -s /opt/intel/openvino /opt/intel/openvino_2022
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
@@ -218,7 +218,9 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 COPY check_coverage.bat /ovms/
+
 # Test Coverage
+ARG CHECK_COVERAGE=1
 RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; bazel coverage --combined_report=lcov //src:ovms_test &&\
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
     
