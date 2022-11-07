@@ -37,7 +37,7 @@ public:
     InferenceTensor(const InferenceTensor&) = delete;
     InferenceTensor& operator=(const InferenceTensor&) = delete;
     InferenceTensor& operator=(const InferenceTensor&&);
-    Status setBuffer(const void* addr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> deviceId);
+    Status setBuffer(const void* addr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> deviceId, bool ownCopy = false);
     Status removeBuffer();
     DataType getDataType() const;
     const shape_t& getShape() const;

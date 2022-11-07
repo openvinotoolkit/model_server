@@ -159,6 +159,8 @@ cc_library(
         "grpcservermodule.hpp",
         "inferenceparameter.cpp",
         "inferenceparameter.hpp",
+        "inferenceresponse.cpp",
+        "inferenceresponse.hpp",
         "inferencerequest.cpp",
         "inferencerequest.hpp",
         "inferencetensor.cpp",

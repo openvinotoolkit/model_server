@@ -31,7 +31,7 @@ uint64_t InferenceRequest::getServableVersion() const {
 }
 Status InferenceRequest::addInput(const char* name, DataType datatype, const size_t* shape, size_t dimCount) {
     auto [it, emplaced] = inputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
-    return emplaced ? StatusCode::OK : StatusCode::DOUBLE_INPUT_INSERT;
+    return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
 Status InferenceRequest::setInputBuffer(const char* name, const void* addr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto it = inputs.find(name);

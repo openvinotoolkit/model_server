@@ -19,8 +19,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../buffer.hpp"
 #include "../inferenceparameter.hpp"
 #include "../inferencerequest.hpp"
+#include "../inferenceresponse.hpp"
+#include "../logging.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"
 
@@ -29,6 +32,7 @@ using testing::ElementsAre;
 using ovms::Buffer;
 using ovms::InferenceParameter;
 using ovms::InferenceRequest;
+using ovms::InferenceResponse;
 using ovms::InferenceTensor;
 using ovms::Shape;
 using ovms::Status;
@@ -47,6 +51,7 @@ const uint64_t REQUEST_ID{3};
 const std::string INPUT_NAME{"NOT_RANDOM_NAME"};
 const ovms::shape_t INPUT_SHAPE{1, 3, 220, 230};
 const std::array<float, 10> INPUT_DATA{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
+constexpr size_t INPUT_DATA_BYTESIZE{INPUT_DATA.size() * sizeof(float)};
 const DataType DATATYPE{OVMS_DATATYPE_FP32};
 }  // namespace
 
@@ -77,7 +82,7 @@ TEST(InferenceRequest, CreateInferenceRequest) {
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     // add same input second time should fail
     status = request.addInput(INPUT_NAME.c_str(), DATATYPE, INPUT_SHAPE.data(), INPUT_SHAPE.size());
-    ASSERT_EQ(status, StatusCode::DOUBLE_INPUT_INSERT) << status.string();
+    ASSERT_EQ(status, StatusCode::DOUBLE_TENSOR_INSERT) << status.string();
 
     // set input buffer
     status = request.setInputBuffer(INPUT_NAME.c_str(), INPUT_DATA.data(), INPUT_DATA.size() * sizeof(float), OVMS_BUFFERTYPE_CPU, std::nullopt);
@@ -117,5 +122,62 @@ TEST(InferenceRequest, CreateInferenceRequest) {
     status = request.removeParameter(PARAMETER_NAME.c_str());
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     ASSERT_EQ(nullptr, request.getParameter(PARAMETER_NAME.c_str()));
+}
+TEST(InferenceResponse, CreateAndReadData) {
+    // create response
+    InferenceResponse response{MODEL_NAME, MODEL_VERSION};
+    EXPECT_EQ(response.getServableName(), MODEL_NAME);
+    EXPECT_EQ(response.getServableVersion(), MODEL_VERSION);
+    // add output
+    auto status = response.addOutput(INPUT_NAME.c_str(), DATATYPE, INPUT_SHAPE.data(), INPUT_SHAPE.size());
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    // add 2nd output with the same name should fail
+    status = response.addOutput(INPUT_NAME.c_str(), DATATYPE, INPUT_SHAPE.data(), INPUT_SHAPE.size());
+    ASSERT_EQ(status, StatusCode::DOUBLE_TENSOR_INSERT) << status.string();
+    // get nonexistent output
+    InferenceTensor* tensor = nullptr;
+    status = response.getOutput("SOME_NOT_RANDOM_NAME", &tensor);
+    ASSERT_EQ(status, StatusCode::NONEXISTENT_INPUT) << status.string();
+    // get output
+    status = response.getOutput(INPUT_NAME.c_str(), &tensor);
+    ASSERT_NE(nullptr, tensor);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    // compare datatype
+    ASSERT_EQ(tensor->getDataType(), DATATYPE);
+    // compare shape
+    auto shape = tensor->getShape();
+    ASSERT_THAT(shape, ElementsAre(1, 3, 220, 230));
+
+    // save data into output (it should have it's own copy in contrast to request)
+    bool ownCopy = true;
+    status = tensor->setBuffer(INPUT_DATA.data(), INPUT_DATA_BYTESIZE, OVMS_BUFFERTYPE_CPU, std::nullopt, ownCopy);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    // savind data into output twice should fail
+    std::array<float, 10> RANDOM_DATA{10., 9, 8, 7, 6, 5, 4, 3, 2, 1};
+    status = tensor->setBuffer(RANDOM_DATA.data(), INPUT_DATA_BYTESIZE, OVMS_BUFFERTYPE_CPU, std::nullopt, ownCopy);
+    ASSERT_EQ(status, StatusCode::DOUBLE_BUFFER_SET) << status.string();
+
+    const Buffer* buffer = tensor->getBuffer();
+    ASSERT_NE(nullptr, buffer);
+    ASSERT_NE(nullptr, buffer->data());
+    ASSERT_NE(buffer->data(), INPUT_DATA.data());
+    // save data 2nd time should fail
+    // compare data content with what was saved
+    auto res = std::memcmp(buffer->data(), reinterpret_cast<void*>(const_cast<float*>(INPUT_DATA.data())), INPUT_DATA_BYTESIZE);
+    EXPECT_EQ(0, res) << res;
+
+    // verify parameter handling
+    status = response.addParameter(PARAMETER_NAME.c_str(), PARAMETER_DATATYPE, reinterpret_cast<const void*>(&PARAMETER_VALUE));
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+
+    // add parameter
+    const InferenceParameter* parameter = response.getParameter(PARAMETER_NAME.c_str());
+    ASSERT_NE(parameter, nullptr);
+    EXPECT_EQ(parameter->getName(), PARAMETER_NAME);
+    EXPECT_EQ(parameter->getDataType(), PARAMETER_DATATYPE);
+    EXPECT_EQ(*(reinterpret_cast<uint32_t*>(const_cast<void*>(parameter->getData()))), PARAMETER_VALUE);
+    // add same parameter second time should fail
+    status = response.addParameter(PARAMETER_NAME.c_str(), PARAMETER_DATATYPE, reinterpret_cast<const void*>(&PARAMETER_VALUE));
+    ASSERT_EQ(status, StatusCode::DOUBLE_PARAMETER_INSERT) << status.string();
 }
 // TODO logging

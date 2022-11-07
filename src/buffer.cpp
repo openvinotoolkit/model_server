@@ -15,11 +15,25 @@
 //*****************************************************************************
 #include "buffer.hpp"
 
+#include <cstring>
+
+#include "logging.hpp"
+
 namespace ovms {
-Buffer::Buffer(const void* ptr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> bufferDeviceId) :
-    ptr(ptr),
+Buffer::Buffer(const void* pptr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> bufferDeviceId, bool createCopy) :
+    ptr(createCopy ? nullptr : pptr),
     byteSize(byteSize),
     bufferType(bufferType),
-    bufferDeviceId(bufferDeviceId) {}
+    bufferDeviceId(bufferDeviceId) {
+    // TODO in later stages
+    // it can be advantageous to have custom made release fn especially with buffers passed by external users
+    if (!createCopy)
+        return;
+    ownedCopy = std::make_unique<char[]>(byteSize);
+    std::memcpy(ownedCopy.get(), pptr, byteSize);
+}
+const void* Buffer::data() const {
+    return (ptr != nullptr) ? ptr : ownedCopy.get();
+}
 Buffer::~Buffer() = default;
 }  // namespace ovms
