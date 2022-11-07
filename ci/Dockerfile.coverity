@@ -17,7 +17,7 @@
 ARG BUILD_IMAGE=openvino/model_server-build:latest
 FROM $BUILD_IMAGE
 
-ADD ./cov-analysis-linux64-2022.6.0 /cov
+COPY ./cov-analysis-linux64-2022.6.0 /cov
 
 RUN /cov/bin/cov-configure --gcc --config coverity_config.xml && \
     /cov/bin/cov-configure --comptype gcc --compiler /usr/bin/gcc && \
