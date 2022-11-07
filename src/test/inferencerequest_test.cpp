@@ -82,6 +82,9 @@ TEST(InferenceRequest, CreateInferenceRequest) {
     // set input buffer
     status = request.setInputBuffer(INPUT_NAME.c_str(), INPUT_DATA.data(), INPUT_DATA.size() * sizeof(float), OVMS_BUFFERTYPE_CPU, std::nullopt);
     ASSERT_EQ(status, StatusCode::OK) << status.string();
+    // set buffer second time should fail
+    status = request.setInputBuffer(INPUT_NAME.c_str(), INPUT_DATA.data(), INPUT_DATA.size() * sizeof(float), OVMS_BUFFERTYPE_CPU, std::nullopt);
+    ASSERT_EQ(status, StatusCode::DOUBLE_BUFFER_SET) << status.string();
 
     // get input & buffer
     const InferenceTensor* tensor;

@@ -261,8 +261,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::METRICS_REST_PORT_MISSING, "Missing rest_port parameter in server CLI"},
 
     // C-API
-    {StatusCode::DOUBLE_PARAMETER_INSERT, "Cannot more than one parameter with the same name"},
-    {StatusCode::DOUBLE_INPUT_INSERT, "Cannot more than one input with the same name"},
+    {StatusCode::DOUBLE_BUFFER_SET, "Cannot set buffer more than once to the same input"},
+    {StatusCode::DOUBLE_INPUT_INSERT, "Cannot insert more than one input with the same name"},
+    {StatusCode::DOUBLE_PARAMETER_INSERT, "Cannot insert more than one parameter with the same name"},
     {StatusCode::NONEXISTENT_INPUT, "Tried to get nonexisting input"},
     {StatusCode::NONEXISTENT_INPUT_FOR_SET_BUFFER, "Tried to set buffer for nonexisting input"},
     {StatusCode::NONEXISTENT_INPUT_FOR_REMOVE_BUFFER, "Tried to remove buffer for nonexisting input"},
