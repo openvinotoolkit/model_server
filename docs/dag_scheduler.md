@@ -13,10 +13,10 @@
 @endsphinxdirective
 
 ## Introduction
-The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipeline of models for execution in a single client request. 
-The pipeline is a Directed Acyclic Graph with different nodes which define how to process each step of predict request. 
-By using a pipeline, there is no need to return intermediate results of every model to the client. This allows avoiding the network overhead by minimizing the number of requests sent to the Model Server. 
-Each model output can be mapped to another model input. Since intermediate results are kept in the server's RAM these can be reused by subsequent inferences which reduce overall latency.
+
+The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipeline of models for execution in a single client request. The pipeline is a Directed Acyclic Graph with different nodes that define how to process each step of a predict request. 
+
+Using a pipeline, there is no need to return intermediate results of every model to the client. This allows avoiding network overhead by minimizing the number of requests sent to the Model Server. Each model output can be mapped to another model input. Since intermediate results are kept in the server's RAM, they can be reused by subsequent inferences, which reduces overall latency.
 
 This guide gives information about:
 
@@ -27,6 +27,31 @@ This guide gives information about:
 * <a href="#current-limitations">Current Limitations</a>
 
 
+## Using Pipelines <a name="using-pipelines"></a>
+
+Pipelines can use the same API as the models. There are exactly the same calls for running 
+the predictions. The request format must match the pipeline definition inputs.
+
+
+The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_tfs.md) calls and
+[REST Metadata](model_server_rest_api_tfs.md).
+It returns the definition of the pipelines inputs and outputs. 
+
+Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_tfs.md)
+and [REST Model Status](model_server_rest_api_tfs.md)
+
+The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
+the version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
+
+## Pipelines Examples <a name="pipeline-examples"></a>
+
+[Single face analysis with combined models](../demos/single_face_analysis_pipeline/python/README.md)
+
+[Multiple vehicles analysis using demultiplexer with model_zoo_object_detection example custom node](../demos/vehicle_analysis_pipeline/python/README.md)
+
+[Optical Character Recognition pipeline with east_ocr example custom node](../demos/optical_character_recognition/python/README.md)
+
+[Horizontal Text Detection pipeline with horizontal_ocr example custom node](../demos/horizontal_text_detection/python/README.md)
 
 ## Node Types <a name="node-type"></a>
 ### Auxiliary Node Types
@@ -191,31 +216,6 @@ the same way. Custom node functions are just like a standard node in that respec
 |`"type"`|string|Must be set to `custom`|Yes|
 |`"params"`| json object with string values| a list of parameters and their values which could be used in the custom node implementation|No|
 
-## Using Pipelines <a name="using-pipelines"></a>
-
-Pipelines can use the same API as the models. There are exactly the same calls for running 
-the predictions. The request format must match the pipeline definition inputs.
-
-
-The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_tfs.md) calls and
-[REST Metadata](model_server_rest_api_tfs.md).
-It returns the definition of the pipelines inputs and outputs. 
-
-Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_tfs.md)
-and [REST Model Status](model_server_rest_api_tfs.md)
-
-The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
-the version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
-
-## Pipelines Examples <a name="pipeline-examples"></a>
-
-[Single face analysis with combined models](../demos/single_face_analysis_pipeline/python/README.md)
-
-[Multiple vehicles analysis using demultiplexer with model_zoo_object_detection example custom node](../demos/vehicle_analysis_pipeline/python/README.md)
-
-[Optical Character Recognition pipeline with east_ocr example custom node](../demos/optical_character_recognition/python/README.md)
-
-[Horizontal Text Detection pipeline with horizontal_ocr example custom node](../demos/horizontal_text_detection/python/README.md)
 
 ## Current limitations <a name="current-limitations"></a>
 
