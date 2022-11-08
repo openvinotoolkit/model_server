@@ -121,14 +121,14 @@ void ModelManager::logPluginConfiguration() {
         auto prop = ov::supported_properties;
         try {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
-            std::vector<ov::PropertyName> supportedConfigKeys2 = ieCore->get_property(plugin, prop);
+            auto supportedConfigKeys2 = ieCore->get_property(plugin, prop);
             supportedConfigKeys = std::move(supportedConfigKeys2);
         } catch (std::exception& e) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, prop.name(), e.what());
         } catch (...) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, prop.name());
         }
-        for (ov::PropertyName& key : supportedConfigKeys) {
+        for (auto& key : supportedConfigKeys) {
             std::string value;
             try {
                 auto paramValue = ieCore->get_property(plugin, key);

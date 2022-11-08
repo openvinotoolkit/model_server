@@ -722,7 +722,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     auto prop = ov::supported_properties;
     std::vector<ov::PropertyName> supportedConfigKeys;
     try {
-        std::vector<ov::PropertyName> supportedConfigKeys2 = compiledModel->get_property(prop);
+        auto supportedConfigKeys2 = compiledModel->get_property(prop);
         supportedConfigKeys = std::move(supportedConfigKeys2);
     } catch (std::exception& e) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, prop.name(), e.what());
@@ -732,7 +732,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         return StatusCode::OK;
     }
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version: {};target device: {}; CompiledModel configuration", getName(), getVersion(), targetDevice);
-    for (ov::PropertyName& key : supportedConfigKeys) {
+    for (auto& key : supportedConfigKeys) {
         std::string value;
         try {
             auto paramValue = compiledModel->get_property(key);
