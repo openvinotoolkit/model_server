@@ -137,7 +137,7 @@ TEST(InferenceResponse, CreateAndReadData) {
     // get nonexistent output
     InferenceTensor* tensor = nullptr;
     status = response.getOutput("SOME_NOT_RANDOM_NAME", &tensor);
-    ASSERT_EQ(status, StatusCode::NONEXISTENT_INPUT) << status.string();
+    ASSERT_EQ(status, StatusCode::NONEXISTENT_TENSOR) << status.string();
     // get output
     status = response.getOutput(INPUT_NAME.c_str(), &tensor);
     ASSERT_NE(nullptr, tensor);

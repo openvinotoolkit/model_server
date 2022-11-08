@@ -36,14 +36,14 @@ Status InferenceRequest::addInput(const char* name, DataType datatype, const siz
 Status InferenceRequest::setInputBuffer(const char* name, const void* addr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto it = inputs.find(name);
     if (it == inputs.end()) {
-        return StatusCode::NONEXISTENT_INPUT_FOR_SET_BUFFER;
+        return StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER;
     }
     return it->second.setBuffer(addr, byteSize, bufferType, deviceId);
 }
 Status InferenceRequest::removeInputBuffer(const char* name) {
     auto it = inputs.find(name);
     if (it == inputs.end()) {
-        return StatusCode::NONEXISTENT_INPUT_FOR_REMOVE_BUFFER;
+        return StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER;
     }
     return it->second.removeBuffer();
 }
@@ -55,7 +55,7 @@ Status InferenceRequest::getInput(const char* name, const InferenceTensor** tens
     auto it = inputs.find(name);
     if (it == inputs.end()) {
         *tensor = nullptr;
-        return StatusCode::NONEXISTENT_INPUT;
+        return StatusCode::NONEXISTENT_TENSOR;
     }
     *tensor = &it->second;
     return StatusCode::OK;
@@ -65,7 +65,7 @@ Status InferenceRequest::removeInput(const char* name) {
     if (count) {
         return StatusCode::OK;
     }
-    return StatusCode::NONEXISTENT_INPUT_FOR_REMOVAL;
+    return StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL;
 }
 Status InferenceRequest::addParameter(const char* parameterName, DataType datatype, const void* data) {
     auto [it, emplaced] = parameters.emplace(parameterName, InferenceParameter{parameterName, datatype, data});

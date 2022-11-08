@@ -261,13 +261,13 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::METRICS_REST_PORT_MISSING, "Missing rest_port parameter in server CLI"},
 
     // C-API
-    {StatusCode::DOUBLE_BUFFER_SET, "Cannot set buffer more than once to the same input"},
+    {StatusCode::DOUBLE_BUFFER_SET, "Cannot set buffer more than once to the same tensor"},
     {StatusCode::DOUBLE_TENSOR_INSERT, "Cannot insert more than one tensor with the same name"},
     {StatusCode::DOUBLE_PARAMETER_INSERT, "Cannot insert more than one parameter with the same name"},
-    {StatusCode::NONEXISTENT_INPUT, "Tried to get nonexisting input"},
-    {StatusCode::NONEXISTENT_INPUT_FOR_SET_BUFFER, "Tried to set buffer for nonexisting input"},
-    {StatusCode::NONEXISTENT_INPUT_FOR_REMOVE_BUFFER, "Tried to remove buffer for nonexisting input"},
-    {StatusCode::NONEXISTENT_INPUT_FOR_REMOVAL, "Tried to remove nonexisting input"},
+    {StatusCode::NONEXISTENT_TENSOR, "Tried to get nonexisting tensor"},
+    {StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER, "Tried to set buffer for nonexisting tensor"},
+    {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER, "Tried to remove buffer for nonexisting tensor"},
+    {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
     {StatusCode::NONEXISTENT_BUFFER_FOR_REMOVAL, "Tried to remove nonexisting buffer"},
     {StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL, "Tried to remove nonexisting parameter"},
 };

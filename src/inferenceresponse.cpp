@@ -43,7 +43,7 @@ Status InferenceResponse::getOutput(const char* name, InferenceTensor** tensor) 
     auto it = outputs.find(name);
     if (outputs.end() == it) {
         *tensor = nullptr;
-        return StatusCode::NONEXISTENT_INPUT;
+        return StatusCode::NONEXISTENT_TENSOR;
     }
     *tensor = &it->second;
     return StatusCode::OK;
