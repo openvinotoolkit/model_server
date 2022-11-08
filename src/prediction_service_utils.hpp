@@ -35,4 +35,12 @@ std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request);
 std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request, const size_t batchSizeIndex);
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
 
+bool useSharedOutputContent(const tensorflow::serving::PredictRequest* request) {
+    return true;
+}
+
+bool useSharedOutputContent(const ::inference::ModelInferRequest* request) {
+    return request->raw_input_contents().size() > 0;
+}
+
 }  // namespace ovms
