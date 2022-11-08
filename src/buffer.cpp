@@ -35,5 +35,8 @@ Buffer::Buffer(const void* pptr, size_t byteSize, BufferType bufferType, std::op
 const void* Buffer::data() const {
     return (ptr != nullptr) ? ptr : ownedCopy.get();
 }
+size_t Buffer::getByteSize() const {
+    return byteSize;
+}
 Buffer::~Buffer() = default;
 }  // namespace ovms

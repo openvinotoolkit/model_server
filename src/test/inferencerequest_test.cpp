@@ -72,7 +72,7 @@ TEST(InferenceRequest, CreateInferenceRequest) {
     ASSERT_NE(parameter, nullptr);
     EXPECT_EQ(parameter->getName(), PARAMETER_NAME);
     EXPECT_EQ(parameter->getDataType(), PARAMETER_DATATYPE);
-    EXPECT_EQ(*(reinterpret_cast<uint32_t*>(const_cast<void*>(parameter->getData()))), PARAMETER_VALUE);
+    EXPECT_EQ(*(reinterpret_cast<const uint32_t*>(parameter->getData())), PARAMETER_VALUE);
     // add same parameter second time should fail
     status = request.addParameter(PARAMETER_NAME.c_str(), PARAMETER_DATATYPE, reinterpret_cast<const void*>(&PARAMETER_VALUE));
     ASSERT_EQ(status, StatusCode::DOUBLE_PARAMETER_INSERT) << status.string();
@@ -100,6 +100,13 @@ TEST(InferenceRequest, CreateInferenceRequest) {
     EXPECT_TRUE(Shape(tensor->getShape()).match(INPUT_SHAPE));
     const Buffer* buffer = tensor->getBuffer();
     ASSERT_NE(nullptr, buffer);
+    ASSERT_NE(nullptr, buffer->data());
+    ASSERT_EQ(buffer->data(), INPUT_DATA.data());
+    ASSERT_EQ(buffer->getByteSize(), INPUT_DATA_BYTESIZE);
+    // save data 2nd time should fail
+    // compare data content with what was saved
+    auto res = std::memcmp(buffer->data(), reinterpret_cast<const void*>(INPUT_DATA.data()), INPUT_DATA_BYTESIZE);
+    EXPECT_EQ(0, res) << res;
 
     // remove input buffer
     status = request.removeInputBuffer(INPUT_NAME.c_str());
@@ -161,9 +168,10 @@ TEST(InferenceResponse, CreateAndReadData) {
     ASSERT_NE(nullptr, buffer);
     ASSERT_NE(nullptr, buffer->data());
     ASSERT_NE(buffer->data(), INPUT_DATA.data());
+    ASSERT_EQ(buffer->getByteSize(), INPUT_DATA_BYTESIZE);
     // save data 2nd time should fail
     // compare data content with what was saved
-    auto res = std::memcmp(buffer->data(), reinterpret_cast<void*>(const_cast<float*>(INPUT_DATA.data())), INPUT_DATA_BYTESIZE);
+    auto res = std::memcmp(buffer->data(), reinterpret_cast<const void*>(INPUT_DATA.data()), INPUT_DATA_BYTESIZE);
     EXPECT_EQ(0, res) << res;
 
     // verify parameter handling
@@ -175,7 +183,7 @@ TEST(InferenceResponse, CreateAndReadData) {
     ASSERT_NE(parameter, nullptr);
     EXPECT_EQ(parameter->getName(), PARAMETER_NAME);
     EXPECT_EQ(parameter->getDataType(), PARAMETER_DATATYPE);
-    EXPECT_EQ(*(reinterpret_cast<uint32_t*>(const_cast<void*>(parameter->getData()))), PARAMETER_VALUE);
+    EXPECT_EQ(*(reinterpret_cast<const uint32_t*>(parameter->getData())), PARAMETER_VALUE);
     // add same parameter second time should fail
     status = response.addParameter(PARAMETER_NAME.c_str(), PARAMETER_DATATYPE, reinterpret_cast<const void*>(&PARAMETER_VALUE));
     ASSERT_EQ(status, StatusCode::DOUBLE_PARAMETER_INSERT) << status.string();
