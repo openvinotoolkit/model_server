@@ -149,12 +149,12 @@ TEST(InferenceResponse, CreateAndReadData) {
     ASSERT_THAT(shape, ElementsAre(1, 3, 220, 230));
 
     // save data into output (it should have it's own copy in contrast to request)
-    bool ownCopy = true;
-    status = tensor->setBuffer(INPUT_DATA.data(), INPUT_DATA_BYTESIZE, OVMS_BUFFERTYPE_CPU, std::nullopt, ownCopy);
+    bool createCopy = true;
+    status = tensor->setBuffer(INPUT_DATA.data(), INPUT_DATA_BYTESIZE, OVMS_BUFFERTYPE_CPU, std::nullopt, createCopy);
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     // savind data into output twice should fail
     std::array<float, 10> RANDOM_DATA{10., 9, 8, 7, 6, 5, 4, 3, 2, 1};
-    status = tensor->setBuffer(RANDOM_DATA.data(), INPUT_DATA_BYTESIZE, OVMS_BUFFERTYPE_CPU, std::nullopt, ownCopy);
+    status = tensor->setBuffer(RANDOM_DATA.data(), INPUT_DATA_BYTESIZE, OVMS_BUFFERTYPE_CPU, std::nullopt, createCopy);
     ASSERT_EQ(status, StatusCode::DOUBLE_BUFFER_SET) << status.string();
 
     const Buffer* buffer = tensor->getBuffer();
