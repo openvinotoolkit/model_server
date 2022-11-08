@@ -404,7 +404,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
 }
 
 TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithuseSharedOutputContent) {
-    KFSPredictResponse response;
+    KFSResponse response;
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
@@ -430,7 +430,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithuseS
 }
 
 TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithsharedInputContentsNotUsed) {
-    KFSPredictResponse response;
+    KFSResponse response;
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");

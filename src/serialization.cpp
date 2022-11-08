@@ -159,7 +159,7 @@ static void serializeContent(std::string* content, ov::Tensor& tensor) {
     }
 }
 
-#define SERIALIZE_BY_DATATYPE(contents, datatype)                                    \
+#define SERIALIZE_BY_DATATYPE(contents, datatype)                                  \
     for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(datatype)) {        \
         auto value = responseOutput.mutable_contents()->contents()->Add();         \
         *value = (*(reinterpret_cast<const datatype*>((char*)tensor.data() + i))); \
@@ -229,7 +229,6 @@ Status serializeTensorToTensorProtoRaw(
 
 Status serializeTensorToTensorProto(
     ::KFSResponse::InferOutputTensor& responseOutput,
-    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();

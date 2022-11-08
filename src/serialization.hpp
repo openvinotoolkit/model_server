@@ -63,6 +63,11 @@ Status serializeTensorToTensorProto(
 
 Status serializeTensorToTensorProto(
     ::KFSResponse::InferOutputTensor& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor);
+
+Status serializeTensorToTensorProtoRaw(
+    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor);

@@ -97,4 +97,12 @@ std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::Predi
     return requestShapes;
 }
 
+bool useSharedOutputContent(const tensorflow::serving::PredictRequest* request) {
+    return true;
+}
+
+bool useSharedOutputContent(const ::inference::ModelInferRequest* request) {
+    return request->raw_input_contents().size() > 0;
+}
+
 }  // namespace ovms
