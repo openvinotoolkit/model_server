@@ -24,13 +24,13 @@
 #include "status.hpp"
 
 namespace ovms {
-InferenceResponse::InferenceResponse(const std::string& servableName, uint64_t servableVersion) :
+InferenceResponse::InferenceResponse(const std::string& servableName, model_version_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {}
 const std::string& InferenceResponse::getServableName() const {
     return this->servableName;
 }
-uint64_t InferenceResponse::getServableVersion() const {
+model_version_t InferenceResponse::getServableVersion() const {
     return this->servableVersion;
 }
 Status InferenceResponse::addOutput(const std::string& name, DataType datatype, const size_t* shape, size_t dimCount) {

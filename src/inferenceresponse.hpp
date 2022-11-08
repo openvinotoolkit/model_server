@@ -19,6 +19,7 @@
 
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
+#include "modelversion.hpp"
 #include "pocapi.hpp"
 
 namespace ovms {
@@ -27,19 +28,19 @@ class Status;
 
 class InferenceResponse {
     const std::string& servableName;
-    const uint64_t servableVersion;
+    const model_version_t servableVersion;
     std::unordered_map<std::string, InferenceParameter> parameters;
     std::unordered_map<std::string, InferenceTensor> outputs;
 
 public:
-    InferenceResponse(const std::string& servableName, uint64_t servableVersion);
+    InferenceResponse(const std::string& servableName, model_version_t servableVersion);
     Status addOutput(const std::string& name, DataType datatype, const size_t* shape, size_t dimCount);
     Status getOutput(const char* name, InferenceTensor** tensor);
     Status addParameter(const char* parameterName, DataType datatype, const void* data);
     const InferenceParameter* getParameter(const char* name) const;
 
     const std::string& getServableName() const;
-    uint64_t getServableVersion() const;
+    model_version_t getServableVersion() const;
 
     Status setId();
     Status getId();

@@ -18,7 +18,7 @@
 #include "status.hpp"
 namespace ovms {
 
-InferenceRequest::InferenceRequest(const char* servableName, uint64_t servableVersion) :
+InferenceRequest::InferenceRequest(const char* servableName, model_version_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {
 }
@@ -26,7 +26,7 @@ InferenceRequest::InferenceRequest(const char* servableName, uint64_t servableVe
 const std::string& InferenceRequest::getServableName() const {
     return this->servableName;
 }
-uint64_t InferenceRequest::getServableVersion() const {
+model_version_t InferenceRequest::getServableVersion() const {
     return this->servableVersion;
 }
 Status InferenceRequest::addInput(const char* name, DataType datatype, const size_t* shape, size_t dimCount) {
