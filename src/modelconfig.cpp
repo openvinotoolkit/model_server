@@ -289,20 +289,19 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
 
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (it->value.IsString()) {
-            if (((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) &&  (it->value.GetString() == std::string("CPU_THROUGHPUT_AUTO"))) || ((it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) &&  (it->value.GetString() == std::string("GPU_THROUGHPUT_AUTO"))))
-            {
+            if (((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("CPU_THROUGHPUT_AUTO"))) || ((it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("GPU_THROUGHPUT_AUTO")))) {
                 pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
             } else {
                 pluginConfig[it->name.GetString()] = it->value.GetString();
             }
         } else if (it->value.IsInt64()) {
-            if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")){
+            if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
                 pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetInt64());
             } else {
                 pluginConfig[it->name.GetString()] = std::to_string(it->value.GetInt64());
             }
         } else if (it->value.IsDouble()) {
-            if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")){
+            if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
                 pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetDouble());
             } else {
                 pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());

@@ -514,7 +514,6 @@ TEST(ModelConfig, plugin_config_legacy_gpu_num) {
     EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
 }
 
-
 TEST(ModelConfig, mappingInputs) {
     ovms::ModelConfig config;
     ovms::mapping_config_t mapping{
