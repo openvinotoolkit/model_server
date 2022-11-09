@@ -214,14 +214,6 @@ public:
     mutable std::shared_mutex modelsMtx;
 
     /**
-     * @brief Gets the instance of ModelManager
-     */
-    static ModelManager& getInstance() {
-        static ModelManager instance;
-        return instance;
-    }
-
-    /**
      *  @brief Gets the watcher interval timestep in seconds
      */
     uint getWatcherIntervalSec() {

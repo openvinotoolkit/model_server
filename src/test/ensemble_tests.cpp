@@ -1740,7 +1740,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
 
 class DLNodeFailInFetch : public DLNode {
 public:
-    DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
+    DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager) :
         DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
     ovms::Status fetchResults(NodeSession& nodeSession, SessionResults& sessionResults) override {
         // no release is called as in dl_node.cpp when on error path
@@ -2610,12 +2610,13 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_DefinitionMissing) {
+    ConstructorEnabledModelManager manager;
     PipelineFactory factory;
 
     PredictRequest request;
     PredictResponse response;
     std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, manager), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
