@@ -18,12 +18,10 @@ The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipelin
 
 Using a pipeline, there is no need to return intermediate results of every model to the client. This allows avoiding network overhead by minimizing the number of requests sent to the Model Server. Each model output can be mapped to another model input. Since intermediate results are kept in the server's RAM, they can be reused by subsequent inferences, which reduces overall latency.
 
-This guide gives information about:
-
-* <a href="#node-type">Node Types</a>
-* <a href="#configuration-file">Configuration file</a>
 * <a href="#using-pipelines">Using the pipelines</a>
 * <a href="#pipeline-examples">Pipelines examples </a>
+* <a href="#node-type">Node Types</a>
+* <a href="#configuration-file">Configuration file</a>
 * <a href="#current-limitations">Current Limitations</a>
 
 
@@ -32,13 +30,12 @@ This guide gives information about:
 Pipelines can use the same API as the models. There are exactly the same calls for running 
 the predictions. The request format must match the pipeline definition inputs.
 
-
 The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_tfs.md) calls and
 [REST Metadata](model_server_rest_api_tfs.md).
 It returns the definition of the pipelines inputs and outputs. 
 
 Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_tfs.md)
-and [REST Model Status](model_server_rest_api_tfs.md)
+and [REST Model Status](model_server_rest_api_tfs.md).
 
 The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
 the version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
@@ -54,6 +51,7 @@ the version parameter is ignored. Pipelines are not versioned. Though, they can 
 [Horizontal Text Detection pipeline with horizontal_ocr example custom node](../demos/horizontal_text_detection/python/README.md)
 
 ## Node Types <a name="node-type"></a>
+
 ### Auxiliary Node Types
 There are two special kinds of nodes - Request and Response node. Both of them are predefined and included in every pipeline definition you create:
 *  Request node
