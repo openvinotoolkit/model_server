@@ -176,9 +176,7 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 RUN wget https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
-    yum install -y lcov-1.16-1.noarch.rpm &&\
-    
-RUN 
+    yum install -y lcov-1.16-1.noarch.rpm
 
 COPY check_coverage.bat /ovms/
 

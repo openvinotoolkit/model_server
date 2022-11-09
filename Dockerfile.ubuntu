@@ -229,8 +229,6 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
-RUN 
-
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
 
