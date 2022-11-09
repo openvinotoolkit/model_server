@@ -71,11 +71,17 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             yum-utils \
             unzip \
             vim \
-            tbb.x86_64 \
-            pugixml.x86_64 \
+            http://mirror.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm \
             xz && \
             yum clean all
+# Build and install pugixml
+RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
+    cd pugixml && \
+    cmake -DBUILD_SHARED_LIBS=ON && \
+    make all && \
+    cp libpugixml.so* /usr/lib64/
 # Set up Bazel
+
 ENV BAZEL_VERSION 5.3.1
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
