@@ -27,6 +27,7 @@
 #include "logging.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelinstance.hpp"
+#include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "node_library_utils.hpp"
 #include "nodeinfo.hpp"

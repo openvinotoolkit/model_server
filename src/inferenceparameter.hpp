@@ -1,5 +1,6 @@
+#pragma once
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,45 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
 #include <string>
 
-#include <openvino/openvino.hpp>
+#include "pocapi.hpp"
 
 namespace ovms {
 
-enum class Precision {
-    BF16,
-    FP64,
-    FP32,
-    FP16,
-    I64,
-    I32,
-    I16,
-    I8,
-    I4,
-    U64,
-    U32,
-    U16,
-    U8,
-    U4,
-    U1,
-    BOOL,
-    CUSTOM,
-    UNDEFINED,
-    DYNAMIC,
-    MIXED,
-    Q78,
-    BIN  // TODO remove BIN,Q78, DYNAMIC, CUSTOM, MIXED
+// TODO should we own our own copy of value?
+class InferenceParameter {
+    const std::string name;
+    DataType datatype;
+    const std::string data;
+
+public:
+    InferenceParameter(const char* name, DataType datatype, const void* data);
+    InferenceParameter(const char* name, DataType datatype, const void* data, size_t byteSize);
+    const std::string& getName() const;
+    DataType getDataType() const;
+    size_t getByteSize() const;
+    const void* getData() const;
 };
-
-const std::string& toString(Precision precision);
-
-Precision fromString(const std::string& s);
-
-Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type);
-
-ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision);
-
 }  // namespace ovms
