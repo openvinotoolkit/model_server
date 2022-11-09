@@ -236,6 +236,8 @@ cc_library(
         "poc_api_impl.cpp",
         "poc_api_impl.hpp",
         "pocapi.hpp",
+        "pocapiinternal.cpp",
+        "pocapiinternal.hpp",
         "pocapi.cpp",
         "precision.cpp",
         "precision.hpp",

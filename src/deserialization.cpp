@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "deserialization.hpp"
 
+#include "buffer.hpp"
+
 namespace ovms {
 
 template <>
@@ -37,6 +39,16 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
     }
 
     return status;
+}
+ov::Tensor makeTensor(const InferenceTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
+    ov::Shape shape;
+    for (const auto& dim : requestInput.getShape()) {
+        shape.push_back(dim);
+    }
+    ov::element::Type_t precision = tensorInfo->getOvPrecision();
+    return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
 }
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
