@@ -27,7 +27,8 @@ Model server hosts models and makes them accessible to software components over 
 - Ideal architecture for microservices-based applications and deployments in cloud environments – including Kubernetes and OpenShift clusters.
 - Efficient resource utilization with horizontal and vertical inference scaling.
 
-![OVMS picture](ovms_high_level.png)
+![OVMS diagram](ovms_diagram.png)
+
 
 ## OpenVINO Model Server
 
@@ -35,7 +36,7 @@ OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving mod
 
 Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md).
 
-![OVMS diagram](ovms_diagram.png)
+![OVMS picture](ovms_high_level.png)
 
 
 ## OpenVINO Model Server Key Features
