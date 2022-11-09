@@ -28,6 +28,7 @@
 #pragma GCC diagnostic pop
 
 #include "rest_parser.hpp"
+#include "status.hpp"
 
 namespace ovms {
 class ServableMetricReporter;
@@ -35,7 +36,6 @@ class KFSInferenceServiceImpl;
 class GetModelMetadataImpl;
 class Server;
 class ModelManager;
-class Status;
 
 enum RequestType { Predict,
     GetModelStatus,
