@@ -110,6 +110,7 @@ def check_dir(start_dir):
         'tf.patch',
         'tftext.patch',
         'vehicle_images.txt',
+        'bazel_rules_apple.patch',
         ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
@@ -184,6 +185,7 @@ def check_func(start_dir):
         'tf.patch',
         'tftext.patch',
         'zlib.LICENSE.txt',
+        'bazel_rules_apple.patch',
     ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator']

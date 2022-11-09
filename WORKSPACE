@@ -61,7 +61,7 @@ cc_library(
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.10.0",
+    tag = "2.6.5",
     patch_args = ["-p1"],
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
@@ -88,8 +88,8 @@ cc_library(
 load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
 tensorflow_http_archive(
     name = "org_tensorflow",
-    sha256 = "bc4e9bbeb0136163f283ab8b695bec747cad738963e153ce3b7e414ebffe408f",
-    git_commit = "359c3cdfc5fabac82b3c70b3b6de2b0a8c16874f",
+    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
+    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
     patch = "tf.patch",
     repo_mapping = {"@curl" : "@curl"}
 )
