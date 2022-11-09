@@ -12,6 +12,7 @@
    ovms_docs_multiple_models
    ovms_docs_parameters
    ovms_docs_target_devices
+   ovms_docs_kubernetes
    ovms_docs_security
    
 

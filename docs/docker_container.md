@@ -1,19 +1,9 @@
 # Deploying Model Server inside Docker Container {#ovms_docs_docker_container}
 
-@sphinxdirective
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_docs_kubernetes
-
-@endsphinxdirective
-
-OpenVINO Model Server can be hosted inside a docker container. You can either download a pre-build container or build a container from source. It is also suitable for landing in the [Kubernetes environment](installations_kubernetes.md).
+OpenVINO Model Server is hosted inside a docker container. You can either download a pre-build container or build a container from source. It is also suitable for landing in the [Kubernetes environment](installations_kubernetes.md).
 
 * <a href="#prebuild-container">Use Pre-build Model Server Container</a>
-* <a href="#model-server-installation">Build a Container from Source</a>
+* <a href="#model-server-installation">Build Container from Source</a>
 
 ## Use Pre-build Model Server Container <a name="prebuild-container"></a>
 
@@ -96,14 +86,12 @@ If everything is set up correctly, you will see 'zebra' prediction in the output
 - To see another example of setting up the model server with a face-detection model, refer to the [Quickstart guide](./ovms_quickstart.md).
 - Learn more about model server [starting parameters](parameters.md).
 
-## Build a Container from Source <a name="model-server-installation"></a> 
+## Build Container from Source <a name="model-server-installation"></a> 
 
 Before starting the server, make sure your hardware is [supported](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html) by OpenVINO.
 
 > **NOTE**: OpenVINO Model Server execution on baremetal is tested on Ubuntu 20.04.x. For other operating systems, starting model server in a [docker container](./docker_container.md) is recommended.
    
-### Building an OpenVINO&trade; Model Server Image from Source 
-
 1. Clone model server git repository.
 2. Navigate to the model server directory.
 3. Use a precompiled binary or build it in a Docker container.
