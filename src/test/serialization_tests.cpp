@@ -312,7 +312,7 @@ TEST_F(KFServingGRPCPredict, ValidSerialization) {
     EXPECT_EQ(responseOutput.shape(1), 3);
     EXPECT_EQ(responseOutput.shape(2), 1);
     EXPECT_EQ(responseOutput.shape(3), 1);
-    EXPECT_EQ(responseOutput.contents().fp32_contents_size(), 12);
+    EXPECT_EQ(responseOutput.contents().fp32_contents_size(), 3);
 }
 
 TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorPrecisionRaw) {
