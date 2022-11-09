@@ -42,7 +42,6 @@
 
 namespace ovms {
 class MetricRegistry;
-class ModelConfig;
 class ModelInstanceUnloadGuard;
 class PipelineDefinition;
 class Status;
@@ -322,7 +321,7 @@ public:
     /**
          * @brief Destroy the Model Instance object
          */
-    virtual ~ModelInstance() = default;
+    virtual ~ModelInstance();
 
     /**
          * @brief Increases predict requests usage count

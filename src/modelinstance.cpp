@@ -72,6 +72,7 @@ const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
+ModelInstance::~ModelInstance() = default;
 ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) :
     ieCore(ieCore),
     name(name),
