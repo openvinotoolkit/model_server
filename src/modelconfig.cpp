@@ -289,11 +289,24 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
 
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (it->value.IsString()) {
-            pluginConfig[it->name.GetString()] = it->value.GetString();
+            if (((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) &&  (it->value.GetString() == std::string("CPU_THROUGHPUT_AUTO"))) || ((it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) &&  (it->value.GetString() == std::string("GPU_THROUGHPUT_AUTO"))))
+            {
+                pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
+            } else {
+                pluginConfig[it->name.GetString()] = it->value.GetString();
+            }
         } else if (it->value.IsInt64()) {
-            pluginConfig[it->name.GetString()] = std::to_string(it->value.GetInt64());
+            if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")){
+                pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetInt64());
+            } else {
+                pluginConfig[it->name.GetString()] = std::to_string(it->value.GetInt64());
+            }
         } else if (it->value.IsDouble()) {
-            pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
+            if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")){
+                pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetDouble());
+            } else {
+                pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
+            }
         } else {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }

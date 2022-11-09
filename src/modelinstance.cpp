@@ -563,9 +563,8 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
         // nireq is set globally for all models in ovms startup parameters
         return ovmsConfig.nireq();
     }
-    std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
-        numberOfParallelInferRequests = compiledModel->get_property(key).as<unsigned int>();
+        numberOfParallelInferRequests = compiledModel->get_property(ov::optimal_number_of_infer_requests);
     } catch (const ov::Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
@@ -659,22 +658,11 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
-    // Do not add CPU_THROUGHPUT_AUTO when performance hint is specified.
-    bool isPerformanceHintSpecified = pluginConfig.count("PERFORMANCE_HINT") > 0;
-    if (isPerformanceHintSpecified) {
+    // By default, set "PERFORMANCE_HINT" = "THROUGHPUT";
+    if (!pluginConfig.empty()) {
         return pluginConfig;
     }
-    // For CPU and GPU, if user did not specify, calculate CPU_THROUGHPUT_STREAMS automatically
-    if (config.isSingleDeviceUsed("CPU")) {
-        if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
-            pluginConfig["CPU_THROUGHPUT_STREAMS"] = "CPU_THROUGHPUT_AUTO";
-        }
-    }
-    if (config.isSingleDeviceUsed("GPU")) {
-        if (pluginConfig.count("GPU_THROUGHPUT_STREAMS") == 0) {
-            pluginConfig["GPU_THROUGHPUT_STREAMS"] = "GPU_THROUGHPUT_AUTO";
-        }
-    }
+    pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
     return pluginConfig;
 }
 
@@ -720,20 +708,20 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
 
-    const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
-    std::vector<std::string> supportedConfigKeys;
+    auto prop = ov::supported_properties;
+    std::vector<ov::PropertyName> supportedConfigKeys;
     try {
-        std::vector<std::string> supportedConfigKeys2 = compiledModel->get_property(supportedConfigKey).as<std::vector<std::string>>();
+        std::vector<ov::PropertyName> supportedConfigKeys2 = compiledModel->get_property(prop);
         supportedConfigKeys = std::move(supportedConfigKeys2);
     } catch (std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, supportedConfigKey, e.what());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, prop.name(), e.what());
         return StatusCode::OK;
     } catch (...) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}", targetDevice, supportedConfigKey);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}", targetDevice, prop.name());
         return StatusCode::OK;
     }
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version: {};target device: {}; CompiledModel configuration", getName(), getVersion(), targetDevice);
-    for (auto& key : supportedConfigKeys) {
+    for (ov::PropertyName& key : supportedConfigKeys) {
         std::string value;
         try {
             auto paramValue = compiledModel->get_property(key);

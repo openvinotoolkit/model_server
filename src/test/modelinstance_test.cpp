@@ -809,7 +809,7 @@ TEST(CpuThroughputStreamsNotSpecified, DefaultIsSetForCPU) {
     config.setTargetDevice("CPU");
     config.setPluginConfig({});
     ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
-    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 1);
+    EXPECT_EQ(pluginConfig.count("PERFORMANCE_HINT"), 1);
 }
 
 TEST(CpuThroughputStreamsNotSpecified, NotSetForHeteroCPU) {
