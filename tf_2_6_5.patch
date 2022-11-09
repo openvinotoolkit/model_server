@@ -1,0 +1,161 @@
+diff --git a/Dockerfile.redhat b/Dockerfile.redhat
+index 58b9104a..b0ae1967 100644
+--- a/Dockerfile.redhat
++++ b/Dockerfile.redhat
+@@ -151,7 +151,13 @@ COPY external /ovms/external/
+ COPY third_party /ovms/third_party/
+ 
+ RUN alternatives --set python /usr/bin/python3
++
+ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
++
++# Patch apple build scripts
++RUN cp -rf /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch $(bazel info output_base)/external/build_bazel_rules_apple/
++RUN cd $(bazel info output_base)/external/build_bazel_rules_apple/ && patch -p1 < bazel_rules_apple.patch
++
+ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+ 
+ RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+diff --git a/Dockerfile.ubuntu b/Dockerfile.ubuntu
+index 7df50cc9..59dde219 100644
+--- a/Dockerfile.ubuntu
++++ b/Dockerfile.ubuntu
+@@ -194,7 +194,13 @@ COPY .bazelrc WORKSPACE /ovms/
+ COPY external /ovms/external/
+ 
+ RUN apt install -y python-is-python3
++
+ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
++
++# Patch apple build scripts
++RUN cp -rf /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch $(bazel info output_base)/external/build_bazel_rules_apple/
++RUN cd $(bazel info output_base)/external/build_bazel_rules_apple/ && patch -p1 < bazel_rules_apple.patch
++
+ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+ 
+ # Copy example clients into build image for static analysis
+diff --git a/WORKSPACE b/WORKSPACE
+index 02f2b112..7189ba9a 100644
+--- a/WORKSPACE
++++ b/WORKSPACE
+@@ -61,7 +61,7 @@ cc_library(
+ git_repository(
+     name = "tensorflow_serving",
+     remote = "https://github.com/tensorflow/serving.git",
+-    tag = "2.10.0",
++    tag = "2.6.5",
+     patch_args = ["-p1"],
+     patches = ["net_http.patch", "listen.patch"]
+     #                             ^^^^^^^^^^^^
+@@ -88,8 +88,8 @@ cc_library(
+ load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
+ tensorflow_http_archive(
+     name = "org_tensorflow",
+-    sha256 = "bc4e9bbeb0136163f283ab8b695bec747cad738963e153ce3b7e414ebffe408f",
+-    git_commit = "359c3cdfc5fabac82b3c70b3b6de2b0a8c16874f",
++    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
++    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
+     patch = "tf.patch",
+     repo_mapping = {"@curl" : "@curl"}
+ )
+
+diff --git a/external/tf.patch b/external/tf.patch
+index b80d525d..d144ed97 100644
+--- a/external/tf.patch
++++ b/external/tf.patch
+@@ -15,3 +15,25 @@ index b5521b1752..feaa8d1b91 100644
+        case 1:
+          h += static_cast<uint8_t>(data[0]);
+          h *= m;
++
++diff --git a/tensorflow/workspace2.bzl b/tensorflow/workspace2.bzl
++index be571aaf1f8..a8765b08bd4 100644
++--- a/tensorflow/workspace2.bzl
+++++ b/tensorflow/workspace2.bzl
++@@ -706,12 +706,12 @@ def _tf_repositories():
++     tf_http_archive(
++         name = "zlib",
++         build_file = "//third_party:zlib.BUILD",
++-        sha256 = "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1",
++-        strip_prefix = "zlib-1.2.11",
+++        sha256 = "b3a24de97a8fdbc835b9833169501030b8977031bcb54b3b3ac13740f846ab30",
+++        strip_prefix = "zlib-1.2.13",
++         system_build_file = "//third_party/systemlibs:zlib.BUILD",
++         urls = [
++-            "https://storage.googleapis.com/mirror.tensorflow.org/zlib.net/zlib-1.2.11.tar.gz",
++-            "https://zlib.net/zlib-1.2.11.tar.gz",
+++            "https://storage.googleapis.com/mirror.tensorflow.org/zlib.net/zlib-1.2.13.tar.gz",
+++            "https://zlib.net/zlib-1.2.13.tar.gz",
++         ],
++     )
++
+diff --git a/extras/openvino-operator-openshift/README.md b/extras/openvino-operator-openshift/README.md
+index f0dd30f6..11aaeca2 100644
+--- a/extras/openvino-operator-openshift/README.md
++++ b/extras/openvino-operator-openshift/README.md
+@@ -54,7 +54,7 @@ Modify the [sample resource](https://github.com/openvinotoolkit/model_server/tre
+ oc apply -f config/samples/intel_v1alpha1_ovms.yaml
+ ```
+ 
+-The available [parameters](https://github.com/openvinotoolkit/operator/blob/main/docs/modelserver_params.md) are the same as above.
++The available [parameters](../../deploy/README.md) are the same as above.
+ 
+ <b>Note</b>: Some deployment configurations have prerequisites like creating relevant resources in Kubernetes. For example, a secret with credentials,
+ persistent volume claim or configmap with a Model Server configuration file.
+
+diff --git a/lib_search.py b/lib_search.py
+index 22f32175..ce9ddbb6 100644
+--- a/lib_search.py
++++ b/lib_search.py
+@@ -110,6 +110,7 @@ def check_dir(start_dir):
+         'tf.patch',
+         'tftext.patch',
+         'vehicle_images.txt',
++        'bazel_rules_apple.patch',
+         ]
+ 
+     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
+@@ -184,6 +185,7 @@ def check_func(start_dir):
+         'tf.patch',
+         'tftext.patch',
+         'zlib.LICENSE.txt',
++        'bazel_rules_apple.patch',
+     ]
+ 
+     exclude_directories = ['/dist/', 'extras/ovms-operator']
+diff --git a/third_party/build_bazel_rules_apple/bazel_rules_apple.patch b/third_party/build_bazel_rules_apple/bazel_rules_apple.patch
+new file mode 100644
+index 00000000..9bf1a67d
+--- /dev/null
++++ b/third_party/build_bazel_rules_apple/bazel_rules_apple.patch
+@@ -0,0 +1,30 @@
++diff -uraN a/apple/internal/rule_factory.bzl b/apple/internal/rule_factory.bzl
++--- a/apple/internal/rule_factory.bzl    2020-04-03 18:27:03.000000000 +0000
+++++ b/apple/internal/rule_factory2.bzl   2022-10-19 15:31:40.437342517 +0000
++@@ -230,7 +230,7 @@
++
++ def _common_binary_linking_attrs(rule_descriptor):
++     deps_aspects = [
++-        apple_common.objc_proto_aspect,
+++#        apple_common.objc_proto_aspect,
++         apple_resource_aspect,
++         framework_import_aspect,
++         swift_usage_aspect,
++@@ -250,7 +250,7 @@
++     """,
++         ),
++         "bundle_loader": attr.label(
++-            aspects = [apple_common.objc_proto_aspect],
+++#            aspects = [apple_common.objc_proto_aspect],
++             providers = [[apple_common.AppleExecutableBinary]],
++             doc = """
++ This attribute is public as an implementation detail while we migrate the architecture of the rules.
++@@ -258,7 +258,7 @@
++     """,
++         ),
++         "dylibs": attr.label_list(
++-            aspects = [apple_common.objc_proto_aspect],
+++#            aspects = [apple_common.objc_proto_aspect],
++             doc = """
++ This attribute is public as an implementation detail while we migrate the architecture of the rules.
++ Do not change its value.
