@@ -28,6 +28,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "../buffer.hpp"
 #include "../deserialization.hpp"
 #include "../inferencerequest.hpp"
 #include "../inferencetensor.hpp"
@@ -46,6 +47,7 @@ using TFPredictResponse = tensorflow::serving::PredictResponse;
 using namespace ovms;
 
 using testing::_;
+using testing::ElementsAre;
 using testing::NiceMock;
 using testing::Throw;
 
@@ -67,7 +69,7 @@ protected:
         tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
             tensorName,
             precision,
-            shape_t{1, 3},
+            shape_t{1, DUMMY_MODEL_INPUT_SIZE},
             Layout{"NC"});
         SetUpTensorProto(getPrecisionAsDataType(precision));
     }
@@ -91,17 +93,16 @@ class DeserializeTFTensorProtoNegative : public TensorflowGRPCPredict {};
 class CAPIPredict : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
-        auto precision = ovms::Precision::FP32;
         tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
             tensorName,
-            precision,
-            shape_t{1, 3},
+            PRECISION,
+            shape_t{1, DUMMY_MODEL_INPUT_SIZE},
             Layout{"NC"});
-        SetUpTensorProto(getPrecisionAsOVMSDataType(precision));
+        SetUpTensorProto(getPrecisionAsOVMSDataType(PRECISION));
     }
     void SetUpTensorProto(DataType dataType) {
         std::array<size_t, 2> shape{1, DUMMY_MODEL_INPUT_SIZE};
-        tensorCapi = std::make_unique<InferenceTensor>(OVMS_DATATYPE_FP32,
+        tensorCapi = std::make_unique<InferenceTensor>(dataType,
             shape.data(),
             shape.size());
         bool createCopy{true};
@@ -112,6 +113,7 @@ protected:
         buffer = tensorCapi->getBuffer();
         ASSERT_NE(buffer, nullptr);
     }
+    ovms::Precision PRECISION = ovms::Precision::FP32;
     std::unique_ptr<InferenceTensor> tensorCapi;
     const char* tensorName = DUMMY_MODEL_INPUT_NAME;
     ovms::tensor_map_t tensorMap;
@@ -122,8 +124,9 @@ class CAPIPredictRequest : public CAPIPredict {
 protected:
     InferenceRequest request{"dummy", 1};
     static const std::string DATA;
-    static constexpr std::array<size_t, DUMMY_MODEL_INPUT_SIZE> SHAPE{1, 10};
+    static constexpr std::array<size_t, 2> SHAPE{1, 10};
     void SetUp() {
+        CAPIPredict::SetUp();
         request.addInput(DUMMY_MODEL_INPUT_NAME,
             OVMS_DATATYPE_FP32,
             SHAPE.data(),
@@ -147,6 +150,16 @@ TEST_F(CAPIPredictRequest, ShouldSuccessForSupportedPrecision) {
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_TRUE(status.ok());
+    auto tensor = inferRequest.get_tensor(CAPIPredictRequest::tensorName);
+    EXPECT_EQ(PRECISION, ovElementTypeToOvmsPrecision(tensor.get_element_type()));
+    auto shape = tensor.get_shape();
+    EXPECT_THAT(shape, ElementsAre(1, DUMMY_MODEL_INPUT_SIZE));
+    const InferenceTensor* requestTensor{nullptr};
+    status = request.getInput(DUMMY_MODEL_INPUT_NAME, &requestTensor);
+    ASSERT_NE(nullptr, requestTensor);
+    const Buffer* buffer = requestTensor->getBuffer();
+    EXPECT_EQ(tensor.data(), buffer->data());
+    EXPECT_EQ(tensor.get_byte_size(), buffer->getByteSize());
 }
 
 class DeserializeCAPITensor : public CAPIPredict {};
@@ -277,6 +290,7 @@ TEST_P(DeserializeTFTensorProto, ShouldReturnValidTensor) {
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid tensor ptr";
+    EXPECT_EQ(ovElementTypeToOvmsPrecision(tensor.get_element_type()), testedPrecision);
 }
 TEST_P(DeserializeCAPITensor, ShouldReturnValidTensor) {
     ovms::Precision testedPrecision = GetParam();
@@ -286,6 +300,7 @@ TEST_P(DeserializeCAPITensor, ShouldReturnValidTensor) {
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid tensor ptr";
+    EXPECT_EQ(ovElementTypeToOvmsPrecision(tensor.get_element_type()), testedPrecision);
 }
 
 class KserveGRPCPredict : public ::testing::TestWithParam<std::pair<ovms::Precision, bool>> {
@@ -423,6 +438,7 @@ TEST_P(DeserializeKFSTensorProto, ShouldReturnValidTensor) {
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid tensor ptr";
+    EXPECT_EQ(ovElementTypeToOvmsPrecision(tensor.get_element_type()), testedPrecision);
 }
 
 TEST_F(KserveGRPCPredict, ShouldReturnValidTensor) {
@@ -554,14 +570,6 @@ INSTANTIATE_TEST_SUITE_P(
     GRPCPredictRequest,
     ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<GRPCPredictRequest::ParamType>& info) {
-        return toString(info.param);
-    });
-
-INSTANTIATE_TEST_SUITE_P(
-    TestDeserialize,
-    CAPIPredictRequest,
-    ::testing::ValuesIn(SUPPORTED_KFS_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<CAPIPredictRequest::ParamType>& info) {
         return toString(info.param);
     });
 

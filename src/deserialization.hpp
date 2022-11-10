@@ -453,13 +453,11 @@ Status deserializePredictRequest(
     Sink& inputSink, bool isPipeline) {
     OVMS_PROFILE_FUNCTION();
     Status status;
-    for (const auto& pair : inputMap) {
+    for (const auto& [name, tensorInfo] : inputMap) {
         try {
-            const auto& name = pair.first;
-            auto tensorInfo = pair.second;
             const InferenceTensor* requestInputPtr{nullptr};
             auto status = request.getInput(name.c_str(), &requestInputPtr);
-            if (requestInputPtr == nullptr) {
+            if (!status.ok() || requestInputPtr == nullptr) {
                 SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
