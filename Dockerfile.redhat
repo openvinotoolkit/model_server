@@ -181,7 +181,7 @@ RUN wget https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov
 COPY check_coverage.bat /ovms/
 
 # Test coverage and unit tests in one layer
-RUN bazel coverage --combined_report=lcov //src:ovms_test &&\
+RUN bazel coverage --combined_report=lcov --test_output=streamed //src:ovms_test &&\
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
     bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
     
