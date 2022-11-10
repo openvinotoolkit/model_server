@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server {#ovms_what_is_openvino_model_server}
+# Model Serving {#ovms_what_is_openvino_model_server}
 
 @sphinxdirective
 
@@ -16,9 +16,7 @@
 
 @endsphinxdirective
 
-## Model Serving
-
-Model server hosts models and makes them accessible to software components over standart network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model server offers many advantages for efficient model deployment: 
+Model server hosts models and makes them accessible to software components over standard network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model server offers many advantages for efficient model deployment: 
 
 - Remote inference enables using lightweight clients with only the necessary functions to perform API calls to edge or cloud deployments.
 - Applications are independent of the model framework, hardware device, and infrastructure.
