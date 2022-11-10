@@ -20,7 +20,6 @@
 #include <string>
 #include <utility>
 
-#include <ie_plugin_config.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 

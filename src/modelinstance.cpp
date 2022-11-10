@@ -659,10 +659,11 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
     // By default, set "PERFORMANCE_HINT" = "THROUGHPUT";
-    if (!pluginConfig.empty()) {
+    if ((pluginConfig.count("NUM_STREAMS") == 1) || (pluginConfig.count("PERFORMANCE_HINT") == 1)) {
         return pluginConfig;
+    } else {
+        pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
     }
-    pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
     return pluginConfig;
 }
 
@@ -711,7 +712,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     auto prop = ov::supported_properties;
     std::vector<ov::PropertyName> supportedConfigKeys;
     try {
-        std::vector<ov::PropertyName> supportedConfigKeys2 = compiledModel->get_property(prop);
+        auto supportedConfigKeys2 = compiledModel->get_property(prop);
         supportedConfigKeys = std::move(supportedConfigKeys2);
     } catch (std::exception& e) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, prop.name(), e.what());
@@ -721,7 +722,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         return StatusCode::OK;
     }
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version: {};target device: {}; CompiledModel configuration", getName(), getVersion(), targetDevice);
-    for (ov::PropertyName& key : supportedConfigKeys) {
+    for (auto& key : supportedConfigKeys) {
         std::string value;
         try {
             auto paramValue = compiledModel->get_property(key);
@@ -878,14 +879,14 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
 Status ModelInstance::setCacheOptions(const ModelConfig& config) {
     if (!config.getCacheDir().empty()) {
         if (!config.isAllowCacheSetToTrue() && (config.isCustomLoaderRequiredToLoadModel() || config.anyShapeSetToAuto() || (config.getBatchingMode() == Mode::AUTO))) {
-            this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), ""}});
+            this->ieCore.set_property(ov::cache_dir(""));
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
             this->cacheDisabled = true;
         } else if (config.isAllowCacheSetToTrue() && config.isCustomLoaderRequiredToLoadModel()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model: {} has allow cache set to true while using custom loader", this->getName());
             return StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER;
         } else {
-            this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
+            this->ieCore.set_property(ov::cache_dir(config.getCacheDir()));
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
         }
     }
