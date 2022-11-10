@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <array>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -28,6 +29,9 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "../buffer.hpp"
+#include "../inferenceresponse.hpp"
+#include "../inferencetensor.hpp"
 #include "../serialization.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
@@ -42,6 +46,7 @@ using TFPredictResponse = tensorflow::serving::PredictResponse;
 using namespace ovms;
 
 using testing::_;
+using testing::ElementsAre;
 using testing::NiceMock;
 using testing::Throw;
 
@@ -119,6 +124,46 @@ const std::vector<ovms::Precision> UNSUPPORTED_KFS_OUTPUT_PRECISIONS{
     // ovms::Precision::BIN, // Cannot create tensor with such precision
     // ovms::Precision::BOOL
     // ovms::Precision::CUSTOM)
+};
+
+const std::vector<ovms::Precision> SUPPORTED_CAPI_OUTPUT_PRECISIONS{
+    // ovms::Precision::BF16,
+    ovms::Precision::FP64,
+    ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    ovms::Precision::I64,
+    ovms::Precision::I32,
+    ovms::Precision::I16,
+    ovms::Precision::I8,
+    // ovms::Precision::I4,
+    ovms::Precision::U64,
+    ovms::Precision::U32,
+    ovms::Precision::U16,
+    ovms::Precision::U8,
+    // ovms::Precision::U4,
+    // ovms::Precision::U1,
+    // ovms::Precision::BOOL,
+    // ovms::Precision::UNDEFINED,
+};
+
+const std::vector<ovms::Precision> UNSUPPORTED_CAPI_OUTPUT_PRECISIONS{
+    ovms::Precision::BF16,
+    // ovms::Precision::FP64,
+    // ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    // ovms::Precision::I64,
+    // ovms::Precision::I32,
+    // ovms::Precision::I16,
+    // ovms::Precision::I8,
+    ovms::Precision::I4,
+    // ovms::Precision::U64,
+    // ovms::Precision::U32,
+    // ovms::Precision::U16,
+    // ovms::Precision::U8,
+    ovms::Precision::U4,
+    ovms::Precision::U1,
+    ovms::Precision::BOOL,
+    // ovms::Precision::UNDEFINED,  // Cannot create ov tensor with such precision
 };
 
 class TensorflowGRPCPredict : public ::testing::TestWithParam<ovms::Precision> {
@@ -212,7 +257,7 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
 
 class SerializeTFTensorProtoNegative : public SerializeTFTensorProto {};
 
-TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPrecision) {
+TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldFailForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TFTensorProto responseOutput;
@@ -233,7 +278,7 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
-        DUMMY_MODEL_INPUT_NAME,
+        DUMMY_MODEL_OUTPUT_NAME,
         ovms::Precision::FP32,
         ovms::Shape{1, 10},
         Layout{"NC"});
@@ -361,7 +406,7 @@ TEST_P(SerializeKFSInferOutputTensor, SerializeTensorProtoShouldSucceedForPrecis
 
 class SerializeKFSInferOutputTensorNegative : public SerializeKFSInferOutputTensor {};
 
-TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldSucceedForPrecision) {
+TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldFailForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     KFSResponse response;
@@ -386,7 +431,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
-        DUMMY_MODEL_INPUT_NAME,
+        DUMMY_MODEL_OUTPUT_NAME,
         ovms::Precision::FP32,
         ovms::Shape{1, 10},
         Layout{"NC"});
@@ -396,7 +441,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
     auto status = serializePredictResponse(outputGetter, tenMap, &response, getTensorInfoName);
     ASSERT_TRUE(status.ok());
-    EXPECT_EQ(DUMMY_MODEL_INPUT_NAME, response.outputs(0).name());
+    EXPECT_EQ(DUMMY_MODEL_OUTPUT_NAME, response.outputs(0).name());
     EXPECT_EQ("FP32", response.outputs(0).datatype());
     EXPECT_EQ(1, response.outputs(0).shape(0));
     EXPECT_EQ(10, response.outputs(0).shape(1));
@@ -418,3 +463,162 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<SerializeKFSInferOutputTensorNegative::ParamType>& info) {
         return toString(info.param);
     });
+
+// C-API
+
+class CApiSerialization : public ::testing::TestWithParam<ovms::Precision> {
+protected:
+    void SetUp() override {
+        ovms::Precision precision = ovms::Precision::FP32;
+
+        tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
+            tensorName,
+            precision,
+            shape_t{1, 3, 1, 1},
+            Layout{"NHWC"});
+    }
+
+    std::tuple<
+        std::shared_ptr<ovms::TensorInfo>,
+        ov::Tensor>
+    getInputs(ovms::Precision precision) {
+        std::shared_ptr<ovms::TensorInfo> servableOutput =
+            std::make_shared<ovms::TensorInfo>(
+                std::string("2_values_C_layout"),
+                precision,
+                ovms::Shape{2},
+                Layout{"C"});
+        ov::Tensor mockTensor = ov::Tensor(
+            ovmsPrecisionToIE2Precision(precision), ov::Shape{2});
+        return std::make_tuple(servableOutput, mockTensor);
+    }
+
+    const char* tensorName = "Input_PRECISION_1_3_1_1_NHWC";
+    ovms::tensor_map_t tensorMap;
+    InferenceResponse response{"dummy", 1};
+};
+
+TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
+    ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
+    shape_t tensorInfoShape{1, 3, 224, 224};
+    auto layout = Layout{"NCHW"};
+    const std::string name = "NOT_IMPORTANT";
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
+    ov::Tensor tensor(ov::element::i32, tensorInfoShape);
+    InferenceTensor responseOutput;
+    auto status = serializeTensorToTensorProto(responseOutput, tensorInfo, tensor);
+    EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
+}
+
+TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorShape) {
+    ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
+    shape_t tensorInfoShape{1, 3, 224, 224};
+    shape_t tensorShape{1, 3, 225, 225};
+    auto layout = Layout{"NCHW"};
+    const std::string name = "NOT_IMPORTANT";
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
+    ov::Tensor tensor(tensorInfo->getOvPrecision(), tensorShape);
+    InferenceTensor responseOutput;
+    auto status = serializeTensorToTensorProto(responseOutput,
+        tensorInfo,
+        tensor);
+    EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
+}
+
+class SerializeCApiTensorPositive : public CApiSerialization {};
+
+TEST_P(SerializeCApiTensorPositive, SerializeTensorShouldSucceedForPrecision) {
+    ovms::Precision testedPrecision = GetParam();
+    auto inputs = getInputs(testedPrecision);
+    InferenceTensor responseOutput;
+    ov::Tensor mockTensor = std::get<1>(inputs);
+    auto status = serializeTensorToTensorProto(responseOutput,
+        std::get<0>(inputs),
+        mockTensor);
+    EXPECT_TRUE(status.ok())
+        << "Supported OV serialization precision"
+        << toString(testedPrecision)
+        << "should succeed";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    SerializeCApiTensorPositive,
+    ::testing::ValuesIn(SUPPORTED_CAPI_OUTPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<SerializeCApiTensorPositive::ParamType>& info) {
+        return toString(info.param);
+    });
+
+class SerializeCApiTensorNegative : public CApiSerialization {};
+
+TEST_P(SerializeCApiTensorNegative, SerializeTensorShouldFailForPrecision) {
+    ovms::Precision testedPrecision = GetParam();
+    auto inputs = getInputs(testedPrecision);
+    InferenceTensor responseOutput;
+    auto status = serializeTensorToTensorProto(responseOutput,
+        std::get<0>(inputs),
+        std::get<1>(inputs));
+    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
+        << "Unsupported OV serialization precision"
+        << toString(testedPrecision)
+        << "should fail";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    SerializeCApiTensorNegative,
+    ::testing::ValuesIn(UNSUPPORTED_CAPI_OUTPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<SerializeCApiTensorNegative::ParamType>& info) {
+        return toString(info.param);
+    });
+
+TEST_F(CApiSerialization, ValidSerialization) {
+    constexpr size_t NUMBER_OF_ELEMENTS = 3;
+    ov::Tensor tensor(ov::element::f32, shape_t{1, NUMBER_OF_ELEMENTS, 1, 1});
+    std::array<float, NUMBER_OF_ELEMENTS> data = {3.0, 2.0, 1.0};
+    std::memcpy(tensor.data(), data.data(), sizeof(float) * NUMBER_OF_ELEMENTS);
+    ProtoGetter<InferenceResponse*, InferenceTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    auto status = serializeTensorToTensorProto(responseOutput,
+        tensorMap[tensorName],
+        tensor);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    EXPECT_EQ(responseOutput.getDataType(), OVMS_DATATYPE_FP32);
+    EXPECT_THAT(responseOutput.getShape(), ElementsAre(1, NUMBER_OF_ELEMENTS, 1, 1));
+    const auto* buffer = responseOutput.getBuffer();
+    ASSERT_NE(buffer, nullptr);
+    ASSERT_NE(buffer->data(), nullptr);
+    EXPECT_EQ(buffer->getByteSize(), tensor.get_byte_size());
+    EXPECT_EQ(std::memcmp(tensor.data(), buffer->data(), sizeof(float) * NUMBER_OF_ELEMENTS), 0);
+}
+
+TEST(SerializeCApiInferenceResponse, ShouldSuccessForSupportedPrecision) {
+    InferenceResponse response{"dummy", 1};
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ov::InferRequest inferRequest = compiledModel.create_infer_request();
+    ovms::tensor_map_t tenMap;
+    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+        DUMMY_MODEL_OUTPUT_NAME,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 10},
+        Layout{"NC"});
+    tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
+    ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
+    float data[] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.10};
+    std::memcpy(tensor.data(), data, tensor.get_byte_size());
+    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
+    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    auto status = serializePredictResponse(outputGetter, tenMap, &response, getTensorInfoName);
+    ASSERT_TRUE(status.ok());
+    InferenceTensor* inferenceTensor = nullptr;
+    ASSERT_EQ(response.getOutput(DUMMY_MODEL_OUTPUT_NAME, &inferenceTensor), ovms::StatusCode::OK);
+    ASSERT_NE(inferenceTensor, nullptr);
+    EXPECT_EQ(inferenceTensor->getDataType(), OVMS_DATATYPE_FP32);
+    EXPECT_THAT(inferenceTensor->getShape(), ElementsAre(1, 10));
+    ASSERT_NE(inferenceTensor->getBuffer(), nullptr);
+    ASSERT_NE(inferenceTensor->getBuffer()->data(), nullptr);
+    ASSERT_EQ(inferenceTensor->getBuffer()->getByteSize(), tensor.get_byte_size());
+    EXPECT_EQ(std::memcmp(inferenceTensor->getBuffer()->data(), data, tensor.get_byte_size()), 0);
+}

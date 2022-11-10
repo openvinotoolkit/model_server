@@ -22,6 +22,8 @@
 #include "status.hpp"
 
 namespace ovms {
+InferenceTensor::InferenceTensor() :
+    datatype(DataType::OVMS_DATATYPE_UNDEFINED) {}
 InferenceTensor::~InferenceTensor() = default;
 InferenceTensor::InferenceTensor(InferenceTensor&& rhs) :
     datatype(std::move(rhs.datatype)),
@@ -30,6 +32,12 @@ InferenceTensor::InferenceTensor(InferenceTensor&& rhs) :
 InferenceTensor::InferenceTensor(DataType datatype, const size_t* shape, size_t dimCount) :
     datatype(datatype),
     shape(shape, shape + dimCount) {}
+void InferenceTensor::setDataType(const DataType datatype) {
+    this->datatype = datatype;
+}
+void InferenceTensor::setShape(const shape_t& shape) {
+    this->shape = shape;
+}
 Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> deviceId, bool createCopy) {
     if (nullptr != buffer) {
         return StatusCode::DOUBLE_BUFFER_SET;

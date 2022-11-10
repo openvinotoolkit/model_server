@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 #include <openvino/openvino.hpp>
@@ -27,12 +28,14 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "inferenceresponse.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
+class InferenceTensor;
 
 template <typename T>
 class OutputGetter {
@@ -64,6 +67,11 @@ Status serializeTensorToTensorProto(
 Status serializeTensorToTensorProto(
     ::KFSResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor);
+
+Status serializeTensorToTensorProto(
+    InferenceTensor& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
@@ -120,6 +128,35 @@ Status serializePredictResponse(
         status = serializeTensorToTensorProto(inferOutputTensor, protoGetter.createContent(outputInfo->getMappedName()), outputInfo, tensor);
         if (!status.ok()) {
             return status;
+        }
+    }
+    return status;
+}
+template <typename T>
+Status serializePredictResponse(
+    OutputGetter<T>& outputGetter,
+    const tensor_map_t& outputMap,
+    InferenceResponse* response,
+    outputNameChooser_t outputNameChooser) {
+    OVMS_PROFILE_FUNCTION();
+    Status status;
+    ProtoGetter<InferenceResponse*, InferenceTensor&> protoGetter(response);
+    for (const auto& [outputName, outputInfo] : outputMap) {
+        ov::Tensor tensor;
+        status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);
+        if (!status.ok()) {
+            return status;
+        }
+        try {
+            auto& tensorProto = protoGetter.createOutput(outputInfo->getMappedName());
+            status = serializeTensorToTensorProto(tensorProto, outputInfo, tensor);
+            if (!status.ok()) {
+                return status;
+            }
+        } catch (std::logic_error& e) {
+            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: {}",
+                outputName, response->getServableName(), response->getServableVersion(), e.what());
+            return StatusCode::INTERNAL_ERROR;
         }
     }
     return status;

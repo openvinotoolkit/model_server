@@ -39,6 +39,15 @@ Status InferenceResponse::addOutput(const std::string& name, DataType datatype, 
     auto [it, emplaced] = outputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
+Status InferenceResponse::addOutput(const std::string& name) {
+    // TODO insert tensor with wrong shape/datatype/name/dimcount
+    // TODO reuse infer response/request
+    auto [it, emplaced] = outputs.emplace(name, InferenceTensor{});
+    return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
+}
+bool InferenceResponse::hasOutput(const std::string& name) const {
+    return outputs.find(name) != outputs.end();
+}
 Status InferenceResponse::getOutput(const char* name, InferenceTensor** tensor) {
     auto it = outputs.find(name);
     if (outputs.end() == it) {
