@@ -45,13 +45,9 @@ fi
 if [ ${NO_WARNINGS} -gt  179 ]; then
     echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
     exit 1
-else
-    exit 0;
 fi
-if [ ${NO_WARNINGS_TEST} -gt  131 ]; then
+if [ ${NO_WARNINGS_TEST} -gt  124 ]; then
     echo "Failed due to higher than allowed number of issues in test code: ${NO_WARNINGS_TEST}"
     exit 1
-else
-    exit 0;
 fi
 exit 0
