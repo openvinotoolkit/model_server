@@ -55,9 +55,10 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 @endsphinxdirective
 
 
-## Next Step
+## Next Steps
 
-- Try the model server [features](features.md).
+- Try the model server [features](features.md)
+- Explore the model server [demos](../demos/README.md)
 
 ## Additional Resources
 

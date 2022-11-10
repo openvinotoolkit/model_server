@@ -1,3 +1,5 @@
+# Quickstart Guide {#ovms_docs_quick_start_guide}
+
 OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) 
 or [ONNX](https://onnx.ai/) format. You can get them by:
 

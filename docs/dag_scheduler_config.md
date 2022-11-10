@@ -1,4 +1,4 @@
-# Config {#ovms_docs_dag_config}
+# DAG Configuration File  {#ovms_docs_dag_config}
 
 * <a href="#configuration-file">Configuration file</a>
 * <a href="#current-limitations">Current Limitations</a>

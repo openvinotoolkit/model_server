@@ -1,4 +1,4 @@
-# Deploying Model Server inside Docker Container {#ovms_docs_docker_container}
+# Deploying Model Server in Docker Container {#ovms_docs_docker_container}
 
 OpenVINO Model Server is hosted inside a docker container. You can either download a pre-build container or build a container from source. It is also suitable for landing in the [Kubernetes environment](installations_kubernetes.md).
 
@@ -20,14 +20,7 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 
 ### Launch Model Server Container <a name="quickstart"></a>
 
-1. Pull OpenVINO&trade; Model Server Image.
-2. Prepare data for serving:
-   - Start a Docker Container with OVMS and your model.
-   - Provide the input files.
-   - Prepare a client package.
-3. Run the prediction using ovmsclient.
-
-Here is an example of launching the model server using a ResNet50 image classification model from a cloud storage:
+This example shows how to launch the model server with a ResNet50 image classification model from a cloud storage:
 
 #### Step 1. Pull Model Server Image
 
@@ -80,12 +73,6 @@ python predict.py
 ```
 If everything is set up correctly, you will see 'zebra' prediction in the output.
 
-### Next Steps
-
-- To serve your own model, [prepare it for serving](models_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
-- To see another example of setting up the model server with a face-detection model, refer to the [Quickstart guide](./ovms_quickstart.md).
-- Learn more about model server [starting parameters](parameters.md).
-
 ## Build Container from Source <a name="model-server-installation"></a> 
 
 Before starting the server, make sure your hardware is [supported](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html) by OpenVINO.
@@ -137,11 +124,13 @@ The server can be started in two ways:
 ### Next Steps
 
 - To serve your own model, [prepare it for serving](models_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
-- Learn more about the model server [parameters](parameters.md).
+- To see another example of setting up the model server with a face-detection model, refer to the [Quickstart guide](./ovms_quickstart.md) and explore the [demos](../demos/README.md).
+- Learn more about model server [starting parameters](parameters.md).
 
 ### Additional Resources
 
 - [Configure AI accelerators](accelerators.md)
 - [Model server parameters](parameters.md)
 - [Quickstart guide](./ovms_quickstart.md)
+- [Demos](../demos/README.md)
 - [Troubleshooting](troubleshooting.md)

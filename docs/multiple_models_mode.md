@@ -64,9 +64,10 @@ docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.j
 
 ```
 
-## Next Step
+## Next Steps
 
-- Try the model server [features](features.md).
+- Try the model server [features](features.md)
+- Explore the model server [demos](../demos/README.md)
 
 ## Additional Resources
 
