@@ -63,7 +63,7 @@ DataType getPrecisionAsOVMSDataType(Precision precision) {
     case Precision::BIN:
         return OVMS_DATATYPE_BIN;
     default:
-        return OVMS_DATATYPE_END;
+        return OVMS_DATATYPE_UNDEFINED;
     }
 }
 Precision getOVMSDataTypeAsPrecision(DataType datatype) {
@@ -113,7 +113,7 @@ Precision getOVMSDataTypeAsPrecision(DataType datatype) {
     case OVMS_DATATYPE_BIN:
         return Precision::BIN;
     default:
-        return Precision::PRECISION_END;
+        return Precision::UNDEFINED;
     }
 }
 }  // namespace ovms
