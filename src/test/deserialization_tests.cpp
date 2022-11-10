@@ -584,7 +584,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeCAPITensorProtoNegative,
-    ::testing::ValuesIn(UNSUPPORTED_KFS_INPUT_PRECISIONS),
+    ::testing::ValuesIn(UNSUPPORTED_CAPI_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<DeserializeCAPITensorProtoNegative::ParamType>& info) {
         return toString(info.param);
     });
@@ -599,7 +599,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeCAPITensor,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    ::testing::ValuesIn(SUPPORTED_CAPI_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<DeserializeCAPITensor::ParamType>& info) {
         return toString(info.param);
     });
