@@ -291,12 +291,19 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
         if (it->value.IsString()) {
             if (((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("CPU_THROUGHPUT_AUTO"))) || ((it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("GPU_THROUGHPUT_AUTO")))) {
                 pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
+                SPDLOG_WARN("{} plugin config key is deprecated. Use PERHORMANCE_HINT instead",it->name.GetString());
             } else {
-                pluginConfig[it->name.GetString()] = it->value.GetString();
+                if ((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) || (it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS"))){
+                    pluginConfig["NUM_STREAMS"] = it->value.GetString();
+                    SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead",it->name.GetString());
+                } else {
+                    pluginConfig[it->name.GetString()] = it->value.GetString();
+                }
             }
         } else if (it->value.IsInt64()) {
             if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
                 pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetInt64());
+                SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead",it->name.GetString());
             } else {
                 pluginConfig[it->name.GetString()] = std::to_string(it->value.GetInt64());
             }

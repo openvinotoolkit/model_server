@@ -496,6 +496,15 @@ TEST(ModelConfig, plugin_config_legacy_cpu_num) {
     EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
 }
 
+TEST(ModelConfig, plugin_config_legacy_cpu_str) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"CPU_THROUGHPUT_STREAMS\":\"5\"}";
+    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
+}
+
 TEST(ModelConfig, plugin_config_legacy_gpu) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"GPU_THROUGHPUT_STREAMS\":\"GPU_THROUGHPUT_AUTO\"}";
