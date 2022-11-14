@@ -129,7 +129,6 @@ RUN ./install_opencv.sh
 
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
-ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR /
