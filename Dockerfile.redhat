@@ -182,19 +182,21 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
+RUN wget https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
+    yum install -y lcov-1.16-1.noarch.rpm
+
 COPY check_coverage.bat /ovms/
-# Test Coverage
-RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; wget https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
-    yum install -y lcov-1.16-1.noarch.rpm &&\
-    bazel coverage --combined_report=lcov //src:ovms_test &&\
-    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
+
+# Test coverage and unit tests in one layer
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else  bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test && exit 0; fi ;\
+    bazel coverage --test_output=streamed --combined_report=lcov //src:ovms_test &&\
+    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
+    bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
     
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
-RUN cd /ovms/src/example/SampleCpuExtension/ && make
-
-RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed  //src:ovms_test
+RUN cd /ovms/src/example/SampleCpuExtension/ && make 
 
 COPY ${ovms_metadata_file} metadata.json
 
