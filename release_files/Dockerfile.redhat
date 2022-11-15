@@ -45,7 +45,7 @@ ENV GPU=$GPU
 WORKDIR /
 RUN     set -e ; \
         set -x ; \
-        microdnf install -y pkg-config tbb.x86_64 pugixml.x86_64 \; \
+        microdnf install -y pkg-config ; \
         if [ "$GPU" == "1" ] ; then \
                 case $INSTALL_DRIVER_VERSION in \
                 "20.35.17767") \

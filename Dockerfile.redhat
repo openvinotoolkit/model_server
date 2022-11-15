@@ -71,8 +71,6 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             yum-utils \
             unzip \
             vim \
-            tbb.x86_64 \
-            pugixml.x86_64 \
             xz && \
             yum clean all
 # Set up Bazel
