@@ -42,6 +42,9 @@ using testing::Eq;
 
 using ovms::StatusCode;
 
+// TODO: These tests test both TFS and KFS for prediction,
+// but output is always serialized to TFS, therefore we only test TFS serialization here.
+// TODO: Add C-API tests when predict/infer becomes ready.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
 void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
