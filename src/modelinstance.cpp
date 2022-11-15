@@ -54,9 +54,11 @@
 namespace {
 enum : unsigned int {
     GET_INFER_REQUEST,
+    PREPROCESS,
     DESERIALIZE,
     PREDICTION,
     SERIALIZE,
+    POSTPROCESS,
     TIMER_END
 };
 }  // namespace
@@ -1111,16 +1113,20 @@ void ModelInstance::unloadModelComponents() {
     }
 }
 
+const std::set<std::string>& ModelInstance::getOptionalInputNames() {
+    static const std::set<std::string> optionalInputNames = {};
+    return optionalInputNames;
+}
+
 template <typename RequestType>
 const Status ModelInstance::validate(const RequestType* request) {
     OVMS_PROFILE_FUNCTION();
-    static const std::set<std::string> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
         getInputsInfo(),
         getName(),
         getVersion(),
-        optionalInputNames,
+        this->getOptionalInputNames(),
         getModelConfig().getBatchingMode(),
         getModelConfig().getShapes());
 }
@@ -1200,10 +1206,17 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
 
-    auto status = validate(requestProto);
+    auto specialResources = getSR();
+    auto status = specialResources->extractRequestParameters(requestProto);
+    if (!status.ok())
+        return status;
+    status = validate(requestProto);
     auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
     auto requestShapes = getRequestShapes(requestProto);
     status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
+    if (!status.ok())
+        return status;
+    status = specialResources->process();
     if (!status.ok())
         return status;
     timer.start(GET_INFER_REQUEST);
@@ -1218,6 +1231,13 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, getInferRequestTime / 1000);
 
+    timer.start(PREPROCESS);
+    status = specialResources->preInferenceProcessing(inferRequest);
+    timer.stop(PREPROCESS);
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREPROCESS) / 1000);
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
@@ -1246,7 +1266,16 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
 
-    return StatusCode::OK;
+    timer.start(POSTPROCESS);
+    status = specialResources->postInferenceProcessing(responseProto, inferRequest);
+    timer.stop(POSTPROCESS);
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
+
+    status = specialResources->release();
+    return status;
 }
 Status ModelInstance::infer(const ::KFSRequest* requestProto,
     ::KFSResponse* responseProto,
@@ -1324,4 +1353,7 @@ uint32_t ModelInstance::getNumOfStreams() const {
     return compiledModel->get_property(ov::num_streams);
 }
 
+std::unique_ptr<SpecialResourcesBasic> ModelInstance::getSR() {
+    return std::make_unique<SpecialResourcesBasic>();
+}
 }  // namespace ovms

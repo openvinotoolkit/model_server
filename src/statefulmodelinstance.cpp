@@ -35,15 +35,15 @@ const std::set<std::string> StatefulModelInstance::SPECIAL_INPUT_NAMES{"sequence
 
 const Status StatefulModelInstance::extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId) {
     if (!proto.tensor_shape().dim_size()) {
-        SPDLOG_DEBUG("[Model: {} version: {}] Sequence id tensor proto does not contain tensor shape information", getName(), getVersion());
+        //       SPDLOG_DEBUG("[Model: {} version: {}] Sequence id tensor proto does not contain tensor shape information", getName(), getVersion());
         return StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE;
     } else if (proto.tensor_shape().dim_size() != 1) {
-        SPDLOG_DEBUG("[Model: {} version: {}] Sequence id tensor proto shape has invalid number of dimensions. Expecting shape with one dimension", getName(), getVersion());
+        //     SPDLOG_DEBUG("[Model: {} version: {}] Sequence id tensor proto shape has invalid number of dimensions. Expecting shape with one dimension", getName(), getVersion());
         return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Required shape for sequence_id is: (1)");
     }
 
     if (proto.tensor_shape().dim(0).size() != 1) {
-        SPDLOG_DEBUG("[Model: {} version: {}] Sequence id tensor proto shape has invalid shape. Expecting shape: (1)", getName(), getVersion());
+        //   SPDLOG_DEBUG("[Model: {} version: {}] Sequence id tensor proto shape has invalid shape. Expecting shape: (1)", getName(), getVersion());
         return Status(StatusCode::INVALID_SHAPE, "Required shape for sequence_id is: (1)");
     }
 
@@ -56,15 +56,15 @@ const Status StatefulModelInstance::extractSequenceId(const tensorflow::TensorPr
 
 const Status StatefulModelInstance::extractSequenceControlInput(const tensorflow::TensorProto& proto, uint32_t& sequenceControlInput) {
     if (proto.tensor_shape().dim_size() == 0) {
-        SPDLOG_DEBUG("[Model: {} version: {}] Sequence control tensor proto does not contain tensor shape information", getName(), getVersion());
+        // SPDLOG_DEBUG("[Model: {} version: {}] Sequence control tensor proto does not contain tensor shape information", getName(), getVersion());
         return StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE;
     } else if (proto.tensor_shape().dim_size() != 1) {
-        SPDLOG_DEBUG("[Model: {} version: {}] Sequence control tensor proto shape has invalid number of dimensions. Expecting shape with one dimension.", getName(), getVersion());
+        // SPDLOG_DEBUG("[Model: {} version: {}] Sequence control tensor proto shape has invalid number of dimensions. Expecting shape with one dimension.", getName(), getVersion());
         return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Required shape for sequence_control_input is: (1)");
     }
 
     if (proto.tensor_shape().dim(0).size() != 1) {
-        SPDLOG_DEBUG("[Model: {} version: {}] Sequence control tensor proto shape has invalid shape. Expecting shape: (1)", getName(), getVersion());
+        //  SPDLOG_DEBUG("[Model: {} version: {}] Sequence control tensor proto shape has invalid shape. Expecting shape: (1)", getName(), getVersion());
         return Status(StatusCode::INVALID_SHAPE, "Required shape for sequence_control_input is: (1)");
     }
 
@@ -180,117 +180,79 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
     return StatusCode::OK;
 }
 
-template <typename RequestType>
-const Status StatefulModelInstance::validate(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec) {
-    OVMS_PROFILE_FUNCTION();
-    auto status = validateSpecialKeys(request, sequenceProcessingSpec);
-    if (!status.ok())
-        return status;
-
-    return request_validation_utils::validate(
-        *request,
-        getInputsInfo(),
-        getName(),
-        getVersion(),
-        SPECIAL_INPUT_NAMES,
-        getModelConfig().getBatchingMode(),
-        getModelConfig().getShapes());
+const std::set<std::string>& StatefulModelInstance::getOptionalInputNames() {
+    return SPECIAL_INPUT_NAMES;
 }
 
-Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
-    tensorflow::serving::PredictResponse* responseProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
+SpecialResources::SpecialResources(SequenceManager& sequenceManager) :
+    sequenceManager(sequenceManager) {
+}
+Status SpecialResources::extractRequestParameters(const tensorflow::serving::PredictRequest* request) {
     OVMS_PROFILE_FUNCTION();
-    enum : unsigned int {
-        GET_INFER_REQUEST,
-        PREPROCESS,
-        DESERIALIZE,
-        PREDICTION,
-        SERIALIZE,
-        POSTPROCESS,
-        TIMER_END
-    };
-    Timer<TIMER_END> timer;
-    using std::chrono::microseconds;
-    SequenceProcessingSpec sequenceProcessingSpec;
-    auto status = validate(requestProto, sequenceProcessingSpec);
+    auto status = StatefulModelInstance::validateSpecialKeys(request, sequenceProcessingSpec);
+    return status;
+}
+Status SpecialResources::process() {
+    sequenceManagerLock = std::make_unique<std::unique_lock<std::mutex>>(sequenceManager.getMutex());
+    auto status = sequenceManager.processRequestedSpec(sequenceProcessingSpec);
     if (!status.ok())
         return status;
-
-    std::unique_lock<std::mutex> sequenceManagerLock(sequenceManager->getMutex());
-    status = sequenceManager->processRequestedSpec(sequenceProcessingSpec);
-    if (!status.ok())
-        return status;
-    const uint64_t sequenceId = sequenceProcessingSpec.getSequenceId();
-    if (!sequenceManager->sequenceExists(sequenceId))
+    this->sequenceId = sequenceProcessingSpec.getSequenceId();
+    if (!sequenceManager.sequenceExists(this->sequenceId))
         return StatusCode::INTERNAL_ERROR;
-    Sequence& sequence = sequenceManager->getSequence(sequenceId);
+    // TODO should be able to search & get in one go
+    sequence = &sequenceManager.getSequence(this->sequenceId);
 
-    std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
-    sequenceManagerLock.unlock();
-
-    timer.start(GET_INFER_REQUEST);
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
-    int executingInferId = executingStreamIdGuard.getId();
-    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
-    timer.stop(GET_INFER_REQUEST);
-    double getInferRequestTime = timer.elapsed<microseconds>(GET_INFER_REQUEST);
-    OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
-    SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, getInferRequestTime / 1000);
-
-    timer.start(PREPROCESS);
-    status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
-    timer.stop(PREPROCESS);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREPROCESS) / 1000);
-
-    timer.start(DESERIALIZE);
-    InputSink<ov::InferRequest&> inputSink(inferRequest);
-    bool isPipeline = false;
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
-    timer.stop(DESERIALIZE);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
-
-    timer.start(PREDICTION);
-    status = performInference(inferRequest);
-    timer.stop(PREDICTION);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
-
-    timer.start(SERIALIZE);
-    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName);
-    timer.stop(SERIALIZE);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
-
-    timer.start(POSTPROCESS);
-    status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
-    timer.stop(POSTPROCESS);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
-
-    sequenceLock.unlock();
+    sequenceLock = std::make_unique<std::unique_lock<std::mutex>>(sequence->getMutex());
+    sequenceManagerLock->unlock();
+    return StatusCode::OK;
+}
+Status SpecialResources::preInferenceProcessing(ov::InferRequest& inferRequest) {
+    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_START) {
+        // On SEQUENCE_START reset memory state of infer request to default
+        for (auto&& state : inferRequest.query_state()) {
+            state.reset();
+        }
+    } else {
+        // For next requests in the sequence set infer request memory state to the last state saved by the sequence
+        const sequence_memory_state_t& sequenceMemoryState = sequence->getMemoryState();
+        for (auto&& state : inferRequest.query_state()) {
+            auto stateName = state.get_name();
+            if (!sequenceMemoryState.count(stateName))
+                return StatusCode::INTERNAL_ERROR;
+            state.set_state(sequenceMemoryState.at(stateName));
+        }
+    }
+    return StatusCode::OK;
+}
+Status SpecialResources::postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) {
+    // Reset inferRequest states on SEQUENCE_END
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
-        sequenceManagerLock.lock();
-        status = sequenceManager->removeSequence(sequenceId);
+        SPDLOG_DEBUG("Received SEQUENCE_END signal. Reseting model state and removing sequence");
+        for (auto&& state : inferRequest.query_state()) {
+            state.reset();
+        }
+    } else {
+        auto modelState = inferRequest.query_state();
+        sequence->updateMemoryState(modelState);
+    }
+    // Include sequence_id in server response
+    auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
+    tensorProto.mutable_tensor_shape()->add_dim()->set_size(1);
+    tensorProto.set_dtype(tensorflow::DataType::DT_UINT64);
+    tensorProto.add_uint64_val(sequenceProcessingSpec.getSequenceId());
+    return StatusCode::OK;
+}
+Status SpecialResources::release() {
+    sequenceLock->unlock();
+    Status status;
+    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
+        sequenceManagerLock->lock();
+        status = sequenceManager.removeSequence(this->sequenceId);
         if (!status.ok())
             return status;
     }
-
-    return StatusCode::OK;
+    return status;
 }
 
 const Status StatefulModelInstance::preInferenceProcessing(ov::InferRequest& inferRequest, Sequence& sequence,
@@ -333,5 +295,9 @@ const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving:
     tensorProto.add_uint64_val(sequenceProcessingSpec.getSequenceId());
 
     return StatusCode::OK;
+}
+
+std::unique_ptr<SpecialResourcesBasic> StatefulModelInstance::getSR() {
+    return std::make_unique<SpecialResources>(*this->getSequenceManager());
 }
 }  // namespace ovms

@@ -19,6 +19,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -45,6 +46,7 @@ class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class PipelineDefinition;
 class Status;
+struct SpecialResourcesBasic;
 
 class DynamicModelParameter {
 public:
@@ -555,5 +557,16 @@ public:
     uint32_t getNumOfStreams() const;
 
     Status infer(float* data, float* output);
+    virtual std::unique_ptr<SpecialResourcesBasic> getSR();
+    virtual const std::set<std::string>& getOptionalInputNames();
+};
+struct SpecialResourcesBasic {
+    SpecialResourcesBasic() = default;
+    virtual ~SpecialResourcesBasic() = default;
+    virtual Status extractRequestParameters(const tensorflow::serving::PredictRequest* request) { return StatusCode::OK; }
+    virtual Status process() { return StatusCode::OK; }
+    virtual Status preInferenceProcessing(ov::InferRequest& inferRequest) { return StatusCode::OK; }
+    virtual Status postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
+    virtual Status release() { return StatusCode::OK; }
 };
 }  // namespace ovms
