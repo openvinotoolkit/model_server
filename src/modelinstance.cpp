@@ -1216,7 +1216,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     double getInferRequestTime = timer.elapsed<microseconds>(GET_INFER_REQUEST);
     OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, getInferRequestTime / 1000);
+        getName(), getVersion(), executingInferId, getInferRequestTime / 1000);
 
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
@@ -1226,7 +1226,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
 
     timer.start(PREDICTION);
     status = performInference(inferRequest);
@@ -1234,7 +1234,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
@@ -1244,11 +1244,10 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         return status;
 
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
 
     return StatusCode::OK;
 }
-
 Status ModelInstance::infer(const ::KFSRequest* requestProto,
     ::KFSResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
@@ -1263,14 +1262,16 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
     if (!status.ok())
         return status;
     timer.start(GET_INFER_REQUEST);
+    OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
     int executingInferId = executingStreamIdGuard.getId();
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    OVMS_PROFILE_SYNC_END("getInferRequest");
     timer.stop(GET_INFER_REQUEST);
     double getInferRequestTime = timer.elapsed<microseconds>(GET_INFER_REQUEST);
     OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_name(), getVersion(), executingInferId, getInferRequestTime / 1000);
+        getName(), getVersion(), executingInferId, getInferRequestTime / 1000);
 
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
@@ -1280,7 +1281,7 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
 
     timer.start(PREDICTION);
     status = performInference(inferRequest);
@@ -1288,7 +1289,7 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
@@ -1301,7 +1302,7 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
     responseProto->set_model_version(std::to_string(getVersion()));
 
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
 
     return StatusCode::OK;
 }
