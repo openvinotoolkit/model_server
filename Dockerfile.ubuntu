@@ -77,8 +77,6 @@ RUN apt update && apt install -y \
             wget \
             unzip \
             vim \
-            libtbb2 \
-            libpugixml1v5 \
             xz-utils && \
             apt clean
 
@@ -237,8 +235,6 @@ RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
-
-RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
