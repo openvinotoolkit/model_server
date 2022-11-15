@@ -15,13 +15,8 @@
 //*****************************************************************************
 #include "serialization.hpp"
 
-#include <stdexcept>
-
-#include "inferenceresponse.hpp"
-#include "inferencetensor.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "ov_utils.hpp"
-#include "pocapiinternal.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
@@ -105,51 +100,6 @@ static Status serializePrecision(
     return StatusCode::OK;
 }
 
-static Status serializePrecision(
-    InferenceTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
-    ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
-        SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
-            servableOutput->getName(),
-            TensorInfo::getPrecisionAsString(servableOutput->getPrecision()),
-            tensor.get_element_type().get_type_name());
-        return StatusCode::INTERNAL_ERROR;
-    }
-    switch (servableOutput->getPrecision()) {
-    case ovms::Precision::FP64:
-    case ovms::Precision::FP32:
-    case ovms::Precision::FP16:
-    case ovms::Precision::I64:
-    case ovms::Precision::I32:
-    case ovms::Precision::I16:
-    case ovms::Precision::I8:
-    case ovms::Precision::U64:
-    case ovms::Precision::U32:
-    case ovms::Precision::U16:
-    case ovms::Precision::U8:
-        responseOutput.setDataType(getPrecisionAsOVMSDataType(servableOutput->getPrecision()));
-        break;
-    case ovms::Precision::BF16:
-    case ovms::Precision::U4:
-    case ovms::Precision::U1:
-    case ovms::Precision::BOOL:
-    case ovms::Precision::CUSTOM:
-    case ovms::Precision::UNDEFINED:
-    case ovms::Precision::DYNAMIC:
-    case ovms::Precision::MIXED:
-    case ovms::Precision::Q78:
-    case ovms::Precision::BIN:
-    default: {
-        Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
-        SPDLOG_ERROR(status.string());
-        return status;
-    }
-    }
-    return StatusCode::OK;
-}
-
 static Status serializeShape(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
@@ -200,32 +150,6 @@ static Status serializeShape(
     return StatusCode::OK;
 }
 
-static Status serializeShape(
-    InferenceTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
-    ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    auto& effectiveNetworkOutputShape = servableOutput->getShape();
-    ov::Shape actualTensorShape = tensor.get_shape();
-    if (effectiveNetworkOutputShape.size() != actualTensorShape.size()) {
-        SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in number of dimensions expected:{} vs actual:{}",
-            servableOutput->getName(), effectiveNetworkOutputShape.size(), actualTensorShape.size());
-        return StatusCode::INTERNAL_ERROR;
-    }
-    shape_t finalShape;
-    for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
-        dimension_value_t dim = actualTensorShape[i];
-        if (!effectiveNetworkOutputShape[i].match(dim)) {
-            SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in dimension:{} expected:{} vs actual:{}",
-                servableOutput->getName(), i, effectiveNetworkOutputShape[i].toString(), dim);
-            return StatusCode::INTERNAL_ERROR;
-        }
-        finalShape.push_back(dim);
-    }
-    responseOutput.setShape(finalShape);
-    return StatusCode::OK;
-}
-
 static void serializeContent(std::string* content, ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     // We only fill if the content is not already filled.
@@ -233,14 +157,6 @@ static void serializeContent(std::string* content, ov::Tensor& tensor) {
     if (content->size() == 0) {
         content->assign((char*)tensor.data(), tensor.get_byte_size());
     }
-}
-
-static void serializeContent(InferenceTensor& responseOutput, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    // We only fill if the content is not already filled.
-    // It can be filled in gather exit node handler.
-    if (responseOutput.getBuffer() == nullptr)
-        responseOutput.setBuffer(tensor.data(), tensor.get_byte_size(), OVMS_BUFFERTYPE_CPU, std::nullopt, true);
 }
 
 Status serializeTensorToTensorProto(
@@ -275,23 +191,6 @@ Status serializeTensorToTensorProto(
         return status;
     }
     serializeContent(rawOutputContents, tensor);
-    return StatusCode::OK;
-}
-
-Status serializeTensorToTensorProto(
-    InferenceTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
-    ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    auto status = serializePrecision(responseOutput, servableOutput, tensor);
-    if (!status.ok()) {
-        return status;
-    }
-    status = serializeShape(responseOutput, servableOutput, tensor);
-    if (!status.ok()) {
-        return status;
-    }
-    serializeContent(responseOutput, tensor);
     return StatusCode::OK;
 }
 
@@ -341,26 +240,6 @@ std::string* ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&>::cre
         }
     }
     return protoStorage->add_raw_output_contents();
-}
-
-template <>
-InferenceTensor& ProtoGetter<InferenceResponse*, InferenceTensor&>::createOutput(const std::string& name) {
-    OVMS_PROFILE_FUNCTION();
-    InferenceTensor* t = nullptr;
-    if (!protoStorage->hasOutput(name.c_str())) {
-        auto status = protoStorage->addOutput(name);
-        if (!status.ok()) {
-            // Should never happen since we check for its existence above
-            throw std::logic_error("internal error: cannot add output to InferenceResponse");
-        }
-    }
-    auto status = protoStorage->getOutput(name.c_str(), &t);
-    if (!status.ok()) {
-        // Should never happen since we add the output above
-        throw std::logic_error("internal error: cannot get output by name");
-    } else {
-        return *t;
-    }
 }
 
 const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo) {

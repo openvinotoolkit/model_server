@@ -49,7 +49,6 @@ const uint32_t PRIORITY{7};
 const uint64_t REQUEST_ID{3};
 
 const std::string INPUT_NAME{"NOT_RANDOM_NAME"};
-const std::string INPUT_NAME_2{"NOT_RANDOM_NAME_2"};
 const ovms::shape_t INPUT_SHAPE{1, 3, 220, 230};
 const std::array<float, 10> INPUT_DATA{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
 constexpr size_t INPUT_DATA_BYTESIZE{INPUT_DATA.size() * sizeof(float)};
@@ -139,36 +138,14 @@ TEST(InferenceResponse, CreateAndReadData) {
     // add output
     auto status = response.addOutput(INPUT_NAME.c_str(), DATATYPE, INPUT_SHAPE.data(), INPUT_SHAPE.size());
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    // add non initialized output
-    status = response.addOutput(INPUT_NAME_2.c_str());
-    ASSERT_EQ(status, StatusCode::OK) << status.string();
     // add 2nd output with the same name should fail
     status = response.addOutput(INPUT_NAME.c_str(), DATATYPE, INPUT_SHAPE.data(), INPUT_SHAPE.size());
     ASSERT_EQ(status, StatusCode::DOUBLE_TENSOR_INSERT) << status.string();
-    // add 2nd non initialized output with the same name should fail
-    status = response.addOutput(INPUT_NAME_2.c_str());
-    ASSERT_EQ(status, StatusCode::DOUBLE_TENSOR_INSERT) << status.string();
-
     // get nonexistent output
     InferenceTensor* tensor = nullptr;
     status = response.getOutput("SOME_NOT_RANDOM_NAME", &tensor);
     ASSERT_EQ(status, StatusCode::NONEXISTENT_TENSOR) << status.string();
-    ASSERT_FALSE(response.hasOutput("SOME_NOT_RANDOM_NAME"));
-
-    // get non initialized output
-    ASSERT_TRUE(response.hasOutput(INPUT_NAME_2));
-    status = response.getOutput(INPUT_NAME_2.c_str(), &tensor);
-    ASSERT_NE(nullptr, tensor);
-    ASSERT_EQ(status, StatusCode::OK) << status.string();
-    // compare datatype
-    ASSERT_EQ(tensor->getDataType(), OVMS_DATATYPE_UNDEFINED);
-    // compare shape
-    ASSERT_EQ(tensor->getShape().size(), 0);
-    ASSERT_EQ(tensor->getBuffer(), nullptr);
-
-    // get initialized output
-    tensor = nullptr;
-    ASSERT_TRUE(response.hasOutput(INPUT_NAME));
+    // get output
     status = response.getOutput(INPUT_NAME.c_str(), &tensor);
     ASSERT_NE(nullptr, tensor);
     ASSERT_EQ(status, StatusCode::OK) << status.string();

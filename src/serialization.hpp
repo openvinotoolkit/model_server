@@ -16,7 +16,6 @@
 #pragma once
 
 #include <memory>
-#include <stdexcept>
 #include <string>
 
 #include <openvino/openvino.hpp>
@@ -30,6 +29,7 @@
 
 #include "inferenceresponse.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "pocapiinternal.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
@@ -147,18 +147,67 @@ Status serializePredictResponse(
         if (!status.ok()) {
             return status;
         }
-        try {
-            auto& tensorProto = protoGetter.createOutput(outputInfo->getMappedName());
-            status = serializeTensorToTensorProto(tensorProto, outputInfo, tensor);
-            if (!status.ok()) {
-                return status;
-            }
-        } catch (std::logic_error& e) {
-            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: {}",
-                outputName, response->getServableName(), response->getServableVersion(), e.what());
+        auto servableMetaPrecision = outputInfo->getPrecision();
+        auto actualPrecision = ovElementTypeToOvmsPrecision(tensor.get_element_type());
+        if (servableMetaPrecision != actualPrecision) {
             return StatusCode::INTERNAL_ERROR;
         }
+        if (!outputInfo->getShape().match(tensor.get_shape())) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+        switch (servableMetaPrecision) {
+        case ovms::Precision::FP64:
+        case ovms::Precision::FP32:
+        case ovms::Precision::FP16:
+        case ovms::Precision::I64:
+        case ovms::Precision::I32:
+        case ovms::Precision::I16:
+        case ovms::Precision::I8:
+        case ovms::Precision::U64:
+        case ovms::Precision::U32:
+        case ovms::Precision::U16:
+        case ovms::Precision::U8:
+            break;
+        case ovms::Precision::BF16:
+        case ovms::Precision::U4:
+        case ovms::Precision::U1:
+        case ovms::Precision::BOOL:  // ?
+        case ovms::Precision::CUSTOM:
+        case ovms::Precision::UNDEFINED:
+        case ovms::Precision::DYNAMIC:
+        case ovms::Precision::MIXED:
+        case ovms::Precision::Q78:
+        case ovms::Precision::BIN:
+        default: {
+            Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+            SPDLOG_ERROR(status.string());
+            return status;
+        }
+        }
+        InferenceTensor* outputTensor{nullptr};
+        status = response->addOutput(
+            outputInfo->getMappedName(),                             // name
+            getPrecisionAsOVMSDataType(outputInfo->getPrecision()),  // datatype
+            tensor.get_shape().data(),
+            tensor.get_shape().size());
+        if (!status.ok()) {
+            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: duplicate output name",
+                outputName, response->getServableName(), response->getServableVersion());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        status = response->getOutput(outputInfo->getMappedName().c_str(), &outputTensor);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted input",
+                outputName, response->getServableName(), response->getServableVersion());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        outputTensor->setBuffer(
+            tensor.data(),
+            tensor.get_byte_size(),
+            OVMS_BUFFERTYPE_CPU,
+            std::nullopt,
+            true);
     }
-    return status;
+    return StatusCode::OK;
 }
 }  // namespace ovms
