@@ -185,9 +185,11 @@ Status serializePredictResponse(
         }
         }
         InferenceTensor* outputTensor{nullptr};
+        // Mapped name for single model result serialization: possible mapping_config.json setting
+        // For DAG: setting in pipeline output configuration
         status = response->addOutput(
-            outputInfo->getMappedName(),                             // name
-            getPrecisionAsOVMSDataType(outputInfo->getPrecision()),  // datatype
+            outputInfo->getMappedName(),
+            getPrecisionAsOVMSDataType(actualPrecision),
             tensor.get_shape().data(),
             tensor.get_shape().size());
         if (!status.ok()) {
