@@ -861,4 +861,3 @@ TEST(CpuThroughputNotSpecified, AffinityWithNumStreams) {
     EXPECT_EQ(pluginConfig.count("AFFINITY"), 1);
     EXPECT_EQ(pluginConfig.count("NUM_STREAMS"), 1);
 }
-
