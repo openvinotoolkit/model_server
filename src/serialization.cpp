@@ -264,12 +264,6 @@ tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tens
 }
 
 template <>
-std::string* ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::createContent(const std::string& name) {
-    OVMS_PROFILE_FUNCTION();
-    return nullptr;
-}
-
-template <>
 ::KFSResponse::InferOutputTensor& ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&>::createOutput(const std::string& name) {
     OVMS_PROFILE_FUNCTION();
     for (int i = 0; i < protoStorage->outputs_size(); i++) {
