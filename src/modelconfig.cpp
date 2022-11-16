@@ -310,7 +310,7 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
         } else if (it->value.IsDouble()) {
             if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
                 pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetDouble());
-		SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead", it->name.GetString());
+                SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead", it->name.GetString());
             } else {
                 pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
             }
