@@ -67,7 +67,7 @@ minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 target_device = os.environ.get("TT_TARGET_DEVICE", TARGET_DEVICE_CPU)
 
 """IMAGE - docker image name which should be used to run tests"""
-if target_device == TARGET_DEVICE_GPU:
+if target_device in [TARGET_DEVICE_GPU, TARGET_DEVICE_GPU_DG2]:
     _default_image = "openvino/model_server-gpu"
 else:
     _default_image = "openvino/model_server"
@@ -108,6 +108,7 @@ default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*defa
 infer_timeouts = {
     TARGET_DEVICE_CPU : default_infer_timeout,
     TARGET_DEVICE_GPU : default_gpu_infer_timeout,
+    TARGET_DEVICE_GPU_DG2 : default_gpu_infer_timeout,
     TARGET_DEVICE_CUDA : default_cuda_infer_timeout,
     TARGET_DEVICE_HDDL : default_hddl_infer_timeout,
     TARGET_DEVICE_MYRIAD : default_myriad_infer_timeout,
