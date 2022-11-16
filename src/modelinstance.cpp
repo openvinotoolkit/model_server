@@ -1302,7 +1302,7 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName);
+    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContent(requestProto));
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;
