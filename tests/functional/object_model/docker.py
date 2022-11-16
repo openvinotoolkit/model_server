@@ -29,7 +29,8 @@ from utils.files_operation import get_path_friendly_test_name
 import config
 from utils.grpc import port_manager_grpc
 from utils.rest import port_manager_rest
-from constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
+from constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_GPU_DG2,\
+    TARGET_DEVICE_CUDA, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
 
 
 logger = logging.getLogger(__name__)

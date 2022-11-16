@@ -16,7 +16,8 @@
 
 import os
 
-from constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
+from constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_GPU_DG2,\
+    TARGET_DEVICE_CUDA, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
 from utils.helpers import get_int, get_bool
 from utils.parametrization import generate_test_object_name
 
