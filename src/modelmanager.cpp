@@ -118,17 +118,17 @@ void ModelManager::logPluginConfiguration() {
     auto availablePlugins = availableDevices;
     for (const auto& plugin : availablePlugins) {
         std::vector<ov::PropertyName> supportedConfigKeys;
-        auto prop = ov::supported_properties;
+        auto supportedPropertiesKey = ov::supported_properties;
         try {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
-            auto supportedConfigKeys2 = ieCore->get_property(plugin, prop);
+            auto supportedConfigKeys2 = ieCore->get_property(plugin, supportedPropertiesKey);
             supportedConfigKeys = std::move(supportedConfigKeys2);
         } catch (std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, prop.name(), e.what());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedPropertiesKey.name(), e.what());
         } catch (...) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, prop.name());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedPropertiesKey.name());
         }
-        for (ov::PropertyName& key : supportedConfigKeys) {
+        for (auto& key : supportedConfigKeys) {
             std::string value;
             try {
                 auto paramValue = ieCore->get_property(plugin, key);
