@@ -125,6 +125,17 @@ TYPED_TEST(BinaryUtilsTest, requestWithEmptyTensor) {
     EXPECT_EQ(convertBinaryRequestTensorToOVTensor(requestTensorEmptyInput, tensor, tensorInfo), StatusCode::BYTES_CONTENTS_EMPTY);
 }
 
+TYPED_TEST(BinaryUtilsTest, requestWithInvalidImage) {
+    ::KFSRequest requestTensorInvalidImage;
+    std::string invalidImage = "INVALID IMAGE";
+    this->prepareBinaryRequest(requestTensorInvalidImage, invalidImage);
+
+    ov::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
+
+    EXPECT_EQ(convertBinaryRequestTensorToOVTensor(requestTensorInvalidImage, tensor, tensorInfo), ovms::StatusCode::IMAGE_PARSING_FAILED);
+}
 TYPED_TEST(BinaryUtilsTest, tensorWithNonSupportedLayout) {
     ov::Tensor tensor;
 
