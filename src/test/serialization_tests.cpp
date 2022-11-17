@@ -540,7 +540,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithuseS
     ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    auto status = serializePredictResponse(outputGetter, tenMap, &response, getTensorInfoName, true);
+    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, &response, getTensorInfoName, true);
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(DUMMY_MODEL_INPUT_NAME, response.outputs(0).name());
     EXPECT_EQ("FP32", response.outputs(0).datatype());
@@ -566,7 +566,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithshar
     ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    auto status = serializePredictResponse(outputGetter, tenMap, &response, getTensorInfoName, false);
+    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, &response, getTensorInfoName, false);
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(DUMMY_MODEL_INPUT_NAME, response.outputs(0).name());
     EXPECT_EQ("FP32", response.outputs(0).datatype());
