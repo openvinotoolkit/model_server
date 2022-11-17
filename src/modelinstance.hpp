@@ -37,6 +37,8 @@
 #include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
+class InferenceRequest;
+class InferenceResponse;
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class PipelineDefinition;
@@ -554,6 +556,7 @@ public:
 
     virtual std::unique_ptr<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
     virtual std::unique_ptr<SpecialResourcesBasic<KFSRequest, KFSResponse>> getSR(const KFSRequest*, KFSResponse*);
+    virtual std::unique_ptr<SpecialResourcesBasic<InferenceRequest, InferenceResponse>> getSR(const InferenceRequest*, InferenceResponse*);
     virtual const std::set<std::string>& getOptionalInputNames();
 };
 template <typename RequestType, typename ResponseType>

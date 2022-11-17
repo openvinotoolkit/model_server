@@ -1308,4 +1308,7 @@ std::unique_ptr<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tenso
 std::unique_ptr<SpecialResourcesBasic<KFSRequest, KFSResponse>> ModelInstance::getSR(const KFSRequest*, KFSResponse*) {
     return std::make_unique<SpecialResourcesBasic<KFSRequest, KFSResponse>>();
 }
+std::unique_ptr<SpecialResourcesBasic<InferenceRequest, InferenceResponse>> ModelInstance::getSR(const InferenceRequest*, InferenceResponse*) {
+    return std::make_unique<SpecialResourcesBasic<InferenceRequest, InferenceResponse>>();
+}
 }  // namespace ovms
