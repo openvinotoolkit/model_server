@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <any>
 #include <csignal>
 #include <memory>
 #include <shared_mutex>

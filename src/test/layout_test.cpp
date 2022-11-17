@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "../layout.hpp"
+#include "../status.hpp"
 
 using namespace ovms;
 

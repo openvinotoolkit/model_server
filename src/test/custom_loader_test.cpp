@@ -32,6 +32,7 @@
 #include "../model.hpp"
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
 #include "../prediction_service_utils.hpp"

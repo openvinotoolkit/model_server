@@ -31,24 +31,21 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "customloaderconfig.hpp"
-#include "customloaderinterface.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
-#include "sequence_processing_spec.hpp"
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
-namespace inference {
-class ModelInferRequest;
-class ModelInferResponse;
-}  // namespace inference
-
 namespace ovms {
+class MetricRegistry;
+class ModelConfig;
+class ModelInstanceUnloadGuard;
+class PipelineDefinition;
+class Status;
 
 class DynamicModelParameter {
 public:
@@ -72,9 +69,6 @@ private:
     int batchSize;
     std::map<std::string, shape_t> shapes;
 };
-
-class PipelineDefinition;
-class MetricRegistry;
 
 /**
      * @brief This class contains all the information about model
@@ -553,8 +547,8 @@ public:
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-    virtual Status infer(const ::inference::ModelInferRequest* requestProto,
-        ::inference::ModelInferResponse* responseProto,
+    virtual Status infer(const ::KFSRequest* requestProto,
+        ::KFSResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }

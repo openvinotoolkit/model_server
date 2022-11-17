@@ -26,6 +26,7 @@
 #include "logging.hpp"
 #include "rapidjson/document.h"
 #include "schema.hpp"
+#include "status.hpp"
 #include "stringutils.hpp"
 
 namespace ovms {

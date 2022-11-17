@@ -19,6 +19,7 @@
 #include <string>
 
 #include "rest_utils.hpp"
+#include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
@@ -311,7 +312,7 @@ bool TFSRestParser::setDimOrValidate(tensorflow::TensorProto& proto, int dim, in
     }
 }
 
-bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
+static bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
     if (!isBinary(value)) {
         return false;
     }
@@ -321,7 +322,7 @@ bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
 }
 
 template <typename T>
-bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
+static bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
     if (sizeof(T) != DataTypeSize(proto.dtype())) {
         return false;
     }
@@ -330,7 +331,7 @@ bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
 }
 
 template <typename T>
-bool addToTensorContent(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
+static bool addToTensorContent(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
     if (value.IsDouble()) {
         return addToTensorContent<T>(proto, static_cast<T>(value.GetDouble()));
     }
@@ -350,7 +351,7 @@ bool addToTensorContent(tensorflow::TensorProto& proto, const rapidjson::Value& 
     return false;
 }
 
-bool addToHalfVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
+static bool addToHalfVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
     if (value.IsDouble()) {
         proto.add_half_val(value.GetDouble());
         return true;
@@ -375,7 +376,7 @@ bool addToHalfVal(tensorflow::TensorProto& proto, const rapidjson::Value& value)
     return false;
 }
 
-bool addToIntVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
+static bool addToIntVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
     if (value.IsDouble()) {
         proto.add_int_val(value.GetDouble());
         return true;
@@ -501,10 +502,10 @@ Status KFSRestParser::parseId(rapidjson::Value& node) {
 Status KFSRestParser::parseRequestParameters(rapidjson::Value& node){
     PARSE_PARAMETER(requestProto)}
 
-Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor& input){
+Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input){
     PARSE_PARAMETER(input)}
 
-Status KFSRestParser::parseOutputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferRequestedOutputTensor& output){
+Status KFSRestParser::parseOutputParameters(rapidjson::Value& node, ::KFSRequest::InferRequestedOutputTensor& output){
     PARSE_PARAMETER(output)}
 
 Status KFSRestParser::parseOutput(rapidjson::Value& node) {
@@ -559,7 +560,7 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
         input->mutable_contents()->CONTENTS()->Add(value.TYPE_GETTER()); \
     }
 
-Status KFSRestParser::parseData(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input) {
+Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInputTensor* input) {
     if (input->datatype() == "FP32") {
         HANDLE_VALUE(mutable_fp32_contents, GetFloat, IsNumber)
     } else if (input->datatype() == "INT64") {

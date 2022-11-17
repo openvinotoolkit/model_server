@@ -23,14 +23,23 @@
 #include <utility>
 #include <vector>
 
-#include "filesystem.hpp"
+#include "logging.hpp"
 #include "modelchangesubscription.hpp"
-#include "modelinstance.hpp"
-#include "statefulmodelinstance.hpp"
+#include "modelversion.hpp"
+
+namespace ov {
+class Core;
+}
 
 namespace ovms {
+class FileSystem;
+class GlobalSequencesViewer;
+class ModelConfig;
+class ModelInstance;
 class PipelineDefinition;
+class MetricConfig;
 class MetricRegistry;
+class Status;
 /*     * @brief This class represent inference models
      */
 class Model {

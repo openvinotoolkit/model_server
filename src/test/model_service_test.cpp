@@ -27,6 +27,7 @@
 
 #include "../execution_context.hpp"
 #include "../model_service.hpp"
+#include "../model_version_policy.hpp"
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
 #include "../pipelinedefinition.hpp"
@@ -39,8 +40,6 @@ using namespace ovms;
 using TFSGetModelStatusRequest = tensorflow::serving::GetModelStatusRequest;
 using TFSGetModelStatusResponse = tensorflow::serving::GetModelStatusResponse;
 using TFSGetModelStatusInterface = std::pair<TFSGetModelStatusRequest, TFSGetModelStatusResponse>;
-using KFSGetModelStatusRequest = ::inference::ModelReadyRequest;
-using KFSGetModelStatusResponse = ::inference::ModelReadyResponse;
 using KFSGetModelStatusInterface = std::pair<KFSGetModelStatusRequest, KFSGetModelStatusResponse>;
 
 template <typename Pair,

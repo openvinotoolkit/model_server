@@ -50,7 +50,7 @@ ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.tensor_content().data())));
 }
 
-ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo,
     const std::string& buffer) {
     OVMS_PROFILE_FUNCTION();
@@ -62,7 +62,7 @@ ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& re
     ov::Tensor tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(buffer.data())));
     return tensor;
 }
-ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;

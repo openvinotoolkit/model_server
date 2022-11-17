@@ -21,8 +21,6 @@
 
 #include <rapidjson/document.h>
 
-#include "status.hpp"
-
 namespace ovms {
 
 extern const std::string METRIC_NAME_REQUESTS_SUCCESS;
@@ -38,6 +36,7 @@ extern const std::string METRIC_NAME_CURRENT_REQUESTS;
 extern const std::string METRIC_NAME_REQUEST_TIME;
 extern const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME;
 
+class Status;
 /**
      * @brief This class represents metrics configuration
      */

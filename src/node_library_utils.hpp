@@ -24,11 +24,11 @@
 #include "node_library.hpp"
 #include "precision.hpp"
 #include "shape.hpp"
-#include "status.hpp"
 #include "tensormap.hpp"
 
 namespace ovms {
 
+class Status;
 class TensorInfo;
 
 CustomNodeTensorPrecision toCustomNodeTensorPrecision(ov::element::Type_t precision);

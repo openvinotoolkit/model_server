@@ -21,3 +21,5 @@ __pycache__
 dist/
 lib/
 !client/python/ovmsclient/lib
+cppclean_src
+cppclean_test

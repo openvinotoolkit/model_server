@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "custom_node_output_allocator.hpp"
 
+#include "custom_node_interface.h"  // NOLINT
 #include "logging.hpp"
 
 namespace ovms {

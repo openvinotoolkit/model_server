@@ -62,6 +62,7 @@ public:
     StatusCode CreateLocalDir(const std::string& path);
     bool isAbsolutePath(const std::string& path);
     std::vector<std::string> FindSubdirectories(std::string path);
+    virtual ~AzureStorageAdapter() = default;
 
 protected:
     const std::string extractAzureStorageExceptionMessage(const as::storage_exception& e);

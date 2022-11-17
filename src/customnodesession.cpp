@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "custom_node_interface.h"  // NOLINT
 #include "custom_node_output_allocator.hpp"
 #include "logging.hpp"
 #include "node.hpp"
@@ -28,6 +29,7 @@
 #include "nodeinputhandler.hpp"
 #include "pipelineeventqueue.hpp"
 #include "profiler.hpp"
+#include "status.hpp"
 #include "timer.hpp"
 
 namespace ovms {

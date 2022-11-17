@@ -21,10 +21,11 @@
 
 #include "nodeinputhandler.hpp"
 #include "nodesession.hpp"
-#include "nodesessionmetadata.hpp"
 #include "tensormap.hpp"
 
 namespace ovms {
+class CollapseDetails;
+class NodeSessionMetadata;
 
 template <typename ResponseType>
 class ExitNodeSession : public NodeSession {

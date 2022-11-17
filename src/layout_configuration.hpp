@@ -19,13 +19,13 @@
 #include <unordered_map>
 
 #include "layout.hpp"
-#include "status.hpp"
 
 namespace ovms {
 
-static const char LAYOUT_CONFIGURATION_DELIMETER = ':';
+class Status;
 
 class LayoutConfiguration {
+    static const char LAYOUT_CONFIGURATION_DELIMETER;
     Layout tensor;
     Layout model;
 

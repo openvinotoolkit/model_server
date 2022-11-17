@@ -19,6 +19,8 @@
 #include "../custom_node_library_manager.hpp"
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
+#include "../model_version_policy.hpp"
+#include "../modelinstance.hpp"
 #include "../pipeline_factory.hpp"
 #include "../pipelinedefinition.hpp"
 #include "test_utils.hpp"

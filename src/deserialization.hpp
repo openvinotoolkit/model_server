@@ -26,7 +26,7 @@
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
 #include "binaryutils.hpp"
@@ -39,16 +39,16 @@ namespace ovms {
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo);
 
-ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo,
     const std::string& buffer);
-ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo);
 
 class ConcreteTensorProtoDeserializator {
 public:
     static ov::Tensor deserializeTensorProto(
-        const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+        const ::KFSRequest::InferInputTensor& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo,
         const std::string* buffer) {
         OVMS_PROFILE_FUNCTION();
@@ -271,7 +271,7 @@ ov::Tensor deserializeTensorProto(
 
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
-    const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+    const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo,
     const std::string* buffer) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, buffer);
@@ -347,7 +347,7 @@ Status deserializePredictRequest(
 
 template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
-    const ::inference::ModelInferRequest& request,
+    const ::KFSRequest& request,
     const tensor_map_t& inputMap,
     Sink& inputSink, bool isPipeline) {
     OVMS_PROFILE_FUNCTION();
@@ -357,7 +357,7 @@ Status deserializePredictRequest(
         try {
             const auto& name = pair.first;
             auto tensorInfo = pair.second;
-            auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&name](const ::inference::ModelInferRequest::InferInputTensor& tensor) { return tensor.name() == name; });
+            auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&name](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == name; });
             if (requestInputItr == request.inputs().end()) {
                 SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");

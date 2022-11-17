@@ -16,10 +16,13 @@
 #include "pipeline_factory.hpp"
 
 #include "logging.hpp"
+#include "model_metric_reporter.hpp"
 #include "modelmanager.hpp"
+#include "nodeinfo.hpp"
 #include "pipeline.hpp"
 #include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
@@ -93,8 +96,8 @@ Status PipelineFactory::createInternal(std::unique_ptr<Pipeline>& pipeline,
 }
 Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
     const std::string& name,
-    const ::inference::ModelInferRequest* request,
-    ::inference::ModelInferResponse* response,
+    const ::KFSRequest* request,
+    ::KFSResponse* response,
     ModelManager& manager) const {
     return this->createInternal(pipeline, name, request, response, manager);
 }

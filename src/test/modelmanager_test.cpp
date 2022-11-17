@@ -18,6 +18,7 @@
 
 #include "../cleaner_utils.hpp"
 #include "../config.hpp"
+#include "../custom_node_library_internal_manager_wrapper.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"

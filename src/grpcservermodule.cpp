@@ -32,7 +32,7 @@
 #include <unistd.h>
 
 #include "config.hpp"
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
@@ -45,11 +45,9 @@
 using grpc::ServerBuilder;
 
 namespace ovms {
-}  // namespace ovms
-using namespace ovms;
 static const int GIGABYTE = 1024 * 1024 * 1024;
 
-bool isPortAvailable(uint64_t port) {
+static bool isPortAvailable(uint64_t port) {
     struct sockaddr_in addr;
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if (s == -1) {
@@ -75,7 +73,7 @@ struct GrpcChannelArgument {
 
 // Parses a comma separated list of gRPC channel arguments into list of
 // ChannelArgument.
-Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vector<GrpcChannelArgument>& result) {
+static Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vector<GrpcChannelArgument>& result) {
     const std::vector<std::string> channel_arguments = tokenize(channel_arguments_str, ',');
 
     for (const std::string& channel_argument : channel_arguments) {
@@ -91,7 +89,7 @@ Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vecto
     return StatusCode::OK;
 }
 
-uint getGRPCServersCount(const ovms::Config& config) {
+static uint getGRPCServersCount(const ovms::Config& config) {
     const char* environmentVariableBuffer = std::getenv("GRPC_SERVERS");
     if (environmentVariableBuffer) {
         auto result = stou32(environmentVariableBuffer);
@@ -185,3 +183,4 @@ const GetModelMetadataImpl& GRPCServerModule::getTFSModelMetadataImpl() const {
 KFSInferenceServiceImpl& GRPCServerModule::getKFSGrpcImpl() const {
     return this->kfsGrpcInferenceService;
 }
+}  // namespace ovms

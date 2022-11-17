@@ -23,12 +23,13 @@
 #include "logging.hpp"
 #include "model.hpp"
 #include "modelversion.hpp"
+#include "sequence_manager.hpp"
 #include "statefulmodelinstance.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-static std::string separator = "_";
+static const std::string separator = "_";
 
 Status GlobalSequencesViewer::registerForCleanup(std::string modelName, model_version_t modelVersion, std::shared_ptr<SequenceManager> sequenceManager) {
     std::string registration_id = modelName + separator + std::to_string(modelVersion);

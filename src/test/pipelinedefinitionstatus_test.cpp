@@ -239,3 +239,65 @@ TEST(PipelineDefinitionStatus, ReloadFromBeginShouldThrow) {
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     ASSERT_THROW(pds.handle(ReloadEvent()), std::logic_error);
 }
+TEST(PipelineDefinitionStatus, ReloadFromReloadShouldThrow) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+    ASSERT_THROW(pds.handle(ReloadEvent()), std::logic_error);
+}
+TEST(PipelineDefinitionStatus, UsedModelChangedFromBeginShouldThrow) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_THROW(pds.handle(UsedModelChangedEvent()), std::logic_error);
+}
+TEST(PipelineDefinitionStatus, UsedModelChangedFromReloadShouldThrow) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+    ASSERT_THROW(pds.handle(UsedModelChangedEvent()), std::logic_error);
+}
+TEST(PipelineDefinitionStatus, RetireFromReloadShouldThrow) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+    ASSERT_THROW(pds.handle(RetireEvent()), std::logic_error);
+}
+TEST(PipelineDefinitionStatus, ValidationFailFromFailedRequiredRevalidation) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    pds.handle(ValidationFailedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
+    pds.handle(ValidationFailedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+}
+TEST(PipelineDefinitionStatus, ConvertToModelStatus) {
+    PipelineDefinitionStatus pds(unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::LOADING, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::AVAILABLE, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::AVAILABLE, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+    pds.handle(ValidationFailedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::LOADING, ModelVersionStatusErrorCode::FAILED_PRECONDITION)), pds.convertToModelStatus());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::LOADING, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+    pds.handle(RetireEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::END, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+}

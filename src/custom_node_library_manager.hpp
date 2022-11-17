@@ -20,9 +20,9 @@
 #include <unordered_map>
 
 #include "node_library.hpp"
-#include "status.hpp"
 
 namespace ovms {
+class Status;
 
 class CustomNodeLibraryManager {
     std::unordered_map<std::string, NodeLibrary> libraries;
