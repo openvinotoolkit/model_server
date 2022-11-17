@@ -230,8 +230,8 @@ static Status parseResponseParameters(const ::KFSResponse& response_proto, rapid
     return StatusCode::OK;
 }
 
-static Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTensor& output, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
-    if (output.parameters_size() > 0) {
+static Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTensor& output, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, int bytesOutputSize) {
+    if (output.parameters_size() > 0 || bytesOutputSize > 0) {
         writer.Key("parameters");
         writer.StartObject();
 
@@ -250,6 +250,10 @@ static Status parseOutputParameters(const inference::ModelInferResponse_InferOut
             default:
                 break;  // return param error
             }
+        }
+        if (bytesOutputSize > 0) {
+            writer.Key("binary_data_size");
+            writer.Int(bytesOutputSize);
         }
         writer.EndObject();
     }
@@ -275,14 +279,13 @@ static void fillTensorDataWithFloatValuesFromRawContents(const ::KFSResponse& re
         writer.Double(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
 }
 
-static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, std::string& bytesOutputsBuffer) {
     writer.Key("outputs");
     writer.StartArray();
 
     bool seekDataInValField = false;
     if (response_proto.raw_output_contents_size() == 0)
         seekDataInValField = true;
-
     int tensor_it = 0;
     for (const auto& tensor : response_proto.outputs()) {
         size_t dataTypeSize = KFSDataTypeSize(tensor.datatype());
@@ -294,7 +297,6 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
 
         if (!seekDataInValField && (response_proto.raw_output_contents(tensor_it).size() != expectedContentSize))
             return StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE;
-
         writer.StartObject();
         writer.Key("name");
         writer.String(tensor.name().c_str());
@@ -306,14 +308,10 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         writer.EndArray();
         writer.Key("datatype");
         writer.String(tensor.datatype().c_str());
-
-        auto status = parseOutputParameters(tensor, writer);
-        if (!status.ok()) {
-            return status;
+        if (tensor.datatype() != "BYTES") {
+            writer.Key("data");
+            writer.StartArray();
         }
-
-        writer.Key("data");
-        writer.StartArray();
         if (tensor.datatype() == "FP32") {
             if (seekDataInValField) {
                 auto status = checkValField(tensor.contents().fp32_contents_size(), expectedElementsNumber);
@@ -426,10 +424,27 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
             } else {
                 fillTensorDataWithFloatValuesFromRawContents<double>(response_proto, tensor_it, writer);
             }
+        } else if (tensor.datatype() == "BYTES") {
+            if (seekDataInValField) {
+                auto status = checkValField(tensor.contents().bytes_contents_size(), expectedElementsNumber);
+                if (!status.ok())
+                    return status;
+                for (auto& bytes : tensor.contents().bytes_contents()) {
+                    bytesOutputsBuffer.append(bytes);
+                }
+            } else {
+                bytesOutputsBuffer.append((char*)response_proto.raw_output_contents(tensor_it).data(), response_proto.raw_output_contents(tensor_it).size());
+            }
         } else {
             return StatusCode::REST_UNSUPPORTED_PRECISION;
         }
-        writer.EndArray();
+        if (tensor.datatype() != "BYTES") {
+            writer.EndArray();
+        }
+        auto status = parseOutputParameters(tensor, writer, bytesOutputsBuffer.size());
+        if (!status.ok()) {
+            return status;
+        }
         writer.EndObject();
         tensor_it++;
     }
@@ -439,7 +454,8 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
 
 Status makeJsonFromPredictResponse(
     const ::KFSResponse& response_proto,
-    std::string* response_json) {
+    std::string* response_json,
+    std::optional<int>& inferenceHeaderContentLength) {
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
     timer.start(CONVERT);
@@ -469,13 +485,18 @@ Status makeJsonFromPredictResponse(
         return StatusCode::REST_PROTO_TO_STRING_ERROR;
     }
 
-    status = parseOutputs(response_proto, writer);
+    std::string binaryOutputsBuffer;
+    status = parseOutputs(response_proto, writer, binaryOutputsBuffer);
     if (!status.ok()) {
         return status;
     }
 
     writer.EndObject();
     response_json->assign(buffer.GetString());
+    if (binaryOutputsBuffer.size() > 0) {
+        inferenceHeaderContentLength = response_json->length();
+    }
+    response_json->append(binaryOutputsBuffer);
 
     timer.stop(CONVERT);
     SPDLOG_DEBUG("GRPC to HTTP response conversion: {:.3f} ms", timer.elapsed<microseconds>(CONVERT) / 1000);

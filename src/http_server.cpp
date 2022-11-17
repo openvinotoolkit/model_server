@@ -194,11 +194,16 @@ private:
             req->http_method(),
             req->uri_path(),
             body.size());
-        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output);
+        HttpResponseComponents responseComponents;
+        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents);
         if (!status.ok() && output.empty()) {
             output.append("{\"error\": \"" + status.string() + "\"}");
         }
         const auto http_status = http(status);
+        if (responseComponents.inferenceHeaderContentLength.has_value()) {
+            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
+            headers.emplace_back(header);
+        }
         for (const auto& kv : headers) {
             req->OverwriteResponseHeader(kv.first, kv.second);
         }
