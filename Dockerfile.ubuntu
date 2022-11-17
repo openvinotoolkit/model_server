@@ -196,10 +196,10 @@ ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
 ENV OPENVINO_HOME=/openvino
 ENV OPENVINO_CONTRIB=/openvino_contrib
 
-RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ;  git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout $ov_source_branch; git submodule update --init --recursive
-WORKDIR /openvino/build
-RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
-RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
+#RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ;  git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout $ov_source_branch; git submodule update --init --recursive
+#WORKDIR /openvino/build
+#RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+#RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin -O /etc/apt/preferences.d/cuda-repository-pin-600 ; \
@@ -232,9 +232,10 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
 	mkdir build ; \
 	cd build ; \
 	cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. ; \
-	ninja -v install ; \
+	ninja -v install ;
+
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     git clone --recurse-submodules --branch=master https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && \
-    git checkout a25726a04e8ff57708cd5f8a49a3977186214430 && \
     git submodule update --recursive && mkdir ${OPENVINO_BUILD_PATH} && \
     cd "${OPENVINO_BUILD_PATH}" && \
 	  cmake "${OPENVINO_HOME}" \
@@ -242,11 +243,11 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
       -DENABLE_TESTS=ON \
       -DBUILD_arm_plugin=OFF \
       -DBUILD_java_api=OFF \
-      -DIE_EXTRA_MODULES="${OPENVINO_CONTRIB}/modules" \
+      -DOPENVINO_EXTRA_MODULES="${OPENVINO_CONTRIB}/modules" \
       -DWHEEL_VERSION=2022.1.0 \
       -DVERBOSE_BUILD=ON \
       -DCMAKE_BUILD_TYPE="Release" && \
-      cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin
+      cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
