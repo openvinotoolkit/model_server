@@ -54,6 +54,7 @@ RUN apt update && apt install -y \
             gdb \
             git \
             lcov \
+            libpugixml1v5 \
             libusb-dev \
             libusb-1.0-0-dev \
             libcurl4-openssl-dev \

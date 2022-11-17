@@ -73,6 +73,14 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             vim \
             xz && \
             yum clean all
+
+# Build and install pugixml
+RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
+    cd pugixml && \
+    cmake -DBUILD_SHARED_LIBS=ON && \
+    make all && \
+    cp libpugixml.so* /usr/lib64/
+
 # Set up Bazel
 ENV BAZEL_VERSION 5.3.1
 WORKDIR /bazel
