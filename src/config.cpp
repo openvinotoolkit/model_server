@@ -151,7 +151,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<std::string>()->default_value("CPU"),
                 "TARGET_DEVICE")
             ("plugin_config",
-                "A dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
+                "A dictionary of plugin configuration keys and their values, eg \"{\\\"PERFORMANCE_HINT\\\": \\\"LATENCY\\\"}\". Default is PERFORMANCE_HINT set to THROUGHPUT mode. ",
                 cxxopts::value<std::string>(),
                 "PLUGIN_CONFIG")
             ("stateful",

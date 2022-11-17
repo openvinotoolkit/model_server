@@ -168,7 +168,7 @@ TEST(OVUtils, ValidatePluginConfigurationPositive) {
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     ovms::ModelConfig config;
     config.setTargetDevice("CPU");
-    config.setPluginConfig({{"CPU_THROUGHPUT_STREAMS", "10"}});
+    config.setPluginConfig({{"NUM_STREAMS", "10"}});
     ovms::plugin_config_t supportedPluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     auto status = ovms::validatePluginConfiguration(supportedPluginConfig, "CPU", ieCore);
     EXPECT_TRUE(status.ok());
