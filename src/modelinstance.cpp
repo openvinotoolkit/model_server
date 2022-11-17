@@ -1206,7 +1206,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
 
-    auto specialResources = getSR();
+    auto specialResources = getSR(requestProto, responseProto);  // request, response passed only to deduce type
     auto status = specialResources->extractRequestParameters(requestProto);
     if (!status.ok())
         return status;
@@ -1219,6 +1219,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     status = specialResources->process();
     if (!status.ok())
         return status;
+
     timer.start(GET_INFER_REQUEST);
     OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
@@ -1238,6 +1239,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         return status;
     SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREPROCESS) / 1000);
+
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
@@ -1258,11 +1260,10 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName);
+    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName);
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;
-
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
 
@@ -1284,12 +1285,20 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
 
-    auto status = validate(requestProto);
+    auto specialResources = getSR(requestProto, responseProto);  // request, response passed only to deduce type
+    auto status = specialResources->extractRequestParameters(requestProto);
+    if (!status.ok())
+        return status;
+    status = validate(requestProto);
     auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
     auto requestShapes = getRequestShapes(requestProto);
     status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
+    status = specialResources->process();
+    if (!status.ok())
+        return status;
+
     timer.start(GET_INFER_REQUEST);
     OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
@@ -1301,6 +1310,14 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
     OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, getInferRequestTime / 1000);
+
+    timer.start(PREPROCESS);
+    status = specialResources->preInferenceProcessing(inferRequest);
+    timer.stop(PREPROCESS);
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREPROCESS) / 1000);
 
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
@@ -1322,18 +1339,23 @@ Status ModelInstance::infer(const ::KFSRequest* requestProto,
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContent(requestProto));
+    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName);
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;
-
-    responseProto->set_model_name(getName());
-    responseProto->set_model_version(std::to_string(getVersion()));
-
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
 
-    return StatusCode::OK;
+    timer.start(POSTPROCESS);
+    status = specialResources->postInferenceProcessing(responseProto, inferRequest);
+    timer.stop(POSTPROCESS);
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
+
+    status = specialResources->release();
+    return status;
 }
 
 const size_t ModelInstance::getBatchSizeIndex() const {
@@ -1353,7 +1375,10 @@ uint32_t ModelInstance::getNumOfStreams() const {
     return compiledModel->get_property(ov::num_streams);
 }
 
-std::unique_ptr<SpecialResourcesBasic> ModelInstance::getSR() {
-    return std::make_unique<SpecialResourcesBasic>();
+std::unique_ptr<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
+    return std::make_unique<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>>();
+}
+std::unique_ptr<SpecialResourcesBasic<KFSRequest, KFSResponse>> ModelInstance::getSR(const KFSRequest*, KFSResponse*) {
+    return std::make_unique<SpecialResourcesBasic<KFSRequest, KFSResponse>>();
 }
 }  // namespace ovms

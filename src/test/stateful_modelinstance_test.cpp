@@ -30,6 +30,7 @@
 #include "../get_model_metadata_impl.hpp"
 #include "../global_sequences_viewer.hpp"
 #include "../modelinstanceunloadguard.hpp"
+#include "../modelversion.hpp"
 #include "../ov_utils.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"
@@ -41,6 +42,8 @@
 using testing::Return;
 
 namespace {
+    const std::string UNUSED_NAME{"UNUSED_NAME"};
+    const ovms::model_version_t UNUSED_VERSION{0};
 static bool testWarningPrinted = false;
 
 enum SequenceTimeoutScenarios {
@@ -148,7 +151,7 @@ public:
         StatefulModelInstance(name, version, ieCore, nullptr, nullptr, &sequencesViewer) {}
 
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
-        ovms::SpecialResources sp(*this->getSequenceManager());
+        ovms::SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> sp(*this->getSequenceManager());
         auto status = sp.extractRequestParameters(request);
         if (!status.ok())
             return status;
@@ -207,7 +210,7 @@ public:
         };
         ovms::Timer<TIMER_END> timer;
         using std::chrono::microseconds;
-        ovms::SpecialResources specialResources(*sequenceManager);
+        ovms::SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> specialResources(*this->getSequenceManager());
         auto status = specialResources.extractRequestParameters(requestProto);
         if (!status.ok())
             return status;
@@ -256,7 +259,7 @@ public:
 
         timer.start(SERIALIZE);
         ovms::OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-        status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, ovms::getTensorInfoName);
+        status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, getOutputsInfo(), responseProto, ovms::getTensorInfoName);
         timer.stop(SERIALIZE);
         if (!status.ok())
             return status;

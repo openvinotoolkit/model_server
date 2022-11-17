@@ -49,9 +49,11 @@ using ovms::StatusCode;
 #pragma GCC diagnostic ignored "-Wnarrowing"
 void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
     std::vector<float> output(10);
+    const std::string UNUSED_NAME{"UNUSED_NAME"};
+    const ovms::model_version_t UNUSED_VERSION{0};
     tensorflow::serving::PredictResponse response;
     ovms::OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    auto status = serializePredictResponse(outputGetter, outputsInfo, &response, ovms::getTensorInfoName);
+    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, outputsInfo, &response, ovms::getTensorInfoName);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
     std::memcpy(output.data(), (float*)response.outputs().at(outputName).tensor_content().data(), DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));

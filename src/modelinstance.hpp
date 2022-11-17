@@ -46,6 +46,7 @@ class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class PipelineDefinition;
 class Status;
+template <typename T1, typename T2>
 struct SpecialResourcesBasic;
 
 class DynamicModelParameter {
@@ -545,10 +546,10 @@ public:
 
     Status performInference(ov::InferRequest& inferRequest);
 
-    virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
+    Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-    virtual Status infer(const ::KFSRequest* requestProto,
+    Status infer(const ::KFSRequest* requestProto,
         ::KFSResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
@@ -557,16 +558,19 @@ public:
     uint32_t getNumOfStreams() const;
 
     Status infer(float* data, float* output);
-    virtual std::unique_ptr<SpecialResourcesBasic> getSR();
+
+    virtual std::unique_ptr<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
+    virtual std::unique_ptr<SpecialResourcesBasic<KFSRequest, KFSResponse>> getSR(const KFSRequest*, KFSResponse*);
     virtual const std::set<std::string>& getOptionalInputNames();
 };
+template <typename RequestType, typename ResponseType>
 struct SpecialResourcesBasic {
     SpecialResourcesBasic() = default;
     virtual ~SpecialResourcesBasic() = default;
-    virtual Status extractRequestParameters(const tensorflow::serving::PredictRequest* request) { return StatusCode::OK; }
+    virtual Status extractRequestParameters(const RequestType* request) { return StatusCode::OK; }
     virtual Status process() { return StatusCode::OK; }
     virtual Status preInferenceProcessing(ov::InferRequest& inferRequest) { return StatusCode::OK; }
-    virtual Status postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
+    virtual Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
     virtual Status release() { return StatusCode::OK; }
 };
 }  // namespace ovms

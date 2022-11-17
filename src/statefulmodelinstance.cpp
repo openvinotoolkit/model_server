@@ -183,16 +183,18 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
 const std::set<std::string>& StatefulModelInstance::getOptionalInputNames() {
     return SPECIAL_INPUT_NAMES;
 }
-
-SpecialResources::SpecialResources(SequenceManager& sequenceManager) :
+template <>
+SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::SpecialResources(SequenceManager& sequenceManager) :
     sequenceManager(sequenceManager) {
 }
-Status SpecialResources::extractRequestParameters(const tensorflow::serving::PredictRequest* request) {
+template <>
+Status SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::extractRequestParameters(const tensorflow::serving::PredictRequest* request) {
     OVMS_PROFILE_FUNCTION();
     auto status = StatefulModelInstance::validateSpecialKeys(request, sequenceProcessingSpec);
     return status;
 }
-Status SpecialResources::process() {
+template <>
+Status SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::process() {
     sequenceManagerLock = std::make_unique<std::unique_lock<std::mutex>>(sequenceManager.getMutex());
     auto status = sequenceManager.processRequestedSpec(sequenceProcessingSpec);
     if (!status.ok())
@@ -207,7 +209,8 @@ Status SpecialResources::process() {
     sequenceManagerLock->unlock();
     return StatusCode::OK;
 }
-Status SpecialResources::preInferenceProcessing(ov::InferRequest& inferRequest) {
+template <>
+Status SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::preInferenceProcessing(ov::InferRequest& inferRequest) {
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_START) {
         // On SEQUENCE_START reset memory state of infer request to default
         for (auto&& state : inferRequest.query_state()) {
@@ -225,7 +228,8 @@ Status SpecialResources::preInferenceProcessing(ov::InferRequest& inferRequest) 
     }
     return StatusCode::OK;
 }
-Status SpecialResources::postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) {
+template <>
+Status SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) {
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         SPDLOG_DEBUG("Received SEQUENCE_END signal. Reseting model state and removing sequence");
@@ -243,7 +247,8 @@ Status SpecialResources::postInferenceProcessing(tensorflow::serving::PredictRes
     tensorProto.add_uint64_val(sequenceProcessingSpec.getSequenceId());
     return StatusCode::OK;
 }
-Status SpecialResources::release() {
+template <>
+Status SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::release() {
     sequenceLock->unlock();
     Status status;
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
@@ -297,7 +302,7 @@ const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving:
     return StatusCode::OK;
 }
 
-std::unique_ptr<SpecialResourcesBasic> StatefulModelInstance::getSR() {
-    return std::make_unique<SpecialResources>(*this->getSequenceManager());
+std::unique_ptr<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> StatefulModelInstance::getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
+    return std::make_unique<SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>>(*this->getSequenceManager());
 }
 }  // namespace ovms

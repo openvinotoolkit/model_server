@@ -92,11 +92,13 @@ public:
     // TODO move it somewhere else
     template <typename RequestType>
     static const Status validateSpecialKeys(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec);
-    std::unique_ptr<SpecialResourcesBasic> getSR() override;
+
+    virtual std::unique_ptr<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) override;
     const std::set<std::string>& getOptionalInputNames() override;
 };
 
-struct SpecialResources : public SpecialResourcesBasic {
+template <typename RequestType, typename ResponseType>
+struct SpecialResources : public SpecialResourcesBasic<RequestType, ResponseType> {
     SequenceManager& sequenceManager;
     std::unique_ptr<std::unique_lock<std::mutex>> sequenceManagerLock;
     std::unique_ptr<std::unique_lock<std::mutex>> sequenceLock;
@@ -105,10 +107,10 @@ struct SpecialResources : public SpecialResourcesBasic {
     uint64_t sequenceId;
 
     SpecialResources(SequenceManager& sequenceManager);
-    Status extractRequestParameters(const tensorflow::serving::PredictRequest* request) override;
+    Status extractRequestParameters(const RequestType* request) override;
     Status process() override;
     Status preInferenceProcessing(ov::InferRequest& inferRequest) override;
-    Status postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) override;
+    Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) override;
     Status release() override;
 };
 }  // namespace ovms
