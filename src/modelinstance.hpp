@@ -26,12 +26,6 @@
 
 #include <openvino/openvino.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
@@ -40,6 +34,7 @@
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "tensorinfo.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 class MetricRegistry;
@@ -546,11 +541,9 @@ public:
 
     Status performInference(ov::InferRequest& inferRequest);
 
-    Status infer(const tensorflow::serving::PredictRequest* requestProto,
-        tensorflow::serving::PredictResponse* responseProto,
-        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-    Status infer(const ::KFSRequest* requestProto,
-        ::KFSResponse* responseProto,
+    template <typename RequestType, typename ResponseType>
+    Status infer(const RequestType* requestProto,
+        ResponseType* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }

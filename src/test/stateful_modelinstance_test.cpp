@@ -42,8 +42,8 @@
 using testing::Return;
 
 namespace {
-    const std::string UNUSED_NAME{"UNUSED_NAME"};
-    const ovms::model_version_t UNUSED_VERSION{0};
+const std::string UNUSED_NAME{"UNUSED_NAME"};
+const ovms::model_version_t UNUSED_VERSION{0};
 static bool testWarningPrinted = false;
 
 enum SequenceTimeoutScenarios {

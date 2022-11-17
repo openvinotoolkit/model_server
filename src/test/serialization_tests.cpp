@@ -167,9 +167,9 @@ const std::vector<ovms::Precision> UNSUPPORTED_CAPI_OUTPUT_PRECISIONS{
 };
 
 namespace {
-    const std::string UNUSED_NAME{"UNUSED_NAME"};
-    const model_version_t UNUSED_VERSION{0};
-}
+const std::string UNUSED_NAME{"UNUSED_NAME"};
+const model_version_t UNUSED_VERSION{0};
+}  // namespace
 
 class TensorflowGRPCPredict : public ::testing::TestWithParam<ovms::Precision> {
 protected:
