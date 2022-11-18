@@ -19,21 +19,34 @@
 #include <string>
 
 #include "buffer.hpp"
+#include "model_service.hpp"
 #include "inferenceparameter.hpp"
 #include "inferencerequest.hpp"
 #include "inferenceresponse.hpp"
 #include "inferencetensor.hpp"
+#include "modelmanager.hpp"
+#include "modelinstance.hpp"
+#include "modelinstanceunloadguard.hpp"
+#include "profiler.hpp"
+#include "status.hpp"
+#include "servablemanagermodule.hpp"
 #include "server.hpp"
 #include "server_options.hpp"
-#include "status.hpp"
+#include "timer.hpp"
 
 using ovms::Buffer;
+using ovms::ModelManager;
 using ovms::InferenceParameter;
 using ovms::InferenceRequest;
 using ovms::InferenceResponse;
 using ovms::InferenceTensor;
+using ovms::ModelInstanceUnloadGuard;
+using ovms::ServableManagerModule;
+using ovms::Server;
 using ovms::Status;
 using ovms::StatusCode;
+using ovms::Timer;
+using std::chrono::microseconds;
 
 OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options) {
     *options = reinterpret_cast<OVMS_ServerGeneralOptions*>(new ovms::GeneralOptionsImpl);
@@ -345,3 +358,82 @@ OVMS_Status* OVMS_InferenceResponseDelete(OVMS_InferenceResponse* res) {
     delete response;
     return nullptr;
 }
+
+namespace {
+enum : unsigned int {
+    TOTAL,
+    TIMER_END
+};
+}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+
+
+Status getModelInstance(const InferenceRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
+    ovms::Server& server = ovms::Server::instance();
+    auto& modelManager = dynamic_cast<const ServableManagerModule*>(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME))->getServableManager();
+    return modelManager.getModelInstance(request->getServableName(), request->getServableVersion(), modelInstance, modelInstanceUnloadGuardPtr);
+}
+
+OVMS_Status* OVMS_Inference(OVMS_InferenceRequest* request, OVMS_InferenceResponse** response) {
+    auto req = reinterpret_cast<ovms::InferenceRequest*>(request);
+    ovms::InferenceResponse* res = new InferenceResponse(req->getServableName(), req->getServableVersion()); // unique_ptr with release? FIXME
+    *response = reinterpret_cast<OVMS_InferenceResponse*>(res);
+    OVMS_PROFILE_FUNCTION();
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
+    using std::chrono::microseconds;
+    SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
+        req->getServableName(),
+        req->getServableVersion());
+
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+ //   std::unique_ptr<ovms::Pipeline> pipelinePtr;
+
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    auto status = getModelInstance(req, modelInstance, modelInstanceUnloadGuard);
+
+    if (status == StatusCode::MODEL_NAME_MISSING) {
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
+       // status = getPipeline(req, response, pipelinePtr);
+    }
+    if (!status.ok()) {
+        if (modelInstance) {
+        //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
+        }
+        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
+        //return grpc(status);
+        return 0;
+    }
+
+   // ExecutionContext executionContext{
+     //   ExecutionContext::Interface::GRPC,
+      //  ExecutionContext::Method::Predict};
+
+   // if (pipelinePtr) {
+ //       status = pipelinePtr->execute(executionContext);
+       // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
+ //   } else {
+        status = modelInstance->infer(req, res, modelInstanceUnloadGuard);
+     //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
+    //}
+
+    if (!status.ok()) {
+            return 0;
+ //       return grpc(status);
+    }
+
+    timer.stop(TOTAL);
+    double reqTotal = timer.elapsed<microseconds>(TOTAL);
+    //if (pipelinePtr) {
+      //  OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().reqTimeGrpc, reqTotal);
+  //  } else {
+     //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
+   // }
+    SPDLOG_DEBUG("Total gRPC req processing time: {} ms", reqTotal / 1000);
+    return 0;
+   // return grpc::Status::OK;
+}
+#pragma GCC diagnostic pop

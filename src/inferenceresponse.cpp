@@ -26,6 +26,8 @@
 #include "status.hpp"
 
 namespace ovms {
+InferenceResponse::InferenceResponse() :
+    InferenceResponse("OBER", 42) {}
 InferenceResponse::InferenceResponse(const std::string& servableName, model_version_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {}
@@ -90,4 +92,6 @@ uint32_t InferenceResponse::getOutputCount() const {
 uint32_t InferenceResponse::getParameterCount() const {
     return this->parameters.size();
 }
+
+void InferenceResponse::Clear() {}  // TODO remove
 }  // namespace ovms

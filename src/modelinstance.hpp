@@ -36,6 +36,9 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
+#include "inferencerequest.hpp"
+#include "inferenceresponse.hpp"
+
 namespace ovms {
 class InferenceRequest;
 class InferenceResponse;
@@ -568,5 +571,15 @@ struct SpecialResourcesBasic {
     virtual Status preInferenceProcessing(ov::InferRequest& inferRequest) { return StatusCode::OK; }
     virtual Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
     virtual Status release() { return StatusCode::OK; }
+};
+class InferenceRequestWrapped : public ovms::InferenceRequest {
+        public:
+    InferenceRequestWrapped(const std::string& name = "OBER", ovms::model_version_t version = 42) : InferenceRequest(name.c_str(), version) {}
+};
+class InferenceResponseWrapped : public ovms::InferenceResponse {
+        public:
+    InferenceResponseWrapped(const std::string& name = "OBER", ovms::model_version_t version = 42) : InferenceResponse(name.c_str(), version) {}
+    void Clear() {
+    } // TODO
 };
 }  // namespace ovms
