@@ -1626,66 +1626,6 @@ public:
     }
 };
 
-TEST_F(EnsembleFlowTest, OrderOfScheduling) {
-    ConstructorEnabledModelManager managerWithDummyModel;
-    config.setNireq(1);
-    managerWithDummyModel.reloadModelWithVersions(config);
-
-    tensor_map_t inputsInfoTmp;
-    inputsInfoTmp[customPipelineInputName] = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
-        ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
-        Layout{"NC"});
-    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfoTmp);
-
-    tensor_map_t outputsInfoTmp;
-    outputsInfoTmp[customPipelineOutputName + "_1"] = std::make_shared<ovms::TensorInfo>(customPipelineOutputName + "_1",
-        ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
-        Layout{"NC"});
-    outputsInfoTmp[customPipelineOutputName + "_2"] = std::make_shared<ovms::TensorInfo>(customPipelineOutputName + "_2",
-        ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
-        Layout{"NC"});
-    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfoTmp);
-
-    // DL Nodes
-    std::vector<int> order;
-    auto node_1 = std::make_unique<DLNodeFirst>("dummy_node_1", dummyModelName, requestedModelVersion, managerWithDummyModel, order);
-    auto node_2 = std::make_unique<DLNodeDeferred>("dummy_node_2", dummyModelName, requestedModelVersion, managerWithDummyModel, order);
-    auto node_3 = std::make_unique<DLNodeNext>("dummy_node_3", dummyModelName, requestedModelVersion, managerWithDummyModel, order);
-
-    Pipeline pipeline(*input_node, *output_node, *this->reporter);
-
-    pipeline.connect(*input_node, *node_1, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
-
-    pipeline.connect(*node_1, *node_3, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
-    pipeline.connect(*input_node, *node_2, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
-
-    pipeline.connect(*node_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName + "_1"}});
-    pipeline.connect(*node_3, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName + "_2"}});
-
-    pipeline.push(std::move(input_node));
-    pipeline.push(std::move(output_node));
-
-    pipeline.push(std::move(node_1));
-    pipeline.push(std::move(node_2));
-    pipeline.push(std::move(node_3));
-
-    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    EXPECT_THAT(order, ElementsAre(
-                           1,    // try to schedule node_1 with success
-                           2,    // try to schedule node_2, defer (with order ticket #1)
-                           3,    // after node_1 ends, try to run next node (node_3), defer with order ticket #2
-                           2,    // also try to schedule previously deferred nodes, node_2 gets scheduled with success
-                           3));  // node_2 ends, try to schedule previously deferred node_3 with success
-    /*
-         -----O1-----O3----
-    O---<                  >----O
-         -----O2-----------
-    */
-}
-
 TEST_F(EnsembleFlowTest, FailInDLNodeSetInputsMissingInput) {
     // Most basic configuration, just process single dummy model request
 
