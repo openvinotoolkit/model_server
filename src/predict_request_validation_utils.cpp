@@ -802,12 +802,12 @@ bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTe
 }
 
 template <typename RequestType>
-bool testForBinaryBatchSizeMismatch(const RequestType& request){
+bool testForBinaryBatchSizeMismatch(const RequestType& request) {
     return true;
 }
 
 template <>
-bool testForBinaryBatchSizeMismatch(const KFSRequest& request){
+bool testForBinaryBatchSizeMismatch(const KFSRequest& request) {
     return request.raw_input_contents().size() <= 0;
 }
 
