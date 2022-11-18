@@ -238,7 +238,7 @@ TEST_F(ModelCacheTest, LayoutChangeDoesImpactCache) {
     ASSERT_EQ(currentCacheFileCount, lastCachedFileCount);
 }
 
-TEST_F(ModelCacheTest, PluginConfigChangeDoesImpactCache) {
+TEST_F(ModelCacheTest, PluginConfigChangeDoesNotImpactCache) {
     this->prepareImageModelCachedRun();
     size_t currentCacheFileCount = this->getCachedFileCount();
 
@@ -250,7 +250,7 @@ TEST_F(ModelCacheTest, PluginConfigChangeDoesImpactCache) {
 
     size_t lastCachedFileCount = currentCacheFileCount;
     currentCacheFileCount = this->getCachedFileCount();
-    ASSERT_GE(currentCacheFileCount, lastCachedFileCount);
+    ASSERT_EQ(currentCacheFileCount, lastCachedFileCount);
 
     manager.reset();
     manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
