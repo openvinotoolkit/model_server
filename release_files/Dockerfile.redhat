@@ -45,7 +45,6 @@ ENV GPU=$GPU
 WORKDIR /
 RUN     set -e ; \
         set -x ; \
-        rpm -ivh http://mirror.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm ; \
         microdnf install -y pkg-config ; \
         if [ "$GPU" == "1" ] ; then \
                 case $INSTALL_DRIVER_VERSION in \

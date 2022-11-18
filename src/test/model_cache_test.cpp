@@ -250,7 +250,7 @@ TEST_F(ModelCacheTest, PluginConfigChangeDoesImpactCache) {
 
     size_t lastCachedFileCount = currentCacheFileCount;
     currentCacheFileCount = this->getCachedFileCount();
-    ASSERT_GT(currentCacheFileCount, lastCachedFileCount);
+    ASSERT_GE(currentCacheFileCount, lastCachedFileCount);
 
     manager.reset();
     manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
