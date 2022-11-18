@@ -73,14 +73,14 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   INSTALL_DRIVER_VERSION ?= "21.48.21782"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_ubuntu20_2022.2.0.7713.af16ea1d79a_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/0f647e6b75a87e334f44e0451f0f7ef9c66141c3/swf_drop/packages/releases/l_openvino_toolkit_ubuntu20_2022.3.0.8693.0f647e6b75a_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "21.38.21026"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_rhel8_2022.2.0.7713.af16ea1d79a_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/0f647e6b75a87e334f44e0451f0f7ef9c66141c3/swf_drop/packages/releases/l_openvino_toolkit_rhel8_2022.3.0.8693.0f647e6b75a_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -91,7 +91,7 @@ endif
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2022.2"
+PRODUCT_VERSION ?= "2022.3"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
 OVMS_CPP_CONTAINTER_PORT ?= 9178

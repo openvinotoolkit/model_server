@@ -83,7 +83,7 @@ RUN	set -e ; \
         apt update -y ; \
         apt install -y curl ; \
 	if [ "$GPU" == "1" ] ; then \
-                apt install -y libnuma1 ocl-icd-libopencl1; \
+                apt install -y libnuma1 ocl-icd-libopencl1 libpugixml1v5 ; \
 	        case $INSTALL_DRIVER_VERSION in \
                 "20.35.17767") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
@@ -119,7 +119,6 @@ RUN	set -e ; \
                         cd /drivers/${INSTALL_DRIVER_VERSION} && \
                             dpkg-scanpackages .  > Packages && \
                             cd - ; \
-
                         echo "deb [trusted=yes arch=amd64] file:/drivers/${INSTALL_DRIVER_VERSION} ./" > /etc/apt/sources.list.d/intel-graphics-${INSTALL_DRIVER_VERSION}.list ; \
                         apt-get update && \
                         apt-get install -y \
