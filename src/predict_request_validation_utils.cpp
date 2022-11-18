@@ -801,6 +801,16 @@ bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTe
     return false;
 }
 
+template <typename RequestType>
+bool testForBinaryBatchSizeMismatch(const RequestType& request){
+    return true;
+}
+
+template <>
+bool testForBinaryBatchSizeMismatch(const KFSRequest& request){
+    return request.raw_input_contents().size() <= 0;
+}
+
 template <typename RequestType, typename InputTensorType, typename IteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::validate() {
     Status finalStatus = StatusCode::OK;
@@ -841,8 +851,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
             if (!status.ok())
                 return status;
 
-            const KFSRequest* r = dynamic_cast<const KFSRequest*>(&request);
-            if (r == nullptr || r->raw_input_contents().size() <= 0) {
+            if (testForBinaryBatchSizeMismatch<RequestType>(request)) {
                 status = checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
                 if (!status.ok())
                     return status;
