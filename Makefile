@@ -84,6 +84,10 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
+ifeq ($(BAZEL_BUILD_TYPE),dbg)
+  OVMS_CPP_DOCKER_IMAGE:=$(OVMS_CPP_DOCKER_IMAGE)-dbg
+endif
+
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
@@ -222,11 +226,6 @@ endif
 	cd extras/nginx-mtls-auth && \
 	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
 	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
-
-.PHONY: docker_build_debug
-docker_build_debug: BAZEL_BUILD_TYPE=dbg
-docker_build_debug: OVMS_CPP_DOCKER_IMAGE:=$(OVMS_CPP_DOCKER_IMAGE)-dbg
-docker_build_debug: docker_build
 
 # Ci build expects index.html in genhtml directory
 get_coverage:
