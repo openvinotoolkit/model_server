@@ -84,6 +84,10 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
+ifeq ($(BAZEL_BUILD_TYPE),dbg)
+  OVMS_CPP_DOCKER_IMAGE:=$(OVMS_CPP_DOCKER_IMAGE)-dbg
+endif
+
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
