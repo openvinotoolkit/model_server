@@ -196,9 +196,20 @@ public:
         size_t bufferId;
         auto status = getOutput(response, outputName, it, bufferId);
         ASSERT_TRUE(status.ok()) << "Couln't find output:" << outputName;
-        float* buffer = reinterpret_cast<float*>(const_cast<char*>(response.raw_output_contents(bufferId).data()));
-        ASSERT_EQ(0, std::memcmp(buffer, expectedValues.data(), expectedValues.size() * sizeof(float)))
-            << readableError(expectedValues.data(), buffer, expectedValues.size() * sizeof(float));
+        if (response.raw_output_contents().size() > 0) {
+            float* buffer = reinterpret_cast<float*>(const_cast<char*>(response.raw_output_contents(bufferId).data()));
+            ASSERT_EQ(0, std::memcmp(buffer, expectedValues.data(), expectedValues.size() * sizeof(float)))
+                << readableError(expectedValues.data(), buffer, expectedValues.size() * sizeof(float));
+        } else {
+            auto& responseOutput = *it;
+            if (responseOutput.datatype() == "FP32") {
+                for (size_t i = 0; i < expectedValues.size(); i++) {
+                    ASSERT_EQ(responseOutput.contents().fp32_contents()[i], expectedValues[i]);
+                }
+            } else if (responseOutput.datatype() == "BYTES") {
+                ASSERT_EQ(0, std::memcmp(&responseOutput.contents().bytes_contents(), expectedValues.data(), expectedValues.size() * sizeof(float)));
+            }
+        }
     }
 
     ovms::Status performInferenceWithRequest(const RequestType& request, ResponseType& response, const std::string& servableName = "dummy") {

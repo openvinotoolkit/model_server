@@ -15,3 +15,25 @@ index b5521b1752..feaa8d1b91 100644
        case 1:
          h += static_cast<uint8_t>(data[0]);
          h *= m;
+
+diff --git a/tensorflow/workspace2.bzl b/tensorflow/workspace2.bzl
+index be571aaf1f8..a8765b08bd4 100644
+--- a/tensorflow/workspace2.bzl
++++ b/tensorflow/workspace2.bzl
+@@ -706,12 +706,12 @@ def _tf_repositories():
+     tf_http_archive(
+         name = "zlib",
+         build_file = "//third_party:zlib.BUILD",
+-        sha256 = "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1",
+-        strip_prefix = "zlib-1.2.11",
++        sha256 = "b3a24de97a8fdbc835b9833169501030b8977031bcb54b3b3ac13740f846ab30",
++        strip_prefix = "zlib-1.2.13",
+         system_build_file = "//third_party/systemlibs:zlib.BUILD",
+         urls = [
+-            "https://storage.googleapis.com/mirror.tensorflow.org/zlib.net/zlib-1.2.11.tar.gz",
+-            "https://zlib.net/zlib-1.2.11.tar.gz",
++            "https://storage.googleapis.com/mirror.tensorflow.org/zlib.net/zlib-1.2.13.tar.gz",
++            "https://zlib.net/zlib-1.2.13.tar.gz",
+         ],
+     )
+

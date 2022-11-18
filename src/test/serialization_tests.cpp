@@ -277,13 +277,13 @@ protected:
     ::KFSResponse response;
 };
 
-TEST_F(KFServingGRPCPredict, ValidSerialization) {
+TEST_F(KFServingGRPCPredict, ValidSerializationRaw) {
     ov::Tensor tensor(ov::element::f32, shape_t{1, 3, 1, 1});
     KFSResponse response;
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
-    auto status = serializeTensorToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
         content,
         tensorMap[tensorName],
         tensor);
@@ -297,13 +297,55 @@ TEST_F(KFServingGRPCPredict, ValidSerialization) {
     EXPECT_EQ(response.raw_output_contents()[0].size(), 12);
 }
 
-TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
+TEST_F(KFServingGRPCPredict, ValidSerialization) {
+    ov::Tensor tensor(ov::element::f32, shape_t{1, 3, 1, 1});
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    auto status = serializeTensorToTensorProto(responseOutput,
+        tensorMap[tensorName],
+        tensor);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    EXPECT_EQ(responseOutput.name(), tensorName);
+    EXPECT_EQ(responseOutput.datatype(), "FP32");
+    EXPECT_EQ(responseOutput.shape(0), 1);
+    EXPECT_EQ(responseOutput.shape(1), 3);
+    EXPECT_EQ(responseOutput.shape(2), 1);
+    EXPECT_EQ(responseOutput.shape(3), 1);
+    EXPECT_EQ(responseOutput.contents().fp32_contents_size(), 3);
+}
+
+TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorPrecisionRaw) {
     ov::Tensor tensor(ov::element::i32, shape_t{1, 3, 1, 1});
     KFSResponse response;
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
+        content,
+        tensorMap[tensorName],
+        tensor);
+    EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
+}
+
+TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
+    ov::Tensor tensor(ov::element::i32, shape_t{1, 3, 1, 1});
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
+        tensorMap[tensorName],
+        tensor);
+    EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
+}
+
+TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorShapeRaw) {
+    ov::Tensor tensor(ov::element::i32, shape_t{2, 3, 1, 1});
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    auto* content = protoGetter.createContent(tensorName);
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
         content,
         tensorMap[tensorName],
         tensor);
@@ -315,9 +357,7 @@ TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorShape) {
     KFSResponse response;
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
-    auto* content = protoGetter.createContent(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
-        content,
         tensorMap[tensorName],
         tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
@@ -341,7 +381,7 @@ public:
     }
 };
 
-TEST_P(SerializeKFSInferOutputTensor, SerializeTensorProtoShouldSucceedForPrecision) {
+TEST_P(SerializeKFSInferOutputTensor, SerializeTensorProtoShouldSucceedForPrecisionRaw) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     KFSResponse response;
@@ -349,8 +389,24 @@ TEST_P(SerializeKFSInferOutputTensor, SerializeTensorProtoShouldSucceedForPrecis
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
     ov::Tensor mockTensor = std::get<1>(inputs);
-    auto status = serializeTensorToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
         content,
+        std::get<0>(inputs),
+        mockTensor);
+    EXPECT_TRUE(status.ok())
+        << "Supported OV serialization precision"
+        << toString(testedPrecision)
+        << "should succeed";
+}
+
+TEST_P(SerializeKFSInferOutputTensor, SerializeTensorProtoShouldSucceedForPrecision) {
+    ovms::Precision testedPrecision = GetParam();
+    auto inputs = getInputs(testedPrecision);
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    ov::Tensor mockTensor = std::get<1>(inputs);
+    auto status = serializeTensorToTensorProto(responseOutput,
         std::get<0>(inputs),
         mockTensor);
     EXPECT_TRUE(status.ok())
@@ -361,15 +417,30 @@ TEST_P(SerializeKFSInferOutputTensor, SerializeTensorProtoShouldSucceedForPrecis
 
 class SerializeKFSInferOutputTensorNegative : public SerializeKFSInferOutputTensor {};
 
-TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldSucceedForPrecision) {
+TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoRawShouldFailedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     KFSResponse response;
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
     auto& responseOutput = protoGetter.createOutput(tensorName);
     auto* content = protoGetter.createContent(tensorName);
-    auto status = serializeTensorToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProtoRaw(responseOutput,
         content,
+        std::get<0>(inputs),
+        std::get<1>(inputs));
+    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
+        << "Unsupported OV serialization precision"
+        << toString(testedPrecision)
+        << "should fail";
+}
+
+TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldFailedForPrecision) {
+    ovms::Precision testedPrecision = GetParam();
+    auto inputs = getInputs(testedPrecision);
+    KFSResponse response;
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    auto status = serializeTensorToTensorProto(responseOutput,
         std::get<0>(inputs),
         std::get<1>(inputs));
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
@@ -401,6 +472,58 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     EXPECT_EQ(1, response.outputs(0).shape(0));
     EXPECT_EQ(10, response.outputs(0).shape(1));
     EXPECT_EQ(40, response.raw_output_contents(0).size());
+}
+
+TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithuseSharedOutputContent) {
+    KFSResponse response;
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ov::InferRequest inferRequest = compiledModel.create_infer_request();
+    ovms::tensor_map_t tenMap;
+    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+        DUMMY_MODEL_INPUT_NAME,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 10},
+        Layout{"NC"});
+    tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
+    ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
+    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
+    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    auto status = serializePredictResponse(outputGetter, tenMap, &response, getTensorInfoName, true);
+    ASSERT_TRUE(status.ok());
+    EXPECT_EQ(DUMMY_MODEL_INPUT_NAME, response.outputs(0).name());
+    EXPECT_EQ("FP32", response.outputs(0).datatype());
+    EXPECT_EQ(1, response.outputs(0).shape(0));
+    EXPECT_EQ(10, response.outputs(0).shape(1));
+    EXPECT_EQ(0, response.outputs(0).contents().fp32_contents_size());
+    EXPECT_EQ(40, response.raw_output_contents(0).size());
+}
+
+TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithsharedInputContentsNotUsed) {
+    KFSResponse response;
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ov::InferRequest inferRequest = compiledModel.create_infer_request();
+    ovms::tensor_map_t tenMap;
+    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+        DUMMY_MODEL_INPUT_NAME,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 10},
+        Layout{"NC"});
+    tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
+    ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
+    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
+    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    auto status = serializePredictResponse(outputGetter, tenMap, &response, getTensorInfoName, false);
+    ASSERT_TRUE(status.ok());
+    EXPECT_EQ(DUMMY_MODEL_INPUT_NAME, response.outputs(0).name());
+    EXPECT_EQ("FP32", response.outputs(0).datatype());
+    EXPECT_EQ(1, response.outputs(0).shape(0));
+    EXPECT_EQ(10, response.outputs(0).shape(1));
+    EXPECT_EQ(10, response.outputs(0).contents().fp32_contents_size());
+    EXPECT_EQ(0, response.raw_output_contents_size());
 }
 
 INSTANTIATE_TEST_SUITE_P(

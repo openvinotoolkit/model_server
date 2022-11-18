@@ -34,12 +34,14 @@ template <typename ResponseType>
 class ExitNode : public Node {
     ResponseType* response;
     const tensor_map_t outputsInfo;
+    bool useSharedOutputContent;
 
 public:
-    ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}) :
+    ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool useSharedOutputContent = true) :
         Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode),
         response(response),
-        outputsInfo(outputsInfo) {
+        outputsInfo(outputsInfo),
+        useSharedOutputContent(useSharedOutputContent) {
     }
 
     // Exit node does not have execute logic.
