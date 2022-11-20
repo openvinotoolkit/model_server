@@ -88,7 +88,11 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
-OVMS_CPP_IMAGE_TAG ?= latest
+ifeq ($(NVIDIA),0)
+  OVMS_CPP_IMAGE_TAG ?= latest
+else
+  OVMS_CPP_IMAGE_TAG ?= latest-cuda
+endif
 
 PRODUCT_NAME = "OpenVINO Model Server"
 PRODUCT_VERSION ?= "2022.2"
