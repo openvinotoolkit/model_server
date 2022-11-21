@@ -219,13 +219,14 @@ TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelMetadata, [&](const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    handler->registerHandler(KFS_GetModelMetadata, [&](const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components) {
         c++;
         return ovms::StatusCode::OK;
     });
     comp.type = ovms::KFS_GetModelMetadata;
     std::string discard;
-    handler->dispatchToProcessor(std::string(), &discard, comp);
+    ovms::HttpResponseComponents responseComponents;
+    handler->dispatchToProcessor(std::string(), &discard, comp, responseComponents);
 
     ASSERT_EQ(c, 1);
 }
@@ -235,13 +236,14 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelReady, [&](const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    handler->registerHandler(KFS_GetModelReady, [&](const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components) {
         c++;
         return ovms::StatusCode::OK;
     });
     comp.type = ovms::KFS_GetModelReady;
     std::string discard;
-    handler->dispatchToProcessor(std::string(), &discard, comp);
+    ovms::HttpResponseComponents responseComponents;
+    handler->dispatchToProcessor(std::string(), &discard, comp, responseComponents);
 
     ASSERT_EQ(c, 1);
 }
@@ -252,7 +254,8 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
 
     handler->parseRequestComponents(comp, "GET", request);
     std::string response;
-    handler->dispatchToProcessor(std::string(), &response, comp);
+    ovms::HttpResponseComponents responseComponents;
+    handler->dispatchToProcessor(std::string(), &response, comp, responseComponents);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -278,7 +281,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp), ovms::StatusCode::OK);
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -296,7 +300,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp), ovms::StatusCode::OK);
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -590,7 +595,8 @@ TEST_F(HttpRestApiHandlerTest, serverReady) {
     comp.type = ovms::KFS_GetServerReady;
     std::string request;
     std::string response;
-    ovms::Status status = handler->dispatchToProcessor(request, &response, comp);
+    ovms::HttpResponseComponents responseComponents;
+    ovms::Status status = handler->dispatchToProcessor(request, &response, comp, responseComponents);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
 }
@@ -600,7 +606,8 @@ TEST_F(HttpRestApiHandlerTest, serverLive) {
     comp.type = ovms::KFS_GetServerLive;
     std::string request;
     std::string response;
-    ovms::Status status = handler->dispatchToProcessor(request, &response, comp);
+    ovms::HttpResponseComponents responseComponents;
+    ovms::Status status = handler->dispatchToProcessor(request, &response, comp, responseComponents);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
 }
@@ -610,7 +617,8 @@ TEST_F(HttpRestApiHandlerTest, serverMetadata) {
     comp.type = ovms::KFS_GetServerMetadata;
     std::string request;
     std::string response;
-    ovms::Status status = handler->dispatchToProcessor(request, &response, comp);
+    ovms::HttpResponseComponents responseComponents;
+    ovms::Status status = handler->dispatchToProcessor(request, &response, comp, responseComponents);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
