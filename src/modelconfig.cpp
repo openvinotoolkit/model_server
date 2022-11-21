@@ -303,8 +303,10 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
             if (it->name.GetString() == std::string("CPU_BIND_THREAD")) {
                 if (it->value.GetString() == std::string("YES")) {
                     pluginConfig["AFFINITY"] = "CORE";
+		    SPDLOG_WARN("{} plugin config key is deprecated. Use  AFFINITY instead", it->name.GetString());
                 } else if (it->value.GetString() == std::string("NO")) {
                     pluginConfig["AFFINITY"] = "NONE";
+		    SPDLOG_WARN("{} plugin config key is deprecated. Use  AFFINITY instead", it->name.GetString());
                 } else {
                     SPDLOG_ERROR("{} plugin config key has invalid value and is deprecated. Use AFFINITY key instead", it->name.GetString());
                     return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
@@ -312,6 +314,7 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
             }
             if (it->name.GetString() == std::string("CPU_THREADS_NUM")) {
                 pluginConfig["INFERENCE_NUM_THREADS"] = it->value.GetString();
+		SPDLOG_WARN("{} plugin config key is deprecated. Use INFERENCE_NUM_THREADS instead", it->name.GetString());
             }
 
         } else if (it->value.IsInt64()) {
