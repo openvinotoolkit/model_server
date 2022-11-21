@@ -498,11 +498,13 @@ TEST(ModelConfig, plugin_config_legacy_cpu_num) {
 
 TEST(ModelConfig, plugin_config_legacy_cpu_str) {
     ovms::ModelConfig config;
-    std::string pluginConfig_str = "{\"CPU_THROUGHPUT_STREAMS\":\"5\"}";
+    std::string pluginConfig_str = "{\"CPU_THROUGHPUT_STREAMS\":\"5\", \"CPU_BIND_THREAD\":\"NO\", \"CPU_THREADS_NUM\": \"2\"}";
     auto status = config.parsePluginConfig(pluginConfig_str);
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
+    EXPECT_EQ(actualPluginConfig["AFFINITY"], "NONE");
+    EXPECT_EQ(actualPluginConfig["INFERENCE_NUM_THREADS"], "2");
 }
 
 TEST(ModelConfig, plugin_config_legacy_gpu) {
@@ -512,6 +514,15 @@ TEST(ModelConfig, plugin_config_legacy_gpu) {
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(actualPluginConfig["PERFORMANCE_HINT"], "THROUGHPUT");
+}
+
+TEST(ModelConfig, plugin_config_cpu_bind_thread) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"CPU_BIND_THREAD\":\"YES\"}";
+    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(actualPluginConfig["AFFINITY"], "CORE");
 }
 
 TEST(ModelConfig, plugin_config_legacy_gpu_num) {

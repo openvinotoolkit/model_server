@@ -300,6 +300,20 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
                     pluginConfig[it->name.GetString()] = it->value.GetString();
                 }
             }
+            if (it->name.GetString() == std::string("CPU_BIND_THREAD")) {
+                if (it->value.GetString() == std::string("YES")) {
+                    pluginConfig["AFFINITY"] = "CORE";
+                } else if (it->value.GetString() == std::string("NO")) {
+                    pluginConfig["AFFINITY"] = "NONE";
+                } else {
+                    SPDLOG_ERROR("{} plugin config key has invalid value and is deprecated. Use AFFINITY key instead", it->name.GetString());
+                    return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
+                }
+            }
+            if (it->name.GetString() == std::string("CPU_THREADS_NUM")) {
+                pluginConfig["INFERENCE_NUM_THREADS"] = it->value.GetString();
+            }
+
         } else if (it->value.IsInt64()) {
             if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
                 pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetInt64());
