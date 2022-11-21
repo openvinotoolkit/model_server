@@ -90,7 +90,7 @@ endif
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 ifeq ($(NVIDIA),1)
-  IMAGE_TAG_SUFFIX = -cuda 
+  IMAGE_TAG_SUFFIX = -cuda
 endif
 
 PRODUCT_NAME = "OpenVINO Model Server"
@@ -234,10 +234,10 @@ endif
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		--build-arg NVIDIA=$(NVIDIA) \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) && \
-    	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)-gpu
+	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$-gpu$(IMAGE_TAG_SUFFIX)
 	cd extras/nginx-mtls-auth && \
-	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
-	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)nginx-mtls
+	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
+	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
 
 # Ci build expects index.html in genhtml directory
 get_coverage:

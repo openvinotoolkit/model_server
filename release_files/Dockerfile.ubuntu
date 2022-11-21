@@ -129,7 +129,7 @@ RUN	set -e ; \
                             intel-opencl-icd \
                             intel-level-zero-gpu level-zero \
                             intel-media-va-driver-non-free libmfx1 && \
-                            rm -rf /var/lib/apt/lists/*
+                            rm -rf /var/lib/apt/lists/* ; \
                 esac ; \
 	fi ; \
 	apt-get clean ; \
