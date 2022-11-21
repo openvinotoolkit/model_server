@@ -5,8 +5,8 @@
 #MIN_FUNCTION_COV=87.4
 
 #Rhel
-MIN_LINES_COV=73.5
-MIN_FUNCTION_COV=74.4
+MIN_LINES_COV=53.5
+MIN_FUNCTION_COV=54.4
 
 
 LINES_COV=`cat genhtml/index.html | grep "headerCovTableEntry.*%" | grep -oP  ">\K(\d*.\d*) " | head -n 1`
