@@ -47,4 +47,4 @@ Refer to [Running Model Server using Docker Container](./docker_container.md) to
 
 > **NOTE**:
 > When AI accelerators are used for inference execution, additional steps may be required to install their drivers and dependencies. Learn more about it 
-> Learn more about it on [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_linux.html).
+> Learn more about it on [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_from_archive_linux.html).
