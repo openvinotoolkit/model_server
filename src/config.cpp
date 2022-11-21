@@ -40,7 +40,7 @@ Config& Config::parse(int argc, char** argv) {
     ovms::MultiModelOptionsImpl mmo;
     p.parse(argc, argv);
     p.prepare(&go, &mmo);
-    if (!this->parse(&go, &mmo))  // TODO: Ret val
+    if (!this->parse(&go, &mmo))
         exit(EX_USAGE);
     return *this;
 }

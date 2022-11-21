@@ -421,12 +421,12 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--metrics_enable",
         "--metrics_list",
         "ovms_streams,ovms_other",
-        // "--idle_sequence_cleanup", "false",  // TOOD: cannot disable, change to --disable_idle_seq_cleanup?
+        "--idle_sequence_cleanup=false",
         "--low_latency_transformation",
         "--max_sequence_number",
         "52",
     };
-    int arg_count = 54;
+    int arg_count = 55;
     MockedConfig config;
     config.parse(arg_count, n_argv);
 
@@ -457,7 +457,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.stateful(), true);
     EXPECT_EQ(config.metricsEnabled(), true);
     EXPECT_EQ(config.metricsList(), "ovms_streams,ovms_other");
-    // EXPECT_EQ(config.idleSequenceCleanup(), false);  // TOOD: cannot disable, change to --disable_idle_seq_cleanup?
+    EXPECT_EQ(config.idleSequenceCleanup(), false);
     EXPECT_EQ(config.lowLatencyTransformation(), true);
     EXPECT_EQ(config.maxSequenceNumber(), 52);
 }

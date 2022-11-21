@@ -57,7 +57,7 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     ovms::GeneralOptionsImpl* go = (ovms::GeneralOptionsImpl*)general_options;
     ovms::MultiModelOptionsImpl* mmo = (ovms::MultiModelOptionsImpl*)multi_model_specific_options;
     std::int64_t res = srv->start(go, mmo);
-    return (OVMS_Status*)res;
+    return (OVMS_Status*)res;  // TODO: Return proper OVMS_Status instead of a raw status code
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
