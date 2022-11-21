@@ -94,7 +94,13 @@ RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
     @com_github_grpc_grpc//:grpc++ \
     @com_google_protobuf//:protobuf_lite \
-    @org_tensorflow//tensorflow/core:framework \
+    @org_tensorflow//tensorflow/core:framework
+
+# Patch apple build scripts
+RUN cp -rf /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch $(bazel info output_base)/external/build_bazel_rules_apple/
+RUN cd $(bazel info output_base)/external/build_bazel_rules_apple/ && patch -p1 < bazel_rules_apple.patch   
+
+RUN bazel build \
     @org_tensorflow//tensorflow/core:lib \
     @opencv//:opencv
 

@@ -23,14 +23,14 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.10.0"
+    tag = "2.6.5"
 )
 
 # Tensorflow core
 git_repository(
     name = "org_tensorflow",
     remote = "https://github.com/tensorflow/tensorflow.git",
-    tag = "v2.10.0",
+    tag = "v2.6.5",
     patch_args = ["-p1"],
     patches = ["tf.patch"]
 )
