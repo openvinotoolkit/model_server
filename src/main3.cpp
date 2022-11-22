@@ -30,12 +30,16 @@ int main(int argc, char** argv) {
     OVMS_ServerGeneralOptionsSetRestPort(go, 11338);
     OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config.json");
 
-    OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
+    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
 
     OVMS_ServerDelete(srv);
     OVMS_ServerMultiModelOptionsDelete(mmo);
     OVMS_ServerGeneralOptionsDelete(go);
 
-    std::cout << "Finish" << std::endl;
+    if (res == 0) {
+        std::cout << "Finish with success" << std::endl;
+    } else {
+        std::cout << "Finish with fail" << std::endl;
+    }
     return 0;
 }

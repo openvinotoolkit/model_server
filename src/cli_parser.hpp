@@ -13,15 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "poc_api_impl.hpp"
+#pragma once
 
-#include "server.hpp"
+#include <memory>
+
+#include <cxxopts.hpp>
 
 namespace ovms {
 
-int ServerImpl::start(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
-    Server& server = Server::instance();
-    return server.start(go, mmo);
-}
+struct GeneralOptionsImpl;
+struct SingleModelOptionsImpl;
+struct MultiModelOptionsImpl;
+
+class CLIParser {
+    std::unique_ptr<cxxopts::Options> options;
+    std::unique_ptr<cxxopts::ParseResult> result;
+
+public:
+    CLIParser() = default;
+    void parse(int argc, char** argv);
+
+    void prepare(GeneralOptionsImpl*, MultiModelOptionsImpl*);
+};
 
 }  // namespace ovms

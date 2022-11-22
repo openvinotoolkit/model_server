@@ -98,6 +98,42 @@ TEST_F(OvmsConfigDeathTest, negativeTwoParams) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Use either config_path or model_path");
 }
 
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithBatchSize) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--batch_size", "5"};
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithShape) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--shape", "(1,2)"};
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithNireq) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--nireq", "3"};
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithModelVersionPolicy) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--model_version_policy", "policy"};
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithTargetDevice) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--target_device", "GPU"};
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithPluginConfig) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--plugin_config", "setting"};
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
 TEST_F(OvmsConfigDeathTest, negativeMissingPathAndName) {
     char* n_argv[] = {"ovms", "--rest_port", "8080"};
     int arg_count = 3;
@@ -286,13 +322,144 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip(too_long), false);
 }
 
-TEST(OvmsConfigTest, positive) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "44", "--rest_port", "45"};
-    int arg_count = 7;
-    ovms::Config::instance().parse(arg_count, n_argv);
-    EXPECT_EQ(ovms::Config::instance().port(), 44);
-    EXPECT_EQ(ovms::Config::instance().restPort(), 45);
-    EXPECT_EQ(ovms::Config::instance().configPath(), "/path1");
+class MockedConfig : public ovms::Config {
+public:
+    MockedConfig() {}
+};
+
+TEST(OvmsConfigTest, positiveMulti) {
+    char* n_argv[] = {"ovms",
+        "--port", "44",
+        "--grpc_workers", "2",
+        "--grpc_bind_address", "1.1.1.1",
+        "--rest_port", "45",
+        "--rest_workers", "46",
+        "--rest_bind_address", "2.2.2.2",
+        "--grpc_channel_arguments", "grpc_channel_args",
+        "--file_system_poll_wait_seconds", "2",
+        "--sequence_cleaner_poll_wait_minutes", "7",
+        "--custom_node_resources_cleaner_interval", "8",
+        "--cpu_extension", "/ovms",
+        "--cache_dir", "/tmp/model_cache",
+        "--log_path", "/tmp/log_path",
+        "--log_level", "ERROR",
+
+        "--config_path", "/config.json"};
+    int arg_count = 31;
+    MockedConfig config;
+    config.parse(arg_count, n_argv);
+
+    EXPECT_EQ(config.port(), 44);
+    EXPECT_EQ(config.grpcWorkers(), 2);
+    EXPECT_EQ(config.grpcBindAddress(), "1.1.1.1");
+    EXPECT_EQ(config.restPort(), 45);
+    EXPECT_EQ(config.restWorkers(), 46);
+    EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
+    EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
+    EXPECT_EQ(config.filesystemPollWaitSeconds(), 2);
+    EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
+    EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
+    EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
+    EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
+    EXPECT_EQ(config.logPath(), "/tmp/log_path");
+    EXPECT_EQ(config.logLevel(), "ERROR");
+
+    EXPECT_EQ(config.configPath(), "/config.json");
+}
+
+TEST(OvmsConfigTest, positiveSingle) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--grpc_workers",
+        "2",
+        "--grpc_bind_address",
+        "1.1.1.1",
+        "--rest_port",
+        "45",
+        "--rest_workers",
+        "46",
+        "--rest_bind_address",
+        "2.2.2.2",
+        "--grpc_channel_arguments",
+        "grpc_channel_args",
+        "--file_system_poll_wait_seconds",
+        "2",
+        "--sequence_cleaner_poll_wait_minutes",
+        "7",
+        "--custom_node_resources_cleaner_interval",
+        "8",
+        "--cpu_extension",
+        "/ovms",
+        "--cache_dir",
+        "/tmp/model_cache",
+        "--log_path",
+        "/tmp/log_path",
+        "--log_level",
+        "ERROR",
+
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--batch_size",
+        "(3:5)",
+        "--shape",
+        "(3:5,5:6)",
+        "--layout",
+        "nchw:nhwc",
+        "--model_version_policy",
+        "setting",
+        "--nireq",
+        "2",
+        "--target_device",
+        "GPU",
+        "--plugin_config",
+        "pluginsetting",
+        "--stateful",
+        "--metrics_enable",
+        "--metrics_list",
+        "ovms_streams,ovms_other",
+        "--idle_sequence_cleanup=false",
+        "--low_latency_transformation",
+        "--max_sequence_number",
+        "52",
+    };
+    int arg_count = 55;
+    MockedConfig config;
+    config.parse(arg_count, n_argv);
+
+    EXPECT_EQ(config.port(), 44);
+    EXPECT_EQ(config.grpcWorkers(), 2);
+    EXPECT_EQ(config.grpcBindAddress(), "1.1.1.1");
+    EXPECT_EQ(config.restPort(), 45);
+    EXPECT_EQ(config.restWorkers(), 46);
+    EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
+    EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
+    EXPECT_EQ(config.filesystemPollWaitSeconds(), 2);
+    EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
+    EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
+    EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
+    EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
+    EXPECT_EQ(config.logPath(), "/tmp/log_path");
+    EXPECT_EQ(config.logLevel(), "ERROR");
+
+    EXPECT_EQ(config.modelPath(), "/path");
+    EXPECT_EQ(config.modelName(), "model");
+    EXPECT_EQ(config.batchSize(), "(3:5)");
+    EXPECT_EQ(config.shape(), "(3:5,5:6)");
+    EXPECT_EQ(config.layout(), "nchw:nhwc");
+    EXPECT_EQ(config.modelVersionPolicy(), "setting");
+    EXPECT_EQ(config.nireq(), 2);
+    EXPECT_EQ(config.targetDevice(), "GPU");
+    EXPECT_EQ(config.pluginConfig(), "pluginsetting");
+    EXPECT_EQ(config.stateful(), true);
+    EXPECT_EQ(config.metricsEnabled(), true);
+    EXPECT_EQ(config.metricsList(), "ovms_streams,ovms_other");
+    EXPECT_EQ(config.idleSequenceCleanup(), false);
+    EXPECT_EQ(config.lowLatencyTransformation(), true);
+    EXPECT_EQ(config.maxSequenceNumber(), 52);
 }
 
 #pragma GCC diagnostic pop

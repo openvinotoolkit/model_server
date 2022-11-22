@@ -15,80 +15,36 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
+#include <optional>
 #include <string>
-#include <vector>
 
-#include <cxxopts.hpp>
+#include "poc_api_impl.hpp"
 
 namespace ovms {
-class GeneralOptionsImpl;
-class MultiModelOptionsImpl;
 
 /**
      * @brief Provides all the configuration options from command line
      */
 class Config {
-private:
+protected:
     /**
          * @brief A default constructor is private
          */
     Config() = default;
 
+private:
     /**
          * @brief Private copying constructor
          */
     Config(const Config&) = delete;
 
     /**
-         * @brief cxxopts options dictionary definition
-         */
-    std::unique_ptr<cxxopts::Options> options;
-
-    /**
-         * @brief cxxopts contains parsed parameters
-         */
-    std::unique_ptr<cxxopts::ParseResult> result;
-
-    /**
          * @brief 
          */
     const std::string empty;
 
-    // new
-    std::string _configPath;
-    uint64_t _port = 9178;
-    std::string _cpuExtensionLibraryPath;
-    std::string _grpcBindAddress = "0.0.0.0";
-    uint64_t _restPort = 0;
-    std::string _restBindAddress = "0.0.0.0";
-    uint _grpcWorkers = 1;
-    uint _restWorkers = 8;  // TODO: In OVMS this is nproc * 4
-    std::string _modelName;
-    std::string _modelPath;
-    std::string _batchSize;
-    std::string _shape;
-    std::string _layout;
-    std::string _modelVersionPolicy;
-    uint32_t _nireq = 0;
-    std::string _targetDevice;
-    std::string _pluginConfig;
-    bool _stateful = false;
-    bool _metricsEnabled = false;
-    std::string _metricsList;
-    bool _idleSequenceCleanup = true;
-    bool _lowLatencyTransformation = false;
-    uint32_t _maxSequenceNumber = 500;
-    std::string _logLevel = "DEBUG";
-    std::string _logPath;
-#ifdef MTR_ENABLED
-    std::string _tracePath;
-#endif
-    std::string _grpcChannelArguments;
-    uint _filesystemPollWaitSeconds = 1;
-    uint32_t _sequenceCleanerPollWaitMinutes = 5;
-    uint32_t _resourcesCleanerPollWaitSeconds = 1;
-    std::string _cacheDir;
+    GeneralOptionsImpl go;
+    MultiModelOptionsImpl mmo;
 
 public:
     /**
@@ -109,14 +65,14 @@ public:
          * @return Config& 
          */
     Config& parse(int argc, char** argv);
-    Config& parse(GeneralOptionsImpl*, MultiModelOptionsImpl*);
+    bool parse(GeneralOptionsImpl*, MultiModelOptionsImpl*);
 
     /**
          * @brief Validate passed arguments
          * 
          * @return void 
          */
-    void validate();
+    bool validate();
 
     /**
          * @brief checks if input is a proper hostname or IP address value
@@ -130,7 +86,6 @@ public:
          * 
          * @return std::string 
          */
-    const std::string& __configPath() const;  // TODO: Move to CLI parser when ready
     const std::string& configPath() const;
 
     /**
@@ -138,7 +93,6 @@ public:
          * 
          * @return uint64_t
          */
-    uint64_t __port() const;
     uint64_t port() const;
 
     /**
@@ -146,7 +100,6 @@ public:
          * 
          * @return const std::string
          */
-    const std::string __cpuExtensionLibraryPath() const;  // TODO: Move to CLI parser when ready
     const std::string cpuExtensionLibraryPath() const;
 
     /**
@@ -154,7 +107,6 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string __grpcBindAddress() const;  // TODO: Move to CLI parser when ready
     const std::string grpcBindAddress() const;
 
     /**
@@ -162,7 +114,6 @@ public:
          * 
          * @return uint64_t
          */
-    uint64_t __restPort() const;
     uint64_t restPort() const;
 
     /**
@@ -170,7 +121,6 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string __restBindAddress() const;  // TODO: Move to CLI parser when ready
     const std::string restBindAddress() const;
 
     /**
@@ -178,7 +128,6 @@ public:
          * 
          * @return uint
          */
-    uint __grpcWorkers() const;  // TODO: Move to CLI parser when ready
     uint grpcWorkers() const;
 
     /**
@@ -186,7 +135,6 @@ public:
          * 
          * @return uint
          */
-    uint __restWorkers() const;  // TODO: Move to CLI parser when ready
     uint restWorkers() const;
 
     /**
@@ -194,7 +142,6 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& __modelName() const;  // TODO: Move to CLI parser when ready
     const std::string& modelName() const;
 
     /**
@@ -202,7 +149,6 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& __modelPath() const;  // TODO: Move to CLI parser when ready
     const std::string& modelPath() const;
 
     /**
@@ -210,7 +156,6 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& __batchSize() const;  // TODO: Move to CLI parser when ready
     const std::string& batchSize() const;
 
     /**
@@ -218,7 +163,6 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& __shape() const;  // TODO: Move to CLI parser when ready
     const std::string& shape() const;
 
     /**
@@ -226,7 +170,6 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& __layout() const;  // TODO: Move to CLI parser when ready
     const std::string& layout() const;
 
     /**
@@ -234,7 +177,6 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& __modelVersionPolicy() const;  // TODO: Move to CLI parser when ready
     const std::string& modelVersionPolicy() const;
 
     /**
@@ -242,7 +184,6 @@ public:
          *
          * @return uint 
          */
-    uint32_t __nireq() const;
     uint32_t nireq() const;
 
     /**
@@ -250,7 +191,6 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& __targetDevice() const;  // TODO: Move to CLI parser when ready
     const std::string& targetDevice() const;
 
     /**
@@ -258,7 +198,6 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& __pluginConfig() const;  // TODO: Move to CLI parser when ready
     const std::string& pluginConfig() const;
 
     /**
@@ -266,7 +205,6 @@ public:
          *
          * @return bool
          */
-    bool __stateful() const;  // TODO: Move to CLI parser when ready
     bool stateful() const;
 
     /**
@@ -274,7 +212,6 @@ public:
      *
      * @return bool
      */
-    bool __metricsEnabled() const;  // TODO: Move to CLI parser when ready
     bool metricsEnabled() const;
 
     /**
@@ -282,7 +219,6 @@ public:
         *
         * @return std::string
         */
-    std::string __metricsList() const;  // TODO: Move to CLI parser when ready
     std::string metricsList() const;
 
     /**
@@ -290,7 +226,6 @@ public:
      *
      * @return uint
      */
-    bool __idleSequenceCleanup() const;  // TODO: Move to CLI parser when ready
     bool idleSequenceCleanup() const;
 
     /**
@@ -298,7 +233,6 @@ public:
          *
          * @return bool
          */
-    bool __lowLatencyTransformation() const;  // TODO: Move to CLI parser when ready
     bool lowLatencyTransformation() const;
 
     /**
@@ -306,7 +240,6 @@ public:
      *
      * @return uint
      */
-    uint32_t __maxSequenceNumber() const;  // TODO: Move to CLI parser when ready
     uint32_t maxSequenceNumber() const;
 
     /**
@@ -314,7 +247,6 @@ public:
         *
         * @return const std::string&
         */
-    const std::string& __logLevel() const;  // TODO: Move to CLI parser when ready
     const std::string& logLevel() const;
 
     /**
@@ -322,7 +254,6 @@ public:
          *
         * @return const std::string&
         */
-    const std::string& __logPath() const;  // TODO: Move to CLI parser when ready
     const std::string& logPath() const;
 
 #ifdef MTR_ENABLED
@@ -331,7 +262,6 @@ public:
          *
         * @return const std::string&
         */
-    const std::string& __tracePath() const;  // TODO: Move to CLI parser when ready
     const std::string& tracePath() const;
 #endif
 
@@ -340,7 +270,6 @@ public:
         *
         * @return const std::string&
         */
-    const std::string& __grpcChannelArguments() const;  // TODO: Move to CLI parser when ready
     const std::string& grpcChannelArguments() const;
 
     /**
@@ -348,7 +277,6 @@ public:
      * 
      * @return uint 
      */
-    uint __filesystemPollWaitSeconds() const;  // TODO: Move to CLI parser when ready
     uint filesystemPollWaitSeconds() const;
 
     /**
@@ -356,7 +284,6 @@ public:
      * 
      * @return uint32_t
      */
-    uint32_t __sequenceCleanerPollWaitMinutes() const;  // TODO: Move to CLI parser when ready
     uint32_t sequenceCleanerPollWaitMinutes() const;
 
     /**
@@ -364,7 +291,6 @@ public:
      * 
      * @return uint32_t
      */
-    uint32_t __resourcesCleanerPollWaitSeconds() const;  // TODO: Move to CLI parser when ready
     uint32_t resourcesCleanerPollWaitSeconds() const;
 
     /**
@@ -372,7 +298,6 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string __cacheDir() const;  // TODO: Move to CLI parser when ready
     const std::string cacheDir() const;
 };
 }  // namespace ovms

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "pocapi.hpp"
 
+#include <cstdint>
 #include <string>
 
 #include "poc_api_impl.hpp"
@@ -55,8 +56,8 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     ovms::ServerImpl* srv = (ovms::ServerImpl*)server;
     ovms::GeneralOptionsImpl* go = (ovms::GeneralOptionsImpl*)general_options;
     ovms::MultiModelOptionsImpl* mmo = (ovms::MultiModelOptionsImpl*)multi_model_specific_options;
-    srv->start(go, mmo);
-    return 0;
+    std::int64_t res = srv->start(go, mmo);
+    return (OVMS_Status*)res;  // TODO: Return proper OVMS_Status instead of a raw status code
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
