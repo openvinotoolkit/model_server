@@ -20,47 +20,24 @@ sys.path.append("../../../../demos/common/python")
 import grpc
 import numpy as np
 import classes
-from enum import Enum, auto
 import datetime
 import argparse
 from client_utils import print_statistics
 from tritonclient.grpc import service_pb2, service_pb2_grpc
 from tritonclient.utils import *
 
-class DataType(Enum):
-    INVALID = auto()
-    BOOL = auto()
-    UINT8 = auto()
-    UINT16 = auto()
-    UINT32 = auto()
-    UINT64 = auto()
-    INT8 = auto()
-    INT16 = auto()
-    INT32 = auto()
-    INT64 = auto()
-    FP16 = auto()
-    FP32 = auto()
-    FP64 = auto()
-    STRING = auto()
-
-def _triton_datatype_to_contents_field_name(datatype):
-    """
-        FIELD_NAME:         DATATYPE:
-        bool_contents       "BOOL"
-        bytes_contents      "BYTES"
-        fp32_contents       "FP32"
-        fp64_contents       "FP64"
-        int64_contents      "INT64"
-        int_contents        "INT32"
-        uint64_contents     "UINT64"
-        uint_contents       "UINT32"
-    """
-    if datatype == DataType.INT32.name:
-        return "int_contents"
-    elif datatype == DataType.UINT32.name:
-        return "uint_contents"
-    else:
-        return f"{datatype.lower()}_contents"    # all other types
+DataTypeToContentsFieldName = {
+    'BOOL' : 'bool_contents',
+    'BYTES' : 'bytes_contents',
+    'FP32' : 'fp32_contents',
+    'FP64' : 'fp64_contents',
+    'INT64' : 'int64_contents',
+    'INT32' : 'int_contents',
+    'UINT64' : 'uint64_contents',
+    'UINT32' : 'uint_contents',
+    'INT64' : 'int64_contents',
+    'INT32' : 'int_contents',
+}
 
 def as_numpy(response, name):
     index = 0
@@ -70,7 +47,7 @@ def as_numpy(response, name):
             for value in output.shape:
                 shape.append(value)
             datatype = output.datatype
-            field_name = _triton_datatype_to_contents_field_name(datatype)
+            field_name = DataTypeToContentsFieldName[datatype]
             contents = eval(f"output.contents.{field_name}[:]")
             if index < len(response.raw_output_contents):
                 np_array = np.frombuffer(
