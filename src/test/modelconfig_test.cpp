@@ -505,6 +505,9 @@ TEST(ModelConfig, plugin_config_legacy_cpu_str) {
     EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
     EXPECT_EQ(actualPluginConfig["AFFINITY"], "NONE");
     EXPECT_EQ(actualPluginConfig["INFERENCE_NUM_THREADS"], "2");
+    EXPECT_EQ(actualPluginConfig.count("CPU_THREADS_NUM"), 0);
+    EXPECT_EQ(actualPluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
+    EXPECT_EQ(actualPluginConfig.count("CPU_BIND_THREAD"), 0);
 }
 
 TEST(ModelConfig, plugin_config_legacy_gpu) {
