@@ -98,6 +98,8 @@ cc_library(
         "buffer.hpp",
         "cleaner_utils.cpp",
         "cleaner_utils.hpp",
+        "cli_parser.cpp",
+        "cli_parser.hpp",
         "config.cpp",
         "config.hpp",
         "custom_node.cpp",
