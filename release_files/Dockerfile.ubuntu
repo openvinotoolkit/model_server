@@ -84,7 +84,7 @@ COPY drivers /drivers
 RUN	set -e ; \
 	set -x ; \
         apt update -y ; \
-        apt install -y curl ; \
+        apt install -y curl libpugixml1v5 ; \
 	if [ "$GPU" == "1" ] ; then \
                 apt-get update && apt-get  install -y libnuma1 ocl-icd-libopencl1 && rm -rf /var/lib/apt/lists/* && \
 	        case $INSTALL_DRIVER_VERSION in \
@@ -122,7 +122,6 @@ RUN	set -e ; \
                         cd /drivers/${INSTALL_DRIVER_VERSION} && \
                             dpkg-scanpackages .  > Packages && \
                             cd - ; \
-
                         echo "deb [trusted=yes arch=amd64] file:/drivers/${INSTALL_DRIVER_VERSION} ./" > /etc/apt/sources.list.d/intel-graphics-${INSTALL_DRIVER_VERSION}.list ; \
                         apt-get update && \
                         apt-get install -y \
