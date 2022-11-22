@@ -72,14 +72,14 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
-  INSTALL_DRIVER_VERSION ?= "21.48.21782"
+  INSTALL_DRIVER_VERSION ?= "22.35.24055"
   DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/0f647e6b75a87e334f44e0451f0f7ef9c66141c3/swf_drop/packages/releases/l_openvino_toolkit_ubuntu20_2022.3.0.8693.0f647e6b75a_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  INSTALL_DRIVER_VERSION ?= "21.38.21026"
+  INSTALL_DRIVER_VERSION ?= "22.28.23726"
   DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/0f647e6b75a87e334f44e0451f0f7ef9c66141c3/swf_drop/packages/releases/l_openvino_toolkit_rhel8_2022.3.0.8693.0f647e6b75a_x86_64.tgz
 endif
 

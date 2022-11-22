@@ -76,7 +76,7 @@ You can build your own Docker image executing the `make docker_build` command in
 In the `./dist` directory it will generate: 
 
 - image tagged as openvino/model_server:latest - with CPU, NCS, and HDDL support
-- image tagged as openvino/model_server:latest-gpu - with CPU, NCS, HDDL, and iGPU support
+- image tagged as openvino/model_server:latest-gpu - with CPU, NCS, HDDL, and iGPU, dGPU support
 - image tagged as openvino/model_server:latest-nginx-mtls - with CPU, NCS, and HDDL support and a reference nginx setup of mTLS integration
 - release package (.tar.gz, with ovms binary and necessary libraries)
 
@@ -98,13 +98,13 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --port 9001 --target_device GPU
 ```
 
-*Note:* The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
+*Note:* The public docker image includes the OpenCL drivers for GPU in version 22.35.24055 for ubuntu20.04 based image and 22.28.23726 for UBI8.
 
-### Model Server image with DG2 support (Ubuntu 20.04)
+### Model Server image using preproduction gpu drivers (Ubuntu 20.04)
 
-Image with DG2 GPU support has not been published. To build the image yourself you need to have DG2 drivers installed on the host and NEO Runtime packages available. 
+To build the image, you need to have NEO Runtime packages available. Contact Intel representative to get the access to the preproduction drivers.
 
-Put NEO Runtime packages in the catalog `<model_server_dir>/release_files/drivers/dg2` and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
+Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2` and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
 
 Example:
 ```
