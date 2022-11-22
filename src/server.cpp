@@ -32,8 +32,10 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sysexits.h>
 #include <unistd.h>
 
+#include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
@@ -322,43 +324,23 @@ void Server::shutdownModules() {
 }
 
 // OVMS Start
-// TODO: Merge with C-API Start CVS-95439
 int Server::start(int argc, char** argv) {
-    ovms::Server& server = ovms::Server::instance();
-    installSignalHandlers(server);
-    try {
-        auto& config = ovms::Config::instance().parse(argc, argv);
-        configure_logger(config.logLevel(), config.logPath());
-        logConfig(config);
-        ModulesShutdownGuard shutdownGuard(*this);
-        auto retCode = this->startModules(config);
-        if (retCode)
-            return retCode;
-
-        while (!shutdown_request) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        if (shutdown_request == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-        }
-        SPDLOG_INFO("Shutting down");
-    } catch (std::exception& e) {
-        SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
-        return EXIT_FAILURE;
-    } catch (...) {
-        SPDLOG_ERROR("Unknown exception catch - will now terminate.");
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
+    ovms::CLIParser parser;
+    ovms::GeneralOptionsImpl go;
+    ovms::MultiModelOptionsImpl mmo;
+    parser.parse(argc, argv);
+    parser.prepare(&go, &mmo);
+    return start(&go, &mmo);
 }
 
 // C-API Start
-// TODO: Merge with OVMS Start CVS-95439
 int Server::start(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
     ovms::Server& server = ovms::Server::instance();
     installSignalHandlers(server);
     try {
-        auto& config = ovms::Config::instance().parse(go, mmo);
+        auto& config = ovms::Config::instance();
+        if (!config.parse(go, mmo))
+            return EX_USAGE;
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);
         ModulesShutdownGuard shutdownGuard(*this);
