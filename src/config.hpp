@@ -21,6 +21,11 @@
 #include "poc_api_impl.hpp"
 
 namespace ovms {
+<<<<<<< Updated upstream
+=======
+class GeneralOptionsImpl;
+class MultiModelOptionsImpl;
+>>>>>>> Stashed changes
 
 /**
      * @brief Provides all the configuration options from command line
@@ -43,8 +48,45 @@ private:
          */
     const std::string empty;
 
+<<<<<<< Updated upstream
     GeneralOptionsImpl go;
     MultiModelOptionsImpl mmo;
+=======
+    // new
+    std::string _configPath;
+    uint64_t _port = 9178;
+    std::string _cpuExtensionLibraryPath;
+    std::string _grpcBindAddress = "0.0.0.0";
+    uint64_t _restPort = 0;
+    std::string _restBindAddress = "0.0.0.0";
+    uint _grpcWorkers = 1;
+    uint _restWorkers = 8;  // TODO: In OVMS this is nproc * 4
+    std::string _modelName;
+    std::string _modelPath;
+    std::string _batchSize;
+    std::string _shape;
+    std::string _layout;
+    std::string _modelVersionPolicy;
+    uint32_t _nireq = 0;
+    std::string _targetDevice;
+    std::string _pluginConfig;
+    bool _stateful = false;
+    bool _metricsEnabled = false;
+    std::string _metricsList;
+    bool _idleSequenceCleanup = true;
+    bool _lowLatencyTransformation = false;
+    uint32_t _maxSequenceNumber = 500;
+    std::string _logLevel = "DEBUG";
+    std::string _logPath;
+#ifdef MTR_ENABLED
+    std::string _tracePath;
+#endif
+    std::string _grpcChannelArguments;
+    uint _filesystemPollWaitSeconds = 1;
+    uint32_t _sequenceCleanerPollWaitMinutes = 5;
+    uint32_t _resourcesCleanerPollWaitSeconds = 1;
+    std::string _cacheDir;
+>>>>>>> Stashed changes
 
 public:
     /**
@@ -65,7 +107,11 @@ public:
          * @return Config& 
          */
     Config& parse(int argc, char** argv);
+<<<<<<< Updated upstream
     bool parse(GeneralOptionsImpl*, MultiModelOptionsImpl*);
+=======
+    Config& parse(GeneralOptionsImpl*, MultiModelOptionsImpl*);
+>>>>>>> Stashed changes
 
     /**
          * @brief Validate passed arguments
@@ -240,6 +286,7 @@ public:
      *
      * @return uint
      */
+    uint32_t __maxSequenceNumber() const;  // TODO: Move to CLI parser when ready
     uint32_t maxSequenceNumber() const;
 
     /**

@@ -38,5 +38,11 @@ const void* Buffer::data() const {
 size_t Buffer::getByteSize() const {
     return byteSize;
 }
+const BufferType Buffer::getBufferType() const {
+    return bufferType;
+}
+const std::optional<uint32_t> Buffer::getDeviceId() const {
+    return bufferDeviceId;
+}
 Buffer::~Buffer() = default;
 }  // namespace ovms

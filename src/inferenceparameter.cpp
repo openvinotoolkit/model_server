@@ -21,7 +21,7 @@
 namespace ovms {
 // TODO should we own our own copy of value?
 //
-static size_t DataTypeToByteSize(DataType datatype) {
+static size_t DataTypeToByteSize(OVMS_DataType datatype) {
     switch (datatype) {
     case OVMS_DATATYPE_FP32:
     case OVMS_DATATYPE_I32:
@@ -32,7 +32,7 @@ static size_t DataTypeToByteSize(DataType datatype) {
         return 0;
     }
 }
-InferenceParameter::InferenceParameter(const char* name, DataType datatype, const void* data) :
+InferenceParameter::InferenceParameter(const char* name, OVMS_DataType datatype, const void* data) :
     name(name),
     datatype(datatype),
     data(reinterpret_cast<const char*>(data), DataTypeToByteSize(datatype)) {
@@ -41,7 +41,7 @@ InferenceParameter::InferenceParameter(const char* name, DataType datatype, cons
 const std::string& InferenceParameter::getName() const {
     return this->name;
 }
-DataType InferenceParameter::getDataType() const {
+OVMS_DataType InferenceParameter::getDataType() const {
     return this->datatype;
 }
 size_t InferenceParameter::getByteSize() const {

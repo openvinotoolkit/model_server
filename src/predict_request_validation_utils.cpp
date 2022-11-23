@@ -23,9 +23,14 @@
 
 #include <spdlog/spdlog.h>
 
+#include "buffer.hpp"
+#include "capi_frontend/capi_utils.hpp"
+#include "inferencerequest.hpp"
+#include "inferencetensor.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "modelconfig.hpp"
+#include "pocapiinternal.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
@@ -56,12 +61,20 @@ dimension_value_t RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getDim(siz
     return tensor.tensor_shape().dim(i).size();
 }
 template <>
+dimension_value_t RequestShapeInfo<InferenceTensor, shape_t>::getDim(size_t i) {
+    return tensor.getShape()[i];
+}
+template <>
 size_t RequestShapeInfo<KFSTensorInputProto, KFSShapeType>::getShapeSize() {
     return tensor.shape().size();
 }
 template <>
 size_t RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getShapeSize() {
     return tensor.tensor_shape().dim_size();
+}
+template <>
+size_t RequestShapeInfo<InferenceTensor, shape_t>::getShapeSize() {
+    return tensor.getShape().size();
 }
 template <>
 const TFSShapeType& RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getShape() {
@@ -71,7 +84,10 @@ template <>
 const KFSShapeType& RequestShapeInfo<KFSTensorInputProto, KFSShapeType>::getShape() {
     return tensor.shape();
 }
-
+template <>
+const shape_t& RequestShapeInfo<InferenceTensor, shape_t>::getShape() {
+    return tensor.getShape();
+}
 template <typename RequestType, typename InputTensorType, typename InputIterator, typename ShapeType>
 class RequestValidator {
     const RequestType& request;
@@ -85,6 +101,8 @@ class RequestValidator {
     InputIterator it;
 
     RequestValidator() = delete;
+
+    const std::string* currentlyValidatedName;
 
     const std::string& getCurrentlyValidatedInputName() const;
     const InputTensorType& getInputFromIt(const InputIterator& it) const;
@@ -139,6 +157,11 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
 }
 
 template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateRequestCoherency() const {
+    return StatusCode::OK;
+}
+
+template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfInputs() const {
     size_t expectedNumberOfInputs = inputsInfo.size();
 
@@ -163,21 +186,28 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
 
 template <>
 const std::string& RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::getCurrentlyValidatedInputName() const {
-    return it->name();
+    return *currentlyValidatedName;
 }
-
 template <>
 const std::string& RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::getCurrentlyValidatedInputName() const {
-    return it->first;
+    return *currentlyValidatedName;
 }
+template <>
+const std::string& RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::getCurrentlyValidatedInputName() const {
+    return *currentlyValidatedName;
+}
+
 template <>
 const KFSTensorInputProto& RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::getInputFromIt(const KFSInputTensorIteratorType& it) const {
     return *it;
 }
-
 template <>
 const TFSInputTensorType& RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::getInputFromIt(const TFSInputTensorIteratorType& it) const {
     return it->second;
+}
+template <>
+const InferenceTensor& RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::getInputFromIt(const InferenceTensor* const& it) const {
+    return *it;
 }
 
 template <>
@@ -196,20 +226,33 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", servableName, servableVersion, details);
     return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
 }
+template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateNumberOfInputs() const {
+    size_t expectedNumberOfInputs = inputsInfo.size();
+    if (request.getInputsSize() > 0 && expectedNumberOfInputs == static_cast<size_t>(request.getInputsSize())) {
+        return StatusCode::OK;
+    }
+    std::stringstream ss;
+    ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request.getInputsSize();
+    const std::string details = ss.str();
+    SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", servableName, servableVersion, details);
+    return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
+}
 
 template <>
 Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateAndGetInput(const TFSRequestType& request, const std::string& name, TFSInputTensorIteratorType& it, size_t& bufferId) {
     it = request.inputs().find(name);
     if (it != request.inputs().end()) {
+        currentlyValidatedName = &name;
         return StatusCode::OK;
     }
+    currentlyValidatedName = nullptr;
     std::stringstream ss;
     ss << "Required input: " << name;
     const std::string details = ss.str();
     SPDLOG_DEBUG("[servable name: {} version: {}] Missing input with specific name - {}", servableName, servableVersion, details);
     return Status(StatusCode::INVALID_MISSING_INPUT, details);
 }
-
 template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateAndGetInput(const KFSRequest& request, const std::string& name, KFSInputTensorIteratorType& it, size_t& bufferId) {
     it = request.inputs().begin();
@@ -222,8 +265,42 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
         ++bufferId;
     }
     if (it != request.inputs().end()) {
+        currentlyValidatedName = &name;
         return StatusCode::OK;
     }
+    currentlyValidatedName = nullptr;
+    std::stringstream ss;
+    ss << "Required input: " << name;
+    const std::string details = ss.str();
+    SPDLOG_DEBUG("[servable name: {} version: {}] Missing input with specific name - {}", servableName, servableVersion, details);
+    return Status(StatusCode::INVALID_MISSING_INPUT, details);
+}
+template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateAndGetInput(const InferenceRequest& request, const std::string& name, const InferenceTensor*& it, size_t& bufferId) {
+    if (request.getInput(name.c_str(), &it) != StatusCode::NONEXISTENT_TENSOR) {
+        currentlyValidatedName = &name;
+        const Buffer* buffer = it->getBuffer();
+        const BufferType bufType = buffer->getBufferType();
+        if (bufType < BufferType::OVMS_BUFFERTYPE_CPU || bufType > BufferType::OVMS_BUFFERTYPE_HDDL) {
+            std::stringstream ss;
+            ss << "Required input: " << name;
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid buffer type for input with specific name - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_BUFFER_TYPE, details);
+        }
+
+        if (buffer->getBufferType() == BufferType::OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != 0) {
+            std::stringstream ss;
+            ss << "Required input: " << name;
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid device id for buffer, input with specific name - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_DEVICE_ID, details);
+        }
+
+        return StatusCode::OK;
+    }
+
+    currentlyValidatedName = nullptr;
     std::stringstream ss;
     ss << "Required input: " << name;
     const std::string details = ss.str();
@@ -259,10 +336,21 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     }
     return StatusCode::OK;
 }
-
 template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfBinaryInputShapeDimensions(const KFSTensorInputProto& proto) const {
     RequestShapeInfo<KFSTensorInputProto, KFSShapeType> rsi(proto);
+    if (rsi.getShapeSize() != 1) {
+        std::stringstream ss;
+        ss << "Expected number of binary input shape dimensions: 1; Actual: " << rsi.getShapeSize() << "; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of shape dimensions - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
+    }
+    return StatusCode::OK;
+}
+template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateNumberOfBinaryInputShapeDimensions(const InferenceTensor& proto) const {
+    RequestShapeInfo<InferenceTensor, shape_t> rsi(proto);
     if (rsi.getShapeSize() != 1) {
         std::stringstream ss;
         ss << "Expected number of binary input shape dimensions: 1; Actual: " << rsi.getShapeSize() << "; input name: " << getCurrentlyValidatedInputName();
@@ -336,6 +424,31 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     } else if (shapeMode != AUTO) {
         std::stringstream ss;
         ss << "Expected: " << servableBatchSize.toString() << "; Actual: " << proto.contents().bytes_contents_size() << "; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+    return StatusCode::OK;
+}
+template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkBinaryBatchSizeMismatch(const InferenceTensor& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    RequestShapeInfo<InferenceTensor, shape_t> rsi(proto);
+    if (rsi.getDim(0) <= 0) {
+        std::stringstream ss;
+        ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+    if (servableBatchSize.match(rsi.getDim(0))) {
+        return StatusCode::OK;
+    }
+    if (batchingMode == AUTO) {
+        finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+        return StatusCode::OK;
+    } else if (shapeMode != AUTO) {
+        std::stringstream ss;
+        ss << "Expected: " << servableBatchSize.toString() << "; Actual: " << proto.getBuffer()->getByteSize() << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
@@ -518,6 +631,24 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     }
     return StatusCode::OK;
 }
+template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateTensorContentSize(const InferenceTensor& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
+    size_t expectedValueCount = 1;
+    for (size_t i = 0; i < proto.getShape().size(); i++) {
+        expectedValueCount *= proto.getShape()[i];
+    }
+    if (proto.getBuffer()->getByteSize()) {
+        size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+        if (expectedContentSize != proto.getBuffer()->getByteSize()) {
+            std::stringstream ss;
+            ss << "Expected: " << expectedContentSize << " bytes; Actual: " << proto.getBuffer()->getByteSize() << " bytes; input name: " << getCurrentlyValidatedInputName();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+        }
+    }
+    return StatusCode::OK;
+}
 
 template <>
 Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const TFSInputTensorType& proto) const {
@@ -552,6 +683,22 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     }
     return StatusCode::OK;
 }
+template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InferenceTensor& proto) const {
+    // Network and request must have the same number of shape dimensions, higher than 0
+    const auto& shape = inputInfo.getShape();
+    if (proto.getShape().size() <= 0 ||
+        shape.size() != static_cast<size_t>(proto.getShape().size())) {
+        std::stringstream ss;
+        ss << "Expected: " << shape.toString()
+           << "; Actual: " << tensorShapeToString(proto.getShape())
+           << "; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of shape dimensions - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
+    }
+    return StatusCode::OK;
+}
 
 template <>
 Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validatePrecision(const ovms::TensorInfo& inputInfo, const TFSInputTensorType& proto) const {
@@ -566,13 +713,25 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     }
     return StatusCode::OK;
 }
-
 template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validatePrecision(const ovms::TensorInfo& inputInfo, const KFSTensorInputProto& proto) const {
     if (proto.datatype() != ovmsPrecisionToKFSPrecision(inputInfo.getPrecision())) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()
            << "; Actual: " << proto.datatype()
+           << "; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid precision - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_PRECISION, details);
+    }
+    return StatusCode::OK;
+}
+template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validatePrecision(const ovms::TensorInfo& inputInfo, const InferenceTensor& proto) const {
+    if (proto.getDataType() != getPrecisionAsOVMSDataType(inputInfo.getPrecision())) {
+        std::stringstream ss;
+        ss << "Expected: " << inputInfo.getPrecisionAsString()
+           << "; Actual: " << proto.getDataType()
            << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid precision - {}", servableName, servableVersion, details);
@@ -603,13 +762,21 @@ bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterator
     }
     return false;
 }
-
 template <>
 bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::checkIfBinaryInputUsed(const KFSTensorInputProto& proto, const std::string inputName) const {
     if (proto.datatype() == "BYTES") {
         SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.contents().bytes_contents_size());
         return true;
     }
+    return false;
+}
+template <>
+bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkIfBinaryInputUsed(const InferenceTensor& proto, const std::string inputName) const {
+    // TODO no strig no bytes ?
+    // if (proto.getDataType() == "BYTES") {
+    //     SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.contents().bytes_contents_size());
+    //     return true;
+    // }
     return false;
 }
 
@@ -689,6 +856,12 @@ template <>
 Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
     OVMS_PROFILE_FUNCTION();
     return RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+}
+
+template <>
+Status validate(const InferenceRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+    OVMS_PROFILE_FUNCTION();
+    return RequestValidator<InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 }  // namespace request_validation_utils
 }  // namespace ovms

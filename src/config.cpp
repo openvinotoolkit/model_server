@@ -43,12 +43,22 @@ Config& Config::parse(int argc, char** argv) {
     if (!this->parse(&go, &mmo))
         exit(EX_USAGE);
     return *this;
-}
+
+uint32_t Config::maxSequenceNumber() const { return _maxSequenceNumber; }
+
 
 bool Config::parse(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
     this->go = *go;
     this->mmo = *mmo;
     return validate();
+}
+
+Config& Config::parse(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
+    // TODO: Implement
+    this->_port = go->grpcPort;
+    this->_restPort = go->restPort;
+    this->_configPath = mmo->configPath;
+    return instance();
 }
 
 bool Config::check_hostname_or_ip(const std::string& input) {

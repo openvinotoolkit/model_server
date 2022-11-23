@@ -23,14 +23,14 @@ namespace ovms {
 // TODO should we own our own copy of value?
 class InferenceParameter {
     const std::string name;
-    DataType datatype;
+    OVMS_DataType datatype;
     const std::string data;
 
 public:
-    InferenceParameter(const char* name, DataType datatype, const void* data);
-    InferenceParameter(const char* name, DataType datatype, const void* data, size_t byteSize);
+    InferenceParameter(const char* name, OVMS_DataType datatype, const void* data);
+    InferenceParameter(const char* name, OVMS_DataType datatype, const void* data, size_t byteSize);
     const std::string& getName() const;
-    DataType getDataType() const;
+    OVMS_DataType getDataType() const;
     size_t getByteSize() const;
     const void* getData() const;
 };

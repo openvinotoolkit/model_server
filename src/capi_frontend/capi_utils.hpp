@@ -1,4 +1,3 @@
-#pragma once
 //*****************************************************************************
 // Copyright 2022 Intel Corporation
 //
@@ -14,26 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <memory>
-#include <optional>
+#pragma once
+#include <string>
 
-#include "pocapi.hpp"
+#include "../pocapi.hpp"
+#include "../precision.hpp"
+
 namespace ovms {
+class Status;
+class Shape;
+class InferenceResponse;
+std::string tensorShapeToString(const Shape& tensorShape);
 
-class Buffer {
-    const void* ptr;
-    size_t byteSize;
-    BufferType bufferType;
-    std::optional<uint32_t> bufferDeviceId;
-    std::unique_ptr<char[]> ownedCopy = nullptr;
-
-public:
-    Buffer(const void* ptr, size_t byteSize, BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt, bool createCopy = false);
-    ~Buffer();
-    const void* data() const;
-    const BufferType getBufferType() const;
-    const std::optional<uint32_t> getDeviceId() const;
-    size_t getByteSize() const;
-};
-
+size_t DataTypeSize(const OVMS_DataType& datatype);
 }  // namespace ovms
