@@ -19,7 +19,6 @@
 
 #include "../shape.hpp"
 
-
 namespace ovms {
 
 std::string tensorShapeToString(const Shape& shape) {

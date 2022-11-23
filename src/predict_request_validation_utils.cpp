@@ -289,7 +289,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
             return Status(StatusCode::INVALID_BUFFER_TYPE, details);
         }
 
-        if (buffer->getBufferType() == BufferType::OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != 0) {
+        if (buffer->getBufferType() == BufferType::OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != std::nullopt && buffer->getDeviceId() != 0) {
             std::stringstream ss;
             ss << "Required input: " << name;
             const std::string details = ss.str();

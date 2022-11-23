@@ -18,8 +18,8 @@
 #include <functional>
 
 #include "../capi_frontend/capi_utils.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
 #include "../inferenceparameter.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../pocapiinternal.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"
@@ -414,7 +414,7 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
     delete content;
     size_t dataSize = data.size();
     if (badSize)
-        dataSize += 10;
+        dataSize += 1;
 
     request.setInputBuffer(name.c_str(), shape.data(), dataSize * sizeof(float), bufferType, deviceId);
 }

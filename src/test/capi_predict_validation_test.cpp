@@ -446,7 +446,7 @@ TEST_F(CAPIPredictValidation, RequestCorectDeviceId) {
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
 
-TEST_F(CAPIPredictValidation, RequestNullDeviceId) {
+TEST_F(CAPIPredictValidation, RequestNotNullDeviceId) {
     preparePredictRequest(request,
         {{"Input_FP32_1_224_224_3_NHWC",
              std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
@@ -456,9 +456,9 @@ TEST_F(CAPIPredictValidation, RequestNullDeviceId) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, badSize, BufferType::OVMS_BUFFERTYPE_GPU);
+        {}, badSize, BufferType::OVMS_BUFFERTYPE_CPU, 1);
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_DEVICE_ID) << status.string();
 }
 
 TEST_F(CAPIPredictValidation, RequestIncorrectContentSizeBatchAuto) {

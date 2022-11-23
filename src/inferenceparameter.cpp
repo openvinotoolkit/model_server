@@ -40,7 +40,6 @@ size_t DataTypeToByteSize(OVMS_DataType datatype) {
     };
     auto it = datatypeSizeMap.find(datatype);
     if (it == datatypeSizeMap.end()) {
-        throw std::invalid_argument("Unsupported");
         return 0;
     }
     return it->second;
