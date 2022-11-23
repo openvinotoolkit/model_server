@@ -7,23 +7,13 @@
    :hidden:
 
    ovms_docs_quick_start_guide
-   ovms_docs_architecture
-   ovms_docs_models_repository
    ovms_docs_starting_server
-   ovms_docs_server_api
-   ovms_docs_clients
-   ovms_docs_dag
-   ovms_docs_binary_input
-   ovms_docs_model_cache
-   ovms_docs_metrics
-   ovms_sample_cpu_extension
-   ovms_docs_dynamic_input
-   ovms_docs_stateful_models
-   ovms_docs_custom_loader
+   ovms_docs_features
+   ovms_docs_server_app
    ovms_docs_performance_tuning
-   ovms_docs_kubernetes
    ovms_docs_demos
    ovms_docs_troubleshooting
+
 
 @endsphinxdirective
 
@@ -39,8 +29,6 @@ Model repositories may reside on a locally accessible file system (e.g. NFS), as
 Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage. 
 
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
-
-Review the [Architecture concept](architecture.md) document for more details.
 
 Key features: 
 - support for multiple frameworks, such as Caffe, TensorFlow, MXNet, PaddlePaddle and ONNX
