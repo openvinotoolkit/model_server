@@ -782,6 +782,17 @@ Status ModelInstance::fetchModelFilepaths() {
         }
     }
     if (!found) {
+        found = true;
+        modelFiles.clear();
+        for (auto extension : TF_MODEL_FILES_EXTENSIONS) {
+            auto file = findModelFilePathWithExtension(extension);
+            if (file.empty()) {
+                found = false;
+            }
+            modelFiles.push_back(file);
+        }
+    }
+    if (!found) {
         SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
         return StatusCode::FILE_INVALID;
     }
