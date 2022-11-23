@@ -1674,15 +1674,15 @@ TEST_F(EnsembleFlowTest, OrderOfScheduling) {
 
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     std::vector<int> expectedOrder = {
-                           1,    // try to schedule node_1 with success
-                           2,    // try to schedule node_2, defer (with order ticket #1)
-                           3,    // after node_1 ends, try to run next node (node_3), defer with order ticket #2
-                           2,    // also try to schedule previously deferred nodes, node_2 gets scheduled with success
-                           3};   // node_2 ends, try to schedule previously deferred node_3 with success
+        1,   // try to schedule node_1 with success
+        2,   // try to schedule node_2, defer (with order ticket #1)
+        3,   // after node_1 ends, try to run next node (node_3), defer with order ticket #2
+        2,   // also try to schedule previously deferred nodes, node_2 gets scheduled with success
+        3};  // node_2 ends, try to schedule previously deferred node_3 with success
     int expectedOrderIt = 0;
     int lastValue = 0;
-    for(int orderElement : order) {
-        if(orderElement != lastValue) {
+    for (int orderElement : order) {
+        if (orderElement != lastValue) {
             EXPECT_EQ(orderElement, expectedOrder[expectedOrderIt]);
             expectedOrderIt++;
         }
