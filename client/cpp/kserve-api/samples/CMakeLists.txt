@@ -24,3 +24,8 @@ endfunction()
 
 sample(grpc_infer_dummy)
 sample(grpc_server_live)
+sample(grpc_server_ready)
+sample(grpc_server_metadata)
+
+sample(grpc_model_ready)
+sample(grpc_model_metadata)
