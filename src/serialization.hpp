@@ -36,7 +36,6 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-class InferenceTensor;
 
 template <typename T>
 class OutputGetter {

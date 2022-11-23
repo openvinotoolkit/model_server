@@ -161,14 +161,14 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
     const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, OVMS_DataType>& inputInfo,
-    const std::vector<float>& data = {}, bool badSize = false, BufferType bufferType = BufferType::OVMS_BUFFERTYPE_CPU, uint32_t deviceId = 0);
+    const std::vector<float>& data = {}, bool badSize = false, BufferType bufferType = BufferType::OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<float>& data = {}, bool badSize = false, BufferType bufferType = BufferType::OVMS_BUFFERTYPE_CPU, uint32_t deviceId = 0);
+    const std::vector<float>& data = {}, bool badSize = false, BufferType bufferType = BufferType::OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 
 void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
 void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {},
-    bool badSize = false, BufferType bufferType = BufferType::OVMS_BUFFERTYPE_CPU, uint32_t deviceId = 0);
+    bool badSize = false, BufferType bufferType = BufferType::OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize);
@@ -308,9 +308,9 @@ public:
     }
 };
 
-class RequestMockModelInstance : public ovms::ModelInstance {
+class MockedMetadataModelIns : public ovms::ModelInstance {
 public:
-    RequestMockModelInstance(ov::Core& ieCore) :
+    MockedMetadataModelIns(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", 42, ieCore) {}
     MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
     MOCK_METHOD(ovms::Dimension, getBatchSize, (), (const, override));

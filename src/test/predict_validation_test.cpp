@@ -35,14 +35,14 @@ using ::testing::ReturnRef;
 class TfsPredictValidation : public ::testing::Test {
 protected:
     std::unique_ptr<ov::Core> ieCore;
-    std::unique_ptr<NiceMock<RequestMockModelInstance>> instance;
+    std::unique_ptr<NiceMock<MockedMetadataModelIns>> instance;
     tensorflow::serving::PredictRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
-        instance = std::make_unique<NiceMock<RequestMockModelInstance>>(*ieCore);
+        instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
 
         servableInputs = ovms::tensor_map_t({
             {"Input_FP32_1_224_224_3_NHWC",
@@ -663,14 +663,14 @@ INSTANTIATE_TEST_SUITE_P(
 class KFSPredictValidation : public ::testing::Test {
 protected:
     std::unique_ptr<ov::Core> ieCore;
-    std::unique_ptr<NiceMock<RequestMockModelInstance>> instance;
+    std::unique_ptr<NiceMock<MockedMetadataModelIns>> instance;
     ::KFSRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
-        instance = std::make_unique<NiceMock<RequestMockModelInstance>>(*ieCore);
+        instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
 
         servableInputs = ovms::tensor_map_t({
             {"Input_FP32_1_224_224_3_NHWC",
@@ -987,14 +987,14 @@ TEST_F(KFSPredictValidation, RequestIncorrectContentSizeShapeAuto) {
 class KFSPredictValidationInputTensorContent : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     std::unique_ptr<ov::Core> ieCore;
-    std::unique_ptr<NiceMock<RequestMockModelInstance>> instance;
+    std::unique_ptr<NiceMock<MockedMetadataModelIns>> instance;
     ::KFSRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
-        instance = std::make_unique<NiceMock<RequestMockModelInstance>>(*ieCore);
+        instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
     }
 };
 
@@ -1043,14 +1043,14 @@ TEST_P(KFSPredictValidationInputTensorContent, RequestCorrectContentSizeInputTen
 class KFSPredictValidationInputTensorContentNegative : public ::testing::Test {
 protected:
     std::unique_ptr<ov::Core> ieCore;
-    std::unique_ptr<NiceMock<RequestMockModelInstance>> instance;
+    std::unique_ptr<NiceMock<MockedMetadataModelIns>> instance;
     ::KFSRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
-        instance = std::make_unique<NiceMock<RequestMockModelInstance>>(*ieCore);
+        instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
 
         servableInputs = ovms::tensor_map_t({
             {"Input_FP32_1_224_224_3_NHWC",

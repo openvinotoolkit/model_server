@@ -25,5 +25,4 @@ class Shape;
 class InferenceResponse;
 std::string tensorShapeToString(const Shape& tensorShape);
 
-size_t DataTypeSize(const OVMS_DataType& datatype);
 }  // namespace ovms

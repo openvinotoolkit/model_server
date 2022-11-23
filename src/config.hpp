@@ -240,7 +240,6 @@ public:
      *
      * @return uint
      */
-    uint32_t __maxSequenceNumber() const;  // TODO: Move to CLI parser when ready
     uint32_t maxSequenceNumber() const;
 
     /**

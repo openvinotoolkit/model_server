@@ -32,7 +32,7 @@ public:
     ~Buffer();
     const void* data() const;
     const BufferType getBufferType() const;
-    const std::optional<uint32_t> getDeviceId() const;
+    const std::optional<uint32_t>& getDeviceId() const;
     size_t getByteSize() const;
 };
 

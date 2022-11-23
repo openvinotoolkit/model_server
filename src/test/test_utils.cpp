@@ -19,6 +19,7 @@
 
 #include "../capi_frontend/capi_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "../inferenceparameter.hpp"
 #include "../pocapiinternal.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"
@@ -37,7 +38,7 @@ void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, c
     }
 }
 
-void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool badSize, BufferType bufferType, uint32_t deviceId) {
+void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool badSize, BufferType bufferType, std::optional<uint32_t> deviceId) {
     request.removeAllInputs();
     for (auto const& it : requestInputs) {
         prepareCAPIInferInputTensor(request, it.first, it.second, data, badSize, bufferType, deviceId);
@@ -384,7 +385,7 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
 }
 
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<float>& data, bool badSize, BufferType bufferType, uint32_t deviceId) {
+    const std::vector<float>& data, bool badSize, BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto [shape, type] = inputInfo;
     prepareCAPIInferInputTensor(request, name,
         {shape, getPrecisionAsOVMSDataType(type)},
@@ -392,7 +393,7 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
 }
 
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, OVMS_DataType>& inputInfo,
-    const std::vector<float>& data, bool badSize, BufferType bufferType, uint32_t deviceId) {
+    const std::vector<float>& data, bool badSize, BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto [shape, datatype] = inputInfo;
     size_t elementsCount = 1;
     for (auto const& dim : shape) {
@@ -404,12 +405,13 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
 
     std::string* content = new std::string("");
     if (data.size() == 0) {
-        content->assign(elementsCount * ovms::DataTypeSize(datatype), '1');
+        content->assign(elementsCount * ovms::DataTypeToByteSize(datatype), '1');
     } else {
-        content->resize(elementsCount * ovms::DataTypeSize(datatype));
+        content->resize(elementsCount * ovms::DataTypeToByteSize(datatype));
         std::memcpy(content->data(), data.data(), content->size());
     }
 
+    delete content;
     size_t dataSize = data.size();
     if (badSize)
         dataSize += 10;

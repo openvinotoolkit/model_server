@@ -41,7 +41,7 @@ size_t Buffer::getByteSize() const {
 const BufferType Buffer::getBufferType() const {
     return bufferType;
 }
-const std::optional<uint32_t> Buffer::getDeviceId() const {
+const std::optional<uint32_t>& Buffer::getDeviceId() const {
     return bufferDeviceId;
 }
 Buffer::~Buffer() = default;
