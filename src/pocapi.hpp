@@ -24,11 +24,7 @@ struct OVMS_ServerGeneralOptions;
 struct OVMS_ServerMultiModelOptions;
 
 // TODO reuse this in precision.hpp
-<<<<<<< Updated upstream
-enum DataType {
-=======
 enum OVMS_DataType {
->>>>>>> Stashed changes
     OVMS_DATATYPE_BF16,
     OVMS_DATATYPE_FP64,
     OVMS_DATATYPE_FP32,
