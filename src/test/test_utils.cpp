@@ -415,6 +415,8 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
         std::memcpy(content->data(), data.data(), content->size());
     }
 
+    // TODO Add additional buffer with ownership in tests.
+
     request.setInputBuffer(name.c_str(), data.data(), dataSize, bufferType, deviceId);
 }
 
