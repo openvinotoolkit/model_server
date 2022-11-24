@@ -16,9 +16,6 @@
 #pragma once
 #include <string>
 
-#include "../pocapi.hpp"
-#include "../precision.hpp"
-
 namespace ovms {
 class Shape;
 std::string tensorShapeToString(const Shape& tensorShape);
