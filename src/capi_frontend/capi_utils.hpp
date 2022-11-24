@@ -20,9 +20,7 @@
 #include "../precision.hpp"
 
 namespace ovms {
-class Status;
 class Shape;
-class InferenceResponse;
 std::string tensorShapeToString(const Shape& tensorShape);
 
 }  // namespace ovms
