@@ -93,14 +93,14 @@ RUN     microdnf upgrade -y ; \
                         exit 1 ; \
                 esac ; \
                 echo "Installed opencl driver version:" ;\
-                echo $(rpm -qa | grep intel-opencl) ; \
+                rpm -qa | grep intel-opencl ; \
         fi ; \
         if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
                 rpm -ivh http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/numactl-libs-2.0.12-11.el8.x86_64.rpm; \
                 rpm -ivh http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/numactl-2.0.12-11.el8.x86_64.rpm; \
                 rpm -ivh http://mirror.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
         else  \
-                microdnf install -y tar-2* gzip-1.9*; \
+                microdnf install -y tar-1.30* gzip-1.9*; \
                 mkdir /tmp_ovms ; \
                 curl -L --fail -o /tmp_ovms/deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
                 tar -xf /tmp_ovms/deps.tar.xz -C /tmp_ovms; \
@@ -108,7 +108,7 @@ RUN     microdnf upgrade -y ; \
                 rpm -vi /tmp_ovms/pkg/bin/*.rpm ; \
                 rm -rf /tmp_ovms ; \
         fi ; \
-        microdnf install -y shadow-utils-2*; \
+        microdnf install -y shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
