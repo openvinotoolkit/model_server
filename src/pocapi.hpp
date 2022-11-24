@@ -148,7 +148,7 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
 OVMS_Status* OVMS_ServerStop(OVMS_Server* server);
 
 // OVMS_InferenceRequest
-OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const char* servableName, uint32_t servableVersion); // TODO add passing server here
+OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const char* servableName, uint32_t servableVersion);  // TODO add passing server here
 OVMS_Status* OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount);
@@ -165,7 +165,7 @@ OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* request
 
 // OVMS_Inference Response
 OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* response, uint32_t* count);
-OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* response, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, BufferType* bufferType, uint32_t* deviceId, void** data, size_t* bytesize);
+OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* response, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId);
 OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* response, uint32_t* count);
 OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* response, uint32_t id, OVMS_DataType* datatype, const void** data);
 OVMS_Status* OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);

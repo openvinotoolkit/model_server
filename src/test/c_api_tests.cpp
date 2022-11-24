@@ -182,7 +182,7 @@ TEST_F(CapiInferenceRetrievalTest, Basic) {
     BufferType bufferType = (BufferType)199;
     uint32_t deviceId = -1;
     const char* outputName{nullptr};
-    status = OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &bufferType, &deviceId, &voutputData, &bytesize);
+    status = OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(INPUT_NAME, outputName);
     EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);

@@ -160,6 +160,7 @@ OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* req, const 
     }
     return nullptr;
 }
+
 OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, const char* inputName) {
     // TODO error handling if null
     // if (nullptr == req)
@@ -170,7 +171,8 @@ OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, co
     }
     return nullptr;
 }
-OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, BufferType* bufferType, uint32_t* deviceId, void** data, size_t* bytesize) {
+
+OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId) {
     // TODO error handling if null
     // if (nullptr == req)
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
@@ -197,6 +199,7 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
     *bytesize = buffer->getByteSize();
     return nullptr;
 }
+
 OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* res, uint32_t* count) {
     // TODO error handling if null
     // if (nullptr == req)
@@ -212,6 +215,7 @@ OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* res
     *count = response->getParameterCount();
     return nullptr;
 }
+
 OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* res, uint32_t id, OVMS_DataType* datatype, const void** data) {
     // TODO error handling if null
     // if (nullptr == req)
