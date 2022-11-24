@@ -552,7 +552,7 @@ cc_binary(
     copts = [
     ],
     deps = [
-        "//src:ovms_lib",
+        "//src:ovms_shared",
     ],
     linkstatic = True,
 )
@@ -573,7 +573,7 @@ cc_binary(
     copts = [
     ],
     deps = [
-        "//src:ovms_lib",
+        "//src:ovms_shared",
     ],
     linkstatic = True,
 )
@@ -594,7 +594,7 @@ cc_binary(
         "-Werror",
     ],
     deps = [
-        "//src:ovms_lib",
+        "//src:ovms_shared",
     ],
     linkstatic = False,
 )
@@ -694,7 +694,7 @@ cc_test(
         "-lssl",
     ],
     deps = [
-        "//src:ovms_lib",
+        "//src:ovms_shared",
         "//src:custom_nodes_common_lib",
         "//src:libsampleloader.so",
         "//src:lib_node_mock.so",
