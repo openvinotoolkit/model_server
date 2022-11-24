@@ -41,10 +41,12 @@ protected:
     ovms::tensor_map_t servableInputs;
     bool createCopy{false};
     uint32_t decrementBufferSize{0};
+    std::vector<float> requestData{10000000};
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
         instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
+        std::iota(requestData.begin(), requestData.end(), 1.0);
 
         servableInputs = ovms::tensor_map_t({
             {"Input_FP32_1_224_224_3_NHWC",
@@ -69,7 +71,8 @@ protected:
                 {"Input_I64_1_6_128_128_16_NCDHW",
                     std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
                 {"Input_U16_1_2_8_4_NCHW",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+            requestData);
     }
 };
 
@@ -87,7 +90,8 @@ TEST_F(CAPIPredictValidation, InvalidPrecision) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_PRECISION) << status.string();
 }
@@ -101,7 +105,8 @@ TEST_F(CAPIPredictValidation, RequestNotEnoughInputs) {
 TEST_F(CAPIPredictValidation, RequestTooManyInputs) {
     preparePredictRequest(request,
         {{"Input_FP32_1_224_224_3_NHWC",
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}}});
+            std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_INPUTS) << status.string();
 }
@@ -115,7 +120,8 @@ TEST_F(CAPIPredictValidation, RequestMissingInputName) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_MISSING_INPUT);
@@ -125,7 +131,8 @@ TEST_F(CAPIPredictValidation, RequestWrongInputName) {
     request.removeInput("Input_U16_1_2_8_4_NCHW");
     preparePredictRequest(request,
         {{"BADInput_FP32_1_224_224_3_NHWC",
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}}});
+            std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_INPUTS) << status.string();
 }
@@ -139,7 +146,8 @@ TEST_F(CAPIPredictValidation, RequestTooManyShapeDimensions) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 8, 4}, ovms::Precision::U16}}},
+        requestData);
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS) << status.string();
@@ -154,7 +162,8 @@ TEST_F(CAPIPredictValidation, RequestNotEnoughShapeDimensions) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16, 6}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4, 5}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4, 5}, ovms::Precision::U16}}},
+        requestData);
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS) << status.string();
@@ -169,7 +178,8 @@ TEST_F(CAPIPredictValidation, RequestWrongBatchSize) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{2, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{2, 2, 8, 4}, ovms::Precision::U16}}});  // dim(0) is batch size
+                std::tuple<ovms::shape_t, ovms::Precision>{{2, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);  // dim(0) is batch size
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
@@ -185,7 +195,8 @@ TEST_F(CAPIPredictValidation, RequestWrongBatchSizeAuto) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{2, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{2, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{2, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED) << status.string();
 }
@@ -194,8 +205,7 @@ TEST_F(CAPIPredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     modelConfig.setBatchingParams("auto");
 
     // First is incorrect, second is correct
-    preparePredictRequest(request, {{"im_data", {{3, 3, 800, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{1, 3}, ovms::Precision::FP32}}});
+    preparePredictRequest(request, {{"im_data", {{3, 3, 800, 1344}, ovms::Precision::FP32}}, {"im_info", {{1, 3}, ovms::Precision::FP32}}}, requestData);
 
     servableInputs.clear();
     servableInputs = ovms::tensor_map_t{
@@ -206,8 +216,7 @@ TEST_F(CAPIPredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
 
-    preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{3, 3}, ovms::Precision::FP32}}});
+    preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}}, {"im_info", {{3, 3}, ovms::Precision::FP32}}}, requestData);
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED) << status.string();
@@ -215,8 +224,7 @@ TEST_F(CAPIPredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
 
 TEST_F(CAPIPredictValidation, RequestWrongAndCorrectShapeAuto) {
     modelConfig.parseShapeParameter("auto");
-    preparePredictRequest(request, {{"im_data", {{1, 3, 900, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{1, 3}, ovms::Precision::FP32}}});
+    preparePredictRequest(request, {{"im_data", {{1, 3, 900, 1344}, ovms::Precision::FP32}}, {"im_info", {{1, 3}, ovms::Precision::FP32}}}, requestData);
 
     // First is incorrect, second is correct
     servableInputs.clear();
@@ -229,8 +237,7 @@ TEST_F(CAPIPredictValidation, RequestWrongAndCorrectShapeAuto) {
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
 
     // First is correct, second is incorrect
-    preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{1, 6}, ovms::Precision::FP32}}});
+    preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}}, {"im_info", {{1, 6}, ovms::Precision::FP32}}}, requestData);
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
@@ -251,7 +258,8 @@ TEST_F(CAPIPredictValidation, RequestWrongShapeValues) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 17}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
@@ -267,7 +275,8 @@ TEST_F(CAPIPredictValidation, RequestWrongShapeValuesTwoInputsOneWrong) {  // on
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 17}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
@@ -283,7 +292,8 @@ TEST_F(CAPIPredictValidation, RequestWrongShapeValuesAuto) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
 }
@@ -298,7 +308,8 @@ TEST_F(CAPIPredictValidation, RequestWrongShapeValuesAutoTwoInputs) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 2, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 2, 4}, ovms::Precision::U16}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
 }
@@ -313,7 +324,8 @@ TEST_F(CAPIPredictValidation, RequestWrongShapeValuesAutoNoNamedInput) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 1, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 3, 2, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 3, 2, 4}, ovms::Precision::U16}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
 }
@@ -328,7 +340,8 @@ TEST_F(CAPIPredictValidation, RequestWrongShapeValuesAutoFirstDim) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
@@ -350,7 +363,8 @@ TEST_F(CAPIPredictValidation, RequestWrongShapeValuesFixed) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
 }
@@ -365,7 +379,8 @@ TEST_F(CAPIPredictValidation, RequestWrongShapeValuesFixedFirstDim) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
@@ -381,7 +396,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectContentSize) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, decrementBufferSize);
+        requestData, decrementBufferSize);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
@@ -396,7 +411,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectContentSizeZero) {
     preparePredictRequest(request,
         {{"Input_FP32_1_224_224_3_NHWC",
             std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}}},
-        {}, decrementBufferSize);
+        requestData, decrementBufferSize);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
@@ -411,7 +426,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectBufferType) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, decrementBufferSize, static_cast<BufferType>(999));
+        requestData, decrementBufferSize, static_cast<BufferType>(999));
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BUFFER_TYPE) << status.string();
 }
@@ -426,7 +441,7 @@ TEST_F(CAPIPredictValidation, RequestNegativeBufferType) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, decrementBufferSize, static_cast<BufferType>(-22));
+        requestData, decrementBufferSize, static_cast<BufferType>(-22));
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BUFFER_TYPE) << status.string();
 }
@@ -441,7 +456,7 @@ TEST_F(CAPIPredictValidation, RequestIncorectDeviceId) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_CPU, 1);
+        requestData, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_CPU, 1);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_DEVICE_ID) << status.string();
 }
@@ -456,7 +471,7 @@ TEST_F(CAPIPredictValidation, RequestIncorectBufferType) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_GPU);
+        requestData, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_GPU);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BUFFER_TYPE) << status.string();
 }
@@ -472,7 +487,7 @@ TEST_F(CAPIPredictValidation, RequestCorectDeviceId) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_GPU, 1);
+        requestData, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_GPU, 1);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
@@ -487,7 +502,7 @@ TEST_F(CAPIPredictValidation, RequestNotNullDeviceId) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_CPU, 1);
+        requestData, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_CPU, 1);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_DEVICE_ID) << status.string();
 }
@@ -504,7 +519,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectContentSizeBatchAuto) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, decrementBufferSize);
+        requestData, decrementBufferSize);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
@@ -521,7 +536,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectContentSizeShapeAuto) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        {}, decrementBufferSize);
+        requestData, decrementBufferSize);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
@@ -534,10 +549,12 @@ protected:
 
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
+    std::vector<float> requestData{10000000};
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
         instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
+        std::iota(requestData.begin(), requestData.end(), 1.0);
     }
 };
 
@@ -554,7 +571,7 @@ TEST_P(CAPIPredictValidationInputTensorContent, RequestCorrectContentSizeInputTe
     preparePredictRequest(request,
         {{inputName,
             std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, testedPrecision}}},
-        {},  // data,
+        requestData,  // data,
         false);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
@@ -569,7 +586,8 @@ TEST_F(CAPIPredictValidation, RequestWrongPrecision) {
             {"Input_I64_1_6_128_128_16_NCDHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_PRECISION) << status.string();
@@ -593,7 +611,8 @@ protected:
                     std::tuple<ovms::shape_t, ovms::Precision>{{224, 224, 3, 1}, ovms::Precision::FP32}},
                 {"Input_U8_3_1_128_CNH",
                     std::tuple<ovms::shape_t, ovms::Precision>{{3, 1, 128}, ovms::Precision::U8}},
-            });
+            },
+            requestData);
     }
 };
 
@@ -610,7 +629,8 @@ TEST_F(CAPIPredictValidationArbitraryBatchPosition, RequestWrongBatchSize) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{224, 224, 3, 10}, ovms::Precision::FP32}},
             {"Input_U8_3_1_128_CNH",
                 std::tuple<ovms::shape_t, ovms::Precision>{{3, 1, 128}, ovms::Precision::U8}},
-        });
+        },
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
@@ -624,7 +644,8 @@ TEST_F(CAPIPredictValidationArbitraryBatchPosition, RequestWrongBatchSizeAuto) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{224, 224, 3, 10}, ovms::Precision::FP32}},
             {"Input_U8_3_1_128_CNH",
                 std::tuple<ovms::shape_t, ovms::Precision>{{3, 1, 128}, ovms::Precision::U8}},
-        });
+        },
+        requestData);
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED) << status.string();
@@ -638,7 +659,8 @@ TEST_F(CAPIPredictValidationArbitraryBatchPosition, RequestWrongShapeValues) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{221, 224, 3, 1}, ovms::Precision::FP32}},
             {"Input_U8_3_1_128_CNH",
                 std::tuple<ovms::shape_t, ovms::Precision>{{3, 1, 128}, ovms::Precision::U8}},
-        });
+        },
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
 }
@@ -652,7 +674,8 @@ TEST_F(CAPIPredictValidationArbitraryBatchPosition, RequestWrongShapeValuesAuto)
                 std::tuple<ovms::shape_t, ovms::Precision>{{10, 224, 3, 1}, ovms::Precision::FP32}},
             {"Input_U8_3_1_128_CNH",
                 std::tuple<ovms::shape_t, ovms::Precision>{{3, 1, 128}, ovms::Precision::U8}},
-        });
+        },
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
 }
@@ -676,7 +699,8 @@ protected:
                     std::tuple<ovms::shape_t, ovms::Precision>{{requestBatchSize, 300, 320, 3}, ovms::Precision::FP32}},
                 {"Input_U8_100:200_any_CN",
                     std::tuple<ovms::shape_t, ovms::Precision>{{101, requestBatchSize}, ovms::Precision::U8}},
-            });
+            },
+            requestData);
     }
 };
 
@@ -692,7 +716,8 @@ TEST_F(CAPIPredictValidationDynamicModel, RequestBatchNotInRangeFirstPosition) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{16, 300, 320, 3}, ovms::Precision::FP32}},
             {"Input_U8_100:200_any_CN",
                 std::tuple<ovms::shape_t, ovms::Precision>{{101, 16}, ovms::Precision::U8}},
-        });
+        },
+        requestData);
 
     servableInputs["Input_FP32_any_224:512_224:512_3_NHWC"] = std::make_shared<ovms::TensorInfo>("Input_FP32_any_224:512_224:512_3_NHWC", ovms::Precision::FP32, ovms::Shape{{1, 5}, {224, 512}, {224, 512}, 3}, ovms::Layout{"NHWC"});
     auto status = instance->mockValidate(&request);
@@ -706,7 +731,8 @@ TEST_F(CAPIPredictValidationDynamicModel, RequestDimensionNotInRangeFirstPositio
                 std::tuple<ovms::shape_t, ovms::Precision>{{16, 300, 320, 3}, ovms::Precision::FP32}},
             {"Input_U8_100:200_any_CN",
                 std::tuple<ovms::shape_t, ovms::Precision>{{98, 1}, ovms::Precision::U8}},
-        });
+        },
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
 }
@@ -718,7 +744,8 @@ TEST_F(CAPIPredictValidationDynamicModel, RequestBatchNotInRangeSecondPosition) 
                 std::tuple<ovms::shape_t, ovms::Precision>{{16, 300, 320, 3}, ovms::Precision::FP32}},
             {"Input_U8_100:200_any_CN",
                 std::tuple<ovms::shape_t, ovms::Precision>{{100, 98}, ovms::Precision::U8}},
-        });
+        },
+        requestData);
     servableInputs["Input_U8_100:200_any_CN"] = std::make_shared<ovms::TensorInfo>("Input_U8_100:200_any_CN", ovms::Precision::U8, ovms::Shape{{100, 200}, {1, 5}}, ovms::Layout{"CN"});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
@@ -731,7 +758,8 @@ TEST_F(CAPIPredictValidationDynamicModel, RequestDimensionNotInRangeSecondPositi
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 223, 224, 3}, ovms::Precision::FP32}},
             {"Input_U8_100:200_any_CN",
                 std::tuple<ovms::shape_t, ovms::Precision>{{101, 16}, ovms::Precision::U8}},
-        });
+        },
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
 }
@@ -745,7 +773,7 @@ TEST_F(CAPIPredictValidationDynamicModel, RequestDimensionInRangeWrongTensorCont
             {"Input_U8_100:200_any_CN",
                 std::tuple<ovms::shape_t, ovms::Precision>{{101, 16}, ovms::Precision::U8}},
         },
-        {}, decrementBufferSize);
+        requestData, decrementBufferSize);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
@@ -754,7 +782,10 @@ TEST_F(CAPIPredictValidationDynamicModel, RequestDimensionInRangeWrongTensorCont
 
 class CAPIPredictValidationPrecision : public ::testing::TestWithParam<ovms::Precision> {
 protected:
+    std::vector<float> requestData{10000000};
+
     void SetUp() override {
+        std::iota(requestData.begin(), requestData.end(), 1.0);
         auto precision = ovms::Precision::FP32;
         mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(tensorName, precision, ovms::shape_t{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Layout{"NC"});
     }
@@ -771,7 +802,8 @@ TEST_P(CAPIPredictValidationPrecision, ValidPrecisions) {
         {
             {tensorName,
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, testedPrecision}},
-        });
+        },
+        requestData);
     auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::OK) << "Precision validation failed:"
                                             << toString(testedPrecision)

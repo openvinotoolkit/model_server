@@ -407,16 +407,6 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
     if (decrementBufferSize)
         dataSize -= decrementBufferSize;
 
-    std::string* content = new std::string("");
-    if (data.size() == 0) {
-        content->assign(dataSize, '1');
-    } else {
-        content->resize(dataSize);
-        std::memcpy(content->data(), data.data(), content->size());
-    }
-
-    // TODO Add additional buffer with ownership in tests.
-
     request.setInputBuffer(name.c_str(), data.data(), dataSize, bufferType, deviceId);
 }
 
