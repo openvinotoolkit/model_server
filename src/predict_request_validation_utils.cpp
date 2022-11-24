@@ -282,11 +282,14 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         const Buffer* buffer = it->getBuffer();
         const BufferType bufType = buffer->getBufferType();
         if (bufType < BufferType::OVMS_BUFFERTYPE_CPU || bufType > BufferType::OVMS_BUFFERTYPE_HDDL) {
-            std::stringstream ss;
-            ss << "Required input: " << name;
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid buffer type for input with specific name - {}", servableName, servableVersion, details);
-            return Status(StatusCode::INVALID_BUFFER_TYPE, details);
+            // Remove this when other buffer types are supported
+            if (bufType != BufferType::OVMS_BUFFERTYPE_CPU) {
+                std::stringstream ss;
+                ss << "Required input: " << name;
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid buffer type for input with specific name - {}", servableName, servableVersion, details);
+                return Status(StatusCode::INVALID_BUFFER_TYPE, details);
+            }
         }
 
         if (buffer->getBufferType() == BufferType::OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != std::nullopt && buffer->getDeviceId() != 0) {
@@ -637,16 +640,15 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
     for (size_t i = 0; i < tensor.getShape().size(); i++) {
         expectedValueCount *= tensor.getShape()[i];
     }
-    if (tensor.getBuffer()->getByteSize()) {
-        size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
-        if (expectedContentSize != tensor.getBuffer()->getByteSize()) {
-            std::stringstream ss;
-            ss << "Expected: " << expectedContentSize << " bytes; Actual: " << tensor.getBuffer()->getByteSize() << " bytes; input name: " << getCurrentlyValidatedInputName();
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor - {}", servableName, servableVersion, details);
-            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
-        }
+    size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+    if (expectedContentSize != tensor.getBuffer()->getByteSize()) {
+        std::stringstream ss;
+        ss << "Expected: " << expectedContentSize << " bytes; Actual: " << tensor.getBuffer()->getByteSize() << " bytes; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
+
     return StatusCode::OK;
 }
 
