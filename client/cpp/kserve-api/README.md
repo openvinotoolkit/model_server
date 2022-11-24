@@ -55,6 +55,126 @@ Usage:
 Server Live: True
 ```
 
+### Run the Client to get server readiness <a name="grpc-server-ready"></a>
+
+- Command
+
+```Bash
+./grpc_server_ready --help
+Sends requests via KServe gRPC API to check if server is ready.
+Usage:
+  grpc_server_ready [OPTION...]
+
+  -h, --help              Show this help message and exit
+      --grpc_address arg  Specify url to grpc service.  (default: 
+                          localhost)
+      --grpc_port arg     Specify port to grpc service.  (default: 9000)
+      --timeout arg       Request timeout. (default: 0)
+
+```
+
+- Usage Example
+
+```Bash
+./grpc_server_ready --grpc_port 9000 --grpc_address localhost
+Server Ready: True
+```
+
+### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
+
+- Command
+
+```Bash
+./grpc_server_metadata --help
+Sends requests via KServe gRPC API to get server metadata.
+Usage:
+  grpc_server_metadata [OPTION...]
+
+  -h, --help              Show this help message and exit
+      --grpc_address arg  Specify url to grpc service.  (default: 
+                          localhost)
+      --grpc_port arg     Specify port to grpc service.  (default: 9000)
+      --timeout arg       Request timeout. (default: 0)
+```
+
+- Usage Example
+
+```Bash
+./grpc_server_metadata --grpc_port 9000 --grpc_address localhost
+Name: "OpenVINO Model Server"
+Version: "2022.2.c290da85"
+```
+
+### Run the Client to get model readiness <a name="grpc-model-ready"></a>
+
+- Command
+
+```Bash
+./grpc_model_ready --help
+Sends requests via KServe gRPC API to check if model is ready for inference.
+Usage:
+  grpc_model_ready [OPTION...]
+
+  -h, --help               Show this help message and exit
+      --grpc_address arg   Specify url to grpc service.  (default: 
+                           localhost)
+      --grpc_port arg      Specify port to grpc service.  (default: 9000)
+      --model_name arg     Define model name, must be same as is in 
+                           service.  (default: dummy)
+      --model_version arg  Define model version. (default: "")
+      --timeout arg        Request timeout. (default: 0)
+```
+
+- Usage Example
+
+```Bash
+./grpc_model_ready --grpc_port 9000 --grpc_address localhost --model_name resnet
+Model Ready: True
+```
+
+### Run the Client to get metadata <a name="grpc-model-metadata"></a>
+
+- Command
+
+```Bash
+./grpc_model_metadata --help
+Sends requests via KServe gRPC API to get model metadata.
+Usage:
+  grpc_ready [OPTION...]
+
+  -h, --help               Show this help message and exit
+      --grpc_address arg   Specify url to grpc service.  (default: 
+                           localhost)
+      --grpc_port arg      Specify port to grpc service.  (default: 9000)
+      --model_name arg     Define model name, must be same as is in 
+                           service.  (default: dummy)
+      --model_version arg  Define model version. (default: "")
+      --timeout arg        Request timeout. (default: 0)
+```
+
+- Usage Example
+
+```Bash
+./grpc_model_metadata --grpc_port 9000 --grpc_address localhost --model_name resnet
+model metadata:
+name: "resnet"
+versions: "1"
+platform: "OpenVINO"
+inputs {
+  name: "0"
+  datatype: "FP32"
+  shape: 1
+  shape: 224
+  shape: 224
+  shape: 3
+}
+outputs {
+  name: "1463"
+  datatype: "FP32"
+  shape: 1
+  shape: 1000
+}
+```
 ### Run the Client to perform inference
 
 ```Bash
