@@ -127,7 +127,7 @@ style: venv clang-format
 sdl-check: venv
 	@echo "Checking SDL requirements..."
 	@echo "Checking docker files..."
-	@bash -c "if [ $$(find . -type f -name 'Dockerfile.*' -exec grep ADD {} \; | wc -l | xargs ) -eq 0 ]; then echo 'ok'; else echo 'replace ADD with COPY in dockerfiles'; exit 1 ; fi"
+	@./tests/hadolint.sh
 
 	@echo "Checking python files..."
 	@. $(ACTIVATE); bash -c "bandit -x demos/benchmark/python -r demos/*/python > bandit.txt"
