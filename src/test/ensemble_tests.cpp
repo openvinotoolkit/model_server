@@ -1688,7 +1688,7 @@ TEST_F(EnsembleFlowTest, OrderOfScheduling) {
         }
         lastValue = orderElement;
     }
-    // This fragment above is implemented that way because amount of scheduling retries may differ between different machines 
+    // This fragment above is implemented that way because amount of scheduling retries may differ between different machines
     // depending on the inference time of the dummy model
     /*
          -----O1-----O3----
