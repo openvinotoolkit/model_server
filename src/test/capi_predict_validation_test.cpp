@@ -446,7 +446,23 @@ TEST_F(CAPIPredictValidation, RequestIncorectDeviceId) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_DEVICE_ID) << status.string();
 }
 
+TEST_F(CAPIPredictValidation, RequestIncorectBufferType) {
+    preparePredictRequest(request,
+        {{"Input_FP32_1_224_224_3_NHWC",
+             std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
+            {"Input_U8_1_3_62_62_NCHW",
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 3, 62, 62}, ovms::Precision::U8}},
+            {"Input_I64_1_6_128_128_16_NCDHW",
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
+            {"Input_U16_1_2_8_4_NCHW",
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        {}, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_GPU);
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BUFFER_TYPE) << status.string();
+}
+
 TEST_F(CAPIPredictValidation, RequestCorectDeviceId) {
+    GTEST_SKIP() << "Enable when Other buffer types are supported";
     preparePredictRequest(request,
         {{"Input_FP32_1_224_224_3_NHWC",
              std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},

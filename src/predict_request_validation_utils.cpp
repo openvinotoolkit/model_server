@@ -120,6 +120,7 @@ public:
         batchingMode(batchingMode),
         shapeInfo(shapeInfo) {}
 
+    Status validateInferenceTensorBufferType(const InferenceTensor& it) const;
     Status validateNumberOfInputs() const;
     Status validateAndGetInput(const RequestType& request, const std::string& name, InputIterator& it, size_t& bufferId);
     Status checkIfShapeValuesNegative(const InputTensorType& proto) const;
@@ -127,7 +128,7 @@ public:
     Status checkBatchSizeMismatch(const InputTensorType& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status checkBinaryBatchSizeMismatch(const InputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status checkShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
-    Status validateTensorContentSize(const InputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const;
+    Status validateTensorContent(const InputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const;
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     Status validatePrecision(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     bool checkIfBinaryInputUsed(const InputTensorType& proto, const std::string inputName) const;
@@ -275,31 +276,11 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     SPDLOG_DEBUG("[servable name: {} version: {}] Missing input with specific name - {}", servableName, servableVersion, details);
     return Status(StatusCode::INVALID_MISSING_INPUT, details);
 }
+
 template <>
 Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateAndGetInput(const InferenceRequest& request, const std::string& name, const InferenceTensor*& it, size_t& bufferId) {
     if (request.getInput(name.c_str(), &it) != StatusCode::NONEXISTENT_TENSOR) {
         currentlyValidatedName = &name;
-        const Buffer* buffer = it->getBuffer();
-        const BufferType bufType = buffer->getBufferType();
-        if (bufType < BufferType::OVMS_BUFFERTYPE_CPU || bufType > BufferType::OVMS_BUFFERTYPE_HDDL) {
-            // Remove this when other buffer types are supported
-            if (bufType != BufferType::OVMS_BUFFERTYPE_CPU) {
-                std::stringstream ss;
-                ss << "Required input: " << name;
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid buffer type for input with specific name - {}", servableName, servableVersion, details);
-                return Status(StatusCode::INVALID_BUFFER_TYPE, details);
-            }
-        }
-
-        if (buffer->getBufferType() == BufferType::OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != std::nullopt && buffer->getDeviceId() != 0) {
-            std::stringstream ss;
-            ss << "Required input: " << name;
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid device id for buffer, input with specific name - {}", servableName, servableVersion, details);
-            return Status(StatusCode::INVALID_DEVICE_ID, details);
-        }
-
         return StatusCode::OK;
     }
 
@@ -503,8 +484,41 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
     return StatusCode::OK;
 }
 
+template <typename RequestType, typename InputTensorType, typename IteratorType, typename ShapeType>
+Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::validateInferenceTensorBufferType(const InferenceTensor& it) const {
+    const Buffer* buffer = it.getBuffer();
+    const BufferType bufType = buffer->getBufferType();
+    if (bufType < BufferType::OVMS_BUFFERTYPE_CPU || bufType > BufferType::OVMS_BUFFERTYPE_HDDL) {
+        std::stringstream ss;
+        ss << "Required input ";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid buffer type for input with specific name - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_BUFFER_TYPE, details);
+
+    } else {
+        // Remove this when other buffer types are supported
+        if (bufType != BufferType::OVMS_BUFFERTYPE_CPU) {
+            std::stringstream ss;
+            ss << "Required input ";
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid buffer type for input with specific name - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_BUFFER_TYPE, details);
+        }
+    }
+
+    if (buffer->getBufferType() == BufferType::OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != std::nullopt && buffer->getDeviceId() != 0) {
+        std::stringstream ss;
+        ss << "Required input ";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid device id for buffer, input with specific name - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_DEVICE_ID, details);
+    }
+
+    return StatusCode::OK;
+}
+
 template <>
-Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateTensorContentSize(const TFSInputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateTensorContent(const TFSInputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
     /*
     int8        data in request.tensor_content
     uint8       data in request.tensor_content
@@ -606,7 +620,7 @@ static size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision
 }
 
 template <>
-Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContentSize(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
+Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContent(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
     size_t expectedValueCount = 1;
     for (int i = 0; i < proto.shape().size(); i++) {
         expectedValueCount *= proto.shape()[i];
@@ -635,7 +649,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     return StatusCode::OK;
 }
 template <>
-Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateTensorContentSize(const InferenceTensor& tensor, ovms::Precision expectedPrecision, size_t bufferId) const {
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateTensorContent(const InferenceTensor& tensor, ovms::Precision expectedPrecision, size_t bufferId) const {
     size_t expectedValueCount = 1;
     for (size_t i = 0; i < tensor.getShape().size(); i++) {
         expectedValueCount *= tensor.getShape()[i];
@@ -649,7 +663,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
 
-    return StatusCode::OK;
+    return validateInferenceTensorBufferType(tensor);
 }
 
 template <>
@@ -837,7 +851,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         status = checkShapeMismatch(proto, *inputInfo, batchIndex.value(), finalStatus, batchingMode, shapeMode);
         if (!status.ok())
             return status;
-        status = validateTensorContentSize(proto, inputInfo->getPrecision(), bufferId);
+        status = validateTensorContent(proto, inputInfo->getPrecision(), bufferId);
         if (!status.ok())
             return status;
     }
