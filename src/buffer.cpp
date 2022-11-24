@@ -17,8 +17,6 @@
 
 #include <cstring>
 
-#include "logging.hpp"
-
 namespace ovms {
 Buffer::Buffer(const void* pptr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> bufferDeviceId, bool createCopy) :
     ptr(createCopy ? nullptr : pptr),
@@ -32,17 +30,23 @@ Buffer::Buffer(const void* pptr, size_t byteSize, BufferType bufferType, std::op
     ownedCopy = std::make_unique<char[]>(byteSize);
     std::memcpy(ownedCopy.get(), pptr, byteSize);
 }
+
 const void* Buffer::data() const {
     return (ptr != nullptr) ? ptr : ownedCopy.get();
 }
+
 size_t Buffer::getByteSize() const {
     return byteSize;
 }
-const BufferType Buffer::getBufferType() const {
-    return bufferType;
+
+BufferType Buffer::getBufferType() const {
+    return this->bufferType;
+    // TODO add inference response test
 }
+
 const std::optional<uint32_t>& Buffer::getDeviceId() const {
     return bufferDeviceId;
 }
+
 Buffer::~Buffer() = default;
 }  // namespace ovms
