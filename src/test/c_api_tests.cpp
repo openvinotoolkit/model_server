@@ -128,7 +128,7 @@ const uint64_t REQUEST_ID{3};
 
 const std::string INPUT_NAME{"NOT_RANDOM_NAME"};
 const ovms::shape_t INPUT_SHAPE{1, 3, 220, 230};
-const std::array<float, 10> INPUT_DATA{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
+const std::array<float, DUMMY_MODEL_INPUT_SIZE> INPUT_DATA{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
 constexpr size_t INPUT_DATA_BYTESIZE{INPUT_DATA.size() * sizeof(float)};
 const OVMS_DataType DATATYPE{OVMS_DATATYPE_FP32};
 }  // namespace
@@ -136,7 +136,7 @@ class CapiInferenceRetrievalTest : public ::testing::Test {};
 TEST_F(CapiInferenceRetrievalTest, Basic) {
     auto cppResponse = std::make_unique<InferenceResponse>(MODEL_NAME, MODEL_VERSION);
     // add output
-    std::array<size_t, 2> cppOutputShape{1, 10};
+    std::array<size_t, 2> cppOutputShape{1, DUMMY_MODEL_INPUT_SIZE};
     auto cppStatus = cppResponse->addOutput(INPUT_NAME.c_str(), DATATYPE, cppOutputShape.data(), cppOutputShape.size());
     ASSERT_EQ(cppStatus, StatusCode::OK) << cppStatus.string();
     InferenceTensor* cpptensor = nullptr;
@@ -174,6 +174,7 @@ TEST_F(CapiInferenceRetrievalTest, Basic) {
     EXPECT_EQ(0, std::memcmp(parameterData, (void*)&seqId, sizeof(seqId)));
     // verify get Output
     void* voutputData;
+    size_t bytesize = -1;
     uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
     const uint64_t* shape{nullptr};
@@ -181,7 +182,7 @@ TEST_F(CapiInferenceRetrievalTest, Basic) {
     BufferType bufferType = (BufferType)199;
     uint32_t deviceId = -1;
     const char* outputName{nullptr};
-    status = OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &bufferType, &deviceId, &voutputData);
+    status = OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &bufferType, &deviceId, &voutputData, &bytesize);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(INPUT_NAME, outputName);
     EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
@@ -193,10 +194,10 @@ TEST_F(CapiInferenceRetrievalTest, Basic) {
         EXPECT_EQ(cppOutputShape[i], shape[i]) << "Different at:" << i << " place.";
     }
     float* outputData = reinterpret_cast<float*>(voutputData);
+    ASSERT_EQ(bytesize, sizeof(float) * DUMMY_MODEL_INPUT_SIZE);
     for (size_t i = 0; i < INPUT_DATA.size(); ++i) {
         EXPECT_EQ(INPUT_DATA[i], outputData[i]) << "Different at:" << i << " place.";
     }
-    // byteSize?
 
     // we release unique_ptr ownership here so that we can free it safely via C-API
     cppResponse.release();

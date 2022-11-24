@@ -100,10 +100,12 @@ OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const cha
     *request = reinterpret_cast<OVMS_InferenceRequest*>(new InferenceRequest(servableName, servableVersion));
     return nullptr;
 }
+
 OVMS_Status* OVMS_InferenceRequestDelete(OVMS_InferenceRequest* request) {
     delete reinterpret_cast<InferenceRequest*>(request);
     return nullptr;
 }
+
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount) {
     // TODO error handling if null
     // if (nullptr == req)
@@ -114,6 +116,7 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const cha
     }
     return nullptr;
 }
+
 OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const char* inputName, void* data, size_t bufferSize, BufferType bufferType, uint32_t deviceId) {
     // TODO error handling if null
     // if (nullptr == req)
@@ -167,7 +170,7 @@ OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, co
     }
     return nullptr;
 }
-OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, BufferType* bufferType, uint32_t* deviceId, void** data) {
+OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, BufferType* bufferType, uint32_t* deviceId, void** data, size_t* bytesize) {
     // TODO error handling if null
     // if (nullptr == req)
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
@@ -191,6 +194,7 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
     *deviceId = buffer->getDeviceId().value_or(0);  // TODO how discriminate betwen undefined & actual device 0
     // possibly it is not neccessary to discriminate
     *data = const_cast<void*>(buffer->data());  // should data return const ptr?
+    *bytesize = buffer->getByteSize();
     return nullptr;
 }
 OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* res, uint32_t* count) {
