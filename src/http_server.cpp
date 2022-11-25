@@ -110,6 +110,8 @@ const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_BATCH_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_BUFFER_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_DEVICE_ID, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},

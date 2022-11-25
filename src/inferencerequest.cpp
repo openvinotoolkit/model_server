@@ -29,7 +29,7 @@ const std::string& InferenceRequest::getServableName() const {
 model_version_t InferenceRequest::getServableVersion() const {
     return this->servableVersion;
 }
-Status InferenceRequest::addInput(const char* name, DataType datatype, const size_t* shape, size_t dimCount) {
+Status InferenceRequest::addInput(const char* name, OVMS_DataType datatype, const size_t* shape, size_t dimCount) {
     auto [it, emplaced] = inputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
@@ -60,6 +60,9 @@ Status InferenceRequest::getInput(const char* name, const InferenceTensor** tens
     *tensor = &it->second;
     return StatusCode::OK;
 }
+uint64_t InferenceRequest::getInputsSize() const {
+    return inputs.size();
+}
 Status InferenceRequest::removeInput(const char* name) {
     auto count = inputs.erase(name);
     if (count) {
@@ -67,7 +70,7 @@ Status InferenceRequest::removeInput(const char* name) {
     }
     return StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL;
 }
-Status InferenceRequest::addParameter(const char* parameterName, DataType datatype, const void* data) {
+Status InferenceRequest::addParameter(const char* parameterName, OVMS_DataType datatype, const void* data) {
     auto [it, emplaced] = parameters.emplace(parameterName, InferenceParameter{parameterName, datatype, data});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_PARAMETER_INSERT;
 }

@@ -97,6 +97,8 @@ enum class StatusCode {
     INVALID_VALUE_COUNT,            /*!< Invalid value count error status for uint16 and half float data types */
     INVALID_CONTENT_SIZE,           /*!< Invalid content size error status for types using tensor_content() */
     INVALID_MESSAGE_STRUCTURE,      /*!< Buffers can't be both in raw_input_content & input tensor content */
+    INVALID_BUFFER_TYPE,            /*!< Invalid buffer type */
+    INVALID_DEVICE_ID,              /*!< Invalid buffer device id */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */

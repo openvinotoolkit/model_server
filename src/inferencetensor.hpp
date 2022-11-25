@@ -26,12 +26,12 @@ class Buffer;
 class Status;
 
 class InferenceTensor {
-    const DataType datatype;
+    const OVMS_DataType datatype;
     shape_t shape;
     std::unique_ptr<Buffer> buffer;
 
 public:
-    InferenceTensor(DataType datatype, const size_t* shape, size_t dimCount);
+    InferenceTensor(OVMS_DataType datatype, const size_t* shape, size_t dimCount);
     ~InferenceTensor();
     InferenceTensor(InferenceTensor&&);
     InferenceTensor(const InferenceTensor&) = delete;
@@ -39,7 +39,7 @@ public:
     InferenceTensor& operator=(const InferenceTensor&&);
     Status setBuffer(const void* addr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> deviceId, bool createCopy = false);
     Status removeBuffer();
-    DataType getDataType() const;
+    OVMS_DataType getDataType() const;
     const shape_t& getShape() const;
     const Buffer* const getBuffer() const;
 };

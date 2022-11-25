@@ -35,8 +35,10 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "../execution_context.hpp"
+#include "../inferencerequest.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric_registry.hpp"
+#include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
 #include "../tensorinfo.hpp"
@@ -158,7 +160,15 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, OVMS_DataType>& inputInfo,
+    const std::vector<float>& data, uint32_t decrementBufferSize = 0, BufferType bufferType = BufferType::OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+    const std::vector<float>& data, uint32_t decrementBufferSize = 0, BufferType bufferType = BufferType::OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
+
 void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
+
+void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data,
+    uint32_t decrementBufferSize = 0, BufferType bufferType = BufferType::OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize);
@@ -295,6 +305,24 @@ public:
      */
     void updateConfigurationWithoutConfigFile() {
         ModelManager::updateConfigurationWithoutConfigFile();
+    }
+};
+
+class MockedMetadataModelIns : public ovms::ModelInstance {
+public:
+    MockedMetadataModelIns(ov::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", 42, ieCore) {}
+    MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
+    MOCK_METHOD(ovms::Dimension, getBatchSize, (), (const, override));
+    MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
+    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
+        return validate(request);
+    }
+    const ovms::Status mockValidate(const ::KFSRequest* request) {
+        return validate(request);
+    }
+    const ovms::Status mockValidate(const ovms::InferenceRequest* request) {
+        return validate(request);
     }
 };
 
@@ -483,6 +511,46 @@ static const std::vector<ovms::Precision> SUPPORTED_KFS_INPUT_PRECISIONS_TENSORI
 };
 
 static const std::vector<ovms::Precision> UNSUPPORTED_KFS_INPUT_PRECISIONS_TENSORINPUTCONTENT{
+    ovms::Precision::UNDEFINED,
+    ovms::Precision::MIXED,
+    // ovms::Precision::FP64,
+    // ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    ovms::Precision::Q78,
+    // ovms::Precision::I16,
+    // ovms::Precision::U8,
+    // ovms::Precision::I8,
+    // ovms::Precision::U16,
+    // ovms::Precision::I32,
+    // ovms::Precision::I64,
+    // ovms::Precision::U32,
+    // ovms::Precision::U64,
+    ovms::Precision::BIN,
+    // ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+static const std::vector<ovms::Precision> SUPPORTED_CAPI_INPUT_PRECISIONS_TENSORINPUTCONTENT{
+    // ovms::Precision::UNDEFINED,
+    // ovms::Precision::MIXED,
+    ovms::Precision::FP64,
+    ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    // ovms::Precision::Q78,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+    ovms::Precision::I64,
+    ovms::Precision::U32,
+    ovms::Precision::U64,
+    // ovms::Precision::BIN,
+    ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENSORINPUTCONTENT{
     ovms::Precision::UNDEFINED,
     ovms::Precision::MIXED,
     // ovms::Precision::FP64,

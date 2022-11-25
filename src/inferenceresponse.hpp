@@ -34,9 +34,9 @@ class InferenceResponse {
 
 public:
     InferenceResponse(const std::string& servableName, model_version_t servableVersion);
-    Status addOutput(const std::string& name, DataType datatype, const size_t* shape, size_t dimCount);
+    Status addOutput(const std::string& name, OVMS_DataType datatype, const size_t* shape, size_t dimCount);
     Status getOutput(const char* name, InferenceTensor** tensor);
-    Status addParameter(const char* parameterName, DataType datatype, const void* data);
+    Status addParameter(const char* parameterName, OVMS_DataType datatype, const void* data);
     const InferenceParameter* getParameter(const char* name) const;
 
     const std::string& getServableName() const;

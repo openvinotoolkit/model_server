@@ -100,7 +100,8 @@ protected:
             Layout{"NC"});
         SetUpTensorProto(getPrecisionAsOVMSDataType(PRECISION));
     }
-    void SetUpTensorProto(DataType dataType) {
+
+    void SetUpTensorProto(OVMS_DataType dataType) {
         std::array<size_t, 2> shape{1, DUMMY_MODEL_INPUT_SIZE};
         tensorCapi = std::make_unique<InferenceTensor>(dataType,
             shape.data(),
