@@ -17,7 +17,10 @@
 
 #include <functional>
 
+#include "../capi_frontend/capi_utils.hpp"
+#include "../inferenceparameter.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "../pocapiinternal.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
@@ -32,6 +35,13 @@ void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, c
     request.mutable_raw_input_contents()->Clear();
     for (auto const& it : requestInputs) {
         prepareKFSInferInputTensor(request, it.first, it.second, data, putBufferInInputTensorContent);
+    }
+}
+
+void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, uint32_t decrementBufferSize, BufferType bufferType, std::optional<uint32_t> deviceId) {
+    request.removeAllInputs();
+    for (auto const& it : requestInputs) {
+        prepareCAPIInferInputTensor(request, it.first, it.second, data, decrementBufferSize, bufferType, deviceId);
     }
 }
 
@@ -372,6 +382,32 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
     prepareKFSInferInputTensor(request, name,
         {shape, ovmsPrecisionToKFSPrecision(type)},
         data, putBufferInInputTensorContent);
+}
+
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+    const std::vector<float>& data, uint32_t decrementBufferSize, BufferType bufferType, std::optional<uint32_t> deviceId) {
+    auto [shape, type] = inputInfo;
+    prepareCAPIInferInputTensor(request, name,
+        {shape, getPrecisionAsOVMSDataType(type)},
+        data, decrementBufferSize, bufferType, deviceId);
+}
+
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, OVMS_DataType>& inputInfo,
+    const std::vector<float>& data, uint32_t decrementBufferSize, BufferType bufferType, std::optional<uint32_t> deviceId) {
+    auto [shape, datatype] = inputInfo;
+    size_t elementsCount = 1;
+    for (auto const& dim : shape) {
+        ASSERT_GE(dim, 0);
+        elementsCount *= dim;
+    }
+
+    request.addInput(name.c_str(), datatype, shape.data(), shape.size());
+
+    size_t dataSize = elementsCount * ovms::DataTypeToByteSize(datatype);
+    if (decrementBufferSize)
+        dataSize -= decrementBufferSize;
+
+    request.setInputBuffer(name.c_str(), data.data(), dataSize, bufferType, deviceId);
 }
 
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,

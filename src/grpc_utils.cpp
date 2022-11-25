@@ -68,6 +68,8 @@ const grpc::Status grpc(const Status& status) {
         {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_BATCH_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_SHAPE, grpc::StatusCode::INVALID_ARGUMENT},
+        {StatusCode::INVALID_BUFFER_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
+        {StatusCode::INVALID_DEVICE_ID, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_PRECISION, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_VALUE_COUNT, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_CONTENT_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
