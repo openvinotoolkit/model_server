@@ -34,14 +34,15 @@ class InferenceRequest {
 
 public:
     InferenceRequest(const char* modelName, model_version_t modelVersion);
-    Status addInput(const char* name, DataType datatype, const size_t* shape, size_t dimCount);
+    Status addInput(const char* name, OVMS_DataType datatype, const size_t* shape, size_t dimCount);
     Status getInput(const char* name, const InferenceTensor** tensor) const;
+    uint64_t getInputsSize() const;
     Status removeInput(const char* name);
     Status removeAllInputs();
 
     Status setInputBuffer(const char* name, const void* addr, size_t byteSize, BufferType, std::optional<uint32_t> deviceId);
     Status removeInputBuffer(const char* name);
-    Status addParameter(const char* parameterName, DataType datatype, const void* data);
+    Status addParameter(const char* parameterName, OVMS_DataType datatype, const void* data);
     Status removeParameter(const char* parameterName);
     const InferenceParameter* getParameter(const char* name) const;
 

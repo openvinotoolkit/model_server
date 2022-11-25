@@ -33,7 +33,7 @@ const std::string& InferenceResponse::getServableName() const {
 model_version_t InferenceResponse::getServableVersion() const {
     return this->servableVersion;
 }
-Status InferenceResponse::addOutput(const std::string& name, DataType datatype, const size_t* shape, size_t dimCount) {
+Status InferenceResponse::addOutput(const std::string& name, OVMS_DataType datatype, const size_t* shape, size_t dimCount) {
     // TODO insert tensor with wrong shape/datatype/name/dimcount
     // TODO reuse infer response/request
     auto [it, emplaced] = outputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
@@ -48,7 +48,7 @@ Status InferenceResponse::getOutput(const char* name, InferenceTensor** tensor) 
     *tensor = &it->second;
     return StatusCode::OK;
 }
-Status InferenceResponse::addParameter(const char* parameterName, DataType datatype, const void* data) {
+Status InferenceResponse::addParameter(const char* parameterName, OVMS_DataType datatype, const void* data) {
     auto [it, emplaced] = parameters.emplace(parameterName, InferenceParameter{parameterName, datatype, data});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_PARAMETER_INSERT;
 }

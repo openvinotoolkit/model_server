@@ -28,6 +28,7 @@
 #pragma GCC diagnostic pop
 
 #include "inferenceresponse.hpp"
+#include "inferencetensor.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "pocapiinternal.hpp"
 #include "profiler.hpp"
@@ -35,7 +36,6 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-class InferenceTensor;
 
 template <typename T>
 class OutputGetter {

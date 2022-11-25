@@ -16,7 +16,7 @@
 #include "pocapiinternal.hpp"
 
 namespace ovms {
-DataType getPrecisionAsOVMSDataType(Precision precision) {
+OVMS_DataType getPrecisionAsOVMSDataType(Precision precision) {
     switch (precision) {
     case Precision::BF16:
         return OVMS_DATATYPE_BF16;
@@ -66,7 +66,7 @@ DataType getPrecisionAsOVMSDataType(Precision precision) {
         return OVMS_DATATYPE_UNDEFINED;
     }
 }
-Precision getOVMSDataTypeAsPrecision(DataType datatype) {
+Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype) {
     switch (datatype) {
     case OVMS_DATATYPE_BF16:
         return Precision::BF16;

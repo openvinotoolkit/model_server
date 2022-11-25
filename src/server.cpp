@@ -364,5 +364,4 @@ int Server::start(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
     }
     return EXIT_SUCCESS;
 }
-
 }  // namespace ovms
