@@ -51,7 +51,7 @@ Learn more about model server [starting parameters](parameters.md).
 
 ### Next Steps
 
-- To serve your own model, [prepare it for serving](models_repository.md) and proceed to serve [single](single_model_mode.md) or [multiple](multiple_models_mode.md) models.
+- To serve your own model, [prepare it for serving](models_repository.md) and proceed to [serve models](single_model_mode.md) models.
 - To see another example of setting up the model server with a face-detection model, refer to the [Quickstart guide](./ovms_quickstart.md) and explore the [demos](../demos/README.md).
 
 ### Additional Resources

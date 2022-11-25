@@ -7,7 +7,7 @@
    :hidden:
 
    ovms_docs_docker_container
-   ovms_docs_build_from_source
+   ovms_docs_baremetal
    ovms_docs_kubernetes
    
 @endsphinxdirective
@@ -19,7 +19,7 @@
    ---
     
    Using Docker is the recommended way of running OpenVINO Model Server. The images are available via 
-   DockerHub and RedHat Ecosystem Catalog
+   DockerHub and RedHat Ecosystem Catalog.
 
    +++
 
