@@ -25,5 +25,5 @@ cd model_server
 ```
 
 ```bash
-make docker_build BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=ovms_neo INSTALL_DRIVER_VERSION=neo
+make docker_build BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=ovms_custom_neo INSTALL_DRIVER_VERSION=neo
 ```
