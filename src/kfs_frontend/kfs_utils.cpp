@@ -61,9 +61,8 @@ size_t KFSDataTypeSize(const KFSDataType& datatype) {
         {"INT64", 8},
         {"FP16", 2},
         {"FP32", 4},
-        {"FP64", 8}
-        // {"BYTES", },
-    };
+        {"FP64", 8},
+        {"BYTES", 1}};
     auto it = datatypeSizeMap.find(datatype);
     if (it == datatypeSizeMap.end()) {
         return 0;

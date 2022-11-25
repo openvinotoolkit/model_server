@@ -116,17 +116,17 @@ void ModelManager::logPluginConfiguration() {
     auto availableDevices = ieCore->get_available_devices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
-    const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
     for (const auto& plugin : availablePlugins) {
-        std::vector<std::string> supportedConfigKeys;
+        std::vector<ov::PropertyName> supportedConfigKeys;
+        auto supportedPropertiesKey = ov::supported_properties;
         try {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
-            std::vector<std::string> supportedConfigKeys2 = ieCore->get_property(plugin, supportedConfigKey).as<std::vector<std::string>>();
+            auto supportedConfigKeys2 = ieCore->get_property(plugin, supportedPropertiesKey);
             supportedConfigKeys = std::move(supportedConfigKeys2);
         } catch (std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedConfigKey, e.what());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedPropertiesKey.name(), e.what());
         } catch (...) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedConfigKey);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedPropertiesKey.name());
         }
         for (auto& key : supportedConfigKeys) {
             std::string value;
