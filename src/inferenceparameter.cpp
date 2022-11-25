@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
 #include "inferenceparameter.hpp"
 
 #include <stdexcept>
@@ -21,18 +22,34 @@
 namespace ovms {
 // TODO should we own our own copy of value?
 //
-static size_t DataTypeToByteSize(DataType datatype) {
-    switch (datatype) {
-    case OVMS_DATATYPE_FP32:
-    case OVMS_DATATYPE_I32:
-    case OVMS_DATATYPE_U32:
-        return 4;
-    default:
-        throw std::invalid_argument("Unsupported");
+size_t DataTypeToByteSize(OVMS_DataType datatype) {
+    static std::unordered_map<OVMS_DataType, size_t> datatypeSizeMap{
+        {OVMS_DATATYPE_BOOL, 1},
+        {OVMS_DATATYPE_U1, 1},
+        {OVMS_DATATYPE_U4, 1},
+        {OVMS_DATATYPE_U8, 1},
+        {OVMS_DATATYPE_U16, 2},
+        {OVMS_DATATYPE_U32, 4},
+        {OVMS_DATATYPE_U64, 8},
+        {OVMS_DATATYPE_I4, 1},
+        {OVMS_DATATYPE_I8, 1},
+        {OVMS_DATATYPE_I16, 2},
+        {OVMS_DATATYPE_I32, 4},
+        {OVMS_DATATYPE_I64, 8},
+        {OVMS_DATATYPE_FP16, 2},
+        {OVMS_DATATYPE_FP32, 4},
+        {OVMS_DATATYPE_FP64, 8},
+        {OVMS_DATATYPE_BF16, 2},
+        // {"BYTES", },
+    };
+    auto it = datatypeSizeMap.find(datatype);
+    if (it == datatypeSizeMap.end()) {
         return 0;
     }
+    return it->second;
 }
-InferenceParameter::InferenceParameter(const char* name, DataType datatype, const void* data) :
+
+InferenceParameter::InferenceParameter(const char* name, OVMS_DataType datatype, const void* data) :
     name(name),
     datatype(datatype),
     data(reinterpret_cast<const char*>(data), DataTypeToByteSize(datatype)) {
@@ -41,7 +58,7 @@ InferenceParameter::InferenceParameter(const char* name, DataType datatype, cons
 const std::string& InferenceParameter::getName() const {
     return this->name;
 }
-DataType InferenceParameter::getDataType() const {
+OVMS_DataType InferenceParameter::getDataType() const {
     return this->datatype;
 }
 size_t InferenceParameter::getByteSize() const {

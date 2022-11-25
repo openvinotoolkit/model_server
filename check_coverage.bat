@@ -9,6 +9,7 @@ MIN_LINES_COV=73.7
 MIN_FUNCTION_COV=74.1
 
 
+
 LINES_COV=`cat genhtml/index.html | grep "headerCovTableEntry.*%" | grep -oP  ">\K(\d*.\d*) " | head -n 1`
 FUNC_COV=`cat genhtml/index.html | grep "headerCovTableEntry.*%" | grep -oP  ">\K(\d*.\d*) " | tail -n 1`
 

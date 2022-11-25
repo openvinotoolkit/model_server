@@ -1116,6 +1116,7 @@ const Status ModelInstance::validate(const RequestType* request) {
         getModelConfig().getShapes());
 }
 
+template const Status ModelInstance::validate(const InferenceRequest* request);
 template const Status ModelInstance::validate(const ::KFSRequest* request);
 template const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request);
 

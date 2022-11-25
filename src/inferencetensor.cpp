@@ -27,7 +27,7 @@ InferenceTensor::InferenceTensor(InferenceTensor&& rhs) :
     datatype(std::move(rhs.datatype)),
     shape(std::move(rhs.shape)),
     buffer(std::move(rhs.buffer)) {}
-InferenceTensor::InferenceTensor(DataType datatype, const size_t* shape, size_t dimCount) :
+InferenceTensor::InferenceTensor(OVMS_DataType datatype, const size_t* shape, size_t dimCount) :
     datatype(datatype),
     shape(shape, shape + dimCount) {}
 Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> deviceId, bool createCopy) {
@@ -37,7 +37,8 @@ Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, BufferType 
     buffer = std::make_unique<Buffer>(addr, byteSize, bufferType, deviceId, createCopy);
     return StatusCode::OK;
 }
-DataType InferenceTensor::getDataType() const {
+
+OVMS_DataType InferenceTensor::getDataType() const {
     return this->datatype;
 }
 const shape_t& InferenceTensor::getShape() const {

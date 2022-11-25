@@ -1,4 +1,3 @@
-#pragma once
 //*****************************************************************************
 // Copyright 2022 Intel Corporation
 //
@@ -14,26 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 #include <string>
-#include <unordered_map>
-
-#include "pocapi.hpp"
 
 namespace ovms {
-size_t DataTypeToByteSize(OVMS_DataType datatype);
+class Shape;
+std::string tensorShapeToString(const Shape& tensorShape);
 
-// TODO should we own our own copy of value?
-class InferenceParameter {
-    const std::string name;
-    OVMS_DataType datatype;
-    const std::string data;
-
-public:
-    InferenceParameter(const char* name, OVMS_DataType datatype, const void* data);
-    InferenceParameter(const char* name, OVMS_DataType datatype, const void* data, size_t byteSize);
-    const std::string& getName() const;
-    OVMS_DataType getDataType() const;
-    size_t getByteSize() const;
-    const void* getData() const;
-};
 }  // namespace ovms
