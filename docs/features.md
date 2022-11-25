@@ -16,54 +16,37 @@
    ovms_docs_dynamic_input
    ovms_docs_advanced
 
-
 @endsphinxdirective
 
-## Serving Pipelines of Models
-
+[Serving Pipelines of Models](dag_scheduler.md)\
 Connect multiple models to deploy complex processing solutions and reducing data transfer overhead with Directed Acyclic Graph (DAG) Scheduler. 
 Implement model inference and data transformations with a custom node C/C++ dynamic library.
-[Learn more](dag_scheduler.md)
 
-## Processing Raw Data
-
+[Processing Raw Data](binary_input.md)\
 Send data in JPEG or PNG formats to reduce traffic and offload the client applications.
-[Learn more](binary_input.md)
 
-## Setting Model Versioning Policies for served models
 
+[Setting Model Versioning Policies for served models](model_version_policy.md)\
 Take advantage of the model repository structure. Add or delete version directories and Model Server will automatically adjust. 
 Take full control over the served model versions by setting a model version policy and serving all, the chosen, or just the latest version of the model.
-[Learn more](model_version_policy.md)
 
-## Model Reshaping 
-
+[Model Reshaping](shape_batch_size_and_layout.md)\
 Change batch, shape and layout of the model in runtime for high-throughput and low-latency
-[Learn more](shape_batch_size_and_layout.md) 
 
-## Modifying Model Configuration in Runtime
 
+[Modifying Model Configuration in Runtime](online_config_changes.md)\
 OpenVINO Model Server tracks changes to the configuration file and applies them in runtime. It means that you can change model configurations 
 (for example serve the model on a different device), add a new model or completely remove one that is no longer needed. All changes will be applied with no 
 disruption to the service and no restart will berequired.
-[Learn more](online_config_changes.md)
 
-## Working with Stateful Models
-
+[Working with Stateful Models](stateful_models.md)\
 Serve models that operate on sequences of data and maintain their state between inference requests.
-[Learn more](stateful_models.md)
 
-## Metrics
-
+[Metrics](metrics.md)\
 Use metrics endpoint compatible with Prometheus standard to get performance and utilization statistics.
-[Learn more](metrics.md)
 
-## Enabling Dynamic Inputs
-
+[Enabling Dynamic Inputs](dynamic_input.md)\
 Configure served models to accept data with different batch sizes and in different shapes.
-[Learn more](dynamic_input.md)
 
-## Advanced Features
-
+[Advanced Features](advanced_topics.md)\
 Use CPU Extensions, model cache feature or a custom model loader.
-[Learn more](advanced_topics.md)
