@@ -42,7 +42,7 @@ namespace {
 const std::string MODEL_NAME{"SomeModelName"};
 const uint64_t MODEL_VERSION{42};
 const std::string PARAMETER_NAME{"SEQUENCE_ID"};  // TODO check if in ovms there is such constant
-const DataType PARAMETER_DATATYPE{OVMS_DATATYPE_I32};
+const OVMS_DataType PARAMETER_DATATYPE{OVMS_DATATYPE_I32};
 
 const uint32_t PARAMETER_VALUE{13};
 const uint32_t PRIORITY{7};
@@ -52,7 +52,7 @@ const std::string INPUT_NAME{"NOT_RANDOM_NAME"};
 const ovms::shape_t INPUT_SHAPE{1, 3, 220, 230};
 const std::array<float, 10> INPUT_DATA{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
 constexpr size_t INPUT_DATA_BYTESIZE{INPUT_DATA.size() * sizeof(float)};
-const DataType DATATYPE{OVMS_DATATYPE_FP32};
+const OVMS_DataType DATATYPE{OVMS_DATATYPE_FP32};
 }  // namespace
 
 TEST(InferenceParameter, CreateParameter) {

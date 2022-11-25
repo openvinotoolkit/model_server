@@ -24,8 +24,6 @@
 #include "sequence_manager.hpp"
 
 namespace ovms {
-class MetricRegistry;
-class MetricConfig;
 class ModelConfig;
 class StatefulModelInstance : public ModelInstance {
     static const std::set<std::string> SPECIAL_INPUT_NAMES;

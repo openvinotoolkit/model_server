@@ -18,6 +18,6 @@
 #include "precision.hpp"
 
 namespace ovms {
-DataType getPrecisionAsOVMSDataType(Precision precision);
-Precision getOVMSDataTypeAsPrecision(DataType datatype);
+OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
+Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype);
 }  // namespace ovms
