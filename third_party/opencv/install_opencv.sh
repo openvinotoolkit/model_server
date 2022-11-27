@@ -57,7 +57,7 @@ cd $work_dir
 git clone https://github.com/opencv/opencv.git --depth 1 -b $opencv_branch $work_dir/opencv_repo
 cd $work_dir/opencv_repo
 git fetch origin 4.x:4.4
-git cherry-pick 1b1bbe426277715a876878890a3dc88231b871bc
+git cherry-pick -n 1b1bbe426277715a876878890a3dc88231b871bc
 mkdir -p $work_dir/opencv_repo/build
 cd $work_dir/opencv_repo/build
 cmake $(cat $current_working_dir/opencv_cmake_flags.txt) $work_dir/opencv_repo && \
