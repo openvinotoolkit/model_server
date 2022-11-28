@@ -40,7 +40,7 @@ Key features:
 [Intel Movidius Myriad VPUs](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_MYRIAD.html), 
 [GPU](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html), and 
 [HDDL](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_HDDL.html) 
-- works with [Bare Metal Hosts](host.md) as well as [Docker containers](docker_container.md) 
+- works with [Bare Metal Hosts](build_from_source.md) as well as [Docker containers](docker_container.md) 
 - [model reshaping](shape_batch_size_and_layout.md) in runtime
 - [directed Acyclic Graph Scheduler](dag_scheduler.md) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
 - [custom nodes in DAG pipelines](custom_node_development.md) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
@@ -64,7 +64,7 @@ For more information on using Model Server in various scenarios you can check th
 
 * [Using a docker container](docker_container.md)
 
-* [Landing on bare metal or virtual machine](host.md)
+* [Landing on bare metal or virtual machine](build_from_source.md)
 
 * [Performance tuning](performance_tuning.md)
 
