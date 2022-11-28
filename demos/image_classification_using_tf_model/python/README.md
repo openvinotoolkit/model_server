@@ -23,6 +23,8 @@ cd model_server/demos/image_classification_using_tf_model/python
 ```bash
 mkdir -p model/1
 wget -P model/1 https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/inception_resnet_v2_2018_04_27.tgz
+tar xzf model/1/inception_resnet_v2_2018_04_27.tgz -C model/1
+ls model/1
 ```
 
 ## Run Openvino Model Server
