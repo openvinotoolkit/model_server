@@ -18,7 +18,21 @@
 #include <cstdint>
 #include <string>
 
+#include "buffer.hpp"
+#include "inferenceparameter.hpp"
+#include "inferencerequest.hpp"
+#include "inferenceresponse.hpp"
+#include "inferencetensor.hpp"
 #include "poc_api_impl.hpp"
+#include "status.hpp"
+
+using ovms::Buffer;
+using ovms::InferenceParameter;
+using ovms::InferenceRequest;
+using ovms::InferenceResponse;
+using ovms::InferenceTensor;
+using ovms::Status;
+using ovms::StatusCode;
 
 OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options) {
     *options = (OVMS_ServerGeneralOptions*)new ovms::GeneralOptionsImpl;
@@ -79,4 +93,148 @@ OVMS_Status* OVMS_ServerMultiModelOptionsSetConfigPath(OVMS_ServerMultiModelOpti
     ovms::MultiModelOptionsImpl* mmo = (ovms::MultiModelOptionsImpl*)options;
     mmo->configPath = std::string(config_path);
     return 0;
+}
+// inference API
+OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const char* servableName, uint32_t servableVersion) {
+    // TODO should we allow to create requests to not yet loaded models?
+    *request = reinterpret_cast<OVMS_InferenceRequest*>(new InferenceRequest(servableName, servableVersion));
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceRequestDelete(OVMS_InferenceRequest* request) {
+    delete reinterpret_cast<InferenceRequest*>(request);
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->addInput(inputName, datatype, shape, dimCount);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const char* inputName, void* data, size_t bufferSize, BufferType bufferType, uint32_t deviceId) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->setInputBuffer(inputName, data, bufferSize, bufferType, deviceId);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceRequestAddParameter(OVMS_InferenceRequest* req, const char* parameterName, OVMS_DataType datatype, const void* data, size_t byteSize) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->addParameter(parameterName, datatype, data);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* req, const char* parameterName) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->removeParameter(parameterName);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* req, const char* inputName) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->removeInput(inputName);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, const char* inputName) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->removeInputBuffer(inputName);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
+    InferenceTensor* tensor = nullptr;
+    const std::string* cppName;
+    auto status = response->getOutput(id, &cppName, &tensor);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    if ((tensor == nullptr) ||
+        (cppName == nullptr)) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::INTERNAL_ERROR, "InferenceResponse returned nullptr tensor or name"));
+    }
+    const Buffer* buffer = tensor->getBuffer();
+    if (nullptr == buffer) {
+        return reinterpret_cast<OVMS_Status*>(new Status(ovms::StatusCode::INTERNAL_ERROR, "InferenceResponse has tensor without buffer"));
+    }
+    *name = cppName->c_str();
+    *datatype = tensor->getDataType();
+    *shape = tensor->getShape().data();
+    *dimCount = tensor->getShape().size();
+    *bufferType = buffer->getBufferType();
+    *deviceId = buffer->getDeviceId().value_or(0);  // TODO how discriminate betwen undefined & actual device 0
+    // possibly it is not neccessary to discriminate
+    *data = const_cast<void*>(buffer->data());  // should data return const ptr?
+    *bytesize = buffer->getByteSize();
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* res, uint32_t* count) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
+    *count = response->getOutputCount();
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* res, uint32_t* count) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
+    *count = response->getParameterCount();
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* res, uint32_t id, OVMS_DataType* datatype, const void** data) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
+    const InferenceParameter* parameter = response->getParameter(id);
+    if (nullptr == parameter) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL));
+    }
+    *datatype = parameter->getDataType();
+    *data = parameter->getData();
+    return nullptr;
+}
+
+OVMS_Status* OVMS_InferenceResponseDelete(OVMS_InferenceResponse* res) {
+    // TODO error handling if null
+    // if (nullptr == req)
+    InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
+    delete response;
+    return nullptr;
 }

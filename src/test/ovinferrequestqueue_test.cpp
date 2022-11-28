@@ -77,7 +77,7 @@ TEST(OVInferRequestQueue, FullQueue) {
     EXPECT_EQ(reqid, 3);
 }
 
-void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
+static void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
     for (int i = 1; i <= 10; i++) {
         int st = ms.getIdleStream().get();
         int rd = std::rand();
