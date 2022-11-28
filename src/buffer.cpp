@@ -41,7 +41,6 @@ size_t Buffer::getByteSize() const {
 
 BufferType Buffer::getBufferType() const {
     return this->bufferType;
-    // TODO add inference response test
 }
 
 const std::optional<uint32_t>& Buffer::getDeviceId() const {
