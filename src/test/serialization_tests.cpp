@@ -726,7 +726,14 @@ TEST_F(CApiSerialization, ValidSerialization) {
         getTensorInfoName);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
     InferenceTensor* responseOutput{nullptr};
-    ASSERT_EQ(response.getOutput(DUMMY_MODEL_OUTPUT_NAME, &responseOutput), StatusCode::OK);
+    uint32_t outputCount = response.getOutputCount();
+    ASSERT_EQ(1, outputCount);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    const std::string* outputName{nullptr};
+    status = response.getOutput(0, &outputName, &responseOutput);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_NE(outputName, nullptr);
+    ASSERT_EQ(*outputName, DUMMY_MODEL_OUTPUT_NAME);
     ASSERT_NE(responseOutput, nullptr);
     EXPECT_EQ(responseOutput->getDataType(), OVMS_DATATYPE_FP32);
     EXPECT_THAT(responseOutput->getShape(), ElementsAre(1, NUMBER_OF_ELEMENTS, 1, 1));
