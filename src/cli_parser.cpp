@@ -75,7 +75,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS")
             ("file_system_poll_wait_seconds",
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
-                cxxopts::value<uint>()->default_value("1"),
+                cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
             ("sequence_cleaner_poll_wait_minutes",
                 "Time interval between two consecutive sequence cleanup scans. Default is 5. Zero value disables sequence cleaner.",
@@ -182,8 +182,8 @@ void CLIParser::parse(int argc, char** argv) {
 }
 
 void CLIParser::prepare(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
-    go->grpcPort = result->operator[]("port").as<uint64_t>();
-    go->restPort = result->operator[]("rest_port").as<uint64_t>();
+    go->grpcPort = result->operator[]("port").as<uint32_t>();
+    go->restPort = result->operator[]("rest_port").as<uint32_t>();
 
     if (result->count("model_name"))
         mmo->modelName = result->operator[]("model_name").as<std::string>();
@@ -203,10 +203,10 @@ void CLIParser::prepare(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
     if (result->count("rest_bind_address"))
         go->restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
 
-    go->grpcWorkers = result->operator[]("grpc_workers").as<uint>();
+    go->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("rest_workers"))
-        go->restWorkers = result->operator[]("rest_workers").as<uint>();
+        go->restWorkers = result->operator[]("rest_workers").as<uint32_t>();
 
     if (result->count("batch_size"))
         mmo->batchSize = result->operator[]("batch_size").as<std::string>();
@@ -254,7 +254,7 @@ void CLIParser::prepare(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
     if (result->count("grpc_channel_arguments"))
         go->grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
 
-    go->filesystemPollWaitSeconds = result->operator[]("file_system_poll_wait_seconds").as<uint>();
+    go->filesystemPollWaitSeconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>();
     go->sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
     go->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval").as<uint32_t>();
 
