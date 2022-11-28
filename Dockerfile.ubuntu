@@ -231,7 +231,6 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else (bazel test ${debug_bazel
     (bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} || cat ${TEST_LOG} && exit 1) &&\
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
     (bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} || cat ${TEST_LOG} && exit 1)
- 
 
 RUN tail -n 100 ${TEST_LOG}
 
