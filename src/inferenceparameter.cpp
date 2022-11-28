@@ -40,7 +40,7 @@ size_t DataTypeToByteSize(OVMS_DataType datatype) {
         {OVMS_DATATYPE_FP32, 4},
         {OVMS_DATATYPE_FP64, 8},
         {OVMS_DATATYPE_BF16, 2},
-        // {"BYTES", },
+        // {"BYTES", }, TODO
     };
     auto it = datatypeSizeMap.find(datatype);
     if (it == datatypeSizeMap.end()) {
@@ -54,16 +54,18 @@ InferenceParameter::InferenceParameter(const char* name, OVMS_DataType datatype,
     datatype(datatype),
     data(reinterpret_cast<const char*>(data), DataTypeToByteSize(datatype)) {
 }
-//   InferenceParameter::InferenceParameter(const char* name, DataType datatype, const void* data, size_t byteSize);
+
 const std::string& InferenceParameter::getName() const {
     return this->name;
 }
 OVMS_DataType InferenceParameter::getDataType() const {
     return this->datatype;
 }
+
 size_t InferenceParameter::getByteSize() const {
     return this->data.size();
 }
+
 const void* InferenceParameter::getData() const {
     return reinterpret_cast<const void*>(this->data.c_str());
 }
