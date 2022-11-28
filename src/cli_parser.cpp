@@ -20,7 +20,7 @@
 
 #include <sysexits.h>
 
-#include "poc_api_impl.hpp"
+#include "api_options.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -37,7 +37,7 @@ void CLIParser::parse(int argc, char** argv) {
                 "Show binary version")
             ("port",
                 "gRPC server port",
-                cxxopts::value<uint64_t>()->default_value("9178"),
+                cxxopts::value<uint32_t>()->default_value("9178"),
                 "PORT")
             ("grpc_bind_address",
                 "Network interface address to bind to for the gRPC API",
@@ -45,7 +45,7 @@ void CLIParser::parse(int argc, char** argv) {
                 "GRPC_BIND_ADDRESS")
             ("rest_port",
                 "REST server port, the REST server will not be started if rest_port is blank or set to 0",
-                cxxopts::value<uint64_t>()->default_value("0"),
+                cxxopts::value<uint32_t>()->default_value("0"),
                 "REST_PORT")
             ("rest_bind_address",
                 "Network interface address to bind to for the REST API",
@@ -53,11 +53,11 @@ void CLIParser::parse(int argc, char** argv) {
                 "REST_BIND_ADDRESS")
             ("grpc_workers",
                 "Number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
-                cxxopts::value<uint>()->default_value("1"),
+                cxxopts::value<uint32_t>()->default_value("1"),
                 "GRPC_WORKERS")
             ("rest_workers",
                 "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
-                cxxopts::value<uint>(),
+                cxxopts::value<uint32_t>(),
                 "REST_WORKERS")
             ("log_level",
                 "serving log level - one of TRACE, DEBUG, INFO, WARNING, ERROR",

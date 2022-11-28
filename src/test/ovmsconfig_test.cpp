@@ -25,6 +25,7 @@
 #include "spdlog/spdlog.h"
 
 #include "../config.hpp"
+#include "test_utils.hpp"
 
 using testing::_;
 using testing::ContainerEq;
@@ -321,11 +322,6 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     std::string too_long(256, 'a');
     EXPECT_EQ(ovms::Config::check_hostname_or_ip(too_long), false);
 }
-
-class MockedConfig : public ovms::Config {
-public:
-    MockedConfig() {}
-};
 
 TEST(OvmsConfigTest, positiveMulti) {
     char* n_argv[] = {"ovms",

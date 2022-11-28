@@ -34,6 +34,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#include "../config.hpp"
 #include "../execution_context.hpp"
 #include "../inferencerequest.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -571,3 +572,8 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 };
 
 void randomizePort(std::string& port);
+
+class MockedConfig : public ovms::Config {
+public:
+    MockedConfig() {}
+};

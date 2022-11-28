@@ -18,34 +18,200 @@
 
 // TODO we should not include classes from OVMS here
 // consider how to workaround test_utils
-#include "../config.hpp"
 #include "../inferenceresponse.hpp"
 #include "../logging.hpp"
-#include "../poc_api_impl.hpp"
+#include "../api_options.hpp"
+#include "../config.hpp"
+#include "../modelconfig.hpp"
 #include "../pocapi.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
 using testing::ElementsAreArray;
 
-class CapiConfigTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-    }
-};
+TEST(CApiConfigTest, MultiModelConfiguration) {
+    OVMS_ServerGeneralOptions* _go = 0;
+    OVMS_ServerMultiModelOptions* _mmo = 0;
 
-TEST_F(CapiConfigTest, Parse) {
-    GeneralOptionsImpl go;
-    MultiModelOptionsImpl mmo;
+    ASSERT_EQ(OVMS_ServerGeneralOptionsNew(&_go), nullptr);
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsNew(&_mmo), nullptr);
+    ASSERT_NE(_go, nullptr);
+    ASSERT_NE(_mmo, nullptr);
 
-    go.grpcPort = 123;
-    go.restPort = 234;
-    mmo.configPath = "/path/config.json";
+    GeneralOptionsImpl* go = reinterpret_cast<GeneralOptionsImpl*>(_go);
+    MultiModelOptionsImpl* mmo = reinterpret_cast<MultiModelOptionsImpl*>(_mmo);
 
-    ovms::Config::instance().parse(&go, &mmo);
-    EXPECT_EQ(ovms::Config::instance().port(), 123);
-    EXPECT_EQ(ovms::Config::instance().restPort(), 234);
-    EXPECT_EQ(ovms::Config::instance().configPath(), "/path/config.json");
+    // Test default values
+    EXPECT_EQ(go->grpcPort, 9178);
+    EXPECT_EQ(go->restPort, 0);
+    EXPECT_EQ(go->grpcWorkers, 1);
+    EXPECT_EQ(go->grpcBindAddress, "0.0.0.0");
+    EXPECT_EQ(go->restWorkers, std::nullopt);
+    EXPECT_EQ(go->restBindAddress, "0.0.0.0");
+    EXPECT_EQ(go->metricsEnabled, false);
+    EXPECT_EQ(go->metricsList, "");
+    EXPECT_EQ(go->cpuExtensionLibraryPath, "");
+    EXPECT_EQ(go->logLevel, "INFO");
+    EXPECT_EQ(go->logPath, "");
+    // trace path
+    EXPECT_EQ(go->grpcChannelArguments, "");
+    EXPECT_EQ(go->filesystemPollWaitSeconds, 1);
+    EXPECT_EQ(go->sequenceCleanerPollWaitMinutes, 5);
+    EXPECT_EQ(go->resourcesCleanerPollWaitSeconds, 1);
+    EXPECT_EQ(go->cacheDir, "");
+
+    EXPECT_EQ(mmo->modelName, "");
+    EXPECT_EQ(mmo->modelPath, "");
+    EXPECT_EQ(mmo->batchSize, "");
+    EXPECT_EQ(mmo->shape, "");
+    EXPECT_EQ(mmo->layout, "");
+    EXPECT_EQ(mmo->modelVersionPolicy, "");
+    EXPECT_EQ(mmo->nireq, 0);
+    EXPECT_EQ(mmo->targetDevice, "");
+    EXPECT_EQ(mmo->pluginConfig, "");
+    EXPECT_EQ(mmo->stateful, std::nullopt);
+    EXPECT_EQ(mmo->lowLatencyTransformation, std::nullopt);
+    EXPECT_EQ(mmo->maxSequenceNumber, std::nullopt);
+    EXPECT_EQ(mmo->idleSequenceCleanup, std::nullopt);
+
+    EXPECT_EQ(mmo->configPath, "");
+
+    // Set non default values
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetGrpcPort(_go, 5555), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetRestPort(_go, 6666), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetGrpcWorkers(_go, 30), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetGrpcBindAddress(_go, "2.2.2.2"), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetRestWorkers(_go, 31), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetRestBindAddress(_go, "3.3.3.3"), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetGrpcChannelArguments(_go, "grpcargs"), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(_go, 2), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(_go, 3), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerInterval(_go, 4), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetCpuExtensionPath(_go, "/ovms/src/test"), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetCacheDir(_go, "/tmp/cache"), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_TRACE), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetLogPath(_go, "/logs"), nullptr);
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsSetConfigPath(_mmo, "/config"), nullptr);
+
+    // Test non default values
+    EXPECT_EQ(go->grpcPort, 5555);
+    EXPECT_EQ(go->restPort, 6666);
+    EXPECT_EQ(go->grpcWorkers, 30);
+    EXPECT_EQ(go->grpcBindAddress, "2.2.2.2");
+    EXPECT_EQ(go->restWorkers, 31);
+    EXPECT_EQ(go->restBindAddress, "3.3.3.3");
+    // EXPECT_EQ(go->metricsEnabled, false);  // TODO: enable testing once metrics will be configurable via api
+    // EXPECT_EQ(go->metricsList, "");
+    EXPECT_EQ(go->cpuExtensionLibraryPath, "/ovms/src/test");
+    EXPECT_EQ(go->logLevel, "TRACE");
+    EXPECT_EQ(go->logPath, "/logs");
+    // trace path
+    EXPECT_EQ(go->grpcChannelArguments, "grpcargs");
+    EXPECT_EQ(go->filesystemPollWaitSeconds, 2);
+    EXPECT_EQ(go->sequenceCleanerPollWaitMinutes, 3);
+    EXPECT_EQ(go->resourcesCleanerPollWaitSeconds, 4);
+    EXPECT_EQ(go->cacheDir, "/tmp/cache");
+
+    EXPECT_EQ(mmo->modelName, "");
+    EXPECT_EQ(mmo->modelPath, "");
+    EXPECT_EQ(mmo->batchSize, "");
+    EXPECT_EQ(mmo->shape, "");
+    EXPECT_EQ(mmo->layout, "");
+    EXPECT_EQ(mmo->modelVersionPolicy, "");
+    EXPECT_EQ(mmo->nireq, 0);
+    EXPECT_EQ(mmo->targetDevice, "");
+    EXPECT_EQ(mmo->pluginConfig, "");
+    EXPECT_EQ(mmo->stateful, std::nullopt);
+    EXPECT_EQ(mmo->lowLatencyTransformation, std::nullopt);
+    EXPECT_EQ(mmo->maxSequenceNumber, std::nullopt);
+    EXPECT_EQ(mmo->idleSequenceCleanup, std::nullopt);
+
+    EXPECT_EQ(mmo->configPath, "/config");
+
+    // Test config parser
+    MockedConfig cfg;
+    ASSERT_TRUE(cfg.parse(go, mmo));
+    EXPECT_EQ(cfg.port(), 5555);
+    EXPECT_EQ(cfg.restPort(), 6666);
+    EXPECT_EQ(cfg.grpcWorkers(), 30);
+    EXPECT_EQ(cfg.grpcBindAddress(), "2.2.2.2");
+    EXPECT_EQ(cfg.restWorkers(), 31);
+    EXPECT_EQ(cfg.restBindAddress(), "3.3.3.3");
+    // EXPECT_EQ(go->metricsEnabled, false);  // TODO: enable testing once metrics will be configurable via api
+    // EXPECT_EQ(go->metricsList, "");
+    EXPECT_EQ(cfg.cpuExtensionLibraryPath(), "/ovms/src/test");
+    EXPECT_EQ(cfg.logLevel(), "TRACE");
+    EXPECT_EQ(cfg.logPath(), "/logs");
+    // trace path
+    EXPECT_EQ(cfg.grpcChannelArguments(), "grpcargs");
+    EXPECT_EQ(cfg.filesystemPollWaitSeconds(), 2);
+    EXPECT_EQ(cfg.sequenceCleanerPollWaitMinutes(), 3);
+    EXPECT_EQ(cfg.resourcesCleanerPollWaitSeconds(), 4);
+    EXPECT_EQ(cfg.cacheDir(), "/tmp/cache");
+
+    EXPECT_EQ(cfg.modelName(), "");
+    EXPECT_EQ(cfg.modelPath(), "");
+    EXPECT_EQ(cfg.batchSize(), "0");
+    EXPECT_EQ(cfg.shape(), "");
+    EXPECT_EQ(cfg.layout(), "");
+    EXPECT_EQ(cfg.modelVersionPolicy(), "");
+    EXPECT_EQ(cfg.nireq(), 0);
+    EXPECT_EQ(cfg.targetDevice(), "CPU");
+    EXPECT_EQ(cfg.pluginConfig(), "");
+    EXPECT_FALSE(cfg.stateful());
+    EXPECT_FALSE(cfg.lowLatencyTransformation());
+    EXPECT_EQ(cfg.maxSequenceNumber(), ovms::DEFAULT_MAX_SEQUENCE_NUMBER);
+    EXPECT_TRUE(cfg.idleSequenceCleanup());
+
+    EXPECT_EQ(cfg.configPath(), "/config");
+
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsDelete(_mmo), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsDelete(_go), nullptr);
+}
+
+TEST(CApiConfigTest, SingleModelConfiguration) {
+    GTEST_SKIP() << "Use C-API to initialize in next stages, currently not supported";
+}
+
+TEST(CApiStartTest, InitializingMultipleServers) {
+    OVMS_Server* srv1 = 0;
+    OVMS_Server* srv2 = 0;
+
+    ASSERT_EQ(OVMS_ServerNew(&srv1), nullptr);
+    ASSERT_EQ(OVMS_ServerNew(&srv2), nullptr);
+    ASSERT_EQ(srv1, srv2);
+    ASSERT_EQ(OVMS_ServerDelete(srv1), nullptr);
+}
+
+TEST(CApiStartTest, StartFlow) {
+    OVMS_Server* srv = 0;
+    OVMS_ServerGeneralOptions* go = 0;
+    OVMS_ServerMultiModelOptions* mmo = 0;
+
+    ASSERT_EQ(OVMS_ServerNew(&srv), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsNew(&go), nullptr);
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsNew(&mmo), nullptr);
+
+    ASSERT_NE(srv, nullptr);
+    ASSERT_NE(go, nullptr);
+    ASSERT_NE(mmo, nullptr);
+
+    // Cannot start due to configuration error
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetGrpcPort(go, 5555), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetRestPort(go, 5555), nullptr);  // The same port
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config.json"), nullptr);
+
+    // Expect fail
+    // TODO: Check exact error code and details once error reporting becomes ready
+    ASSERT_NE(OVMS_ServerStartFromConfigurationFile(srv, go, mmo), nullptr);
+
+    // Fix and expect ok
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetRestPort(go, 6666), nullptr);  // Different port
+    ASSERT_EQ(OVMS_ServerStartFromConfigurationFile(srv, go, mmo), nullptr);
+
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsDelete(mmo), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsDelete(go), nullptr);
+    ASSERT_EQ(OVMS_ServerDelete(srv), nullptr);
 }
 
 class CapiInferencePreparationTest : public ::testing::Test {};

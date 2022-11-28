@@ -90,6 +90,7 @@ cc_library(
     hdrs = ["pocapi.hpp"],
     srcs = [
         "aliases.hpp",
+        "api_options.hpp",
         "azurestorage.hpp",
         "azurestorage.cpp",
         "azurefilesystem.cpp",
@@ -237,8 +238,6 @@ cc_library(
         "pipelineeventqueue.hpp",
         "pipeline_factory.cpp",
         "pipeline_factory.hpp",
-        "poc_api_impl.cpp",
-        "poc_api_impl.hpp",
         "pocapi.hpp",
         "pocapiinternal.cpp",
         "pocapiinternal.hpp",

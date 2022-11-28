@@ -35,6 +35,7 @@
 #include <sysexits.h>
 #include <unistd.h>
 
+#include "api_options.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
@@ -45,7 +46,6 @@
 #include "metric_module.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
-#include "poc_api_impl.hpp"
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"
@@ -119,7 +119,7 @@ static void onIllegal(int status) {
     shutdown_request = 2;
 }
 
-static void installSignalHandlers(ovms::Server& server) {
+static void installSignalHandlers() {
     static struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = onInterrupt;
     sigemptyset(&sigIntHandler.sa_mask);
@@ -325,36 +325,41 @@ void Server::shutdownModules() {
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
+    installSignalHandlers();
+
     ovms::CLIParser parser;
     ovms::GeneralOptionsImpl go;
     ovms::MultiModelOptionsImpl mmo;
     parser.parse(argc, argv);
     parser.prepare(&go, &mmo);
-    return start(&go, &mmo);
+
+    int ret = start(&go, &mmo);
+    ModulesShutdownGuard shutdownGuard(*this);
+    if (ret != 0) {
+        return ret;
+    }
+    while (!shutdown_request) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    if (shutdown_request == 2) {
+        SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
+    }
+    SPDLOG_INFO("Shutting down");
+
+    return EXIT_SUCCESS;
 }
 
 // C-API Start
 int Server::start(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
-    ovms::Server& server = ovms::Server::instance();
-    installSignalHandlers(server);
     try {
         auto& config = ovms::Config::instance();
         if (!config.parse(go, mmo))
             return EX_USAGE;
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);
-        ModulesShutdownGuard shutdownGuard(*this);
         auto retCode = this->startModules(config);
         if (retCode)
             return retCode;
-
-        while (!shutdown_request) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        if (shutdown_request == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-        }
-        SPDLOG_INFO("Shutting down");
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
         return EXIT_FAILURE;
