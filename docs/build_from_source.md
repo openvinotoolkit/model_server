@@ -1,7 +1,5 @@
 # Building Container from Source {#ovms_docs_build_from_source}
 
-OpenVINO Model Server is hosted inside a docker container. Depending on your requirements, you can choose one of methods: either download a pre-build container or build a container from source, if you want to have full control of the container. 
-
 Before starting the server, make sure your hardware is [supported](https://docs.openvino.ai/2022.2/_docs_IE_DG_supported_plugins_Supported_Devices.html) by OpenVINO.
 
 > **NOTE**: OpenVINO Model Server execution on baremetal is tested on Ubuntu 20.04.x. For other operating systems, starting model server in a [docker container](./docker_container.md) is recommended.
