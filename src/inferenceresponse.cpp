@@ -15,8 +15,10 @@
 //*****************************************************************************
 #include "inferenceresponse.hpp"
 
+#include <algorithm>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
@@ -30,32 +32,62 @@ InferenceResponse::InferenceResponse(const std::string& servableName, model_vers
 const std::string& InferenceResponse::getServableName() const {
     return this->servableName;
 }
+
 model_version_t InferenceResponse::getServableVersion() const {
     return this->servableVersion;
 }
+
 Status InferenceResponse::addOutput(const std::string& name, OVMS_DataType datatype, const size_t* shape, size_t dimCount) {
     // TODO insert tensor with wrong shape/datatype/name/dimcount
-    // TODO reuse infer response/request
-    auto [it, emplaced] = outputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
-    return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
+    auto it = std::find_if(outputs.begin(),
+        outputs.end(),
+        [&name](const std::pair<std::string, InferenceTensor>& pair) {
+            return name == pair.first;
+        });
+    if (outputs.end() != it) {
+        return StatusCode::DOUBLE_TENSOR_INSERT;
+    }
+
+    auto pair = std::pair<std::string, InferenceTensor>(name, InferenceTensor{datatype, shape, dimCount});
+    outputs.push_back(std::move(pair));
+    return StatusCode::OK;
 }
-Status InferenceResponse::getOutput(const char* name, InferenceTensor** tensor) {
-    auto it = outputs.find(name);
-    if (outputs.end() == it) {
+
+Status InferenceResponse::getOutput(uint32_t id, const std::string** name, InferenceTensor** tensor) {
+    if (outputs.size() <= id) {
         *tensor = nullptr;
         return StatusCode::NONEXISTENT_TENSOR;
     }
-    *tensor = &it->second;
+    *name = &(outputs[id].first);
+    *tensor = &(outputs[id].second);
     return StatusCode::OK;
 }
+
 Status InferenceResponse::addParameter(const char* parameterName, OVMS_DataType datatype, const void* data) {
-    auto [it, emplaced] = parameters.emplace(parameterName, InferenceParameter{parameterName, datatype, data});
-    return emplaced ? StatusCode::OK : StatusCode::DOUBLE_PARAMETER_INSERT;
+    auto it = std::find_if(parameters.begin(),
+        parameters.end(),
+        [&parameterName](const InferenceParameter& parameter) {
+            return parameterName == parameter.getName();
+        });
+    if (parameters.end() != it) {
+        return StatusCode::DOUBLE_PARAMETER_INSERT;
+    }
+    parameters.emplace_back(parameterName, datatype, data);
+    return StatusCode::OK;
 }
-const InferenceParameter* InferenceResponse::getParameter(const char* name) const {
-    auto it = parameters.find(name);
-    if (it != parameters.end())
-        return &it->second;
-    return nullptr;
+
+const InferenceParameter* InferenceResponse::getParameter(uint32_t id) const {
+    if (id >= parameters.size()) {
+        return nullptr;
+    }
+    return &parameters[id];
+}
+
+uint32_t InferenceResponse::getOutputCount() const {
+    return this->outputs.size();
+}
+
+uint32_t InferenceResponse::getParameterCount() const {
+    return this->parameters.size();
 }
 }  // namespace ovms

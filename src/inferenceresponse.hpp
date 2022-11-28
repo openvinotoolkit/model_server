@@ -15,7 +15,8 @@
 // limitations under the License.
 //*****************************************************************************
 #include <string>
-#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
@@ -29,18 +30,21 @@ class Status;
 class InferenceResponse {
     const std::string& servableName;
     const model_version_t servableVersion;
-    std::unordered_map<std::string, InferenceParameter> parameters;
-    std::unordered_map<std::string, InferenceTensor> outputs;
+    std::vector<InferenceParameter> parameters;                    // TODO after benchmark app verify if additional map<int, name> wouldn't be better
+    std::vector<std::pair<std::string, InferenceTensor>> outputs;  // TODO after benchmark app verify if additional map<int, name> wouldn't be better
 
 public:
     InferenceResponse(const std::string& servableName, model_version_t servableVersion);
     Status addOutput(const std::string& name, OVMS_DataType datatype, const size_t* shape, size_t dimCount);
-    Status getOutput(const char* name, InferenceTensor** tensor);
+    Status getOutput(uint32_t id, const std::string** name, InferenceTensor** tensor);  // TODO consider in the future if we need getOutput by name
+
     Status addParameter(const char* parameterName, OVMS_DataType datatype, const void* data);
-    const InferenceParameter* getParameter(const char* name) const;
+    const InferenceParameter* getParameter(uint32_t id) const;
 
     const std::string& getServableName() const;
     model_version_t getServableVersion() const;
+    uint32_t getOutputCount() const;
+    uint32_t getParameterCount() const;
 
     Status setId();
     Status getId();

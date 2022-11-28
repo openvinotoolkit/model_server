@@ -138,16 +138,22 @@ TEST(InferenceResponse, CreateAndReadData) {
     // add output
     auto status = response.addOutput(INPUT_NAME.c_str(), DATATYPE, INPUT_SHAPE.data(), INPUT_SHAPE.size());
     ASSERT_EQ(status, StatusCode::OK) << status.string();
+    EXPECT_EQ(response.getOutputCount(), 1);
     // add 2nd output with the same name should fail
     status = response.addOutput(INPUT_NAME.c_str(), DATATYPE, INPUT_SHAPE.data(), INPUT_SHAPE.size());
     ASSERT_EQ(status, StatusCode::DOUBLE_TENSOR_INSERT) << status.string();
     // get nonexistent output
+    const std::string* wrongOutputName = nullptr;
     InferenceTensor* tensor = nullptr;
-    status = response.getOutput("SOME_NOT_RANDOM_NAME", &tensor);
+    status = response.getOutput(13, &wrongOutputName, &tensor);
     ASSERT_EQ(status, StatusCode::NONEXISTENT_TENSOR) << status.string();
+    ASSERT_EQ(nullptr, tensor);
+    ASSERT_EQ(nullptr, wrongOutputName);
     // get output
-    status = response.getOutput(INPUT_NAME.c_str(), &tensor);
+    const std::string* outputName = nullptr;
+    status = response.getOutput(0, &outputName, &tensor);
     ASSERT_NE(nullptr, tensor);
+    ASSERT_EQ(INPUT_NAME, *outputName);
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     // compare datatype
     ASSERT_EQ(tensor->getDataType(), DATATYPE);
@@ -177,9 +183,11 @@ TEST(InferenceResponse, CreateAndReadData) {
     // verify parameter handling
     status = response.addParameter(PARAMETER_NAME.c_str(), PARAMETER_DATATYPE, reinterpret_cast<const void*>(&PARAMETER_VALUE));
     ASSERT_EQ(status, StatusCode::OK) << status.string();
+    EXPECT_EQ(response.getParameterCount(), 1);
 
-    // add parameter
-    const InferenceParameter* parameter = response.getParameter(PARAMETER_NAME.c_str());
+    const InferenceParameter* parameter = response.getParameter(1);
+    ASSERT_EQ(parameter, nullptr);
+    parameter = response.getParameter(0);
     ASSERT_NE(parameter, nullptr);
     EXPECT_EQ(parameter->getName(), PARAMETER_NAME);
     EXPECT_EQ(parameter->getDataType(), PARAMETER_DATATYPE);
