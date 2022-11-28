@@ -146,7 +146,7 @@ Status serializePredictResponse(
     outputNameChooser_t outputNameChooser) {
     OVMS_PROFILE_FUNCTION();
     Status status;
-    ProtoGetter<InferenceResponse*, InferenceTensor&> protoGetter(response);
+    uint32_t outputId = 0;
     for (const auto& [outputName, outputInfo] : outputMap) {
         ov::Tensor tensor;
         status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);
@@ -203,7 +203,9 @@ Status serializePredictResponse(
                 outputName, response->getServableName(), response->getServableVersion());
             return StatusCode::INTERNAL_ERROR;
         }
-        status = response->getOutput(outputInfo->getMappedName().c_str(), &outputTensor);
+        const std::string* outputNameFromCapiTensor = nullptr;
+        status = response->getOutput(outputId, &outputNameFromCapiTensor, &outputTensor);
+        ++outputId;  // TODO C-API test serialization 2 outputs
         if (!status.ok()) {
             SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted input",
                 outputName, response->getServableName(), response->getServableVersion());
