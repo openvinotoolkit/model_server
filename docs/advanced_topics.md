@@ -15,7 +15,7 @@
 ## CPU Extensions
 Implement any CPU layer, unsupported by OpenVINO, as a shared library.
 
-[Learn more](/src/example/SampleCpuExtension/README.md)
+[Learn more](../src/example/SampleCpuExtension/README.md)
 
 ## Model Cache
 Leverage an [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_Model_caching_overview.html) to speed up subsequent model loading on a target device.
