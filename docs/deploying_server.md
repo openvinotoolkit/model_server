@@ -7,7 +7,7 @@
    :hidden:
 
    ovms_docs_docker_container
-   ovms_docs_baremetal
+   ovms_docs_build_from_source
    ovms_docs_kubernetes
    
 @endsphinxdirective
