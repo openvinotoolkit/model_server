@@ -146,7 +146,6 @@ Status serializePredictResponse(
     outputNameChooser_t outputNameChooser) {
     OVMS_PROFILE_FUNCTION();
     Status status;
-    ProtoGetter<InferenceResponse*, InferenceTensor&> protoGetter(response);
     uint32_t outputId = 0;
     for (const auto& [outputName, outputInfo] : outputMap) {
         ov::Tensor tensor;

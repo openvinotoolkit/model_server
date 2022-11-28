@@ -186,7 +186,7 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
     }
     const Buffer* buffer = tensor->getBuffer();
     if (nullptr == buffer) {
-        return reinterpret_cast<OVMS_Status*>(new Status(ovms::StatusCode::NOT_IMPLEMENTED));  // TODO retcode
+        return reinterpret_cast<OVMS_Status*>(new Status(ovms::StatusCode::INTERNAL_ERROR, "InferenceResponse has tensor without buffer"));
     }
     *name = cppName->c_str();
     *datatype = tensor->getDataType();
