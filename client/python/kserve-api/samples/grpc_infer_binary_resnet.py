@@ -17,6 +17,7 @@
 import sys
 sys.path.append("../../../../demos/common/python")
 
+import ast
 import grpc
 import numpy as np
 import classes
@@ -26,6 +27,18 @@ from client_utils import print_statistics
 from tritonclient.grpc import service_pb2, service_pb2_grpc
 from tritonclient.utils import *
 
+DataTypeToContentsFieldName = {
+    'BOOL' : 'bool_contents',
+    'BYTES' : 'bytes_contents',
+    'FP32' : 'fp32_contents',
+    'FP64' : 'fp64_contents',
+    'INT64' : 'int64_contents',
+    'INT32' : 'int_contents',
+    'UINT64' : 'uint64_contents',
+    'UINT32' : 'uint_contents',
+    'INT64' : 'int64_contents',
+    'INT32' : 'int_contents',
+}
 
 def as_numpy(response, name):
     index = 0
@@ -35,11 +48,14 @@ def as_numpy(response, name):
             for value in output.shape:
                 shape.append(value)
             datatype = output.datatype
+            field_name = DataTypeToContentsFieldName[datatype]
+            contents = getattr(output, "contents")
+            contents = getattr(contents, f"{field_name}")
             if index < len(response.raw_output_contents):
                 np_array = np.frombuffer(
                     response.raw_output_contents[index], dtype=triton_to_np_dtype(output.datatype))
-            elif len(output.contents.bytes_contents) != 0:
-                np_array = np.array(output.contents.bytes_contents,
+            elif len(contents) != 0:
+                np_array = np.array(contents,
                                     copy=False)
             else:
                 np_array = np.empty(0)
