@@ -194,11 +194,11 @@ RUN wget https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov
 
 COPY check_coverage.bat /ovms/
 
-# Test coverage and unit tests in one layer
-RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else  bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test && exit 0; fi ;\
-    bazel coverage --combined_report=lcov //src:ovms_test > /dev/null || bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test &&\
+# Test Coverage
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else (bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > $TEST_LOG || cat $TEST_LOG && exit 1) && exit 0; fi ;\
+    (bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > $TEST_LOG || cat $TEST_LOG && exit 1) &&\
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
-    bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
+    (bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > $TEST_LOG || cat $TEST_LOG && exit 1)
     
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so

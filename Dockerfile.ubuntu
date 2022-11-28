@@ -35,6 +35,7 @@ ARG minitrace_flags
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TF_SYSTEM_LIBS="curl"
+ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/k8-opt/testlogs/src/ovms_test/test.log"
 SHELL ["/bin/bash", "-c"]
 RUN apt update && apt install -y \
             libboost-atomic1.71.0 \
@@ -226,10 +227,10 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:
 
 COPY check_coverage.bat /ovms/
 # Test Coverage
-RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test && exit 0; fi ;\
-    bazel coverage --combined_report=lcov //src:ovms_test > /dev/null || bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test &&\
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else (bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > $TEST_LOG || cat $TEST_LOG && exit 1) && exit 0; fi ;\
+    (bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > $TEST_LOG || cat $TEST_LOG && exit 1) &&\
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
-    bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
+    (bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > $TEST_LOG || cat $TEST_LOG && exit 1)
     
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
