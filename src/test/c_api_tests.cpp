@@ -20,6 +20,7 @@
 // consider how to workaround test_utils
 #include "../config.hpp"
 #include "../inferenceresponse.hpp"
+#include "../logging.hpp"
 #include "../poc_api_impl.hpp"
 #include "../pocapi.hpp"
 #include "test_utils.hpp"
@@ -68,6 +69,10 @@ TEST_F(CapiInferencePreparationTest, Basic) {
     const uint64_t sequenceId{42};
     status = OVMS_InferenceRequestAddParameter(request, "sequence_id", OVMS_DATATYPE_U64, reinterpret_cast<const void*>(&sequenceId), sizeof(sequenceId));
     ASSERT_EQ(nullptr, status);
+    // 2nd time should get error
+    status = OVMS_InferenceRequestAddParameter(request, "sequence_id", OVMS_DATATYPE_U64, reinterpret_cast<const void*>(&sequenceId), sizeof(sequenceId));
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
     const uint32_t sequenceControl{1};  // SEQUENCE_START
     status = OVMS_InferenceRequestAddParameter(request, "sequence_control_input", OVMS_DATATYPE_U32, reinterpret_cast<const void*>(&sequenceControl), sizeof(sequenceControl));
     ASSERT_EQ(nullptr, status);
@@ -102,6 +107,10 @@ TEST_F(CapiInferencePreparationTest, Basic) {
 
     status = OVMS_InferenceRequestInputRemoveData(request, "INPUT_WITHOUT_BUFFER_REMOVED_DIRECTLY");
     ASSERT_EQ(nullptr, status);
+    // second time we should get error
+    status = OVMS_InferenceRequestInputRemoveData(request, "INPUT_WITHOUT_BUFFER_REMOVED_DIRECTLY");
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
     status = OVMS_InferenceRequestRemoveInput(request, "INPUT_WITHOUT_BUFFER_REMOVED_DIRECTLY");
     ASSERT_EQ(nullptr, status);
     status = OVMS_InferenceRequestRemoveInput(request, "INPUT_WITH_BUFFER_REMOVED_DIRECTLY");
@@ -109,7 +118,14 @@ TEST_F(CapiInferencePreparationTest, Basic) {
     // we will remove 1 of two parameters
     status = OVMS_InferenceRequestRemoveParameter(request, "sequence_id");
     ASSERT_EQ(nullptr, status);
+    // 2nd time should report error
+    status = OVMS_InferenceRequestRemoveParameter(request, "sequence_id");
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
 
+    status = OVMS_InferenceRequestRemoveInput(request, "NONEXISTENT_TENSOR");
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
     status = OVMS_InferenceRequestDelete(request);
     ASSERT_EQ(nullptr, status);
 }
@@ -182,6 +198,9 @@ TEST_F(CapiInferenceRetrievalTest, Basic) {
     BufferType bufferType = (BufferType)199;
     uint32_t deviceId = -1;
     const char* outputName{nullptr};
+    status = OVMS_InferenceResponseGetOutput(response, outputId + 42123, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
     status = OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(INPUT_NAME, outputName);
@@ -200,6 +219,17 @@ TEST_F(CapiInferenceRetrievalTest, Basic) {
     }
 
     // we release unique_ptr ownership here so that we can free it safely via C-API
+    // test negative scenario with getting output without buffer
+    cppStatus = cppResponse->addOutput("outputWithNoBuffer", DATATYPE, cppOutputShape.data(), cppOutputShape.size());
+    ASSERT_EQ(cppStatus, StatusCode::OK) << cppStatus.string();
+    status = OVMS_InferenceResponseGetOutput(response, outputId + 1, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
+    // negative scenario nonexistsing parameter
+    status = OVMS_InferenceResponseGetParameter(response, 123, &parameterDatatype, &parameterData);
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
+    // final cleanup
     cppResponse.release();
     status = OVMS_InferenceResponseDelete(response);
     ASSERT_EQ(nullptr, status);
