@@ -130,8 +130,8 @@ RUN	set -e ; \
                         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
                 ;; \
                 *) \
-                        dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd ; \
-                        apt-get update && apt-get -y install dpkg-dev && rm -rf /var/lib/apt/lists/* \
+                        dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
+                        apt-get update && apt-get -y install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
                         cd /drivers/${INSTALL_DRIVER_VERSION} && \
                             dpkg-scanpackages .  > Packages && \
                             cd - ; \
