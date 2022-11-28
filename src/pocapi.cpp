@@ -179,10 +179,12 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
     InferenceTensor* tensor = nullptr;
     const std::string* cppName;
     auto status = response->getOutput(id, &cppName, &tensor);
-    if (!status.ok() ||
-        (tensor == nullptr) ||
-        (cppName == nullptr)) {
+    if (!status.ok()) {
         return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    if ((tensor == nullptr) ||
+        (cppName == nullptr)) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::INTERNAL_ERROR, "InferenceResponse returned nullptr tensor or name"));
     }
     const Buffer* buffer = tensor->getBuffer();
     if (nullptr == buffer) {
