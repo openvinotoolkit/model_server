@@ -739,6 +739,21 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
+template<class ArrayType>
+void ModelInstance::fetchModelFiles(bool* found, ArrayType ext){
+    if (!(*found)) {
+        *found = true;
+        modelFiles.clear();
+        for (auto extension : ext) {
+            auto file = findModelFilePathWithExtension(extension);
+            if (file.empty()) {
+                *found = false;
+            }
+            modelFiles.push_back(file);
+        }
+    }
+}
+
 Status ModelInstance::fetchModelFilepaths() {
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
         // not required if the model is loaded using a custom loader and can be returned from here
@@ -751,47 +766,12 @@ Status ModelInstance::fetchModelFilepaths() {
         return StatusCode::PATH_INVALID;
     }
 
-    bool found = true;
-    for (auto extension : OV_MODEL_FILES_EXTENSIONS) {
-        auto file = findModelFilePathWithExtension(extension);
-        if (file.empty()) {
-            found = false;
-        }
-        modelFiles.push_back(file);
-    }
-    if (!found) {
-        found = true;
-        modelFiles.clear();
-        for (auto extension : ONNX_MODEL_FILES_EXTENSIONS) {
-            auto file = findModelFilePathWithExtension(extension);
-            if (file.empty()) {
-                found = false;
-            }
-            modelFiles.push_back(file);
-        }
-    }
-    if (!found) {
-        found = true;
-        modelFiles.clear();
-        for (auto extension : PADDLE_MODEL_FILES_EXTENSIONS) {
-            auto file = findModelFilePathWithExtension(extension);
-            if (file.empty()) {
-                found = false;
-            }
-            modelFiles.push_back(file);
-        }
-    }
-    if (!found) {
-        found = true;
-        modelFiles.clear();
-        for (auto extension : TF_MODEL_FILES_EXTENSIONS) {
-            auto file = findModelFilePathWithExtension(extension);
-            if (file.empty()) {
-                found = false;
-            }
-            modelFiles.push_back(file);
-        }
-    }
+    bool found = false;
+    fetchModelFiles(&found, OV_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(&found, ONNX_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(&found, PADDLE_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(&found, TF_MODEL_FILES_EXTENSIONS);
+
     if (!found) {
         SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
         return StatusCode::FILE_INVALID;

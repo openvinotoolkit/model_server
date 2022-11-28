@@ -559,5 +559,8 @@ public:
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
 
     uint32_t getNumOfStreams() const;
+
+    template<class ArrayType>
+    void fetchModelFiles(bool* found, ArrayType ext);
 };
 }  // namespace ovms
