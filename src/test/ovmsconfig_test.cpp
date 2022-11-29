@@ -25,6 +25,7 @@
 #include "spdlog/spdlog.h"
 
 #include "../config.hpp"
+#include "test_utils.hpp"
 
 using testing::_;
 using testing::ContainerEq;
@@ -322,11 +323,6 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip(too_long), false);
 }
 
-class MockedConfig : public ovms::Config {
-public:
-    MockedConfig() {}
-};
-
 TEST(OvmsConfigTest, positiveMulti) {
     char* n_argv[] = {"ovms",
         "--port", "44",
@@ -338,7 +334,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--grpc_channel_arguments", "grpc_channel_args",
         "--file_system_poll_wait_seconds", "2",
         "--sequence_cleaner_poll_wait_minutes", "7",
-        "--custom_node_resources_cleaner_interval", "8",
+        "--custom_node_resources_cleaner_interval_seconds", "8",
         "--cpu_extension", "/ovms",
         "--cache_dir", "/tmp/model_cache",
         "--log_path", "/tmp/log_path",
@@ -346,7 +342,7 @@ TEST(OvmsConfigTest, positiveMulti) {
 
         "--config_path", "/config.json"};
     int arg_count = 31;
-    MockedConfig config;
+    ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
     EXPECT_EQ(config.port(), 44);
@@ -388,7 +384,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "2",
         "--sequence_cleaner_poll_wait_minutes",
         "7",
-        "--custom_node_resources_cleaner_interval",
+        "--custom_node_resources_cleaner_interval_seconds",
         "8",
         "--cpu_extension",
         "/ovms",
@@ -427,7 +423,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "52",
     };
     int arg_count = 55;
-    MockedConfig config;
+    ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
     EXPECT_EQ(config.port(), 44);
