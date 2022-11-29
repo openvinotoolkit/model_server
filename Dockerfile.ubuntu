@@ -27,9 +27,12 @@ ARG DL_DIR=/tmp
 ARG JOBS
 ARG APT_OV_PACKAGE=openvino-2022.1.0
 ARG CHECK_COVERAGE=0
+ARG NVIDIA=0
+ARG http_proxy
+ARG CMAKE_BUILD_TYPE=Release
 
 # build_type=[ opt, dbg ]
-ARG build_type=dbg
+ARG build_type=opt
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 ARG minitrace_flags
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
@@ -37,7 +40,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/k8-opt/testlogs/test.log"
 SHELL ["/bin/bash", "-c"]
-RUN apt update && apt install -y \
+RUN apt-get update && apt-get install -y \
             libboost-atomic1.71.0 \
             libboost-chrono1.71.0 \
             libboost-filesystem1.71.0 \
@@ -80,7 +83,42 @@ RUN apt update && apt install -y \
             unzip \
             vim \
             xz-utils && \
-            apt clean
+            apt-get clean && \
+            rm -rf /var/lib/apt/lists/*
+
+
+# Add Nvidia dev tool if needed
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin -O /etc/apt/preferences.d/cuda-repository-pin-600 ; \
+    set -exuo pipefail ; \
+    rm -f /etc/apt/apt.conf.d/docker-clean ; \
+    apt-get update && \
+    apt-get install -y \
+      gnupg2 \
+      software-properties-common; \
+    if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
+    apt-key adv --keyserver-options http-proxy=$http_proxy --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub ; \
+    add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"; \
+    apt-get update && apt install -y \
+      libzstd-dev \
+      cuda \
+      libcudnn8 \
+      libcudnn8-dev \
+      libcutensor1 \
+      libcutensor-dev; \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip3 install --no-cache-dir cython && \
+    curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin ; \
+    curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
+    chmod a+x /usr/local/bin/sccache ; \
+    curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 ; \
+    curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv ; \
+    cd ccache-4.3 ; \
+    mkdir build ; \
+    cd build ; \
+    cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. ; \
+    ninja -v install
 
 # Set up Bazel
 ENV BAZEL_VERSION 5.3.1
@@ -108,7 +146,7 @@ COPY third_party /ovms/third_party/
 
 ####### Azure SDK
 WORKDIR /azure
-RUN apt update && apt-get install -y uuid uuid-dev
+RUN apt-get update && apt-get install -y uuid uuid-dev && rm -rf /var/lib/apt/lists/*
 RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.18 -b v2.10.18 && git submodule update --init
 
 RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage-cpp/Microsoft.WindowsAzure.Storage && git checkout tags/v7.5.0 && mkdir build.release
@@ -141,12 +179,13 @@ RUN ./install_opencv.sh
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG ov_source_branch=master
+ARG ov_contrib_branch=master
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout $ov_source_branch; git submodule update --init --recursive
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout $ov_source_branch; git submodule update --init --recursive
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
@@ -182,20 +221,41 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
     wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
     apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
     echo "deb https://apt.repos.intel.com/openvino/2022 focal main" | tee /etc/apt/sources.list.d/intel-openvino-2022.list && \
-    apt update && \
-    apt install -y $APT_OV_PACKAGE && \
+    apt-get update && \
+    apt-get install -y $APT_OV_PACKAGE && \
+    rm -rf /var/lib/apt/lists/* && \
     ln -s /opt/intel/openvino_2022 /opt/intel/openvino
 
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
 
+# NVIDIA
+ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
+ENV OPENVINO_HOME=/openvino
+ENV OPENVINO_CONTRIB=/openvino_contrib
+
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
+    git clone --recurse-submodules --branch=$ov_contrib_branch https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && \
+    mkdir ${OPENVINO_BUILD_PATH} && \
+    cd "${OPENVINO_BUILD_PATH}" && \
+    cmake "${OPENVINO_HOME}" \
+      -DENABLE_NVIDIA=ON \
+      -DENABLE_TESTS=ON \
+      -DBUILD_arm_plugin=OFF \
+      -DBUILD_java_api=OFF \
+      -DOPENVINO_EXTRA_MODULES="${OPENVINO_CONTRIB}/modules" \
+      -DWHEEL_VERSION=2022.1.0 \
+      -DVERBOSE_BUILD=ON \
+      -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && \
+      cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS
+
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 
-RUN apt install -y python-is-python3
+RUN apt-get update && apt-get install -y python-is-python3 && rm -rf /var/lib/apt/lists/*
 
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
@@ -235,7 +295,7 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then \
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
-RUN cd /ovms/src/example/SampleCpuExtension/ && make
+RUN cd /ovms/src/example/SampleCpuExtension/ && OPENVINO_PATH=/opt/intel/openvino make
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
