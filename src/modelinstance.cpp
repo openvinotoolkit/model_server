@@ -1314,9 +1314,7 @@ std::unique_ptr<SpecialResourcesBasic<InferenceRequest, InferenceResponse>> Mode
 //template<>
 //Status ModelInstance::infer<InferenceRequest, InferenceResponse>(InferenceRequest const* requestProto,
 //    InferenceResponse* responseProto,
- //   std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+//   std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 }  // namespace ovms
-template
-ovms::Status ovms::ModelInstance::infer<ovms::InferenceRequest, ovms::InferenceResponse>(ovms::InferenceRequest const*, ovms::InferenceResponse*, std::unique_ptr<ovms::ModelInstanceUnloadGuard>&);
-template
-ovms::Status const ovms::ModelInstance::validate<ovms::InferenceRequest>(ovms::InferenceRequest const*);
+//template ovms::Status const ovms::ModelInstance::validate<ovms::InferenceRequest>(ovms::InferenceRequest const*); FIXME
+template ovms::Status ovms::ModelInstance::infer<ovms::InferenceRequest, ovms::InferenceResponse>(ovms::InferenceRequest const*, ovms::InferenceResponse*, std::unique_ptr<ovms::ModelInstanceUnloadGuard>&);

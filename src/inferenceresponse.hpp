@@ -50,6 +50,6 @@ public:
     Status setId();
     Status getId();
     InferenceParameter* getInferenceParameter(const char* name);
-    void Clear(); // TODO remove
+    void Clear();  // TODO remove
 };
 }  // namespace ovms

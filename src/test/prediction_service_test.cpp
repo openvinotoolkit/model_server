@@ -28,13 +28,13 @@
 
 #include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
 #include "../inferencerequest.hpp"
 #include "../inferenceresponse.hpp"
 #include "../inferencetensor.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../modelinstance.hpp"
-#include "../modelversion.hpp"
 #include "../modelinstanceunloadguard.hpp"
+#include "../modelversion.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"
@@ -90,7 +90,7 @@ ovms::Status getOutput(const TFSResponseType& response, const std::string& name,
 }
 
 ovms::Status getOutput(const ovms::InferenceResponse& response2, const std::string& name, const ovms::InferenceTensor*& it, size_t& bufferId) {
-    auto& response = const_cast<ovms::InferenceResponse&>(response2); // TODO remove const_cast
+    auto& response = const_cast<ovms::InferenceResponse&>(response2);  // TODO remove const_cast
     auto status = response.getOutput(name.c_str(), const_cast<ovms::InferenceTensor**>(&it));
     bufferId = -1;
     return status;
@@ -242,16 +242,16 @@ public:
         response.Clear();
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
-    // turn off all warnings since compiler will complain that it cannot cast KFS/TFS
-    // request types to InferenceRequest
- //   const ovms::InferenceRequest* irq = dynamic_cast<const ovms::InferenceRequest*>(&request);
-   // ovms::InferenceResponse* irs = dynamic_cast<ovms::InferenceResponse*>(&response);
+        // turn off all warnings since compiler will complain that it cannot cast KFS/TFS
+        // request types to InferenceRequest
+        //   const ovms::InferenceRequest* irq = dynamic_cast<const ovms::InferenceRequest*>(&request);
+        // ovms::InferenceResponse* irs = dynamic_cast<ovms::InferenceResponse*>(&response);
 #pragma GCC diagnostic pop
-   // if ((irq != nullptr) && (irs != nullptr)) {
-    //    return model->infer(irq, irs, unload_guard);
-   // } else {
+        // if ((irq != nullptr) && (irs != nullptr)) {
+        //    return model->infer(irq, irs, unload_guard);
+        // } else {
         return model->infer(&request, &response, unload_guard);
-   // }
+        // }
     }
 
     ovms::Status performInferenceWithShape(ResponseType& response, const ovms::shape_t& shape = {1, 10}, const ovms::Precision precision = ovms::Precision::FP32) {
@@ -303,7 +303,7 @@ void TestPredict<TFSInterface>::checkOutputShape(const TFSResponseType& response
 
 template <>
 void TestPredict<CAPIInterface>::checkOutputShape(const ovms::InferenceResponse& response, const ovms::shape_t& shape, const std::string& outputName) {
-    return; // TODO
+    return;  // TODO
 }
 
 template <>
@@ -326,15 +326,15 @@ public:
     const ovms::Status mockValidate(const RequestType* request) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
-    // turn off all warnings since compiler will complain that it cannot cast KFS/TFS
-    // request types to InferenceRequest
- //   const ovms::InferenceRequest* irq = dynamic_cast<const ovms::InferenceRequest*>(request);
+        // turn off all warnings since compiler will complain that it cannot cast KFS/TFS
+        // request types to InferenceRequest
+        //   const ovms::InferenceRequest* irq = dynamic_cast<const ovms::InferenceRequest*>(request);
 #pragma GCC diagnostic pop
-   // if (irq != nullptr) {
-     //   return validate(irq);
-   // } else {
+        // if (irq != nullptr) {
+        //   return validate(irq);
+        // } else {
         return validate(request);
-   // }
+        // }
     }
 };
 
@@ -404,7 +404,8 @@ void TestPredict<Pair, RequestType, ResponseType>::performPredict(const std::str
 }
 
 //using CAPIInterface2 = std::pair<ovms::InferenceRequestWrapped, ovms::InferenceResponseWrapped>;
-using MyTypes = ::testing::Types<TFSInterface, KFSInterface, CAPIInterface>;
+//using MyTypes = ::testing::Types<TFSInterface, KFSInterface, CAPIInterface>;
+using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
 TYPED_TEST_SUITE(TestPredict, MyTypes);
 
 TYPED_TEST(TestPredict, SuccesfullOnDummyModel) {
@@ -604,7 +605,7 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
-/*    // Get dummy model instance
+    /*    // Get dummy model instance
     std::shared_ptr<ovms::ModelInstance> model;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     auto status = this->manager.getModelInstance("dummy", 0, model, unload_guard);*/
@@ -620,7 +621,7 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     // Do the inference
     auto status = this->performInferenceWithRequest(request, response, "dummy");
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-/*#pragma GCC diagnostic push
+    /*#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
     // turn off all warnings since compiler will complain that it cannot cast KFS/TFS
     // request types to InferenceRequest
@@ -1204,7 +1205,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
 */
 
 ovms::Precision getPrecisionFromResponse(ovms::InferenceResponse& response, const std::string& name) {
-    return ovms::getOVMSDataTypeAsPrecision(OVMS_DATATYPE_FP32); // TODO
+    return ovms::getOVMSDataTypeAsPrecision(OVMS_DATATYPE_FP32);  // TODO
 }
 ovms::Precision getPrecisionFromResponse(KFSResponse& response, const std::string& name) {
     KFSOutputTensorIteratorType it;

@@ -401,6 +401,18 @@ TEST_F(CAPIPredictValidation, RequestIncorrectContentSize) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
 
+TEST_F(CAPIPredictValidation, RequestIncorrectInputWithNoBuffer) {
+    servableInputs = ovms::tensor_map_t({{"Input_FP32_1_1_1_1_NHWC",
+        std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 1, 1, 1}, ovms::Layout{"NHWC"})}});
+    ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(servableInputs));
+
+    InferenceRequest request("NOT_USED", 42);
+    std::array<size_t, 4> shape{1, 1, 1, 1};
+    request.addInput("Input_FP32_1_1_1_1_NHWC", OVMS_DATATYPE_FP32, shape.data(), shape.size());
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();  // TODO change retcode?
+}
+
 TEST_F(CAPIPredictValidation, RequestIncorrectContentSizeZero) {
     decrementBufferSize = 602112;
 

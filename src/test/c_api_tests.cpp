@@ -24,6 +24,7 @@
 #include "../modelconfig.hpp"
 #include "../pocapi.hpp"
 #include "../server_options.hpp"
+#include "../server.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -204,9 +205,9 @@ TEST(CApiStartTest, StartFlow) {
     ASSERT_EQ(OVMS_ServerDelete(srv), nullptr);
 }
 
-class CapiInferencePreparationTest : public ::testing::Test {};
+class CapiInference : public ::testing::Test {};
 
-TEST_F(CapiInferencePreparationTest, Basic) {
+TEST_F(CapiInference, Basic) {
     // request creation
     OVMS_InferenceRequest* request{nullptr};
     OVMS_Status* status = OVMS_InferenceRequestNew(&request, "dummy", 1);
@@ -236,10 +237,81 @@ TEST_F(CapiInferencePreparationTest, Basic) {
     //////////////////
     //  INFERENCE
     //////////////////
+    // we need to prepare server now TODO
+    // remove when C-API start implemented
+    std::string port = "9000";
+    randomizePort(port);
+    char* argv[] = {
+        (char*)"OpenVINO Model Server",
+        (char*)"--model_name",
+        (char*)"dummy",
+        (char*)"--model_path",
+        (char*)"/ovms/src/test/dummy",
+        (char*)"--port",
+        (char*)port.c_str(),
+        (char*)"--log_level",
+        (char*)"DEBUG",
+        nullptr};
+
+    ovms::Server& server = ovms::Server::instance();
+    std::thread t([&argv, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
+    });
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(1));  // TODO
+    SPDLOG_ERROR("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM");
+    OVMS_InferenceResponse* response = nullptr;
+    OVMS_Server* cserver = reinterpret_cast<OVMS_Server*>(&server);
+    status = OVMS_Inference(cserver, request, &response);
+    ASSERT_EQ(nullptr, status);
+    SPDLOG_ERROR("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM");
+    // verify GetOutputCount
+    uint32_t outputCount = -1;
+    status = OVMS_InferenceResponseGetOutputCount(response, &outputCount);
+    ASSERT_EQ(nullptr, status);
+    ASSERT_EQ(outputCount, 1);
+    // verify GetParameterCount
+    uint32_t parameterCount = -1;
+    status = OVMS_InferenceResponseGetParameterCount(response, &parameterCount);
+    ASSERT_EQ(nullptr, status);
+    ASSERT_EQ(0, parameterCount);
+    // verify GetOutput
+    void* voutputData;
+    size_t bytesize = -1;
+    uint32_t outputId = 0;
+    OVMS_DataType datatype = (OVMS_DataType)199;
+    const uint64_t* shape{nullptr};
+    uint32_t dimCount = -1;
+    BufferType bufferType = (BufferType)199;
+    uint32_t deviceId = -1;
+    const char* outputName{nullptr};
+    status = OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
+    ASSERT_EQ(nullptr, status);
+    ASSERT_EQ(std::string(DUMMY_MODEL_OUTPUT_NAME), outputName);
+    EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
+    EXPECT_EQ(dimCount, 2);
+    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
+    EXPECT_EQ(deviceId, 0);
+
+    for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
+        EXPECT_EQ(DUMMY_MODEL_SHAPE[i], shape[i]) << "Different at:" << i << " place.";
+    }
+    float* outputData = reinterpret_cast<float*>(voutputData);
+    ASSERT_EQ(bytesize, sizeof(float) * DUMMY_MODEL_INPUT_SIZE);
+    for (size_t i = 0; i < data.size(); ++i) {
+        EXPECT_EQ(data[i] + 1, outputData[i]) << "Different at:" << i << " place.";
+    }
 
     ///////////////
     // CLEANUP
     ///////////////
+    // cleanup response
+    status = OVMS_InferenceResponseDelete(response);
+    ASSERT_EQ(nullptr, status);
+    // cleanup request
     // here we will add additional inputs to verify 2 ways of cleanup
     // - direct call to remove whole request
     // - separate calls to remove partial data
@@ -284,6 +356,90 @@ TEST_F(CapiInferencePreparationTest, Basic) {
     // OVMS_StatusDelete(status); // FIXME(dkalinow)
     status = OVMS_InferenceRequestDelete(request);
     ASSERT_EQ(nullptr, status);
+
+    // TODO replace with C-API
+    server.setShutdownRequest(1);
+    t.join();
+    server.setShutdownRequest(0);
+}
+
+TEST_F(CapiInference, NegativeInference) {
+    // first start OVMS
+    std::string port = "9000";
+    randomizePort(port);
+    char* argv[] = {
+        (char*)"OpenVINO Model Server",
+        (char*)"--model_name",
+        (char*)"dummy",
+        (char*)"--model_path",
+        (char*)"/ovms/src/test/dummy",
+        (char*)"--port",
+        (char*)port.c_str(),
+        (char*)"--log_level",
+        (char*)"DEBUG",
+        nullptr};
+
+    ovms::Server& server = ovms::Server::instance();
+    std::thread t([&argv, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
+    });
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(1));  // TODO
+    OVMS_Server* cserver = reinterpret_cast<OVMS_Server*>(&server);
+
+    OVMS_InferenceRequest* request{nullptr};
+    OVMS_InferenceResponse* response = nullptr;
+    OVMS_Status* status = OVMS_InferenceRequestNew(&request, "dummy", 1);
+    ASSERT_EQ(nullptr, status);
+    ASSERT_NE(nullptr, request);
+    // negative no inputs
+    status = OVMS_Inference(cserver, request, &response);
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
+
+    // negative no input buffer
+    status = OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size());
+    ASSERT_EQ(nullptr, status);
+    status = OVMS_Inference(cserver, request, &response);
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
+
+    // setting buffer
+    std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    uint32_t notUsedNum = 0;
+    status = OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum);
+    ASSERT_EQ(nullptr, status);
+    // add parameters
+    const uint64_t sequenceId{42};
+    status = OVMS_InferenceRequestAddParameter(request, "sequence_id", OVMS_DATATYPE_U64, reinterpret_cast<const void*>(&sequenceId), sizeof(sequenceId));
+    ASSERT_EQ(nullptr, status);
+    // 2nd time should get error
+    status = OVMS_InferenceRequestAddParameter(request, "sequence_id", OVMS_DATATYPE_U64, reinterpret_cast<const void*>(&sequenceId), sizeof(sequenceId));
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
+    const uint32_t sequenceControl{1};  // SEQUENCE_START
+    status = OVMS_InferenceRequestAddParameter(request, "sequence_control_input", OVMS_DATATYPE_U32, reinterpret_cast<const void*>(&sequenceControl), sizeof(sequenceControl));
+    ASSERT_EQ(nullptr, status);
+
+    // verify passing nullptrs
+    status = OVMS_Inference(nullptr, request, &response);
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); FIXME
+    status = OVMS_Inference(cserver, nullptr, &response);
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); FIXME
+    status = OVMS_Inference(cserver, request, nullptr);
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); FIXME
+
+    // server cleanup
+    // TODO replace with C-API
+    server.setShutdownRequest(1);
+    t.join();
+    server.setShutdownRequest(0);
 }
 // TODO negative test -> validate at the infer stage
 // TODO flow with removel just request no separate input/buffer
@@ -304,8 +460,8 @@ const std::array<float, DUMMY_MODEL_INPUT_SIZE> INPUT_DATA{1, 2, 3, 4, 5, 6, 7, 
 constexpr size_t INPUT_DATA_BYTESIZE{INPUT_DATA.size() * sizeof(float)};
 const OVMS_DataType DATATYPE{OVMS_DATATYPE_FP32};
 }  // namespace
-class CapiInferenceRetrievalTest : public ::testing::Test {};
-TEST_F(CapiInferenceRetrievalTest, Basic) {
+
+TEST_F(CapiInference, ResponseRetrieval) {
     auto cppResponse = std::make_unique<InferenceResponse>(MODEL_NAME, MODEL_VERSION);
     // add output
     std::array<size_t, 2> cppOutputShape{1, DUMMY_MODEL_INPUT_SIZE};
@@ -374,7 +530,6 @@ TEST_F(CapiInferenceRetrievalTest, Basic) {
         EXPECT_EQ(INPUT_DATA[i], outputData[i]) << "Different at:" << i << " place.";
     }
 
-    // we release unique_ptr ownership here so that we can free it safely via C-API
     // test negative scenario with getting output without buffer
     cppStatus = cppResponse->addOutput("outputWithNoBuffer", DATATYPE, cppOutputShape.data(), cppOutputShape.size());
     ASSERT_EQ(cppStatus, StatusCode::OK) << cppStatus.string();
@@ -386,6 +541,7 @@ TEST_F(CapiInferenceRetrievalTest, Basic) {
     ASSERT_NE(nullptr, status);
     // OVMS_StatusDelete(status); // FIXME(dkalinow)
     // final cleanup
+    // we release unique_ptr ownership here so that we can free it safely via C-API
     cppResponse.release();
     status = OVMS_InferenceResponseDelete(response);
     ASSERT_EQ(nullptr, status);

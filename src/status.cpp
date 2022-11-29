@@ -272,5 +272,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
     {StatusCode::NONEXISTENT_BUFFER_FOR_REMOVAL, "Tried to remove nonexisting buffer"},
     {StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL, "Tried to remove nonexisting parameter"},
+    {StatusCode::NONEXISTENT_SERVER, "Tried to use nonexisting server"},
+    {StatusCode::NONEXISTENT_REQUEST, "Tried to use nonexisting request"},
+    {StatusCode::NONEXISTENT_RESPONSE, "Tried to use nonexisting response"},
 };
 }  // namespace ovms

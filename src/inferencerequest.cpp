@@ -17,8 +17,8 @@
 
 #include "status.hpp"
 namespace ovms {
-        InferenceRequest::InferenceRequest() :
-                InferenceRequest("OBER", 42) {}
+InferenceRequest::InferenceRequest() :
+    InferenceRequest("OBER", 42) {}
 InferenceRequest::InferenceRequest(const char* servableName, model_version_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {

@@ -39,7 +39,6 @@ std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::Predi
 std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex);
 std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request);
 
-
 bool useSharedOutputContent(const tensorflow::serving::PredictRequest* request);
 bool useSharedOutputContent(const ::inference::ModelInferRequest* request);
 }  // namespace ovms

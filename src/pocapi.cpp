@@ -19,28 +19,28 @@
 #include <string>
 
 #include "buffer.hpp"
-#include "model_service.hpp"
 #include "inferenceparameter.hpp"
 #include "inferencerequest.hpp"
 #include "inferenceresponse.hpp"
 #include "inferencetensor.hpp"
+#include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "profiler.hpp"
-#include "status.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
 #include "server_options.hpp"
+#include "status.hpp"
 #include "timer.hpp"
 
 using ovms::Buffer;
-using ovms::ModelManager;
 using ovms::InferenceParameter;
 using ovms::InferenceRequest;
 using ovms::InferenceResponse;
 using ovms::InferenceTensor;
 using ovms::ModelInstanceUnloadGuard;
+using ovms::ModelManager;
 using ovms::ServableManagerModule;
 using ovms::Server;
 using ovms::Status;
@@ -75,7 +75,9 @@ OVMS_Status* OVMS_ServerNew(OVMS_Server** server) {
 }
 
 OVMS_Status* OVMS_ServerDelete(OVMS_Server* server) {
-    // Make use of the server pointer instead of singleton once multi server configuration becomes possible.
+    if (server == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+    }
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     srv->shutdownModules();
     return nullptr;
@@ -84,6 +86,9 @@ OVMS_Status* OVMS_ServerDelete(OVMS_Server* server) {
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerGeneralOptions* general_options,
     OVMS_ServerMultiModelOptions* multi_model_specific_options) {
+    if (server == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+    }
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(general_options);
     ovms::MultiModelOptionsImpl* mmo = reinterpret_cast<ovms::MultiModelOptionsImpl*>(multi_model_specific_options);
@@ -364,76 +369,84 @@ enum : unsigned int {
     TOTAL,
     TIMER_END
 };
-}
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 
-
-Status getModelInstance(const InferenceRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance,
+Status getModelInstance(ovms::Server& server, const InferenceRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
-    ovms::Server& server = ovms::Server::instance();
     auto& modelManager = dynamic_cast<const ServableManagerModule*>(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME))->getServableManager();
     return modelManager.getModelInstance(request->getServableName(), request->getServableVersion(), modelInstance, modelInstanceUnloadGuardPtr);
 }
-
-OVMS_Status* OVMS_Inference(OVMS_InferenceRequest* request, OVMS_InferenceResponse** response) {
-    auto req = reinterpret_cast<ovms::InferenceRequest*>(request);
-    ovms::InferenceResponse* res = new InferenceResponse(req->getServableName(), req->getServableVersion()); // unique_ptr with release? FIXME
-    *response = reinterpret_cast<OVMS_InferenceResponse*>(res);
+}  // namespace
+OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response) {
+    // TODO server should be in theory const
     OVMS_PROFILE_FUNCTION();
+    using std::chrono::microseconds;
     Timer<TIMER_END> timer;
     timer.start(TOTAL);
-    using std::chrono::microseconds;
+    if (serverPtr == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+    }
+    if (request == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+    }
+    if (response == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+    }
+    auto req = reinterpret_cast<ovms::InferenceRequest*>(request);
+    ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+    std::unique_ptr<ovms::InferenceResponse> res(new ovms::InferenceResponse(req->getServableName(), req->getServableVersion()));
+
     SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
         req->getServableName(),
         req->getServableVersion());
 
     std::shared_ptr<ovms::ModelInstance> modelInstance;
- //   std::unique_ptr<ovms::Pipeline> pipelinePtr;
+    //   std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    auto status = getModelInstance(req, modelInstance, modelInstanceUnloadGuard);
+    auto status = getModelInstance(server, req, modelInstance, modelInstanceUnloadGuard);
 
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
-       // status = getPipeline(req, response, pipelinePtr);
+        // status = getPipeline(req, response, pipelinePtr);
+        status = Status(StatusCode::NOT_IMPLEMENTED, "Inference with DAG not supported with C-API in preview");
     }
     if (!status.ok()) {
         if (modelInstance) {
-        //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
+            //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
         }
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
-        //return grpc(status);
-        return 0;
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
 
-   // ExecutionContext executionContext{
-     //   ExecutionContext::Interface::GRPC,
-      //  ExecutionContext::Method::Predict};
+    // ExecutionContext executionContext{
+    //   ExecutionContext::Interface::CAPI,
+    //  ExecutionContext::Method::Inference};
 
-   // if (pipelinePtr) {
- //       status = pipelinePtr->execute(executionContext);
-       // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
- //   } else {
-        status = modelInstance->infer(req, res, modelInstanceUnloadGuard);
-     //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
+    // if (pipelinePtr) {
+    //       status = pipelinePtr->execute(executionContext);
+    // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
+    //   } else {
+    status = modelInstance->infer(req, res.get(), modelInstanceUnloadGuard);
+    //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     //}
 
     if (!status.ok()) {
-            return 0;
- //       return grpc(status);
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
 
     timer.stop(TOTAL);
     double reqTotal = timer.elapsed<microseconds>(TOTAL);
     //if (pipelinePtr) {
-      //  OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().reqTimeGrpc, reqTotal);
-  //  } else {
-     //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
-   // }
+    //  OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().reqTimeGrpc, reqTotal);
+    //  } else {
+    //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
+    // }
     SPDLOG_DEBUG("Total gRPC req processing time: {} ms", reqTotal / 1000);
-    return 0;
-   // return grpc::Status::OK;
+    *response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
+    return nullptr;
+    // return grpc::Status::OK;
 }
 #pragma GCC diagnostic pop
