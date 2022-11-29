@@ -81,10 +81,10 @@ void CLIParser::parse(int argc, char** argv) {
                 "Time interval between two consecutive sequence cleanup scans. Default is 5. Zero value disables sequence cleaner.",
                 cxxopts::value<uint32_t>()->default_value("5"),
                 "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
-            ("custom_node_resources_cleaner_interval",
+            ("custom_node_resources_cleaner_interval_seconds",
                 "Time interval between two consecutive resources cleanup scans. Default is 1. Must be greater than 0.",
                 cxxopts::value<uint32_t>()->default_value("1"),
-                "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL")
+                "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL_SECONDS")
             ("cache_dir",
                 "Overrides model cache directory. By default cache files are saved into /opt/cache if the directory is present. When enabled, first model load will produce cache files.",
                 cxxopts::value<std::string>(),
@@ -256,7 +256,7 @@ void CLIParser::prepare(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
 
     go->filesystemPollWaitSeconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>();
     go->sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
-    go->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval").as<uint32_t>();
+    go->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
 
     if (result != nullptr && result->count("cache_dir")) {
         go->cacheDir = result->operator[]("cache_dir").as<std::string>();

@@ -128,23 +128,23 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcChannelArguments(OVMS_ServerGeneral
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(OVMS_ServerGeneralOptions* options,
-    uint32_t file_system_poll_wait_seconds) {
+    uint32_t seconds) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->filesystemPollWaitSeconds = file_system_poll_wait_seconds;
+    go->filesystemPollWaitSeconds = seconds;
     return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(OVMS_ServerGeneralOptions* options,
-    uint32_t sequence_cleaner_poll_wait_minutes) {
+    uint32_t minutes) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->sequenceCleanerPollWaitMinutes = sequence_cleaner_poll_wait_minutes;
+    go->sequenceCleanerPollWaitMinutes = minutes;
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerInterval(OVMS_ServerGeneralOptions* options,
-    uint32_t custom_node_resources_cleaner_interval) {
+OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerGeneralOptions* options,
+    uint32_t seconds) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->resourcesCleanerPollWaitSeconds = custom_node_resources_cleaner_interval;
+    go->resourcesCleanerPollWaitSeconds = seconds;
     return nullptr;
 }
 

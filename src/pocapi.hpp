@@ -110,15 +110,15 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcChannelArguments(OVMS_ServerGeneral
 
 // --file_system_poll_wait_seconds
 OVMS_Status* OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(OVMS_ServerGeneralOptions* options,
-    uint32_t file_system_poll_wait_seconds);
+    uint32_t seconds);
 
 // --sequence_cleaner_poll_wait_minutes
 OVMS_Status* OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(OVMS_ServerGeneralOptions* options,
-    uint32_t sequence_cleaner_poll_wait_minutes);
+    uint32_t minutes);
 
-// --custom_node_resources_cleaner_interval
-OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerInterval(OVMS_ServerGeneralOptions* options,
-    uint32_t custom_node_resources_cleaner_interval);  // TODO: Should include seconds or minutes in the name
+// --custom_node_resources_cleaner_interval_seconds
+OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerGeneralOptions* options,
+    uint32_t seconds);
 
 // --cpu_extension
 OVMS_Status* OVMS_ServerGeneralOptionsSetCpuExtensionPath(OVMS_ServerGeneralOptions* options,

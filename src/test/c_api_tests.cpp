@@ -29,6 +29,22 @@
 using namespace ovms;
 using testing::ElementsAreArray;
 
+static void testDefaultSingleModelOptions(MultiModelOptionsImpl* mmo) {
+    EXPECT_EQ(mmo->modelName, "");
+    EXPECT_EQ(mmo->modelPath, "");
+    EXPECT_EQ(mmo->batchSize, "");
+    EXPECT_EQ(mmo->shape, "");
+    EXPECT_EQ(mmo->layout, "");
+    EXPECT_EQ(mmo->modelVersionPolicy, "");
+    EXPECT_EQ(mmo->nireq, 0);
+    EXPECT_EQ(mmo->targetDevice, "");
+    EXPECT_EQ(mmo->pluginConfig, "");
+    EXPECT_EQ(mmo->stateful, std::nullopt);
+    EXPECT_EQ(mmo->lowLatencyTransformation, std::nullopt);
+    EXPECT_EQ(mmo->maxSequenceNumber, std::nullopt);
+    EXPECT_EQ(mmo->idleSequenceCleanup, std::nullopt);
+}
+
 TEST(CApiConfigTest, MultiModelConfiguration) {
     OVMS_ServerGeneralOptions* _go = 0;
     OVMS_ServerMultiModelOptions* _mmo = 0;
@@ -53,27 +69,14 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(go->cpuExtensionLibraryPath, "");
     EXPECT_EQ(go->logLevel, "INFO");
     EXPECT_EQ(go->logPath, "");
-    // trace path
+    // trace path  // not tested since it is not supported in C-API
     EXPECT_EQ(go->grpcChannelArguments, "");
     EXPECT_EQ(go->filesystemPollWaitSeconds, 1);
     EXPECT_EQ(go->sequenceCleanerPollWaitMinutes, 5);
     EXPECT_EQ(go->resourcesCleanerPollWaitSeconds, 1);
     EXPECT_EQ(go->cacheDir, "");
 
-    EXPECT_EQ(mmo->modelName, "");
-    EXPECT_EQ(mmo->modelPath, "");
-    EXPECT_EQ(mmo->batchSize, "");
-    EXPECT_EQ(mmo->shape, "");
-    EXPECT_EQ(mmo->layout, "");
-    EXPECT_EQ(mmo->modelVersionPolicy, "");
-    EXPECT_EQ(mmo->nireq, 0);
-    EXPECT_EQ(mmo->targetDevice, "");
-    EXPECT_EQ(mmo->pluginConfig, "");
-    EXPECT_EQ(mmo->stateful, std::nullopt);
-    EXPECT_EQ(mmo->lowLatencyTransformation, std::nullopt);
-    EXPECT_EQ(mmo->maxSequenceNumber, std::nullopt);
-    EXPECT_EQ(mmo->idleSequenceCleanup, std::nullopt);
-
+    testDefaultSingleModelOptions(mmo);
     EXPECT_EQ(mmo->configPath, "");
 
     // Set non default values
@@ -86,7 +89,7 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetGrpcChannelArguments(_go, "grpcargs"), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(_go, 2), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(_go, 3), nullptr);
-    ASSERT_EQ(OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerInterval(_go, 4), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(_go, 4), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetCpuExtensionPath(_go, "/ovms/src/test"), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetCacheDir(_go, "/tmp/cache"), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_TRACE), nullptr);
@@ -105,31 +108,18 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(go->cpuExtensionLibraryPath, "/ovms/src/test");
     EXPECT_EQ(go->logLevel, "TRACE");
     EXPECT_EQ(go->logPath, "/logs");
-    // trace path
+    // trace path  // not tested since it is not supported in C-API
     EXPECT_EQ(go->grpcChannelArguments, "grpcargs");
     EXPECT_EQ(go->filesystemPollWaitSeconds, 2);
     EXPECT_EQ(go->sequenceCleanerPollWaitMinutes, 3);
     EXPECT_EQ(go->resourcesCleanerPollWaitSeconds, 4);
     EXPECT_EQ(go->cacheDir, "/tmp/cache");
 
-    EXPECT_EQ(mmo->modelName, "");
-    EXPECT_EQ(mmo->modelPath, "");
-    EXPECT_EQ(mmo->batchSize, "");
-    EXPECT_EQ(mmo->shape, "");
-    EXPECT_EQ(mmo->layout, "");
-    EXPECT_EQ(mmo->modelVersionPolicy, "");
-    EXPECT_EQ(mmo->nireq, 0);
-    EXPECT_EQ(mmo->targetDevice, "");
-    EXPECT_EQ(mmo->pluginConfig, "");
-    EXPECT_EQ(mmo->stateful, std::nullopt);
-    EXPECT_EQ(mmo->lowLatencyTransformation, std::nullopt);
-    EXPECT_EQ(mmo->maxSequenceNumber, std::nullopt);
-    EXPECT_EQ(mmo->idleSequenceCleanup, std::nullopt);
-
+    testDefaultSingleModelOptions(mmo);
     EXPECT_EQ(mmo->configPath, "/config");
 
     // Test config parser
-    MockedConfig cfg;
+    ConstructorEnabledConfig cfg;
     ASSERT_TRUE(cfg.parse(go, mmo));
     EXPECT_EQ(cfg.port(), 5555);
     EXPECT_EQ(cfg.restPort(), 6666);
@@ -142,7 +132,7 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.cpuExtensionLibraryPath(), "/ovms/src/test");
     EXPECT_EQ(cfg.logLevel(), "TRACE");
     EXPECT_EQ(cfg.logPath(), "/logs");
-    // trace path
+    // trace path  // not tested since it is not supported in C-API
     EXPECT_EQ(cfg.grpcChannelArguments(), "grpcargs");
     EXPECT_EQ(cfg.filesystemPollWaitSeconds(), 2);
     EXPECT_EQ(cfg.sequenceCleanerPollWaitMinutes(), 3);

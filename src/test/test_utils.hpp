@@ -573,7 +573,7 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 
 void randomizePort(std::string& port);
 
-class MockedConfig : public ovms::Config {
+class ConstructorEnabledConfig : public ovms::Config {
 public:
-    MockedConfig() {}
+    ConstructorEnabledConfig() {}
 };
