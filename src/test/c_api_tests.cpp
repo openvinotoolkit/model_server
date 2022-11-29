@@ -18,12 +18,12 @@
 
 // TODO we should not include classes from OVMS here
 // consider how to workaround test_utils
+#include "../config.hpp"
 #include "../inferenceresponse.hpp"
 #include "../logging.hpp"
-#include "../api_options.hpp"
-#include "../config.hpp"
 #include "../modelconfig.hpp"
 #include "../pocapi.hpp"
+#include "../server_options.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

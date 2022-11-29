@@ -35,7 +35,6 @@
 #include <sysexits.h>
 #include <unistd.h>
 
-#include "api_options.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
@@ -49,6 +48,7 @@
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"
+#include "server_options.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 

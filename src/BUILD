@@ -90,7 +90,6 @@ cc_library(
     hdrs = ["pocapi.hpp"],
     srcs = [
         "aliases.hpp",
-        "api_options.hpp",
         "azurestorage.hpp",
         "azurestorage.cpp",
         "azurefilesystem.cpp",
@@ -266,6 +265,7 @@ cc_library(
         "serialization.hpp",
         "servablemanagermodule.cpp",
         "servablemanagermodule.hpp",
+        "server_options.hpp",
         "server.cpp",
         "server.hpp",
         "session_id.hpp",

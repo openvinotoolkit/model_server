@@ -22,9 +22,9 @@
 
 #include <sysexits.h>
 
-#include "api_options.hpp"
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
+#include "server_options.hpp"
 
 namespace ovms {
 

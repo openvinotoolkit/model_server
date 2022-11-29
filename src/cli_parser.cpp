@@ -20,7 +20,7 @@
 
 #include <sysexits.h>
 
-#include "api_options.hpp"
+#include "server_options.hpp"
 #include "version.hpp"
 
 namespace ovms {

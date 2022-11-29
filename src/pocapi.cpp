@@ -23,9 +23,9 @@
 #include "inferencerequest.hpp"
 #include "inferenceresponse.hpp"
 #include "inferencetensor.hpp"
-#include "status.hpp"
-#include "api_options.hpp"
 #include "server.hpp"
+#include "server_options.hpp"
+#include "status.hpp"
 
 using ovms::Buffer;
 using ovms::InferenceParameter;
@@ -37,42 +37,44 @@ using ovms::StatusCode;
 
 OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options) {
     *options = reinterpret_cast<OVMS_ServerGeneralOptions*>(new ovms::GeneralOptionsImpl);
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options) {
     delete reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerMultiModelOptionsNew(OVMS_ServerMultiModelOptions** options) {
     *options = reinterpret_cast<OVMS_ServerMultiModelOptions*>(new ovms::MultiModelOptionsImpl);
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerMultiModelOptionsDelete(OVMS_ServerMultiModelOptions* options) {
     delete reinterpret_cast<ovms::MultiModelOptionsImpl*>(options);
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerNew(OVMS_Server** server) {
     // Create new server once multi server configuration becomes possible.
     *server = reinterpret_cast<OVMS_Server*>(&ovms::Server::instance());
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerDelete(OVMS_Server* server) {
     // Make use of the server pointer instead of singleton once multi server configuration becomes possible.
-    ovms::Server::instance().shutdownModules();
-    return 0;
+    ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
+    srv->shutdownModules();
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerGeneralOptions* general_options,
     OVMS_ServerMultiModelOptions* multi_model_specific_options) {
+    ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(general_options);
     ovms::MultiModelOptionsImpl* mmo = reinterpret_cast<ovms::MultiModelOptionsImpl*>(multi_model_specific_options);
-    std::int64_t res = ovms::Server::instance().start(go, mmo);
+    std::int64_t res = srv->start(go, mmo);
     return (OVMS_Status*)res;  // TODO: Return proper OVMS_Status instead of a raw status code in error handling PR
 }
 
@@ -80,84 +82,84 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* opt
     uint32_t grpcPort) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->grpcPort = grpcPort;
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetRestPort(OVMS_ServerGeneralOptions* options,
     uint32_t restPort) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->restPort = restPort;
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcWorkers(OVMS_ServerGeneralOptions* options,
     uint32_t grpc_workers) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->grpcWorkers = grpc_workers;
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcBindAddress(OVMS_ServerGeneralOptions* options,
     const char* grpc_bind_address) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->grpcBindAddress = std::string(grpc_bind_address);
-    return 0;
+    go->grpcBindAddress.assign(grpc_bind_address);
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetRestWorkers(OVMS_ServerGeneralOptions* options,
     uint32_t rest_workers) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->restWorkers = rest_workers;
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetRestBindAddress(OVMS_ServerGeneralOptions* options,
     const char* rest_bind_address) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->restBindAddress = std::string(rest_bind_address);
-    return 0;
+    go->restBindAddress.assign(rest_bind_address);
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcChannelArguments(OVMS_ServerGeneralOptions* options,
     const char* grpc_channel_arguments) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->grpcChannelArguments = std::string(grpc_channel_arguments);
-    return 0;
+    go->grpcChannelArguments.assign(grpc_channel_arguments);
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(OVMS_ServerGeneralOptions* options,
     uint32_t file_system_poll_wait_seconds) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->filesystemPollWaitSeconds = file_system_poll_wait_seconds;
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(OVMS_ServerGeneralOptions* options,
     uint32_t sequence_cleaner_poll_wait_minutes) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->sequenceCleanerPollWaitMinutes = sequence_cleaner_poll_wait_minutes;
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerInterval(OVMS_ServerGeneralOptions* options,
     uint32_t custom_node_resources_cleaner_interval) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->resourcesCleanerPollWaitSeconds = custom_node_resources_cleaner_interval;
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetCpuExtensionPath(OVMS_ServerGeneralOptions* options,
     const char* cpu_extension_path) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->cpuExtensionLibraryPath = std::string(cpu_extension_path);
-    return 0;
+    go->cpuExtensionLibraryPath.assign(cpu_extension_path);
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetCacheDir(OVMS_ServerGeneralOptions* options,
     const char* cache_dir) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->cacheDir = std::string(cache_dir);
-    return 0;
+    go->cacheDir.assign(cache_dir);
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* options,
@@ -183,21 +185,21 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* opt
         // TODO: Return error in error handling PR
         break;
     }
-    return 0;
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetLogPath(OVMS_ServerGeneralOptions* options,
     const char* log_path) {
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->logPath = std::string(log_path);
-    return 0;
+    go->logPath.assign(log_path);
+    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerMultiModelOptionsSetConfigPath(OVMS_ServerMultiModelOptions* options,
     const char* config_path) {
     ovms::MultiModelOptionsImpl* mmo = reinterpret_cast<ovms::MultiModelOptionsImpl*>(options);
-    mmo->configPath = std::string(config_path);
-    return 0;
+    mmo->configPath.assign(config_path);
+    return nullptr;
 }
 // inference API
 OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const char* servableName, uint32_t servableVersion) {

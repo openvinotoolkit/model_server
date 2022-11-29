@@ -18,7 +18,7 @@
 #include <optional>
 #include <string>
 
-#include "api_options.hpp"
+#include "server_options.hpp"
 
 namespace ovms {
 
