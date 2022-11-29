@@ -21,12 +21,12 @@
 namespace ovms {
 
 struct GeneralOptionsImpl {
-    uint64_t grpcPort = 9178;
-    uint64_t restPort = 0;
+    uint32_t grpcPort = 9178;
+    uint32_t restPort = 0;
+    uint32_t grpcWorkers = 1;
     std::string grpcBindAddress = "0.0.0.0";
+    std::optional<uint32_t> restWorkers;
     std::string restBindAddress = "0.0.0.0";
-    uint grpcWorkers = 1;
-    std::optional<uint> restWorkers;
     bool metricsEnabled = false;
     std::string metricsList;
     std::string cpuExtensionLibraryPath;
@@ -36,7 +36,7 @@ struct GeneralOptionsImpl {
     std::string tracePath;
 #endif
     std::string grpcChannelArguments;
-    uint filesystemPollWaitSeconds = 1;
+    uint32_t filesystemPollWaitSeconds = 1;
     uint32_t sequenceCleanerPollWaitMinutes = 5;
     uint32_t resourcesCleanerPollWaitSeconds = 1;
     std::string cacheDir;
@@ -58,10 +58,6 @@ struct MultiModelOptionsImpl {
     std::optional<bool> idleSequenceCleanup;
 
     std::string configPath;
-};
-
-struct ServerImpl {
-    int start(GeneralOptionsImpl*, MultiModelOptionsImpl*);
 };
 
 }  // namespace ovms

@@ -18,7 +18,7 @@
 #include <optional>
 #include <string>
 
-#include "poc_api_impl.hpp"
+#include "server_options.hpp"
 
 namespace ovms {
 
@@ -90,9 +90,9 @@ public:
     /**
          * @brief Gets the grpc port
          * 
-         * @return uint64_t
+         * @return uint32_t
          */
-    uint64_t port() const;
+    uint32_t port() const;
 
     /**
          * @brief Get the gRPC network interface address to bind to
@@ -111,9 +111,9 @@ public:
     /**
          * @brief Gets the REST port
          * 
-         * @return uint64_t
+         * @return uint32_t
          */
-    uint64_t restPort() const;
+    uint32_t restPort() const;
 
     /**
          * @brief Get the rest network interface address to bind to
@@ -127,14 +127,14 @@ public:
          * 
          * @return uint
          */
-    uint grpcWorkers() const;
+    uint32_t grpcWorkers() const;
 
     /**
          * @brief Gets the rest workers count
          * 
          * @return uint
          */
-    uint restWorkers() const;
+    uint32_t restWorkers() const;
 
     /**
          * @brief Get the model name
@@ -276,7 +276,7 @@ public:
      * 
      * @return uint 
      */
-    uint filesystemPollWaitSeconds() const;
+    uint32_t filesystemPollWaitSeconds() const;
 
     /**
      * @brief Get the sequence cleanup poll wait time in minutes
