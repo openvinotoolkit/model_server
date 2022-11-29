@@ -189,6 +189,9 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
 	@docker pull $(BASE_IMAGE)
+  ifeq ($(BASE_OS),redhat)
+	@docker pull registry.access.redhat.com/ubi8/ubi-minimal:8.6
+  endif
 endif
 ifneq ($(OVMS_METADATA_FILE),)
 	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
