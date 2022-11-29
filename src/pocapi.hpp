@@ -63,13 +63,13 @@ struct OVMS_Status;
 struct OVMS_InferenceRequest;
 struct OVMS_InferenceResponse;
 
-typedef enum OVMSSERVER_loglevel_enum {
-    OVMSSERVER_LOG_TRACE,
-    OVMSSERVER_LOG_DEBUG,
-    OVMSSERVER_LOG_INFO,
-    OVMSSERVER_LOG_WARNING,
-    OVMSSERVER_LOG_ERROR
-} OVMSSERVER_LogLevel;
+typedef enum OVMS_LogLevel_enum {
+    OVMS_LOG_TRACE,
+    OVMS_LOG_DEBUG,
+    OVMS_LOG_INFO,
+    OVMS_LOG_WARNING,
+    OVMS_LOG_ERROR
+} OVMS_LogLevel;
 
 ////
 //// OVMS_ServerGeneralOptions
@@ -82,39 +82,59 @@ OVMS_Status* OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options)
 
 // --port
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
-    uint64_t grpcPort);
+    uint32_t grpc_port);
 
 // --rest_port
 OVMS_Status* OVMS_ServerGeneralOptionsSetRestPort(OVMS_ServerGeneralOptions* options,
-    uint64_t restPort);
+    uint32_t rest_port);
 
-// --log_level
-OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* options,
-    OVMSSERVER_LogLevel log_level);
+// --grpc_workers
+OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcWorkers(OVMS_ServerGeneralOptions* options,
+    uint32_t grpc_workers);
 
-// --log_path
-OVMS_Status* OVMS_ServerGeneralOptionsSetLogPath(OVMS_ServerGeneralOptions* options,
-    const char* log_path);
+// --grpc_bind_address
+OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcBindAddress(OVMS_ServerGeneralOptions* options,
+    const char* grpc_bind_address);
+
+// --rest_workers
+OVMS_Status* OVMS_ServerGeneralOptionsSetRestWorkers(OVMS_ServerGeneralOptions* options,
+    uint32_t rest_workers);
+
+// --rest_bind_address
+OVMS_Status* OVMS_ServerGeneralOptionsSetRestBindAddress(OVMS_ServerGeneralOptions* options,
+    const char* rest_bind_address);
+
+// --grpc_channel_arguments
+OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcChannelArguments(OVMS_ServerGeneralOptions* options,
+    const char* grpc_channel_arguments);
 
 // --file_system_poll_wait_seconds
 OVMS_Status* OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(OVMS_ServerGeneralOptions* options,
-    uint64_t file_system_poll_wait_seconds);
+    uint32_t seconds);
 
 // --sequence_cleaner_poll_wait_minutes
 OVMS_Status* OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(OVMS_ServerGeneralOptions* options,
-    uint64_t sequence_cleaner_poll_wait_minutes);
+    uint32_t minutes);
 
-// --custom_node_resources_cleaner_interval
-OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerInterval(OVMS_ServerGeneralOptions* options,
-    uint64_t custom_node_resources_cleaner_interval);  // TODO: Should include seconds or minutes in the name
-
-// --cache_dir
-void OVMS_ServerGeneralOptionsSetCacheDir(OVMS_ServerGeneralOptions* options,
-    const char* cache_dir);
+// --custom_node_resources_cleaner_interval_seconds
+OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerGeneralOptions* options,
+    uint32_t seconds);
 
 // --cpu_extension
 OVMS_Status* OVMS_ServerGeneralOptionsSetCpuExtensionPath(OVMS_ServerGeneralOptions* options,
     const char* cpu_extension_path);
+
+// --cache_dir
+OVMS_Status* OVMS_ServerGeneralOptionsSetCacheDir(OVMS_ServerGeneralOptions* options,
+    const char* cache_dir);
+
+// --log_level
+OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* options,
+    OVMS_LogLevel log_level);
+
+// --log_path
+OVMS_Status* OVMS_ServerGeneralOptionsSetLogPath(OVMS_ServerGeneralOptions* options,
+    const char* log_path);
 
 ////
 //// OVMS_ServerMultiModelOptions

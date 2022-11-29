@@ -22,7 +22,6 @@
 namespace ovms {
 
 struct GeneralOptionsImpl;
-struct SingleModelOptionsImpl;
 struct MultiModelOptionsImpl;
 
 class CLIParser {
