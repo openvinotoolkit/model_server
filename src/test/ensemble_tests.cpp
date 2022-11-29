@@ -5916,7 +5916,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomN
     int batchSize = 1;
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
 
-    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
