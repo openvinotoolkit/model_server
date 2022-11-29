@@ -197,7 +197,7 @@ COPY check_coverage.bat /ovms/
 
 # Test Coverage
 RUN if [ "$CHECK_COVERAGE" == "1" ] ; then \
-    bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test 2>&1> ${TEST_LOG} || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1) && genhtml --output genhtml $(bazel info output_path)/_coverage/_coverage_report.dat; else true; fi; \
+    bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test 2>&1> ${TEST_LOG} || (cat ${TEST_LOG} && rm -rf ${TEST_LOG}) && exit 1 && genhtml --output genhtml $(bazel info output_path)/_coverage/_coverage_report.dat; else true; fi; \
     # Run unit tests after coverage
     bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test 2>&1> ${TEST_LOG} || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG}
 
