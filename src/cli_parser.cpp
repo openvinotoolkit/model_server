@@ -20,7 +20,7 @@
 
 #include <sysexits.h>
 
-#include "poc_api_impl.hpp"
+#include "server_options.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -37,7 +37,7 @@ void CLIParser::parse(int argc, char** argv) {
                 "Show binary version")
             ("port",
                 "gRPC server port",
-                cxxopts::value<uint64_t>()->default_value("9178"),
+                cxxopts::value<uint32_t>()->default_value("9178"),
                 "PORT")
             ("grpc_bind_address",
                 "Network interface address to bind to for the gRPC API",
@@ -45,7 +45,7 @@ void CLIParser::parse(int argc, char** argv) {
                 "GRPC_BIND_ADDRESS")
             ("rest_port",
                 "REST server port, the REST server will not be started if rest_port is blank or set to 0",
-                cxxopts::value<uint64_t>()->default_value("0"),
+                cxxopts::value<uint32_t>()->default_value("0"),
                 "REST_PORT")
             ("rest_bind_address",
                 "Network interface address to bind to for the REST API",
@@ -53,11 +53,11 @@ void CLIParser::parse(int argc, char** argv) {
                 "REST_BIND_ADDRESS")
             ("grpc_workers",
                 "Number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
-                cxxopts::value<uint>()->default_value("1"),
+                cxxopts::value<uint32_t>()->default_value("1"),
                 "GRPC_WORKERS")
             ("rest_workers",
                 "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
-                cxxopts::value<uint>(),
+                cxxopts::value<uint32_t>(),
                 "REST_WORKERS")
             ("log_level",
                 "serving log level - one of TRACE, DEBUG, INFO, WARNING, ERROR",
@@ -75,16 +75,16 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS")
             ("file_system_poll_wait_seconds",
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
-                cxxopts::value<uint>()->default_value("1"),
+                cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
             ("sequence_cleaner_poll_wait_minutes",
                 "Time interval between two consecutive sequence cleanup scans. Default is 5. Zero value disables sequence cleaner.",
                 cxxopts::value<uint32_t>()->default_value("5"),
                 "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
-            ("custom_node_resources_cleaner_interval",
+            ("custom_node_resources_cleaner_interval_seconds",
                 "Time interval between two consecutive resources cleanup scans. Default is 1. Must be greater than 0.",
                 cxxopts::value<uint32_t>()->default_value("1"),
-                "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL")
+                "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL_SECONDS")
             ("cache_dir",
                 "Overrides model cache directory. By default cache files are saved into /opt/cache if the directory is present. When enabled, first model load will produce cache files.",
                 cxxopts::value<std::string>(),
@@ -182,8 +182,8 @@ void CLIParser::parse(int argc, char** argv) {
 }
 
 void CLIParser::prepare(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
-    go->grpcPort = result->operator[]("port").as<uint64_t>();
-    go->restPort = result->operator[]("rest_port").as<uint64_t>();
+    go->grpcPort = result->operator[]("port").as<uint32_t>();
+    go->restPort = result->operator[]("rest_port").as<uint32_t>();
 
     if (result->count("model_name"))
         mmo->modelName = result->operator[]("model_name").as<std::string>();
@@ -203,10 +203,10 @@ void CLIParser::prepare(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
     if (result->count("rest_bind_address"))
         go->restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
 
-    go->grpcWorkers = result->operator[]("grpc_workers").as<uint>();
+    go->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("rest_workers"))
-        go->restWorkers = result->operator[]("rest_workers").as<uint>();
+        go->restWorkers = result->operator[]("rest_workers").as<uint32_t>();
 
     if (result->count("batch_size"))
         mmo->batchSize = result->operator[]("batch_size").as<std::string>();
@@ -254,9 +254,9 @@ void CLIParser::prepare(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
     if (result->count("grpc_channel_arguments"))
         go->grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
 
-    go->filesystemPollWaitSeconds = result->operator[]("file_system_poll_wait_seconds").as<uint>();
+    go->filesystemPollWaitSeconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>();
     go->sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
-    go->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval").as<uint32_t>();
+    go->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
 
     if (result != nullptr && result->count("cache_dir")) {
         go->cacheDir = result->operator[]("cache_dir").as<std::string>();

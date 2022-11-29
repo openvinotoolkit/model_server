@@ -24,7 +24,7 @@
 
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
-#include "poc_api_impl.hpp"
+#include "server_options.hpp"
 
 namespace ovms {
 
@@ -173,13 +173,13 @@ bool Config::validate() {
 }
 
 const std::string& Config::configPath() const { return this->mmo.configPath; }
-uint64_t Config::port() const { return this->go.grpcPort; }
+uint32_t Config::port() const { return this->go.grpcPort; }
 const std::string Config::cpuExtensionLibraryPath() const { return this->go.cpuExtensionLibraryPath; }
 const std::string Config::grpcBindAddress() const { return this->go.grpcBindAddress; }
-uint64_t Config::restPort() const { return this->go.restPort; }
+uint32_t Config::restPort() const { return this->go.restPort; }
 const std::string Config::restBindAddress() const { return this->go.restBindAddress; }
-uint Config::grpcWorkers() const { return this->go.grpcWorkers; }
-uint Config::restWorkers() const { return this->go.restWorkers.value_or(DEFAULT_REST_WORKERS); }
+uint32_t Config::grpcWorkers() const { return this->go.grpcWorkers; }
+uint32_t Config::restWorkers() const { return this->go.restWorkers.value_or(DEFAULT_REST_WORKERS); }
 const std::string& Config::modelName() const { return this->mmo.modelName; }
 const std::string& Config::modelPath() const { return this->mmo.modelPath; }
 const std::string& Config::batchSize() const {
@@ -207,7 +207,7 @@ const std::string& Config::logPath() const { return this->go.logPath; }
 const std::string& Config::tracePath() const { return this->go.tracePath; }
 #endif
 const std::string& Config::grpcChannelArguments() const { return this->go.grpcChannelArguments; }
-uint Config::filesystemPollWaitSeconds() const { return this->go.filesystemPollWaitSeconds; }
+uint32_t Config::filesystemPollWaitSeconds() const { return this->go.filesystemPollWaitSeconds; }
 uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->go.sequenceCleanerPollWaitMinutes; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->go.resourcesCleanerPollWaitSeconds; }
 const std::string Config::cacheDir() const { return this->go.cacheDir; }

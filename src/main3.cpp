@@ -13,11 +13,54 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
+// #include <chrono>
+// #include <iostream>
+// #include <thread>
+
+#include <signal.h>
+#include <stdio.h>
 
 #include "pocapi.hpp"
 
+namespace {
+volatile sig_atomic_t shutdown_request = 0;
+}
+
+static void onInterrupt(int status) {
+    shutdown_request = 1;
+}
+
+static void onTerminate(int status) {
+    shutdown_request = 1;
+}
+
+static void onIllegal(int status) {
+    shutdown_request = 2;
+}
+
+static void installSignalHandlers() {
+    static struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = onInterrupt;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, NULL);
+
+    static struct sigaction sigTermHandler;
+    sigTermHandler.sa_handler = onTerminate;
+    sigemptyset(&sigTermHandler.sa_mask);
+    sigTermHandler.sa_flags = 0;
+    sigaction(SIGTERM, &sigTermHandler, NULL);
+
+    static struct sigaction sigIllHandler;
+    sigIllHandler.sa_handler = onIllegal;
+    sigemptyset(&sigIllHandler.sa_mask);
+    sigIllHandler.sa_flags = 0;
+    sigaction(SIGILL, &sigIllHandler, NULL);
+}
+
 int main(int argc, char** argv) {
+    installSignalHandlers();
+
     OVMS_ServerGeneralOptions* go = 0;
     OVMS_ServerMultiModelOptions* mmo = 0;
     OVMS_Server* srv;
@@ -28,19 +71,38 @@ int main(int argc, char** argv) {
 
     OVMS_ServerGeneralOptionsSetGrpcPort(go, 11337);
     OVMS_ServerGeneralOptionsSetRestPort(go, 11338);
+
+    OVMS_ServerGeneralOptionsSetLogLevel(go, OVMS_LOG_DEBUG);
     OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config.json");
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
+
+    if (res) {
+        // TODO: Better error handling?
+        fprintf(stderr, "Error starting the server\n");
+        OVMS_ServerDelete(srv);
+        OVMS_ServerMultiModelOptionsDelete(mmo);
+        OVMS_ServerGeneralOptionsDelete(go);
+        return 1;
+    }
+
+    fprintf(stdout, "Server ready for inference\n");
+
+    // infer 1
+    // infer 2
+    // infer 3
+
+    // Application loop if required (C++):
+    // while (shutdown_request == 0) {
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    // }
+
+    fprintf(stdout, "No more job to be done, will shut down\n");
 
     OVMS_ServerDelete(srv);
     OVMS_ServerMultiModelOptionsDelete(mmo);
     OVMS_ServerGeneralOptionsDelete(go);
 
-    if (res == 0) {
-        std::cout << "Finish with success" << std::endl;
-    } else {
-        std::cout << "Finish with fail" << std::endl;
-    }
-
+    fprintf(stdout, "main() exit\n");
     return 0;
 }
