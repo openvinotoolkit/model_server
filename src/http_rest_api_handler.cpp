@@ -497,6 +497,26 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     return StatusCode::OK;
 }
 
+static void getRequestedBinaryOutputs(::KFSRequest& grpc_request, ::KFSResponse& grpc_response, std::map<std::string, bool>& binaryOutputs) {
+    for (auto parameter : grpc_request.parameters()) {
+        if (parameter.second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam) {
+            if (parameter.first == "binary_data_output") {
+                for (auto output : grpc_response.outputs()) {
+                    binaryOutputs[output.name()] = parameter.second.bool_param();
+                }
+            }
+        }
+    }
+    for (const inference::ModelInferRequest_InferRequestedOutputTensor output : grpc_request.outputs()) {
+        for (auto parameter : output.parameters()) {
+            if ((parameter.second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) &&
+                (parameter.first == "binary_data")) {
+                binaryOutputs[output.name()] = parameter.second.bool_param();
+            }
+        }
+    }
+}
+
 Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength) {
     Timer<TIMER_END> timer;
     timer.start(TOTAL);
@@ -524,9 +544,10 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     if (!gstatus.ok()) {
         return gstatus;
     }
+    std::map<std::string, bool> binaryOutputs;
+    getRequestedBinaryOutputs(grpc_request, grpc_response, binaryOutputs);
     std::string output;
-    google::protobuf::util::JsonPrintOptions opts_out;
-    status = ovms::makeJsonFromPredictResponse(grpc_response, &output, inferenceHeaderContentLength);
+    status = ovms::makeJsonFromPredictResponse(grpc_response, &output, inferenceHeaderContentLength, binaryOutputs);
     if (!status.ok()) {
         return status;
     }

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
 #include <string>
 
 #pragma GCC diagnostic push
@@ -34,7 +35,8 @@ Status makeJsonFromPredictResponse(
 Status makeJsonFromPredictResponse(
     const ::KFSResponse& response_proto,
     std::string* response_json,
-    std::optional<int>& inferenceHeaderContentLength);
+    std::optional<int>& inferenceHeaderContentLength,
+    std::map<std::string, bool> binaryOutputs = {});
 
 Status decodeBase64(std::string& bytes, std::string& decodedBytes);
 

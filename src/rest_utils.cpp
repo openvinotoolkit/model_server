@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "rest_utils.hpp"
 
+#include <map>
+
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
@@ -230,8 +232,8 @@ static Status parseResponseParameters(const ::KFSResponse& response_proto, rapid
     return StatusCode::OK;
 }
 
-static Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTensor& output, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, int bytesOutputSize) {
-    if (output.parameters_size() > 0 || bytesOutputSize > 0) {
+static Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTensor& output, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, int binaryOutputSize) {
+    if (output.parameters_size() > 0 || binaryOutputSize > 0) {
         writer.Key("parameters");
         writer.StartObject();
 
@@ -251,9 +253,9 @@ static Status parseOutputParameters(const inference::ModelInferResponse_InferOut
                 break;  // return param error
             }
         }
-        if (bytesOutputSize > 0) {
+        if (binaryOutputSize > 0) {
             writer.Key("binary_data_size");
-            writer.Int(bytesOutputSize);
+            writer.Int(binaryOutputSize);
         }
         writer.EndObject();
     }
@@ -261,25 +263,32 @@ static Status parseOutputParameters(const inference::ModelInferResponse_InferOut
     return StatusCode::OK;
 }
 
-template <typename ValueType>
-static void fillTensorDataWithIntValuesFromRawContents(const ::KFSResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
-    for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
-        writer.Int(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
+static void appendBinaryOutput(std::string& bytesOutputsBuffer, char* output, size_t outputSize) {
+    bytesOutputsBuffer.append(output, outputSize);
 }
 
-template <typename ValueType>
-static void fillTensorDataWithUintValuesFromRawContents(const ::KFSResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
-    for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
-        writer.Int(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
-}
+#define PARSE_OUTPUT_DATA(CONTENTS_FIELD, DATATYPE, WRITER_TYPE)                                                                      \
+    if (seekDataInValField) {                                                                                                         \
+        auto status = checkValField(tensor.contents().CONTENTS_FIELD##_size(), expectedElementsNumber);                               \
+        if (!status.ok())                                                                                                             \
+            return status;                                                                                                            \
+        if (binaryOutput) {                                                                                                           \
+            appendBinaryOutput(bytesOutputsBuffer, (char*)tensor.contents().CONTENTS_FIELD().data(), expectedContentSize);            \
+        } else {                                                                                                                      \
+            for (auto& number : tensor.contents().CONTENTS_FIELD()) {                                                                 \
+                writer.WRITER_TYPE(number);                                                                                           \
+            }                                                                                                                         \
+        }                                                                                                                             \
+    } else {                                                                                                                          \
+        if (binaryOutput) {                                                                                                           \
+            appendBinaryOutput(bytesOutputsBuffer, (char*)response_proto.raw_output_contents(tensor_it).data(), expectedContentSize); \
+        } else {                                                                                                                      \
+            for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(DATATYPE))                       \
+                writer.WRITER_TYPE(*(reinterpret_cast<const DATATYPE*>(response_proto.raw_output_contents(tensor_it).data() + i)));   \
+        }                                                                                                                             \
+    }
 
-template <typename ValueType>
-static void fillTensorDataWithFloatValuesFromRawContents(const ::KFSResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
-    for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
-        writer.Double(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
-}
-
-static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, std::string& bytesOutputsBuffer) {
+static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, std::string& bytesOutputsBuffer, std::map<std::string, bool> binaryOutputs) {
     writer.Key("outputs");
     writer.StartArray();
 
@@ -308,140 +317,56 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         writer.EndArray();
         writer.Key("datatype");
         writer.String(tensor.datatype().c_str());
-        if (tensor.datatype() != "BYTES") {
+        bool binaryOutput = (binaryOutputs.count(tensor.name().c_str()) > 0) ? binaryOutputs[tensor.name().c_str()] : (tensor.datatype() == "BYTES");
+        if (!binaryOutput) {
             writer.Key("data");
             writer.StartArray();
         }
         if (tensor.datatype() == "FP32") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().fp32_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().fp32_contents()) {
-                    writer.Double(number);
-                }
-            } else {
-                fillTensorDataWithFloatValuesFromRawContents<float>(response_proto, tensor_it, writer);
-            }
-        } else if (tensor.datatype() == "INT64") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().int64_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().int64_contents()) {
-                    writer.Int64(number);
-                }
-            } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(int64_t))
-                    writer.Int64(*(reinterpret_cast<const int64_t*>(response_proto.raw_output_contents(tensor_it).data() + i)));
-            }
+            PARSE_OUTPUT_DATA(fp32_contents, float, Double)
         } else if (tensor.datatype() == "INT32") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().int_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().int_contents()) {
-                    writer.Int(number);
-                }
-            } else {
-                fillTensorDataWithIntValuesFromRawContents<int32_t>(response_proto, tensor_it, writer);
-            }
+            PARSE_OUTPUT_DATA(int_contents, int32_t, Int)
         } else if (tensor.datatype() == "INT16") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().int_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().int_contents()) {
-                    writer.Int(number);
-                }
-            } else {
-                fillTensorDataWithIntValuesFromRawContents<int16_t>(response_proto, tensor_it, writer);
-            }
+            PARSE_OUTPUT_DATA(int_contents, int16_t, Int)
         } else if (tensor.datatype() == "INT8") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().int_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().int_contents()) {
-                    writer.Int(number);
-                }
-            } else {
-                fillTensorDataWithIntValuesFromRawContents<int8_t>(response_proto, tensor_it, writer);
-            }
-        } else if (tensor.datatype() == "UINT64") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().uint64_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().uint64_contents()) {
-                    writer.Uint64(number);
-                }
-            } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(uint64_t))
-                    writer.Uint64(*(reinterpret_cast<const uint64_t*>(response_proto.raw_output_contents(tensor_it).data() + i)));
-            }
+            PARSE_OUTPUT_DATA(int_contents, int8_t, Int)
         } else if (tensor.datatype() == "UINT32") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().uint_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().uint_contents()) {
-                    writer.Uint(number);
-                }
-            } else {
-                fillTensorDataWithUintValuesFromRawContents<uint32_t>(response_proto, tensor_it, writer);
-            }
+            PARSE_OUTPUT_DATA(uint_contents, uint32_t, Uint)
         } else if (tensor.datatype() == "UINT16") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().uint_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().uint_contents()) {
-                    writer.Uint(number);
-                }
-            } else {
-                fillTensorDataWithUintValuesFromRawContents<uint16_t>(response_proto, tensor_it, writer);
-            }
+            PARSE_OUTPUT_DATA(uint_contents, uint16_t, Uint)
         } else if (tensor.datatype() == "UINT8") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().uint_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().uint_contents()) {
-                    writer.Uint(number);
-                }
-            } else {
-                fillTensorDataWithUintValuesFromRawContents<uint8_t>(response_proto, tensor_it, writer);
-            }
+            PARSE_OUTPUT_DATA(uint_contents, uint8_t, Uint)
         } else if (tensor.datatype() == "FP64") {
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().fp64_contents_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& number : tensor.contents().fp64_contents()) {
-                    writer.Double(number);
-                }
-            } else {
-                fillTensorDataWithFloatValuesFromRawContents<double>(response_proto, tensor_it, writer);
-            }
+            PARSE_OUTPUT_DATA(fp64_contents, double, Double)
+        } else if (tensor.datatype() == "INT64") {
+            PARSE_OUTPUT_DATA(int64_contents, int64_t, Int64)
+        } else if (tensor.datatype() == "UINT64") {
+            PARSE_OUTPUT_DATA(uint64_contents, uint64_t, Uint64)
         } else if (tensor.datatype() == "BYTES") {
             if (seekDataInValField) {
-                auto status = checkValField(tensor.contents().bytes_contents_size(), expectedElementsNumber);
+                size_t bytesContentsSize = 0;
+                for (auto bytesStr : tensor.contents().bytes_contents()) {
+                    bytesContentsSize += bytesStr.size();
+                }
+                auto status = checkValField(bytesContentsSize, expectedElementsNumber);
                 if (!status.ok())
                     return status;
-                for (auto& bytes : tensor.contents().bytes_contents()) {
-                    bytesOutputsBuffer.append(bytes);
+                for (auto bytesStr : tensor.contents().bytes_contents()) {
+                    bytesOutputsBuffer.append(bytesStr);
                 }
             } else {
-                bytesOutputsBuffer.append((char*)response_proto.raw_output_contents(tensor_it).data(), response_proto.raw_output_contents(tensor_it).size());
+                appendBinaryOutput(bytesOutputsBuffer, (char*)response_proto.raw_output_contents(tensor_it).data(), expectedContentSize);
             }
         } else {
             return StatusCode::REST_UNSUPPORTED_PRECISION;
         }
-        if (tensor.datatype() != "BYTES") {
+        Status status;
+        if (!binaryOutput) {
             writer.EndArray();
+            status = parseOutputParameters(tensor, writer, 0);
+        } else {
+            status = parseOutputParameters(tensor, writer, expectedContentSize);
         }
-        auto status = parseOutputParameters(tensor, writer, bytesOutputsBuffer.size());
         if (!status.ok()) {
             return status;
         }
@@ -455,7 +380,8 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
 Status makeJsonFromPredictResponse(
     const ::KFSResponse& response_proto,
     std::string* response_json,
-    std::optional<int>& inferenceHeaderContentLength) {
+    std::optional<int>& inferenceHeaderContentLength,
+    std::map<std::string, bool> binaryOutputs) {
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
     timer.start(CONVERT);
@@ -486,7 +412,7 @@ Status makeJsonFromPredictResponse(
     }
 
     std::string binaryOutputsBuffer;
-    status = parseOutputs(response_proto, writer, binaryOutputsBuffer);
+    status = parseOutputs(response_proto, writer, binaryOutputsBuffer, binaryOutputs);
     if (!status.ok()) {
         return status;
     }
