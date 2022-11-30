@@ -93,5 +93,8 @@ uint32_t InferenceResponse::getParameterCount() const {
     return this->parameters.size();
 }
 
-void InferenceResponse::Clear() {}  // TODO remove
+void InferenceResponse::Clear() {
+    outputs.clear();
+    parameters.clear();
+}  // TODO remove
 }  // namespace ovms

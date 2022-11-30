@@ -26,8 +26,10 @@
 #include <openvino/openvino.hpp>
 #include <stdlib.h>
 
+#include "../buffer.hpp"
 #include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
+#include "../inferenceparameter.hpp"  // TODO move bytesize util
 #include "../inferencerequest.hpp"
 #include "../inferenceresponse.hpp"
 #include "../inferencetensor.hpp"
@@ -44,10 +46,10 @@
 using testing::Each;
 using testing::Eq;
 
+using ovms::Buffer;
+using ovms::InferenceResponse;
+using ovms::InferenceTensor;
 using ovms::StatusCode;
-// using ovms::InferenceRequest;
-// using ovms::InferenceResponse;
-// using ovms::InferenceTensor;
 
 // TODO: These tests test both TFS and KFS for prediction,
 // but output is always serialized to TFS, therefore we only test TFS serialization here.
@@ -91,9 +93,37 @@ ovms::Status getOutput(const TFSResponseType& response, const std::string& name,
 
 ovms::Status getOutput(const ovms::InferenceResponse& response2, const std::string& name, const ovms::InferenceTensor*& it, size_t& bufferId) {
     auto& response = const_cast<ovms::InferenceResponse&>(response2);  // TODO remove const_cast
-    auto status = response.getOutput(name.c_str(), const_cast<ovms::InferenceTensor**>(&it));
+    const std::string* str;
+    auto status = response.getOutput(0, &str, const_cast<ovms::InferenceTensor**>(&it));  // TODO FIXME
     bufferId = -1;
     return status;
+}
+
+using inputs_info_elem_t = std::pair<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
+size_t calculateByteSize(const inputs_info_elem_t& e) {
+    auto& [inputName, shapeDatatypeTuple] = e;
+    auto& [shape, precision] = shapeDatatypeTuple;
+    size_t shapeProduct = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+    return shapeProduct * ovms::DataTypeToByteSize(ovms::getPrecisionAsOVMSDataType(precision));
+}
+template <typename RequestType>
+class Preparer {
+    std::vector<std::unique_ptr<std::vector<float>>> dataKeeper;
+
+public:
+    void preparePredictRequest(RequestType& request, inputs_info_t requestInputs) {
+        ::preparePredictRequest(request, requestInputs);
+    }
+};
+template <>
+void Preparer<ovms::InferenceRequest>::preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs) {
+    auto inputWithGreatestRequirements = std::max_element(requestInputs.begin(), requestInputs.end(), [](const inputs_info_elem_t& a, const inputs_info_elem_t& b) {
+        return calculateByteSize(a) < calculateByteSize(b);
+    });
+    size_t byteSizeToPreserve = calculateByteSize(*inputWithGreatestRequirements);
+    auto& currentData = dataKeeper.emplace_back(std::make_unique<std::vector<float>>(byteSizeToPreserve));
+    memset(reinterpret_cast<void*>(const_cast<float*>(currentData->data())), '1', byteSizeToPreserve);
+    ::preparePredictRequest(request, requestInputs, *currentData);
 }
 
 template <typename Pair,
@@ -131,7 +161,8 @@ public:
                 std::thread(
                     [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i]() {
                         RequestType request;
-                        preparePredictRequest(request,
+                        Preparer<RequestType> preparer;
+                        preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
                                 std::tuple<ovms::shape_t, ovms::Precision>{{(initialBatchSize + (i % 3)), 10}, ovms::Precision::FP32}}});
 
@@ -144,7 +175,8 @@ public:
                 std::thread(
                     [this, initialBatchSize, &releaseWaitBeforePerformInference, i]() {
                         RequestType request;
-                        preparePredictRequest(request,
+                        Preparer<RequestType> preparer;
+                        preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
                                 std::tuple<ovms::shape_t, ovms::Precision>{{initialBatchSize, 10}, ovms::Precision::FP32}}});
 
@@ -180,7 +212,8 @@ public:
                 std::thread(
                     [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i]() {
                         RequestType request;
-                        preparePredictRequest(request,
+                        Preparer<RequestType> preparer;
+                        preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
                                 std::tuple<ovms::shape_t, ovms::Precision>{{(initialBatchSize + i), 10}, ovms::Precision::FP32}}});
                         performPredict(config.getName(), config.getVersion(), request,
@@ -208,7 +241,30 @@ public:
         ASSERT_EQ(0, std::memcmp(actualValues.data(), expectedValues.data(), expectedValues.size() * sizeof(float)))
             << readableError(expectedValues.data(), actualValues.data(), expectedValues.size() * sizeof(float));
     }
-    static void checkOutputValues(const ovms::InferenceResponse& response, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+    static void checkOutputValues(const ovms::InferenceResponse& res, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+        InferenceResponse& response = const_cast<InferenceResponse&>(res);  // TODO decide if output should be const
+        size_t outputCount = response.getOutputCount();
+        ASSERT_GE(1, outputCount);
+        size_t outputId = 0;
+        while (outputId < outputCount) {
+            const std::string* cppName;
+            InferenceTensor* tensor;
+            auto status = response.getOutput(outputId, &cppName, &tensor);
+            ASSERT_EQ(status, StatusCode::OK) << status.string();
+            ASSERT_NE(nullptr, tensor);
+            ASSERT_NE(nullptr, cppName);
+            if (outputName == *cppName) {
+                const Buffer* buffer = tensor->getBuffer();
+                ASSERT_NE(nullptr, buffer);
+                ASSERT_EQ(expectedValues.size() * sizeof(float), buffer->getByteSize());
+                float* bufferRaw = reinterpret_cast<float*>(const_cast<void*>(buffer->data()));
+                ASSERT_EQ(0, std::memcmp(bufferRaw, expectedValues.data(), expectedValues.size() * sizeof(float)))
+                    << readableError(expectedValues.data(), bufferRaw, expectedValues.size() * sizeof(float));
+                return;
+            }
+            ++outputId;
+        }
+        ASSERT_TRUE(false) << "did not found output with name: " << outputName;
     }
     static void checkOutputValues(const KFSResponse& response, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
         KFSOutputTensorIteratorType it;
@@ -256,7 +312,8 @@ public:
 
     ovms::Status performInferenceWithShape(ResponseType& response, const ovms::shape_t& shape = {1, 10}, const ovms::Precision precision = ovms::Precision::FP32) {
         RequestType request;
-        preparePredictRequest(request,
+        Preparer<RequestType> preparer;
+        preparer.preparePredictRequest(request,
             {{DUMMY_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, ovms::Precision>{shape, precision}}});
         return performInferenceWithRequest(request, response);
     }
@@ -265,15 +322,22 @@ public:
         ovms::shape_t shape = {1, 10};
         shape[batchSizePosition] = batchSize;
         RequestType request;
-        preparePredictRequest(request,
+        Preparer<RequestType> preparer;
+        preparer.preparePredictRequest(request,
             {{DUMMY_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, ovms::Precision>{shape, precision}}});
         return performInferenceWithRequest(request, response);
     }
 
     ovms::Status performInferenceWithImageInput(ResponseType& response, const std::vector<size_t>& shape, const std::vector<float>& data = {}, const std::string& servableName = "increment_1x3x4x5", int batchSize = 1, const ovms::Precision precision = ovms::Precision::FP32) {
         RequestType request;
-        preparePredictRequest(request,
-            {{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, ovms::Precision>{shape, precision}}}, data);
+        Preparer<RequestType> preparer;
+        if (data.size()) {
+            preparePredictRequest(request,
+                {{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, ovms::Precision>{shape, precision}}}, data);
+        } else {
+            preparer.preparePredictRequest(request,
+                {{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, ovms::Precision>{shape, precision}}});
+        }
         return performInferenceWithRequest(request, response, servableName);
     }
 
@@ -404,13 +468,14 @@ void TestPredict<Pair, RequestType, ResponseType>::performPredict(const std::str
 }
 
 //using CAPIInterface2 = std::pair<ovms::InferenceRequestWrapped, ovms::InferenceResponseWrapped>;
-//using MyTypes = ::testing::Types<TFSInterface, KFSInterface, CAPIInterface>;
-using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
+using MyTypes = ::testing::Types<TFSInterface, KFSInterface, CAPIInterface>;
+//using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
 TYPED_TEST_SUITE(TestPredict, MyTypes);
 
 TYPED_TEST(TestPredict, SuccesfullOnDummyModel) {
     typename TypeParam::first_type request;
-    preparePredictRequest(request,
+    Preparer<typename TypeParam::first_type> preparer;
+    preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -473,8 +538,9 @@ public:
 TYPED_TEST_SUITE(TestPredictWithMapping, MyTypes);
 
 TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMapping) {
+    Preparer<typename TypeParam::first_type> preparer;
     typename TypeParam::first_type request;
-    preparePredictRequest(request,
+    preparer.preparePredictRequest(request,
         {{this->dummyModelInputMapping,
             std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -485,8 +551,9 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMapping) {
 }
 
 TYPED_TEST(TestPredict, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
+    Preparer<typename TypeParam::first_type> preparer;
     typename TypeParam::first_type request;
-    preparePredictRequest(request,
+    preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -498,12 +565,13 @@ TYPED_TEST(TestPredict, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
 
 TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceInProgress) {
     //  FIRST LOAD MODEL WITH BS=1
+    Preparer<typename TypeParam::first_type> preparer;
     typename TypeParam::first_type requestBs1;
-    preparePredictRequest(requestBs1,
+    preparer.preparePredictRequest(requestBs1,
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     typename TypeParam::first_type requestBs2;
-    preparePredictRequest(requestBs2,
+    preparer.preparePredictRequest(requestBs2,
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, ovms::Precision>{{2, 10}, ovms::Precision::FP32}}});
 
@@ -532,14 +600,15 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceInProgress) {
 
 TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceAboutToStart) {
     //  FIRST LOAD MODEL WITH BS=1
-    typename TypeParam::first_type requestBs1;
-    preparePredictRequest(requestBs1,
-        {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+    Preparer<typename TypeParam::first_type> preparer;
     typename TypeParam::first_type requestBs2;
-    preparePredictRequest(requestBs2,
+    preparer.preparePredictRequest(requestBs2,
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, ovms::Precision>{{2, 10}, ovms::Precision::FP32}}});
+    typename TypeParam::first_type requestBs1;
+    preparer.preparePredictRequest(requestBs1,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
 
     this->config.setBatchingParams("auto");
     this->config.setNireq(2);
@@ -611,8 +680,9 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     auto status = this->manager.getModelInstance("dummy", 0, model, unload_guard);*/
 
     // Prepare request with 1x5 shape, expect reshape
+    Preparer<typename TypeParam::first_type> preparer;
     typename TypeParam::first_type request;
-    preparePredictRequest(request,
+    preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, ovms::Precision>{{1, 5}, ovms::Precision::FP32}}});
 
@@ -699,7 +769,6 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
  */
 TYPED_TEST(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
     using namespace ovms;
-
     // Prepare model with shape=auto (initially (1,10) shape)
     ModelConfig config = DUMMY_MODEL_CONFIG;
     this->config.setBatchingParams("auto");
@@ -756,9 +825,9 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelInputLayout) {
     typename TypeParam::second_type response;
 
     // Perform inference with NHWC layout, ensure status OK and correct results
-    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 4, 5, 3}), ovms::StatusCode::OK);
+    auto status = this->performInferenceWithImageInput(response, {1, 4, 5, 3});
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     this->checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
-
     // Perform inference with NCHW layout, ensure error
     ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::INVALID_SHAPE);
 
@@ -993,6 +1062,9 @@ TYPED_TEST(TestPredict, NetworkNotLoadedWhenLayoutAndDimsInconsistent) {
  * 6. Do the inference with single binary image tensor - expect status OK and result in NCHW layout
  * */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
+
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1034,6 +1106,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
  * 2. Do the inference with single binary image tensor with witdth exceeding shape range - expect status OK and reshaped output tensor
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1058,6 +1132,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
  * 2. Do the inference with batch=5 binary image tensor - expect status OK and result in NCHW layout
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1082,6 +1158,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
  * 2. Do the inference with binary image tensor with no shape set - expect status INVALID_NO_OF_SHAPE_DIMENSIONS
 */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1205,7 +1283,22 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
 */
 
 ovms::Precision getPrecisionFromResponse(ovms::InferenceResponse& response, const std::string& name) {
-    return ovms::getOVMSDataTypeAsPrecision(OVMS_DATATYPE_FP32);  // TODO
+    size_t outputCount = response.getOutputCount();
+    EXPECT_GE(1, outputCount);
+    size_t outputId = 0;
+    while (outputId < outputCount) {
+        const std::string* cppName;
+        InferenceTensor* tensor;
+        auto status = response.getOutput(outputId, &cppName, &tensor);
+        EXPECT_EQ(status, StatusCode::OK) << status.string();
+        EXPECT_NE(nullptr, tensor);
+        EXPECT_NE(nullptr, cppName);
+        if (name == *cppName) {
+            return ovms::getOVMSDataTypeAsPrecision(tensor->getDataType());
+        }
+        ++outputId;
+    }
+    return ovms::getOVMSDataTypeAsPrecision(OVMS_DATATYPE_UNDEFINED);
 }
 ovms::Precision getPrecisionFromResponse(KFSResponse& response, const std::string& name) {
     KFSOutputTensorIteratorType it;
@@ -1233,7 +1326,8 @@ TYPED_TEST(TestPredict, PerformInferenceDummyFp64) {
     typename TypeParam::first_type request;
     typename TypeParam::second_type response;
 
-    preparePredictRequest(request, {{"input:0", std::tuple<ovms::shape_t, ovms::Precision>{{3, 10}, ovms::Precision::FP64}}});
+    Preparer<typename TypeParam::first_type> preparer;
+    preparer.preparePredictRequest(request, {{"input:0", std::tuple<ovms::shape_t, ovms::Precision>{{3, 10}, ovms::Precision::FP64}}});
     ASSERT_EQ(this->performInferenceWithRequest(request, response, "dummy_fp64"), ovms::StatusCode::OK);
     this->checkOutputShape(response, {3, 10}, "output:0");
     ASSERT_EQ(getPrecisionFromResponse(response, "output:0"), ovms::Precision::FP64);
@@ -1281,6 +1375,8 @@ TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsHaveRange) {
  * 2. Do the inference with batch=5 binary image tensor 1x1 - expect status INVALID_SHAPE, because if any dimension is dynamic, we perform no resize operation.
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionNotMatching) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1303,6 +1399,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionNot
  * 2. Do the inference with batch=5 binary image tensor 1x1 - expect status OK, and correct results.
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionMatching) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1327,6 +1425,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionMat
  * 2. Do the inference with resolution 1x1 binary image tensor - expect status OK and result in NCHW layout
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionAny) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1351,6 +1451,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionAny) {
  * 3. Do the inference with resolution 1x1 binary image tensor - expect status OK and result in NCHW layout
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionRange) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)

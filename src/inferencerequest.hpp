@@ -59,5 +59,7 @@ public:
     Status setTimeoutMicorseconds(uint64_t microseconds);
     InferenceParameter* getInferenceParameter(const char* name);
     InferenceTensor* getTensor(const char* name);
+    Status getBatchSize(size_t& batchSize, size_t batchSizeIndex) const;  // TODO test
+    std::map<std::string, shape_t> getRequestShapes() const;              // TODO test
 };
 }  // namespace ovms

@@ -99,10 +99,16 @@ std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::Predi
     return requestShapes;
 }
 std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex) {
-    return std::nullopt;  // TODO
+    size_t bs = 0;
+    auto status = request->getBatchSize(bs, batchSizeIndex);
+    if (!status.ok()) {
+        return std::nullopt;  // TODO sth different?
+    }
+    return bs;
 }
+
 std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request) {
-    return {};  // TODO
+    return request->getRequestShapes();
 }
 
 bool useSharedOutputContent(const tensorflow::serving::PredictRequest* request) {
