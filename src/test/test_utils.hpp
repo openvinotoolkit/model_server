@@ -155,7 +155,6 @@ ovms::tensor_map_t prepareTensors(
     ovms::Precision precision = ovms::Precision::FP32);
 
 void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {});
-//void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {});
 
 KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
@@ -177,14 +176,14 @@ void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t reques
 
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize);
-void prepareBinaryPredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize); // CAPI binary not supported
+void prepareBinaryPredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize);  // CAPI binary not supported
 
 void prepareBinaryPredictRequestNoShape(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequestNoShape(::KFSRequest& request, const std::string& inputName, const int batchSize);
-void prepareBinaryPredictRequestNoShape(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize); // CAPI binary not supported
+void prepareBinaryPredictRequestNoShape(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize);  // CAPI binary not supported
 void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
-void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1); // CAPI binary not supported
+void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1);  // CAPI binary not supported
 
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);

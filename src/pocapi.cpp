@@ -16,6 +16,7 @@
 #include "pocapi.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 #include "buffer.hpp"
@@ -439,7 +440,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
 
     timer.stop(TOTAL);
     double reqTotal = timer.elapsed<microseconds>(TOTAL);
-    //if (pipelinePtr) {
+    // if (pipelinePtr) {
     //  OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().reqTimeGrpc, reqTotal);
     //  } else {
     //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);

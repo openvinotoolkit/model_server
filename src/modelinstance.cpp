@@ -1311,10 +1311,5 @@ std::unique_ptr<SpecialResourcesBasic<KFSRequest, KFSResponse>> ModelInstance::g
 std::unique_ptr<SpecialResourcesBasic<InferenceRequest, InferenceResponse>> ModelInstance::getSR(const InferenceRequest*, InferenceResponse*) {
     return std::make_unique<SpecialResourcesBasic<InferenceRequest, InferenceResponse>>();
 }
-//template<>
-//Status ModelInstance::infer<InferenceRequest, InferenceResponse>(InferenceRequest const* requestProto,
-//    InferenceResponse* responseProto,
-//   std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 }  // namespace ovms
-//template ovms::Status const ovms::ModelInstance::validate<ovms::InferenceRequest>(ovms::InferenceRequest const*); FIXME
 template ovms::Status ovms::ModelInstance::infer<ovms::InferenceRequest, ovms::InferenceResponse>(ovms::InferenceRequest const*, ovms::InferenceResponse*, std::unique_ptr<ovms::ModelInstanceUnloadGuard>&);

@@ -26,8 +26,9 @@
 #include "status.hpp"
 
 namespace ovms {
+// this constructor can be removed with prediction tests overhaul
 InferenceResponse::InferenceResponse() :
-    InferenceResponse("OBER", 42) {}
+    InferenceResponse("CONSTRUCTOR_USED_ONLY_IN_PREDICTION_TESTS", 42) {}
 InferenceResponse::InferenceResponse(const std::string& servableName, model_version_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {}

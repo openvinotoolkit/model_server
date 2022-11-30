@@ -39,8 +39,6 @@
 #include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
-class InferenceRequest;
-class InferenceResponse;
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class PipelineDefinition;

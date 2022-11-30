@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <map>
 #include <string>
 #include <unordered_map>
 
@@ -33,6 +34,7 @@ class InferenceRequest {
     std::unordered_map<std::string, InferenceTensor> inputs;
 
 public:
+    // this constructor can be removed with prediction tests overhaul
     InferenceRequest();
     InferenceRequest(const char* modelName, model_version_t modelVersion);
     Status addInput(const char* name, OVMS_DataType datatype, const size_t* shape, size_t dimCount);
@@ -59,7 +61,8 @@ public:
     Status setTimeoutMicorseconds(uint64_t microseconds);
     InferenceParameter* getInferenceParameter(const char* name);
     InferenceTensor* getTensor(const char* name);
-    Status getBatchSize(size_t& batchSize, size_t batchSizeIndex) const;  // TODO test
-    std::map<std::string, shape_t> getRequestShapes() const;              // TODO test
+    // TODO add tests & seek if those can be removed by potentialy exposing inputs map?
+    Status getBatchSize(size_t& batchSize, size_t batchSizeIndex) const;
+    std::map<std::string, shape_t> getRequestShapes() const;
 };
 }  // namespace ovms

@@ -67,7 +67,7 @@ void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std
     EXPECT_THAT(output, Each(Eq(1.)));
 }
 
-ovms::Status getOutput(const KFSResponse& response, const std::string& name, KFSOutputTensorIteratorType& it, size_t& bufferId) {
+static ovms::Status getOutput(const KFSResponse& response, const std::string& name, KFSOutputTensorIteratorType& it, size_t& bufferId) {
     it = response.outputs().begin();
     bufferId = 0;
     while (it != response.outputs().end()) {
@@ -83,20 +83,12 @@ ovms::Status getOutput(const KFSResponse& response, const std::string& name, KFS
     return StatusCode::INVALID_MISSING_INPUT;
 }
 
-ovms::Status getOutput(const TFSResponseType& response, const std::string& name, TFSOutputTensorIteratorType& it, size_t& bufferId) {
+static ovms::Status getOutput(const TFSResponseType& response, const std::string& name, TFSOutputTensorIteratorType& it, size_t& bufferId) {
     it = response.outputs().find(name);
     if (it != response.outputs().end()) {
         return StatusCode::OK;
     }
     return StatusCode::INVALID_MISSING_INPUT;
-}
-
-ovms::Status getOutput(const ovms::InferenceResponse& response2, const std::string& name, const ovms::InferenceTensor*& it, size_t& bufferId) {
-    auto& response = const_cast<ovms::InferenceResponse&>(response2);  // TODO remove const_cast
-    const std::string* str;
-    auto status = response.getOutput(0, &str, const_cast<ovms::InferenceTensor**>(&it));  // TODO FIXME
-    bufferId = -1;
-    return status;
 }
 
 using inputs_info_elem_t = std::pair<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
@@ -467,9 +459,7 @@ void TestPredict<Pair, RequestType, ResponseType>::performPredict(const std::str
         DUMMY_MODEL_OUTPUT_NAME);
 }
 
-//using CAPIInterface2 = std::pair<ovms::InferenceRequestWrapped, ovms::InferenceResponseWrapped>;
 using MyTypes = ::testing::Types<TFSInterface, KFSInterface, CAPIInterface>;
-//using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
 TYPED_TEST_SUITE(TestPredict, MyTypes);
 
 TYPED_TEST(TestPredict, SuccesfullOnDummyModel) {
@@ -1282,7 +1272,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
  * 2. Do the inferences with (3, 10) shape, expect correct output shapes and precision
 */
 
-ovms::Precision getPrecisionFromResponse(ovms::InferenceResponse& response, const std::string& name) {
+static ovms::Precision getPrecisionFromResponse(ovms::InferenceResponse& response, const std::string& name) {
     size_t outputCount = response.getOutputCount();
     EXPECT_GE(1, outputCount);
     size_t outputId = 0;
@@ -1300,14 +1290,16 @@ ovms::Precision getPrecisionFromResponse(ovms::InferenceResponse& response, cons
     }
     return ovms::getOVMSDataTypeAsPrecision(OVMS_DATATYPE_UNDEFINED);
 }
-ovms::Precision getPrecisionFromResponse(KFSResponse& response, const std::string& name) {
+
+static ovms::Precision getPrecisionFromResponse(KFSResponse& response, const std::string& name) {
     KFSOutputTensorIteratorType it;
     size_t bufferId;
     auto status = getOutput(response, name, it, bufferId);
     EXPECT_TRUE(status.ok());
     return ovms::KFSPrecisionToOvmsPrecision(it->datatype());
 }
-ovms::Precision getPrecisionFromResponse(TFSResponseType& response, const std::string& name) {
+
+static ovms::Precision getPrecisionFromResponse(TFSResponseType& response, const std::string& name) {
     TFSOutputTensorIteratorType it;
     size_t bufferId;
     auto status = getOutput(response, name, it, bufferId);
