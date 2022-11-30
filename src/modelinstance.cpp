@@ -740,14 +740,14 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
 }
 
 template<class ArrayType>
-void ModelInstance::fetchModelFiles(bool* found, ArrayType ext){
-    if (!(*found)) {
-        *found = true;
+void ModelInstance::fetchModelFiles(bool& found, ArrayType ext){
+    if (!found) {
+        found = true;
         modelFiles.clear();
         for (auto extension : ext) {
             auto file = findModelFilePathWithExtension(extension);
             if (file.empty()) {
-                *found = false;
+                found = false;
             }
             modelFiles.push_back(file);
         }

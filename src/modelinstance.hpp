@@ -149,7 +149,7 @@ protected:
     static constexpr std::array<const char*, 2> PADDLE_MODEL_FILES_EXTENSIONS{".pdmodel", ".pdiparams"};
 
     /**
-      * @brief Stores required paddlepaddle model files extensions to be able to load model
+      * @brief Stores required tensorflow model files extensions to be able to load model
       */
     static constexpr std::array<const char*, 1> TF_MODEL_FILES_EXTENSIONS{".pb"};
 
