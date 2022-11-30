@@ -800,9 +800,9 @@ protected:
     template <typename T>
     void assertDataBinary(T data, std::string expectedJson) {
         ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-        ASSERT_EQ(json.size(), expectedJson.size() + sizeof(float));
+        ASSERT_EQ(json.size(), expectedJson.size() + sizeof(T));
         EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-        EXPECT_EQ(*(float*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+        EXPECT_EQ(*(T*)json.substr(inferenceHeaderContentLength.value()).data(), data);
     }
 };
 
