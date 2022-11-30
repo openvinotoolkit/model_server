@@ -288,7 +288,7 @@ static void appendBinaryOutput(std::string& bytesOutputsBuffer, char* output, si
         }                                                                                                                             \
     }
 
-static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, std::string& bytesOutputsBuffer, std::set<std::string> binaryOutputs) {
+static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, std::string& bytesOutputsBuffer, std::set<std::string>& binaryOutputs) {
     writer.Key("outputs");
     writer.StartArray();
 
@@ -360,13 +360,10 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         } else {
             return StatusCode::REST_UNSUPPORTED_PRECISION;
         }
-        Status status;
         if (!binaryOutput) {
             writer.EndArray();
-            status = parseOutputParameters(tensor, writer, 0);
-        } else {
-            status = parseOutputParameters(tensor, writer, expectedContentSize);
         }
+        auto status = parseOutputParameters(tensor, writer, binaryOutput ? expectedContentSize : 0);
         if (!status.ok()) {
             return status;
         }
@@ -381,7 +378,7 @@ Status makeJsonFromPredictResponse(
     const ::KFSResponse& response_proto,
     std::string* response_json,
     std::optional<int>& inferenceHeaderContentLength,
-    std::set<std::string> binaryOutputs) {
+    std::set<std::string> requestedBinaryOutputsNames) {
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
     timer.start(CONVERT);
@@ -412,7 +409,7 @@ Status makeJsonFromPredictResponse(
     }
 
     std::string binaryOutputsBuffer;
-    status = parseOutputs(response_proto, writer, binaryOutputsBuffer, binaryOutputs);
+    status = parseOutputs(response_proto, writer, binaryOutputsBuffer, requestedBinaryOutputsNames);
     if (!status.ok()) {
         return status;
     }

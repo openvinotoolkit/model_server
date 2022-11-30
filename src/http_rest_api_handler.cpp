@@ -498,10 +498,10 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     return StatusCode::OK;
 }
 
-static std::set<std::string> getRequestedBinaryOutputs(::KFSRequest& grpc_request, ::KFSResponse& grpc_response) {
+static std::set<std::string> getRequestedBinaryOutputsNames(::KFSRequest& grpc_request) {
     std::set<std::string> binaryOutputs;
     bool allBinaryOutputsRequested = false;
-    for (auto parameter : grpc_request.parameters()) {
+    for (auto &parameter : grpc_request.parameters()) {
         if (parameter.second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam) {
             if (parameter.first == "binary_data_output") {
                 allBinaryOutputsRequested = parameter.second.bool_param();
@@ -509,16 +509,16 @@ static std::set<std::string> getRequestedBinaryOutputs(::KFSRequest& grpc_reques
             }
         }
     }
-    for (const inference::ModelInferRequest_InferRequestedOutputTensor output : grpc_request.outputs()) {
-        bool specificBinaryOutputRequested = false;
-        for (auto parameter : output.parameters()) {
+    for (const inference::ModelInferRequest_InferRequestedOutputTensor &output : grpc_request.outputs()) {
+        bool specificBinaryOutputRequested = allBinaryOutputsRequested;
+        for (auto &parameter : output.parameters()) {
             if ((parameter.second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) &&
                 (parameter.first == "binary_data")) {
                 specificBinaryOutputRequested = parameter.second.bool_param();
                 break;
             }
         }
-        if (specificBinaryOutputRequested || allBinaryOutputsRequested) {
+        if (specificBinaryOutputRequested) {
             binaryOutputs.insert(output.name());
         }
     }
@@ -552,9 +552,9 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     if (!gstatus.ok()) {
         return gstatus;
     }
-    std::set<std::string> binaryOutputs = getRequestedBinaryOutputs(grpc_request, grpc_response);
+    std::set<std::string> requestedBinaryOutputsNames = getRequestedBinaryOutputsNames(grpc_request);
     std::string output;
-    status = ovms::makeJsonFromPredictResponse(grpc_response, &output, inferenceHeaderContentLength, binaryOutputs);
+    status = ovms::makeJsonFromPredictResponse(grpc_response, &output, inferenceHeaderContentLength, requestedBinaryOutputsNames);
     if (!status.ok()) {
         return status;
     }
