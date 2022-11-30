@@ -560,7 +560,7 @@ public:
 
     uint32_t getNumOfStreams() const;
 
-    template<class ArrayType>
+    template <class ArrayType>
     void fetchModelFiles(bool& found, ArrayType ext);
 };
 }  // namespace ovms
