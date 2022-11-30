@@ -767,10 +767,10 @@ Status ModelInstance::fetchModelFilepaths() {
     }
 
     bool found = false;
-    fetchModelFiles(&found, OV_MODEL_FILES_EXTENSIONS);
-    fetchModelFiles(&found, ONNX_MODEL_FILES_EXTENSIONS);
-    fetchModelFiles(&found, PADDLE_MODEL_FILES_EXTENSIONS);
-    fetchModelFiles(&found, TF_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(found, OV_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(found, ONNX_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(found, PADDLE_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(found, TF_MODEL_FILES_EXTENSIONS);
 
     if (!found) {
         SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
