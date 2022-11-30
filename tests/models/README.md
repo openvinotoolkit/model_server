@@ -1,5 +1,7 @@
 # Generating models with simple arithmetical operations
 
+## Prepare Python environment
+
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/tests/models
