@@ -791,8 +791,8 @@ protected:
         output->set_datatype(datatype);
         auto* output_contents = proto.add_raw_output_contents();
         output_contents->assign(reinterpret_cast<const char*>(&data), sizeof(T));
-        std::map<std::string, bool> binaryOutputs;
-        binaryOutputs[outputName] = true;
+        std::set<std::string> binaryOutputs;
+        binaryOutputs.insert(outputName);
         ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength, binaryOutputs), StatusCode::OK);
         ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
     }
@@ -1275,8 +1275,8 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positi
 }
 
 TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positive_oneOutputsBinary) {
-    std::map<std::string, bool> binaryOutputs;
-    binaryOutputs["single_uint64_val"] = true;
+    std::set<std::string> binaryOutputs;
+    binaryOutputs.insert("single_uint64_val");
     ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength, binaryOutputs), StatusCode::OK);
     ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
     std::string expectedJson = R"({
@@ -1304,9 +1304,9 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positi
 }
 
 TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positive_bothOutputsBinary) {
-    std::map<std::string, bool> binaryOutputs;
-    binaryOutputs["single_uint64_val"] = true;
-    binaryOutputs["two_uint32_vals"] = true;
+    std::set<std::string> binaryOutputs;
+    binaryOutputs.insert("single_uint64_val");
+    binaryOutputs.insert("two_uint32_vals");
     ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength, binaryOutputs), StatusCode::OK);
     ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
     std::string expectedJson = R"({

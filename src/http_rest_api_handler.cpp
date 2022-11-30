@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <set>
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -497,24 +498,31 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     return StatusCode::OK;
 }
 
-static void getRequestedBinaryOutputs(::KFSRequest& grpc_request, ::KFSResponse& grpc_response, std::map<std::string, bool>& binaryOutputs) {
+static std::set<std::string> getRequestedBinaryOutputs(::KFSRequest& grpc_request, ::KFSResponse& grpc_response) {
+    std::set<std::string> binaryOutputs;
+    bool allBinaryOutputsRequested = false;
     for (auto parameter : grpc_request.parameters()) {
         if (parameter.second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam) {
             if (parameter.first == "binary_data_output") {
-                for (auto output : grpc_response.outputs()) {
-                    binaryOutputs[output.name()] = parameter.second.bool_param();
-                }
+                allBinaryOutputsRequested = parameter.second.bool_param();
+                break;
             }
         }
     }
     for (const inference::ModelInferRequest_InferRequestedOutputTensor output : grpc_request.outputs()) {
+        bool specificBinaryOutputRequested = false;
         for (auto parameter : output.parameters()) {
             if ((parameter.second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) &&
                 (parameter.first == "binary_data")) {
-                binaryOutputs[output.name()] = parameter.second.bool_param();
+                specificBinaryOutputRequested = parameter.second.bool_param();
+                break;
             }
         }
+        if(specificBinaryOutputRequested || allBinaryOutputsRequested) {
+            binaryOutputs.insert(output.name());
+        }
     }
+    return binaryOutputs;
 }
 
 Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength) {
@@ -544,8 +552,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     if (!gstatus.ok()) {
         return gstatus;
     }
-    std::map<std::string, bool> binaryOutputs;
-    getRequestedBinaryOutputs(grpc_request, grpc_response, binaryOutputs);
+    std::set<std::string> binaryOutputs = getRequestedBinaryOutputs(grpc_request, grpc_response);
     std::string output;
     status = ovms::makeJsonFromPredictResponse(grpc_response, &output, inferenceHeaderContentLength, binaryOutputs);
     if (!status.ok()) {

@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include "rest_utils.hpp"
 
-#include <map>
+#include <set>
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -288,7 +288,7 @@ static void appendBinaryOutput(std::string& bytesOutputsBuffer, char* output, si
         }                                                                                                                             \
     }
 
-static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, std::string& bytesOutputsBuffer, std::map<std::string, bool> binaryOutputs) {
+static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, std::string& bytesOutputsBuffer, std::set<std::string> binaryOutputs) {
     writer.Key("outputs");
     writer.StartArray();
 
@@ -317,7 +317,7 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         writer.EndArray();
         writer.Key("datatype");
         writer.String(tensor.datatype().c_str());
-        bool binaryOutput = (binaryOutputs.count(tensor.name().c_str()) > 0) ? binaryOutputs[tensor.name().c_str()] : (tensor.datatype() == "BYTES");
+        bool binaryOutput = ((binaryOutputs.find(tensor.name().c_str()) != binaryOutputs.end()) || (tensor.datatype() == "BYTES"));
         if (!binaryOutput) {
             writer.Key("data");
             writer.StartArray();
@@ -381,7 +381,7 @@ Status makeJsonFromPredictResponse(
     const ::KFSResponse& response_proto,
     std::string* response_json,
     std::optional<int>& inferenceHeaderContentLength,
-    std::map<std::string, bool> binaryOutputs) {
+    std::set<std::string> binaryOutputs) {
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
     timer.start(CONVERT);
