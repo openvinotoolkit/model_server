@@ -667,7 +667,8 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 status = checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
                 if (!status.ok())
                     return status;
-            }
+            } else if(batchSize != 1)
+                return StatusCode::INVALID_BATCH_SIZE;
 
             continue;
         }
