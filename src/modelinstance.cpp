@@ -739,8 +739,8 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-template<class ArrayType>
-void ModelInstance::fetchModelFiles(bool& found, ArrayType ext){
+template <class ArrayType>
+void ModelInstance::fetchModelFiles(bool& found, ArrayType ext) {
     if (!found) {
         found = true;
         modelFiles.clear();
