@@ -17,12 +17,12 @@
 
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <set>
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -518,7 +518,7 @@ static std::set<std::string> getRequestedBinaryOutputs(::KFSRequest& grpc_reques
                 break;
             }
         }
-        if(specificBinaryOutputRequested || allBinaryOutputsRequested) {
+        if (specificBinaryOutputRequested || allBinaryOutputsRequested) {
             binaryOutputs.insert(output.name());
         }
     }
