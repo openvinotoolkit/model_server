@@ -796,6 +796,14 @@ protected:
         ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength, binaryOutputs), StatusCode::OK);
         ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
     }
+
+    template <typename T>
+    void assertDataBinary(T data, std::string expectedJson) {
+        ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
+        ASSERT_EQ(json.size(), expectedJson.size() + sizeof(float));
+        EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
+        EXPECT_EQ(*(float*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    }
 };
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Float) {
@@ -828,10 +836,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Float_binary) {
             }
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(float));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ(*(float*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    assertDataBinary(data, expectedJson);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Double) {
@@ -864,10 +869,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Double_binary) {
             }
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(double));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ(*(double*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    assertDataBinary(data, expectedJson);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int32) {
@@ -900,10 +902,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int32_binary) {
             }
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(int32_t));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ(*(int32_t*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    assertDataBinary(data, expectedJson);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int16) {
@@ -936,10 +935,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int16_binary) {
             }
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(int16_t));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ(*(int16_t*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    assertDataBinary(data, expectedJson);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int8) {
@@ -972,10 +968,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int8_binary) {
             }
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(int8_t));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ(*(int8_t*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    assertDataBinary(data, expectedJson);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint8) {
@@ -1008,10 +1001,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint8_binary) {
             }
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(uint8_t));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ(*(uint8_t*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    assertDataBinary(data, expectedJson);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int64) {
@@ -1044,10 +1034,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int64_binary) {
             }
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(int64_t));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ(*(int64_t*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    assertDataBinary(data, expectedJson);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint32) {
@@ -1080,10 +1067,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint32_binary) {
             }
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(uint32_t));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ(*(uint32_t*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    assertDataBinary(data, expectedJson);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint64) {
@@ -1116,10 +1100,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint64_binary) {
             }
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(uint64_t));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ(*(uint64_t*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+    assertDataBinary(data, expectedJson);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, BYTES_1) {
