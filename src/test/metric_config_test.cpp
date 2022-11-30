@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <sstream>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -80,7 +82,8 @@ public:
     }
 };
 
-static const char* modelMetricsChangedConfig = R"(
+std::string createModelMetricsChangedConfig() {
+    return R"(
 {
     "model_config_list": [
         {
@@ -99,13 +102,16 @@ static const char* modelMetricsChangedConfig = R"(
             "metrics":
             {
                 "enable" : true,
-                "metrics_list": ["ovms_requests_success", "ovms_infer_req_queue_size"]
+                "metrics_list": [")" +
+           METRIC_NAME_REQUESTS_SUCCESS +
+           std::string{"\", \""} + METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
             }
         }
 })";
+}
 
 TEST_F(MetricsConfigNegativeTest, MissingPort) {
-    SetUpConfig(modelMetricsChangedConfig);
+    SetUpConfig(createModelMetricsChangedConfig());
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
@@ -148,7 +154,7 @@ TEST_F(MetricsConfigTest, DefaultValues) {
 }
 
 TEST_F(MetricsConfigTest, ChangedValues) {
-    SetUpConfig(modelMetricsChangedConfig);
+    SetUpConfig(createModelMetricsChangedConfig());
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
@@ -161,12 +167,13 @@ TEST_F(MetricsConfigTest, ChangedValues) {
     ASSERT_EQ(metricConfig.metricsEnabled, true);
 
     // ASSERT_EQ(metricConfig.endpointsPath, "/newmetrics");
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_fail"), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_INFER_REQ_QUEUE_SIZE));
+    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL), false);
 }
 
-static const char* modelMetricsBadListConfig = R"(
+std::string createModelMetricsBadListConfig() {
+    return R"(
 {
     "model_config_list": [
         {
@@ -185,13 +192,15 @@ static const char* modelMetricsBadListConfig = R"(
             "metrics":
             {
                 "enable" : true,
-                "metrics_list": ["ovms_request_success", "ovms_infer_req_queue_size"]
+                "metrics_list": ["bad_name", ")" +
+           METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
             }
         }
 })";
+}
 
 TEST_F(MetricsConfigTest, BadFamilyConfig) {
-    SetUpConfig(modelMetricsBadListConfig);
+    SetUpConfig(createModelMetricsBadListConfig());
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
@@ -202,7 +211,7 @@ TEST_F(MetricsConfigTest, BadFamilyConfig) {
 }
 
 TEST_F(MetricsConfigTest, InitOnce) {
-    SetUpConfig(modelMetricsChangedConfig);
+    SetUpConfig(createModelMetricsChangedConfig());
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
@@ -220,9 +229,9 @@ TEST_F(MetricsConfigTest, InitOnce) {
     ASSERT_EQ(metricConfig2.metricsEnabled, true);
 
     // ASSERT_EQ(metricConfig2.endpointsPath, "/newmetrics");
-    ASSERT_TRUE(metricConfig2.isFamilyEnabled("ovms_requests_success"));
-    ASSERT_TRUE(metricConfig2.isFamilyEnabled("ovms_infer_req_queue_size"));
-    ASSERT_EQ(metricConfig2.isFamilyEnabled("ovms_requests_fail"), false);
+    ASSERT_TRUE(metricConfig2.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS));
+    ASSERT_TRUE(metricConfig2.isFamilyEnabled(METRIC_NAME_INFER_REQ_QUEUE_SIZE));
+    ASSERT_EQ(metricConfig2.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL), false);
 }
 
 static const char* modelMetricsAllEnabledConfig = R"(
@@ -260,10 +269,10 @@ TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
     const auto& metricConfig = manager.getMetricConfig();
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS));
     // Non default metric
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
+    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_INFER_REQ_QUEUE_SIZE), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL));
 }
 
 static const char* modelMetricsBadEndpoint = R"(
@@ -471,30 +480,35 @@ TEST_F(MetricsCli, DefaultCliReading) {
     MetricConfig metricConfig;
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_success"), false);
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_fail"), false);
+    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS), false);
+    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_INFER_REQ_QUEUE_SIZE), false);
+    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL), false);
 
-    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_requests_fail");
+    std::stringstream ss;
+    ss << METRIC_NAME_REQUESTS_SUCCESS << ", " << METRIC_NAME_REQUESTS_FAIL;
+    auto status = metricConfig.loadFromCLIString(true, ss.str());
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS));
+    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_INFER_REQ_QUEUE_SIZE), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL));
 }
 
 TEST_F(MetricsCli, WorkingCliReading) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(true, "ovms_requests_success, ovms_infer_req_queue_size");
+
+    std::stringstream ss;
+    ss << METRIC_NAME_REQUESTS_SUCCESS << ", " << METRIC_NAME_INFER_REQ_QUEUE_SIZE;
+    auto status = metricConfig.loadFromCLIString(true, ss.str());
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_fail"), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_INFER_REQ_QUEUE_SIZE));
+    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL), false);
 }
 
 TEST_F(MetricsCli, DefaultEmptyList) {
@@ -508,9 +522,9 @@ TEST_F(MetricsCli, DefaultEmptyList) {
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_success"));
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"), false);
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS));
+    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_INFER_REQ_QUEUE_SIZE), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL));
 }
 
 TEST_F(MetricsCli, BadCliReading) {
@@ -528,19 +542,25 @@ TEST_F(MetricsCli, BadCliReading) {
 
 TEST_F(MetricsCli, DisabledMetrics) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(false, "ovms_infer_req_queue_size, ovms_requests_fail");
+
+    std::stringstream ss;
+    ss << METRIC_NAME_INFER_REQ_QUEUE_SIZE << ", " << METRIC_NAME_REQUESTS_FAIL;
+    auto status = metricConfig.loadFromCLIString(false, ss.str());
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(metricConfig.metricsEnabled, false);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_EQ(metricConfig.isFamilyEnabled("ovms_requests_success"), false);
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_infer_req_queue_size"));
-    ASSERT_TRUE(metricConfig.isFamilyEnabled("ovms_requests_fail"));
+    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS), false);
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_INFER_REQ_QUEUE_SIZE));
+    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL));
 }
 
 TEST_F(MetricsCli, MetricsEnabledCliRestPortDefault) {
     MetricConfig metricConfig;
-    auto status = metricConfig.loadFromCLIString(true, "ovms_infer_req_queue_size, ovms_requests_fail");
+
+    std::stringstream ss;
+    ss << METRIC_NAME_INFER_REQ_QUEUE_SIZE << ", " << METRIC_NAME_REQUESTS_FAIL;
+    auto status = metricConfig.loadFromCLIString(true, ss.str());
 
     ASSERT_EQ(status, StatusCode::OK);
 }

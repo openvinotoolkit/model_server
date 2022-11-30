@@ -50,7 +50,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         this->buckets.emplace_back(floor(BUCKET_MULTIPLIER * pow(BUCKET_POWER_BASE, i)));
     }
 
-    std::string familyName = "ovms_requests_success";
+    std::string familyName = METRIC_NAME_REQUESTS_SUCCESS;
     auto family = registry->createFamily<MetricCounter>(familyName,
         "Number of successful requests to a model or a DAG.");
     THROW_IF_NULL(family, "cannot create family");
@@ -139,7 +139,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         THROW_IF_NULL(this->requestSuccessRestModelReady, "cannot create metric");
     }
 
-    familyName = "ovms_requests_fail";
+    familyName = METRIC_NAME_REQUESTS_FAIL;
     family = registry->createFamily<MetricCounter>(familyName,
         "Number of failed requests to a model or a DAG.");
     THROW_IF_NULL(family, "cannot create family");
@@ -228,7 +228,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         THROW_IF_NULL(this->requestFailRestModelReady, "cannot create metric");
     }
 
-    familyName = "ovms_request_time_us";
+    familyName = METRIC_NAME_REQUEST_TIME;
     auto requestTimeFamily = registry->createFamily<MetricHistogram>(familyName,
         "Processing time of requests to a model or a DAG.");
     THROW_IF_NULL(requestTimeFamily, "cannot create family");
@@ -258,7 +258,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         return;
     }
 
-    std::string familyName = "ovms_inference_time_us";
+    std::string familyName = METRIC_NAME_INFERENCE_TIME;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricHistogram>(familyName,
             "Inference execution time in the OpenVINO backend.");
@@ -269,7 +269,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         THROW_IF_NULL(this->inferenceTime, "cannot create metric");
     }
 
-    familyName = "ovms_wait_for_infer_req_time_us";
+    familyName = METRIC_NAME_WAIT_FOR_INFER_REQ_TIME;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricHistogram>(familyName,
             "Request waiting time in the scheduling queue.");
@@ -280,7 +280,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         THROW_IF_NULL(this->waitForInferReqTime, "cannot create metric");
     }
 
-    familyName = "ovms_streams";
+    familyName = METRIC_NAME_STREAMS;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricGauge>(familyName,
             "Number of OpenVINO execution streams.");
@@ -290,7 +290,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         THROW_IF_NULL(this->streams, "cannot create metric");
     }
 
-    familyName = "ovms_infer_req_queue_size";
+    familyName = METRIC_NAME_INFER_REQ_QUEUE_SIZE;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricGauge>(familyName,
             "Inference request queue size (nireq).");
@@ -300,7 +300,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         THROW_IF_NULL(this->inferReqQueueSize, "cannot create metric");
     }
 
-    familyName = "ovms_infer_req_active";
+    familyName = METRIC_NAME_INFER_REQ_ACTIVE;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricGauge>(familyName,
             "Number of currently consumed inference request from the processing queue.");
@@ -310,7 +310,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         THROW_IF_NULL(this->inferReqActive, "cannot create metric");
     }
 
-    familyName = "ovms_current_requests";
+    familyName = METRIC_NAME_CURRENT_REQUESTS;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricGauge>(familyName,
             "Number of inference requests currently in process.");

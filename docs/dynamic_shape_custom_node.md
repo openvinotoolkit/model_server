@@ -43,12 +43,15 @@ docker pull openvino/model_server:latest
 
 3. Build the custom node:
     ```bash
-    make BASE_OS=ubuntu NODES=image_transformation
+    # replace to 'redhat` if using UBI base image
+    export BASE_OS=ubuntu
+
+    make BASE_OS=${BASE_OS} NODES=image_transformation
     ```
 
 4. Copy the custom node to the `models` repository:
     ```bash
-    cp lib/ubuntu/libcustom_node_image_transformation.so ../../models/libcustom_node_image_transformation.so
+    cp lib/${BASE_OS}/libcustom_node_image_transformation.so ../../models/libcustom_node_image_transformation.so
     ```
 
 #### Create Model Server Configuration File

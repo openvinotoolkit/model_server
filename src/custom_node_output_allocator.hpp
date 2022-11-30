@@ -25,7 +25,7 @@ namespace ovms {
 bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2);
 
 class CustomNodeOutputAllocator : public ov::AllocatorImpl {
-    struct CustomNodeTensor tensor;
+    struct ::CustomNodeTensor tensor;
     NodeLibrary nodeLibrary;
     void* customNodeLibraryInternalManager;
 

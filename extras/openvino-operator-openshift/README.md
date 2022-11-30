@@ -1,4 +1,6 @@
-# OpenShift Operator {#ovms_extras_openvino-operator-openshift-readme}
+# [DEPRECATED] OpenVINO Operator is now maintained in a separate [repository](https://github.com/openvinotoolkit/operator#openshift-and-kubernetes-operator)
+
+## OpenShift Operator {#ovms_extras_openvino-operator-openshift-readme}
 The Operator installs and manages development tools and production AI deployments in an OpenShift cluster. It enables easy deployment and management of AI inference services by creating `ModelServer` resource.
 
 The Operator also integrates with the JupyterHub [Spawner](https://jupyterhub.readthedocs.io/en/stable/reference/spawners.html) in [Red Hat OpenShift Data Science](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-data-science) and [Open Data Hub](https://opendatahub.io/docs.html). See [detailed instructions](#integration-with-openshift-data-science-and-open-data-hub) below. 
@@ -52,7 +54,7 @@ Modify the [sample resource](https://github.com/openvinotoolkit/model_server/tre
 oc apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
-The available [parameters](../../deploy/README.md) are the same as above.
+The available [parameters](https://github.com/openvinotoolkit/operator/blob/main/docs/modelserver_params.md) are the same as above.
 
 <b>Note</b>: Some deployment configurations have prerequisites like creating relevant resources in Kubernetes. For example, a secret with credentials,
 persistent volume claim or configmap with a Model Server configuration file.

@@ -64,7 +64,7 @@ Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and In
 
 
 Before using GPU as OpenVINO Model Server target device, you need to:
-- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_linux.html#step-5-optional-configure-inference-on-non-cpu-devices)
+- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_from_archive_linux.html#step-4-optional-configure-inference-on-non-cpu-devices)
 - start the docker container with the additional parameter of `--device /dev/dri` to pass the device context 
 - set the parameter of `--target_device` to `GPU`.
 - use the `openvino/model_server:latest-gpu` image, which contains GPU dependencies
@@ -214,3 +214,16 @@ THROUGHPUT
 ```
 
 > **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
+
+## Using NVIDIA Plugin
+
+*Note:* To build container with NVIDIA plugin use command: 
+```bash
+   make docker_build NVIDIA=1 OV_USE_BINARY=0 
+```
+
+Example command to run container with NVIDIA support:
+
+```bash
+   docker run -it --gpus all -p 9178:9178 -v /model:/model openvino/model_server-cuda:latest --model_path /model --model_name resnet --target_device NVIDIA
+```

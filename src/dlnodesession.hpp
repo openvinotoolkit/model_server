@@ -25,7 +25,6 @@
 #include "modelversion.hpp"
 #include "nodesession.hpp"
 #include "pipelineeventqueue.hpp"
-#include "status.hpp"
 
 namespace ovms {
 
@@ -34,6 +33,7 @@ class ModelInstance;
 class Node;
 class NodeStreamIdGuard;
 class ModelInstanceUnloadGuard;
+class Status;
 class TensorInfo;
 
 class DLNodeSession : public NodeSession {

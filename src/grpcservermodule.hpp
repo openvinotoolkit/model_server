@@ -20,13 +20,14 @@
 
 #include <grpcpp/server.h>
 
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "model_service.hpp"
+#include "module.hpp"
 #include "prediction_service.hpp"
-#include "servablemanagermodule.hpp"
-#include "server.hpp"
 
 namespace ovms {
 class Config;
+class Server;
 
 class GRPCServerModule : public Module {
     Server& server;

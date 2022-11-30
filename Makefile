@@ -40,6 +40,7 @@ BASE_OS_TAG_REDHAT ?= 8.6
 
 INSTALL_RPMS_FROM_URL ?=
 CHECK_COVERAGE ?=1
+NVIDIA ?=0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -50,6 +51,7 @@ OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
+CMAKE_BUILD_TYPE ?= Release
 MINITRACE ?= OFF
 
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
@@ -71,25 +73,35 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
-  BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
-  INSTALL_DRIVER_VERSION ?= "21.48.21782"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_ubuntu20_2022.2.0.7713.af16ea1d79a_x86_64.tgz
+  ifeq ($(NVIDIA),1)
+	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04
+  else
+	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
+  endif
+  INSTALL_DRIVER_VERSION ?= "22.35.24055"
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2022.3.0.8844.12f74f066a4_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  INSTALL_DRIVER_VERSION ?= "21.38.21026"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_rhel8_2022.2.0.7713.af16ea1d79a_x86_64.tgz
+  INSTALL_DRIVER_VERSION ?= "22.28.23726"
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2022.3.0.8844.12f74f066a4_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
+ifeq ($(BAZEL_BUILD_TYPE),dbg)
+  OVMS_CPP_DOCKER_IMAGE:=$(OVMS_CPP_DOCKER_IMAGE)-dbg
+endif
+
 OVMS_CPP_IMAGE_TAG ?= latest
+ifeq ($(NVIDIA),1)
+  IMAGE_TAG_SUFFIX = -cuda
+endif
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2022.2"
+PRODUCT_VERSION ?= "2022.3"
 
-OVMS_CPP_CONTAINTER_NAME ?= server-test
+OVMS_CPP_CONTAINTER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
 OVMS_CPP_CONTAINTER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
@@ -117,6 +129,8 @@ style: venv clang-format
 	@git diff --exit-code || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
 	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
 	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+	@echo "Checking cppclean..."
+	@. $(ACTIVATE); bash -c "./cppclean.sh"
 
 sdl-check: venv
 	@echo "Checking SDL requirements..."
@@ -156,6 +170,11 @@ clang-format: venv
 
 .PHONY: docker_build
 docker_build:
+ifeq ($(NVIDIA),1)
+  ifeq ($(OV_USE_BINARY),1)
+	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
+  endif
+endif
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
 	@cd src/custom_nodes && make BASE_OS=$(BASE_OS)
@@ -170,6 +189,9 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
 	@docker pull $(BASE_IMAGE)
+  ifeq ($(BASE_OS),redhat)
+	@docker pull registry.access.redhat.com/ubi8/ubi-minimal:8.6
+  endif
 endif
 ifneq ($(OVMS_METADATA_FILE),)
 	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
@@ -183,21 +205,24 @@ endif
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) \
+		--build-arg NVIDIA=$(NVIDIA) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg JOBS=$(JOBS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) --build-arg BASE_OS=$(BASE_OS) \
+		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
-		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
 		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
 			"tar -c -C / ovms.tar* ; sleep 2" | tar -x
-	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) )
+	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX))
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
 	cp -vR release_files/* dist/$(DIST_OS)/
@@ -207,7 +232,8 @@ endif
 		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg GPU=0 \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
+		--build-arg NVIDIA=$(NVIDIA) \
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
     	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
     	--build-arg no_proxy=$(NO_PROXY) \
@@ -215,14 +241,29 @@ endif
 		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
     	--build-arg GPU=1 \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-    	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) && \
-    	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu
+		--build-arg NVIDIA=$(NVIDIA) \
+    	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) && \
+	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
 	cd extras/nginx-mtls-auth && \
-	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
-	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
+	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
+	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
 
+# Ci build expects index.html in genhtml directory
+get_coverage:
+	@echo "Copying coverage report from build image to genhtml if exist..."
+	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms/genhtml/ .  || true
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
+	@if [ -d genhtml/src ]; then $(MAKE) check_coverage; \
+	else echo "ERROR: genhtml/src was not generated during build"; \
+	fi
+check_coverage:
+	@echo "Checking if coverage is above threshold..."
+	@docker run $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
+	
 test_checksec:
 	@echo "Running checksec on ovms binary..."
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)

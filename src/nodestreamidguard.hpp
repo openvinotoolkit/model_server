@@ -19,6 +19,7 @@
 #include <optional>
 
 namespace ovms {
+class OVInferRequestsQueue;
 
 class ModelMetricReporter;
 class OVInferRequestsQueue;

@@ -27,7 +27,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
@@ -62,6 +62,11 @@ Status serializeTensorToTensorProto(
     ov::Tensor& tensor);
 
 Status serializeTensorToTensorProto(
+    ::KFSResponse::InferOutputTensor& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor);
+
+Status serializeTensorToTensorProtoRaw(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
@@ -71,19 +76,13 @@ typedef const std::string& (*outputNameChooser_t)(const std::string&, const Tens
 const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo);
 const std::string& getOutputMapKeyName(const std::string& first, const TensorInfo& tensorInfo);
 
-template <typename T, typename ResponseType>
-Status serializePredictResponse(
-    OutputGetter<T>& outputGetter,
-    const tensor_map_t& outputMap,
-    ResponseType* response,
-    outputNameChooser_t outputNameChooser);
-// partial template specialization
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response,
-    outputNameChooser_t outputNameChooser) {
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent = true) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&> protoGetter(response);
@@ -101,15 +100,17 @@ Status serializePredictResponse(
     }
     return status;
 }
+
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
     const tensor_map_t& outputMap,
-    ::inference::ModelInferResponse* response,
-    outputNameChooser_t outputNameChooser) {
+    ::KFSResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent = true) {
     OVMS_PROFILE_FUNCTION();
     Status status;
-    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(response);
+    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(response);
     for (const auto& [outputName, outputInfo] : outputMap) {
         ov::Tensor tensor;
         status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);
@@ -117,7 +118,12 @@ Status serializePredictResponse(
             return status;
         }
         auto& inferOutputTensor = protoGetter.createOutput(outputInfo->getMappedName());
-        status = serializeTensorToTensorProto(inferOutputTensor, protoGetter.createContent(outputInfo->getMappedName()), outputInfo, tensor);
+        if (useSharedOutputContent) {
+            status = serializeTensorToTensorProtoRaw(inferOutputTensor, protoGetter.createContent(outputInfo->getMappedName()), outputInfo, tensor);
+        } else {
+            status = serializeTensorToTensorProto(inferOutputTensor, outputInfo, tensor);
+        }
+
         if (!status.ok()) {
             return status;
         }

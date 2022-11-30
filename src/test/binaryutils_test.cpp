@@ -41,7 +41,7 @@ public:
         tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
         tensor.set_dtype(tensorflow::DataType::DT_STRING);
     }
-    void prepareBinaryTensor(::inference::ModelInferRequest::InferInputTensor& tensor, std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
+    void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
         for (size_t i = 0; i < batchSize; i++) {
             tensor.mutable_contents()->add_bytes_contents(image_bytes.get(), filesize);
         }
@@ -56,7 +56,7 @@ public:
         readRgbJpg(filesize, image_bytes);
         prepareBinaryTensor(tensor, image_bytes, filesize);
     }
-    void prepareBinaryTensor(::inference::ModelInferRequest::InferInputTensor& tensor) {
+    void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor) {
         size_t filesize;
         std::unique_ptr<char[]> image_bytes;
 
@@ -68,13 +68,13 @@ public:
         tensor.set_dtype(tensorflow::DataType::DT_STRING);
         tensor.add_string_val(input);
     }
-    void prepareBinaryTensor(::inference::ModelInferRequest::InferInputTensor& tensor, std::string input) {
+    void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, std::string input) {
         tensor.mutable_contents()->add_bytes_contents(input);
         tensor.set_datatype("BYTES");
     }
 };
 
-using MyTypes = ::testing::Types<tensorflow::TensorProto, ::inference::ModelInferRequest::InferInputTensor>;
+using MyTypes = ::testing::Types<tensorflow::TensorProto, ::KFSRequest::InferInputTensor>;
 TYPED_TEST_SUITE(BinaryUtilsTest, MyTypes);
 
 TYPED_TEST(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
@@ -549,7 +549,7 @@ protected:
 
     size_t filesize;
     std::unique_ptr<char[]> image_bytes;
-    ::inference::ModelInferRequest::InferInputTensor inferTensorContent;
+    ::KFSRequest::InferInputTensor inferTensorContent;
 };
 
 class BinaryUtilsKFSValidPrecisionTest : public BinaryUtilsKFSPrecisionTest {};

@@ -1,3 +1,5 @@
+# [DEPRECATED] OpenVINO Operator is now maintained in a separate [repository](https://github.com/openvinotoolkit/operator#openshift-and-kubernetes-operator)
+
 ## Kubernetes Operator {#ovms_extras_ovms-operator-readme}
 This Operator is based on a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/v2021.3/deploy) for OpenVINO Model Server. 
 It supports all the parameters from the helm chart.
@@ -28,7 +30,7 @@ It can be done by editing the [sample resource](https://github.com/openvinotoolk
 kubectl apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
-The parameters are identical to [Helm chart](../../deploy/README.md).
+The parameters are identical to [Helm chart](https://github.com/openvinotoolkit/operator/tree/main/helm-charts/ovms).
 
 <b>Note</b>: Some deployment configurations have prerequisites like creating relevant resources in Kubernetes. For example a secret with credentials,
 persistent volume claim or configmap with OVMS configuration file.

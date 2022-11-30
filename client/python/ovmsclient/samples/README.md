@@ -93,6 +93,7 @@ usage: grpc_get_model_metadata.py [-h] [--service_url SERVICE_URL]
                                   [--model_version MODEL_VERSION]
                                   [--timeout TIMEOUT]
 
+Get information about the status of served models over gRPC interace
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -127,6 +128,7 @@ usage: grpc_predict_resnet.py [-h] --images_numpy IMAGES_NUMPY
                               [--model_version MODEL_VERSION]
                               [--iterations ITERATIONS] [--timeout TIMEOUT]
 
+Make prediction using images in numerical format
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -160,12 +162,6 @@ Image #8 has been classified as snail
 Image #9 has been classified as zebra
 ```
 
-To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be acheived by starting the OVMS container with `--layout NHWC:NCHW` parameter.
-new OVMS instance with `--layout NHWC:NCHW` parameter.
-```bash
-docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC:NCHW
-```
-
 ### Predict binary format<a name="grpc-predict-binary">
 
 #### **Make prediction using images in binary format:**
@@ -174,12 +170,13 @@ docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50
 
 ```bash
 python grpc_predict_binary_resnet.py --help
-usage: grpc_predict_binary_resnet.py [-h] [--images_dir IMAGES_DIR]
+usage: grpc_predict_binary_resnet.py [-h] --images_dir IMAGES_DIR
                               [--service_url SERVICE_URL]
                               [--model_name MODEL_NAME]
                               [--model_version MODEL_VERSION]
                               [--timeout TIMEOUT]
 
+Make prediction using images in binary format
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -233,13 +230,14 @@ docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection 
 
 ```bash
 python grpc_predict_binary_vehicle_detection.py --help
-usage: grpc_predict_binary_vehicle_detection.py [-h] [--images_dir IMAGES_DIR]
+usage: grpc_predict_binary_vehicle_detection.py [-h] --images_dir IMAGES_DIR
                                            [--service_url SERVICE_URL]
                                            [--model_name MODEL_NAME]
                                            [--model_version MODEL_VERSION]
-                                           [--output_dir OUTPUT_DIR]
+                                           --output_dir OUTPUT_DIR
                                            [--timeout TIMEOUT]
 
+Make vehicle detection prediction using images in binary format
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -284,6 +282,7 @@ usage: http_get_model_status.py [-h] [--service_url SERVICE_URL]
                                 [--model_version MODEL_VERSION]
                                 [--timeout TIMEOUT]
 
+Get information about the status of served models over HTTP interace
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -317,6 +316,7 @@ usage: http_get_model_metadata.py [-h] [--service_url SERVICE_URL]
                                   [--model_version MODEL_VERSION]
                                   [--timeout TIMEOUT]
 
+Get information about the status of served models over HTTP interace
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -351,8 +351,10 @@ usage: http_predict_resnet.py [-h] --images_numpy IMAGES_NUMPY
                               [--model_version MODEL_VERSION]
                               [--iterations ITERATIONS] [--timeout TIMEOUT]
 
+Make prediction using images in numerical format
+
 optional arguments:
-  -h, --help            show this help message and exit 
+  -h, --help            show this help message and exit
   --images_numpy IMAGES_NUMPY
                         Path to a .npy file with data to infer
   --service_url SERVICE_URL
@@ -382,12 +384,6 @@ Image #8 has been classified as snail
 Image #9 has been classified as zebra
 ```
 
-To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be acheived by starting the OVMS container with `--layout NHWC:NCHW` parameter.
-new OVMS instance with `--layout NHWC:NCHW` parameter.
-```bash
-docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC:NCHW
-```
-
 ### Predict binary format<a name="http-predict-binary">
 
 #### **Make prediction using images in binary format:**
@@ -402,10 +398,10 @@ usage: http_predict_binary_resnet.py [-h] --images_dir IMAGES_DIR
                                      [--model_version MODEL_VERSION]
                                      [--timeout TIMEOUT]
 
-
+Make prediction using images in binary format
 
 optional arguments:
-  -h, --help            show this help message and exit 
+  -h, --help            show this help message and exit
   --images_dir IMAGES_DIR
                         Path to a directory with images in JPG or PNG format
   --service_url SERVICE_URL
@@ -458,7 +454,7 @@ usage: http_predict_binary_vehicle_detection.py [-h] --images_dir IMAGES_DIR
                                                 --output_dir OUTPUT_DIR
                                                 [--timeout TIMEOUT]
 
-
+Make vehicle detection prediction using images in binary format
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -479,6 +475,5 @@ optional arguments:
 
 ```bash
 python http_predict_binary_vehicle_detection.py --images_dir ../../../../demos/common/static/images/cars/ --output_dir ./output --service_url localhost:8000
-Making directory for output: ./output
 Detection results in file:  ./output/road1.jpg
 ```

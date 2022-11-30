@@ -26,7 +26,7 @@
 
 namespace ovms {
 
-const std::string ENTRY_NODE_NAME = "request";
+extern const std::string ENTRY_NODE_NAME;
 
 template <typename RequestType>
 class EntryNode : public Node {

@@ -28,18 +28,19 @@
 
 #include "layout_configuration.hpp"
 #include "metric_config.hpp"
-#include "model_version_policy.hpp"
+#include "modelversion.hpp"
 #include "shape.hpp"
 #include "status.hpp"
 
 namespace ovms {
+class ModelVersionPolicy;
 
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
 
-const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
-const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
+extern const std::string ANONYMOUS_INPUT_NAME;
+extern const std::string MAPPING_CONFIG_JSON;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
 /**
@@ -213,27 +214,7 @@ public:
         uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
         const std::string& cacheDir = "",
         model_version_t version = 0,
-        const std::string& localPath = "") :
-        name(name),
-        basePath(basePath),
-        localPath(localPath),
-        targetDevice(targetDevice),
-        modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
-        nireq(nireq),
-        stateful(stateful),
-        idleSequenceCleanup(idleSequenceCleanup),
-        lowLatencyTransformation(lowLatencyTransformation),
-        maxSequenceNumber(maxSequenceNumber),
-        cacheDir(cacheDir),
-        version(version),
-        pluginConfig({}),
-        layout(""),
-        shapes({}),
-        layouts({}),
-        mappingInputs({}),
-        mappingOutputs({}) {
-        setBatchingParams(configBatchSize);
-    }
+        const std::string& localPath = "");
 
     /**
          * @brief Compares two ModelConfig instances and decides if models should be reloaded

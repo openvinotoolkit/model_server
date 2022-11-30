@@ -14,9 +14,11 @@
 # limitations under the License.
 #
 
+OPENVINO_PATH ?= /opt/intel/openvino_2022
+
 all: $(eval SHELL:=/bin/bash)
 	/usr/bin/g++ --version
-	. /opt/intel/openvino_2022/setupvars.sh && /usr/bin/g++ -std=gnu++11 -fPIC -shared ov_extension.cpp CustomReluOp.cpp \
-		-I /opt/intel/openvino_2022/runtime/include/ie \
-		-I /opt/intel/openvino_2022/runtime/include \
+	. $(OPENVINO_PATH)/setupvars.sh && /usr/bin/g++ -std=gnu++11 -fPIC -shared ov_extension.cpp CustomReluOp.cpp \
+		-I $(OPENVINO_PATH)/runtime/include/ie \
+		-I $(OPENVINO_PATH)/runtime/include \
 		-o libcustom_relu_cpu_extension.so

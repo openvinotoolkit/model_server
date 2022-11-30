@@ -57,27 +57,72 @@ def check_function(fd):
 
 def check_dir(start_dir):
     no_header = []
-
-    exclude_files = ['bazel-', '__pycache__', '.venv', '.jpg', '.wav', '.png', '.json', '.git', '.md', '.svg', '.proto', 'gif',
-                     '.jpeg', '.groovy', '.bin', '.npy', '.bandit', '.pdf', '.pytest_cache', '.tar.gz', 'docx', 
-                     'input_images.txt', 'requirements.txt', 'index.html', 'dummy.xml', 'summator.xml', 'tf.patch', 'LICENSE',
-                     'add.xml', 'tftext.patch', 'net_http.patch', 'clang-format', 'missing_headers.txt', 'listen.patch', 'Doxyfile',
-                     'increment_1x3x4x5.xml', 'rest_sdk_v2.10.16.patch', 'azure_sdk.patch', 'model.xml', 'ovms-c/dist',
-                     'client_requirements.txt', 'REST_age_gender.ipynb', 'libevent/BUILD', 'forbidden_functions.txt',
-                     'resnet_images.txt', 'vehicle_images.txt', 'opencv_cmake_flags.txt', 'metrics_output.out', 'check_coverage.bat']
+    exclude_files = [
+        '.bandit',
+        '.bin',
+        '.git',
+        '.groovy',
+        '.jpeg',
+        '.jpg',
+        '.json',
+        '.md',
+        '.npy',
+        '.pdf',
+        '.png',
+        '.proto',
+        '.pytest_cache',
+        '.svg',
+        '.tar.gz',
+        '.venv',
+        '.wav',
+        'Doxyfile',
+        'LICENSE',
+        'REST_age_gender.ipynb',
+        '__pycache__',
+        'add.xml',
+        'azure_sdk.patch',
+        'bazel-',
+        'check_coverage.bat',
+        'genhtml',
+        'clang-format',
+        'client_requirements.txt',
+        'cppclean_src',
+        'cppclean_test',
+        'docx',
+        'dummy.xml',
+        'forbidden_functions.txt',
+        'gif',
+        'increment_1x3x4x5.xml',
+        'index.html',
+        'input_images.txt',
+        'libevent/BUILD',
+        'listen.patch',
+        'metrics_output.out',
+        'missing_headers.txt',
+        'model.xml',
+        'net_http.patch',
+        'opencv_cmake_flags.txt',
+        'ovms-c/dist',
+        'requirements.txt',
+        'resnet_images.txt',
+        'rest_sdk_v2.10.16.patch',
+        'summator.xml',
+        'tf.patch',
+        'tftext.patch',
+        'vehicle_images.txt',
+        'bazel_rules_apple.patch',
+        ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
 
     for (d_path, _, file_set) in os.walk(start_dir):
         for f_name in file_set:
-            
             skip = False
             for excluded in exclude_directories:
                 if excluded in d_path:
                     skip = True
                     print('Warning - Skipping directory - ' + d_path + ' for file - ' + f_name)
                     break
-                
             if skip:
                 continue
 
@@ -93,13 +138,55 @@ def check_dir(start_dir):
 def check_func(start_dir):
     not_ok = []
 
-    exclude_files = ['__pycache__', '.venv', '.pytest_cache', '.vscode', 'ovms-c/dist', '.git', '.tar.gz', 'docx',
-                     '.npy', '.png', '.svg', '.bin', '.jpeg', '.jpg', 'license.txt', 'md', '.groovy', '.json' ,'bazel-',
-                     'Doxyfile', 'clang-format','net_http.patch', 'tftext.patch', 'tf.patch', 'client_requirements.txt',
-                     'openvino.LICENSE.txt', 'c-ares.LICENSE.txt', 'zlib.LICENSE.txt', 'boost.LICENSE.txt',
-                     'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml', 'listen.patch', 'add.xml',
-                     'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch',
-                     'forbidden_functions.txt', 'missing_headers.txt', 'metrics_output.out', 'summator.xml', 'check_coverage.bat']
+    exclude_files = [
+        '.bin',
+        '.git',
+        '.groovy',
+        '.jpeg',
+        '.jpg',
+        '.json' ,
+        '.npy',
+        '.png',
+        '.pytest_cache',
+        '.svg',
+        '.tar.gz',
+        '.venv',
+        '.vscode',
+        'Doxyfile',
+        'REST_age_gender.ipynb',
+        '__pycache__',
+        'add.xml',
+        'azure_sdk.patch',
+        'bazel-',
+        'boost.LICENSE.txt',
+        'c-ares.LICENSE.txt',
+        'check_coverage.bat',
+        'genhtml',
+        'clang-format',
+        'client_requirements.txt',
+        'docx',
+        'dummy.xml',
+        'forbidden_functions.txt',
+        'input_images.txt',
+        'libevent/BUILD',
+        'libuuid.LICENSE.txt',
+        'license.txt',
+        'listen.patch',
+        'md',
+        'metrics_output.out',
+        'missing_headers.txt',
+        'missing_headers.txt',
+        'net_http.patch',
+        'openvino.LICENSE.txt',
+        'ovms-c/dist',
+        'requirements.txt',
+        'rest_sdk_v2.10.16.patch',
+        'summator.xml',
+        'tf.patch',
+        'tftext.patch',
+        'zlib.LICENSE.txt',
+        'bazel_rules_apple.patch',
+    ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator']
 

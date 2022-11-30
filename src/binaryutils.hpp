@@ -17,10 +17,10 @@
 
 #include <memory>
 
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
+class Status;
 template <typename TensorType>
 Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
 }  // namespace ovms

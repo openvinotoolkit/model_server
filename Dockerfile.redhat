@@ -70,11 +70,19 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             which \
             yum-utils \
             unzip \
+            vim \
             xz && \
             yum clean all
 
+# Build and install pugixml
+RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
+    cd pugixml && \
+    cmake -DBUILD_SHARED_LIBS=ON && \
+    make all && \
+    cp libpugixml.so* /usr/lib64/
+
 # Set up Bazel
-ENV BAZEL_VERSION 3.7.2
+ENV BAZEL_VERSION 5.3.1
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
@@ -129,7 +137,6 @@ RUN ./install_opencv.sh
 
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
-ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR /
@@ -151,7 +158,13 @@ COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 
 RUN alternatives --set python /usr/bin/python3
+
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+
+# Patch apple build scripts
+RUN cp -rf /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch $(bazel info output_base)/external/build_bazel_rules_apple/
+RUN cd $(bazel info output_base)/external/build_bazel_rules_apple/ && patch -p1 < bazel_rules_apple.patch
+
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
@@ -171,25 +184,26 @@ LABEL description=${PROJECT_NAME}
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
-RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp"
+RUN if [ "$build_type" == "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}-debug|g' /ovms/src/version.hpp" ; else bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" ; fi ;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+'`#g" /ovms/src/version.hpp
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
+RUN wget https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
+    yum install -y lcov-1.16-1.noarch.rpm
+
 COPY check_coverage.bat /ovms/
-# Test Coverage
-RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else exit 0 ; fi ; wget https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
-    yum install -y lcov-1.16-1.noarch.rpm &&\
-    bazel coverage --combined_report=lcov //src:ovms_test &&\
+
+# Test coverage and unit tests in one layer
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else  bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test && exit 0; fi ;\
+    bazel coverage --test_output=streamed --combined_report=lcov //src:ovms_test &&\
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
-    ./check_coverage.bat && exit $?
+    bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
     
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
-RUN cd /ovms/src/example/SampleCpuExtension/ && make
-
-RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed  //src:ovms_test
+RUN cd /ovms/src/example/SampleCpuExtension/ && make 
 
 COPY ${ovms_metadata_file} metadata.json
 

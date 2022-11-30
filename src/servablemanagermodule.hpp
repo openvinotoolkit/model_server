@@ -16,11 +16,12 @@
 #pragma once
 #include <memory>
 
-#include "server.hpp"
+#include "module.hpp"
 
 namespace ovms {
 class Config;
 class ModelManager;
+class Server;
 
 class ServableManagerModule : public Module {
 protected:

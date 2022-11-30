@@ -31,23 +31,24 @@
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
-#include "custom_node_library_internal_manager_wrapper.hpp"
-#include "customloaders.hpp"
-#include "filesystem.hpp"
 #include "global_sequences_viewer.hpp"
+#include "metric_config.hpp"
 #include "model.hpp"
-#include "pipeline.hpp"
+#include "modelconfig.hpp"
 #include "pipeline_factory.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
 const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
-const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
+extern const std::string DEFAULT_MODEL_CACHE_DIRECTORY;
 
 class Config;
-class IVersionReader;
+class CNLIMWrapper;
+class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricRegistry;
+class FileSystem;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 /**
@@ -164,6 +165,8 @@ private:
      * 
      */
     std::unordered_map<std::string, ModelConfig> servedModelConfigs;
+    // TODO we should either dispose this member or at least keep it as a pointer
+    // so we do not disclose details about ModelConfig to all modelmanager users
 
     /**
      * @brief Retires models non existing in config file

@@ -22,10 +22,10 @@
 
 #include "modelversion.hpp"
 #include "shape.hpp"
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
+class Status;
 namespace request_validation_utils {
 
 template <typename RequestType>

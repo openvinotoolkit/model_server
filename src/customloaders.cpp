@@ -19,6 +19,7 @@
 #include <spdlog/spdlog.h>
 
 #include "customloaderinterface.hpp"
+#include "status.hpp"
 
 namespace ovms {
 

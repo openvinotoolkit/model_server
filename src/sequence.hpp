@@ -25,10 +25,9 @@
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
-#include "ov_utils.hpp"
-#include "status.hpp"
-
 namespace ovms {
+
+class Status;
 
 using sequence_memory_state_t = std::unordered_map<std::string, ov::Tensor>;
 using model_memory_state_t = std::vector<ov::VariableState>;

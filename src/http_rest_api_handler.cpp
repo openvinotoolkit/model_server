@@ -23,6 +23,8 @@
 #include <utility>
 #include <vector>
 
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
@@ -30,17 +32,23 @@
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "metric_module.hpp"
 #include "metric_registry.hpp"
 #include "model_metric_reporter.hpp"
 #include "model_service.hpp"
+#include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
+#include "modelmanager.hpp"
+#include "pipeline.hpp"
 #include "pipelinedefinition.hpp"
+#include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
+#include "servablemanagermodule.hpp"
 #include "server.hpp"
+#include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
 
@@ -121,12 +129,12 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
     return StatusCode::OK;
 }
 
-void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)> f) {
+void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)> f) {
     handlers[type] = f;
 }
 
 void HttpRestApiHandler::registerAll() {
-    registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, &response);
@@ -136,39 +144,39 @@ void HttpRestApiHandler::registerAll() {
         }
     });
 
-    registerHandler(GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    registerHandler(GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) {
         return processModelMetadataRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(GetModelStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    registerHandler(GetModelStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) {
         return processModelStatusRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processConfigReloadRequest(response, this->modelManager);
     });
-    registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processConfigStatusRequest(response, this->modelManager);
     });
-    registerHandler(KFS_GetModelReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetModelReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processModelReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processModelMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_Infer, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
-        return processInferKFSRequest(request_components, response, request_body);
+    registerHandler(KFS_Infer, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+        return processInferKFSRequest(request_components, response, request_body, response_components.inferenceHeaderContentLength);
     });
-    registerHandler(KFS_GetServerReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetServerReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processServerReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerLive, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetServerLive, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processServerLiveKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetServerMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processServerMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processMetrics(request_components, response, request_body);
     });
 }
@@ -192,8 +200,8 @@ Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponen
 }
 
 Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ServerMetadataRequest grpc_request;
-    ::inference::ServerMetadataResponse grpc_response;
+    ::KFSServerMetadataRequest grpc_request;
+    ::KFSServerMetadataResponse grpc_response;
     Status gstatus = kfsGrpcImpl.ServerMetadataImpl(nullptr, &grpc_request, &grpc_response);
     if (!gstatus.ok()) {
         return gstatus;
@@ -231,7 +239,7 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
 }
 
 std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body) {
-    static std::unordered_map<std::string, std::string> types = {
+    static const std::unordered_map<std::string, std::string> types = {
         {"BOOL", "bool_contents"},
         {"INT8", "int_contents"},
         {"INT16", "int_contents"},
@@ -251,7 +259,11 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
     for (SizeType i = 0; i < inputs.Size(); i++) {
         Value data = inputs[i].GetObject()["data"].GetArray();
         Value contents(rapidjson::kObjectType);
-        Value datatype(types[inputs[i].GetObject()["datatype"].GetString()].c_str(), doc.GetAllocator());
+        auto it = types.find(inputs[i].GetObject()["datatype"].GetString());
+        if (it == types.end())
+            return "";
+        // TODO confirm its not an issue
+        Value datatype(it->second.c_str(), doc.GetAllocator());
         contents.AddMember(datatype, data, doc.GetAllocator());
         inputs[i].AddMember("contents", contents, doc.GetAllocator());
         parseParams(inputs[i], doc);
@@ -268,7 +280,7 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
     return buffer.GetString();
 }
 
-Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
+static Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
     std::stringstream streamData(comma_separated_numbers);
     std::vector<int> sizes_;
 
@@ -286,7 +298,7 @@ Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, 
     return StatusCode::OK;
 }
 
-Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, size_t binary_input_size, const char* buffer) {
+static Status parseBinaryInput(KFSTensorInputProto* input, size_t binary_input_size, const char* buffer) {
     if (input->datatype() == "FP32") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(float)) {
             auto value = input->mutable_contents()->mutable_fp32_contents()->Add();
@@ -348,7 +360,7 @@ Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, 
 
 #define CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE " contents is not empty. Content field should be empty when using binary inputs extension."
 
-Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputTensor* input) {
+static Status validateContentFieldsEmptiness(KFSTensorInputProto* input) {
     if (input->datatype() == "FP32") {
         if (input->contents().fp32_contents_size() > 0) {
             SPDLOG_DEBUG("FP32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
@@ -411,7 +423,7 @@ Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputT
     return StatusCode::OK;
 }
 
-Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
+static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
     const char* binary_inputs = &(request_body[endOfJson]);
     size_t binary_inputs_size = request_body.length() - endOfJson;
 
@@ -464,7 +476,7 @@ Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const st
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
@@ -485,14 +497,14 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength) {
     Timer<TIMER_END> timer;
     timer.start(TOTAL);
     ServableMetricReporter* reporter = nullptr;
     std::string modelName(request_components.model_name);
     std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
-    ::inference::ModelInferRequest grpc_request;
+    ::KFSRequest grpc_request;
     timer.start(PREPARE_GRPC_REQUEST);
     using std::chrono::microseconds;
     auto status = prepareGrpcRequest(modelName, request_components.model_version, request_body, grpc_request, request_components.inferenceHeaderContentLength);
@@ -507,18 +519,18 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     }
     timer.stop(PREPARE_GRPC_REQUEST);
     SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>(PREPARE_GRPC_REQUEST) / 1000);
-    ::inference::ModelInferResponse grpc_response;
+    ::KFSResponse grpc_response;
     const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, executionContext, reporter);
     if (!gstatus.ok()) {
         return gstatus;
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts_out;
-    status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
+    status = ovms::makeJsonFromPredictResponse(grpc_response, &output, inferenceHeaderContentLength);
     if (!status.ok()) {
         return status;
     }
-    response = output;
+    response = std::move(output);
     timer.stop(TOTAL);
     double totalTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total REST request processing time: {} ms", totalTime / 1000);
@@ -529,11 +541,12 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
 Status HttpRestApiHandler::dispatchToProcessor(
     const std::string& request_body,
     std::string* response,
-    const HttpRequestComponents& request_components) {
+    const HttpRequestComponents& request_components,
+    HttpResponseComponents& response_components) {
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
-        return handler->second(request_components, *response, request_body);
+        return handler->second(request_components, *response, request_body, response_components);
     } else {
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
@@ -559,8 +572,8 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
 }
 
 Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ModelReadyRequest grpc_request;
-    ::inference::ModelReadyResponse grpc_response;
+    ::KFSGetModelStatusRequest grpc_request;
+    ::KFSGetModelStatusResponse grpc_response;
     std::string modelName(request_components.model_name);
     grpc_request.set_name(modelName);
     if (request_components.model_version.has_value()) {
@@ -592,8 +605,8 @@ void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
 }
 
 Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ModelMetadataRequest grpc_request;
-    ::inference::ModelMetadataResponse grpc_response;
+    ::KFSModelMetadataRequest grpc_request;
+    ::KFSModelMetadataResponse grpc_response;
     std::string modelName(request_components.model_name);
     grpc_request.set_name(modelName);
     if (request_components.model_version.has_value()) {
@@ -626,7 +639,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     return StatusCode::OK;
 }
 
-Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
+static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
     const std::vector<std::pair<std::string, std::string>>& headers) {
     for (auto header : headers) {
         if (header.first == "Inference-Header-Content-Length") {
@@ -762,7 +775,8 @@ Status HttpRestApiHandler::processRequest(
     const std::string_view request_path,
     const std::string& request_body,
     std::vector<std::pair<std::string, std::string>>* headers,
-    std::string* response) {
+    std::string* response,
+    HttpResponseComponents& responseComponents) {
 
     std::smatch sm;
     std::string request_path_str(request_path);
@@ -780,7 +794,7 @@ Status HttpRestApiHandler::processRequest(
 
     if (!status.ok())
         return status;
-    return dispatchToProcessor(request_body, response, requestComponents);
+    return dispatchToProcessor(request_body, response, requestComponents, responseComponents);
 }
 
 Status HttpRestApiHandler::processPredictRequest(
@@ -1003,7 +1017,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
     return StatusCode::OK;
 }
 
-std::string createErrorJsonWithMessage(std::string message) {
+inline static std::string createErrorJsonWithMessage(std::string message) {
     return "{\n\t\"error\": \"" + message + "\"\n}";
 }
 

@@ -23,6 +23,7 @@
 #include <utility>
 
 #include "logging.hpp"
+#include "status.hpp"
 #include "stringutils.hpp"
 
 namespace ovms {

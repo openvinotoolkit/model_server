@@ -26,13 +26,16 @@ Here is an example of this process:
 git clone https://github.com/openvinotoolkit/model_server.git
 
 cd model_server   
-   
+
+# replace to 'redhat` if using UBI base image
+export BASE_OS=ubuntu
+
 # automatically build a container from source
 # it will also place a copy of the binary package in the `dist` subfolder in the Model Server root directory
-make docker_build
+make docker_build BASE_OS=${BASE_OS}
 
 # unpack the `tar.gz` file
-cd dist/ubuntu && tar -xzvf ovms.tar.gz
+cd dist/${BASE_OS} && tar -xzvf ovms.tar.gz
 
 ```
 
@@ -47,4 +50,4 @@ Refer to [Running Model Server using Docker Container](./docker_container.md) to
 
 > **NOTE**:
 > When AI accelerators are used for inference execution, additional steps may be required to install their drivers and dependencies. Learn more about it 
-> Learn more about it on [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_linux.html).
+> Learn more about it on [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_from_archive_linux.html).
