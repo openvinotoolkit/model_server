@@ -49,7 +49,7 @@ RUN git clone https://github.com/openvinotoolkit/model_server.git /opt/model_ser
     cd /opt/model_server && \
     virtualenv -p python3 .venv && \
     . .venv/bin/activate && \
-    pip install tensorflow-serving-api==2.* kaldi-python-io==1.2.1 && \
+    pip install tensorflow-serving-api==2.11.0 kaldi-python-io==1.2.1 && \
     echo "source /opt/model_server/.venv/bin/activate" | tee -a /root/.bashrc && \
     mkdir /opt/workspace
 
