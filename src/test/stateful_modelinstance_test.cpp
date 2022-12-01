@@ -151,7 +151,7 @@ public:
         StatefulModelInstance(name, version, ieCore, nullptr, nullptr, &sequencesViewer) {}
 
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
-        ovms::SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> sp(*this->getSequenceManager());
+        ovms::StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> sp(*this->getSequenceManager());
         auto status = sp.extractRequestParameters(request);
         if (!status.ok())
             return status;
@@ -210,7 +210,7 @@ public:
         };
         ovms::Timer<TIMER_END> timer;
         using std::chrono::microseconds;
-        ovms::SpecialResources<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> specialResources(*this->getSequenceManager());
+        ovms::StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> specialResources(*this->getSequenceManager());
         auto status = specialResources.extractRequestParameters(requestProto);
         if (!status.ok())
             return status;
@@ -222,7 +222,7 @@ public:
             std::cout << "Waiting before sequenceManagerLock" << std::endl;
             waitBeforeManagerLock->get();
         }
-        status = specialResources.process();
+        status = specialResources.prepare();
         if (!status.ok())
             return status;
 

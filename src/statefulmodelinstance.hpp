@@ -22,7 +22,6 @@
 #include "global_sequences_viewer.hpp"
 #include "modelinstance.hpp"
 #include "sequence_manager.hpp"
-// TODO move specificres
 #include "sequence_processing_spec.hpp"
 
 namespace ovms {
@@ -89,16 +88,15 @@ protected:
     Status loadOVCompiledModel(const ModelConfig& config) override;
 
 public:
-    // TODO move it somewhere else
     template <typename RequestType>
     static const Status validateSpecialKeys(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec);
 
-    std::unique_ptr<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) override;
+    std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) override;
     const std::set<std::string>& getOptionalInputNames() override;
 };
 
 template <typename RequestType, typename ResponseType>
-struct SpecialResources : public SpecialResourcesBasic<RequestType, ResponseType> {
+struct StatefulRequestProcessor : public RequestProcessor<RequestType, ResponseType> {
     SequenceManager& sequenceManager;
     std::unique_ptr<std::unique_lock<std::mutex>> sequenceManagerLock;
     std::unique_ptr<std::unique_lock<std::mutex>> sequenceLock;
@@ -106,9 +104,9 @@ struct SpecialResources : public SpecialResourcesBasic<RequestType, ResponseType
     Sequence* sequence;
     uint64_t sequenceId;
 
-    SpecialResources(SequenceManager& sequenceManager);
+    StatefulRequestProcessor(SequenceManager& sequenceManager);
     Status extractRequestParameters(const RequestType* request) override;
-    Status process() override;
+    Status prepare() override;
     Status preInferenceProcessing(ov::InferRequest& inferRequest) override;
     Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) override;
     Status release() override;

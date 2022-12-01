@@ -1217,7 +1217,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
     status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
-    status = specialResources->process();
+    status = specialResources->prepare();
     if (!status.ok())
         return status;
 
@@ -1302,14 +1302,14 @@ uint32_t ModelInstance::getNumOfStreams() const {
     return compiledModel->get_property(ov::num_streams);
 }
 
-std::unique_ptr<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
-    return std::make_unique<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>>();
+std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
+    return std::make_unique<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>>();
 }
-std::unique_ptr<SpecialResourcesBasic<KFSRequest, KFSResponse>> ModelInstance::getSR(const KFSRequest*, KFSResponse*) {
-    return std::make_unique<SpecialResourcesBasic<KFSRequest, KFSResponse>>();
+std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> ModelInstance::getSR(const KFSRequest*, KFSResponse*) {
+    return std::make_unique<RequestProcessor<KFSRequest, KFSResponse>>();
 }
-std::unique_ptr<SpecialResourcesBasic<InferenceRequest, InferenceResponse>> ModelInstance::getSR(const InferenceRequest*, InferenceResponse*) {
-    return std::make_unique<SpecialResourcesBasic<InferenceRequest, InferenceResponse>>();
+std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> ModelInstance::getSR(const InferenceRequest*, InferenceResponse*) {
+    return std::make_unique<RequestProcessor<InferenceRequest, InferenceResponse>>();
 }
 }  // namespace ovms
 template ovms::Status ovms::ModelInstance::infer<ovms::InferenceRequest, ovms::InferenceResponse>(ovms::InferenceRequest const*, ovms::InferenceResponse*, std::unique_ptr<ovms::ModelInstanceUnloadGuard>&);

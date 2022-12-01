@@ -262,12 +262,10 @@ TEST_F(CapiInference, Basic) {
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
     }
     std::this_thread::sleep_for(std::chrono::seconds(1));  // TODO
-    SPDLOG_ERROR("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM");
     OVMS_InferenceResponse* response = nullptr;
     OVMS_Server* cserver = reinterpret_cast<OVMS_Server*>(&server);
     status = OVMS_Inference(cserver, request, &response);
     ASSERT_EQ(nullptr, status);
-    SPDLOG_ERROR("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM");
     // verify GetOutputCount
     uint32_t outputCount = -1;
     status = OVMS_InferenceResponseGetOutputCount(response, &outputCount);

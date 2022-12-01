@@ -44,7 +44,7 @@ class ModelInstanceUnloadGuard;
 class PipelineDefinition;
 class Status;
 template <typename T1, typename T2>
-struct SpecialResourcesBasic;
+struct RequestProcessor;
 
 class DynamicModelParameter {
 public:
@@ -554,31 +554,19 @@ public:
 
     Status infer(float* data, float* output);
 
-    virtual std::unique_ptr<SpecialResourcesBasic<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
-    virtual std::unique_ptr<SpecialResourcesBasic<KFSRequest, KFSResponse>> getSR(const KFSRequest*, KFSResponse*);
-    virtual std::unique_ptr<SpecialResourcesBasic<InferenceRequest, InferenceResponse>> getSR(const InferenceRequest*, InferenceResponse*);
+    virtual std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
+    virtual std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> getSR(const KFSRequest*, KFSResponse*);
+    virtual std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> getSR(const InferenceRequest*, InferenceResponse*);
     virtual const std::set<std::string>& getOptionalInputNames();
 };
 template <typename RequestType, typename ResponseType>
-struct SpecialResourcesBasic {
-    SpecialResourcesBasic() = default;
-    virtual ~SpecialResourcesBasic() = default;
+struct RequestProcessor {
+    RequestProcessor() = default;
+    virtual ~RequestProcessor() = default;
     virtual Status extractRequestParameters(const RequestType* request) { return StatusCode::OK; }
-    virtual Status process() { return StatusCode::OK; }
+    virtual Status prepare() { return StatusCode::OK; }
     virtual Status preInferenceProcessing(ov::InferRequest& inferRequest) { return StatusCode::OK; }
     virtual Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
     virtual Status release() { return StatusCode::OK; }
-};
-class InferenceRequestWrapped : public ovms::InferenceRequest {
-public:
-    InferenceRequestWrapped(const std::string& name = "OBER", ovms::model_version_t version = 42) :
-        InferenceRequest(name.c_str(), version) {}
-};
-class InferenceResponseWrapped : public ovms::InferenceResponse {
-public:
-    InferenceResponseWrapped(const std::string& name = "OBER", ovms::model_version_t version = 42) :
-        InferenceResponse(name.c_str(), version) {}
-    void Clear() {
-    }  // TODO
 };
 }  // namespace ovms
