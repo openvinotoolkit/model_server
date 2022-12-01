@@ -1311,5 +1311,24 @@ std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> ModelInstance::getSR(
 std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> ModelInstance::getSR(const InferenceRequest*, InferenceResponse*) {
     return std::make_unique<RequestProcessor<InferenceRequest, InferenceResponse>>();
 }
+
+template Status ModelInstance::infer<InferenceRequest, InferenceResponse>(InferenceRequest const*, InferenceResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
+
+template <typename RequestType, typename ResponseType>
+RequestProcessor<RequestType, ResponseType>::RequestProcessor() = default;
+template <typename RequestType, typename ResponseType>
+RequestProcessor<RequestType, ResponseType>::~RequestProcessor() = default;
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::extractRequestParameters(const RequestType* request) { return StatusCode::OK; }
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::prepare() { return StatusCode::OK; }
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::preInferenceProcessing(ov::InferRequest& inferRequest) { return StatusCode::OK; }
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::release() { return StatusCode::OK; }
+
+template class RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>;
+template class RequestProcessor<KFSRequest, KFSResponse>;
 }  // namespace ovms
-template ovms::Status ovms::ModelInstance::infer<ovms::InferenceRequest, ovms::InferenceResponse>(ovms::InferenceRequest const*, ovms::InferenceResponse*, std::unique_ptr<ovms::ModelInstanceUnloadGuard>&);
