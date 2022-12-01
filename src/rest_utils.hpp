@@ -36,7 +36,7 @@ Status makeJsonFromPredictResponse(
     const ::KFSResponse& response_proto,
     std::string* response_json,
     std::optional<int>& inferenceHeaderContentLength,
-    std::set<std::string> requestedBinaryOutputsNames = {});
+    const std::set<std::string>& requestedBinaryOutputsNames = {});
 
 Status decodeBase64(std::string& bytes, std::string& decodedBytes);
 
