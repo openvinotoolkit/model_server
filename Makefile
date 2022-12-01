@@ -39,7 +39,8 @@ BASE_OS_TAG_UBUNTU ?= 20.04
 BASE_OS_TAG_REDHAT ?= 8.6
 
 INSTALL_RPMS_FROM_URL ?=
-CHECK_COVERAGE ?=1
+
+CHECK_COVERAGE ?=0
 NVIDIA ?=0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:

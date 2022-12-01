@@ -26,7 +26,7 @@ ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
 ARG APT_OV_PACKAGE=openvino-2022.1.0
-ARG CHECK_COVERAGE=1
+ARG CHECK_COVERAGE=0
 ARG NVIDIA=0
 ARG http_proxy
 ARG CMAKE_BUILD_TYPE=Release
@@ -38,6 +38,7 @@ ARG minitrace_flags
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TF_SYSTEM_LIBS="curl"
+ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/k8-opt/testlogs/test.log"
 SHELL ["/bin/bash", "-c"]
 RUN apt-get update && apt-get install -y \
             libboost-atomic1.71.0 \
@@ -286,11 +287,9 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:
 
 COPY check_coverage.bat /ovms/
 # Test Coverage
-RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test && exit 0; fi ;\
-    bazel coverage --test_output=streamed --combined_report=lcov //src:ovms_test &&\
-    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
-    bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
-    
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml $(bazel info output_path)/_coverage/_coverage_report.dat ; fi ; \
+    bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG}
+
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
