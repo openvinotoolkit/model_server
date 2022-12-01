@@ -50,27 +50,42 @@ using ovms::Timer;
 using std::chrono::microseconds;
 
 OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     *options = reinterpret_cast<OVMS_ServerGeneralOptions*>(new ovms::GeneralOptionsImpl);
     return nullptr;
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     delete reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     return nullptr;
 }
 
 OVMS_Status* OVMS_ServerMultiModelOptionsNew(OVMS_ServerMultiModelOptions** options) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     *options = reinterpret_cast<OVMS_ServerMultiModelOptions*>(new ovms::MultiModelOptionsImpl);
     return nullptr;
 }
 
 OVMS_Status* OVMS_ServerMultiModelOptionsDelete(OVMS_ServerMultiModelOptions* options) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     delete reinterpret_cast<ovms::MultiModelOptionsImpl*>(options);
     return nullptr;
 }
 
 OVMS_Status* OVMS_ServerNew(OVMS_Server** server) {
     // Create new server once multi server configuration becomes possible.
+    if (server == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+    }
     *server = reinterpret_cast<OVMS_Server*>(&ovms::Server::instance());
     return nullptr;
 }
@@ -90,6 +105,12 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     if (server == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
     }
+    if (general_options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
+    if (multi_model_specific_options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(general_options);
     ovms::MultiModelOptionsImpl* mmo = reinterpret_cast<ovms::MultiModelOptionsImpl*>(multi_model_specific_options);
@@ -99,6 +120,9 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
     uint32_t grpcPort) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->grpcPort = grpcPort;
     return nullptr;
@@ -106,6 +130,9 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* opt
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetRestPort(OVMS_ServerGeneralOptions* options,
     uint32_t restPort) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->restPort = restPort;
     return nullptr;
@@ -113,6 +140,9 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetRestPort(OVMS_ServerGeneralOptions* opt
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcWorkers(OVMS_ServerGeneralOptions* options,
     uint32_t grpc_workers) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->grpcWorkers = grpc_workers;
     return nullptr;
@@ -120,6 +150,12 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcWorkers(OVMS_ServerGeneralOptions* 
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcBindAddress(OVMS_ServerGeneralOptions* options,
     const char* grpc_bind_address) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
+    if (grpc_bind_address == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->grpcBindAddress.assign(grpc_bind_address);
     return nullptr;
@@ -127,6 +163,9 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcBindAddress(OVMS_ServerGeneralOptio
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetRestWorkers(OVMS_ServerGeneralOptions* options,
     uint32_t rest_workers) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->restWorkers = rest_workers;
     return nullptr;
@@ -134,6 +173,12 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetRestWorkers(OVMS_ServerGeneralOptions* 
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetRestBindAddress(OVMS_ServerGeneralOptions* options,
     const char* rest_bind_address) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
+    if (rest_bind_address == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->restBindAddress.assign(rest_bind_address);
     return nullptr;
@@ -141,6 +186,12 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetRestBindAddress(OVMS_ServerGeneralOptio
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcChannelArguments(OVMS_ServerGeneralOptions* options,
     const char* grpc_channel_arguments) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
+    if (grpc_channel_arguments == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->grpcChannelArguments.assign(grpc_channel_arguments);
     return nullptr;
@@ -148,6 +199,9 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcChannelArguments(OVMS_ServerGeneral
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(OVMS_ServerGeneralOptions* options,
     uint32_t seconds) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->filesystemPollWaitSeconds = seconds;
     return nullptr;
@@ -155,6 +209,9 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(OVMS_ServerGe
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(OVMS_ServerGeneralOptions* options,
     uint32_t minutes) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->sequenceCleanerPollWaitMinutes = minutes;
     return nullptr;
@@ -162,6 +219,9 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(OVMS_Ser
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerGeneralOptions* options,
     uint32_t seconds) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->resourcesCleanerPollWaitSeconds = seconds;
     return nullptr;
@@ -169,6 +229,12 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSecon
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetCpuExtensionPath(OVMS_ServerGeneralOptions* options,
     const char* cpu_extension_path) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
+    if (cpu_extension_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->cpuExtensionLibraryPath.assign(cpu_extension_path);
     return nullptr;
@@ -176,6 +242,12 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetCpuExtensionPath(OVMS_ServerGeneralOpti
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetCacheDir(OVMS_ServerGeneralOptions* options,
     const char* cache_dir) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
+    if (cache_dir == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->cacheDir.assign(cache_dir);
     return nullptr;
@@ -183,6 +255,9 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetCacheDir(OVMS_ServerGeneralOptions* opt
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* options,
     OVMS_LogLevel log_level) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     switch (log_level) {
     case OVMS_LOG_INFO:
@@ -209,6 +284,12 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* opt
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetLogPath(OVMS_ServerGeneralOptions* options,
     const char* log_path) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
+    if (log_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+    }
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
     go->logPath.assign(log_path);
     return nullptr;
@@ -216,6 +297,12 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetLogPath(OVMS_ServerGeneralOptions* opti
 
 OVMS_Status* OVMS_ServerMultiModelOptionsSetConfigPath(OVMS_ServerMultiModelOptions* options,
     const char* config_path) {
+    if (options == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    }
+    if (config_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+    }
     ovms::MultiModelOptionsImpl* mmo = reinterpret_cast<ovms::MultiModelOptionsImpl*>(options);
     mmo->configPath.assign(config_path);
     return nullptr;
@@ -223,18 +310,34 @@ OVMS_Status* OVMS_ServerMultiModelOptionsSetConfigPath(OVMS_ServerMultiModelOpti
 // inference API
 OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const char* servableName, uint32_t servableVersion) {
     // TODO should we allow to create requests to not yet loaded models?
+    if (request == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+    }
+    if (servableName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
     *request = reinterpret_cast<OVMS_InferenceRequest*>(new InferenceRequest(servableName, servableVersion));
     return nullptr;
 }
 
 OVMS_Status* OVMS_InferenceRequestDelete(OVMS_InferenceRequest* request) {
+    if (request == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+    }
     delete reinterpret_cast<InferenceRequest*>(request);
     return nullptr;
 }
 
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+    }
+    if (inputName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
+    if (shape == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+    }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->addInput(inputName, datatype, shape, dimCount);
     if (!status.ok()) {
@@ -244,8 +347,15 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const cha
 }
 
 OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const char* inputName, void* data, size_t bufferSize, BufferType bufferType, uint32_t deviceId) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+    }
+    if (inputName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
+    if (data == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+    }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->setInputBuffer(inputName, data, bufferSize, bufferType, deviceId);
     if (!status.ok()) {
@@ -255,8 +365,15 @@ OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const
 }
 
 OVMS_Status* OVMS_InferenceRequestAddParameter(OVMS_InferenceRequest* req, const char* parameterName, OVMS_DataType datatype, const void* data, size_t byteSize) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+    }
+    if (parameterName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
+    if (data == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+    }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->addParameter(parameterName, datatype, data);
     if (!status.ok()) {
@@ -266,8 +383,12 @@ OVMS_Status* OVMS_InferenceRequestAddParameter(OVMS_InferenceRequest* req, const
 }
 
 OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* req, const char* parameterName) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+    }
+    if (parameterName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeParameter(parameterName);
     if (!status.ok()) {
@@ -277,8 +398,12 @@ OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* req, co
 }
 
 OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* req, const char* inputName) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+    }
+    if (inputName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeInput(inputName);
     if (!status.ok()) {
@@ -288,8 +413,12 @@ OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* req, const 
 }
 
 OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, const char* inputName) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+    }
+    if (inputName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeInputBuffer(inputName);
     if (!status.ok()) {
@@ -299,8 +428,33 @@ OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, co
 }
 
 OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (res == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+    }
+    if (name == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
+    if (datatype == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    if (shape == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+    }
+    if (dimCount == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    if (data == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+    }
+    if (bytesize == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    if (bufferType == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    if (deviceId == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     InferenceTensor* tensor = nullptr;
     const std::string* cppName;
@@ -329,24 +483,39 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
 }
 
 OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* res, uint32_t* count) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (res == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+    }
+    if (count == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     *count = response->getOutputCount();
     return nullptr;
 }
 
 OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* res, uint32_t* count) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (res == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+    }
+    if (count == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     *count = response->getParameterCount();
     return nullptr;
 }
 
 OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* res, uint32_t id, OVMS_DataType* datatype, const void** data) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (res == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+    }
+    if (datatype == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    if (data == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+    }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     const InferenceParameter* parameter = response->getParameter(id);
     if (nullptr == parameter) {
@@ -358,8 +527,9 @@ OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* res, uin
 }
 
 OVMS_Status* OVMS_InferenceResponseDelete(OVMS_InferenceResponse* res) {
-    // TODO error handling if null
-    // if (nullptr == req)
+    if (res == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+    }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     delete response;
     return nullptr;
@@ -381,7 +551,6 @@ Status getModelInstance(ovms::Server& server, const InferenceRequest* request, s
 }
 }  // namespace
 OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response) {
-    // TODO server should be in theory const
     OVMS_PROFILE_FUNCTION();
     using std::chrono::microseconds;
     Timer<TIMER_END> timer;

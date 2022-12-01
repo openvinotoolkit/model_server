@@ -18,13 +18,9 @@
 
 // TODO we should not include classes from OVMS here
 // consider how to workaround test_utils
-#include "../config.hpp"
+//#include "../config.hpp"
 #include "../inferenceresponse.hpp"
-#include "../logging.hpp"
-#include "../modelconfig.hpp"
 #include "../pocapi.hpp"
-#include "../server.hpp"
-#include "../server_options.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -237,33 +233,24 @@ TEST_F(CapiInference, Basic) {
     //////////////////
     //  INFERENCE
     //////////////////
-    // we need to prepare server now TODO
     // remove when C-API start implemented
     std::string port = "9000";
     randomizePort(port);
-    char* argv[] = {
-        (char*)"OpenVINO Model Server",
-        (char*)"--model_name",
-        (char*)"dummy",
-        (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
-        (char*)"--port",
-        (char*)port.c_str(),
-        (char*)"--log_level",
-        (char*)"DEBUG",
-        nullptr};
+    // prepare options
+    OVMS_ServerGeneralOptions* go = 0;
+    OVMS_ServerMultiModelOptions* mmo = 0;
+    ASSERT_EQ(OVMS_ServerGeneralOptionsNew(&go), nullptr);
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsNew(&mmo), nullptr);
+    ASSERT_NE(go, nullptr);
+    ASSERT_NE(mmo, nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetGrpcPort(go, std::stoi(port)), nullptr);
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json"), nullptr);
 
-    ovms::Server& server = ovms::Server::instance();
-    std::thread t([&argv, &server]() {
-        ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
-    });
-    auto start = std::chrono::high_resolution_clock::now();
-    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));  // TODO
+    OVMS_Server* cserver = nullptr;
+    ASSERT_EQ(OVMS_ServerNew(&cserver), nullptr);
+    ASSERT_EQ(OVMS_ServerStartFromConfigurationFile(cserver, go, mmo), nullptr);
+
     OVMS_InferenceResponse* response = nullptr;
-    OVMS_Server* cserver = reinterpret_cast<OVMS_Server*>(&server);
     status = OVMS_Inference(cserver, request, &response);
     ASSERT_EQ(nullptr, status);
     // verify GetOutputCount
@@ -355,38 +342,32 @@ TEST_F(CapiInference, Basic) {
     status = OVMS_InferenceRequestDelete(request);
     ASSERT_EQ(nullptr, status);
 
-    // TODO replace with C-API
-    server.setShutdownRequest(1);
-    t.join();
-    server.setShutdownRequest(0);
+    ASSERT_EQ(OVMS_ServerDelete(cserver), nullptr);
 }
 
 TEST_F(CapiInference, NegativeInference) {
     // first start OVMS
     std::string port = "9000";
     randomizePort(port);
-    char* argv[] = {
-        (char*)"OpenVINO Model Server",
-        (char*)"--model_name",
-        (char*)"dummy",
-        (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
-        (char*)"--port",
-        (char*)port.c_str(),
-        (char*)"--log_level",
-        (char*)"DEBUG",
-        nullptr};
+    // prepare options
+    OVMS_ServerGeneralOptions* go = 0;
+    OVMS_ServerMultiModelOptions* mmo = 0;
+    ASSERT_EQ(OVMS_ServerGeneralOptionsNew(&go), nullptr);
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsNew(&mmo), nullptr);
+    ASSERT_NE(go, nullptr);
+    ASSERT_NE(mmo, nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetGrpcPort(go, std::stoi(port)), nullptr);
+    ASSERT_EQ(OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json"), nullptr);
 
-    ovms::Server& server = ovms::Server::instance();
-    std::thread t([&argv, &server]() {
-        ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
-    });
-    auto start = std::chrono::high_resolution_clock::now();
-    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));  // TODO
-    OVMS_Server* cserver = reinterpret_cast<OVMS_Server*>(&server);
+    OVMS_Server* cserver = nullptr;
+    ASSERT_EQ(OVMS_ServerNew(&cserver), nullptr);
+    ASSERT_NE(OVMS_ServerStartFromConfigurationFile(nullptr, go, mmo), nullptr);
+    ASSERT_NE(OVMS_ServerStartFromConfigurationFile(cserver, nullptr, mmo), nullptr);
+    ASSERT_NE(OVMS_ServerStartFromConfigurationFile(cserver, go, nullptr), nullptr);
+    ASSERT_EQ(OVMS_ServerStartFromConfigurationFile(cserver, go, mmo), nullptr);
+    // TODO ensure cleanup
+    // TODO add check for server ready strict in 2022.3 not available in C-API
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
@@ -433,14 +414,11 @@ TEST_F(CapiInference, NegativeInference) {
     ASSERT_NE(nullptr, status);
     // OVMS_StatusDelete(status); FIXME
 
-    // server cleanup
-    // TODO replace with C-API
-    server.setShutdownRequest(1);
-    t.join();
-    server.setShutdownRequest(0);
+    ASSERT_NE(OVMS_ServerDelete(nullptr), nullptr);
+    ASSERT_EQ(OVMS_ServerDelete(cserver), nullptr);
+    ASSERT_NE(OVMS_ServerDelete(nullptr), nullptr);
 }
 // TODO negative test -> validate at the infer stage
-// TODO flow with removel just request no separate input/buffer
 // TODO reuse request after inference
 namespace {
 const std::string MODEL_NAME{"SomeModelName"};
