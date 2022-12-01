@@ -44,6 +44,7 @@
 #include "test_utils.hpp"
 
 using testing::Each;
+using testing::ElementsAre;
 using testing::Eq;
 
 using ovms::Buffer;
@@ -286,20 +287,8 @@ public:
         if (!status.ok()) {
             return status;
         }
-
         response.Clear();
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-        // turn off all warnings since compiler will complain that it cannot cast KFS/TFS
-        // request types to InferenceRequest
-        //   const ovms::InferenceRequest* irq = dynamic_cast<const ovms::InferenceRequest*>(&request);
-        // ovms::InferenceResponse* irs = dynamic_cast<ovms::InferenceResponse*>(&response);
-#pragma GCC diagnostic pop
-        // if ((irq != nullptr) && (irs != nullptr)) {
-        //    return model->infer(irq, irs, unload_guard);
-        // } else {
         return model->infer(&request, &response, unload_guard);
-        // }
     }
 
     ovms::Status performInferenceWithShape(ResponseType& response, const ovms::shape_t& shape = {1, 10}, const ovms::Precision precision = ovms::Precision::FP32) {
@@ -358,8 +347,28 @@ void TestPredict<TFSInterface>::checkOutputShape(const TFSResponseType& response
 }
 
 template <>
-void TestPredict<CAPIInterface>::checkOutputShape(const ovms::InferenceResponse& response, const ovms::shape_t& shape, const std::string& outputName) {
-    return;  // TODO
+void TestPredict<CAPIInterface>::checkOutputShape(const ovms::InferenceResponse& cresponse, const ovms::shape_t& shape, const std::string& outputName) {
+    size_t outputCount = cresponse.getOutputCount();
+    EXPECT_GE(1, outputCount);
+    size_t outputId = 0;
+    while (outputId < outputCount) {
+        const std::string* cppName;
+        InferenceTensor* tensor;
+        InferenceResponse& response = const_cast<InferenceResponse&>(cresponse);  // TODO decide if output should be const
+        auto status = response.getOutput(outputId, &cppName, &tensor);
+        EXPECT_EQ(status, StatusCode::OK) << status.string();
+        EXPECT_NE(nullptr, tensor);
+        EXPECT_NE(nullptr, cppName);
+        if (outputName == *cppName) {
+            auto resultShape = tensor->getShape();
+            EXPECT_EQ(shape.size(), resultShape.size());
+            for (size_t i = 0; i < shape.size(); ++i) {
+                EXPECT_EQ(resultShape[i], shape[i]);
+            }
+        }
+        ++outputId;
+    }
+    return;
 }
 
 template <>
@@ -380,17 +389,7 @@ public:
         ModelInstance(UNUSED_SERVABLE_NAME, UNUSED_MODEL_VERSION, ieCore) {}
     template <typename RequestType>
     const ovms::Status mockValidate(const RequestType* request) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-        // turn off all warnings since compiler will complain that it cannot cast KFS/TFS
-        // request types to InferenceRequest
-        //   const ovms::InferenceRequest* irq = dynamic_cast<const ovms::InferenceRequest*>(request);
-#pragma GCC diagnostic pop
-        // if (irq != nullptr) {
-        //   return validate(irq);
-        // } else {
         return validate(request);
-        // }
     }
 };
 
@@ -664,11 +663,6 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
-    /*    // Get dummy model instance
-    std::shared_ptr<ovms::ModelInstance> model;
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
-    auto status = this->manager.getModelInstance("dummy", 0, model, unload_guard);*/
-
     // Prepare request with 1x5 shape, expect reshape
     Preparer<typename TypeParam::first_type> preparer;
     typename TypeParam::first_type request;
@@ -681,19 +675,6 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     // Do the inference
     auto status = this->performInferenceWithRequest(request, response, "dummy");
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    /*#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-    // turn off all warnings since compiler will complain that it cannot cast KFS/TFS
-    // request types to InferenceRequest
-    ovms::InferenceRequest* irq = dynamic_cast<ovms::InferenceRequest*>(&request);
-    ovms::InferenceResponse* irs = dynamic_cast<ovms::InferenceResponse*>(&response);
-#pragma GCC diagnostic pop
-    if ((irq != nullptr) && (irs != nullptr)) {
-        ASSERT_EQ(model->infer(irq, irs, unload_guard), ovms::StatusCode::OK);
-    } else {
-        ASSERT_EQ(model->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
-    }*/
-
     // Expect reshape to 1x5
     this->checkOutputShape(response, {1, 5}, DUMMY_MODEL_OUTPUT_NAME);
 }

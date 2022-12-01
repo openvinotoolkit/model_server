@@ -96,6 +96,7 @@ OVMS_Status* OVMS_ServerDelete(OVMS_Server* server) {
     }
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     srv->shutdownModules();
+    // delete passed in ptr once multi server configuration is done
     return nullptr;
 }
 
@@ -543,7 +544,7 @@ enum : unsigned int {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 
-Status getModelInstance(ovms::Server& server, const InferenceRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance,
+static Status getModelInstance(ovms::Server& server, const InferenceRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
     auto& modelManager = dynamic_cast<const ServableManagerModule*>(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME))->getServableManager();
@@ -568,7 +569,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     std::unique_ptr<ovms::InferenceResponse> res(new ovms::InferenceResponse(req->getServableName(), req->getServableVersion()));
 
-    SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
+    SPDLOG_DEBUG("Processing C-API request for model: {}; version: {}",
         req->getServableName(),
         req->getServableVersion());
 
@@ -614,7 +615,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     //  } else {
     //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
     // }
-    SPDLOG_DEBUG("Total gRPC req processing time: {} ms", reqTotal / 1000);
+    SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
     *response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
     return nullptr;
     // return grpc::Status::OK;

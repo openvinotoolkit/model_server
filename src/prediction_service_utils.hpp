@@ -24,11 +24,10 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
-
-class InferenceRequest;
 #include "shape.hpp"
 
 namespace ovms {
+class InferenceRequest;
 
 std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const size_t batchSizeIndex);
 std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request);
