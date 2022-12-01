@@ -18,7 +18,6 @@
 
 // TODO we should not include classes from OVMS here
 // consider how to workaround test_utils
-//#include "../config.hpp"
 #include "../inferenceresponse.hpp"
 #include "../pocapi.hpp"
 #include "test_utils.hpp"
