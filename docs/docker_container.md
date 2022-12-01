@@ -104,11 +104,25 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 
 To build the image, you need to have NEO Runtime packages available. Contact Intel representative to get the access to the preproduction drivers.
 
-Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2` and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
+Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
+```
+drivers
+└── dg2
+     ├── intel-igc-core_<version>_amd64.deb
+     ├── intel-igc-opencl_<version>_amd64.deb
+     ├── intel-level-zero-gpu-dbgsym_<version>_amd64.ddeb
+     ├── intel-level-zero-gpu_<version>_amd64.deb
+     ├── intel-opencl-icd-dbgsym_<version>_amd64.ddeb
+     ├── intel-opencl-icd_<version>_amd64.deb
+     ├── libigdgmm12_<version>_amd64.deb
+     └── libigdgmm12_<version>_amd64.deb
+```
+
+and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
 
 Example:
 ```
-make docker_build BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=ovms_dg2 INSTALL_DRIVER_VERSION=dg2
+make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
 ```
 
 ## Using Multi-Device Plugin
