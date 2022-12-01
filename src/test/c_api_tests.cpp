@@ -23,8 +23,8 @@
 #include "../logging.hpp"
 #include "../modelconfig.hpp"
 #include "../pocapi.hpp"
-#include "../server_options.hpp"
 #include "../server.hpp"
+#include "../server_options.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
