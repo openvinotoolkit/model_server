@@ -42,14 +42,15 @@ namespace tc = triton::client;
     }
 
 std::vector<uint8_t> Load(std::string fileName) {
-    std::ifstream input(fileName, std::ios::binary);
+    std::ifstream fileImg(fileName, std::ios::binary);
+    fileImg.seekg(0, std::ios::end);
+    int bufferLength = fileImg.tellg();
+    fileImg.seekg(0, std::ios::beg);
 
-    std::vector<uint8_t> bytes(
-         (std::istream_iterator<uint8_t>(input)),
-         (std::istream_iterator<uint8_t>()));
+    char* buffer = new char[bufferLength];
+    fileImg.read(buffer, bufferLength);
 
-    input.close();
-    return bytes;
+    return std::vector<uint8_t>(buffer, buffer + bufferLength);
 }
 
 int main(int argc, char** argv) {
