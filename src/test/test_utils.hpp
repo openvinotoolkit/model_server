@@ -37,6 +37,7 @@
 #include "../config.hpp"
 #include "../execution_context.hpp"
 #include "../inferencerequest.hpp"
+#include "../inferenceresponse.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric_registry.hpp"
 #include "../modelinstance.hpp"
@@ -131,6 +132,7 @@ constexpr const char* INCREMENT_1x3x4x5_MODEL_INPUT_NAME = "input";
 constexpr const char* INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME = "output";
 constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
+const std::string UNUSED_SERVABLE_NAME = "UNUSED_SERVABLE_NAME";
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
 
 static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
@@ -144,6 +146,7 @@ using TFSInputTensorIteratorType = google::protobuf::Map<std::string, TFSInputTe
 using TFSOutputTensorIteratorType = google::protobuf::Map<std::string, TFSOutputTensorType>::const_iterator;
 using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
+using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -173,12 +176,14 @@ void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t reques
 
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize);
+void prepareBinaryPredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize);  // CAPI binary not supported
 
 void prepareBinaryPredictRequestNoShape(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequestNoShape(::KFSRequest& request, const std::string& inputName, const int batchSize);
-
+void prepareBinaryPredictRequestNoShape(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize);  // CAPI binary not supported
 void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
+void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1);  // CAPI binary not supported
 
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
