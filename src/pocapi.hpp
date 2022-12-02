@@ -191,7 +191,3 @@ OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* response
 OVMS_Status* OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
-
-// POCAPI to be removed
-int OVMS_Start(int argc, char** argv);
-void OVMS_Infer(char* name, float* data, float* output);

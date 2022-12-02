@@ -541,8 +541,6 @@ enum : unsigned int {
     TOTAL,
     TIMER_END
 };
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
 
 static Status getModelInstance(ovms::Server& server, const InferenceRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
@@ -620,4 +618,3 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     return nullptr;
     // return grpc::Status::OK;
 }
-#pragma GCC diagnostic pop

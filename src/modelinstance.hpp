@@ -552,8 +552,6 @@ public:
 
     uint32_t getNumOfStreams() const;
 
-    Status infer(float* data, float* output);
-
     virtual std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
     virtual std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> getSR(const KFSRequest*, KFSResponse*);
     virtual std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> getSR(const InferenceRequest*, InferenceResponse*);
