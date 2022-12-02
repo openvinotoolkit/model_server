@@ -500,17 +500,17 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
 
 static std::set<std::string> getRequestedBinaryOutputsNames(::KFSRequest& grpc_request) {
     std::set<std::string> binaryOutputs;
-    bool allBinaryOutputsRequested = false;
+    bool byDefaultBinaryOutpuRequested = false;
     for (auto& parameter : grpc_request.parameters()) {
         if (parameter.second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam) {
             if (parameter.first == "binary_data_output") {
-                allBinaryOutputsRequested = parameter.second.bool_param();
+                byDefaultBinaryOutpuRequested = parameter.second.bool_param();
                 break;
             }
         }
     }
     for (const inference::ModelInferRequest_InferRequestedOutputTensor& output : grpc_request.outputs()) {
-        bool specificBinaryOutputRequested = allBinaryOutputsRequested;
+        bool specificBinaryOutputRequested = byDefaultBinaryOutpuRequested;
         for (auto& parameter : output.parameters()) {
             if ((parameter.second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) &&
                 (parameter.first == "binary_data")) {

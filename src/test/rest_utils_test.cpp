@@ -759,6 +759,15 @@ TEST_F(KFSMakeJsonFromPredictResponseRawTest, ErrorWhenNoOutputs) {
     ASSERT_EQ(inferenceHeaderContentLength.has_value(), false);
 }
 
+template <typename T>
+static void assertBinaryOutput(T data, std::string json, std::string expectedJson, std::optional<int> inferenceHeaderContentLength) {
+    ASSERT_TRUE(inferenceHeaderContentLength.has_value());
+    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
+    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(T));
+    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
+    EXPECT_EQ(*(T*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+}
+
 class KFSMakeJsonFromPredictResponsePrecisionTest : public ::testing::Test {
 protected:
     KFSResponse proto;
@@ -799,10 +808,7 @@ protected:
 
     template <typename T>
     void assertDataBinary(T data, std::string expectedJson) {
-        ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-        ASSERT_EQ(json.size(), expectedJson.size() + sizeof(T));
-        EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-        EXPECT_EQ(*(T*)json.substr(inferenceHeaderContentLength.value()).data(), data);
+        assertBinaryOutput(data, json, expectedJson, inferenceHeaderContentLength);
     }
 };
 
@@ -1277,11 +1283,8 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positi
             "data": [4000000000, 1]
         }]
 })";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(uint64_t));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
     uint64_t expectedData = 5000000000;
-    EXPECT_EQ(*(uint64_t*)json.substr(inferenceHeaderContentLength.value()).data(), expectedData);
+    assertBinaryOutput(expectedData, json, expectedJson, inferenceHeaderContentLength);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positive_bothOutputsBinary) {
