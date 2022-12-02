@@ -264,6 +264,32 @@ docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:l
 Once you finish above steps, you are ready to run the samples.
 
 ### Run the Client to perform inference
+```Bash
+./grpc_infer_resnet --help
+Sends requests via KServe gRPC API.
+Usage:
+  grpc_infer_resnet [OPTION...]
+
+  -h, --help                    Show this help message and exit
+      --images_list IMAGES      Path to a file with a list of labeled 
+                                images. 
+      --labels_list LABELS      Path to a file with a list of labels. 
+      --grpc_address GRPC_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --grpc_port PORT          Specify port to grpc service.  (default: 
+                                9000)
+      --input_name INPUT_NAME   Specify input tensor name.  (default: 0)
+      --output_name OUTPUT_NAME
+                                Specify input tensor name.  (default: 1463)
+      --model_name MODEL_NAME   Define model name, must be same as is in 
+                                service.  (default: resnet)
+      --model_version MODEL_VERSION
+                                Define model version.
+      --timeout TIMEOUT         Request timeout. (default: 0)
+```
+
+- Usage Example
 
 ```Bash
 ./grpc_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --grpc_port 9000  
