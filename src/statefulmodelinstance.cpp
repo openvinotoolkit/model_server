@@ -302,7 +302,7 @@ const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving:
     return StatusCode::OK;
 }
 
-std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> StatefulModelInstance::getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
+std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> StatefulModelInstance::createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
     return std::make_unique<StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>>(*this->getSequenceManager());
 }
 }  // namespace ovms

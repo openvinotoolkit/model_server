@@ -210,8 +210,8 @@ public:
         };
         ovms::Timer<TIMER_END> timer;
         using std::chrono::microseconds;
-        ovms::StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> specialResources(*this->getSequenceManager());
-        auto status = specialResources.extractRequestParameters(requestProto);
+        ovms::StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> requestProcessor(*this->getSequenceManager());
+        auto status = requestProcessor.extractRequestParameters(requestProto);
         if (!status.ok())
             return status;
         status = validate(requestProto);
@@ -222,7 +222,7 @@ public:
             std::cout << "Waiting before sequenceManagerLock" << std::endl;
             waitBeforeManagerLock->get();
         }
-        status = specialResources.prepare();
+        status = requestProcessor.prepare();
         if (!status.ok())
             return status;
 
@@ -237,7 +237,7 @@ public:
         timer.stop(GET_INFER_REQUEST);
 
         timer.start(PREPROCESS);
-        status = specialResources.preInferenceProcessing(inferRequest);
+        status = requestProcessor.preInferenceProcessing(inferRequest);
         if (!status.ok())
             return status;
         timer.stop(PREPROCESS);
@@ -265,7 +265,7 @@ public:
             return status;
 
         timer.start(POSTPROCESS);
-        status = specialResources.postInferenceProcessing(responseProto, inferRequest);
+        status = requestProcessor.postInferenceProcessing(responseProto, inferRequest);
         timer.stop(POSTPROCESS);
         if (!status.ok())
             return status;
@@ -274,7 +274,7 @@ public:
             std::cout << "Waiting before waitBeforeSequenceUnlocked" << std::endl;
             waitBeforeSequenceUnlocked->get();
         }
-        status = specialResources.release();
+        status = requestProcessor.release();
         return status;
     }
 };

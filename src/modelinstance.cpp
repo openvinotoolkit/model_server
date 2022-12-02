@@ -1169,8 +1169,8 @@ Status ModelInstance::infer(const RequestType* requestProto,
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
 
-    auto specialResources = getSR(requestProto, responseProto);  // request, response passed only to deduce type
-    auto status = specialResources->extractRequestParameters(requestProto);
+    auto requestProcessor = createRequestProcessor(requestProto, responseProto);  // request, response passed only to deduce type
+    auto status = requestProcessor->extractRequestParameters(requestProto);
     if (!status.ok())
         return status;
     status = validate(requestProto);
@@ -1179,7 +1179,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
     status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
-    status = specialResources->prepare();
+    status = requestProcessor->prepare();
     if (!status.ok())
         return status;
 
@@ -1196,7 +1196,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
         getName(), getVersion(), executingInferId, getInferRequestTime / 1000);
 
     timer.start(PREPROCESS);
-    status = specialResources->preInferenceProcessing(inferRequest);
+    status = requestProcessor->preInferenceProcessing(inferRequest);
     timer.stop(PREPROCESS);
     if (!status.ok())
         return status;
@@ -1231,14 +1231,14 @@ Status ModelInstance::infer(const RequestType* requestProto,
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
 
     timer.start(POSTPROCESS);
-    status = specialResources->postInferenceProcessing(responseProto, inferRequest);
+    status = requestProcessor->postInferenceProcessing(responseProto, inferRequest);
     timer.stop(POSTPROCESS);
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
 
-    status = specialResources->release();
+    status = requestProcessor->release();
     return status;
 }
 template Status ModelInstance::infer<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(const tensorflow::serving::PredictRequest* requestProto,
@@ -1264,13 +1264,13 @@ uint32_t ModelInstance::getNumOfStreams() const {
     return compiledModel->get_property(ov::num_streams);
 }
 
-std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
+std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
     return std::make_unique<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>>();
 }
-std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> ModelInstance::getSR(const KFSRequest*, KFSResponse*) {
+std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> ModelInstance::createRequestProcessor(const KFSRequest*, KFSResponse*) {
     return std::make_unique<RequestProcessor<KFSRequest, KFSResponse>>();
 }
-std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> ModelInstance::getSR(const InferenceRequest*, InferenceResponse*) {
+std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> ModelInstance::createRequestProcessor(const InferenceRequest*, InferenceResponse*) {
     return std::make_unique<RequestProcessor<InferenceRequest, InferenceResponse>>();
 }
 
