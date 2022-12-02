@@ -253,24 +253,24 @@ TEST_F(CapiInference, Basic) {
     status = OVMS_Inference(cserver, request, &response);
     ASSERT_EQ(nullptr, status);
     // verify GetOutputCount
-    uint32_t outputCount = -1;
+    uint32_t outputCount = 42;
     status = OVMS_InferenceResponseGetOutputCount(response, &outputCount);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(outputCount, 1);
     // verify GetParameterCount
-    uint32_t parameterCount = -1;
+    uint32_t parameterCount = 42;
     status = OVMS_InferenceResponseGetParameterCount(response, &parameterCount);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(0, parameterCount);
     // verify GetOutput
     const void* voutputData;
-    size_t bytesize = -1;
+    size_t bytesize = 42;
     uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
     const uint64_t* shape{nullptr};
-    uint32_t dimCount = -1;
+    uint32_t dimCount = 42;
     BufferType bufferType = (BufferType)199;
-    uint32_t deviceId = -1;
+    uint32_t deviceId = 42;
     const char* outputName{nullptr};
     status = OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
     ASSERT_EQ(nullptr, status);
@@ -459,12 +459,12 @@ TEST_F(CapiInference, ResponseRetrieval) {
     // now response is prepared so we can test C-API
     ///////////////////////////
     OVMS_InferenceResponse* response = reinterpret_cast<OVMS_InferenceResponse*>(cppResponse.get());
-    uint32_t outputCount = -1;
+    uint32_t outputCount = 42;
     auto status = OVMS_InferenceResponseGetOutputCount(response, &outputCount);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(outputCount, 1);
 
-    uint32_t parameterCount = -1;
+    uint32_t parameterCount = 42;
     status = OVMS_InferenceResponseGetParameterCount(response, &parameterCount);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(1, parameterCount);
@@ -477,13 +477,13 @@ TEST_F(CapiInference, ResponseRetrieval) {
     EXPECT_EQ(0, std::memcmp(parameterData, (void*)&seqId, sizeof(seqId)));
     // verify get Output
     const void* voutputData;
-    size_t bytesize = -1;
+    size_t bytesize = 42;
     uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
     const uint64_t* shape{nullptr};
-    uint32_t dimCount = -1;
+    uint32_t dimCount = 42;
     BufferType bufferType = (BufferType)199;
-    uint32_t deviceId = -1;
+    uint32_t deviceId = 42;
     const char* outputName{nullptr};
     status = OVMS_InferenceResponseGetOutput(response, outputId + 42123, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
     ASSERT_NE(nullptr, status);
