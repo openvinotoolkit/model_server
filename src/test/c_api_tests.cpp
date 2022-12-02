@@ -366,7 +366,6 @@ TEST_F(CapiInference, NegativeInference) {
     ASSERT_EQ(OVMS_ServerStartFromConfigurationFile(cserver, go, mmo), nullptr);
     // TODO ensure cleanup
     // TODO add check for server ready strict in 2022.3 not available in C-API
-    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
