@@ -232,7 +232,7 @@ template <>
 Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) {
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
-        SPDLOG_DEBUG("Received SEQUENCE_END signal. Reseting model state and removing sequence");
+        SPDLOG_DEBUG("Received SEQUENCE_END signal. Reseting model state");
         for (auto&& state : inferRequest.query_state()) {
             state.reset();
         }
@@ -249,13 +249,12 @@ Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow:
 }
 template <>
 Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::release() {
+    SPDLOG_DEBUG("Received SEQUENCE_END signal. Removing sequence");
     sequenceLock->unlock();
     Status status;
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         sequenceManagerLock->lock();
         status = sequenceManager.removeSequence(this->sequenceId);
-        if (!status.ok())
-            return status;
     }
     return status;
 }
