@@ -263,7 +263,7 @@ TEST_F(CapiInference, Basic) {
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(0, parameterCount);
     // verify GetOutput
-    void* voutputData;
+    const void* voutputData;
     size_t bytesize = -1;
     uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
@@ -283,7 +283,7 @@ TEST_F(CapiInference, Basic) {
     for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
         EXPECT_EQ(DUMMY_MODEL_SHAPE[i], shape[i]) << "Different at:" << i << " place.";
     }
-    float* outputData = reinterpret_cast<float*>(voutputData);
+    const float* outputData = reinterpret_cast<const float*>(voutputData);
     ASSERT_EQ(bytesize, sizeof(float) * DUMMY_MODEL_INPUT_SIZE);
     for (size_t i = 0; i < data.size(); ++i) {
         EXPECT_EQ(data[i] + 1, outputData[i]) << "Different at:" << i << " place.";
@@ -476,7 +476,7 @@ TEST_F(CapiInference, ResponseRetrieval) {
     ASSERT_EQ(parameterDatatype, OVMS_DATATYPE_U64);
     EXPECT_EQ(0, std::memcmp(parameterData, (void*)&seqId, sizeof(seqId)));
     // verify get Output
-    void* voutputData;
+    const void* voutputData;
     size_t bytesize = -1;
     uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
@@ -499,7 +499,7 @@ TEST_F(CapiInference, ResponseRetrieval) {
     for (size_t i = 0; i < cppOutputShape.size(); ++i) {
         EXPECT_EQ(cppOutputShape[i], shape[i]) << "Different at:" << i << " place.";
     }
-    float* outputData = reinterpret_cast<float*>(voutputData);
+    const float* outputData = reinterpret_cast<const float*>(voutputData);
     ASSERT_EQ(bytesize, sizeof(float) * DUMMY_MODEL_INPUT_SIZE);
     for (size_t i = 0; i < INPUT_DATA.size(); ++i) {
         EXPECT_EQ(INPUT_DATA[i], outputData[i]) << "Different at:" << i << " place.";

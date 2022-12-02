@@ -428,7 +428,7 @@ OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, co
     return nullptr;
 }
 
-OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId) {
+OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, const void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId) {
     if (res == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
     }
@@ -457,7 +457,7 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
     }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
-    InferenceTensor* tensor = nullptr;
+    const InferenceTensor* tensor = nullptr;
     const std::string* cppName;
     auto status = response->getOutput(id, &cppName, &tensor);
     if (!status.ok()) {
@@ -478,7 +478,7 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
     *bufferType = buffer->getBufferType();
     *deviceId = buffer->getDeviceId().value_or(0);  // TODO how discriminate betwen undefined & actual device 0
     // possibly it is not neccessary to discriminate
-    *data = const_cast<void*>(buffer->data());  // should data return const ptr?
+    *data = buffer->data();
     *bytesize = buffer->getByteSize();
     return nullptr;
 }

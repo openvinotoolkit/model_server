@@ -38,7 +38,8 @@ public:
     InferenceResponse();
     InferenceResponse(const std::string& servableName, model_version_t servableVersion);
     Status addOutput(const std::string& name, OVMS_DataType datatype, const size_t* shape, size_t dimCount);
-    Status getOutput(uint32_t id, const std::string** name, InferenceTensor** tensor);  // TODO consider in the future if we need getOutput by name
+    Status getOutput(uint32_t id, const std::string** name, const InferenceTensor** tensor) const;  // TODO consider in the future if we need getOutput by name
+    Status getOutput(uint32_t id, const std::string** name, InferenceTensor** tensor);
 
     Status addParameter(const char* parameterName, OVMS_DataType datatype, const void* data);
     const InferenceParameter* getParameter(uint32_t id) const;
