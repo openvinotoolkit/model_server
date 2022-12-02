@@ -59,15 +59,15 @@ int main(int argc, char** argv) {
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
-    ("images_list", "Path to a file with a list of labeled images. ", cxxopts::value<std::string>())
-    ("labels_list", "Path to a file with a list of labels. ", cxxopts::value<std::string>())
-    ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"))
-    ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"))
-    ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("0"))
-    ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("1463"))
-    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("resnet"))
-    ("model_version", "Define model version.", cxxopts::value<std::string>())
-    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
+    ("images_list", "Path to a file with a list of labeled images. ", cxxopts::value<std::string>(), "IMAGES")
+    ("labels_list", "Path to a file with a list of labels. ", cxxopts::value<std::string>(), "LABELS")
+    ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"), "GRPC_ADDRESS")
+    ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"), "PORT")
+    ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("0"), "INPUT_NAME")
+    ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("1463"), "OUTPUT_NAME")
+    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("resnet"), "MODEL_NAME")
+    ("model_version", "Define model version.", cxxopts::value<std::string>(), "MODEL_VERSION")
+    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"), "TIMEOUT")
     ;
     // clang-format on
 
