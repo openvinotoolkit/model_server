@@ -538,25 +538,6 @@ cc_binary(
     ]
 )
 
-cc_binary(
-    name = "poc",
-    srcs = [
-        "main2.cpp",
-    ],
-    linkopts = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-    ],
-    copts = [
-    ],
-    deps = [
-        "//src:ovms_lib",
-    ],
-    linkstatic = True,
-)
-
 # POC which can start OVMS with C-API built by bazel
 # Standalone example for building outside of bazel (with bare g++ is inside MakefileCapi)
 cc_binary(

@@ -19,18 +19,15 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include <openvino/openvino.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
+#include "inferencerequest.hpp"
+#include "inferenceresponse.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
@@ -39,12 +36,15 @@
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "tensorinfo.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class PipelineDefinition;
 class Status;
+template <typename T1, typename T2>
+struct RequestProcessor;
 
 class DynamicModelParameter {
 public:
@@ -543,17 +543,28 @@ public:
 
     Status performInference(ov::InferRequest& inferRequest);
 
-    virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
-        tensorflow::serving::PredictResponse* responseProto,
-        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-    virtual Status infer(const ::KFSRequest* requestProto,
-        ::KFSResponse* responseProto,
+    template <typename RequestType, typename ResponseType>
+    Status infer(const RequestType* requestProto,
+        ResponseType* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
 
     uint32_t getNumOfStreams() const;
 
-    Status infer(float* data, float* output);
+    virtual std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
+    virtual std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> createRequestProcessor(const KFSRequest*, KFSResponse*);
+    virtual std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> createRequestProcessor(const InferenceRequest*, InferenceResponse*);
+    virtual const std::set<std::string>& getOptionalInputNames();
+};
+template <typename RequestType, typename ResponseType>
+struct RequestProcessor {
+    RequestProcessor();
+    virtual ~RequestProcessor();
+    virtual Status extractRequestParameters(const RequestType* request);
+    virtual Status prepare();
+    virtual Status preInferenceProcessing(ov::InferRequest& inferRequest);
+    virtual Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest);
+    virtual Status release();
 };
 }  // namespace ovms
