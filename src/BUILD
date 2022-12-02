@@ -559,6 +559,19 @@ cc_binary(
     linkstatic = True,
 )
 
+cc_import(
+  name = "shared_lib",
+  hdrs = ["pocapi.hpp"],
+  shared_library = "libovms_shared.so",
+)
+
+cc_library(
+    name = "cpp_headers",
+    srcs = ["server.hpp",
+        "module.hpp",],
+    deps = ["//src:shared_lib"]
+)
+
 cc_binary(
     name = "ovms",
     srcs = [
@@ -575,7 +588,7 @@ cc_binary(
         "-Wconversion",
         "-Werror",
     ],
-    deps = [],
+    deps = ["//src:cpp_headers"],
     linkstatic = False,
 )
 
@@ -672,7 +685,7 @@ cc_test(
         "-lstdc++fs",
         "-lcrypto",
         "-lssl",
-        "-llovms_shared",
+        "-lovms_shared",
     ],
     deps = [
         "//src:custom_nodes_common_lib",

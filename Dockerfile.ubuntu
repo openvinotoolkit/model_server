@@ -231,14 +231,14 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else bazel test ${debug_bazel_
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
     bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
 
+# C api shared library
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
+
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
-
-# C api shared library
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
