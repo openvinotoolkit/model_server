@@ -2,6 +2,24 @@
 
 OpenVINO Model Server 2022.2 release introduced support for [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2).
 
+This guide shows how to interact with KServe API endpoints on both gRPC and HTTP interfaces. It covers following topics:
+- <a href="#grpc-api">GRPC API Examples </a>
+  - <a href="#grpc-server-live">grpc_server_live.py</a>
+  - <a href="#grpc-server-ready">grpc_server_ready.py</a>
+  - <a href="#grpc-server-metadata">grpc_server_metadata.py</a>
+  - <a href="#grpc-model-ready">grpc_model_ready.py</a>
+  - <a href="#grpc-model-metadata">grpc_model_metadata.py</a>
+  - <a href="#grpc-model-infer">grpc_infer_resnet.py</a>
+  - <a href="#grpc-model-infer-binary">grpc_infer_binary_resnet.py</a>
+- <a href="#http-api">HTTP API Example</a>
+  - <a href="#http-server-live">http_server_live.py</a>
+  - <a href="#http-server-ready">http_server_ready.py</a>
+  - <a href="#http-server-metadata">http_server_metadata.py</a>
+  - <a href="#http-model-ready">http_model_ready.py</a>
+  - <a href="#http-model-metadata">http_model_metadata.py</a>
+  - <a href="#http-model-infer">http_infer_resnet.py</a>
+  - <a href="#http-model-infer-binary">http_infer_binary_resnet.py</a>
+
 ## Before you run the samples
 
 ### Clone OpenVINO&trade; Model Server GitHub repository and go to the top directory.
@@ -41,11 +59,13 @@ Sends requests via KServe gRPC API to check if server is alive.
 Usage:
   grpc_server_live [OPTION...]
 
-  -h, --help              Show this help message and exit
-      --grpc_address arg  Specify url to grpc service.  (default: 
-                          localhost)
-      --grpc_port arg     Specify port to grpc service.  (default: 9000)
-      --timeout arg       Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --grpc_address GRPC_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --grpc_port PORT          Specify port to grpc service.  (default: 
+                                9000)
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example 
@@ -65,12 +85,13 @@ Sends requests via KServe gRPC API to check if server is ready.
 Usage:
   grpc_server_ready [OPTION...]
 
-  -h, --help              Show this help message and exit
-      --grpc_address arg  Specify url to grpc service.  (default: 
-                          localhost)
-      --grpc_port arg     Specify port to grpc service.  (default: 9000)
-      --timeout arg       Request timeout. (default: 0)
-
+  -h, --help                    Show this help message and exit
+      --grpc_address GRPC_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --grpc_port PORT          Specify port to grpc service.  (default: 
+                                9000)
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
@@ -90,11 +111,13 @@ Sends requests via KServe gRPC API to get server metadata.
 Usage:
   grpc_server_metadata [OPTION...]
 
-  -h, --help              Show this help message and exit
-      --grpc_address arg  Specify url to grpc service.  (default: 
-                          localhost)
-      --grpc_port arg     Specify port to grpc service.  (default: 9000)
-      --timeout arg       Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --grpc_address GRPC_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --grpc_port PORT          Specify port to grpc service.  (default: 
+                                9000)
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
@@ -115,14 +138,17 @@ Sends requests via KServe gRPC API to check if model is ready for inference.
 Usage:
   grpc_model_ready [OPTION...]
 
-  -h, --help               Show this help message and exit
-      --grpc_address arg   Specify url to grpc service.  (default: 
-                           localhost)
-      --grpc_port arg      Specify port to grpc service.  (default: 9000)
-      --model_name arg     Define model name, must be same as is in 
-                           service.  (default: dummy)
-      --model_version arg  Define model version. (default: "")
-      --timeout arg        Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --grpc_address GRPC_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --grpc_port PORT          Specify port to grpc service.  (default: 
+                                9000)
+      --model_name MODEL_NAME   Define model name, must be same as is in 
+                                service.  (default: dummy)
+      --model_version MODEL_VERSION
+                                Define model version. (default: "")
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
@@ -142,14 +168,17 @@ Sends requests via KServe gRPC API to get model metadata.
 Usage:
   grpc_ready [OPTION...]
 
-  -h, --help               Show this help message and exit
-      --grpc_address arg   Specify url to grpc service.  (default: 
-                           localhost)
-      --grpc_port arg      Specify port to grpc service.  (default: 9000)
-      --model_name arg     Define model name, must be same as is in 
-                           service.  (default: dummy)
-      --model_version arg  Define model version. (default: "")
-      --timeout arg        Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --grpc_address GRPC_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --grpc_port PORT          Specify port to grpc service.  (default: 
+                                9000)
+      --model_name MODEL_NAME   Define model name, must be same as is in 
+                                service.  (default: dummy)
+      --model_version MODEL_VERSION
+                                Define model version. (default: "")
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
@@ -183,16 +212,20 @@ Sends requests via KServe gRPC API.
 Usage:
   grpc_infer_dummy [OPTION...]
 
-  -h, --help              Show this help message and exit
-      --grpc_address arg  Specify url to grpc service.  (default: 
-                          localhost)
-      --grpc_port arg     Specify port to grpc service.  (default: 9000)
-      --input_name arg    Specify input tensor name.  (default: b)
-      --output_name arg   Specify input tensor name.  (default: a)
-      --model_name arg    Define model name, must be same as is in service. 
-                           (default: dummy)
-      --model_version     Define model version.
-      --timeout arg       Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --grpc_address GRPC_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --grpc_port PORT          Specify port to grpc service.  (default: 
+                                9000)
+      --input_name INPUT_NAME   Specify input tensor name.  (default: b)
+      --output_name OUTPUT_NAME
+                                Specify input tensor name.  (default: a)
+      --model_name MODEL_NAME   Define model name, must be same as is in 
+                                service.  (default: dummy)
+      --model_version MODEL_VERSION
+                                Define model version.
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
@@ -228,11 +261,13 @@ Sends requests via KServe rest API to check if server is alive.
 Usage:
   http_server_live [OPTION...]
 
-  -h, --help              Show this help message and exit
-      --http_address arg  Specify url to grpc service.  (default: 
-                          localhost)
-      --http_port arg     Specify port to grpc service.  (default: 8000)
-      --timeout arg       Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --http_address HTTP_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --http_port PORT          Specify port to grpc service.  (default: 
+                                8000)
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
@@ -252,11 +287,13 @@ Sends requests via KServe rest API to check if server is ready.
 Usage:
   http_server_ready [OPTION...]
 
-  -h, --help              Show this help message and exit
-      --http_address arg  Specify url to http service.  (default: 
-                          localhost)
-      --http_port arg     Specify port to http service.  (default: 8000)
-      --timeout arg       Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --http_address HTTP_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --http_port PORT          Specify port to grpc service.  (default: 
+                                8000)
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
@@ -276,11 +313,13 @@ Sends requests via KServe rest API to get server metadata.
 Usage:
   http_server_metadata [OPTION...]
 
-  -h, --help              Show this help message and exit
-      --http_address arg  Specify url to grpc service.  (default: 
-                          localhost)
-      --http_port arg     Specify port to grpc service.  (default: 8000)
-      --timeout arg       Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --http_address HTTP_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --http_port PORT          Specify port to grpc service.  (default: 
+                                8000)
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
@@ -300,14 +339,17 @@ Sends requests via KServe rest API to check if model is ready for inference.
 Usage:
   http_model_ready [OPTION...]
 
-  -h, --help               Show this help message and exit
-      --http_address arg   Specify url to grpc service.  (default: 
-                           localhost)
-      --http_port arg      Specify port to grpc service.  (default: 8000)
-      --model_name arg     Define model name, must be same as is in 
-                           service.  (default: dummy)
-      --model_version arg  Define model version. (default: "")
-      --timeout arg        Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --http_address HTTP_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --http_port PORT          Specify port to grpc service.  (default: 
+                                8000)
+      --model_name MODEL_NAME   Define model name, must be same as is in 
+                                service.  (default: dummy)
+      --model_version MODEL_VERSION
+                                Define model version. (default: "")
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
@@ -327,14 +369,17 @@ Sends requests via KServe rest API to get model metadata.
 Usage:
   http_ready [OPTION...]
 
-  -h, --help               Show this help message and exit
-      --http_address arg   Specify url to grpc service.  (default: 
-                           localhost)
-      --http_port arg      Specify port to grpc service.  (default: 8000)
-      --model_name arg     Define model name, must be same as is in 
-                           service.  (default: dummy)
-      --model_version arg  Define model version. (default: "")
-      --timeout arg        Request timeout. (default: 0)
+  -h, --help                    Show this help message and exit
+      --http_address HTTP_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --http_port PORT          Specify port to grpc service.  (default: 
+                                8000)
+      --model_name MODEL_NAME   Define model name, must be same as is in 
+                                service.  (default: dummy)
+      --model_version MODEL_VERSION
+                                Define model version. (default: "")
+      --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
 - Usage Example
