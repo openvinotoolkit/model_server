@@ -389,3 +389,49 @@ Usage:
 ./http_model_metadata --http_port 8000 --http_address localhost
 {"name":"dummy","versions":["1"],"platform":"OpenVINO","inputs":[{"name":"b","datatype":"FP32","shape":[1,10]}],"outputs":[{"name":"a","datatype":"FP32","shape":[1,10]}]}
 ```
+### Run the Client to perform inference <a name="http-model-infer"></a>
+
+- Command
+
+```Bash
+./http_infer_resnet --help
+Sends requests via KServe rest API.
+Usage:
+  http_infer_dummy [OPTION...]
+
+  -h, --help                    Show this help message and exit
+      --http_address HTTP_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --http_port PORT          Specify port to grpc service.  (default: 
+                                8000)
+      --input_name INPUT_NAME   Specify input tensor name.  (default: b)
+      --output_name OUTPUT_NAME
+                                Specify input tensor name.  (default: a)
+      --model_name MODEL_NAME   Define model name, must be same as is in 
+                                service.  (default: dummy)
+      --model_version MODEL_VERSION
+                                Define model version.
+      --timeout TIMEOUT         Request timeout. (default: 0)
+```
+
+- Usage Example
+
+```Bash
+./http_infer_resnety --http_port 8000
+0 => 1
+1 => 2
+2 => 3
+3 => 4
+4 => 5
+5 => 6
+6 => 7
+7 => 8
+8 => 9
+9 => 10
+======Client Statistics======
+Number of requests: 1
+Total processing time: 2.18683 ms
+Latency: 2.18683 ms
+Requests per second: 457.283
+```
