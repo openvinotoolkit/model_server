@@ -650,14 +650,24 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
 }
 template <>
 Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateTensorContent(const InferenceTensor& tensor, ovms::Precision expectedPrecision, size_t bufferId) const {
+    const Buffer* buffer = tensor.getBuffer();
+    if (nullptr == buffer) {
+        std::stringstream ss;
+        ss << "Servable: " << servableName
+           << "; version: " << servableVersion
+           << "; is missing buffer for tensor: " << bufferId;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);  // TODO separate code?
+    }
     size_t expectedValueCount = 1;
     for (size_t i = 0; i < tensor.getShape().size(); i++) {
         expectedValueCount *= tensor.getShape()[i];
     }
     size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
-    if (expectedContentSize != tensor.getBuffer()->getByteSize()) {
+    if (expectedContentSize != buffer->getByteSize()) {
         std::stringstream ss;
-        ss << "Expected: " << expectedContentSize << " bytes; Actual: " << tensor.getBuffer()->getByteSize() << " bytes; input name: " << getCurrentlyValidatedInputName();
+        ss << "Expected: " << expectedContentSize << " bytes; Actual: " << buffer->getByteSize() << " bytes; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);

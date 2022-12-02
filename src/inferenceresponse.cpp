@@ -26,6 +26,9 @@
 #include "status.hpp"
 
 namespace ovms {
+// this constructor can be removed with prediction tests overhaul
+InferenceResponse::InferenceResponse() :
+    InferenceResponse("CONSTRUCTOR_USED_ONLY_IN_PREDICTION_TESTS", 42) {}
 InferenceResponse::InferenceResponse(const std::string& servableName, model_version_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {}
@@ -53,7 +56,7 @@ Status InferenceResponse::addOutput(const std::string& name, OVMS_DataType datat
     return StatusCode::OK;
 }
 
-Status InferenceResponse::getOutput(uint32_t id, const std::string** name, InferenceTensor** tensor) {
+Status InferenceResponse::getOutput(uint32_t id, const std::string** name, const InferenceTensor** tensor) const {
     if (outputs.size() <= id) {
         *tensor = nullptr;
         return StatusCode::NONEXISTENT_TENSOR;
@@ -61,6 +64,10 @@ Status InferenceResponse::getOutput(uint32_t id, const std::string** name, Infer
     *name = &(outputs[id].first);
     *tensor = &(outputs[id].second);
     return StatusCode::OK;
+}
+
+Status InferenceResponse::getOutput(uint32_t id, const std::string** name, InferenceTensor** tensor) {
+    return const_cast<const InferenceResponse*>(this)->getOutput(id, name, const_cast<const InferenceTensor**>(tensor));
 }
 
 Status InferenceResponse::addParameter(const char* parameterName, OVMS_DataType datatype, const void* data) {
@@ -90,4 +97,9 @@ uint32_t InferenceResponse::getOutputCount() const {
 uint32_t InferenceResponse::getParameterCount() const {
     return this->parameters.size();
 }
+
+void InferenceResponse::Clear() {
+    outputs.clear();
+    parameters.clear();
+}  // TODO remove
 }  // namespace ovms

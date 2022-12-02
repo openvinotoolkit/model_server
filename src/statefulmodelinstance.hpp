@@ -22,6 +22,7 @@
 #include "global_sequences_viewer.hpp"
 #include "modelinstance.hpp"
 #include "sequence_manager.hpp"
+#include "sequence_processing_spec.hpp"
 
 namespace ovms {
 class ModelConfig;
@@ -42,9 +43,9 @@ public:
         return this->sequenceManager;
     }
 
-    const Status extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId);
+    static const Status extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId);
 
-    const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, uint32_t& sequenceControlInput);
+    static const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, uint32_t& sequenceControlInput);
     /*
     Performs pre inference operations:
         - for SEQUENCE_START control input - reset InferRequest memory state
@@ -65,10 +66,6 @@ public:
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
         ov::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
-    Status infer(const tensorflow::serving::PredictRequest* requestProto,
-        tensorflow::serving::PredictResponse* responseProto,
-        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) override;
-
     Status loadModel(const ModelConfig& config) override;
 
     Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
@@ -86,15 +83,32 @@ protected:
 
     GlobalSequencesViewer* globalSequencesViewer;
 
-    template <typename RequestType>
-    const Status validate(const RequestType* request, SequenceProcessingSpec& processingSpec);
-
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
     Status loadOVCompiledModel(const ModelConfig& config) override;
 
-private:
+public:
     template <typename RequestType>
-    const Status validateSpecialKeys(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec);
+    static const Status extractSpecialKeys(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec);
+
+    std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) override;
+    const std::set<std::string>& getOptionalInputNames() override;
+};
+
+template <typename RequestType, typename ResponseType>
+struct StatefulRequestProcessor : public RequestProcessor<RequestType, ResponseType> {
+    SequenceManager& sequenceManager;
+    std::unique_ptr<std::unique_lock<std::mutex>> sequenceManagerLock;
+    std::unique_ptr<std::unique_lock<std::mutex>> sequenceLock;
+    SequenceProcessingSpec sequenceProcessingSpec;
+    Sequence* sequence;
+    uint64_t sequenceId;
+
+    StatefulRequestProcessor(SequenceManager& sequenceManager);
+    Status extractRequestParameters(const RequestType* request) override;
+    Status prepare() override;
+    Status preInferenceProcessing(ov::InferRequest& inferRequest) override;
+    Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) override;
+    Status release() override;
 };
 }  // namespace ovms
