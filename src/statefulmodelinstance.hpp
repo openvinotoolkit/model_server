@@ -89,7 +89,7 @@ protected:
 
 public:
     template <typename RequestType>
-    static const Status validateSpecialKeys(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec);
+    static const Status extractSpecialKeys(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec);
 
     std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> getSR(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) override;
     const std::set<std::string>& getOptionalInputNames() override;

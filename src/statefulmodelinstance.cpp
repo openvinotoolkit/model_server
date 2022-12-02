@@ -150,7 +150,7 @@ Status StatefulModelInstance::loadOVCompiledModel(const ModelConfig& config) {
 }
 
 template <>
-const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {
+const Status StatefulModelInstance::extractSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {
     uint64_t sequenceId = 0;
     uint32_t sequenceControlInput = 0;
     Status status;
@@ -190,7 +190,7 @@ StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::servin
 template <>
 Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::extractRequestParameters(const tensorflow::serving::PredictRequest* request) {
     OVMS_PROFILE_FUNCTION();
-    auto status = StatefulModelInstance::validateSpecialKeys(request, sequenceProcessingSpec);
+    auto status = StatefulModelInstance::extractSpecialKeys(request, sequenceProcessingSpec);
     return status;
 }
 template <>
