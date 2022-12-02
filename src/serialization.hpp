@@ -87,6 +87,8 @@ const std::string& getOutputMapKeyName(const std::string& first, const TensorInf
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response,
     outputNameChooser_t outputNameChooser,
@@ -112,12 +114,16 @@ Status serializePredictResponse(
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
     const tensor_map_t& outputMap,
     ::KFSResponse* response,
     outputNameChooser_t outputNameChooser,
     bool useSharedOutputContent = true) {
     OVMS_PROFILE_FUNCTION();
     Status status;
+    response->set_model_name(servableName);
+    response->set_model_version(std::to_string(servableVersion));
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(response);
     for (const auto& [outputName, outputInfo] : outputMap) {
         ov::Tensor tensor;
@@ -141,6 +147,8 @@ Status serializePredictResponse(
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
     const tensor_map_t& outputMap,
     InferenceResponse* response,
     outputNameChooser_t outputNameChooser) {

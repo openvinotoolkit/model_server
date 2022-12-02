@@ -17,7 +17,9 @@
 
 #include "status.hpp"
 namespace ovms {
-
+// this constructor can be removed with prediction tests overhaul
+InferenceRequest::InferenceRequest() :
+    InferenceRequest("CONSTRUCTOR_USED_ONLY_IN_PREDICTION_TESTS", 42) {}
 InferenceRequest::InferenceRequest(const char* servableName, model_version_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {
@@ -86,5 +88,25 @@ const InferenceParameter* InferenceRequest::getParameter(const char* name) const
     if (it != parameters.end())
         return &it->second;
     return nullptr;
+}
+Status InferenceRequest::getBatchSize(size_t& batchSize, size_t batchSizeIndex) const {
+    if (inputs.size() == 0) {
+        return StatusCode::INTERNAL_ERROR;  // TODO test
+    }
+    // we make here the same assumption as with bs=auto in TFS/KFS API
+    const InferenceTensor& tensor = inputs.begin()->second;
+    const auto& shape = tensor.getShape();
+    if (batchSizeIndex >= shape.size()) {
+        return StatusCode::INTERNAL_ERROR;  // TODO test
+    }
+    batchSize = shape[batchSizeIndex];
+    return StatusCode::OK;
+}
+std::map<std::string, shape_t> InferenceRequest::getRequestShapes() const {
+    std::map<std::string, shape_t> result;
+    for (auto& [name, tensor] : inputs) {
+        result.emplace(name, tensor.getShape());
+    }
+    return result;
 }
 }  // namespace ovms

@@ -19,6 +19,8 @@
 
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
+#include "inferencerequest.hpp"
+#include "inferencetensor.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
@@ -95,6 +97,18 @@ std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::Predi
         requestShapes[name] = std::move(requestShape);
     }
     return requestShapes;
+}
+std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex) {
+    size_t bs = 0;
+    auto status = request->getBatchSize(bs, batchSizeIndex);
+    if (!status.ok()) {
+        return std::nullopt;  // TODO sth different?
+    }
+    return bs;
+}
+
+std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request) {
+    return request->getRequestShapes();
 }
 
 bool useSharedOutputContent(const tensorflow::serving::PredictRequest* request) {

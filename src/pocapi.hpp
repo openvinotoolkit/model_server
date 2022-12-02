@@ -185,13 +185,9 @@ OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* request
 
 // OVMS_Inference Response
 OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* response, uint32_t* count);
-OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* response, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId);
+OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* response, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, const void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId);
 OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* response, uint32_t* count);
 OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* response, uint32_t id, OVMS_DataType* datatype, const void** data);
 OVMS_Status* OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 
-OVMS_Status* OVMS_Inference(OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
-
-// POCAPI to be removed
-int OVMS_Start(int argc, char** argv);
-void OVMS_Infer(char* name, float* data, float* output);
+OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
