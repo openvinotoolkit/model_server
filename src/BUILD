@@ -685,9 +685,9 @@ cc_test(
         "-lstdc++fs",
         "-lcrypto",
         "-lssl",
-        "-lovms_shared",
     ],
     deps = [
+        "//src:ovms_lib",
         "//src:custom_nodes_common_lib",
         "//src:libsampleloader.so",
         "//src:lib_node_mock.so",
