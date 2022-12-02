@@ -37,6 +37,7 @@ docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 openvino/model_
 ```Bash
 cd client/cpp/kserve-api
 cmake . && make
+cd samples
 ```
 
 ## GRPC Examples <a name="grpc-api"></a>
