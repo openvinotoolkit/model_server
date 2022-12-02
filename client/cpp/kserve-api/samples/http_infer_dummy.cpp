@@ -64,13 +64,13 @@ int main(int argc, char** argv) {
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
-    ("http_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"))
-    ("http_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("8000"))
-    ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("b"))
-    ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("a"))
-    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"))
-    ("model_version", "Define model version.", cxxopts::value<std::string>())
-    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
+    ("http_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"), "HTTP_ADDRESS")
+    ("http_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("8000"), "PORT")
+    ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("b"), "INPUT_NAME")
+    ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("a"), "OUTPUT_NAME")
+    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"), "MODEL_NAME")
+    ("model_version", "Define model version.", cxxopts::value<std::string>(), "MODEL_VERSION")
+    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"), "TIMEOUT")
     ;
     // clang-format on
 
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
     // Validate the results...
     ValidateShapeAndDatatype(output_name, results_ptr);
 
-    // Get pointers to the result returned...
+    // Get pointer to the result returned...
     float* output_data;
     size_t output_byte_size;
     FAIL_IF_ERR(

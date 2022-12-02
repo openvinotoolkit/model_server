@@ -38,11 +38,11 @@ int main(int argc, char** argv) {
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
-    ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"))
-    ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"))
-    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"))
-    ("model_version", "Define model version.", cxxopts::value<std::string>()->default_value(""))
-    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
+    ("grpc_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"), "GRPC_ADDRESS")
+    ("grpc_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("9000"), "PORT")
+    ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"), "MODEL_NAME")
+    ("model_version", "Define model version.", cxxopts::value<std::string>()->default_value(""), "MODEL_VERSION")
+    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"), "TIMEOUT")
     ;
     // clang-format on
 
