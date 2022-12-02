@@ -62,10 +62,6 @@ OVMS_DataType InferenceParameter::getDataType() const {
     return this->datatype;
 }
 
-size_t InferenceParameter::getByteSize() const {
-    return this->data.size();
-}
-
 const void* InferenceParameter::getData() const {
     return reinterpret_cast<const void*>(this->data.c_str());
 }

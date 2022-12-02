@@ -33,7 +33,6 @@ public:
     InferenceParameter(const char* name, OVMS_DataType datatype, const void* data, size_t byteSize);
     const std::string& getName() const;
     OVMS_DataType getDataType() const;
-    size_t getByteSize() const;
     const void* getData() const;
 };
 }  // namespace ovms

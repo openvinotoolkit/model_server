@@ -202,7 +202,7 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs=$JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 
-RUN cd /ovms/src/example/SampleCpuExtension/ && make 
+RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
 # C api shared library
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
