@@ -77,7 +77,7 @@ static cv::Mat convertStringToMat(const std::string& image) {
     cv::Mat dataMat(data);
 
     try {
-        return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
+        return cv::imdecode(dataMat, cv::IMREAD_COLOR);
     } catch (const cv::Exception& e) {
         SPDLOG_DEBUG("Error during string_val to mat conversion: {}", e.what());
         return cv::Mat{};
