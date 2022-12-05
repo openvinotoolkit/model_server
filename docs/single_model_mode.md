@@ -30,9 +30,7 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 @sphinxdirective
 .. raw:: html
     <div class="collapsible-section" data-title="Model Server Parameters: Click to expand/collapse">
-@endsphinxdirective
 
-@sphinxdirective
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
 | `--rm`                         | | remove the container when exiting the Docker container                                                                        |
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
@@ -57,9 +55,7 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
 | `--rest_port`                  | | the REST server port                                                                                                          |
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
-@endsphinxdirective
 
-@sphinxdirective
 .. raw:: html
     </div>
 @endsphinxdirective
