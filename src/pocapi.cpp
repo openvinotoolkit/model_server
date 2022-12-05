@@ -49,6 +49,34 @@ using ovms::StatusCode;
 using ovms::Timer;
 using std::chrono::microseconds;
 
+void OVMS_StatusDelete(OVMS_Status* status) {
+    if (status == nullptr)
+        return;
+    delete reinterpret_cast<ovms::Status*>(status);
+}
+
+OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
+    uint32_t* code) {
+    if (status == nullptr)
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS));
+    if (code == nullptr)
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS_CODE_PTR));
+    ovms::Status* sts = reinterpret_cast<ovms::Status*>(status);
+    *code = static_cast<uint32_t>(sts->getCode());
+    return nullptr;
+}
+
+OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
+    const char** details) {
+    if (status == nullptr)
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS));
+    if (details == nullptr)
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS_DETAILS_PTR));
+    ovms::Status* sts = reinterpret_cast<ovms::Status*>(status);
+    *details = sts->string().c_str();
+    return nullptr;
+}
+
 OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options) {
     if (options == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
@@ -57,12 +85,10 @@ OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options) {
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
-    }
+void OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options) {
+    if (options == nullptr)
+        return;
     delete reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerMultiModelOptionsNew(OVMS_ServerMultiModelOptions** options) {
@@ -73,12 +99,10 @@ OVMS_Status* OVMS_ServerMultiModelOptionsNew(OVMS_ServerMultiModelOptions** opti
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerMultiModelOptionsDelete(OVMS_ServerMultiModelOptions* options) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
-    }
+void OVMS_ServerMultiModelOptionsDelete(OVMS_ServerMultiModelOptions* options) {
+    if (options == nullptr)
+        return;
     delete reinterpret_cast<ovms::MultiModelOptionsImpl*>(options);
-    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerNew(OVMS_Server** server) {
@@ -90,14 +114,12 @@ OVMS_Status* OVMS_ServerNew(OVMS_Server** server) {
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerDelete(OVMS_Server* server) {
-    if (server == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
-    }
+void OVMS_ServerDelete(OVMS_Server* server) {
+    if (server == nullptr)
+        return;
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     srv->shutdownModules();
     // delete passed in ptr once multi server configuration is done
-    return nullptr;
 }
 
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
@@ -115,8 +137,10 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(general_options);
     ovms::MultiModelOptionsImpl* mmo = reinterpret_cast<ovms::MultiModelOptionsImpl*>(multi_model_specific_options);
-    std::int64_t res = srv->start(go, mmo);
-    return (OVMS_Status*)res;  // TODO: Return proper OVMS_Status instead of a raw status code in error handling PR
+    auto res = srv->start(go, mmo);
+    if (res.ok())
+        return nullptr;
+    return reinterpret_cast<OVMS_Status*>(new ovms::Status(res));
 }
 
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
@@ -277,8 +301,7 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* opt
         go->logLevel = "WARNING";
         break;
     default:
-        // TODO: Return error in error handling PR
-        break;
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_LOG_LEVEL));
     }
     return nullptr;
 }
@@ -321,12 +344,10 @@ OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const cha
     return nullptr;
 }
 
-OVMS_Status* OVMS_InferenceRequestDelete(OVMS_InferenceRequest* request) {
-    if (request == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
-    }
+void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* request) {
+    if (request == nullptr)
+        return;
     delete reinterpret_cast<InferenceRequest*>(request);
-    return nullptr;
 }
 
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount) {
@@ -527,13 +548,11 @@ OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* res, uin
     return nullptr;
 }
 
-OVMS_Status* OVMS_InferenceResponseDelete(OVMS_InferenceResponse* res) {
-    if (res == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
-    }
+void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* res) {
+    if (res == nullptr)
+        return;
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     delete response;
-    return nullptr;
 }
 
 namespace {

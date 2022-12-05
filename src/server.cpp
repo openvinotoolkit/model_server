@@ -187,6 +187,8 @@ class ProfilerModule : public Module {
 
 public:
     ProfilerModule() = default;
+    Status start(const ovms::Config& config) override { return StatusCode::OK; }
+
     int start(const Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         SPDLOG_INFO("{} starting", PROFILER_MODULE_NAME);
@@ -248,14 +250,14 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         std::tie(IT_NAME, inserted) = this->modules.emplace(MODULE_NAME, std::move(module)); \
     }                                                                                        \
     if (!inserted)                                                                           \
-    return EXIT_FAILURE
+    return Status(StatusCode::MODULE_ALREADY_INSERTED, MODULE_NAME)
 
-#define START_MODULE(IT_NAME)                 \
-    retCode = IT_NAME->second->start(config); \
-    if (retCode)                              \
-    return retCode
+#define START_MODULE(IT_NAME)                \
+    status = IT_NAME->second->start(config); \
+    if (!status.ok())                        \
+    return status
 
-int Server::startModules(ovms::Config& config) {
+Status Server::startModules(ovms::Config& config) {
     // The order of starting modules is slightly different from inserting modules
     // due to dependency of modules on each other during runtime
     // To avoid unnecessary runtime calls in eg. prediction we have different order
@@ -266,7 +268,7 @@ int Server::startModules(ovms::Config& config) {
     // while we want to start the server as quickly as possible to respond with liveness probe
     // thats why we delay starting the servable until the very end while we need to create it before
     // GRPC & REST
-    auto retCode = EXIT_SUCCESS;
+    Status status;
     bool inserted = false;
     auto it = modules.end();
 #if MTR_ENABLED
@@ -291,7 +293,7 @@ int Server::startModules(ovms::Config& config) {
         START_MODULE(itHttp);
     }
     START_MODULE(itServable);
-    return retCode;
+    return status;
 }
 
 void Server::ensureModuleShutdown(const std::string& name) {
@@ -323,20 +325,28 @@ void Server::shutdownModules() {
     modules.clear();
 }
 
+static int statusToExitCode(const Status& status) {
+    if (status.ok()) {
+        return EX_OK;
+    } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
+        return EX_USAGE;
+    }
+    return EXIT_FAILURE;
+}
+
 // OVMS Start
 int Server::start(int argc, char** argv) {
     installSignalHandlers();
-
-    ovms::CLIParser parser;
-    ovms::GeneralOptionsImpl go;
-    ovms::MultiModelOptionsImpl mmo;
+    CLIParser parser;
+    GeneralOptionsImpl go;
+    MultiModelOptionsImpl mmo;
     parser.parse(argc, argv);
     parser.prepare(&go, &mmo);
-
-    int ret = start(&go, &mmo);
+    Status ret = start(&go, &mmo);
     ModulesShutdownGuard shutdownGuard(*this);
-    if (ret != 0) {
-        return ret;
+    if (!ret.ok()) {
+        // Handle OVMS main() return code
+        return statusToExitCode(ret);
     }
     while (!shutdown_request) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -345,28 +355,26 @@ int Server::start(int argc, char** argv) {
         SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
     }
     SPDLOG_INFO("Shutting down");
-
     return EXIT_SUCCESS;
 }
 
 // C-API Start
-int Server::start(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
+Status Server::start(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
     try {
+        if (this->isLive())
+            return StatusCode::SERVER_ALREADY_STARTED;
         auto& config = ovms::Config::instance();
         if (!config.parse(go, mmo))
-            return EX_USAGE;
+            return StatusCode::OPTIONS_USAGE_ERROR;  // TODO: Have separate code for each option validation failure
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);
-        auto retCode = this->startModules(config);
-        if (retCode)
-            return retCode;
+        return this->startModules(config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
-        return EXIT_FAILURE;
+        return Status(StatusCode::INTERNAL_ERROR, e.what());
     } catch (...) {
         SPDLOG_ERROR("Unknown exception catch - will now terminate.");
-        return EXIT_FAILURE;
+        return StatusCode::INTERNAL_ERROR;
     }
-    return EXIT_SUCCESS;
 }
 }  // namespace ovms

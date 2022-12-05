@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "httpservermodule.hpp"
 
+#include <sstream>
 #include <string>
 #include <utility>
 
@@ -22,11 +23,12 @@
 #include "http_server.hpp"
 #include "logging.hpp"
 #include "server.hpp"
+#include "status.hpp"
 
 namespace ovms {
 HTTPServerModule::HTTPServerModule(ovms::Server& ovmsServer) :
     ovmsServer(ovmsServer) {}
-int HTTPServerModule::start(const ovms::Config& config) {
+Status HTTPServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", HTTP_SERVER_MODULE_NAME);
     const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
@@ -35,13 +37,16 @@ int HTTPServerModule::start(const ovms::Config& config) {
     SPDLOG_INFO("Will start {} REST workers", workers);
     server = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
     if (server == nullptr) {
-        SPDLOG_ERROR("Failed to start REST server at " + server_address);
-        return EXIT_FAILURE;
+        std::stringstream ss;
+        ss << "at " << server_address;
+        auto status = Status(StatusCode::FAILED_TO_START_REST_SERVER, ss.str());
+        SPDLOG_ERROR(status.string());
+        return status;
     }
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", HTTP_SERVER_MODULE_NAME);
     SPDLOG_INFO("Started REST server at {}", server_address);
-    return EXIT_SUCCESS;
+    return StatusCode::OK;
 }
 void HTTPServerModule::shutdown() {
     if (server == nullptr)
