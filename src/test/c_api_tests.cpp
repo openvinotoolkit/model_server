@@ -138,6 +138,7 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_DEBUG));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_WARNING));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_TRACE));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetLogLevel(_go, static_cast<OVMS_LogLevel>(99)), StatusCode::NONEXISTENT_LOG_LEVEL);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogPath(_go, "/logs"));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsSetConfigPath(_mmo, "/config"));
     // check nullptr
