@@ -45,7 +45,9 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     OVMS_ServerGeneralOptions* _go = 0;
     OVMS_ServerMultiModelOptions* _mmo = 0;
 
+    ASSERT_NE(OVMS_ServerGeneralOptionsNew(nullptr), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsNew(&_go), nullptr);
+    ASSERT_NE(OVMS_ServerMultiModelOptionsNew(nullptr), nullptr);
     ASSERT_EQ(OVMS_ServerMultiModelOptionsNew(&_mmo), nullptr);
     ASSERT_NE(_go, nullptr);
     ASSERT_NE(_mmo, nullptr);
@@ -88,9 +90,36 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(_go, 4), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetCpuExtensionPath(_go, "/ovms/src/test"), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetCacheDir(_go, "/tmp/cache"), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_INFO), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_ERROR), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_DEBUG), nullptr);
+    ASSERT_EQ(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_WARNING), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_TRACE), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsSetLogPath(_go, "/logs"), nullptr);
     ASSERT_EQ(OVMS_ServerMultiModelOptionsSetConfigPath(_mmo, "/config"), nullptr);
+    // check nullptr
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetGrpcPort(nullptr, 5555), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetRestPort(nullptr, 6666), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetGrpcWorkers(nullptr, 30), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetGrpcBindAddress(nullptr, "2.2.2.2"), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetGrpcBindAddress(_go, nullptr), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetRestWorkers(nullptr, 31), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetRestBindAddress(nullptr, "3.3.3.3"), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetRestBindAddress(_go, nullptr), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetGrpcChannelArguments(nullptr, "grpcargs"), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetGrpcChannelArguments(_go, nullptr), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(nullptr, 2), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(nullptr, 3), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(nullptr, 4), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetCpuExtensionPath(nullptr, "/ovms/src/test"), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetCpuExtensionPath(_go, nullptr), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetCacheDir(nullptr, "/tmp/cache"), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetCacheDir(_go, nullptr), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetLogLevel(nullptr, OVMS_LOG_TRACE), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetLogPath(nullptr, "/logs"), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsSetLogPath(_go, nullptr), nullptr);
+    ASSERT_NE(OVMS_ServerMultiModelOptionsSetConfigPath(nullptr, "/config"), nullptr);
+    ASSERT_NE(OVMS_ServerMultiModelOptionsSetConfigPath(_mmo, nullptr), nullptr);
 
     // Test non default values
     EXPECT_EQ(go->grpcPort, 5555);
@@ -151,6 +180,8 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
 
     EXPECT_EQ(cfg.configPath(), "/config");
 
+    ASSERT_NE(OVMS_ServerMultiModelOptionsDelete(nullptr), nullptr);
+    ASSERT_NE(OVMS_ServerGeneralOptionsDelete(nullptr), nullptr);
     ASSERT_EQ(OVMS_ServerMultiModelOptionsDelete(_mmo), nullptr);
     ASSERT_EQ(OVMS_ServerGeneralOptionsDelete(_go), nullptr);
 }
@@ -254,11 +285,15 @@ TEST_F(CapiInference, Basic) {
     ASSERT_EQ(nullptr, status);
     // verify GetOutputCount
     uint32_t outputCount = 42;
+    ASSERT_NE(OVMS_InferenceResponseGetOutputCount(nullptr, &outputCount), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetOutputCount(response, nullptr), nullptr);
     status = OVMS_InferenceResponseGetOutputCount(response, &outputCount);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(outputCount, 1);
     // verify GetParameterCount
     uint32_t parameterCount = 42;
+    ASSERT_NE(OVMS_InferenceResponseGetParameterCount(nullptr, &parameterCount), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetParameterCount(response, nullptr), nullptr);
     status = OVMS_InferenceResponseGetParameterCount(response, &parameterCount);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(0, parameterCount);
@@ -272,6 +307,15 @@ TEST_F(CapiInference, Basic) {
     BufferType bufferType = (BufferType)199;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
+    ASSERT_NE(OVMS_InferenceResponseGetOutput(nullptr, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetOutput(response, outputId, nullptr, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, nullptr, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, nullptr, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, nullptr, &voutputData, &bytesize, &bufferType, &deviceId), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, nullptr, &bytesize, &bufferType, &deviceId), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, nullptr, &bufferType, &deviceId), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, nullptr, &deviceId), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, nullptr), nullptr);
     status = OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(std::string(DUMMY_MODEL_OUTPUT_NAME), outputName);
@@ -333,11 +377,16 @@ TEST_F(CapiInference, Basic) {
     // 2nd time should report error
     status = OVMS_InferenceRequestRemoveParameter(request, "sequence_id");
     ASSERT_NE(nullptr, status);
+    ASSERT_NE(OVMS_InferenceRequestRemoveParameter(nullptr, "sequence_id"), nullptr);
+    ASSERT_NE(OVMS_InferenceRequestRemoveParameter(request, nullptr), nullptr);
     // OVMS_StatusDelete(status); // FIXME(dkalinow)
 
     status = OVMS_InferenceRequestRemoveInput(request, "NONEXISTENT_TENSOR");
     ASSERT_NE(nullptr, status);
+    ASSERT_NE(OVMS_InferenceRequestRemoveInput(nullptr, "INPUT_WITHOUT_BUFFER_REMOVED_WITH_REQUEST"), nullptr);
+    ASSERT_NE(OVMS_InferenceRequestRemoveInput(request, nullptr), nullptr);
     // OVMS_StatusDelete(status); // FIXME(dkalinow)
+    ASSERT_NE(OVMS_InferenceRequestDelete(nullptr), nullptr);
     status = OVMS_InferenceRequestDelete(request);
     ASSERT_EQ(nullptr, status);
 
@@ -359,6 +408,7 @@ TEST_F(CapiInference, NegativeInference) {
     ASSERT_EQ(OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json"), nullptr);
 
     OVMS_Server* cserver = nullptr;
+    ASSERT_NE(OVMS_ServerNew(nullptr), nullptr);
     ASSERT_EQ(OVMS_ServerNew(&cserver), nullptr);
     ASSERT_NE(OVMS_ServerStartFromConfigurationFile(nullptr, go, mmo), nullptr);
     ASSERT_NE(OVMS_ServerStartFromConfigurationFile(cserver, nullptr, mmo), nullptr);
@@ -369,6 +419,8 @@ TEST_F(CapiInference, NegativeInference) {
 
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
+    ASSERT_NE(OVMS_InferenceRequestNew(nullptr, "dummy", 1), nullptr);
+    ASSERT_NE(OVMS_InferenceRequestNew(&request, nullptr, 1), nullptr);
     OVMS_Status* status = OVMS_InferenceRequestNew(&request, "dummy", 1);
     ASSERT_EQ(nullptr, status);
     ASSERT_NE(nullptr, request);
@@ -378,8 +430,13 @@ TEST_F(CapiInference, NegativeInference) {
     // OVMS_StatusDelete(status); // FIXME(dkalinow)
 
     // negative no input buffer
+    ASSERT_NE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), nullptr);
+    ASSERT_NE(OVMS_InferenceRequestAddInput(request, nullptr, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), nullptr);
+    ASSERT_NE(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, nullptr, DUMMY_MODEL_SHAPE.size()), nullptr);
     status = OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size());
     ASSERT_EQ(nullptr, status);
+    // fail with adding input second time
+    ASSERT_NE(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), nullptr);
     status = OVMS_Inference(cserver, request, &response);
     ASSERT_NE(nullptr, status);
     // OVMS_StatusDelete(status); // FIXME(dkalinow)
@@ -387,10 +444,17 @@ TEST_F(CapiInference, NegativeInference) {
     // setting buffer
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
+    ASSERT_NE(OVMS_InferenceRequestInputSetData(nullptr, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum), nullptr);
+    ASSERT_NE(OVMS_InferenceRequestInputSetData(request, nullptr, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum), nullptr);
+    ASSERT_NE(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, nullptr, sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum), nullptr);
     status = OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum);
     ASSERT_EQ(nullptr, status);
+    status = OVMS_InferenceRequestInputSetData(request, "NONEXISTENT_TENSOR", reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum);
     // add parameters
     const uint64_t sequenceId{42};
+    ASSERT_NE(OVMS_InferenceRequestAddParameter(nullptr, "sequence_id", OVMS_DATATYPE_U64, reinterpret_cast<const void*>(&sequenceId), sizeof(sequenceId)), nullptr);
+    ASSERT_NE(OVMS_InferenceRequestAddParameter(request, nullptr, OVMS_DATATYPE_U64, reinterpret_cast<const void*>(&sequenceId), sizeof(sequenceId)), nullptr);
+    ASSERT_NE(OVMS_InferenceRequestAddParameter(request, "sequence_id", OVMS_DATATYPE_U64, nullptr, sizeof(sequenceId)), nullptr);
     status = OVMS_InferenceRequestAddParameter(request, "sequence_id", OVMS_DATATYPE_U64, reinterpret_cast<const void*>(&sequenceId), sizeof(sequenceId));
     ASSERT_EQ(nullptr, status);
     // 2nd time should get error
@@ -411,11 +475,27 @@ TEST_F(CapiInference, NegativeInference) {
     status = OVMS_Inference(cserver, request, nullptr);
     ASSERT_NE(nullptr, status);
     // OVMS_StatusDelete(status); FIXME
+    //
+    // negative inference with non existing model
+    OVMS_InferenceRequest* requestNoModel{nullptr};
+    OVMS_InferenceResponse* reponseNoModel{nullptr};
+    status = OVMS_InferenceRequestNew(&request, "NONEXISTENT_MODEL", 13);
+    ASSERT_EQ(nullptr, status);
+    // negative no model
+    status = OVMS_Inference(cserver, request, &response);
+    ASSERT_NE(nullptr, status);
+    // OVMS_StatusDelete(status); // FIXME(dkalinow)
+
+    ASSERT_NE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), nullptr);
+    status = OVMS_Inference(cserver, requestNoModel, &reponseNoModel);
+    ASSERT_NE(nullptr, status);
+    OVMS_InferenceRequestDelete(requestNoModel);
 
     ASSERT_NE(OVMS_ServerDelete(nullptr), nullptr);
     ASSERT_EQ(OVMS_ServerDelete(cserver), nullptr);
     ASSERT_NE(OVMS_ServerDelete(nullptr), nullptr);
 }
+
 // TODO negative test -> validate at the infer stage
 // TODO reuse request after inference
 namespace {
@@ -470,6 +550,9 @@ TEST_F(CapiInference, ResponseRetrieval) {
     // verify get Parameter
     OVMS_DataType parameterDatatype = OVMS_DATATYPE_FP32;
     const void* parameterData{nullptr};
+    ASSERT_NE(OVMS_InferenceResponseGetParameter(nullptr, 0, &parameterDatatype, &parameterData), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetParameter(response, 0, nullptr, &parameterData), nullptr);
+    ASSERT_NE(OVMS_InferenceResponseGetParameter(response, 0, &parameterDatatype, nullptr), nullptr);
     status = OVMS_InferenceResponseGetParameter(response, 0, &parameterDatatype, &parameterData);
     ASSERT_EQ(nullptr, status);
     ASSERT_EQ(parameterDatatype, OVMS_DATATYPE_U64);
@@ -517,6 +600,7 @@ TEST_F(CapiInference, ResponseRetrieval) {
     // final cleanup
     // we release unique_ptr ownership here so that we can free it safely via C-API
     cppResponse.release();
+    ASSERT_NE(OVMS_InferenceResponseDelete(nullptr), nullptr);
     status = OVMS_InferenceResponseDelete(response);
     ASSERT_EQ(nullptr, status);
 }
