@@ -245,8 +245,7 @@ RUN cd /ovms/src/example/SampleCpuExtension/ && make
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
 
-RUN ./bazel-bin/src/./ovms --version
-RUN ./bazel-bin/src/./ovms
+RUN cd bazel-bin/src/ && ./ovms --version && ./ovms && cd /ovms
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 
