@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #Ubuntu
-#MIN_LINES_COV=75.2
-#MIN_FUNCTION_COV=87.4
+#MIN_LINES_COV=76.3
+#MIN_FUNCTION_COV=88.3
 
 #Rhel
-MIN_LINES_COV=74.1
-MIN_FUNCTION_COV=75.6
+MIN_LINES_COV=74.8
+MIN_FUNCTION_COV=75.7
 
 LINES_COV=`cat genhtml/index.html | grep "headerCovTableEntry.*%" | grep -oP  ">\K(\d*.\d*) " | head -n 1`
 FUNC_COV=`cat genhtml/index.html | grep "headerCovTableEntry.*%" | grep -oP  ">\K(\d*.\d*) " | tail -n 1`
