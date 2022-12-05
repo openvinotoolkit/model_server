@@ -1,6 +1,5 @@
 # Serving Models {#ovms_docs_serving_model}
 
-
 Serving a single model is the simplest way to deploy OpenVINO™ Model Server. Only one model is served and the whole configuration is passed via CLI parameters.
 Note that changing configuration in runtime while serving a single model is not possible. Serving multiple models requires a configuration file that stores settings for all served models. 
 You can add and delete models, as well as update their configurations in runtime, without restarting the model server.
@@ -27,9 +26,9 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 --model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 9001 --log_level DEBUG
 ```
 
+The required Model Server parameters are listed below. To learn more about all configuration options, see [Model Server Parameters](parameters.md).
+
 @sphinxdirective
-.. raw:: html
-    <div class="collapsible-section" data-title="Model Server Parameters: Click to expand/collapse">
 
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
 | `--rm`                         | | remove the container when exiting the Docker container                                                                        |
@@ -56,8 +55,6 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 | `--rest_port`                  | | the REST server port                                                                                                          |
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
 
-.. raw:: html
-    </div>
 @endsphinxdirective
 
 - Publish the container's port to your host's **open ports**. 
@@ -132,7 +129,6 @@ docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.j
 --config_path /opt/ml/config.json --port 9001 --rest_port 8001
 
 ```
-
 
 ## Next Steps
 
