@@ -89,7 +89,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 PRODUCT_NAME = "OpenVINO Model Server"
 PRODUCT_VERSION ?= "2022.2"
 
-OVMS_CPP_CONTAINTER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
+OVMS_CPP_CONTAINTER_NAME = server-test$(shell date +%Y-%m-%d-%H.%M.%S)
 OVMS_CPP_CONTAINTER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
