@@ -1,6 +1,6 @@
-# Preparing Model Repository {#ovms_docs_models_repository}
+# Preparing a Model Repository {#ovms_docs_models_repository}
 
-The AI models served by OpenVINO&trade; Model Server must be in either of the three formats:
+Served models must be in one of the following formats:
 - [OpenVINO IR](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
 - [ONNX](https://onnx.ai/), using the .onnx file
 - [PaddlePaddle](https://www.paddlepaddle.org.cn/en), using .pdiparams and .pdmodel files

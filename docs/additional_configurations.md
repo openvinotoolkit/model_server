@@ -13,29 +13,32 @@
 
 @endsphinxdirective
 
-[Configuring Deployment](parameters.md)\
-Depending on performance requirements, traffic expectations, and  models, you may want to make certain adjustments to:  
+## Configuring Deployment
+Depending on performance requirements, traffic projections, and  models, you may want to adjust the following:  
 
-configuration of server options:
+Server configuration options:
 - ports used
 - enable/disable REST API
 - set configuration monitoring 
 
-configuration for each of the served models:  
-- the device to load the model onto
-- the model version policy
+Configuration for each served models:  
+- device where model is loaded
+- model version policy
 - inference related options
 
-Read about the [model server parameters](parameters.md) to get more details on the model server configuration. 
+See the [model server parameters](parameters.md) page for additional details about the model server configuration. 
 
-[Using AI Accelerators](accelerators.md)\
-Learn how to configure AI accelerators, such as Intel Movidius Myriad VPUs, 
-GPU, and HDDL, as well as Multi-Device, Heterogeneous and Auto Device Plugins for inference execution. 
+## Using AI Accelerators
+Learn how to configure AI accelerators, including the Intel® Movidius™ Myriad™ X VPU, Intel® Data Center GPU Flex, and Intel® Movidius™ Myriad™ X High Density Deep Learning (HDDL), as well as Multi-Device (MULTI), Heterogeneous (HETERO) and AUTO device plugins for inference execution. 
 
-[Keeping Models in a Remote Storage](using_cloud_storage.md)\
-Leverage remote storages, compatible with Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage, to create more flexible model repositories 
-that are easy to use and manage, for example, in Kubernetes deployments. 
+[Learn more](accelerators.md)
 
-[Keeping Deployments Secure](security_considerations.md)\
-While deploying model server, think about security of your deployment. Take care of appropriate permissions and keeping your models in a safe place. 
-Consider configuring access restrictions and traffic encryption to secure communication with the model server.
+## Keeping Models in Remote Storage
+Leverage remote storage for your model repository. Use Google Cloud Storage (GCS), Amazon S3, Azure Blob Storage or any other S3-compatible storage (i.e., MinIO) to create more flexible model repositories which are easy to use and manage, for example, in Kubernetes deployments. 
+
+[Learn more](using_cloud_storage.md)
+
+## Keeping Deployments Secure
+Security is an important consideration in model serving deployments. Ensure that appropriate permissions are in place to keep your models secure. Consider configuring access restrictions and traffic encryption to secure communication between clients and the model server. 
+
+[Learn more](security_considerations.md)

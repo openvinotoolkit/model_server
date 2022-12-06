@@ -19,31 +19,30 @@
 @endsphinxdirective
 
 ## Serving Pipelines of Models
-Connect multiple models to deploy complex processing solutions and reducing data transfer overhead with Directed Acyclic Graph (DAG) Scheduler. 
-Implement model inference and data transformations with a custom node C/C++ dynamic library.
+Connect multiple models in a pipeline and reduce data transfer overhead with Directed Acyclic Graph (DAG) Scheduler. 
+Implement model inference and data transformations using a custom node C/C++ dynamic library.
 
 [Learn more](dag_scheduler.md)
 
 ## Processing Raw Data
-Send data in JPEG or PNG formats to reduce traffic and offload the client applications.
+Send data in JPEG or PNG formats to reduce traffic and offload data pre-processing to the server.
 
 [Learn more](binary_input.md)
 
-## Setting Model Versioning Policies for served models
-Take advantage of the model repository structure. Add or delete version directories and Model Server will automatically adjust. 
-Take full control over the served model versions by setting a model version policy and serving all, the chosen, or just the latest version of the model.
+## Model Versioning Policies
+The model repository structure enables adding or deleting numerical version directories and the server will automatically adjust which models are served.  
+Control which model versions are served by setting the model version policy to serve all models, a specific model or set of models or just the latest version of the model (default setting).
 
 [Learn more](model_version_policy.md)
 
 ## Model Reshaping
-Change batch, shape and layout of the model in runtime for high-throughput and low-latency
+Change the batch size, shape and layout of the model at runtime to achieve high throughput and low latency.
 
 [Learn more](shape_batch_size_and_layout.md)
 
-## Modifying Model Configuration in Runtime
-OpenVINO Model Server tracks changes to the configuration file and applies them in runtime. It means that you can change model configurations 
-(for example serve the model on a different device), add a new model or completely remove one that is no longer needed. All changes will be applied with no 
-disruption to the service and no restart will berequired.
+## Modify Model Configuration at Runtime
+OpenVINO Model Server regularly checks for changes to the configuration file and applies them during runtime. This means that you can change model configurations 
+(for example, change the device where a model is served), add a new model or completely remove one that is no longer needed. These changes will be applied without any disruption to the service.
 
 [Learn more](online_config_changes.md)
 
@@ -53,12 +52,12 @@ Serve models that operate on sequences of data and maintain their state between 
 [Learn more](stateful_models.md)
 
 ## Metrics
-Use metrics endpoint compatible with Prometheus standard to get performance and utilization statistics.
+Use the metrics endpoint compatible with the Prometheus to access performance and utilization statistics.
 
 [Learn more](metrics.md)
 
 ## Enabling Dynamic Inputs
-Configure served models to accept data with different batch sizes and in different shapes.
+Configure served models to accept data with variable batch sizes and input shapes.
 
 [Learn more](dynamic_input.md)
 

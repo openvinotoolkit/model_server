@@ -2,11 +2,11 @@
 
 Serving a single model is the simplest way to deploy OpenVINO™ Model Server. Only one model is served and the whole configuration is passed via CLI parameters.
 Note that changing configuration in runtime while serving a single model is not possible. Serving multiple models requires a configuration file that stores settings for all served models. 
-You can add and delete models, as well as update their configurations in runtime, without restarting the model server.
+When deploying model(s) with a configuration file, you can add or delete models, as well as update their configurations in runtime, without needing to restart the server.
 
-## Serving Single Model
+## Serving a Single Model
 
-Before starting the container, make sure you [prepared the model for serving](models_repository.md).
+Before starting the container, make sure you have [prepared the model for serving](models_repository.md).
 
 Start the model server by running the following command with your parameters: 
 
@@ -15,7 +15,7 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 open
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 9001 --log_level DEBUG
 ```
 
-Example using a resnet model:
+Example using a ResNet model:
 
 ```bash
 mkdir -p models/resnet/1
@@ -26,7 +26,7 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/m
 --model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 9001 --log_level DEBUG
 ```
 
-The required Model Server parameters are listed below. To learn more about all configuration options, see [Model Server Parameters](parameters.md).
+The required Model Server parameters are listed below. For additional configuration options, see the [Model Server Parameters](parameters.md) section.
 
 @sphinxdirective
 
@@ -57,14 +57,13 @@ The required Model Server parameters are listed below. To learn more about all c
 
 @endsphinxdirective
 
-- Publish the container's port to your host's **open ports**. 
+- Expose the container ports to **open ports** on your host or virtual machine. 
 - In the command above, port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.
 
 ## Serving Multiple Models 
 
-To use a container with several models, you need an additional JSON configuration file defining each model. In the file, provide a 
-`model_config_list` array that includes a collection of config objects for each served model. The `name` and the `base_path` values of the model are required for every config object.
+To serve multiple models from the same container you will need an additional JSON configuration file that defines each model. To use a container with several models, you need an additional JSON configuration file defining each model. `model_config_list` array that includes a collection of config objects for each served model. The `name` and the `base_path` values of the model are required for each config object.
 
 
 ```json
@@ -117,11 +116,11 @@ To use a container with several models, you need an additional JSON configuratio
 }
 ```
 
-When the Docker container has the config file mounted, it can be started - the command is minimalistic, as arguments are read from the config file. 
+Once the Docker container has the path to your config file mounted, it can be started. This simplifies the `docker run` command, as arguments are now read from the config file. 
 
 ## Serving Models from Cloud Storage
 
-Note that models with a cloud storage path require setting specific environmental variables. Learn more in [Using cloud storage](using_cloud_storage.md) documentation.
+Note that models deployed from a cloud storage require setting specific environmental variables. Learn more in [Using cloud storage](using_cloud_storage.md) documentation.
 
 ```
 
@@ -132,12 +131,12 @@ docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.j
 
 ## Next Steps
 
-- Try the model server [features](features.md)
-- Explore the model server [demos](../demos/README.md)
+- Explore all model serving [features](features.md)
+- Try model serving [demos](../demos/README.md)
 
 ## Additional Resources
 
-- [Preparing Model Repository](models_repository.md)
+- [Preparing a Model Repository](models_repository.md)
 - [Using Cloud Storage](using_cloud_storage.md)
 - [Troubleshooting](troubleshooting.md)
-- [Model server parameters](parameters.md)
+- [Model Server Parameters](parameters.md)

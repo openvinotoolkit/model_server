@@ -18,7 +18,7 @@
 
    ---
     
-   Using Docker is the recommended way of running OpenVINO Model Server. The images are available via DockerHub and RedHat Ecosystem Catalog. 
+   Docker is the recommended way to deploy OpenVINO Model Server. Pre-built container images are available on Docker Hub and Red Hat Ecosystem Catalog. 
 
    +++
 

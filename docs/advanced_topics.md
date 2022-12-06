@@ -13,16 +13,16 @@
 @endsphinxdirective
 
 ## CPU Extensions
-Implement any CPU layer, unsupported by OpenVINO, as a shared library.
+Implement any CPU layer, that is not support by OpenVINO yet, as a shared library.
 
 [Learn more](../src/example/SampleCpuExtension/README.md)
 
 ## Model Cache
-Leverage an [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_Model_caching_overview.html) to speed up subsequent model loading on a target device.
+Leverage the OpenVINO [model caching](https://docs.openvino.ai/latest/openvino_docs_OV_UG_Model_caching_overview.html) feature to speed up subsequent model loading on a target device.
 
 [Learn more](model_cache.md)
 
 ## Custom Model Loader
-Write your own custom model loader based on the predefine interface and load the same as a dynamic library. 
+Write your own custom model loader based on a predefined interface and load it similar to a dynamic library.  
 
 [Learn more](custom_model_loader.md)
