@@ -280,5 +280,14 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER, "Tried to set buffer for nonexisting tensor"},
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER, "Tried to remove buffer for nonexisting tensor"},
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
+    {StatusCode::NONEXISTENT_STATUS, "Tried to use nonexisting status"},
+    {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
+
+    // Server Start errors
+    {StatusCode::OPTIONS_USAGE_ERROR, "options validation error"},
+    {StatusCode::FAILED_TO_START_GRPC_SERVER, "Failed to start gRPC server"},
+    {StatusCode::FAILED_TO_START_REST_SERVER, "Failed to start REST server"},
+    {StatusCode::SERVER_ALREADY_STARTED, "Server has already started"},
+    {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
 };
 }  // namespace ovms

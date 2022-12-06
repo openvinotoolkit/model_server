@@ -35,17 +35,17 @@ ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
     }
 }
 
-int ServableManagerModule::start(const ovms::Config& config) {
+Status ServableManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", SERVABLE_MANAGER_MODULE_NAME);
     auto status = servableManager->start(config);
     if (status.ok()) {
         state = ModuleState::INITIALIZED;
         SPDLOG_INFO("{} started", SERVABLE_MANAGER_MODULE_NAME);
-        return EXIT_SUCCESS;
+        return status;
     }
     SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());
-    return EXIT_FAILURE;
+    return status;
 }
 void ServableManagerModule::shutdown() {
     if (state == ModuleState::SHUTDOWN)

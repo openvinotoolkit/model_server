@@ -78,8 +78,16 @@ int main(int argc, char** argv) {
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
 
     if (res) {
-        // TODO: Better error handling?
-        fprintf(stderr, "Error starting the server\n");
+        uint32_t code = 0;
+        const char* details = nullptr;
+
+        OVMS_StatusGetCode(res, &code);
+        OVMS_StatusGetDetails(res, &details);
+
+        fprintf(stderr, "error during start: code %d, details: %s\n", code, details);
+
+        OVMS_StatusDelete(res);
+
         OVMS_ServerDelete(srv);
         OVMS_ServerMultiModelOptionsDelete(mmo);
         OVMS_ServerGeneralOptionsDelete(go);

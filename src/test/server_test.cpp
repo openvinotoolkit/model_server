@@ -157,7 +157,7 @@ public:
     bool waitWithChangingState = true;
     MockedServableManagerModule(ovms::Server& ovmsServer) :
         ovms::ServableManagerModule(ovmsServer) {}
-    int start(const Config& config) override {
+    ovms::Status start(const Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
         auto start = std::chrono::high_resolution_clock::now();
@@ -173,10 +173,10 @@ public:
 
             state = ModuleState::INITIALIZED;
             SPDLOG_INFO("Mocked {} started", SERVABLE_MANAGER_MODULE_NAME);
-            return EXIT_SUCCESS;
+            return status;
         }
         SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());
-        return EXIT_FAILURE;
+        return status;
     }
 };
 
