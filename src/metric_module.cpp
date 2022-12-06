@@ -16,6 +16,7 @@
 #include "metric_module.hpp"
 
 #include "metric_registry.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
@@ -24,7 +25,7 @@ MetricModule::~MetricModule() = default;
 MetricModule::MetricModule() :
     registry(std::make_unique<MetricRegistry>()) {}
 
-int MetricModule::start(const Config& config) { return EXIT_SUCCESS; }
+Status MetricModule::start(const Config& config) { return StatusCode::OK; }
 
 void MetricModule::shutdown() {}
 

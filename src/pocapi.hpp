@@ -72,13 +72,28 @@ typedef enum OVMS_LogLevel_enum {
 } OVMS_LogLevel;
 
 ////
+//// OVMS_Status
+//// Structure for status management.
+//// Whenever C-API call returns non null pointer it should be treated as error with code and detailed message.
+//// The status should be deallocated with OVMS_StatusDelete afterwards.
+////
+// Deallocates status memory for given ptr
+void OVMS_StatusDelete(OVMS_Status* status);
+
+OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
+    uint32_t* code);
+
+OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
+    const char** details);
+
+////
 //// OVMS_ServerGeneralOptions
 //// Structure for general options for both: single and multi (with config.json) management
 ////
 // Allocates memory for server general options and returns ptr
 OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options);
 // Deallocates server general options memory for given ptr
-OVMS_Status* OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options);
+void OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options);
 
 // --port
 OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
@@ -143,7 +158,7 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetLogPath(OVMS_ServerGeneralOptions* opti
 // Allocates memory for multi model server options and returns ptr
 OVMS_Status* OVMS_ServerMultiModelOptionsNew(OVMS_ServerMultiModelOptions** options);
 // Deallocates options memory for given ptr
-OVMS_Status* OVMS_ServerMultiModelOptionsDelete(OVMS_ServerMultiModelOptions* options);
+void OVMS_ServerMultiModelOptionsDelete(OVMS_ServerMultiModelOptions* options);
 
 // --config_path
 OVMS_Status* OVMS_ServerMultiModelOptionsSetConfigPath(OVMS_ServerMultiModelOptions* options,
@@ -156,7 +171,7 @@ OVMS_Status* OVMS_ServerMultiModelOptionsSetConfigPath(OVMS_ServerMultiModelOpti
 // Allocates memory for server and returns ptr
 OVMS_Status* OVMS_ServerNew(OVMS_Server** server);
 // Deallocates server memory for given ptr
-OVMS_Status* OVMS_ServerDelete(OVMS_Server* server);
+void OVMS_ServerDelete(OVMS_Server* server);
 
 // Start with configuration file config.json
 // Return error if already started
@@ -169,7 +184,7 @@ OVMS_Status* OVMS_ServerStop(OVMS_Server* server);
 
 // OVMS_InferenceRequest
 OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const char* servableName, uint32_t servableVersion);  // TODO add passing server here
-OVMS_Status* OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
+void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount);
 OVMS_Status* OVMS_InferenceRequestAddInputRaw(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype);  // TODO consider no datatype & handle the parameters NOT IMPLEMENTED
@@ -188,6 +203,6 @@ OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* respon
 OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* response, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, const void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId);
 OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* response, uint32_t* count);
 OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* response, uint32_t id, OVMS_DataType* datatype, const void** data);
-OVMS_Status* OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
+void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);

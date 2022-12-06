@@ -24,6 +24,7 @@
 
 namespace ovms {
 class Config;
+class Status;
 
 class GeneralOptionsImpl;
 class MultiModelOptionsImpl;
@@ -45,7 +46,7 @@ protected:
 public:
     static Server& instance();
     int start(int argc, char** argv);
-    int start(GeneralOptionsImpl*, MultiModelOptionsImpl*);
+    Status start(GeneralOptionsImpl*, MultiModelOptionsImpl*);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;
     bool isReady() const;
@@ -54,7 +55,7 @@ public:
     void setShutdownRequest(int i);
     virtual ~Server();
 
-    int startModules(ovms::Config& config);
+    Status startModules(ovms::Config& config);
     void shutdownModules();
 
 private:
