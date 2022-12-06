@@ -103,7 +103,7 @@ endif
 PRODUCT_NAME = "OpenVINO Model Server"
 PRODUCT_VERSION ?= "2022.3"
 
-OVMS_CPP_CONTAINTER_NAME = server-test$(shell date +%Y-%m-%d-%H.%M.%S)
+OVMS_CPP_CONTAINTER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
 OVMS_CPP_CONTAINTER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
@@ -255,7 +255,7 @@ get_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms/genhtml/ .  || true
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@if [ -d genhtml/src ]; then $(MAKE) check_coverage; \
 	else echo "ERROR: genhtml/src was not generated during build"; \
 	fi
@@ -268,7 +268,7 @@ test_checksec:
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@checksec --file=/tmp/ovms --format=csv > checksec.txt
 	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,No" checksec.txt; then\
  		error Run checksec on ovms binary and fix issues.;\

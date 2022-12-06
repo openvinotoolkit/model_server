@@ -1,0 +1,128 @@
+diff --git a/Dockerfile.redhat b/Dockerfile.redhat
+index 53f3efe2..f2a2b8f3 100644
+--- a/Dockerfile.redhat
++++ b/Dockerfile.redhat
+@@ -192,18 +192,20 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else  bazel test ${debug_bazel
+     bazel coverage --test_output=streamed --combined_report=lcov //src:ovms_test &&\
+     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
+     bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
+-    
+-RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
+-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
+-
+-RUN cd /ovms/src/example/SampleCpuExtension/ && make 
+ 
+ # C api shared library
+ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
+ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
+ 
++# Copy binary for //src:ovms
++RUN cp $(bazel info bazel-bin)/src/libovms_shared.so src
++RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
++RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
++
++RUN cd /ovms/src/example/SampleCpuExtension/ && make
++
+ COPY ${ovms_metadata_file} metadata.json
+ 
+-RUN ./bazel-bin/src/./ovms
++RUN cd bazel-bin/src/ && ./ovms --version && ./ovms && cd /ovms
+ COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
+ COPY release_files/LICENSE /ovms/release_files/LICENSE
+diff --git a/Dockerfile.ubuntu b/Dockerfile.ubuntu
+index 72d0fe96..8f99ce32 100644
+--- a/Dockerfile.ubuntu
++++ b/Dockerfile.ubuntu
+@@ -231,20 +231,21 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then true ; else bazel test ${debug_bazel_
+     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" &&\
+     bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
+ 
++# C api shared library
++RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
++RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
++
++# Copy binary for //src:ovms
++RUN cp $(bazel info bazel-bin)/src/libovms_shared.so src
+ RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
+ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
+ 
+ RUN cd /ovms/src/example/SampleCpuExtension/ && make
+ 
+-# C api shared library
+-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
+-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
+-
+ ARG ovms_metadata_file
+ COPY ${ovms_metadata_file} metadata.json
+ 
+-RUN ./bazel-bin/src/./ovms --version
+-RUN ./bazel-bin/src/./ovms
++RUN cd bazel-bin/src/ && ./ovms --version && ./ovms && cd /ovms
+ COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
+ COPY release_files/LICENSE /ovms/release_files/LICENSE
+ 
+diff --git a/Makefile b/Makefile
+index 432f666d..abdf9889 100644
+--- a/Makefile
++++ b/Makefile
+@@ -89,7 +89,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
+ PRODUCT_NAME = "OpenVINO Model Server"
+ PRODUCT_VERSION ?= "2022.2"
+ 
+-OVMS_CPP_CONTAINTER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
++OVMS_CPP_CONTAINTER_NAME = server-test$(shell date +%Y-%m-%d-%H.%M.%S)
+ OVMS_CPP_CONTAINTER_PORT ?= 9178
+ 
+ TEST_PATH ?= tests/functional/
+@@ -243,7 +243,7 @@ test_checksec:
+ 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
+ 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
+ 	@checksec --file=/tmp/ovms --format=csv > checksec.txt
+-	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
++	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,No" checksec.txt; then\
+  		error Run checksec on ovms binary and fix issues.;\
+ 	fi
+ 	@rm -f checksec.txt
+
+diff --git a/src/BUILD b/src/BUILD
+index 947260c4..ac02cbec 100644
+--- a/src/BUILD
++++ b/src/BUILD
+@@ -578,6 +559,19 @@ cc_binary(
+     linkstatic = True,
+ )
+ 
++cc_import(
++  name = "shared_lib",
++  hdrs = ["pocapi.hpp"],
++  shared_library = "libovms_shared.so",
++)
++
++cc_library(
++    name = "cpp_headers",
++    srcs = ["server.hpp",
++        "module.hpp",],
++    deps = ["//src:shared_lib"]
++)
++
+ cc_binary(
+     name = "ovms",
+     srcs = [
+@@ -588,14 +582,13 @@ cc_binary(
+         "-luuid",
+         "-lstdc++fs",
+         "-lcrypto",
++        "-lovms_shared"
+     ],
+     copts = [
+         "-Wconversion",
+         "-Werror",
+     ],
+-    deps = [
+-        "//src:ovms_lib",
+-    ],
++    deps = ["//src:cpp_headers"],
+     linkstatic = False,
+ )
+ 
+ 
