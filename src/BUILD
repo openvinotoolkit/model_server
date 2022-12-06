@@ -589,7 +589,7 @@ cc_binary(
         "-Werror",
     ],
     deps = [
-        "//src:ovms_lib",
+        "//src:cpp_headers",
     ],
     linkstatic = False,
 )
