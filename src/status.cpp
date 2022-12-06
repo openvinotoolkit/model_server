@@ -280,10 +280,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER, "Tried to set buffer for nonexisting tensor"},
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER, "Tried to remove buffer for nonexisting tensor"},
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
-    {StatusCode::NONEXISTENT_BUFFER_FOR_REMOVAL, "Tried to remove nonexisting buffer"},
     {StatusCode::NONEXISTENT_STATUS, "Tried to use nonexisting status"},
-    {StatusCode::NONEXISTENT_STATUS_CODE_PTR, "Tried to use nonexisting status code"},
-    {StatusCode::NONEXISTENT_STATUS_DETAILS_PTR, "Tried to use nonexisting status details"},
     {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
 
     // Server Start errors

@@ -60,7 +60,7 @@ OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
     if (status == nullptr)
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS));
     if (code == nullptr)
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS_CODE_PTR));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
     ovms::Status* sts = reinterpret_cast<ovms::Status*>(status);
     *code = static_cast<uint32_t>(sts->getCode());
     return nullptr;
@@ -71,7 +71,7 @@ OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
     if (status == nullptr)
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS));
     if (details == nullptr)
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS_DETAILS_PTR));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
     ovms::Status* sts = reinterpret_cast<ovms::Status*>(status);
     *details = sts->string().c_str();
     return nullptr;

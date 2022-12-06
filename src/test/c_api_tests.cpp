@@ -290,11 +290,12 @@ TEST(CApiStatusTest, GetCodeAndDetails) {
     OVMS_Status* sts = reinterpret_cast<OVMS_Status*>(s.get());
     uint32_t code = 0;
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_StatusGetCode(nullptr, &code), StatusCode::NONEXISTENT_STATUS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_StatusGetCode(sts, nullptr), StatusCode::NONEXISTENT_STATUS_CODE_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_StatusGetCode(sts, nullptr), StatusCode::NONEXISTENT_NUMBER);
     ASSERT_CAPI_STATUS_NULL(OVMS_StatusGetCode(sts, &code));
+    EXPECT_EQ(code, static_cast<uint32_t>(StatusCode::INTERNAL_ERROR));
     const char* details = nullptr;
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_StatusGetDetails(nullptr, &details), StatusCode::NONEXISTENT_STATUS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_StatusGetDetails(sts, nullptr), StatusCode::NONEXISTENT_STATUS_DETAILS_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_StatusGetDetails(sts, nullptr), StatusCode::NONEXISTENT_STRING);
     ASSERT_CAPI_STATUS_NULL(OVMS_StatusGetDetails(sts, &details));
     std::stringstream ss;
     ss << Status(StatusCode::INTERNAL_ERROR).string() << " - custom message";
