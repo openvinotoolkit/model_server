@@ -592,7 +592,13 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
     return StatusCode::OK;
 }
 
-Status KFSRestParser::parseInput(rapidjson::Value& node) {
+static Status binaryDataSizeCanBeCalculated(::KFSRequest::InferInputTensor* input, bool onlyOneInput) {
+    if(input->datatype() == "BYTES" && (!onlyOneInput || input->shape().size() != 1 || input->shape()[0] != 1))
+        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+    return StatusCode::OK;
+}
+
+Status KFSRestParser::parseInput(rapidjson::Value& node, bool onlyOneInput) {
     if (!node.IsObject()) {
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     }
@@ -639,9 +645,8 @@ Status KFSRestParser::parseInput(rapidjson::Value& node) {
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
         if (binary_data_size_parameter != input->parameters().end()) {
             return StatusCode::OK;
-        } else {
-            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
+        return binaryDataSizeCanBeCalculated(input, onlyOneInput);
     }
 }
 
@@ -654,7 +659,7 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
     }
     requestProto.mutable_inputs()->Clear();
     for (auto& input : node.GetArray()) {
-        auto status = parseInput(input);
+        auto status = parseInput(input, (node.GetArray().Size() == 1));
         if (!status.ok()) {
             return status;
         }

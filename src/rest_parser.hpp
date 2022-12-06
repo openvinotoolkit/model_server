@@ -228,7 +228,7 @@ class KFSRestParser : RestParser {
     Status parseOutput(rapidjson::Value& node);
     Status parseOutputs(rapidjson::Value& node);
     Status parseData(rapidjson::Value& node, ::KFSRequest::InferInputTensor* input);
-    Status parseInput(rapidjson::Value& node);
+    Status parseInput(rapidjson::Value& node, bool onlyOneInput);
     Status parseInputs(rapidjson::Value& node);
 
 public:

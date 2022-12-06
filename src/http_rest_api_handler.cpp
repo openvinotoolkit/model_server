@@ -34,6 +34,7 @@
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_utils.hpp"
 #include "metric_module.hpp"
 #include "metric_registry.hpp"
 #include "model_metric_reporter.hpp"
@@ -341,6 +342,7 @@ static Status validateContentFieldsEmptiness(KFSTensorInputProto* input) {
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT8") {
+        SPDLOG_ERROR("{}", input->contents().int_contents_size());
         if (input->contents().int_contents_size() > 0) {
             SPDLOG_DEBUG("INT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
@@ -382,6 +384,56 @@ static Status validateContentFieldsEmptiness(KFSTensorInputProto* input) {
     return StatusCode::OK;
 }
 
+static bool isInputEmpty(::KFSRequest::InferInputTensor* input) {
+    if (input->datatype() == "FP32")
+        return input->contents().fp32_contents_size() == 0;
+    if (input->datatype() == "INT64")
+        return input->contents().int64_contents_size() == 0;
+    if (input->datatype() == "INT32")
+        return input->contents().int_contents_size() == 0;
+    if (input->datatype() == "INT16")
+        return input->contents().int_contents_size() == 0;
+    if (input->datatype() == "INT8")
+        return input->contents().int_contents_size() == 0;
+    if (input->datatype() == "UINT64")
+        return input->contents().uint64_contents_size() == 0;
+    if (input->datatype() == "UINT32")
+        return input->contents().uint_contents_size() == 0;
+    if (input->datatype() == "UINT16")
+        return input->contents().uint_contents_size() == 0;
+    if (input->datatype() == "UINT8")
+        return input->contents().uint_contents_size() == 0;
+    if (input->datatype() == "FP64")
+        return input->contents().fp64_contents_size() == 0;
+    if (input->datatype() == "BYTES")
+        return input->contents().bytes_contents_size() == 0;
+    return true;
+}
+
+static Status handleBinaryInput(const int& binary_input_size, size_t& binary_input_offset, const size_t& binary_inputs_size, const char* binary_inputs, ::KFSRequest::InferInputTensor* input) {
+    if (binary_input_offset + binary_input_size > binary_inputs_size) {
+        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_inputs_size);
+        return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
+    }
+    auto status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Parsing binary inputs failed");
+        return status;
+    }
+    binary_input_offset += binary_input_size;
+    return StatusCode::OK;
+}
+
+static Status calculateBinaryDataSize(::KFSRequest::InferInputTensor* input, size_t& binary_data_size) {
+    auto element_size = KFSDataTypeSize(input->datatype());
+    size_t elements_number = 1;
+    for(auto dim : input->shape()) {
+        elements_number *= dim;
+    }
+    binary_data_size = elements_number * element_size;
+    return StatusCode::OK;
+}
+
 static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
     const char* binary_inputs = &(request_body[endOfJson]);
     size_t binary_inputs_size = request_body.length() - endOfJson;
@@ -389,6 +441,10 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
     size_t binary_input_offset = 0;
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
         auto input = grpc_request.mutable_inputs()->Mutable(i);
+        if(!isInputEmpty(input))
+            continue;
+        if(grpc_request.mutable_inputs()->size() == 1)
+            handleBinaryInput(binary_inputs_size, binary_input_offset, binary_inputs_size, binary_inputs, input);
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
         if (binary_data_size_parameter != input->parameters().end()) {
             auto status = validateContentFieldsEmptiness(input);
@@ -398,16 +454,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 auto binary_input_size = binary_data_size_parameter->second.int64_param();
-                if (binary_input_offset + binary_input_size > binary_inputs_size) {
-                    SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_inputs_size);
-                    return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
-                }
-                status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("Parsing binary inputs failed");
-                    return status;
-                }
-                binary_input_offset += binary_input_size;
+                handleBinaryInput(binary_input_size, binary_input_offset, binary_inputs_size, binary_inputs, input);
             } else if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
                 std::vector<int> binary_inputs_sizes;
                 status = convertStringToVectorOfSizes(binary_data_size_parameter->second.string_param(), binary_inputs_sizes);
@@ -430,6 +477,12 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
                 SPDLOG_DEBUG("binary_data_size parameter type should be int64 or string");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
             }
+        }
+        else
+        {
+            size_t binary_data_size;
+            auto status = calculateBinaryDataSize(input, binary_data_size);
+            handleBinaryInput(binary_data_size, binary_input_offset, binary_inputs_size, binary_inputs, input);
         }
     }
     return StatusCode::OK;
