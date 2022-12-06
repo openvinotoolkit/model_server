@@ -44,9 +44,9 @@ static void testDefaultSingleModelOptions(MultiModelOptionsImpl* mmo) {
     EXPECT_EQ(mmo->idleSequenceCleanup, std::nullopt);
 }
 
-#define ASSERT_CAPI_STATUS_NULL(code)         \
+#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)   \
     {                                         \
-        auto* err = code;                     \
+        auto* err = C_API_CALL;               \
         if (err != nullptr) {                 \
             const char* msg = nullptr;        \
             OVMS_StatusGetDetails(err, &msg); \
@@ -56,30 +56,30 @@ static void testDefaultSingleModelOptions(MultiModelOptionsImpl* mmo) {
         }                                     \
     }
 
-#define ASSERT_CAPI_STATUS_NOT_NULL(code) \
-    {                                     \
-        auto* err = code;                 \
-        if (err != nullptr) {             \
-            OVMS_StatusDelete(err);       \
-        } else {                          \
-            ASSERT_TRUE(false);           \
-        }                                 \
+#define ASSERT_CAPI_STATUS_NOT_NULL(C_API_CALL) \
+    {                                           \
+        auto* err = C_API_CALL;                 \
+        if (err != nullptr) {                   \
+            OVMS_StatusDelete(err);             \
+        } else {                                \
+            ASSERT_NE(err, nullptr);            \
+        }                                       \
     }
 
-#define ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(method, status_code)                                           \
+#define ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(C_API_CALL, EXPECTED_STATUS_CODE)                              \
     {                                                                                                          \
-        auto* err = method;                                                                                    \
+        auto* err = C_API_CALL;                                                                                \
         if (err != nullptr) {                                                                                  \
             uint32_t code = 0;                                                                                 \
             const char* details = nullptr;                                                                     \
             ASSERT_EQ(OVMS_StatusGetCode(err, &code), nullptr);                                                \
             ASSERT_EQ(OVMS_StatusGetDetails(err, &details), nullptr);                                          \
             ASSERT_NE(details, nullptr);                                                                       \
-            ASSERT_EQ(code, static_cast<uint32_t>(status_code))                                                \
+            ASSERT_EQ(code, static_cast<uint32_t>(EXPECTED_STATUS_CODE))                                       \
                 << std::string{"wrong code: "} + std::to_string(code) + std::string{"; details: "} << details; \
             OVMS_StatusDelete(err);                                                                            \
         } else {                                                                                               \
-            ASSERT_TRUE(false);                                                                                \
+            ASSERT_NE(err, nullptr);                                                                           \
         }                                                                                                      \
     }
 

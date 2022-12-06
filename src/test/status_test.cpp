@@ -43,8 +43,7 @@ TEST(StatusCodeTest, AllStatusCodesMapped) {
 TEST(StatusCodeTest, CApi) {
     for (auto statusCode = StatusCode::OK; statusCode != StatusCode::STATUS_CODE_END; ++statusCode) {
         Status status = Status(statusCode);
-        std::unique_ptr<Status> s = std::make_unique<Status>(status);
-        OVMS_Status* sts = reinterpret_cast<OVMS_Status*>(s.get());
+        OVMS_Status* sts = reinterpret_cast<OVMS_Status*>(&status);
         uint32_t code = 0;
         ASSERT_EQ(OVMS_StatusGetCode(sts, &code), nullptr);
         EXPECT_EQ(code, static_cast<uint32_t>(statusCode));
