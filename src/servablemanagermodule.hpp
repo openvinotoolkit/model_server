@@ -30,7 +30,8 @@ protected:
 public:
     ServableManagerModule(ovms::Server& ovmsServer);
     ~ServableManagerModule();
-    int start(const ovms::Config& config) override;
+    Status start(const ovms::Config& config) override;
+
     void shutdown() override;
     virtual ModelManager& getServableManager() const;
 };
