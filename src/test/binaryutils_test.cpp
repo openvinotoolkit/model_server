@@ -49,11 +49,10 @@ public:
         tensor.set_datatype("BYTES");
     }
     void prepareBinaryRequest(::KFSRequest& tensor, std::string& image_bytes) {
-        if (image_bytes.size() > 0){
+        if (image_bytes.size() > 0) {
             std::string* raw_contents = tensor.add_raw_input_contents();
             raw_contents->reserve(image_bytes.size());
             raw_contents->append(image_bytes.data(), image_bytes.size());
-
         }
     }
     void prepareBinaryTensor(tensorflow::TensorProto& tensor) {
