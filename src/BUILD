@@ -561,7 +561,7 @@ cc_binary(
 
 cc_import(
   name = "shared_lib",
-  hdrs = ["pocapi.hpp"],
+  hdrs = ["pocapi.h"],
   shared_library = "libovms_shared.so",
 )
 
