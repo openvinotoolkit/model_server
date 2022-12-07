@@ -490,7 +490,7 @@ Status KFSRestParser::parseId(rapidjson::Value& node) {
         } else if (parameter.value.IsBool()) {                                                                \
             auto requestParameters = PROTO.mutable_parameters();                                              \
             ((*requestParameters)[parameter.name.GetString()]).set_bool_param(parameter.value.GetBool());     \
-        } else if (parameter.value.IsInt()) {   \
+        } else if (parameter.value.IsInt()) {                                                                 \
             auto requestParameters = PROTO.mutable_parameters();                                              \
             ((*requestParameters)[parameter.name.GetString()]).set_int64_param(parameter.value.GetInt());     \
         } else {                                                                                              \
@@ -593,7 +593,7 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
 }
 
 static Status binaryDataSizeCanBeCalculated(::KFSRequest::InferInputTensor* input, bool onlyOneInput) {
-    if(input->datatype() == "BYTES" && !onlyOneInput)
+    if (input->datatype() == "BYTES" && !onlyOneInput)
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     return StatusCode::OK;
 }

@@ -363,7 +363,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8) {
     ASSERT_EQ(i, 4);
 }
 
-static void assertSingleBinaryInput(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request){
+static void assertSingleBinaryInput(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request) {
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
     ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
@@ -371,9 +371,9 @@ static void assertSingleBinaryInput(const std::string& modelName, const std::opt
     ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
 }
 
-static void assertBinaryInputsBYTES(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData){
+static void assertBinaryInputsBYTES(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData) {
     assertSingleBinaryInput(modelName, modelVersion, grpc_request);
-    
+
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "BYTES");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
@@ -404,9 +404,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_noBinaryDataSizeParameter) {
     assertBinaryInputsBYTES(modelName, modelVersion, grpc_request, binaryData);
 }
 
-static void assertBinaryInputsINT16(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData){
+static void assertBinaryInputsINT16(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData) {
     assertSingleBinaryInput(modelName, modelVersion, grpc_request);
-    
+
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT16");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
@@ -439,9 +439,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT16_noBinaryDataSizeParameter) {
     assertBinaryInputsINT16(modelName, modelVersion, grpc_request, binaryData);
 }
 
-static void assertBinaryInputsINT32(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData){
+static void assertBinaryInputsINT32(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData) {
     assertSingleBinaryInput(modelName, modelVersion, grpc_request);
-    
+
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT32");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
@@ -474,9 +474,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT32_noBinaryDataSizeParameter) {
     assertBinaryInputsINT32(modelName, modelVersion, grpc_request, binaryData);
 }
 
-static void assertBinaryInputsINT64(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData){
+static void assertBinaryInputsINT64(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData) {
     assertSingleBinaryInput(modelName, modelVersion, grpc_request);
-    
+
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT64");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
@@ -509,9 +509,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT64_noBinaryDataSizeParameter) {
     assertBinaryInputsINT64(modelName, modelVersion, grpc_request, binaryData);
 }
 
-static void assertBinaryInputsFP32(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request){
+static void assertBinaryInputsFP32(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request) {
     assertSingleBinaryInput(modelName, modelVersion, grpc_request);
-    
+
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "FP32");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
@@ -544,9 +544,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsFP32_noBinaryDataSizeParameter) {
     assertBinaryInputsFP32(modelName, modelVersion, grpc_request);
 }
 
-static void assertBinaryInputsFP64(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request){
+static void assertBinaryInputsFP64(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request) {
     assertSingleBinaryInput(modelName, modelVersion, grpc_request);
-    
+
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "FP64");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);

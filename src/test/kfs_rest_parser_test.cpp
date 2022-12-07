@@ -411,7 +411,6 @@ TEST_F(KFSRestParserTest, parseValidRequestFP32_noData_noBinaryDataSizeParameter
     ASSERT_EQ(proto.inputs()[1].contents().int_contents_size(), 0);
 }
 
-
 TEST_F(KFSRestParserTest, parseValidRequestWithStringRequestParameter) {
     std::string request = R"({
     "parameters" : {"param" : "value"},
