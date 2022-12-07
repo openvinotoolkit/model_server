@@ -10,7 +10,6 @@
    ovms_docs_models_repository
    ovms_docs_deploying_server
    ovms_docs_serving_model
-   ovms_docs_additional_configurations
    ovms_docs_features
    ovms_docs_server_app
    ovms_docs_performance_tuning

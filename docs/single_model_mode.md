@@ -1,4 +1,17 @@
-# Serving Models {#ovms_docs_serving_model}
+# Starting Model Server {#ovms_docs_serving_model}
+
+@sphinxdirective
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   ovms_docs_parameters
+   ovms_docs_target_devices
+   ovms_docs_cloud_storage
+   ovms_docs_security
+
+@endsphinxdirective
 
 Serving a single model is the simplest way to deploy OpenVINO™ Model Server. Only one model is served and the whole configuration is passed via CLI parameters.
 Note that changing configuration in runtime while serving a single model is not possible. Serving multiple models requires a configuration file that stores settings for all served models. 
