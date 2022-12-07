@@ -441,10 +441,6 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
     size_t binary_input_offset = 0;
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
         auto input = grpc_request.mutable_inputs()->Mutable(i);
-        if(!isInputEmpty(input))
-            continue;
-        if(grpc_request.mutable_inputs()->size() == 1)
-            handleBinaryInput(binary_inputs_size, binary_input_offset, binary_inputs_size, binary_inputs, input);
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
         if (binary_data_size_parameter != input->parameters().end()) {
             auto status = validateContentFieldsEmptiness(input);
@@ -454,7 +450,9 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 auto binary_input_size = binary_data_size_parameter->second.int64_param();
-                handleBinaryInput(binary_input_size, binary_input_offset, binary_inputs_size, binary_inputs, input);
+                auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_inputs_size, binary_inputs, input);
+                if(!status.ok())
+                    return status;
             } else if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
                 std::vector<int> binary_inputs_sizes;
                 status = convertStringToVectorOfSizes(binary_data_size_parameter->second.string_param(), binary_inputs_sizes);
@@ -480,9 +478,21 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
         }
         else
         {
+            if(!isInputEmpty(input))
+                continue;
+            if(grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
+                auto status = handleBinaryInput(binary_inputs_size, binary_input_offset, binary_inputs_size, binary_inputs, input);
+                if(!status.ok())
+                    return status;
+                continue;
+            }
             size_t binary_data_size;
             auto status = calculateBinaryDataSize(input, binary_data_size);
-            handleBinaryInput(binary_data_size, binary_input_offset, binary_inputs_size, binary_inputs, input);
+            if(!status.ok())
+                return status;
+            status = handleBinaryInput(binary_data_size, binary_input_offset, binary_inputs_size, binary_inputs, input);
+            if(!status.ok())
+                return status;
         }
     }
     return StatusCode::OK;
