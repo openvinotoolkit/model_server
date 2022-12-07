@@ -23,8 +23,6 @@
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
-#include <iostream>
-
 using namespace ovms;
 
 namespace {
