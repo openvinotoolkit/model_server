@@ -492,9 +492,9 @@ Usage:
 Accuracy 100%
 ======Client Statistics======
 Number of requests: 10
-Total processing time: 99.9689 ms
-Latency: 9.99689 ms
-Requests per second: 1.00031
+Total processing time: 96.651 ms
+Latency: 9.6651 ms
+Requests per second: 103.465
 ```
 
 ### Run the Client to perform inference using rest api
@@ -541,7 +541,7 @@ Usage:
 Accuracy 100%
 ======Client Statistics======
 Number of requests: 10
-Total processing time: 110.521 ms
-Latency: 11.0521 ms
-Requests per second: 0.904802
+Total processing time: 115.804 ms
+Latency: 11.5804 ms
+Requests per second: 86.3526
 ```
