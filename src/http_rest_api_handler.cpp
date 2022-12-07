@@ -342,7 +342,6 @@ static Status validateContentFieldsEmptiness(KFSTensorInputProto* input) {
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
     } else if (input->datatype() == "INT8") {
-        SPDLOG_ERROR("{}", input->contents().int_contents_size());
         if (input->contents().int_contents_size() > 0) {
             SPDLOG_DEBUG("INT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;

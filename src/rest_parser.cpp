@@ -491,7 +491,6 @@ Status KFSRestParser::parseId(rapidjson::Value& node) {
             auto requestParameters = PROTO.mutable_parameters();                                              \
             ((*requestParameters)[parameter.name.GetString()]).set_bool_param(parameter.value.GetBool());     \
         } else if (parameter.value.IsInt()) {   \
-            SPDLOG_ERROR("{}", parameter.name.GetString());                                         \
             auto requestParameters = PROTO.mutable_parameters();                                              \
             ((*requestParameters)[parameter.name.GetString()]).set_int64_param(parameter.value.GetInt());     \
         } else {                                                                                              \
