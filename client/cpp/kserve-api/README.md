@@ -99,7 +99,7 @@ Usage:
 Server Ready: True
 ```
 
-### Run the Client to get server metadata <a name="grpc-server-metadata"></a> 
+### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
 
 - Command
 
@@ -246,7 +246,6 @@ Total processing time: 5.28986 ms
 Latency: 5.28986 ms
 Requests per second: 189.041
 ```
-
 
 ## HTTP Examples <a name="http-api"></a>
 
