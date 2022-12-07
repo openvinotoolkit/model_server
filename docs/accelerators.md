@@ -11,7 +11,6 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_de
 mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 ```
 
-
 ## Starting the server with the Intel® Neural Compute Stick 2
 
 [Intel Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS OpenVINO Model Server via 
@@ -64,7 +63,7 @@ Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and In
 
 
 Before using GPU as OpenVINO Model Server target device, you need to:
-- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_from_archive_linux.html#step-4-optional-configure-inference-on-non-cpu-devices)
+- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_linux.html#step-5-optional-configure-inference-on-non-cpu-devices)
 - start the docker container with the additional parameter of `--device /dev/dri` to pass the device context 
 - set the parameter of `--target_device` to `GPU`.
 - use the `openvino/model_server:latest-gpu` image, which contains GPU dependencies
@@ -104,6 +103,17 @@ Support for [Intel Arc](https://www.intel.com/content/www/us/en/architecture-and
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make docker_build INSTALL_DRIVER_VERSION=22.10.22597
+```
+
+## Model Server image with DG2 support (Ubuntu 20.04)
+
+Image with DG2 GPU support has not been published. To build the image yourself you need to have DG2 drivers installed on the host and NEO Runtime packages available. 
+
+Put NEO Runtime packages in the catalog `<model_server_dir>/release_files/drivers/dg2` and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
+
+Example:
+```
+make docker_build BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=ovms_dg2 INSTALL_DRIVER_VERSION=dg2
 ```
 
 ## Using Multi-Device Plugin
@@ -181,7 +191,7 @@ Make sure you have passed the devices and access to the devices you want to use 
 Below is an example of the command with AUTO Plugin as target device. It includes extra docker parameters to enable GPU (/dev/dri) , beside CPU.
 
 ```bash
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)\
             -u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
             --target_device AUTO
@@ -203,14 +213,14 @@ LATENCY
             --target_device AUTO
 ```
 
-THROUGHPUT
+THROUGHTPUT
 
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
             -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
             --target_device AUTO
 ```
 
-> **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
+> **NOTE**: Currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
