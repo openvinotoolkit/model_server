@@ -38,9 +38,9 @@ int main(int argc, char** argv) {
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
-    ("http_address", "Specify url to rest service. ", cxxopts::value<std::string>()->default_value("localhost"))
-    ("http_port", "Specify port to rest service. ", cxxopts::value<std::string>()->default_value("8000"))
-    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"))
+    ("http_address", "Specify url to rest service. ", cxxopts::value<std::string>()->default_value("localhost"), "HTTP_ADDRESS")
+    ("http_port", "Specify port to rest service. ", cxxopts::value<std::string>()->default_value("8000"), "PORT")
+    ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"), "TIMEOUT")
     ;
     // clang-format on
 
