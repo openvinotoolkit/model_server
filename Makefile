@@ -264,14 +264,14 @@ check_coverage:
 	@docker run $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
 	
 test_checksec:
-	@echo "Running checksec on ovms binary..."
+	@echo "Running checksec on libovms_shared library..."
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
-	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
+	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/lib/libovms_shared.so /tmp
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
-	@checksec --file=/tmp/ovms --format=csv > checksec.txt
-	@if ! grep -FRq "Full RELRO,No Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,No" checksec.txt; then\
- 		error Run checksec on ovms binary and fix issues.;\
+	@checksec --file=/tmp/libovms_shared.so --format=csv > checksec.txt
+	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
+ 		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues.";\
 	fi
 	@rm -f checksec.txt
 	@rm -f /tmp/ovms
