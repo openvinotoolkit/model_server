@@ -25,10 +25,6 @@
 
 namespace tc = triton::client;
 
-#define IMG_HEIGHT 224
-#define IMG_WIDTH 224
-#define IMG_C 3
-
 #define FAIL_IF_ERR(X, MSG)                                              \
     {                                                                    \
         tc::Error err = (X);                                             \
@@ -166,14 +162,14 @@ int main(int argc, char** argv) {
     tc::InferStat infer_stat;
     client->ClientInferStat(&infer_stat);
     std::cout << "======Client Statistics======" << std::endl;
-    std::cout << "Completed request count "
+    std::cout << "Number of requests: "
               << infer_stat.completed_request_count << std::endl;
-    std::cout << "Cumulative total request time "
-              << double(infer_stat.cumulative_total_request_time_ns) / 1000000 << " ms" << std::endl;
-    std::cout << "Cumulative send time "
-              << double(infer_stat.cumulative_send_time_ns) / 1000000 << " ms" << std::endl;
-    std::cout << "Cumulative receive time "
-              << double(infer_stat.cumulative_receive_time_ns) / 1000000 << " ms" << std::endl;
+    std::cout << "Total processing time: "
+              << double(infer_stat.cumulative_total_request_time_ns)/1.0e+6 << " ms" << std::endl;
+    std::cout << "Latency: "
+              << double(infer_stat.cumulative_total_request_time_ns/infer_stat.completed_request_count)/1.0e+6 << " ms" << std::endl;
+    std::cout << "Requests per second: "
+              << double(1.0e+9/infer_stat.cumulative_total_request_time_ns/infer_stat.completed_request_count) << std::endl;
 
     return 0;
 }

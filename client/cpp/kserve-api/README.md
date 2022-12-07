@@ -540,8 +540,8 @@ Usage:
 ../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
 Accuracy 100%
 ======Client Statistics======
-Completed request count 10
-Cumulative total request time 107.524 ms
-Cumulative send time 1.8395 ms
-Cumulative receive time 0.010696 ms
+Number of requests: 10
+Total processing time: 110.521 ms
+Latency: 11.0521 ms
+Requests per second: 0.904802
 ```
