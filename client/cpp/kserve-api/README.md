@@ -4,21 +4,19 @@ OpenVINO Model Server introduced support for [KServe API](https://github.com/kse
 
 This guide shows how to interact with KServe API endpoints on both gRPC and HTTP interfaces using [Triton](https://github.com/triton-inference-server)'s client library. It covers following topics:
 - <a href="#grpc-api">GRPC API Examples </a>
-  - <a href="#grpc-server-live">grpc_server_live.py</a>
-  - <a href="#grpc-server-ready">grpc_server_ready.py</a>
-  - <a href="#grpc-server-metadata">grpc_server_metadata.py</a>
-  - <a href="#grpc-model-ready">grpc_model_ready.py</a>
-  - <a href="#grpc-model-metadata">grpc_model_metadata.py</a>
-  - <a href="#grpc-model-infer">grpc_infer_resnet.py</a>
-  - <a href="#grpc-model-infer-binary">grpc_infer_binary_resnet.py</a>
+  - <a href="#grpc-server-live">grpc_server_live</a>
+  - <a href="#grpc-server-ready">grpc_server_ready</a>
+  - <a href="#grpc-server-metadata">grpc_server_metadata</a>
+  - <a href="#grpc-model-ready">grpc_model_ready</a>
+  - <a href="#grpc-model-metadata">grpc_model_metadata</a>
+  - <a href="#grpc-model-infer">grpc_infer_dummy</a>
 - <a href="#http-api">HTTP API Example</a>
-  - <a href="#http-server-live">http_server_live.py</a>
-  - <a href="#http-server-ready">http_server_ready.py</a>
-  - <a href="#http-server-metadata">http_server_metadata.py</a>
-  - <a href="#http-model-ready">http_model_ready.py</a>
-  - <a href="#http-model-metadata">http_model_metadata.py</a>
-  - <a href="#http-model-infer">http_infer_resnet.py</a>
-  - <a href="#http-model-infer-binary">http_infer_binary_resnet.py</a>
+  - <a href="#http-server-live">http_server_live</a>
+  - <a href="#http-server-ready">http_server_ready</a>
+  - <a href="#http-server-metadata">http_server_metadata</a>
+  - <a href="#http-model-ready">http_model_ready</a>
+  - <a href="#http-model-metadata">http_model_metadata</a>
+  - <a href="#http-model-infer">http_infer_dummy</a>
 
 ## Before you run the samples
 
@@ -30,7 +28,7 @@ cd model_server
 
 ### Start the Model Server Container with Dummy Model
 ```Bash
-docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 
+docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 --rest_port 8000
 ```
 
 ### Build client library and samples
@@ -125,8 +123,8 @@ Usage:
 
 ```Bash
 ./grpc_server_metadata --grpc_port 9000 --grpc_address localhost
-Name: "OpenVINO Model Server"
-Version: "2022.2.c290da85"
+Name: OpenVINO Model Server
+Version: 2022.2.c290da85
 ```
 
 ### Run the Client to get model readiness <a name="grpc-model-ready"></a>
@@ -155,7 +153,7 @@ Usage:
 - Usage Example
 
 ```Bash
-./grpc_model_ready --grpc_port 9000 --grpc_address localhost --model_name resnet
+./grpc_model_ready --grpc_port 9000 --grpc_address localhost --model_name dummy
 Model Ready: True
 ```
 
@@ -185,24 +183,21 @@ Usage:
 - Usage Example
 
 ```Bash
-./grpc_model_metadata --grpc_port 9000 --grpc_address localhost --model_name resnet
-model metadata:
-name: "resnet"
+./grpc_model_metadata --grpc_port 9000 --grpc_address localhost --model_name dummy
+name: "dummy"
 versions: "1"
 platform: "OpenVINO"
 inputs {
-  name: "0"
+  name: "b"
   datatype: "FP32"
   shape: 1
-  shape: 224
-  shape: 224
-  shape: 3
+  shape: 10
 }
 outputs {
-  name: "1463"
+  name: "a"
   datatype: "FP32"
   shape: 1
-  shape: 1000
+  shape: 10
 }
 ```
 ### Run the Client to perform inference
@@ -327,7 +322,7 @@ Usage:
 
 ```Bash
 ./http_server_metadata --http_port 8000 --http_address localhost
-{'name': 'OpenVINO Model Server', 'version': '2022.2.c290da85'}
+{"name":"OpenVINO Model Server","version":"2022.2.c290da85"}
 ```
 
 ### Run the Client to get model readiness <a name="http-model-ready"></a>
@@ -394,7 +389,7 @@ Usage:
 - Command
 
 ```Bash
-./http_infer_resnet --help
+./http_infer_dummy --help
 Sends requests via KServe rest API.
 Usage:
   http_infer_dummy [OPTION...]
@@ -418,7 +413,7 @@ Usage:
 - Usage Example
 
 ```Bash
-./http_infer_resnety --http_port 8000
+./http_infer_dummy --http_port 8000
 0 => 1
 1 => 2
 2 => 3
