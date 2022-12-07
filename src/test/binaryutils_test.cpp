@@ -23,6 +23,8 @@
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
+#include <iostream>
+
 using namespace ovms;
 
 namespace {
@@ -49,8 +51,12 @@ public:
         tensor.set_datatype("BYTES");
     }
     void prepareBinaryRequest(::KFSRequest& tensor, std::string& image_bytes) {
-        if (image_bytes.size() > 0)
-            tensor.add_raw_input_contents()->append(image_bytes);
+        if (image_bytes.size() > 0){
+            std::string* raw_contents = tensor.add_raw_input_contents();
+            raw_contents->reserve(image_bytes.size());
+            raw_contents->append(image_bytes.data(), image_bytes.size());
+
+        }
     }
     void prepareBinaryTensor(tensorflow::TensorProto& tensor) {
         size_t filesize;
@@ -199,6 +205,31 @@ TYPED_TEST(BinaryUtilsTest, positive_grayscale) {
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 1}, Layout{"NHWC"});
 
     ASSERT_EQ(convertBinaryRequestTensorToOVTensor(grayscaleRequestTensor, tensor, tensorInfo), ovms::StatusCode::OK);
+    ASSERT_EQ(tensor.get_size(), 1);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), grayscale_expected_tensor), true);
+}
+
+TYPED_TEST(BinaryUtilsTest, positive_grayscale_request) {
+    uint8_t grayscale_expected_tensor[] = {0x00};
+
+    std::ifstream DataFile;
+    DataFile.open("/ovms/src/test/binaryutils/grayscale.jpg", std::ios::binary);
+    DataFile.seekg(0, std::ios::end);
+    size_t grayscale_filesize = DataFile.tellg();
+    DataFile.seekg(0);
+    std::unique_ptr<char[]> grayscale_image_bytes(new char[grayscale_filesize]);
+    DataFile.read(grayscale_image_bytes.get(), grayscale_filesize);
+
+    ::KFSRequest request;
+    ov::Tensor tensor;
+    std::string data;
+    data.assign(grayscale_image_bytes.get(), grayscale_image_bytes.get() + grayscale_filesize);
+    this->prepareBinaryRequest(request, data);
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 1}, Layout{"NHWC"});
+
+    ASSERT_EQ(convertBinaryRequestTensorToOVTensor(request, tensor, tensorInfo), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 1);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), grayscale_expected_tensor), true);

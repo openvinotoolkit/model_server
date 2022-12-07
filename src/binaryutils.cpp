@@ -344,7 +344,7 @@ inline static const std::string& getBinaryInput(const ::KFSRequest::InferInputTe
 }
 
 inline static const std::string getBinaryInput(const ::KFSRequest& tensor, size_t i) {
-    return tensor.raw_input_contents()[0];
+    return tensor.raw_input_contents()[i];
 }
 
 inline static int getBinaryInputsSize(const tensorflow::TensorProto& tensor) {
