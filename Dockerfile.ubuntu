@@ -48,6 +48,7 @@ RUN apt-get update && apt-get install -y \
             libboost-thread1.71.0 \
             libboost-system1.71.0 \
             libboost-date-time1.71.0 \
+            libgflags-dev \
             bc \
             build-essential \
             cmake \
@@ -66,6 +67,7 @@ RUN apt-get update && apt-get install -y \
             libxml2-dev \
             libnuma-dev \
             libssl-dev \
+            nlohmann-json3-dev \
             patch \
             pkg-config \
             python2 \
@@ -82,7 +84,8 @@ RUN apt-get update && apt-get install -y \
             wget \
             unzip \
             vim \
-            xz-utils && \
+            xz-utils \
+            zlib1g-dev && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
 
