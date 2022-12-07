@@ -99,7 +99,7 @@ Usage:
 Server Ready: True
 ```
 
-### 
+### Run the Client to get server metadata <a name="grpc-server-metadata"></a> 
 
 - Command
 
