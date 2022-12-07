@@ -250,6 +250,23 @@ endif
 	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
 	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
 
+capi_build:
+	rm -vrf capi/$(DIST_OS) && mkdir -vp capi/$(DIST_OS) && cd capi/$(DIST_OS) && \
+		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
+			"tar -c -C / capi.tar* ; sleep 2" | tar -x
+	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX))
+	cd capi/$(DIST_OS) && sha256sum --check capi.tar.gz.sha256
+	cd capi/$(DIST_OS) && sha256sum --check capi.tar.xz.sha256
+	cp -vR release_files/thirdparty-licenses capi/$(DIST_OS)/
+	cp -vR release_files/drivers capi/$(DIST_OS)/
+	cp -vR release_files/LICENSE capi/$(DIST_OS)/
+	cp -vR capi_files/* capi/$(DIST_OS)/
+	cd capi/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+
 # Ci build expects index.html in genhtml directory
 get_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."

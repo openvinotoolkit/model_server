@@ -206,8 +206,7 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
 
 # Copy binary for //src:ovms
-RUN cp $(bazel info bazel-bin)/src/libovms_shared.so src
-RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs=$JOBS //src:ovms
+RUN cp $(bazel info bazel-bin)/src/libovms_shared.so src && bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs=$JOBS //src:ovms && rm -rf src/libovms_shared.so
 RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && OPENVINO_PATH=/opt/intel/openvino make
