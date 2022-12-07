@@ -491,10 +491,10 @@ Usage:
 ../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
 Accuracy 100%
 ======Client Statistics======
-Completed request count 10
-Cumulative total request time 107.524 ms
-Cumulative send time 1.8395 ms
-Cumulative receive time 0.010696 ms
+Number of requests: 10
+Total processing time: 99.9689 ms
+Latency: 9.99689 ms
+Requests per second: 1.00031
 ```
 
 ### Run the Client to perform inference using rest api
