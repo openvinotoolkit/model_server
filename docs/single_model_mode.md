@@ -131,17 +131,6 @@ To serve multiple models from the same container you will need an additional JSO
 
 Once the Docker container has the path to your config file mounted, it can be started. This simplifies the `docker run` command, as arguments are now read from the config file. 
 
-## Serving Models from Cloud Storage
-
-Note that models deployed from a cloud storage require setting specific environmental variables. Learn more in [Using cloud storage](using_cloud_storage.md) documentation.
-
-```
-
-docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.json>:/opt/ml/config.json openvino/model_server:latest \
---config_path /opt/ml/config.json --port 9001 --rest_port 8001
-
-```
-
 ## Next Steps
 
 - Explore all model serving [features](features.md)
