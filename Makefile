@@ -255,7 +255,7 @@ get_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms/genhtml/ .  || true
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@if [ -d genhtml/src ]; then $(MAKE) check_coverage; \
 	else echo "ERROR: genhtml/src was not generated during build"; \
 	fi
@@ -264,17 +264,24 @@ check_coverage:
 	@docker run $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
 	
 test_checksec:
-	@echo "Running checksec on ovms binary..."
+	@echo "Running checksec on libovms_shared library..."
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/lib/libovms_shared.so /tmp
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
+	@checksec --file=/tmp/libovms_shared.so --format=csv > checksec.txt
+	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,DSO,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
+ 		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." && exit 1;\
+	fi
 	@checksec --file=/tmp/ovms --format=csv > checksec.txt
-	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
- 		error Run checksec on ovms binary and fix issues.;\
+# Stack protector and canary not required if linked with libovms_shared
+	@if ! grep -FRq "Full RELRO,No Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,No" checksec.txt; then\
+ 		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues." && exit 1;\
 	fi
 	@rm -f checksec.txt
 	@rm -f /tmp/ovms
+	@rm -f /tmp/libovms_shared.so
 	@echo "Checksec check success."
 
 test_perf: venv
