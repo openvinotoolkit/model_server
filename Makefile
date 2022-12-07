@@ -271,7 +271,7 @@ test_checksec:
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@checksec --file=/tmp/libovms_shared.so --format=csv > checksec.txt
 	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
- 		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues.";\
+ 		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms binary and fix issues.";\
 	fi
 	@rm -f checksec.txt
 	@rm -f /tmp/ovms
