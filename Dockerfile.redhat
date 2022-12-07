@@ -34,7 +34,7 @@ ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 ARG minitrace_flags
 ENV TF_SYSTEM_LIBS="curl"
-ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/k8-opt/testlogs/test.log"
+ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y \
             boost169-atomic \
