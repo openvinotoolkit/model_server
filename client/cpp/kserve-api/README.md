@@ -492,26 +492,26 @@ Usage:
 Accuracy 100%
 ======Client Statistics======
 Completed request count 10
-Cumulative total request time 264.314 ms
-Cumulative send time 1.09484 ms
-Cumulative receive time 0.024284 ms
+Cumulative total request time 107.524 ms
+Cumulative send time 1.8395 ms
+Cumulative receive time 0.010696 ms
 ```
 
 ### Run the Client to perform inference using rest api
 ```Bash
-./grpc_infer_resnet --help
-Sends requests via KServe gRPC API.
+./http_infer_resnet --help
+Sends requests via KServe rest API.
 Usage:
-  grpc_infer_resnet [OPTION...]
+  http_infer_resnet [OPTION...]
 
   -h, --help                    Show this help message and exit
       --images_list IMAGES      Path to a file with a list of labeled 
                                 images. 
       --labels_list LABELS      Path to a file with a list of labels. 
-      --grpc_address GRPC_ADDRESS
-                                Specify url to grpc service.  (default: 
+      --http_address GRPC_ADDRESS
+                                Specify url to rest service.  (default: 
                                 localhost)
-      --grpc_port PORT          Specify port to grpc service.  (default: 
+      --http_port PORT          Specify port to rest service.  (default: 
                                 9000)
       --input_name INPUT_NAME   Specify input tensor name.  (default: 0)
       --output_name OUTPUT_NAME
@@ -521,13 +521,15 @@ Usage:
       --model_version MODEL_VERSION
                                 Define model version.
       --timeout TIMEOUT         Request timeout. (default: 0)
+
 ```
 
 - Usage Example
 
 ```Bash
-./grpc_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --grpc_port 9000  
+ ./http_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --http_port 8000
 ../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
 ../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
 ../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
 ../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
@@ -536,11 +538,10 @@ Usage:
 ../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock 
 ../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
 ../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
-../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
 Accuracy 100%
 ======Client Statistics======
 Completed request count 10
-Cumulative total request time 264.314 ms
-Cumulative send time 1.09484 ms
-Cumulative receive time 0.024284 ms
+Cumulative total request time 107.524 ms
+Cumulative send time 1.8395 ms
+Cumulative receive time 0.010696 ms
 ```
