@@ -268,13 +268,20 @@ test_checksec:
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/lib/libovms_shared.so /tmp
+	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@checksec --file=/tmp/libovms_shared.so --format=csv > checksec.txt
-	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
- 		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms binary and fix issues.";\
+	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,DSO,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
+ 		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." && exit 1;\
+	fi
+	@checksec --file=/tmp/ovms --format=csv > checksec.txt
+# Stack protector and canary not required if linked with libovms_shared
+	@if ! grep -FRq "Full RELRO,No Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,No" checksec.txt; then\
+ 		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues." && exit 1;\
 	fi
 	@rm -f checksec.txt
 	@rm -f /tmp/ovms
+	@rm -f /tmp/libovms_shared.so
 	@echo "Checksec check success."
 
 test_perf: venv
