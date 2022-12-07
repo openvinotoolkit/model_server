@@ -66,6 +66,8 @@ git_repository(
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
     #                       make bind address configurable
+    #          ^^^^^^^^^^^^
+    #        allow all http methods
 )
 
 # minitrace
