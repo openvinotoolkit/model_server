@@ -254,6 +254,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
+COPY MakefileCapi /ovms/
 
 RUN apt-get update && apt-get install -y python-is-python3 && rm -rf /var/lib/apt/lists/*
 
@@ -292,6 +293,8 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov
 
 # C api shared library
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
+
+# C api app with bazel
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
 
 # Copy binary for //src:ovms
@@ -300,6 +303,9 @@ RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs=$JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && OPENVINO_PATH=/opt/intel/openvino make
+
+# C-api C/C++ app with gcc
+RUN cd /ovms && make -f MakefileCapi cpp && make -f MakefileCapi c
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json

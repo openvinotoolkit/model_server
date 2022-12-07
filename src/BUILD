@@ -87,7 +87,7 @@ cc_shared_library(
 
 cc_library(
     name = "ovms_lib",
-    hdrs = ["pocapi.hpp"],
+    hdrs = ["pocapi.h"],
     srcs = [
         "aliases.hpp",
         "azurestorage.hpp",
@@ -237,7 +237,7 @@ cc_library(
         "pipelineeventqueue.hpp",
         "pipeline_factory.cpp",
         "pipeline_factory.hpp",
-        "pocapi.hpp",
+        "pocapi.h",
         "pocapiinternal.cpp",
         "pocapiinternal.hpp",
         "pocapi.cpp",

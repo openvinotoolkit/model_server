@@ -17,16 +17,18 @@
 #include <stddef.h>
 #include <stdint.h>  //  For precise data types
 
-// TODO extern C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-struct OVMS_Server;
-struct OVMS_Status;
+typedef struct OVMS_Server_ OVMS_Server;
+typedef struct OVMS_Status_ OVMS_Status;
 
-struct OVMS_ServerGeneralOptions;
-struct OVMS_ServerMultiModelOptions;
+typedef struct OVMS_ServerGeneralaOptions_ OVMS_ServerGeneralOptions;
+typedef struct OVMS_ServerMultiModelOptions_ OVMS_ServerMultiModelOptions;
 
 // TODO reuse this in precision.hpp
-enum OVMS_DataType {
+typedef enum OVMS_DataType_enum {
     OVMS_DATATYPE_BF16,
     OVMS_DATATYPE_FP64,
     OVMS_DATATYPE_FP32,
@@ -50,18 +52,17 @@ enum OVMS_DataType {
     OVMS_DATATYPE_Q78,
     OVMS_DATATYPE_BIN,
     OVMS_DATATYPE_END
-};
+} OVMS_DataType;
 
-enum BufferType {
+typedef enum OVMS_BufferType_enum {
     OVMS_BUFFERTYPE_CPU,
     OVMS_BUFFERTYPE_CPU_PINNED,
     OVMS_BUFFERTYPE_GPU,
     OVMS_BUFFERTYPE_HDDL,
-};
+} OVMS_BufferType;
 
-struct OVMS_Status;
-struct OVMS_InferenceRequest;
-struct OVMS_InferenceResponse;
+typedef struct OVMS_InferenceRequest_ OVMS_InferenceRequest;
+typedef struct OVMS_InferenceResponse_ OVMS_InferenceResponse;
 
 typedef enum OVMS_LogLevel_enum {
     OVMS_LOG_TRACE,
@@ -180,29 +181,33 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerMultiModelOptions* multi_model_specific_options);  // in fact only --config_path
 // Unload all and cleanup
 // TODO: Should not be possible to re-start?
-OVMS_Status* OVMS_ServerStop(OVMS_Server* server);
+// OVMS_Status* OVMS_ServerStop(OVMS_Server* server);
 
 // OVMS_InferenceRequest
 OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const char* servableName, uint32_t servableVersion);  // TODO add passing server here
 void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount);
-OVMS_Status* OVMS_InferenceRequestAddInputRaw(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype);  // TODO consider no datatype & handle the parameters NOT IMPLEMENTED
+// OVMS_Status* OVMS_InferenceRequestAddInputRaw(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype);  // TODO consider no datatype & handle the parameters NOT IMPLEMENTED
 
 // ownership of data needs to be maintained during inference
-OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* request, const char* inputName, void* data, size_t bufferSize, BufferType bufferType, uint32_t deviceId);
+OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* request, const char* inputName, void* data, size_t bufferSize, OVMS_BufferType bufferType, uint32_t deviceId);
 OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* request, const char* inputName);
 OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* request, const char* inputName);  // this will allow for reuse of request but with different input data
-OVMS_Status* OVMS_InferenceRequestRemoveAllInputs(OVMS_InferenceRequest* request);
-OVMS_Status* OVMS_InferenceRequestAddRequestedOutput(OVMS_InferenceRequest* request, char* inputName);  // TODO consider the other way around - add not usefull outputs
+// OVMS_Status* OVMS_InferenceRequestRemoveAllInputs(OVMS_InferenceRequest* request);
+// OVMS_Status* OVMS_InferenceRequestAddRequestedOutput(OVMS_InferenceRequest* request, char* inputName);  // TODO consider the other way around - add not usefull outputs
 OVMS_Status* OVMS_InferenceRequestAddParameter(OVMS_InferenceRequest* request, const char* parameterName, OVMS_DataType datatype, const void* data, size_t byteSize);
 OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* request, const char* parameterName);
 
 // OVMS_Inference Response
 OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* response, uint32_t* count);
-OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* response, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, const void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId);
+OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* response, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, const void** data, size_t* bytesize, OVMS_BufferType* bufferType, uint32_t* deviceId);
 OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* response, uint32_t* count);
 OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* response, uint32_t id, OVMS_DataType* datatype, const void** data);
 void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
+
+#ifdef __cplusplus
+}
+#endif

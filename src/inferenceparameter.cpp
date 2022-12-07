@@ -18,7 +18,7 @@
 
 #include <stdexcept>
 
-#include "pocapi.hpp"
+#include "./pocapi.h"
 namespace ovms {
 // TODO should we own our own copy of value?
 //

@@ -17,8 +17,8 @@
 
 #include <utility>
 
+#include "./pocapi.h"
 #include "buffer.hpp"
-#include "pocapi.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -30,7 +30,7 @@ InferenceTensor::InferenceTensor(InferenceTensor&& rhs) :
 InferenceTensor::InferenceTensor(OVMS_DataType datatype, const size_t* shape, size_t dimCount) :
     datatype(datatype),
     shape(shape, shape + dimCount) {}
-Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> deviceId, bool createCopy) {
+Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId, bool createCopy) {
     if (nullptr != buffer) {
         return StatusCode::DOUBLE_BUFFER_SET;
     }  // TODO validate against byteSize == 0
