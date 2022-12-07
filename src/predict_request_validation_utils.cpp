@@ -658,7 +658,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         }
         const Dimension& batchSize = inputInfo->getShape()[batchIndex.value()];
         Mode shapeMode = getShapeMode(shapeInfo, name);
-        if (checkIfNativeFileFormatUsed(proto, name)) { 
+        if (checkIfNativeFileFormatUsed(proto, name)) {
             status = validateNumberOfBinaryInputShapeDimensions(proto);
             if (!status.ok())
                 return status;
