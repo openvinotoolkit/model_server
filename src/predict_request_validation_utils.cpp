@@ -487,8 +487,8 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
 template <typename RequestType, typename InputTensorType, typename IteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::validateInferenceTensorBufferType(const InferenceTensor& it) const {
     const Buffer* buffer = it.getBuffer();
-    const BufferType bufType = buffer->getBufferType();
-    if (bufType < BufferType::OVMS_BUFFERTYPE_CPU || bufType > BufferType::OVMS_BUFFERTYPE_HDDL) {
+    const OVMS_BufferType bufType = buffer->getBufferType();
+    if (bufType < OVMS_BUFFERTYPE_CPU || bufType > OVMS_BUFFERTYPE_HDDL) {
         std::stringstream ss;
         ss << "Required input ";
         const std::string details = ss.str();
@@ -497,7 +497,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
 
     } else {
         // Remove this when other buffer types are supported
-        if (bufType != BufferType::OVMS_BUFFERTYPE_CPU) {
+        if (bufType != OVMS_BUFFERTYPE_CPU) {
             std::stringstream ss;
             ss << "Required input ";
             const std::string details = ss.str();
@@ -506,7 +506,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         }
     }
 
-    if (buffer->getBufferType() == BufferType::OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != std::nullopt && buffer->getDeviceId() != 0) {
+    if (buffer->getBufferType() == OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != std::nullopt && buffer->getDeviceId() != 0) {
         std::stringstream ss;
         ss << "Required input ";
         const std::string details = ss.str();

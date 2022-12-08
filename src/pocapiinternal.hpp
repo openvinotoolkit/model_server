@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "pocapi.hpp"
+#include "./pocapi.h"
 #include "precision.hpp"
 
 namespace ovms {

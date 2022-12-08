@@ -13,7 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-all:
+cpp:
 	bazel build //src:ovms_shared
 	g++ src/main3.cpp -I/ovms/src/ -L/ovms/bazel-bin/src/ -lovms_shared -fPIC --std=c++17 -o /ovms/bazel-bin/src/poc3
 	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/ /ovms/bazel-bin/src/poc3
+
+c:
+	bazel build //src:ovms_shared
+	gcc -c src/main3.c -o /ovms/bazel-bin/src/main3.o -std=c99
+	gcc -o /ovms/bazel-bin/src/poc3_c /ovms/bazel-bin/src/main3.o -lovms_shared -L/ovms/bazel-bin/src/
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/ /ovms/bazel-bin/src/poc3_c

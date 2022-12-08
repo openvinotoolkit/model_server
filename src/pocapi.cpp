@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "pocapi.hpp"
+#include "pocapi.h"  // NOLINT
 
 #include <cstdint>
 #include <memory>
@@ -48,6 +48,10 @@ using ovms::Status;
 using ovms::StatusCode;
 using ovms::Timer;
 using std::chrono::microseconds;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void OVMS_StatusDelete(OVMS_Status* status) {
     if (status == nullptr)
@@ -368,7 +372,7 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const cha
     return nullptr;
 }
 
-OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const char* inputName, void* data, size_t bufferSize, BufferType bufferType, uint32_t deviceId) {
+OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const char* inputName, void* data, size_t bufferSize, OVMS_BufferType bufferType, uint32_t deviceId) {
     if (req == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
     }
@@ -449,7 +453,7 @@ OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, co
     return nullptr;
 }
 
-OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, const void** data, size_t* bytesize, BufferType* bufferType, uint32_t* deviceId) {
+OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, const void** data, size_t* bytesize, OVMS_BufferType* bufferType, uint32_t* deviceId) {
     if (res == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
     }
@@ -637,3 +641,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     return nullptr;
     // return grpc::Status::OK;
 }
+
+#ifdef __cplusplus
+}
+#endif

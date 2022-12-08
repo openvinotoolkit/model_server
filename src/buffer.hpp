@@ -17,21 +17,21 @@
 #include <memory>
 #include <optional>
 
-#include "pocapi.hpp"
+#include "./pocapi.h"
 namespace ovms {
 
 class Buffer {
     const void* ptr;
     size_t byteSize;
-    BufferType bufferType;
+    OVMS_BufferType bufferType;
     std::optional<uint32_t> bufferDeviceId;
     std::unique_ptr<char[]> ownedCopy = nullptr;
 
 public:
-    Buffer(const void* ptr, size_t byteSize, BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt, bool createCopy = false);
+    Buffer(const void* ptr, size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt, bool createCopy = false);
     ~Buffer();
     const void* data() const;
-    BufferType getBufferType() const;
+    OVMS_BufferType getBufferType() const;
     const std::optional<uint32_t>& getDeviceId() const;
     size_t getByteSize() const;
 };

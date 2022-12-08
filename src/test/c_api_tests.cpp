@@ -22,7 +22,7 @@
 // TODO we should not include classes from OVMS here
 // consider how to workaround test_utils
 #include "../inferenceresponse.hpp"
-#include "../pocapi.hpp"
+#include "../pocapi.h"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -367,7 +367,7 @@ TEST_F(CapiInference, Basic) {
     OVMS_DataType datatype = (OVMS_DataType)199;
     const uint64_t* shape{nullptr};
     uint32_t dimCount = 42;
-    BufferType bufferType = (BufferType)199;
+    OVMS_BufferType bufferType = (OVMS_BufferType)199;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceResponseGetOutput(nullptr, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId), StatusCode::NONEXISTENT_RESPONSE);
@@ -583,7 +583,7 @@ TEST_F(CapiInference, ResponseRetrieval) {
     OVMS_DataType datatype = (OVMS_DataType)199;
     const uint64_t* shape{nullptr};
     uint32_t dimCount = 42;
-    BufferType bufferType = (BufferType)199;
+    OVMS_BufferType bufferType = (OVMS_BufferType)199;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceResponseGetOutput(response, outputId + 42123, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId), StatusCode::NONEXISTENT_TENSOR);
