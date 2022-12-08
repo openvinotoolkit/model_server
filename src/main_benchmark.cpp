@@ -14,26 +14,28 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
-#include <numeric>
-#include <iomanip>
-#include <future>
 #include <chrono>
-#include <thread>
-#include <sstream>
-#include <vector>
+#include <future>
+#include <iomanip>
 #include <iostream>
+#include <numeric>
+#include <sstream>
+#include <thread>
+#include <vector>
+
+#include <cxxopts.hpp>
 #include <signal.h>
 #include <stdio.h>
 #include <sysexits.h>
 
-#include <cxxopts.hpp>
-#include "pocapi.hpp"
+#include "pocapi.h"  // NOLINT
 #include "stringutils.hpp"
 
 namespace {
 
 class BenchmarkCLIParser {
     std::unique_ptr<cxxopts::Options> options;
+
 public:
     std::unique_ptr<cxxopts::ParseResult> result;
 
@@ -140,7 +142,6 @@ std::vector<size_t> parseShapes(const std::string& cliInputShapes) {
 }
 
 volatile sig_atomic_t shutdown_request = 0;
-}
 
 static void onInterrupt(int status) {
     shutdown_request = 1;
@@ -174,18 +175,6 @@ static void installSignalHandlers() {
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
 
-//const char* MODEL_NAME = "dummy";
-const char* MODEL_NAME = "resnet";
-const uint64_t MODEL_VERSION = 1;
-//const char* INPUT_NAME = "b";
-const char* INPUT_NAME = "map/TensorArrayStack/TensorArrayGatherV3";
-const char* OUTPUT_NAME = "a";
-//constexpr size_t DIM_COUNT = 2;
-constexpr size_t DIM_COUNT = 4;
-constexpr size_t SECOND_DIM = 150528;
-//constexpr size_t SHAPE[DIM_COUNT] = {1, SECOND_DIM};
-constexpr size_t SHAPE[DIM_COUNT] = {1, 3, 224,224};
-
 using shape_t = std::vector<size_t>;
 
 OVMS_InferenceRequest* prepareRequest(const std::string& modelName, uint64_t modelVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
@@ -193,19 +182,19 @@ OVMS_InferenceRequest* prepareRequest(const std::string& modelName, uint64_t mod
     OVMS_InferenceRequestNew(&request, modelName.c_str(), modelVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
     size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    OVMS_InferenceRequestInputSetData(request, INPUT_NAME, data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0); // TODO sizeof
+    OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);  // TODO sizeof
     return request;
 }
 
 void triggerInferenceInALoop(
     std::future<void>& startSignal,
     std::future<void>& stopSignal,
-    const size_t niterPerThread, // TODO improve with atomic
+    const size_t niterPerThread,
     size_t& wholeThreadTimeUs,
     double& averageWholeLatency,
     double& averagePureLatency,
     OVMS_Server* server,
-    OVMS_InferenceRequest* requests) { // each thread gets 2 to switch between
+    OVMS_InferenceRequest* requests) {  // TODO each thread should get 2 to switch
     OVMS_InferenceResponse* response{nullptr};
     startSignal.get();
     std::vector<uint64_t> latenciesWhole(niterPerThread);
@@ -231,6 +220,7 @@ void triggerInferenceInALoop(
     averageWholeLatency = std::accumulate(latenciesWhole.begin(), latenciesWhole.end(), 0) / (double(niterPerThread) * 1'000);
     averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
 }
+}  // namespace
 // TODO support more than 1 input
 // TODO support 3 modes:
 // * fair play -> don't recreate request, but set buffer inputs
@@ -259,17 +249,17 @@ int main(int argc, char** argv) {
 
     std::string cliLogLevel(cliparser.result->operator[]("log_level").as<std::string>());
     OVMS_LogLevel_enum logLevel;
-    if (cliLogLevel == "TRACE")
+    if (cliLogLevel == "TRACE") {
         logLevel = OVMS_LOG_TRACE;
-    else if (cliLogLevel == "DEBUG")
+    } else if (cliLogLevel == "DEBUG") {
         logLevel = OVMS_LOG_DEBUG;
-    else if (cliLogLevel == "INFO")
+    } else if (cliLogLevel == "INFO") {
         logLevel = OVMS_LOG_INFO;
-    else if (cliLogLevel == "WARN")
+    } else if (cliLogLevel == "WARN") {
         logLevel = OVMS_LOG_WARNING;
-    else if (cliLogLevel == "ERROR")
+    } else if (cliLogLevel == "ERROR") {
         logLevel = OVMS_LOG_ERROR;
-    else {
+    } else {
         std::cout << __LINE__ << std::endl;
         return EX_USAGE;
     }
@@ -317,7 +307,7 @@ int main(int argc, char** argv) {
     size_t niterPerThread = niter / threadCount;
 
     size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    std::vector<float> data (elementsCount, 0.1);
+    std::vector<float> data(elementsCount, 0.1);
 
     ///////////////////////
     // prepare time measuring
@@ -342,7 +332,7 @@ int main(int argc, char** argv) {
     OVMS_DataType responseDatatype = (OVMS_DataType) 42;
     const uint64_t* outputShape{nullptr};
     uint32_t dimCount = 0;
-    BufferType bufferType = (BufferType)42;
+    OVMS_BufferType bufferType = (OVMS_BufferType)42;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
     ///////////////////////
