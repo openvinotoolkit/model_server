@@ -18,10 +18,10 @@
 #include <utility>
 #include <vector>
 
+#include "./pocapi.h"
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
 #include "modelversion.hpp"
-#include "pocapi.hpp"
 
 namespace ovms {
 

@@ -1,0 +1,136 @@
+//*****************************************************************************
+// Copyright 2022 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+
+#include <stdio.h>
+#include <string.h>
+
+#include "pocapi.h"
+
+int main() {
+    OVMS_ServerGeneralOptions* go = 0;
+    OVMS_ServerMultiModelOptions* mmo = 0;
+    OVMS_Server* srv;
+
+    OVMS_ServerGeneralOptionsNew(&go);
+    OVMS_ServerMultiModelOptionsNew(&mmo);
+    OVMS_ServerNew(&srv);
+
+    OVMS_ServerGeneralOptionsSetGrpcPort(go, 11337);
+    OVMS_ServerGeneralOptionsSetRestPort(go, 11338);
+
+    OVMS_ServerGeneralOptionsSetLogLevel(go, OVMS_LOG_DEBUG);
+    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config.json");
+
+    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
+
+    if (res) {
+        uint32_t code = 0;
+        const char* details = 0;
+
+        OVMS_StatusGetCode(res, &code);
+        OVMS_StatusGetDetails(res, &details);
+
+        fprintf(stderr, "error during start: code %d, details: %s\n", code, details);
+
+        OVMS_StatusDelete(res);
+
+        OVMS_ServerDelete(srv);
+        OVMS_ServerMultiModelOptionsDelete(mmo);
+        OVMS_ServerGeneralOptionsDelete(go);
+        return 1;
+    }
+
+    printf("Server ready for inference\n");
+
+    const uint64_t SHAPE_N = 30;
+    const uint64_t SHAPE_C = 20;
+    const uint64_t SHAPE[2] = {SHAPE_N, SHAPE_C};
+    const size_t NUM_ELEMENTS = SHAPE_N * SHAPE_C;
+    const size_t DATA_SIZE = NUM_ELEMENTS * sizeof(float);
+    const float INPUT_ELEMENT_VALUE = 3.2f;
+
+    float inputData[DATA_SIZE];
+    for (int i = 0; i < NUM_ELEMENTS; i++) {
+        inputData[i] = INPUT_ELEMENT_VALUE;
+    }
+
+    OVMS_InferenceRequest* request = NULL;
+    OVMS_InferenceRequestNew(&request, "dummy", 1);
+    OVMS_InferenceRequestAddInput(request, "b", OVMS_DATATYPE_FP32, SHAPE, 2);
+    OVMS_InferenceRequestInputSetData(request, "b", inputData, DATA_SIZE, OVMS_BUFFERTYPE_CPU, 0);
+
+    OVMS_InferenceResponse* response = NULL;
+    res = OVMS_Inference(srv, request, &response);
+    if (res) {
+        uint32_t code = 0;
+        const char* details = 0;
+
+        OVMS_StatusGetCode(res, &code);
+        OVMS_StatusGetDetails(res, &details);
+
+        fprintf(stderr, "error during inference: code %d, details: %s\n", code, details);
+
+        OVMS_StatusDelete(res);
+
+        OVMS_InferenceRequestDelete(request);
+
+        OVMS_ServerDelete(srv);
+        OVMS_ServerMultiModelOptionsDelete(mmo);
+        OVMS_ServerGeneralOptionsDelete(go);
+        return 1;
+    }
+
+    const char* oName = NULL;  // not needed
+    OVMS_DataType oType;  // not needed
+    const uint64_t* oShape;  // not needed
+    uint32_t oDims;  // not needed
+    const void* oData = NULL;
+    size_t oNumBytes = 0;
+    OVMS_BufferType oBuffType;  // not needed
+    uint32_t oDeviceId;  // not needed
+    OVMS_InferenceResponseGetOutput(response, 0, &oName, &oType, &oShape, &oDims, &oData, &oNumBytes, &oBuffType, &oDeviceId);
+
+    float expectedOutput[DATA_SIZE];
+    for (int i = 0; i < NUM_ELEMENTS; i++) {
+        expectedOutput[i] = INPUT_ELEMENT_VALUE + 1.0f;
+    }
+    if (memcmp(oData, expectedOutput, DATA_SIZE) != 0) {
+        fprintf(stderr, "output is not correct\n");
+
+        OVMS_InferenceResponseDelete(response);
+        OVMS_InferenceRequestDelete(request);
+
+        OVMS_ServerDelete(srv);
+
+        OVMS_ServerMultiModelOptionsDelete(mmo);
+        OVMS_ServerGeneralOptionsDelete(go);
+        return 1;
+    } else {
+        printf("output is correct\n");
+    }
+
+    OVMS_InferenceResponseDelete(response);
+    OVMS_InferenceRequestDelete(request);
+
+    printf("No more job to be done, will shut down\n");
+
+    OVMS_ServerDelete(srv);
+    OVMS_ServerMultiModelOptionsDelete(mmo);
+    OVMS_ServerGeneralOptionsDelete(go);
+
+    printf("main() exit\n");
+    return 0;
+}
