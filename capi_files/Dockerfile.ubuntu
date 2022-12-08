@@ -15,6 +15,19 @@
 #
 
 ARG BASE_IMAGE=ubuntu:20.04
+FROM $BASE_IMAGE as base_build
+
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
+             --gid 5000 --shell /bin/bash --skel /dev/null ovms
+
+COPY capi.tar.gz /
+RUN tar -xf capi.tar.gz
+RUN chown -R ovms:ovms /capi
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+ARG BASE_IMAGE=ubuntu:20.04
 FROM $BASE_IMAGE as release
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
@@ -25,9 +38,7 @@ RUN	set -e ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY drivers /drivers
-COPY capi.tar.gz /
-RUN tar -xf capi.tar.gz
-RUN chown -R ovms:ovms /capi
+COPY --from=base_build /capi /capi
 
 ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5"
 
