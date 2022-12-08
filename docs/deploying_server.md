@@ -67,6 +67,7 @@ result_index = np.argmax(output[0])
 print(imagenet_classes[result_index])' >> predict.py
 
 python predict.py
+zebra
 ```
 If everything is set up correctly, you will see 'zebra' prediction in the output.
 
@@ -88,7 +89,6 @@ Learn more about model server [starting parameters](parameters.md).
 
 There are three recommended methods for deploying OpenVINO Model Server in Kubernetes:
 1. [helm chart](https://github.com/openvinotoolkit/operator/tree/main/helm-charts/ovms) - deploys Model Server instances using the [helm](https://helm.sh) package manager for Kubernetes
-
 2. [Kubernetes Operator](https://operatorhub.io/operator/ovms-operator) - manages Model Server using a Kubernetes Operator
 3. [OpenShift Operator](https://github.com/openvinotoolkit/operator/blob/main/docs/operator_installation.md#openshift) - manages Model Server instances in Red Hat OpenShift
 
