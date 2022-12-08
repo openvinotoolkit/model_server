@@ -105,9 +105,9 @@ cd model_server
 make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 ```
 
-## Model Server image with DG2 support (Ubuntu 20.04)
+## Model Server image with Intel® Data Center GPU Flex Series and Intel® Arc™ GPU support (Ubuntu 20.04)
 
-Image with DG2 GPU support has not been published. To build the image yourself you need to have DG2 drivers installed on the host and NEO Runtime packages available. 
+Image with Intel® Data Center GPU Flex Series and Intel® Arc™ GPU support has not been published. To build the image yourself you need to have Intel® Data Center GPU Flex Series and Intel® Arc™ GPU drivers installed on the host and NEO Runtime packages available. 
 
 Put NEO Runtime packages in the catalog `<model_server_dir>/release_files/drivers/dg2` and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
 
