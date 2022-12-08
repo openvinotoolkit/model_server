@@ -18,10 +18,10 @@
 #include <string>
 #include <unordered_map>
 
+#include "./pocapi.h"
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
 #include "modelversion.hpp"
-#include "pocapi.hpp"
 
 namespace ovms {
 
@@ -43,7 +43,7 @@ public:
     Status removeInput(const char* name);
     Status removeAllInputs();
 
-    Status setInputBuffer(const char* name, const void* addr, size_t byteSize, BufferType, std::optional<uint32_t> deviceId);
+    Status setInputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType, std::optional<uint32_t> deviceId);
     Status removeInputBuffer(const char* name);
     Status addParameter(const char* parameterName, OVMS_DataType datatype, const void* data);
     Status removeParameter(const char* parameterName);

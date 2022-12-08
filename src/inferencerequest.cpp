@@ -35,7 +35,7 @@ Status InferenceRequest::addInput(const char* name, OVMS_DataType datatype, cons
     auto [it, emplaced] = inputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
-Status InferenceRequest::setInputBuffer(const char* name, const void* addr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> deviceId) {
+Status InferenceRequest::setInputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto it = inputs.find(name);
     if (it == inputs.end()) {
         return StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER;
