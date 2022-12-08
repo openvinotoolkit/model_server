@@ -291,6 +291,7 @@ test_checksec:
 	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,DSO,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
  		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." && exit 1;\
 	fi
+	@echo "Running checksec on ovms binary..."
 	@checksec --file=/tmp/ovms --format=csv > checksec.txt
 # Stack protector and canary not required if linked with libovms_shared
 	@if ! grep -FRq "Full RELRO,No Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,No" checksec.txt; then\
