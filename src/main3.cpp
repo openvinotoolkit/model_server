@@ -13,10 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-// #include <chrono>
-// #include <iostream>
-// #include <thread>
-
+#include <numeric>
+#include <chrono>
+#include <thread>
+#include <array>
+#include <sstream>
+#include <iostream>
 #include <signal.h>
 #include <stdio.h>
 
@@ -58,6 +60,14 @@ static void installSignalHandlers() {
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
 
+const char* MODEL_NAME = "dummy";
+const uint64_t MODEL_VERSION = 1;
+const char* INPUT_NAME = "b";
+const char* OUTPUT_NAME = "b";
+constexpr size_t DIM_COUNT = 2;
+constexpr size_t SHAPE[DIM_COUNT] = {1, 10};
+
+
 int main(int argc, char** argv) {
     installSignalHandlers();
 
@@ -69,11 +79,13 @@ int main(int argc, char** argv) {
     OVMS_ServerMultiModelOptionsNew(&mmo);
     OVMS_ServerNew(&srv);
 
-    OVMS_ServerGeneralOptionsSetGrpcPort(go, 11337);
+    //OVMS_ServerGeneralOptionsSetGrpcPort(go, 11337);
+    OVMS_ServerGeneralOptionsSetGrpcPort(go, 9178);
     OVMS_ServerGeneralOptionsSetRestPort(go, 11338);
 
     OVMS_ServerGeneralOptionsSetLogLevel(go, OVMS_LOG_DEBUG);
-    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config.json");
+    //OVMS_ServerGeneralOptionsSetLogLevel(go, OVMS_LOG_INFO);
+    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json");
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
 
@@ -96,15 +108,65 @@ int main(int argc, char** argv) {
 
     fprintf(stdout, "Server ready for inference\n");
 
-    // infer 1
-    // infer 2
-    // infer 3
+    // prepare request
+    constexpr size_t requests = 10;
+    std::array<float, requests> wholeTimes;
+    std::array<float, requests> pureTimes;
+for(size_t j = 0; j < requests; ++j) {
+    auto wholeRequestStart = std::chrono::high_resolution_clock::now();
+    OVMS_InferenceRequest* request{nullptr};
+    res = OVMS_InferenceRequestNew(&request, MODEL_NAME, MODEL_VERSION);
+    OVMS_InferenceRequestAddInput(request, INPUT_NAME, OVMS_DATATYPE_FP32, SHAPE, DIM_COUNT);
+    std::array<float, SHAPE[1]> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    OVMS_InferenceRequestInputSetData(request, INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, 0);
+    // run sync request
+    OVMS_InferenceResponse* response = nullptr;
+    auto pureInferenceStart = std::chrono::high_resolution_clock::now();
+    OVMS_Inference(srv, request, &response);
+    auto pureInferenceStop = std::chrono::high_resolution_clock::now();
+    auto pureInferenceTime = std::chrono::duration_cast<std::chrono::microseconds>(pureInferenceStop - pureInferenceStart).count();
+    // read output
+    uint32_t outputCount = 0;
+    OVMS_InferenceResponseGetOutputCount(response, &outputCount);
+    const void* voutputData;
+    size_t bytesize = 0;
+    uint32_t outputId = outputCount - 1;
+    OVMS_DataType datatype = (OVMS_DataType) 42;
+    const uint64_t* shape{nullptr};
+    uint32_t dimCount = 0;
+    BufferType bufferType = (BufferType)42;
+    uint32_t deviceId = 42;
+    const char* outputName{nullptr};
+    OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
+    auto wholeRequestStop = std::chrono::high_resolution_clock::now();
+    auto wholeRequestTime = std::chrono::duration_cast<std::chrono::microseconds>(wholeRequestStop - wholeRequestStart).count();
+    // TODO error handling
+    std::stringstream ss;
+    ss << "Got response from OVMS via C-API. "
+              << "Request for model: " << MODEL_NAME
+              << "; version: " << MODEL_VERSION
+              << "; took: " << wholeRequestTime / 1000.0
+              << "; took: " << pureInferenceTime / 1000.0
+              << "ms; output name: " << outputName
+              << "; response with values:\n";
+    for (size_t i = 0; i < shape[1]; ++i) {
+            ss << *(reinterpret_cast<const float*>(voutputData) + i) << " ";
+    }
+    std::cout << ss.str() << std::endl;
+    std::cout << wholeRequestTime << std::endl;
+    std::cout << pureInferenceTime << std::endl;
+    wholeTimes[j] = wholeRequestTime;
+    pureTimes[j] = pureInferenceTime;
+}
+    double totalWhole = std::accumulate(wholeTimes.begin(), wholeTimes.end(), 0.)/requests/1000;
+    double totalPure = std::accumulate(pureTimes.begin(), pureTimes.end(), 0.)/requests/1000;
+    std::cout <<totalWhole << std::endl;
+    std::cout <<totalPure << std::endl;
 
     // Application loop if required (C++):
-    // while (shutdown_request == 0) {
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    // }
-
+    while (shutdown_request == 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
     fprintf(stdout, "No more job to be done, will shut down\n");
 
     OVMS_ServerDelete(srv);
@@ -112,5 +174,7 @@ int main(int argc, char** argv) {
     OVMS_ServerGeneralOptionsDelete(go);
 
     fprintf(stdout, "main() exit\n");
+    int a;
+    std::cin >> a;
     return 0;
 }

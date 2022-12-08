@@ -573,6 +573,25 @@ cc_library(
 )
 
 cc_binary(
+    name = "capi_benchmark",
+    srcs = [
+        "main_benchmark.cpp",
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+    ],
+    copts = [
+    ],
+    deps = [
+        "//src:ovms_lib",
+    ],
+    linkstatic = True,
+)
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",

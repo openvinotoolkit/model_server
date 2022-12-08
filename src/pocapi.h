@@ -191,7 +191,7 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const
 // OVMS_Status* OVMS_InferenceRequestAddInputRaw(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype);  // TODO consider no datatype & handle the parameters NOT IMPLEMENTED
 
 // ownership of data needs to be maintained during inference
-OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* request, const char* inputName, void* data, size_t bufferSize, OVMS_BufferType bufferType, uint32_t deviceId);
+OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* request, const char* inputName, const void* data, size_t bufferSize, OVMS_BufferType bufferType, uint32_t deviceId);
 OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* request, const char* inputName);
 OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* request, const char* inputName);  // this will allow for reuse of request but with different input data
 // OVMS_Status* OVMS_InferenceRequestRemoveAllInputs(OVMS_InferenceRequest* request);
