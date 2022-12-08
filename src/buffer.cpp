@@ -18,7 +18,7 @@
 #include <cstring>
 
 namespace ovms {
-Buffer::Buffer(const void* pptr, size_t byteSize, BufferType bufferType, std::optional<uint32_t> bufferDeviceId, bool createCopy) :
+Buffer::Buffer(const void* pptr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> bufferDeviceId, bool createCopy) :
     ptr(createCopy ? nullptr : pptr),
     byteSize(byteSize),
     bufferType(bufferType),
@@ -39,7 +39,7 @@ size_t Buffer::getByteSize() const {
     return byteSize;
 }
 
-BufferType Buffer::getBufferType() const {
+OVMS_BufferType Buffer::getBufferType() const {
     return this->bufferType;
 }
 

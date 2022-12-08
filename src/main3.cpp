@@ -20,7 +20,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-#include "pocapi.hpp"
+#include "./pocapi.h"
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
