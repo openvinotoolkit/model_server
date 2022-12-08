@@ -208,8 +208,6 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
 # C api app with bazel
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
 
-# Copy binary for //src:ovms
-RUN cp $(bazel info bazel-bin)/src/libovms_shared.so src
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs=$JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 

@@ -18,6 +18,7 @@ __pycache__
 .workspace
 *user_config*
 *.swp
+capi/
 dist/
 lib/
 !client/python/ovmsclient/lib
