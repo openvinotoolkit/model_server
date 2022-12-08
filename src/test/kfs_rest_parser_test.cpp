@@ -324,7 +324,7 @@ TEST_F(KFSRestParserTest, parseValidRequestBYTES_noBinaryDataSizeParameter) {
     "inputs" : [
         {
         "name" : "input0",
-        "shape" : [ 2, 2 ],
+        "shape" : [1],
         "datatype" : "BYTES"
         }
     ]
@@ -335,9 +335,23 @@ TEST_F(KFSRestParserTest, parseValidRequestBYTES_noBinaryDataSizeParameter) {
     auto proto = parser.getProto();
     ASSERT_EQ(proto.inputs_size(), 1);
     ASSERT_EQ(proto.inputs()[0].name(), "input0");
-    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(1));
     ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
     ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 0);
+}
+
+TEST_F(KFSRestParserTest, parseInvalidRequestBYTES_noBinaryDataSizeParameter) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [2],
+        "datatype" : "BYTES"
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
 TEST_F(KFSRestParserTest, parseInvalidRequestBYTES_noBinaryDataSizeParameter_twoInputs) {

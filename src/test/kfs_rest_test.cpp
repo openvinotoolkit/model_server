@@ -376,14 +376,13 @@ static void assertBinaryInputsBYTES(const std::string& modelName, const std::opt
 
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "BYTES");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
-    ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
     ASSERT_EQ(grpc_request.inputs()[0].contents().bytes_contents()[0], binaryData);
     ASSERT_EQ(grpc_request.inputs()[0].contents().bytes_contents_size(), 1);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES) {
     std::string binaryData{0x00, 0x01, 0x02, 0x03};
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":4}}]}";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":4}}]}";
     request_body += binaryData;
 
     ::KFSRequest grpc_request;
@@ -395,7 +394,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES) {
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_noBinaryDataSizeParameter) {
     std::string binaryData{0x00, 0x01, 0x02, 0x03};
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"BYTES\"}]}";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\"}]}";
     request_body += binaryData;
 
     ::KFSRequest grpc_request;
