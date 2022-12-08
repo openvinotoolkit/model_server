@@ -15,44 +15,29 @@
 #
 
 ARG BASE_IMAGE=ubuntu:20.04
-FROM $BASE_IMAGE as base_build
-
-SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl tzdata ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-WORKDIR /
-COPY capi.tar.gz /
-RUN tar -xf capi.tar.gz
-RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
-             --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
-    chown -R ovms:ovms /capi
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
 FROM $BASE_IMAGE as release
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
 WORKDIR /
-
-COPY drivers /drivers
-
 RUN	set -e ; \
 	set -x ; \
-        apt update -y ; \
-        apt install -y curl libpugixml1v5 ; \
-	apt-get clean ; \
-        rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
         groupadd --gid 5000 ovms ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
-COPY --from=base_build /usr/local/lib/ /capi/lib/
-COPY --from=base_build /capi /capi
+COPY drivers /drivers
+COPY capi.tar.gz /
+RUN tar -xf capi.tar.gz
+RUN chown -R ovms:ovms /capi
+
+ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5"
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ${BUILD_DEPENDENCIES} && \
+    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
+WORKDIR /capi/demos
+RUN make -f MakefileCapi cpp
+RUN make -f MakefileCapi c
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /capi/thirdparty-licenses/GPL.txt
 USER ovms

@@ -171,7 +171,8 @@ clang-format: venv
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
 
 .PHONY: docker_build
-docker_build:
+docker_build: ovms_build targz_package ovms_docker capi_docker
+ovms_build:
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
@@ -215,12 +216,16 @@ endif
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg JOBS=$(JOBS)
+
+targz_package:
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) --build-arg BASE_OS=$(BASE_OS) \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg BASE_OS=$(BASE_OS) \
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+
+ovms_docker:
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
 		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
 			"tar -c -C / ovms.tar* ; sleep 2" | tar -x
@@ -250,7 +255,7 @@ endif
 	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
 	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
 
-capi_build:
+capi_docker:
 	rm -vrf capi/$(DIST_OS) && mkdir -vp capi/$(DIST_OS) && cd capi/$(DIST_OS) && \
 		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
 			"tar -c -C / capi.tar* ; sleep 2" | tar -x
