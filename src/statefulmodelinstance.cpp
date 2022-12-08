@@ -200,10 +200,10 @@ Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow:
     if (!status.ok())
         return status;
     this->sequenceId = sequenceProcessingSpec.getSequenceId();
-    if (!sequenceManager.sequenceExists(this->sequenceId))
+    if (!sequenceManager.sequenceExists(this->sequenceId.value()))
         return StatusCode::INTERNAL_ERROR;
     // TODO should be able to search & get in one go
-    sequence = &sequenceManager.getSequence(this->sequenceId);
+    sequence = &sequenceManager.getSequence(this->sequenceId.value());
 
     sequenceLock = std::make_unique<std::unique_lock<std::mutex>>(sequence->getMutex());
     sequenceManagerLock->unlock();
@@ -238,6 +238,10 @@ Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow:
         }
     } else {
         auto modelState = inferRequest.query_state();
+        if (!sequence) {
+            SPDLOG_ERROR("sequence is not set");
+            return StatusCode::INTERNAL_ERROR;
+        }
         sequence->updateMemoryState(modelState);
     }
     // Include sequence_id in server response
@@ -254,7 +258,11 @@ Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow:
     Status status;
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         sequenceManagerLock->lock();
-        status = sequenceManager.removeSequence(this->sequenceId);
+        if (!this->sequenceId.has_value()) {
+            SPDLOG_ERROR("sequenceId is not set");
+            return StatusCode::INTERNAL_ERROR;
+        }
+        status = sequenceManager.removeSequence(this->sequenceId.value());
     }
     return status;
 }

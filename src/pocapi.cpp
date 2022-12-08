@@ -568,7 +568,15 @@ enum : unsigned int {
 static Status getModelInstance(ovms::Server& server, const InferenceRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
-    auto& modelManager = dynamic_cast<const ServableManagerModule*>(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME))->getServableManager();
+    if (!server.isLive()) {
+        return ovms::Status(ovms::StatusCode::INTERNAL_ERROR, "server is not live");
+    }
+    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+    if (!servableModule) {
+        // TODO: Should we wait for servable manager to appear? And for model to get loaded?
+        return ovms::Status(ovms::StatusCode::INTERNAL_ERROR, "missing servable manager");
+    }
+    auto& modelManager = dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
     return modelManager.getModelInstance(request->getServableName(), request->getServableVersion(), modelInstance, modelInstanceUnloadGuardPtr);
 }
 }  // namespace
