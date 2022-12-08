@@ -71,7 +71,7 @@ model/
 
 For more information about the directory structure and how to deploy multiple models at a time, check out the following sections:
 - [Prepare models](models_repository.md)
-- [Deploy multiple models at once and to start a Docker container with a configuration file](single_model_mode)
+- [Deploy multiple models at once and to start a Docker container with a configuration file](single_model_mode.md)
 
 
 ### Step 5: Prepare the Example Client Components
