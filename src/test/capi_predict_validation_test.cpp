@@ -440,7 +440,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectBufferType) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        requestData, decrementBufferSize, static_cast<BufferType>(999));
+        requestData, decrementBufferSize, static_cast<OVMS_BufferType>(999));
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BUFFER_TYPE) << status.string();
 }
@@ -455,7 +455,7 @@ TEST_F(CAPIPredictValidation, RequestNegativeBufferType) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        requestData, decrementBufferSize, static_cast<BufferType>(-22));
+        requestData, decrementBufferSize, static_cast<OVMS_BufferType>(-22));
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BUFFER_TYPE) << status.string();
 }
@@ -470,7 +470,7 @@ TEST_F(CAPIPredictValidation, RequestIncorectDeviceId) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        requestData, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_CPU, 1);
+        requestData, decrementBufferSize, OVMS_BUFFERTYPE_CPU, 1);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_DEVICE_ID) << status.string();
 }
@@ -485,7 +485,7 @@ TEST_F(CAPIPredictValidation, RequestIncorectBufferType) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        requestData, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_GPU);
+        requestData, decrementBufferSize, OVMS_BUFFERTYPE_GPU);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BUFFER_TYPE) << status.string();
 }
@@ -501,7 +501,7 @@ TEST_F(CAPIPredictValidation, RequestCorectDeviceId) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        requestData, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_GPU, 1);
+        requestData, decrementBufferSize, OVMS_BUFFERTYPE_GPU, 1);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
@@ -516,7 +516,7 @@ TEST_F(CAPIPredictValidation, RequestNotNullDeviceId) {
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             {"Input_U16_1_2_8_4_NCHW",
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-        requestData, decrementBufferSize, BufferType::OVMS_BUFFERTYPE_CPU, 1);
+        requestData, decrementBufferSize, OVMS_BUFFERTYPE_CPU, 1);
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_DEVICE_ID) << status.string();
 }
