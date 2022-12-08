@@ -239,48 +239,6 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
     }
 }
 
-std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body) {
-    static const std::unordered_map<std::string, std::string> types = {
-        {"BOOL", "bool_contents"},
-        {"INT8", "int_contents"},
-        {"INT16", "int_contents"},
-        {"INT32", "int_contents"},
-        {"INT64", "int64_contents"},
-        {"UINT8", "uint_contents"},
-        {"UINT16", "uint_contents"},
-        {"UINT32", "uint_contents"},
-        {"UINT64", "uint64_contents"},
-        {"FP32", "fp32_contents"},
-        {"FP64", "fp64_contents"},
-        {"BYTES", "bytes_contents"}};
-
-    Document doc;
-    doc.Parse(request_body.c_str());
-    Value& inputs = doc["inputs"];
-    for (SizeType i = 0; i < inputs.Size(); i++) {
-        Value data = inputs[i].GetObject()["data"].GetArray();
-        Value contents(rapidjson::kObjectType);
-        auto it = types.find(inputs[i].GetObject()["datatype"].GetString());
-        if (it == types.end())
-            return "";
-        // TODO confirm its not an issue
-        Value datatype(it->second.c_str(), doc.GetAllocator());
-        contents.AddMember(datatype, data, doc.GetAllocator());
-        inputs[i].AddMember("contents", contents, doc.GetAllocator());
-        parseParams(inputs[i], doc);
-    }
-    Value& outputs = doc["outputs"];
-    for (SizeType i = 0; i < outputs.Size(); i++) {
-        parseParams(outputs[i], doc);
-    }
-    parseParams(doc, doc);
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-
-    return buffer.GetString();
-}
-
 static Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
     std::stringstream streamData(comma_separated_numbers);
     std::vector<int> sizes_;

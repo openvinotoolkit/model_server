@@ -57,7 +57,6 @@ public:
          * @brief Gets the instance of the config
          */
     static Config& instance() {
-        // TODO to remove singleton
         static Config instance;
 
         return instance;
