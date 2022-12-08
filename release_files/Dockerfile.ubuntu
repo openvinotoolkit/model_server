@@ -25,6 +25,8 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl tzdata ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
+ARG NVIDIA=0
+
 # for VPU
 ARG BUILD_DEPENDENCIES="autoconf \
                         automake \
@@ -71,6 +73,7 @@ ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
 ARG INSTALL_DRIVER_VERSION="22.35.24055"
 ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
+ARG NVIDIA=0
 ENV GPU=$GPU
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
@@ -83,7 +86,7 @@ RUN	set -e ; \
         apt update -y ; \
         apt install -y curl libpugixml1v5 ; \
 	if [ "$GPU" == "1" ] ; then \
-                apt install -y libnuma1 ocl-icd-libopencl1 ; \
+                apt-get update && apt-get  install -y libnuma1 ocl-icd-libopencl1 && rm -rf /var/lib/apt/lists/* && \
 	        case $INSTALL_DRIVER_VERSION in \
                 "20.35.17767") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
@@ -127,8 +130,8 @@ RUN	set -e ; \
                         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
                 ;; \
                 *) \
-                        dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd ; \
-                        apt-get update && apt-get -y install dpkg-dev ; \
+                        dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
+                        apt-get update && apt-get -y install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
                         cd /drivers/${INSTALL_DRIVER_VERSION} && \
                             dpkg-scanpackages .  > Packages && \
                             cd - ; \
@@ -137,10 +140,11 @@ RUN	set -e ; \
                         apt-get install -y \
                             intel-opencl-icd \
                             intel-level-zero-gpu level-zero \
-                            intel-media-va-driver-non-free libmfx1 ; \
+                            intel-media-va-driver-non-free libmfx1 && \
+                            rm -rf /var/lib/apt/lists/* ; \
                 esac ; \
 	fi ; \
-	apt clean ; \
+	apt-get clean ; \
         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
         groupadd --gid 5000 ovms ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
@@ -163,6 +167,13 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 # for NCS
 RUN if [ -f /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules ]; then mkdir -p /etc/udev/rules.d/ && cp /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules /etc/udev/rules.d/ && ldconfig ; fi
+# for NVIDIA
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
+    apt update -y && \
+    apt install -y curl && \
+    cd etc/apt/preferences.d && curl -o cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin ; \
+    apt update && apt install -y --no-install-recommends libcudnn8 libcutensor1 libpng16-16 &&  \
+    apt clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms

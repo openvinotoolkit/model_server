@@ -109,11 +109,25 @@ make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 
 Image with Intel® Data Center GPU Flex Series and Intel® Arc™ GPU support has not been published. To build the image yourself you need to have Intel® Data Center GPU Flex Series and Intel® Arc™ GPU drivers installed on the host and NEO Runtime packages available. 
 
-Put NEO Runtime packages in the catalog `<model_server_dir>/release_files/drivers/dg2` and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
+Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
+```
+drivers
+└── dg2
+     ├── intel-igc-core_<version>_amd64.deb
+     ├── intel-igc-opencl_<version>_amd64.deb
+     ├── intel-level-zero-gpu-dbgsym_<version>_amd64.ddeb
+     ├── intel-level-zero-gpu_<version>_amd64.deb
+     ├── intel-opencl-icd-dbgsym_<version>_amd64.ddeb
+     ├── intel-opencl-icd_<version>_amd64.deb
+     ├── libigdgmm12_<version>_amd64.deb
+     └── libigdgmm12_<version>_amd64.deb
+```
+
+and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
 
 Example:
 ```
-make docker_build BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=ovms_dg2 INSTALL_DRIVER_VERSION=dg2
+make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
 ```
 
 ## Using Multi-Device Plugin
@@ -223,4 +237,19 @@ THROUGHTPUT
             --target_device AUTO
 ```
 
-> **NOTE**: Currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
+> **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
+
+## Using NVIDIA Plugin
+
+*Note:* To build container with NVIDIA plugin use commands:
+```bash
+   git clone https://github.com/openvinotoolkit/model_server.git
+   cd model_server
+   make docker_build NVIDIA=1 OV_USE_BINARY=0
+```
+
+Example command to run container with NVIDIA support:
+
+```bash
+   docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --target_device NVIDIA
+```

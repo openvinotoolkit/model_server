@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -497,6 +498,33 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     return StatusCode::OK;
 }
 
+static std::set<std::string> getRequestedBinaryOutputsNames(::KFSRequest& grpc_request) {
+    std::set<std::string> binaryOutputs;
+    bool byDefaultBinaryOutpuRequested = false;
+    for (auto& parameter : grpc_request.parameters()) {
+        if (parameter.second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam) {
+            if (parameter.first == "binary_data_output") {
+                byDefaultBinaryOutpuRequested = parameter.second.bool_param();
+                break;
+            }
+        }
+    }
+    for (const inference::ModelInferRequest_InferRequestedOutputTensor& output : grpc_request.outputs()) {
+        bool specificBinaryOutputRequested = byDefaultBinaryOutpuRequested;
+        for (auto& parameter : output.parameters()) {
+            if ((parameter.second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) &&
+                (parameter.first == "binary_data")) {
+                specificBinaryOutputRequested = parameter.second.bool_param();
+                break;
+            }
+        }
+        if (specificBinaryOutputRequested) {
+            binaryOutputs.insert(output.name());
+        }
+    }
+    return binaryOutputs;
+}
+
 Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength) {
     Timer<TIMER_END> timer;
     timer.start(TOTAL);
@@ -524,9 +552,9 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     if (!gstatus.ok()) {
         return gstatus;
     }
+    std::set<std::string> requestedBinaryOutputsNames = getRequestedBinaryOutputsNames(grpc_request);
     std::string output;
-    google::protobuf::util::JsonPrintOptions opts_out;
-    status = ovms::makeJsonFromPredictResponse(grpc_response, &output, inferenceHeaderContentLength);
+    status = ovms::makeJsonFromPredictResponse(grpc_response, &output, inferenceHeaderContentLength, requestedBinaryOutputsNames);
     if (!status.ok()) {
         return status;
     }

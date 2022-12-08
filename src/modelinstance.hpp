@@ -149,6 +149,11 @@ protected:
     static constexpr std::array<const char*, 2> PADDLE_MODEL_FILES_EXTENSIONS{".pdmodel", ".pdiparams"};
 
     /**
+      * @brief Stores required tensorflow model files extensions to be able to load model
+      */
+    static constexpr std::array<const char*, 1> TF_MODEL_FILES_EXTENSIONS{".pb"};
+
+    /**
          * @brief Notifies model instance users who wait for loading
          */
     std::condition_variable modelLoadedNotify;
@@ -554,5 +559,8 @@ public:
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
 
     uint32_t getNumOfStreams() const;
+
+    template <class ArrayType>
+    void fetchModelFiles(bool& found, ArrayType ext);
 };
 }  // namespace ovms

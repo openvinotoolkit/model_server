@@ -1673,12 +1673,23 @@ TEST_F(EnsembleFlowTest, OrderOfScheduling) {
     pipeline.push(std::move(node_3));
 
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    EXPECT_THAT(order, ElementsAre(
-                           1,    // try to schedule node_1 with success
-                           2,    // try to schedule node_2, defer (with order ticket #1)
-                           3,    // after node_1 ends, try to run next node (node_3), defer with order ticket #2
-                           2,    // also try to schedule previously deferred nodes, node_2 gets scheduled with success
-                           3));  // node_2 ends, try to schedule previously deferred node_3 with success
+    std::vector<int> expectedOrder = {
+        1,   // try to schedule node_1 with success
+        2,   // try to schedule node_2, defer (with order ticket #1)
+        3,   // after node_1 ends, try to run next node (node_3), defer with order ticket #2
+        2,   // also try to schedule previously deferred nodes, node_2 gets scheduled with success
+        3};  // node_2 ends, try to schedule previously deferred node_3 with success
+    int expectedOrderIt = 0;
+    int lastValue = 0;
+    for (int orderElement : order) {
+        if (orderElement != lastValue) {
+            EXPECT_EQ(orderElement, expectedOrder[expectedOrderIt]);
+            expectedOrderIt++;
+        }
+        lastValue = orderElement;
+    }
+    // This fragment above is implemented that way because amount of scheduling retries may differ between different machines
+    // depending on the inference time of the dummy model
     /*
          -----O1-----O3----
     O---<                  >----O
