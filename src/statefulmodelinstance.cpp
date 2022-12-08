@@ -239,7 +239,7 @@ Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow:
     } else {
         auto modelState = inferRequest.query_state();
         if (!sequence) {
-            SPDLOG_ERROR("sequence is not set");
+            SPDLOG_DEBUG("sequence is not set");
             return StatusCode::INTERNAL_ERROR;
         }
         sequence->updateMemoryState(modelState);
@@ -259,7 +259,7 @@ Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow:
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         sequenceManagerLock->lock();
         if (!this->sequenceId.has_value()) {
-            SPDLOG_ERROR("sequenceId is not set");
+            SPDLOG_DEBUG("sequenceId is not set");
             return StatusCode::INTERNAL_ERROR;
         }
         status = sequenceManager.removeSequence(this->sequenceId.value());
