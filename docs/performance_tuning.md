@@ -161,12 +161,12 @@ Depending on the device employed to run the inference operation, you can tune th
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter. 
 
-Following docker command sets a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `32` and `KEY_CPU_BIND_THREAD` to `NUMA`.
+Following docker command sets a parameter `KEY_NUM_STREAMS` to a value `32` and `KEY_AFFINITY` to `NUMA`.
 
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
---plugin_config '{"CPU_THROUGHPUT_STREAMS": "32", "CPU_BIND_THREAD": "NUMA"}'
+--plugin_config '{"NUM_STREAMS": "32", "AFFINITY": "NUMA"}'
 ```
 
 ## Analyzing performance issues
