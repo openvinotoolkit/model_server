@@ -108,27 +108,51 @@ make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 
 ## Model Server image with Intel® Data Center GPU Flex Series and Intel® Arc™ GPU support (Ubuntu 20.04)
 
-Image with Intel® Data Center GPU Flex Series and Intel® Arc™ GPU support has not been published. To build the image yourself you need to have Intel® Data Center GPU Flex Series and Intel® Arc™ GPU drivers installed on the host and NEO Runtime packages available. 
+The [GPU plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html) uses the Intel Compute Library for 
+Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including 
+Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics.
 
-Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
-```
-drivers
-└── dg2
-     ├── intel-igc-core_<version>_amd64.deb
-     ├── intel-igc-opencl_<version>_amd64.deb
-     ├── intel-level-zero-gpu-dbgsym_<version>_amd64.ddeb
-     ├── intel-level-zero-gpu_<version>_amd64.deb
-     ├── intel-opencl-icd-dbgsym_<version>_amd64.ddeb
-     ├── intel-opencl-icd_<version>_amd64.deb
-     ├── libigdgmm12_<version>_amd64.deb
-     └── libigdgmm12_<version>_amd64.deb
+Before using GPU as OpenVINO Model Server target device, you need to:
+- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_from_archive_linux.html#step-4-optional-configure-inference-on-non-cpu-devices)
+- start the docker container with the additional parameter of `--device /dev/dri` to pass the device context 
+- set the parameter of `--target_device` to `GPU`.
+- use the `openvino/model_server:latest-gpu` image, which contains GPU dependencies
+
+A command example:
+
+```bash
+
+docker run --rm -it --device=/dev/dri -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+--model_path /opt/model --model_name resnet --port 9001 --target_device GPU
+
 ```
 
-and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
+Running inference on GPU requires the model server process security context account to have correct permissions. It must belong to the render group identified by the command:
 
-Example:
+```bash
+stat -c "group_name=%G group_id=%g" /dev/dri/render*
 ```
-make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
+
+The default account in the docker image is preconfigured. If you change the security context, use the following command to start the model server container:
+
+```bash
+
+docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+
+-v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+
+--model_path /opt/model --model_name resnet --port 9001 --target_device GPU
+
+```
+
+> **NOTE**:
+> The public docker image includes the OpenCL drivers for GPU in version 21.38.21026 (RedHat) and 21.48.21782 (Ubuntu).
+
+Support for [Intel Arc](https://www.intel.com/content/www/us/en/architecture-and-technology/visual-technology/arc-discrete-graphics.html), which is in preview now, requires newer driver version `22.10.22597`. You can build OpenVINO Model server with ubuntu base image and that driver using the command below:
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 ```
 
 ## Using Multi-Device Plugin
