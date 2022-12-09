@@ -133,41 +133,44 @@ make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 ## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
-With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
-For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_Running_on_multiple_devices.html).
+It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_Running_on_multiple_devices.html) documentation.
 
-In order to use this feature in OpenVino™ Model Server, following steps are required:
+To use this feature in OpenVINO Model Server, you can choose one of two ways:
 
-Set target_device for the model in configuration json file to MULTI:DEVICE_1,DEVICE_2 (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
+1. Use a .json configuration file to set the `--target_device` parameter with the pattern of: `MULTI:<DEVICE_1>,<DEVICE_2>`. 
+The order of the devices will define their priority, in this case making `device_1` the primary selection. 
 
-Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
-```
-{
-   "model_config_list": [
+This example of a config.json file sets up the Multi-Device Plugin for a resnet model, using Intel Movidius Neural Compute Stick and CPU as devices:
+
+```bash
+echo '{"model_config_list": [
    {"config": {
       "name": "resnet",
       "base_path": "/opt/model",
       "batch_size": "1",
       "target_device": "MULTI:MYRIAD,CPU"}
    }]
-}
+}' >> models/public/resnet-50-tf/config.json
 ```
 
-Additionally, you can use the `INSTALL_DRIVER_VERSION` argument command to choose which GPU driver version is used by the produced image. 
-If not provided, most recent version is used.
+To start OpenVINO Model Server, with the described config file placed as `./models/config.json`, set the `grpc_workers` parameter to match the `nireq` field in config.json 
+and use the run command, like so:
 
-Currently, the following versions are available:
-- 21.38.21026 - Redhat
-- 21.48.21782 - Ubuntu
-
-Example:
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make docker_build INSTALL_DRIVER_VERSION=21.38.21026
+docker run -d --net=host -u root --privileged --rm -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v /dev:/dev -p 9001:9001 \
+openvino/model_server:latest --config_path /opt/model/config.json --port 9001
 ```
-If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
 
+2. When using just a single model, you can start OpenVINO Model Server without the config.json file. To do so, use the run command together with additional parameters, like so: 
+
+```bash
+docker run -d --net=host -u root --privileged --name ie-serving --rm -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v \ 
+/dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/model --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
+```
+ 
+The deployed model will perform inference on both Intel Movidius Neural Compute Stick and CPU. 
+The total throughput will be roughly equal to the sum of CPU and Intel Movidius Neural Compute Stick throughputs.
+ 
 ## Using Heterogeneous Plugin
 
 The [HETERO plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_Hetero_execution.html) makes it possible to distribute inference load of one model 
