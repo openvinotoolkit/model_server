@@ -58,9 +58,35 @@ Check out our recommendations for [throughput optimization on HDDL](performance_
 
 ## Model Server image with Intel® Data Center GPU Flex Series and Intel® Arc™ GPU support (Ubuntu 20.04)
 
+To build the image, you need to have NEO Runtime packages available. Contact Intel representative to get the access to the preproduction drivers.
+
+Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
+```
+drivers
+└── dg2
+     ├── intel-igc-core_<version>_amd64.deb
+     ├── intel-igc-opencl_<version>_amd64.deb
+     ├── intel-level-zero-gpu-dbgsym_<version>_amd64.ddeb
+     ├── intel-level-zero-gpu_<version>_amd64.deb
+     ├── intel-opencl-icd-dbgsym_<version>_amd64.ddeb
+     ├── intel-opencl-icd_<version>_amd64.deb
+     ├── libigdgmm12_<version>_amd64.deb
+     └── libigdgmm12_<version>_amd64.deb
+```
+
+and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
+
+Example:
+```
+make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
+```
+
+## Starting a Docker Container with Intel GPU
+
 The [GPU plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html) uses the Intel Compute Library for 
 Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including 
 Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics.
+
 
 Before using GPU as OpenVINO Model Server target device, you need to:
 - install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_from_archive_linux.html#step-4-optional-configure-inference-on-non-cpu-devices)
@@ -104,48 +130,43 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 ```
-
 ## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
-It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_Running_on_multiple_devices.html) documentation.
+With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
+For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_Running_on_multiple_devices.html).
 
-To use this feature in OpenVINO Model Server, you can choose one of two ways:
+In order to use this feature in OpenVino™ Model Server, following steps are required:
 
-1. Use a .json configuration file to set the `--target_device` parameter with the pattern of: `MULTI:<DEVICE_1>,<DEVICE_2>`. 
-The order of the devices will define their priority, in this case making `device_1` the primary selection. 
+Set target_device for the model in configuration json file to MULTI:DEVICE_1,DEVICE_2 (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
 
-This example of a config.json file sets up the Multi-Device Plugin for a resnet model, using Intel Movidius Neural Compute Stick and CPU as devices:
-
-```bash
-echo '{"model_config_list": [
+Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
+```
+{
+   "model_config_list": [
    {"config": {
       "name": "resnet",
       "base_path": "/opt/model",
       "batch_size": "1",
       "target_device": "MULTI:MYRIAD,CPU"}
    }]
-}' >> models/public/resnet-50-tf/config.json
+}
 ```
 
-To start OpenVINO Model Server, with the described config file placed as `./models/config.json`, set the `grpc_workers` parameter to match the `nireq` field in config.json 
-and use the run command, like so:
+Additionally, you can use the `INSTALL_DRIVER_VERSION` argument command to choose which GPU driver version is used by the produced image. 
+If not provided, most recent version is used.
 
+Currently, the following versions are available:
+- 21.38.21026 - Redhat
+- 21.48.21782 - Ubuntu
+
+Example:
 ```bash
-docker run -d --net=host -u root --privileged --rm -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v /dev:/dev -p 9001:9001 \
-openvino/model_server:latest --config_path /opt/model/config.json --port 9001
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+make docker_build INSTALL_DRIVER_VERSION=21.38.21026
 ```
-
-2. When using just a single model, you can start OpenVINO Model Server without the config.json file. To do so, use the run command together with additional parameters, like so: 
-
-```bash
-docker run -d --net=host -u root --privileged --name ie-serving --rm -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v \ 
-/dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/model --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
-```
- 
-The deployed model will perform inference on both Intel Movidius Neural Compute Stick and CPU. 
-The total throughput will be roughly equal to the sum of CPU and Intel Movidius Neural Compute Stick throughputs.
- 
+If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
 
 ## Using Heterogeneous Plugin
 
