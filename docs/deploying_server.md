@@ -96,7 +96,7 @@ For operators mentioned in 2. and 3. see the [description of the deployment proc
 
 ## Next Steps
 
-- [Start the server](single_model_mode.md) 
+- [Start the server](starting_server.md) 
 - Try the model server [features](features.md)
 - Explore the model server [demos](../demos/README.md)
 

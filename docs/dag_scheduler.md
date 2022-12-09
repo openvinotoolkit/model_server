@@ -72,7 +72,7 @@ It assumes the batches are combined on the first dimension which is dropped afte
 ## Configuration file <a name="configuration-file"></a>
 
 Pipelines configuration is to be placed in the same json file like the 
-[models config file](single_model_mode.md).
+[models config file](starting_server.md).
 While models are defined in section `model_config_list`, pipelines are configured in
 the `pipeline_config_list` section. 
 Nodes in the pipelines can reference only the models configured in model_config_list section.
