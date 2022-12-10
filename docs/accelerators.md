@@ -214,3 +214,18 @@ THROUGHPUT
 ```
 
 > **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
+
+## Using NVIDIA Plugin
+
+*Note:* To build container with NVIDIA plugin use commands:
+```bash
+   git clone https://github.com/openvinotoolkit/model_server.git
+   cd model_server
+   make docker_build NVIDIA=1 OV_USE_BINARY=0
+```
+
+Example command to run container with NVIDIA support:
+
+```bash
+   docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --target_device NVIDIA
+```

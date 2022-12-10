@@ -563,9 +563,8 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
         // nireq is set globally for all models in ovms startup parameters
         return ovmsConfig.nireq();
     }
-    std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
-        numberOfParallelInferRequests = compiledModel->get_property(key).as<unsigned int>();
+        numberOfParallelInferRequests = compiledModel->get_property(ov::optimal_number_of_infer_requests);
     } catch (const ov::Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
@@ -659,21 +658,11 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
-    // Do not add CPU_THROUGHPUT_AUTO when performance hint is specified.
-    bool isPerformanceHintSpecified = pluginConfig.count("PERFORMANCE_HINT") > 0;
-    if (isPerformanceHintSpecified) {
+    // By default, set "PERFORMANCE_HINT" = "THROUGHPUT";
+    if ((pluginConfig.count("NUM_STREAMS") == 1) || (pluginConfig.count("PERFORMANCE_HINT") == 1)) {
         return pluginConfig;
-    }
-    // For CPU and GPU, if user did not specify, calculate CPU_THROUGHPUT_STREAMS automatically
-    if (config.isSingleDeviceUsed("CPU")) {
-        if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
-            pluginConfig["CPU_THROUGHPUT_STREAMS"] = "CPU_THROUGHPUT_AUTO";
-        }
-    }
-    if (config.isSingleDeviceUsed("GPU")) {
-        if (pluginConfig.count("GPU_THROUGHPUT_STREAMS") == 0) {
-            pluginConfig["GPU_THROUGHPUT_STREAMS"] = "GPU_THROUGHPUT_AUTO";
-        }
+    } else {
+        pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
     }
     return pluginConfig;
 }
@@ -720,16 +709,16 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
 
-    const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
-    std::vector<std::string> supportedConfigKeys;
+    auto supportedPropertiesKey = ov::supported_properties;
+    std::vector<ov::PropertyName> supportedConfigKeys;
     try {
-        std::vector<std::string> supportedConfigKeys2 = compiledModel->get_property(supportedConfigKey).as<std::vector<std::string>>();
+        auto supportedConfigKeys2 = compiledModel->get_property(supportedPropertiesKey);
         supportedConfigKeys = std::move(supportedConfigKeys2);
     } catch (std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, supportedConfigKey, e.what());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, supportedPropertiesKey.name(), e.what());
         return StatusCode::OK;
     } catch (...) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}", targetDevice, supportedConfigKey);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}", targetDevice, supportedPropertiesKey.name());
         return StatusCode::OK;
     }
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version: {};target device: {}; CompiledModel configuration", getName(), getVersion(), targetDevice);
@@ -750,6 +739,21 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
+template <class ArrayType>
+void ModelInstance::fetchModelFiles(bool& found, ArrayType ext) {
+    if (!found) {
+        found = true;
+        modelFiles.clear();
+        for (auto extension : ext) {
+            auto file = findModelFilePathWithExtension(extension);
+            if (file.empty()) {
+                found = false;
+            }
+            modelFiles.push_back(file);
+        }
+    }
+}
+
 Status ModelInstance::fetchModelFilepaths() {
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
         // not required if the model is loaded using a custom loader and can be returned from here
@@ -762,36 +766,12 @@ Status ModelInstance::fetchModelFilepaths() {
         return StatusCode::PATH_INVALID;
     }
 
-    bool found = true;
-    for (auto extension : OV_MODEL_FILES_EXTENSIONS) {
-        auto file = findModelFilePathWithExtension(extension);
-        if (file.empty()) {
-            found = false;
-        }
-        modelFiles.push_back(file);
-    }
-    if (!found) {
-        found = true;
-        modelFiles.clear();
-        for (auto extension : ONNX_MODEL_FILES_EXTENSIONS) {
-            auto file = findModelFilePathWithExtension(extension);
-            if (file.empty()) {
-                found = false;
-            }
-            modelFiles.push_back(file);
-        }
-    }
-    if (!found) {
-        found = true;
-        modelFiles.clear();
-        for (auto extension : PADDLE_MODEL_FILES_EXTENSIONS) {
-            auto file = findModelFilePathWithExtension(extension);
-            if (file.empty()) {
-                found = false;
-            }
-            modelFiles.push_back(file);
-        }
-    }
+    bool found = false;
+    fetchModelFiles(found, OV_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(found, ONNX_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(found, PADDLE_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(found, TF_MODEL_FILES_EXTENSIONS);
+
     if (!found) {
         SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
         return StatusCode::FILE_INVALID;
@@ -890,14 +870,14 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
 Status ModelInstance::setCacheOptions(const ModelConfig& config) {
     if (!config.getCacheDir().empty()) {
         if (!config.isAllowCacheSetToTrue() && (config.isCustomLoaderRequiredToLoadModel() || config.anyShapeSetToAuto() || (config.getBatchingMode() == Mode::AUTO))) {
-            this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), ""}});
+            this->ieCore.set_property(ov::cache_dir(""));
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
             this->cacheDisabled = true;
         } else if (config.isAllowCacheSetToTrue() && config.isCustomLoaderRequiredToLoadModel()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model: {} has allow cache set to true while using custom loader", this->getName());
             return StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER;
         } else {
-            this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
+            this->ieCore.set_property(ov::cache_dir(config.getCacheDir()));
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
         }
     }
@@ -1135,7 +1115,7 @@ const Status ModelInstance::validate(const RequestType* request) {
         getModelConfig().getShapes());
 }
 
-template const Status ModelInstance::validate(const ::inference::ModelInferRequest* request);
+template const Status ModelInstance::validate(const ::KFSRequest* request);
 template const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request);
 
 Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
@@ -1220,8 +1200,8 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     return StatusCode::OK;
 }
 
-Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
-    ::inference::ModelInferResponse* responseProto,
+Status ModelInstance::infer(const ::KFSRequest* requestProto,
+    ::KFSResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
     Timer<TIMER_END> timer;
@@ -1263,7 +1243,7 @@ Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName);
+    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContent(requestProto));
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;

@@ -22,7 +22,7 @@
 #include <gtest/gtest.h>
 
 #include "../cleaner_utils.hpp"
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
@@ -88,8 +88,8 @@ public:
     }
     void verifyModelReady(const std::string& modelName, grpc::StatusCode expectedStatus = grpc::StatusCode::OK, bool ready = true) {
         ClientContext context;
-        ::inference::ModelReadyRequest request;
-        ::inference::ModelReadyResponse response;
+        ::KFSGetModelStatusRequest request;
+        ::KFSGetModelStatusResponse response;
         request.set_name(modelName);
 
         ASSERT_NE(nullptr, stub_);
@@ -100,8 +100,8 @@ public:
 
     void verifyServerMetadata(grpc::StatusCode expectedStatus = grpc::StatusCode::OK) {
         ClientContext context;
-        ::inference::ServerMetadataRequest request;
-        ::inference::ServerMetadataResponse response;
+        ::KFSServerMetadataRequest request;
+        ::KFSServerMetadataResponse response;
         ASSERT_NE(nullptr, stub_);
         auto status = stub_->ServerMetadata(&context, request, &response);
         ASSERT_EQ(status.error_code(), expectedStatus);

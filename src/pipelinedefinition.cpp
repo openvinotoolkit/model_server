@@ -274,7 +274,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              nodeResources.at(info.nodeName)));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode);
+            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode, useSharedOutputContent(request));
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -1376,10 +1376,10 @@ template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, 
     const tensorflow::serving::PredictRequest* request,
     tensorflow::serving::PredictResponse* response,
     ModelManager& manager);
-template Status PipelineDefinition::create<::inference::ModelInferRequest, ::inference::ModelInferResponse>(
+template Status PipelineDefinition::create<::KFSRequest, ::KFSResponse>(
     std::unique_ptr<Pipeline>& pipeline,
-    const ::inference::ModelInferRequest* request,
-    ::inference::ModelInferResponse* response,
+    const ::KFSRequest* request,
+    ::KFSResponse* response,
     ModelManager& manager);
 
 }  // namespace ovms

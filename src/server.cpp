@@ -38,7 +38,7 @@
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "metric_module.hpp"
 #include "model_service.hpp"

@@ -61,6 +61,10 @@ struct HttpRequestComponents {
     std::optional<int> inferenceHeaderContentLength;
 };
 
+struct HttpResponseComponents {
+    std::optional<int> inferenceHeaderContentLength;
+};
+
 class HttpRestApiHandler {
 public:
     static const std::string predictionRegexExp;
@@ -92,15 +96,16 @@ public:
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
     static void parseParams(rapidjson::Value&, rapidjson::Document&);
     static std::string preprocessInferRequest(std::string request_body);
-    static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
+    static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
 
-    void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>);
+    void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)>);
     void registerAll();
 
     Status dispatchToProcessor(
         const std::string& request_body,
         std::string* response,
-        const HttpRequestComponents& request_components);
+        const HttpRequestComponents& request_components,
+        HttpResponseComponents& response_components);
 
     /**
      * @brief Process Request
@@ -118,7 +123,8 @@ public:
         const std::string_view request_path,
         const std::string& request_body,
         std::vector<std::pair<std::string, std::string>>* headers,
-        std::string* response);
+        std::string* response,
+        HttpResponseComponents& responseComponents);
 
     /**
      * @brief Process predict request
@@ -191,7 +197,7 @@ public:
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
     Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
-    Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
@@ -214,7 +220,7 @@ private:
 
     const std::regex metricsRegex;
 
-    std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>> handlers;
+    std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)>> handlers;
     int timeout_in_ms;
 
     ovms::Server& ovmsServer;

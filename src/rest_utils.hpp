@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <set>
 #include <string>
 
 #pragma GCC diagnostic push
@@ -24,10 +25,6 @@
 
 #include "rest_parser.hpp"
 
-namespace inference {
-class ModelInferResponse;
-}  // namespace inference
-
 namespace ovms {
 class Status;
 Status makeJsonFromPredictResponse(
@@ -36,8 +33,10 @@ Status makeJsonFromPredictResponse(
     Order order);
 
 Status makeJsonFromPredictResponse(
-    const ::inference::ModelInferResponse& response_proto,
-    std::string* response_json);
+    const ::KFSResponse& response_proto,
+    std::string* response_json,
+    std::optional<int>& inferenceHeaderContentLength,
+    const std::set<std::string>& requestedBinaryOutputsNames = {});
 
 Status decodeBase64(std::string& bytes, std::string& decodedBytes);
 

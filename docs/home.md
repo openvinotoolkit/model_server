@@ -84,7 +84,7 @@ For more information on using Model Server in various scenarios you can check th
 
 * [Serving stateful models](stateful_models.md)
 
-* [Deploy using a Kubernetes Helm Chart](../deploy/README.md)
+* [Deploy using a Kubernetes Helm Chart](https://github.com/openvinotoolkit/operator/tree/main/helm-charts/ovms)
 
 * [Deployment using Kubernetes Operator](https://operatorhub.io/operator/ovms-operator)
 

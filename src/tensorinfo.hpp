@@ -176,13 +176,6 @@ public:
     const std::string& getPrecisionAsString() const;
 
     /**
-        * @brief Get the Precision As String object representing KFS precision
-        *
-        * @return const std::string
-        */
-    const std::string& getPrecisionAsKFSPrecision() const;
-
-    /**
         * @brief Get the string representation of TensorInfo object
         *
         * @return String representation
@@ -190,8 +183,6 @@ public:
     std::string asString() const;
 
     static const std::string& getPrecisionAsString(Precision precision);
-
-    static const std::string& getPrecisionAsKFSPrecision(Precision precision);
 
     /**
          * @brief Get the layout name from Layout
@@ -233,6 +224,5 @@ public:
 
     const std::optional<Dimension> getBatchSize() const;
 };
-std::string tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& tensorShape);
 
 }  // namespace ovms

@@ -19,14 +19,7 @@
 
 #include <openvino/openvino.hpp>
 
-using KFSDataType = std::string;
-namespace tensorflow {
-enum DataType : int;
-}
-
 namespace ovms {
-
-using TFSDataType = tensorflow::DataType;
 
 enum class Precision {
     BF16,
@@ -57,14 +50,8 @@ const std::string& toString(Precision precision);
 
 Precision fromString(const std::string& s);
 
-Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s);
-Precision TFSPrecisionToOvmsPrecision(const TFSDataType& s);
-
-size_t KFSDataTypeSize(const KFSDataType& datatype);
-
-const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision);
+Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type);
 
 ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision);
 
-Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type);
 }  // namespace ovms

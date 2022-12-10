@@ -91,7 +91,7 @@ Status EntryNode<tensorflow::serving::PredictRequest>::isInputBinary(const std::
     return StatusCode::OK;
 }
 template <>
-Status EntryNode<::inference::ModelInferRequest>::isInputBinary(const std::string& name, bool& isBinary) const {
+Status EntryNode<::KFSRequest>::isInputBinary(const std::string& name, bool& isBinary) const {
     auto it = request->inputs().begin();
     while (it != request->inputs().end()) {
         if (it->name() == name) {
@@ -146,7 +146,7 @@ const Status EntryNode<tensorflow::serving::PredictRequest>::validate() {
         optionalInputNames);  // Pipelines are not versioned and always reports version 1
 }
 template <>
-const Status EntryNode<::inference::ModelInferRequest>::validate() {
+const Status EntryNode<::KFSRequest>::validate() {
     static const std::set<std::string> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
@@ -157,15 +157,15 @@ const Status EntryNode<::inference::ModelInferRequest>::validate() {
 }
 
 template Status EntryNode<tensorflow::serving::PredictRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
-template Status EntryNode<::inference::ModelInferRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
+template Status EntryNode<::KFSRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status EntryNode<::inference::ModelInferRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status EntryNode<::KFSRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
 template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(TensorWithSourceMap& outputs);
-template Status EntryNode<::inference::ModelInferRequest>::fetchResults(TensorWithSourceMap& outputs);
+template Status EntryNode<::KFSRequest>::fetchResults(TensorWithSourceMap& outputs);
 template Status EntryNode<tensorflow::serving::PredictRequest>::isInputBinary(const std::string& name, bool& isBinary) const;
-template Status EntryNode<::inference::ModelInferRequest>::isInputBinary(const std::string& name, bool& isBinary) const;
+template Status EntryNode<::KFSRequest>::isInputBinary(const std::string& name, bool& isBinary) const;
 template Status EntryNode<tensorflow::serving::PredictRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
-template Status EntryNode<::inference::ModelInferRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
+template Status EntryNode<::KFSRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 template const Status EntryNode<tensorflow::serving::PredictRequest>::validate();
-template const Status EntryNode<::inference::ModelInferRequest>::validate();
+template const Status EntryNode<::KFSRequest>::validate();
 }  //  namespace ovms

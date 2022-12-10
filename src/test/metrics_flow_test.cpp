@@ -24,7 +24,7 @@
 #include "../config.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../http_rest_api_handler.hpp"
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
@@ -256,8 +256,8 @@ TEST_F(MetricFlowTest, GrpcGetModelStatus) {
 
 TEST_F(MetricFlowTest, GrpcModelInfer) {
     KFSInferenceServiceImpl impl(server);
-    ::inference::ModelInferRequest request;
-    ::inference::ModelInferResponse response;
+    ::KFSRequest request;
+    ::KFSResponse response;
 
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();
@@ -321,8 +321,8 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
 
 TEST_F(MetricFlowTest, GrpcModelMetadata) {
     KFSInferenceServiceImpl impl(server);
-    ::inference::ModelMetadataRequest request;
-    ::inference::ModelMetadataResponse response;
+    ::KFSModelMetadataRequest request;
+    KFSModelMetadataResponse response;
 
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();
@@ -344,8 +344,8 @@ TEST_F(MetricFlowTest, GrpcModelMetadata) {
 
 TEST_F(MetricFlowTest, GrpcModelReady) {
     KFSInferenceServiceImpl impl(server);
-    ::inference::ModelReadyRequest request;
-    ::inference::ModelReadyResponse response;
+    ::KFSGetModelStatusRequest request;
+    ::KFSGetModelStatusResponse response;
 
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();
@@ -458,28 +458,32 @@ TEST_F(MetricFlowTest, RestModelInfer) {
         components.model_name = modelName;
         std::string request = R"({"inputs":[{"name":"b","shape":[1,10],"datatype":"FP32","data":[1,2,3,4,5,6,7,8,9,10]}], "parameters":{"binary_data_output":true}})";
         std::string response;
-        ASSERT_EQ(handler.processInferKFSRequest(components, response, request), ovms::StatusCode::OK);
+        std::optional<int> inferenceHeaderContentLength;
+        ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::OK);
     }
 
     for (int i = 0; i < numberOfFailedRequests; i++) {
         components.model_name = modelName;
         std::string request = R"({{"inputs":[{"name":"b","shape":[1,10],"datatype":"FP32","data":[1,2,3,4,5,6,7,8,9]}], "parameters":{"binary_data_output":true}})";
         std::string response;
-        ASSERT_EQ(handler.processInferKFSRequest(components, response, request), ovms::StatusCode::JSON_INVALID);
+        std::optional<int> inferenceHeaderContentLength;
+        ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
     }
 
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         components.model_name = dagName;
         std::string request = R"({"inputs":[{"name":"b","shape":[3,1,10],"datatype":"FP32","data":[1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10]}], "parameters":{"binary_data_output":true}})";
         std::string response;
-        ASSERT_EQ(handler.processInferKFSRequest(components, response, request), ovms::StatusCode::OK);
+        std::optional<int> inferenceHeaderContentLength;
+        ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::OK);
     }
 
     for (int i = 0; i < numberOfFailedRequests; i++) {
         components.model_name = dagName;
         std::string request = R"({{"inputs":[{"name":"b","shape":[3,1,10],"datatype":"FP32","data":[1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9]}], "parameters":{"binary_data_output":true}})";
         std::string response;
-        ASSERT_EQ(handler.processInferKFSRequest(components, response, request), ovms::StatusCode::JSON_INVALID);
+        std::optional<int> inferenceHeaderContentLength;
+        ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
     }
 
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelInfer", "KServe", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
