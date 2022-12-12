@@ -275,7 +275,7 @@ test_checksec:
  		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." && exit 1;\
 	fi
 	@checksec --file=/tmp/ovms --format=csv > checksec.txt
-	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,DSO,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
+	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
  		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues." && exit 1;\
 	fi
 	@rm -f checksec.txt
