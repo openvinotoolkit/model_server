@@ -558,19 +558,19 @@ cc_binary(
     linkstatic = True,
 )
 
-# Use for dynamic linkink when neccessary
-# cc_import(
-#   name = "shared_lib",
-#   hdrs = ["pocapi.h"],
-#   shared_library = "ovms_shared",
-# )
-#
-# cc_library(
-#     name = "cpp_headers",
-#     srcs = ["server.hpp",
-#         "module.hpp",],
-#     deps = ["//src:shared_lib"]
-# )
+# Use for dynamic linking when neccessary
+cc_import(
+  name = "shared_lib",
+  hdrs = ["pocapi.h"],
+  shared_library = "ovms_shared",
+)
+
+cc_library(
+    name = "cpp_headers",
+    srcs = ["server.hpp",
+        "module.hpp",],
+    deps = ["//src:shared_lib"]
+)
 
 cc_binary(
     name = "ovms",
@@ -582,7 +582,7 @@ cc_binary(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-        # "-lovms_shared",  # Use for dynamic linkink when neccessary
+        # "-lovms_shared",  # Use for dynamic linking when neccessary
     ],
     copts = [
         "-Wconversion",
@@ -590,9 +590,9 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-        # "//src:cpp_headers",  # Use for dynamic linkink when neccessary
+        # "//src:cpp_headers",  # Use for dynamic linking when neccessary
     ],
-    # linkstatic = False,  # Use for dynamic linkink when neccessary
+    # linkstatic = False,  # Use for dynamic linking when neccessary
 )
 
 cc_test(
