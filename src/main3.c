@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pocapi.h"
+#include "ovms.h"
 
 int main() {
     OVMS_ServerGeneralOptions* go = 0;

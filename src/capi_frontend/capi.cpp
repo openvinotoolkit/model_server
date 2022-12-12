@@ -13,27 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "pocapi.h"  // NOLINT
-
 #include <cstdint>
 #include <memory>
 #include <string>
 
-#include "buffer.hpp"
-#include "inferenceparameter.hpp"
-#include "inferencerequest.hpp"
-#include "inferenceresponse.hpp"
-#include "inferencetensor.hpp"
-#include "model_service.hpp"
-#include "modelinstance.hpp"
-#include "modelinstanceunloadguard.hpp"
-#include "modelmanager.hpp"
-#include "profiler.hpp"
-#include "servablemanagermodule.hpp"
-#include "server.hpp"
-#include "server_options.hpp"
-#include "status.hpp"
-#include "timer.hpp"
+#include "../buffer.hpp"
+#include "../inferenceparameter.hpp"
+#include "../inferencerequest.hpp"
+#include "../inferenceresponse.hpp"
+#include "../inferencetensor.hpp"
+#include "../model_service.hpp"
+#include "../modelinstance.hpp"
+#include "../modelinstanceunloadguard.hpp"
+#include "../modelmanager.hpp"
+#include "../ovms.h"  // NOLINT
+#include "../profiler.hpp"
+#include "../servablemanagermodule.hpp"
+#include "../server.hpp"
+#include "../server_options.hpp"
+#include "../status.hpp"
+#include "../timer.hpp"
 
 using ovms::Buffer;
 using ovms::InferenceParameter;

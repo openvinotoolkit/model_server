@@ -17,8 +17,8 @@
 
 #include <utility>
 
-#include "./pocapi.h"
 #include "buffer.hpp"
+#include "ovms.h"  // NOLINT
 #include "status.hpp"
 
 namespace ovms {

@@ -26,7 +26,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-#include "./pocapi.h"
+#include "ovms.h"  // NOLINT
 
 const char* MODEL_NAME = "dummy";
 const uint64_t MODEL_VERSION = 1;

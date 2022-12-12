@@ -18,10 +18,10 @@
 #include <string>
 #include <unordered_map>
 
-#include "./pocapi.h"
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
 #include "modelversion.hpp"
+#include "ovms.h"  // NOLINT
 
 namespace ovms {
 

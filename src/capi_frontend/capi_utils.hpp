@@ -16,8 +16,13 @@
 #pragma once
 #include <string>
 
+#include "../ovms.h"  // NOLINT
+#include "../precision.hpp"
+
 namespace ovms {
 class Shape;
 std::string tensorShapeToString(const Shape& tensorShape);
 
+OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
+Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype);
 }  // namespace ovms

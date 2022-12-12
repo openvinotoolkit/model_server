@@ -17,7 +17,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "./pocapi.h"
+#include "ovms.h"  // NOLINT
 
 namespace ovms {
 size_t DataTypeToByteSize(OVMS_DataType datatype);

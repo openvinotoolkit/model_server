@@ -22,7 +22,7 @@
 // TODO we should not include classes from OVMS here
 // consider how to workaround test_utils
 #include "../inferenceresponse.hpp"
-#include "../pocapi.h"
+#include "../ovms.h"
 #include "test_utils.hpp"
 
 using namespace ovms;

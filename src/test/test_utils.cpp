@@ -20,7 +20,6 @@
 #include "../capi_frontend/capi_utils.hpp"
 #include "../inferenceparameter.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
-#include "../pocapiinternal.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
