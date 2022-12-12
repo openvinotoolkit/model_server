@@ -19,9 +19,11 @@ FROM $BUILD_IMAGE
 
 COPY ./cov-analysis-linux64-2022.6.0 /cov
 
+RUN apt-get remove --yes cmake && apt-get update && apt-get install -y rapidjson-dev && pip3 install cmake
+
 RUN /cov/bin/cov-configure --gcc --config coverity_config.xml && \
     /cov/bin/cov-configure --comptype gcc --compiler /usr/bin/gcc && \
-    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:ovms'
+    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:ovms && cmake /client/cpp/kserve-api && make --jobs=$(nproc)'
 
 WORKDIR /ovms/
 RUN tar czvf /model_server.tgz cov-int 
