@@ -7,21 +7,12 @@
    :hidden:
 
    ovms_docs_quick_start_guide
-   ovms_docs_architecture
    ovms_docs_models_repository
-   ovms_docs_starting_server
-   ovms_docs_server_api
-   ovms_docs_clients
-   ovms_docs_dag
-   ovms_docs_binary_input
-   ovms_docs_model_cache
-   ovms_docs_metrics
-   ovms_sample_cpu_extension
-   ovms_docs_dynamic_input
-   ovms_docs_stateful_models
-   ovms_docs_custom_loader
+   ovms_docs_deploying_server
+   ovms_docs_serving_model
+   ovms_docs_features
+   ovms_docs_server_app
    ovms_docs_performance_tuning
-   ovms_docs_kubernetes
    ovms_docs_demos
    ovms_docs_troubleshooting
 
@@ -40,8 +31,6 @@ Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage.
 
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
-Review the [Architecture concept](architecture.md) document for more details.
-
 Key features: 
 - support for multiple frameworks, such as Caffe, TensorFlow, MXNet, PaddlePaddle and ONNX
 - online deployment of new [model versions](model_version_policy.md)
@@ -50,7 +39,7 @@ Key features:
 [Intel Movidius Myriad VPUs](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_MYRIAD.html), 
 [GPU](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html), and 
 [HDDL](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_HDDL.html) 
-- works with [Bare Metal Hosts](host.md) as well as [Docker containers](docker_container.md) 
+- works with [Bare Metal Hosts](deploying_server.md) as well as [Docker containers](deploying_server.md) 
 - [model reshaping](shape_batch_size_and_layout.md) in runtime
 - [directed Acyclic Graph Scheduler](dag_scheduler.md) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
 - [custom nodes in DAG pipelines](custom_node_development.md) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
@@ -72,9 +61,9 @@ For more information on using Model Server in various scenarios you can check th
 
 * [Model repository configuration](models_repository.md)
 
-* [Using a docker container](docker_container.md)
+* [Using a docker container](deploying_server.md)
 
-* [Landing on bare metal or virtual machine](host.md)
+* [Landing on bare metal or virtual machine](deploying_server.md)
 
 * [Performance tuning](performance_tuning.md)
 
