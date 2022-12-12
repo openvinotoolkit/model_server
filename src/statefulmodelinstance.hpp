@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 
@@ -101,8 +102,8 @@ struct StatefulRequestProcessor : public RequestProcessor<RequestType, ResponseT
     std::unique_ptr<std::unique_lock<std::mutex>> sequenceManagerLock;
     std::unique_ptr<std::unique_lock<std::mutex>> sequenceLock;
     SequenceProcessingSpec sequenceProcessingSpec;
-    Sequence* sequence;
-    uint64_t sequenceId;
+    Sequence* sequence{nullptr};
+    std::optional<uint64_t> sequenceId;
 
     StatefulRequestProcessor(SequenceManager& sequenceManager);
     Status extractRequestParameters(const RequestType* request) override;
