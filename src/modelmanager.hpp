@@ -165,8 +165,6 @@ private:
      * 
      */
     std::unordered_map<std::string, ModelConfig> servedModelConfigs;
-    // TODO we should either dispose this member or at least keep it as a pointer
-    // so we do not disclose details about ModelConfig to all modelmanager users
 
     /**
      * @brief Retires models non existing in config file
