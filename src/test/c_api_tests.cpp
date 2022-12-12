@@ -615,5 +615,23 @@ TEST_F(CapiInference, ResponseRetrieval) {
     OVMS_InferenceResponseDelete(nullptr);
     OVMS_InferenceResponseDelete(response);
 }
+
+TEST_F(CapiInference, CallInferenceServerNotStarted) {
+    OVMS_Server* cserver = nullptr;
+    OVMS_InferenceRequest* request{nullptr};
+    OVMS_InferenceResponse* response = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, "dummy", 1));
+    ASSERT_NE(nullptr, cserver);
+    ASSERT_NE(nullptr, request);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    uint32_t notUsedNum = 0;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::SERVER_NOT_READY_FOR_INFERENCE);
+    OVMS_InferenceResponseDelete(response);
+    OVMS_InferenceRequestDelete(request);
+    OVMS_ServerDelete(cserver);
+}
 // TODO make cleaner error codes reporting
 // todo decide either use remove or delete for consistency

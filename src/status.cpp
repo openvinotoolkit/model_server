@@ -282,6 +282,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
     {StatusCode::NONEXISTENT_STATUS, "Tried to use nonexisting status"},
     {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
+    {StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "Server not in a state to perform inference"},
 
     // Server Start errors
     {StatusCode::OPTIONS_USAGE_ERROR, "options validation error"},
