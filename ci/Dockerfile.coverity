@@ -23,7 +23,7 @@ RUN apt-get remove --yes cmake && apt-get update && apt-get install -y rapidjson
 
 RUN /cov/bin/cov-configure --gcc --config coverity_config.xml && \
     /cov/bin/cov-configure --comptype gcc --compiler /usr/bin/gcc && \
-    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:ovms && cmake /client/cpp/kserve-api && make --jobs=$(nproc)'
+    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:static_analysis && cmake /client/cpp/kserve-api && make --jobs=$(nproc)'
 
 WORKDIR /ovms/
 RUN tar czvf /model_server.tgz cov-int 
