@@ -569,7 +569,10 @@ static Status getModelInstance(ovms::Server& server, const InferenceRequest* req
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
     if (!server.isLive()) {
-        return ovms::Status(ovms::StatusCode::INTERNAL_ERROR, "server is not live");
+        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "not live");
+    }
+    if (!server.isReady()) {
+        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "not ready");
     }
     const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     if (!servableModule) {
