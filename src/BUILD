@@ -576,8 +576,11 @@ cc_binary(
     name = "capi_benchmark",
     srcs = [
         "main_benchmark.cpp",
+        "stringutils.cpp",
+        "stringutils.hpp",
     ],
     linkopts = [
+        "-lpthread",
         "-lxml2",
         "-luuid",
         "-lstdc++fs",

@@ -177,7 +177,7 @@ static void installSignalHandlers() {
 
 using shape_t = std::vector<size_t>;
 
-OVMS_InferenceRequest* prepareRequest(const std::string& modelName, uint64_t modelVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
+OVMS_InferenceRequest* prepareRequest(const std::string& modelName, uint32_t modelVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceRequestNew(&request, modelName.c_str(), modelVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
@@ -194,20 +194,19 @@ void triggerInferenceInALoop(
     double& averageWholeLatency,
     double& averagePureLatency,
     OVMS_Server* server,
-    OVMS_InferenceRequest* requests) {  // TODO each thread should get 2 to switch
+    OVMS_InferenceRequest* request) {
     OVMS_InferenceResponse* response{nullptr};
-    startSignal.get();
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
+    startSignal.get();
     auto workloadStart = std::chrono::high_resolution_clock::now();
     size_t iter = niterPerThread;
     while (iter-- > 0) {
         auto iterationStart = std::chrono::high_resolution_clock::now();
         stopSignal.wait_for(std::chrono::milliseconds(0));
-        // TODO add here resetting buffer
         auto iterationPureStart = std::chrono::high_resolution_clock::now();
         // aternatively we are changing request
-        OVMS_Inference(server, requests, &response);
+        OVMS_Inference(server, request, &response);
         auto iterationPureEnd = std::chrono::high_resolution_clock::now();
         OVMS_InferenceResponseDelete(response);
         auto iterationEnd = std::chrono::high_resolution_clock::now();
@@ -216,7 +215,6 @@ void triggerInferenceInALoop(
     }
     auto workloadEnd = std::chrono::high_resolution_clock::now();
     wholeThreadTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(workloadEnd - workloadStart).count();
-    auto result = std::accumulate(latenciesWhole.begin(), latenciesWhole.end(), 0);
     averageWholeLatency = std::accumulate(latenciesWhole.begin(), latenciesWhole.end(), 0) / (double(niterPerThread) * 1'000);
     averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
 }
@@ -264,13 +262,17 @@ int main(int argc, char** argv) {
         return EX_USAGE;
     }
     OVMS_ServerGeneralOptionsSetLogLevel(go, logLevel);
-    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json");
+    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_benchmark.json");
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
 
     if (res) {
-        // TODO: Better error handling?
-        fprintf(stderr, "Error starting the server\n");
+        uint32_t code = 0;
+        const char* details = nullptr;
+        OVMS_StatusGetCode(res, &code);
+        OVMS_StatusGetDetails(res, &details);
+        std::cout << "Error starting the server. Code:" << code
+                  << "; details:" << details << std::endl;
         OVMS_ServerDelete(srv);
         OVMS_ServerMultiModelOptionsDelete(mmo);
         OVMS_ServerGeneralOptionsDelete(go);
@@ -383,7 +385,7 @@ int main(int argc, char** argv) {
     ///////////////////////
     // start workload
     ///////////////////////
-    std::cout << "Benchmark starting workloa" << std::endl;
+    std::cout << "Benchmark starting workload" << std::endl;
     auto workloadStart = std::chrono::high_resolution_clock::now();
     std::for_each(startSignals.begin(), startSignals.end(), [](auto& startSignal) { startSignal.set_value(); });
     ///////////////////////

@@ -13,12 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstring>
 #include <iostream>
 #include <numeric>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 #include <signal.h>
 #include <stdio.h>
@@ -111,8 +114,15 @@ int main(int argc, char** argv) {
 
     // run sync request
     OVMS_InferenceResponse* response = nullptr;
-    OVMS_Inference(srv, request, &response);
-
+    auto ovmsStatus = OVMS_Inference(srv, request, &response);
+    if (ovmsStatus != nullptr) {
+        uint32_t code = 0;
+        const char* details = 0;
+        OVMS_StatusGetCode(res, &code);
+        OVMS_StatusGetDetails(res, &details);
+        std::cout << "Error occured during inference. Code:" << code
+                  << ", details:" << details << std::endl;
+    }
     // read output
     uint32_t outputCount = 0;
     OVMS_InferenceResponseGetOutputCount(response, &outputCount);
@@ -135,6 +145,15 @@ int main(int argc, char** argv) {
        << "; response with values:\n";
     for (size_t i = 0; i < shape[1]; ++i) {
         ss << *(reinterpret_cast<const float*>(voutputData) + i) << " ";
+    }
+    std::vector<float> expectedOutput;
+    std::transform(data.begin(), data.end(), std::back_inserter(expectedOutput),
+        [](const float& s) -> float {
+            return s + 1;
+        });
+
+    if (std::memcmp(voutputData, expectedOutput.data(), expectedOutput.size() * sizeof(float)) != 0) {
+        std::cout << "Incorrect result of inference" << std::endl;
     }
     // comment line below to have app running similarly to OVMS
     shutdown_request = 1;

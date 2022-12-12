@@ -11,6 +11,17 @@
                 },
                 "shape": "(1, 10)",
                 "nireq": 1}
+        },
+        {"config": {
+                "name": "resnet",
+                "base_path": "/models/resnet-50-tf",
+                "plugin_config": {
+                    "NUM_STREAMS":12,
+                    "AFFINITY": "CORE",
+                    "PERFORMANCE_HINT": "THROUGHPUT",
+                    "PERF_COUNT":"NO"
+                },
+                "nireq": 12}
         }
     ]
 }
