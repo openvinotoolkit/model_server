@@ -18,12 +18,11 @@
 
 @endsphinxdirective
 
-
-Model server hosts models and makes them accessible to software components over standard network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model server offers many advantages for efficient model deployment: 
+Model Server hosts models and makes them accessible to software components over standard network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model Server offers many advantages for efficient model deployment: 
 - Remote inference enables using lightweight clients with only the necessary functions to perform API calls to edge or cloud deployments.
 - Applications are independent of the model framework, hardware device, and infrastructure.
 - Client applications in any programming language that supports REST or gRPC calls can be used to run inference remotely on the model server.
-- Clients require less updates since client libraries change very rarely.
+- Clients require fewer updates since client libraries change very rarely.
 - Model topology and weights are not exposed directly to client applications, making it easier to control access to the model.
 - Ideal architecture for microservices-based applications and deployments in cloud environments – including Kubernetes and OpenShift clusters.
 - Efficient resource utilization with horizontal and vertical inference scaling.
