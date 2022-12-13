@@ -107,15 +107,15 @@ int main(int argc, char** argv) {
 
     // prepare request
     OVMS_InferenceRequest* request{nullptr};
-    res = OVMS_InferenceRequestNew(&request, MODEL_NAME, MODEL_VERSION);
+    OVMS_InferenceRequestNew(&request, MODEL_NAME, MODEL_VERSION);
     OVMS_InferenceRequestAddInput(request, INPUT_NAME, OVMS_DATATYPE_FP32, SHAPE, DIM_COUNT);
     std::array<float, SHAPE[1]> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     OVMS_InferenceRequestInputSetData(request, INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, 0);
 
     // run sync request
     OVMS_InferenceResponse* response = nullptr;
-    auto ovmsStatus = OVMS_Inference(srv, request, &response);
-    if (ovmsStatus != nullptr) {
+    res = OVMS_Inference(srv, request, &response);
+    if (res != nullptr) {
         uint32_t code = 0;
         const char* details = 0;
         OVMS_StatusGetCode(res, &code);
