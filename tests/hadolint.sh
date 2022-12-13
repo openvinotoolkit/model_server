@@ -16,15 +16,34 @@
 #
 
 set -o pipefail
+
+files_to_scan=(
+    "./release_files/Dockerfile.ubuntu"
+    "./release_files/Dockerfile.redhat"
+    "./Dockerfile.ubuntu"
+    "./Dockerfile.redhat"
+)
+
+docker run --rm -i hadolint/hadolint:latest hadolint -v -V
+
+# TODO: Add allowed registries
 has_issues=0
 while IFS= read -r -d '' dockerfile
     do
-        echo "Scanning $dockerfile"
-        docker run --rm -i hadolint/hadolint:latest hadolint \
-              --ignore DL3059 \
-              --ignore DL3006 \
-              --ignore DL3008 \
-              - < "$dockerfile" || has_issues=1
-        grep -in proxy "$dockerfile" && has_issues=1 || true
-    done <  <(find ./release_files \( -name 'Dockerfile.ubuntu' -o -name 'Dockerfile.redhat' \) -print0)
+        if printf '%s\0' "${files_to_scan[@]}" | grep -Fxqz -- $dockerfile; then
+            echo "Scanning $dockerfile with sha256: $(sha256sum $dockerfile | head -n1 | cut -d " " -f1)"
+            docker run --rm -i hadolint/hadolint:latest hadolint \
+                  --ignore DL3006 \
+                  --ignore DL3008 \
+                  --ignore DL3013 \
+                  --ignore DL3016 \
+                  --ignore DL3018 \
+                  --ignore DL3028 \
+                  - < "$dockerfile" || has_issues=1
+        else
+            echo "Skipping $dockerfile"
+        fi
+        #grep -in proxy "$dockerfile" && has_issues=1 || true
+    done <  <(find ./ \( -name 'Dockerfile*' \) -print0)
+
 exit "$has_issues"
