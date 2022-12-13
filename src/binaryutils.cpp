@@ -449,18 +449,15 @@ static ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::s
 template <typename TensorType>
 static Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
-    SPDLOG_ERROR("1");
     auto status = validateTensor(tensorInfo, src, buffer);
     if (status != StatusCode::OK) {
         return status;
     }
-    SPDLOG_ERROR("2");
     std::vector<cv::Mat> images;
     status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo, buffer);
     if (!status.ok()) {
         return status;
     }
-    SPDLOG_ERROR("3");
     tensor = convertMatsToTensor(images, tensorInfo);
     if (!tensor) {
         return StatusCode::IMAGE_PARSING_FAILED;
