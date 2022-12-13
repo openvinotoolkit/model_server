@@ -24,7 +24,7 @@
 
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
-#include "server_options.hpp"
+#include "server_settings.hpp"
 
 namespace ovms {
 
@@ -37,8 +37,8 @@ const uint64_t MAX_REST_WORKERS = 10'000;
 // TODO: Not used in OVMS - get rid of. Used only in tests.
 Config& Config::parse(int argc, char** argv) {
     ovms::CLIParser p;
-    ovms::GeneralOptionsImpl go;
-    ovms::MultiModelOptionsImpl mmo;
+    ovms::ServerSettingsImpl go;
+    ovms::ModelsSettingsImpl mmo;
     p.parse(argc, argv);
     p.prepare(&go, &mmo);
     if (!this->parse(&go, &mmo))
@@ -46,7 +46,7 @@ Config& Config::parse(int argc, char** argv) {
     return *this;
 }
 
-bool Config::parse(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
+bool Config::parse(ServerSettingsImpl* go, ModelsSettingsImpl* mmo) {
     this->go = *go;
     this->mmo = *mmo;
     return validate();

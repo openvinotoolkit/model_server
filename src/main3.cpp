@@ -72,19 +72,18 @@ static void installSignalHandlers() {
 
 int main(int argc, char** argv) {
     installSignalHandlers();
-    OVMS_ServerGeneralOptions* go = 0;
-    OVMS_ServerMultiModelOptions* mmo = 0;
+
+    OVMS_ServerSettings* go = 0;
+    OVMS_ModelsSettings* mmo = 0;
     OVMS_Server* srv;
 
-    OVMS_ServerGeneralOptionsNew(&go);
-    OVMS_ServerMultiModelOptionsNew(&mmo);
+    OVMS_ServerSettingsNew(&go);
+    OVMS_ModelsSettingsNew(&mmo);
     OVMS_ServerNew(&srv);
 
-    OVMS_ServerGeneralOptionsSetGrpcPort(go, 9178);
-    OVMS_ServerGeneralOptionsSetRestPort(go, 11338);
 
-    OVMS_ServerGeneralOptionsSetLogLevel(go, OVMS_LOG_DEBUG);
-    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json");
+    OVMS_ServerSettingsSetLogLevel(go, OVMS_LOG_DEBUG);
+    OVMS_ModelsSettingsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json");
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
     if (res) {
@@ -98,8 +97,8 @@ int main(int argc, char** argv) {
         OVMS_StatusDelete(res);
 
         OVMS_ServerDelete(srv);
-        OVMS_ServerMultiModelOptionsDelete(mmo);
-        OVMS_ServerGeneralOptionsDelete(go);
+        OVMS_ModelsSettingsDelete(mmo);
+        OVMS_ServerSettingsDelete(go);
         return 1;
     }
 
@@ -163,7 +162,9 @@ int main(int argc, char** argv) {
     std::cout << "No more job to be done, will shut down" << std::endl;
 
     OVMS_ServerDelete(srv);
-    OVMS_ServerMultiModelOptionsDelete(mmo);
-    OVMS_ServerGeneralOptionsDelete(go);
+    OVMS_ModelsSettingsDelete(mmo);
+    OVMS_ServerSettingsDelete(go);
+
+    fprintf(stdout, "main() exit\n");
     return 0;
 }

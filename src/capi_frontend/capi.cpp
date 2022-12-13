@@ -30,7 +30,7 @@
 #include "../profiler.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
-#include "../server_options.hpp"
+#include "../server_settings.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
 
@@ -80,32 +80,32 @@ OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+OVMS_Status* OVMS_ServerSettingsNew(OVMS_ServerSettings** settings) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    *options = reinterpret_cast<OVMS_ServerGeneralOptions*>(new ovms::GeneralOptionsImpl);
+    *settings = reinterpret_cast<OVMS_ServerSettings*>(new ovms::ServerSettingsImpl);
     return nullptr;
 }
 
-void OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options) {
-    if (options == nullptr)
+void OVMS_ServerSettingsDelete(OVMS_ServerSettings* settings) {
+    if (settings == nullptr)
         return;
-    delete reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
+    delete reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
 }
 
-OVMS_Status* OVMS_ServerMultiModelOptionsNew(OVMS_ServerMultiModelOptions** options) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+OVMS_Status* OVMS_ModelsSettingsNew(OVMS_ModelsSettings** settings) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    *options = reinterpret_cast<OVMS_ServerMultiModelOptions*>(new ovms::MultiModelOptionsImpl);
+    *settings = reinterpret_cast<OVMS_ModelsSettings*>(new ovms::ModelsSettingsImpl);
     return nullptr;
 }
 
-void OVMS_ServerMultiModelOptionsDelete(OVMS_ServerMultiModelOptions* options) {
-    if (options == nullptr)
+void OVMS_ModelsSettingsDelete(OVMS_ModelsSettings* settings) {
+    if (settings == nullptr)
         return;
-    delete reinterpret_cast<ovms::MultiModelOptionsImpl*>(options);
+    delete reinterpret_cast<ovms::ModelsSettingsImpl*>(settings);
 }
 
 OVMS_Status* OVMS_ServerNew(OVMS_Server** server) {
@@ -126,182 +126,182 @@ void OVMS_ServerDelete(OVMS_Server* server) {
 }
 
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
-    OVMS_ServerGeneralOptions* general_options,
-    OVMS_ServerMultiModelOptions* multi_model_specific_options) {
+    OVMS_ServerSettings* server_settings,
+    OVMS_ModelsSettings* models_settings) {
     if (server == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
     }
-    if (general_options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (server_settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    if (multi_model_specific_options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (models_settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(general_options);
-    ovms::MultiModelOptionsImpl* mmo = reinterpret_cast<ovms::MultiModelOptionsImpl*>(multi_model_specific_options);
-    auto res = srv->start(go, mmo);
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(server_settings);
+    ovms::ModelsSettingsImpl* modelsSettings = reinterpret_cast<ovms::ModelsSettingsImpl*>(models_settings);
+    auto res = srv->start(serverSettings, modelsSettings);
     if (res.ok())
         return nullptr;
     return reinterpret_cast<OVMS_Status*>(new ovms::Status(res));
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetGrpcPort(OVMS_ServerSettings* settings,
     uint32_t grpcPort) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->grpcPort = grpcPort;
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->grpcPort = grpcPort;
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetRestPort(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetRestPort(OVMS_ServerSettings* settings,
     uint32_t restPort) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->restPort = restPort;
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->restPort = restPort;
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcWorkers(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetGrpcWorkers(OVMS_ServerSettings* settings,
     uint32_t grpc_workers) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->grpcWorkers = grpc_workers;
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->grpcWorkers = grpc_workers;
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcBindAddress(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetGrpcBindAddress(OVMS_ServerSettings* settings,
     const char* grpc_bind_address) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (grpc_bind_address == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->grpcBindAddress.assign(grpc_bind_address);
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->grpcBindAddress.assign(grpc_bind_address);
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetRestWorkers(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetRestWorkers(OVMS_ServerSettings* settings,
     uint32_t rest_workers) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->restWorkers = rest_workers;
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->restWorkers = rest_workers;
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetRestBindAddress(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetRestBindAddress(OVMS_ServerSettings* settings,
     const char* rest_bind_address) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (rest_bind_address == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->restBindAddress.assign(rest_bind_address);
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->restBindAddress.assign(rest_bind_address);
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcChannelArguments(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetGrpcChannelArguments(OVMS_ServerSettings* settings,
     const char* grpc_channel_arguments) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (grpc_channel_arguments == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->grpcChannelArguments.assign(grpc_channel_arguments);
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->grpcChannelArguments.assign(grpc_channel_arguments);
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->filesystemPollWaitSeconds = seconds;
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->filesystemPollWaitSeconds = seconds;
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSettings* settings,
     uint32_t minutes) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->sequenceCleanerPollWaitMinutes = minutes;
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->sequenceCleanerPollWaitMinutes = minutes;
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->resourcesCleanerPollWaitSeconds = seconds;
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->resourcesCleanerPollWaitSeconds = seconds;
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetCpuExtensionPath(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetCpuExtensionPath(OVMS_ServerSettings* settings,
     const char* cpu_extension_path) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (cpu_extension_path == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->cpuExtensionLibraryPath.assign(cpu_extension_path);
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->cpuExtensionLibraryPath.assign(cpu_extension_path);
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetCacheDir(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetCacheDir(OVMS_ServerSettings* settings,
     const char* cache_dir) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (cache_dir == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->cacheDir.assign(cache_dir);
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->cacheDir.assign(cache_dir);
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetLogLevel(OVMS_ServerSettings* settings,
     OVMS_LogLevel log_level) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     switch (log_level) {
     case OVMS_LOG_INFO:
-        go->logLevel = "INFO";
+        serverSettings->logLevel = "INFO";
         break;
     case OVMS_LOG_ERROR:
-        go->logLevel = "ERROR";
+        serverSettings->logLevel = "ERROR";
         break;
     case OVMS_LOG_DEBUG:
-        go->logLevel = "DEBUG";
+        serverSettings->logLevel = "DEBUG";
         break;
     case OVMS_LOG_TRACE:
-        go->logLevel = "TRACE";
+        serverSettings->logLevel = "TRACE";
         break;
     case OVMS_LOG_WARNING:
-        go->logLevel = "WARNING";
+        serverSettings->logLevel = "WARNING";
         break;
     default:
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_LOG_LEVEL));
@@ -309,29 +309,29 @@ OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* opt
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerGeneralOptionsSetLogPath(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* settings,
     const char* log_path) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (log_path == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
     }
-    ovms::GeneralOptionsImpl* go = reinterpret_cast<ovms::GeneralOptionsImpl*>(options);
-    go->logPath.assign(log_path);
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->logPath.assign(log_path);
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServerMultiModelOptionsSetConfigPath(OVMS_ServerMultiModelOptions* options,
+OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
     const char* config_path) {
-    if (options == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_OPTIONS));
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (config_path == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
     }
-    ovms::MultiModelOptionsImpl* mmo = reinterpret_cast<ovms::MultiModelOptionsImpl*>(options);
-    mmo->configPath.assign(config_path);
+    ovms::ModelsSettingsImpl* modelsSettings = reinterpret_cast<ovms::ModelsSettingsImpl*>(settings);
+    modelsSettings->configPath.assign(config_path);
     return nullptr;
 }
 // inference API

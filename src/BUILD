@@ -263,7 +263,7 @@ cc_library(
         "serialization.hpp",
         "servablemanagermodule.cpp",
         "servablemanagermodule.hpp",
-        "server_options.hpp",
+        "server_settings.hpp",
         "server.cpp",
         "server.hpp",
         "session_id.hpp",

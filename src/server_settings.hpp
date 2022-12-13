@@ -20,7 +20,7 @@
 
 namespace ovms {
 
-struct GeneralOptionsImpl {
+struct ServerSettingsImpl {
     uint32_t grpcPort = 9178;
     uint32_t restPort = 0;
     uint32_t grpcWorkers = 1;
@@ -42,7 +42,7 @@ struct GeneralOptionsImpl {
     std::string cacheDir;
 };
 
-struct MultiModelOptionsImpl {
+struct ModelsSettingsImpl {
     std::string modelName;
     std::string modelPath;
     std::string batchSize;

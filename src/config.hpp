@@ -18,7 +18,7 @@
 #include <optional>
 #include <string>
 
-#include "server_options.hpp"
+#include "server_settings.hpp"
 
 namespace ovms {
 
@@ -43,8 +43,8 @@ private:
          */
     const std::string empty;
 
-    GeneralOptionsImpl go;
-    MultiModelOptionsImpl mmo;
+    ServerSettingsImpl go;
+    ModelsSettingsImpl mmo;
 
 public:
     /**
@@ -64,7 +64,7 @@ public:
          * @return Config& 
          */
     Config& parse(int argc, char** argv);
-    bool parse(GeneralOptionsImpl*, MultiModelOptionsImpl*);
+    bool parse(ServerSettingsImpl*, ModelsSettingsImpl*);
 
     /**
          * @brief Validate passed arguments
