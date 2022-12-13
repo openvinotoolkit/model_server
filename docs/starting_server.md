@@ -24,8 +24,8 @@ Before starting the container, make sure you have [prepared the model for servin
 Start the model server by running the following command with your parameters: 
 
 ```
-docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 openvino/model_server:latest \
---model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 9001 --log_level DEBUG
+docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+--model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 
 Example using a ResNet model:
@@ -35,8 +35,8 @@ mkdir -p models/resnet/1
 wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
 wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 
-docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/model_server:latest \
---model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 9001 --log_level DEBUG
+docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+--model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 
 The required Model Server parameters are listed below. For additional configuration options, see the [Model Server Parameters](parameters.md) section.
@@ -71,7 +71,7 @@ The required Model Server parameters are listed below. For additional configurat
 @endsphinxdirective
 
 - Expose the container ports to **open ports** on your host or virtual machine. 
-- In the command above, port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
+- In the command above, port 9000 is exposed for gRPC and port 8000 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.
 
 ## Serving Multiple Models 
