@@ -68,7 +68,7 @@ int main() {
     }
 
     OVMS_InferenceRequest* request = NULL;
-    OVMS_InferenceRequestNew(&request, "dummy", 1);
+    OVMS_InferenceRequestNew(&request, srv, "dummy", 1);
     OVMS_InferenceRequestAddInput(request, "b", OVMS_DATATYPE_FP32, SHAPE, 2);
     OVMS_InferenceRequestInputSetData(request, "b", inputData, DATA_SIZE, OVMS_BUFFERTYPE_CPU, 0);
 

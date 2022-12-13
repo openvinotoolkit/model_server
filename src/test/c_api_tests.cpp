@@ -306,9 +306,31 @@ TEST(CApiStatusTest, GetCodeAndDetails) {
 class CapiInference : public ::testing::Test {};
 
 TEST_F(CapiInference, Basic) {
+    //////////////////////
+    // start server
+    //////////////////////
+    // remove when C-API start implemented
+    std::string port = "9000";
+    randomizePort(port);
+    // prepare options
+    OVMS_ServerGeneralOptions* go = 0;
+    OVMS_ServerMultiModelOptions* mmo = 0;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsNew(&go));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsNew(&mmo));
+    ASSERT_NE(go, nullptr);
+    ASSERT_NE(mmo, nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetGrpcPort(go, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json"));
+
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, go, mmo));
+    ASSERT_NE(cserver, nullptr);
+    ///////////////////////
     // request creation
+    ///////////////////////
     OVMS_InferenceRequest* request{nullptr};
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, "dummy", 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_NE(nullptr, request);
 
     // adding input
@@ -328,23 +350,6 @@ TEST_F(CapiInference, Basic) {
     //////////////////
     //  INFERENCE
     //////////////////
-    // remove when C-API start implemented
-    std::string port = "9000";
-    randomizePort(port);
-    // prepare options
-    OVMS_ServerGeneralOptions* go = 0;
-    OVMS_ServerMultiModelOptions* mmo = 0;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsNew(&go));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsNew(&mmo));
-    ASSERT_NE(go, nullptr);
-    ASSERT_NE(mmo, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetGrpcPort(go, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json"));
-
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, go, mmo));
-    ASSERT_NE(cserver, nullptr);
 
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
@@ -462,9 +467,10 @@ TEST_F(CapiInference, NegativeInference) {
 
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(nullptr, "dummy", 1), StatusCode::NONEXISTENT_REQUEST);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(&request, nullptr, 1), StatusCode::NONEXISTENT_STRING);
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, "dummy", 1));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(nullptr, cserver, "dummy", 1), StatusCode::NONEXISTENT_REQUEST);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(&request, cserver, nullptr, 1), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(&request, nullptr, "dummy", 1), StatusCode::NONEXISTENT_SERVER);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_NE(nullptr, request);
     // negative no inputs
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_NO_OF_INPUTS);
@@ -505,7 +511,7 @@ TEST_F(CapiInference, NegativeInference) {
     // negative inference with non existing model
     OVMS_InferenceRequest* requestNoModel{nullptr};
     OVMS_InferenceResponse* reponseNoModel{nullptr};
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, "NONEXISTENT_MODEL", 13));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "NONEXISTENT_MODEL", 13));
     // negative no model
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::NOT_IMPLEMENTED);
 
@@ -621,7 +627,7 @@ TEST_F(CapiInference, CallInferenceServerNotStarted) {
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, "dummy", 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_NE(nullptr, cserver);
     ASSERT_NE(nullptr, request);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
