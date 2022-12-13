@@ -3,12 +3,6 @@
         {"config": {
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
-                "plugin_config": {
-                    "NUM_STREAMS":1,
-                    "AFFINITY": "CORE",
-                    "PERFORMANCE_HINT": "THROUGHPUT",
-                    "PERF_COUNT":"NO"
-                },
                 "shape": "(1, 10)",
                 "nireq": 1}
         }

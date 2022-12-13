@@ -67,7 +67,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 "LOG_LEVEL")
             ("config_path",
                 "Config file path for OVMS to read",
-                cxxopts::value<std::string>(),
+                cxxopts::value<std::string>()->default_value("/ovms/src/test/c_api/config_benchmark.json"),
                 "CONFIG_PATH")
 // benchmark options
             ("niter",
@@ -83,13 +83,13 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("2"),
                 "THREADS_PER_IREQ")
             // inference data
-            ("model_name",
+            ("servable_name",
                 "Model name to sent request to",
                 cxxopts::value<std::string>(),
                 "MODEL_NAME")
-            ("model_version",
+            ("servable_version",
                 "workload threads per ireq",
-                cxxopts::value<uint64_t>()->default_value("1"),
+                cxxopts::value<uint64_t>()->default_value("0"),
                 "MODEL_VERSION")
             ("inputs_names",
                 "Comma separated list of inputs names",
@@ -177,9 +177,9 @@ static void installSignalHandlers() {
 
 using shape_t = std::vector<size_t>;
 
-OVMS_InferenceRequest* prepareRequest(const std::string& modelName, uint32_t modelVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
+OVMS_InferenceRequest* prepareRequest(const std::string& servableName, uint32_t servableVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
     OVMS_InferenceRequest* request{nullptr};
-    OVMS_InferenceRequestNew(&request, modelName.c_str(), modelVersion);
+    OVMS_InferenceRequestNew(&request, servableName.c_str(), servableVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
     size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
     OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);  // TODO sizeof
@@ -202,15 +202,16 @@ void triggerInferenceInALoop(
     auto workloadStart = std::chrono::high_resolution_clock::now();
     size_t iter = niterPerThread;
     while (iter-- > 0) {
-        auto iterationStart = std::chrono::high_resolution_clock::now();
-        stopSignal.wait_for(std::chrono::milliseconds(0));
+        // stopSignal will be used with ctrl-c app stopping or with total requestCount
+        // stopSignal.wait_for(std::chrono::milliseconds(0));
+        auto iterationWholeStart = std::chrono::high_resolution_clock::now();
         auto iterationPureStart = std::chrono::high_resolution_clock::now();
         // aternatively we are changing request
         OVMS_Inference(server, request, &response);
         auto iterationPureEnd = std::chrono::high_resolution_clock::now();
         OVMS_InferenceResponseDelete(response);
-        auto iterationEnd = std::chrono::high_resolution_clock::now();
-        latenciesWhole[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationEnd - iterationStart).count();
+        auto iterationWholeEnd = std::chrono::high_resolution_clock::now();
+        latenciesWhole[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationWholeEnd - iterationWholeStart).count();
         latenciesPure[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationPureEnd - iterationPureStart).count();
     }
     auto workloadEnd = std::chrono::high_resolution_clock::now();
@@ -262,7 +263,7 @@ int main(int argc, char** argv) {
         return EX_USAGE;
     }
     OVMS_ServerGeneralOptionsSetLogLevel(go, logLevel);
-    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_benchmark.json");
+    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, cliparser.result->operator[]("config_path").as<std::string>().c_str());
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
 
@@ -284,8 +285,8 @@ int main(int argc, char** argv) {
     ///////////////////////
     // model parameters
     ///////////////////////
-    std::string modelName(cliparser.result->operator[]("model_name").as<std::string>());
-    uint64_t  modelVersion(cliparser.result->operator[]("model_version").as<uint64_t>());
+    std::string servableName(cliparser.result->operator[]("servable_name").as<std::string>());
+    uint64_t  servableVersion(cliparser.result->operator[]("servable_version").as<uint64_t>());
     // input names handling
     std::string cliInputsNames(cliparser.result->operator[]("inputs_names").as<std::string>());
     auto inputsNames = ovms::tokenize(cliInputsNames, ',');
@@ -322,7 +323,7 @@ int main(int argc, char** argv) {
     ///////////////////////
     // prepare requests
     ///////////////////////
-    OVMS_InferenceRequest* request = prepareRequest(modelName, modelVersion, datatype, shape, inputName, (const void*)data.data());
+    OVMS_InferenceRequest* request = prepareRequest(servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
 
     ///////////////////////
     // prepare response data
