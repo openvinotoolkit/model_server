@@ -64,13 +64,13 @@ Start the container:
 
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/face-detection -p 9000:9000 openvino/model_server:latest \
---model_path /models/face-detection --model_name face-detection --port 9000 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}' --shape auto
+--model_path /models/face-detection --model_name face-detection --port 9000
 ```
-During this step, the model folder is mapped to Docker. This folder will be used as the model storage from which the server will access models.
+During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage from which the server will access models.
 
 ### Step 5: Prepare the Example Client Components
 
-Model scripts are available for quick access to the Model Server. Run an example command to download all required components:
+Client scripts are available for quick access to the Model Server. Run an example command to download all required components:
 
 ```bash
 curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/requirements.txt -o client_requirements.txt
