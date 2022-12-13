@@ -324,6 +324,26 @@ int main(int argc, char** argv) {
     // prepare requests
     ///////////////////////
     OVMS_InferenceRequest* request = prepareRequest(servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
+    ///////////////////////
+    // check request
+    ///////////////////////
+    OVMS_InferenceResponse* response;
+    res = OVMS_Inference(srv, request, &response);
+    if (res != nullptr) {
+        uint32_t code = 0;
+        const char* details = 0;
+        OVMS_StatusGetCode(res, &code);
+        OVMS_StatusGetDetails(res, &details);
+        std::cerr << "Error occured during inference. Code:" << code
+                  << ", details:" << details << std::endl;
+        OVMS_StatusDelete(res);
+        OVMS_InferenceRequestDelete(request);
+        OVMS_ServerDelete(srv);
+        OVMS_ServerMultiModelOptionsDelete(mmo);
+        OVMS_ServerGeneralOptionsDelete(go);
+        exit(EX_CONFIG);
+    }
+    OVMS_InferenceResponseDelete(response);
 
     ///////////////////////
     // prepare response data
@@ -355,6 +375,7 @@ int main(int argc, char** argv) {
         stopSignals.end(),
         std::back_inserter(futureStopSignals),
         [](auto& p) { return p.get_future(); });
+
     ///////////////////////
     // prepare threads
     ///////////////////////
