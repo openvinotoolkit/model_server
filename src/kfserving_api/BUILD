@@ -28,11 +28,3 @@ cc_proto_library(
         "//visibility:public",
     ],
 )
-
-cc_library(
-    name = "kfserving_api_lib",
-    hdrs = ["kfserving_api/grpc_predict_v2.pb.h",
-            "kfserving_api/grpc_predict_v2.grpc.pb.h",
-    ],
-    deps = [":kfserving_api_cpp"],
-)

@@ -320,7 +320,6 @@ cc_library(
         "@openvino//:openvino",
         "@opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
-        #":kfserving_api_cpp",
         "//src/kfserving_api:kfserving_api_cpp",
     ],
     local_defines = [
@@ -559,6 +558,7 @@ cc_binary(
     linkstatic = True,
 )
 
+# Use for dynamic linking when neccessary
 cc_import(
   name = "shared_lib",
   hdrs = ["pocapi.h"],
@@ -582,16 +582,17 @@ cc_binary(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-        "-lovms_shared",
+        # "-lovms_shared",  # Use for dynamic linking when neccessary
     ],
     copts = [
         "-Wconversion",
         "-Werror",
     ],
     deps = [
-        "//src:cpp_headers",
+        "//src:ovms_lib",
+        # "//src:cpp_headers",  # Use for dynamic linking when neccessary
     ],
-    linkstatic = False,
+    # linkstatic = False,  # Use for dynamic linking when neccessary
 )
 
 cc_test(
