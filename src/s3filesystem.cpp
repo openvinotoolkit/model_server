@@ -108,7 +108,7 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         if (region != NULL) {
             config.region = region;
         }
-	if (session_token != NULL) {
+        if (session_token != NULL) {
             credentials.SetSessionToken(session_token);
         }
     } else if (profile_name) {
