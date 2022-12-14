@@ -42,6 +42,7 @@ RUN microdnf install shadow-utils make gcc gcc-c++; \
 
 COPY --from=base_build /ovms /ovms
 COPY --from=base_build /licenses /licenses
+COPY demos /ovms
 
 WORKDIR /ovms/demos
 RUN make -f MakefileCapi cpp

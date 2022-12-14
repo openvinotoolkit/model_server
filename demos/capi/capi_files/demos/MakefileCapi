@@ -14,12 +14,12 @@
 # limitations under the License.
 #
 cpp:
-	mkdir -vp /capi/bin
-	g++ main3.cpp -I/capi/include -L/capi/lib -lovms_shared -fPIC --std=c++17 -o /capi/bin/poc3
-	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/capi/lib /capi/bin/poc3
+	mkdir -vp /ovms/bin
+	g++ main3.cpp -I/ovms/include -L/ovms/lib -lovms_shared -fPIC --std=c++17 -o /ovms/bin/demo1
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/lib /ovms/bin/demo1
 
 c:
-	mkdir -vp /capi/bin
-	gcc -c main3.c -I/capi/include -o /capi/bin/main3.o -std=c99
-	gcc -o /capi/bin/poc3_c /capi/bin/main3.o -L/capi/lib -lovms_shared
-	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/capi/lib /capi/bin/poc3_c
+	mkdir -vp /ovms/bin
+	gcc -c main3.c -I/ovms/include -o /ovms/bin/main3.o -std=c99
+	gcc -o /ovms/bin/demo2_c /ovms/bin/main3.o -L/ovms/lib -lovms_shared
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/lib /ovms/bin/demo2_c

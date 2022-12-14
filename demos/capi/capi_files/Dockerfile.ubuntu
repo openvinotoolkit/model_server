@@ -37,19 +37,18 @@ RUN	set -e ; \
         groupadd --gid 5000 ovms ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-COPY drivers /drivers
-COPY --from=base_build /ovms /ovms
-
 ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb2"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${BUILD_DEPENDENCIES} && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
+COPY --from=base_build /ovms /ovms
+COPY demos /ovms/demos
 WORKDIR /ovms/demos
 RUN make -f MakefileCapi cpp
 RUN make -f MakefileCapi c
 
-RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /capi/thirdparty-licenses/GPL.txt
+RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
 ENTRYPOINT ["/bin/bash"]

@@ -17,6 +17,8 @@
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
+BASE_OS_TAG_UBUNTU ?= 20.04
+BASE_OS_TAG_REDHAT ?= 8.7
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
@@ -41,7 +43,8 @@ all:
 	cp -vR capi_files/* capi/$(DIST_OS)/
 	cp -r ../../src/test/dummy capi/$(DIST_OS)/demos
 	cp -r ../../src/main3.c* capi/$(DIST_OS)/demos
-	sed -i s+/ovms/src/test/c_api/config.json+/capi/demos/config.json+ ovms/demos/main3.c*
+	sed -i s+/ovms/src/test/c_api/config.json+/ovms/demos/config.json+ capi/$(DIST_OS)/demos/main3.c
+	sed -i s+/ovms/src/test/c_api/config_standard_dummy.json+/ovms/demos/config_standard_dummy.json+ capi/$(DIST_OS)/demos/main3.cpp
 	cd capi/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \

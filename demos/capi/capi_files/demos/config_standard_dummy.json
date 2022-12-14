@@ -3,6 +3,8 @@
         {"config": {
                 "name": "dummy",
                 "base_path": "/ovms/demos/dummy",
-                "shape": "(30, 20)"}}
+                "shape": "(1, 10)"
+        	}
+	}
     ]
 }
