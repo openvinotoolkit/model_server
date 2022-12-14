@@ -66,6 +66,7 @@ RUN apt-get update && apt-get install -y \
             libtool \
             libxml2-dev \
             libnuma-dev \
+            libtbb2 \
             libssl-dev \
             nlohmann-json3-dev \
             patch \
