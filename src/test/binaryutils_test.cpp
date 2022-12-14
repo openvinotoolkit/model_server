@@ -48,13 +48,6 @@ public:
         tensor.mutable_shape()->Add(batchSize);
         tensor.set_datatype("BYTES");
     }
-    void prepareBinaryRequest(::KFSRequest& tensor, std::string& image_bytes) {
-        if (image_bytes.size() > 0) {
-            std::string* raw_contents = tensor.add_raw_input_contents();
-            raw_contents->reserve(image_bytes.size());
-            raw_contents->append(image_bytes.data(), image_bytes.size());
-        }
-    }
     void prepareBinaryTensor(tensorflow::TensorProto& tensor) {
         size_t filesize;
         std::unique_ptr<char[]> image_bytes;
@@ -184,31 +177,6 @@ TYPED_TEST(BinaryUtilsTest, positive_grayscale) {
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), grayscale_expected_tensor), true);
 }
-
-// TYPED_TEST(BinaryUtilsTest, positive_grayscale_request) {
-//     uint8_t grayscale_expected_tensor[] = {0x00};
-
-//     std::ifstream DataFile;
-//     DataFile.open("/ovms/src/test/binaryutils/grayscale.jpg", std::ios::binary);
-//     DataFile.seekg(0, std::ios::end);
-//     size_t grayscale_filesize = DataFile.tellg();
-//     DataFile.seekg(0);
-//     std::unique_ptr<char[]> grayscale_image_bytes(new char[grayscale_filesize]);
-//     DataFile.read(grayscale_image_bytes.get(), grayscale_filesize);
-
-//     ::KFSRequest request;
-//     ov::Tensor tensor;
-//     std::string data;
-//     data.assign(grayscale_image_bytes.get(), grayscale_image_bytes.get() + grayscale_filesize);
-//     this->prepareBinaryRequest(request, data);
-
-//     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 1}, Layout{"NHWC"});
-
-//     ASSERT_EQ(convertBinaryRequestTensorToOVTensor(request, tensor, tensorInfo), ovms::StatusCode::OK);
-//     ASSERT_EQ(tensor.get_size(), 1);
-//     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-//     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), grayscale_expected_tensor), true);
-// }
 
 TYPED_TEST(BinaryUtilsTest, positive_batch_size_2) {
     uint8_t rgb_batchsize_2_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
