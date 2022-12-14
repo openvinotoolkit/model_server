@@ -605,6 +605,7 @@ public:
         prepareBinaryTensor(requestTensor);
     }
 
+private:
     void prepareBuffer(std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
         for (size_t i = 0; i < batchSize; i++) {
             buffer.append(image_bytes.get(), filesize);
