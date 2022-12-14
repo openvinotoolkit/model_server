@@ -35,7 +35,7 @@ OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving mod
 
 ![OVMS picture](ovms_high_level.png)
 
-The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](./models_repository.md) documentation. Model server works inside [Docker containers](deploying_server.md), on [Bare Metal](deploying_server.md#deploying-model-server-on-baremetal), and in [Kubernetes environment](deploying_server.md#deploying-model-server-in-kubernetes).
+The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](./models_repository.md) documentation. Model server works inside [Docker containers](deploying_server.md), on [Bare Metal](deploying_server.md), and in [Kubernetes environment](deploying_server.md).
 Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md) or explore [Model Server features](features.md).
 
 ## Additional Resources
