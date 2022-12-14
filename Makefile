@@ -47,6 +47,7 @@ NVIDIA ?=0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= master
+OV_CONTRIB_BRANCH ?= master
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -212,7 +213,7 @@ endif
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg NVIDIA=$(NVIDIA) \
+		--build-arg NVIDIA=$(NVIDIA) --build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg JOBS=$(JOBS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
