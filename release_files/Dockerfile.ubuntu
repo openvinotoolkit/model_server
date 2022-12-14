@@ -84,7 +84,7 @@ COPY drivers /drivers
 RUN	set -e ; \
 	set -x ; \
         apt update -y ; \
-        apt install -y curl libpugixml1v5 libtbb2 \
+        apt install -y curl libpugixml1v5 libtbb2 && \
 	if [ "$GPU" == "1" ] ; then \
                 apt-get update && apt-get  install -y libnuma1 ocl-icd-libopencl1 && rm -rf /var/lib/apt/lists/* && \
 	        case $INSTALL_DRIVER_VERSION in \
