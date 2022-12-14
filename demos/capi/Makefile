@@ -1,0 +1,43 @@
+#
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+HTTP_PROXY := "$(http_proxy)"
+HTTPS_PROXY := "$(https_proxy)"
+NO_PROXY := "$(no_proxy)"
+
+OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
+OVMS_CPP_IMAGE_TAG ?= latest
+BASE_OS ?= ubuntu
+DIST_OS ?= $(BASE_OS)
+
+all:
+	rm -vrf capi/$(DIST_OS) && mkdir -vp capi/$(DIST_OS) && cd capi/$(DIST_OS) && \
+		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
+			"tar -c -C / ovms.tar* ; sleep 2" | tar -x
+	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG))
+	cd capi/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
+	cd capi/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
+	cp -vR ../../release_files/thirdparty-licenses capi/$(DIST_OS)/
+	cp -vR ../../release_files/drivers capi/$(DIST_OS)/
+	cp -vR ../../release_files/LICENSE capi/$(DIST_OS)/
+	cp -r ../../src/test/dummy /capi_files
+	sed -i s+/ovms/src/test/c_api/config.json+/capi/demos/config.json+ capi_files/demos/main3.c*
+	cp -vR capi_files/* capi/$(DIST_OS)/
+	cd capi/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG)
