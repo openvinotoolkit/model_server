@@ -73,19 +73,22 @@ static void installSignalHandlers() {
 int main(int argc, char** argv) {
     installSignalHandlers();
 
-    OVMS_ServerSettings* go = 0;
-    OVMS_ModelsSettings* mmo = 0;
+    OVMS_ServerSettings* serverSettings = 0;
+    OVMS_ModelsSettings* modelsSettings = 0;
     OVMS_Server* srv;
 
-    OVMS_ServerSettingsNew(&go);
-    OVMS_ModelsSettingsNew(&mmo);
+    OVMS_ServerSettingsNew(&serverSettings);
+    OVMS_ModelsSettingsNew(&modelsSettings);
     OVMS_ServerNew(&srv);
 
+    OVMS_ServerSettingsSetGrpcPort(serverSettings, 9178);
+    OVMS_ServerSettingsSetRestPort(serverSettings, 11338);
 
-    OVMS_ServerSettingsSetLogLevel(go, OVMS_LOG_DEBUG);
-    OVMS_ModelsSettingsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json");
+    OVMS_ServerSettingsSetLogLevel(serverSettings, OVMS_LOG_DEBUG);
+    OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json");
 
-    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
+    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
+
     if (res) {
         uint32_t code = 0;
         const char* details = nullptr;
@@ -97,8 +100,8 @@ int main(int argc, char** argv) {
         OVMS_StatusDelete(res);
 
         OVMS_ServerDelete(srv);
-        OVMS_ModelsSettingsDelete(mmo);
-        OVMS_ServerSettingsDelete(go);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
         return 1;
     }
 
@@ -162,8 +165,8 @@ int main(int argc, char** argv) {
     std::cout << "No more job to be done, will shut down" << std::endl;
 
     OVMS_ServerDelete(srv);
-    OVMS_ModelsSettingsDelete(mmo);
-    OVMS_ServerSettingsDelete(go);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
 
     fprintf(stdout, "main() exit\n");
     return 0;
