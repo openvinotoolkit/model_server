@@ -60,8 +60,8 @@ RUN if [ -f /ovms_release/lib/libjava.so ] ; then true ; else exit 0 ; fi ;cd /o
 	libprefs.so librmi.so libsaproc.so libsctp.so libsplashscreen.so libsunec.so libsystemconf.so libunpack.so libverify.so libzip.so
 
 # Remove capi temp libraries
-RUN if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then true ; else exit 0 ; fi ;cd /ovms_release/lib/ &&\
-	rm -rf  libsrc_Slibovms_Ushared.so
+RUN if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then true ; else exit 0 ; fi ;\
+	rm -rf  /ovms_release/lib/libsrc_Slibovms_Ushared.so
 
 RUN find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 RUN find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
