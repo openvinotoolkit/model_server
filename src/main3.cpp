@@ -13,14 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-// #include <chrono>
-// #include <iostream>
-// #include <thread>
+#include <algorithm>
+#include <array>
+#include <chrono>
+#include <cstring>
+#include <iostream>
+#include <numeric>
+#include <sstream>
+#include <thread>
+#include <vector>
 
 #include <signal.h>
 #include <stdio.h>
 
 #include "./pocapi.h"
+
+const char* MODEL_NAME = "dummy";
+const uint64_t MODEL_VERSION = 1;
+const char* INPUT_NAME = "b";
+constexpr size_t DIM_COUNT = 2;
+constexpr size_t SHAPE[DIM_COUNT] = {1, 10};
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
@@ -60,7 +72,6 @@ static void installSignalHandlers() {
 
 int main(int argc, char** argv) {
     installSignalHandlers();
-
     OVMS_ServerGeneralOptions* go = 0;
     OVMS_ServerMultiModelOptions* mmo = 0;
     OVMS_Server* srv;
@@ -69,22 +80,20 @@ int main(int argc, char** argv) {
     OVMS_ServerMultiModelOptionsNew(&mmo);
     OVMS_ServerNew(&srv);
 
-    OVMS_ServerGeneralOptionsSetGrpcPort(go, 11337);
+    OVMS_ServerGeneralOptionsSetGrpcPort(go, 9178);
     OVMS_ServerGeneralOptionsSetRestPort(go, 11338);
 
     OVMS_ServerGeneralOptionsSetLogLevel(go, OVMS_LOG_DEBUG);
-    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config.json");
+    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json");
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
-
     if (res) {
         uint32_t code = 0;
         const char* details = nullptr;
 
         OVMS_StatusGetCode(res, &code);
         OVMS_StatusGetDetails(res, &details);
-
-        fprintf(stderr, "error during start: code %d, details: %s\n", code, details);
+        std::cerr << "error during start: code:" << code << "; details:" << details << std::endl;
 
         OVMS_StatusDelete(res);
 
@@ -94,23 +103,67 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    fprintf(stdout, "Server ready for inference\n");
+    std::cout << "Server ready for inference" << std::endl;
 
-    // infer 1
-    // infer 2
-    // infer 3
+    // prepare request
+    OVMS_InferenceRequest* request{nullptr};
+    OVMS_InferenceRequestNew(&request, MODEL_NAME, MODEL_VERSION);
+    OVMS_InferenceRequestAddInput(request, INPUT_NAME, OVMS_DATATYPE_FP32, SHAPE, DIM_COUNT);
+    std::array<float, SHAPE[1]> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    OVMS_InferenceRequestInputSetData(request, INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, 0);
 
-    // Application loop if required (C++):
-    // while (shutdown_request == 0) {
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    // }
+    // run sync request
+    OVMS_InferenceResponse* response = nullptr;
+    res = OVMS_Inference(srv, request, &response);
+    if (res != nullptr) {
+        uint32_t code = 0;
+        const char* details = 0;
+        OVMS_StatusGetCode(res, &code);
+        OVMS_StatusGetDetails(res, &details);
+        std::cout << "Error occured during inference. Code:" << code
+                  << ", details:" << details << std::endl;
+    }
+    // read output
+    uint32_t outputCount = 0;
+    OVMS_InferenceResponseGetOutputCount(response, &outputCount);
+    const void* voutputData;
+    size_t bytesize = 0;
+    uint32_t outputId = outputCount - 1;
+    OVMS_DataType datatype = (OVMS_DataType)42;
+    const uint64_t* shape{nullptr};
+    uint32_t dimCount = 0;
+    OVMS_BufferType bufferType = (OVMS_BufferType)42;
+    uint32_t deviceId = 42;
+    const char* outputName{nullptr};
+    OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
 
-    fprintf(stdout, "No more job to be done, will shut down\n");
+    std::stringstream ss;
+    ss << "Got response from OVMS via C-API. "
+       << "Request for model: " << MODEL_NAME
+       << "; version: " << MODEL_VERSION
+       << "ms; output name: " << outputName
+       << "; response with values:\n";
+    for (size_t i = 0; i < shape[1]; ++i) {
+        ss << *(reinterpret_cast<const float*>(voutputData) + i) << " ";
+    }
+    std::vector<float> expectedOutput;
+    std::transform(data.begin(), data.end(), std::back_inserter(expectedOutput),
+        [](const float& s) -> float {
+            return s + 1;
+        });
+
+    if (std::memcmp(voutputData, expectedOutput.data(), expectedOutput.size() * sizeof(float)) != 0) {
+        std::cout << "Incorrect result of inference" << std::endl;
+    }
+    // comment line below to have app running similarly to OVMS
+    shutdown_request = 1;
+    while (shutdown_request == 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    std::cout << "No more job to be done, will shut down" << std::endl;
 
     OVMS_ServerDelete(srv);
     OVMS_ServerMultiModelOptionsDelete(mmo);
     OVMS_ServerGeneralOptionsDelete(go);
-
-    fprintf(stdout, "main() exit\n");
     return 0;
 }
