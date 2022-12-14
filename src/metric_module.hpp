@@ -30,7 +30,8 @@ protected:
 public:
     MetricModule();
     ~MetricModule();
-    int start(const Config& config) override;
+    Status start(const Config& config) override;
+
     void shutdown() override;
 
     MetricRegistry& getRegistry() const;

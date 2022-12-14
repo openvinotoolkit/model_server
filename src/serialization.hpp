@@ -27,7 +27,10 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "inferenceresponse.hpp"
+#include "inferencetensor.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "pocapiinternal.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
@@ -72,6 +75,11 @@ Status serializeTensorToTensorProtoRaw(
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
+Status serializeTensorToTensorProto(
+    InferenceTensor& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor);
+
 typedef const std::string& (*outputNameChooser_t)(const std::string&, const TensorInfo&);
 const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo);
 const std::string& getOutputMapKeyName(const std::string& first, const TensorInfo& tensorInfo);
@@ -79,6 +87,8 @@ const std::string& getOutputMapKeyName(const std::string& first, const TensorInf
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response,
     outputNameChooser_t outputNameChooser,
@@ -104,12 +114,16 @@ Status serializePredictResponse(
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
     const tensor_map_t& outputMap,
     ::KFSResponse* response,
     outputNameChooser_t outputNameChooser,
     bool useSharedOutputContent = true) {
     OVMS_PROFILE_FUNCTION();
     Status status;
+    response->set_model_name(servableName);
+    response->set_model_version(std::to_string(servableVersion));
     ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(response);
     for (const auto& [outputName, outputInfo] : outputMap) {
         ov::Tensor tensor;
@@ -129,5 +143,89 @@ Status serializePredictResponse(
         }
     }
     return status;
+}
+template <typename T>
+Status serializePredictResponse(
+    OutputGetter<T>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    InferenceResponse* response,
+    outputNameChooser_t outputNameChooser) {
+    OVMS_PROFILE_FUNCTION();
+    Status status;
+    uint32_t outputId = 0;
+    for (const auto& [outputName, outputInfo] : outputMap) {
+        ov::Tensor tensor;
+        status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);
+        if (!status.ok()) {
+            return status;
+        }
+        auto servableMetaPrecision = outputInfo->getPrecision();
+        auto actualPrecision = ovElementTypeToOvmsPrecision(tensor.get_element_type());
+        if (servableMetaPrecision != actualPrecision) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+        if (!outputInfo->getShape().match(tensor.get_shape())) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+        switch (servableMetaPrecision) {
+        case ovms::Precision::FP64:
+        case ovms::Precision::FP32:
+        case ovms::Precision::FP16:
+        case ovms::Precision::I64:
+        case ovms::Precision::I32:
+        case ovms::Precision::I16:
+        case ovms::Precision::I8:
+        case ovms::Precision::U64:
+        case ovms::Precision::U32:
+        case ovms::Precision::U16:
+        case ovms::Precision::U8:
+            break;
+        case ovms::Precision::BF16:
+        case ovms::Precision::U4:
+        case ovms::Precision::U1:
+        case ovms::Precision::BOOL:  // ?
+        case ovms::Precision::CUSTOM:
+        case ovms::Precision::UNDEFINED:
+        case ovms::Precision::DYNAMIC:
+        case ovms::Precision::MIXED:
+        case ovms::Precision::Q78:
+        case ovms::Precision::BIN:
+        default: {
+            Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+            SPDLOG_ERROR(status.string());
+            return status;
+        }
+        }
+        InferenceTensor* outputTensor{nullptr};
+        // Mapped name for single model result serialization: possible mapping_config.json setting
+        // For DAG: setting in pipeline output configuration
+        status = response->addOutput(
+            outputInfo->getMappedName(),
+            getPrecisionAsOVMSDataType(actualPrecision),
+            tensor.get_shape().data(),
+            tensor.get_shape().size());
+        if (!status.ok()) {
+            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: duplicate output name",
+                outputName, response->getServableName(), response->getServableVersion());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        const std::string* outputNameFromCapiTensor = nullptr;
+        status = response->getOutput(outputId, &outputNameFromCapiTensor, &outputTensor);
+        ++outputId;  // TODO C-API test serialization 2 outputs
+        if (!status.ok()) {
+            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted input",
+                outputName, response->getServableName(), response->getServableVersion());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        outputTensor->setBuffer(
+            tensor.data(),
+            tensor.get_byte_size(),
+            OVMS_BUFFERTYPE_CPU,
+            std::nullopt,
+            true);
+    }
+    return StatusCode::OK;
 }
 }  // namespace ovms

@@ -43,7 +43,8 @@ enum class Precision {
     DYNAMIC,
     MIXED,
     Q78,
-    BIN
+    BIN,  // TODO remove BIN,Q78, DYNAMIC, CUSTOM, MIXED
+    PRECISION_END
 };
 
 const std::string& toString(Precision precision);

@@ -97,6 +97,8 @@ enum class StatusCode {
     INVALID_VALUE_COUNT,            /*!< Invalid value count error status for uint16 and half float data types */
     INVALID_CONTENT_SIZE,           /*!< Invalid content size error status for types using tensor_content() */
     INVALID_MESSAGE_STRUCTURE,      /*!< Buffers can't be both in raw_input_content & input tensor content */
+    INVALID_BUFFER_TYPE,            /*!< Invalid buffer type */
+    INVALID_DEVICE_ID,              /*!< Invalid buffer device id */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
@@ -270,6 +272,35 @@ enum class StatusCode {
     INVALID_METRICS_ENDPOINT,
     INVALID_METRICS_FAMILY_NAME,
     METRICS_REST_PORT_MISSING,
+
+    // C-API
+    DOUBLE_BUFFER_SET,
+    DOUBLE_TENSOR_INSERT,
+    DOUBLE_PARAMETER_INSERT,
+    NONEXISTENT_BUFFER_FOR_REMOVAL,
+    NONEXISTENT_DATA,
+    NONEXISTENT_STRING,
+    NONEXISTENT_NUMBER,
+    NONEXISTENT_OPTIONS,
+    NONEXISTENT_PARAMETER_FOR_REMOVAL,  // rename to non existen parameter
+    NONEXISTENT_SERVER,
+    NONEXISTENT_RESPONSE,
+    NONEXISTENT_REQUEST,
+    NONEXISTENT_TABLE,
+    NONEXISTENT_TENSOR,
+    NONEXISTENT_TENSOR_FOR_SET_BUFFER,
+    NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER,
+    NONEXISTENT_TENSOR_FOR_REMOVAL,
+    NONEXISTENT_STATUS,
+    NONEXISTENT_LOG_LEVEL,
+    SERVER_NOT_READY_FOR_INFERENCE,
+
+    // Server Start errors
+    OPTIONS_USAGE_ERROR,
+    FAILED_TO_START_GRPC_SERVER,
+    FAILED_TO_START_REST_SERVER,
+    SERVER_ALREADY_STARTED,
+    MODULE_ALREADY_INSERTED,
 
     STATUS_CODE_END
 };

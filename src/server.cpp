@@ -32,8 +32,10 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sysexits.h>
 #include <unistd.h>
 
+#include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
@@ -46,6 +48,7 @@
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"
+#include "server_options.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -60,6 +63,11 @@ const std::string METRICS_MODULE_NAME = "MetricsModule";
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
+}
+
+Server& Server::instance() {
+    static Server global;
+    return global;
 }
 
 static void logConfig(const Config& config) {
@@ -111,7 +119,7 @@ static void onIllegal(int status) {
     shutdown_request = 2;
 }
 
-static void installSignalHandlers(ovms::Server& server) {
+static void installSignalHandlers() {
     static struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = onInterrupt;
     sigemptyset(&sigIntHandler.sa_mask);
@@ -179,6 +187,8 @@ class ProfilerModule : public Module {
 
 public:
     ProfilerModule() = default;
+    Status start(const ovms::Config& config) override { return StatusCode::OK; }
+
     int start(const Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         SPDLOG_INFO("{} starting", PROFILER_MODULE_NAME);
@@ -240,14 +250,14 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         std::tie(IT_NAME, inserted) = this->modules.emplace(MODULE_NAME, std::move(module)); \
     }                                                                                        \
     if (!inserted)                                                                           \
-    return EXIT_FAILURE
+    return Status(StatusCode::MODULE_ALREADY_INSERTED, MODULE_NAME)
 
-#define START_MODULE(IT_NAME)                 \
-    retCode = IT_NAME->second->start(config); \
-    if (retCode)                              \
-    return retCode
+#define START_MODULE(IT_NAME)                \
+    status = IT_NAME->second->start(config); \
+    if (!status.ok())                        \
+    return status
 
-int Server::startModules(ovms::Config& config) {
+Status Server::startModules(ovms::Config& config) {
     // The order of starting modules is slightly different from inserting modules
     // due to dependency of modules on each other during runtime
     // To avoid unnecessary runtime calls in eg. prediction we have different order
@@ -258,7 +268,7 @@ int Server::startModules(ovms::Config& config) {
     // while we want to start the server as quickly as possible to respond with liveness probe
     // thats why we delay starting the servable until the very end while we need to create it before
     // GRPC & REST
-    auto retCode = EXIT_SUCCESS;
+    Status status;
     bool inserted = false;
     auto it = modules.end();
 #if MTR_ENABLED
@@ -283,7 +293,7 @@ int Server::startModules(ovms::Config& config) {
         START_MODULE(itHttp);
     }
     START_MODULE(itServable);
-    return retCode;
+    return status;
 }
 
 void Server::ensureModuleShutdown(const std::string& name) {
@@ -315,32 +325,56 @@ void Server::shutdownModules() {
     modules.clear();
 }
 
+static int statusToExitCode(const Status& status) {
+    if (status.ok()) {
+        return EX_OK;
+    } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
+        return EX_USAGE;
+    }
+    return EXIT_FAILURE;
+}
+
+// OVMS Start
 int Server::start(int argc, char** argv) {
-    ovms::Server& server = ovms::Server::instance();
-    installSignalHandlers(server);
+    installSignalHandlers();
+    CLIParser parser;
+    GeneralOptionsImpl go;
+    MultiModelOptionsImpl mmo;
+    parser.parse(argc, argv);
+    parser.prepare(&go, &mmo);
+    Status ret = start(&go, &mmo);
+    ModulesShutdownGuard shutdownGuard(*this);
+    if (!ret.ok()) {
+        // Handle OVMS main() return code
+        return statusToExitCode(ret);
+    }
+    while (!shutdown_request) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    if (shutdown_request == 2) {
+        SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
+    }
+    SPDLOG_INFO("Shutting down");
+    return EXIT_SUCCESS;
+}
+
+// C-API Start
+Status Server::start(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
     try {
-        auto& config = ovms::Config::instance().parse(argc, argv);
+        if (this->isLive())
+            return StatusCode::SERVER_ALREADY_STARTED;
+        auto& config = ovms::Config::instance();
+        if (!config.parse(go, mmo))
+            return StatusCode::OPTIONS_USAGE_ERROR;  // TODO: Have separate code for each option validation failure
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);
-        ModulesShutdownGuard shutdownGuard(*this);
-        auto retCode = this->startModules(config);
-        if (retCode)
-            return retCode;
-
-        while (!shutdown_request) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        if (shutdown_request == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-        }
-        SPDLOG_INFO("Shutting down");
+        return this->startModules(config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
-        return EXIT_FAILURE;
+        return Status(StatusCode::INTERNAL_ERROR, e.what());
     } catch (...) {
         SPDLOG_ERROR("Unknown exception catch - will now terminate.");
-        return EXIT_FAILURE;
+        return StatusCode::INTERNAL_ERROR;
     }
-    return EXIT_SUCCESS;
 }
 }  // namespace ovms

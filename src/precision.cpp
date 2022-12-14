@@ -102,6 +102,7 @@ ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
         {Precision::U4, ov::element::Type_t::u4},
         {Precision::U1, ov::element::Type_t::u1},
         {Precision::BOOL, ov::element::Type_t::boolean},
+        {Precision::BF16, ov::element::Type_t::bf16},
         {Precision::UNDEFINED, ov::element::Type_t::undefined},
         {Precision::DYNAMIC, ov::element::Type_t::dynamic}
         //    {Precision::MIXED, ov::element::Type_t::MIXED},

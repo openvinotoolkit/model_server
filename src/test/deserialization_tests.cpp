@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,8 +28,12 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "../buffer.hpp"
 #include "../deserialization.hpp"
+#include "../inferencerequest.hpp"
+#include "../inferencetensor.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "../pocapiinternal.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 
@@ -43,6 +47,7 @@ using TFPredictResponse = tensorflow::serving::PredictResponse;
 using namespace ovms;
 
 using testing::_;
+using testing::ElementsAre;
 using testing::NiceMock;
 using testing::Throw;
 
@@ -64,7 +69,7 @@ protected:
         tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
             tensorName,
             precision,
-            shape_t{1, 3},
+            shape_t{1, DUMMY_MODEL_INPUT_SIZE},
             Layout{"NC"});
         SetUpTensorProto(getPrecisionAsDataType(precision));
     }
@@ -74,7 +79,7 @@ protected:
         tensorShape->Clear();
         tensorShape->add_dim()->set_size(1);
         tensorShape->add_dim()->set_size(DUMMY_MODEL_INPUT_SIZE);
-        *(tensorProto.mutable_tensor_content()) = std::string(1 * DUMMY_MODEL_INPUT_SIZE, '1');
+        *(tensorProto.mutable_tensor_content()) = std::string(1 * sizeof(float) * DUMMY_MODEL_INPUT_SIZE, '1');
     }
     TFTensorProto tensorProto;
     const char* tensorName = DUMMY_MODEL_INPUT_NAME;
@@ -84,6 +89,82 @@ protected:
 
 class DeserializeTFTensorProto : public TensorflowGRPCPredict {};
 class DeserializeTFTensorProtoNegative : public TensorflowGRPCPredict {};
+
+class CAPIPredict : public ::testing::TestWithParam<ovms::Precision> {
+protected:
+    void SetUp() override {
+        tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
+            tensorName,
+            PRECISION,
+            shape_t{1, DUMMY_MODEL_INPUT_SIZE},
+            Layout{"NC"});
+        SetUpTensorProto(getPrecisionAsOVMSDataType(PRECISION));
+    }
+
+    void SetUpTensorProto(OVMS_DataType dataType) {
+        std::array<size_t, 2> shape{1, DUMMY_MODEL_INPUT_SIZE};
+        tensorCapi = std::make_unique<InferenceTensor>(dataType,
+            shape.data(),
+            shape.size());
+        bool createCopy{true};
+        const std::string data(1 * sizeof(float) * DUMMY_MODEL_INPUT_SIZE, '1');
+        auto status = tensorCapi->setBuffer(data.data(), data.size(), OVMS_BUFFERTYPE_CPU, std::nullopt, createCopy);
+        ASSERT_EQ(status, StatusCode::OK) << status.string();
+        const Buffer* buffer{nullptr};
+        buffer = tensorCapi->getBuffer();
+        ASSERT_NE(buffer, nullptr);
+    }
+    ovms::Precision PRECISION = ovms::Precision::FP32;
+    std::unique_ptr<InferenceTensor> tensorCapi;
+    const char* tensorName = DUMMY_MODEL_INPUT_NAME;
+    ovms::tensor_map_t tensorMap;
+    bool isPipeline = false;
+};
+
+class CAPIPredictRequest : public CAPIPredict {
+protected:
+    InferenceRequest request{"dummy", 1};
+    static const std::string DATA;
+    static constexpr std::array<size_t, 2> SHAPE{1, 10};
+    void SetUp() {
+        CAPIPredict::SetUp();
+        request.addInput(DUMMY_MODEL_INPUT_NAME,
+            OVMS_DATATYPE_FP32,
+            SHAPE.data(),
+            SHAPE.size());
+        request.setInputBuffer(DUMMY_MODEL_INPUT_NAME,
+            DATA.data(),
+            sizeof(float) * DUMMY_MODEL_INPUT_SIZE,
+            OVMS_BUFFERTYPE_CPU,
+            std::nullopt);
+    }
+    void TearDown() {
+    }
+};
+const std::string CAPIPredictRequest::DATA{1 * sizeof(float) * DUMMY_MODEL_INPUT_SIZE, '1'};
+// dispose connection to CAPI Predict
+TEST_F(CAPIPredictRequest, ShouldSuccessForSupportedPrecision) {
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ov::InferRequest inferRequest = compiledModel.create_infer_request();
+    InputSink<ov::InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
+    EXPECT_TRUE(status.ok());
+    auto tensor = inferRequest.get_tensor(CAPIPredictRequest::tensorName);
+    EXPECT_EQ(PRECISION, ovElementTypeToOvmsPrecision(tensor.get_element_type()));
+    auto shape = tensor.get_shape();
+    EXPECT_THAT(shape, ElementsAre(1, DUMMY_MODEL_INPUT_SIZE));
+    const InferenceTensor* requestTensor{nullptr};
+    status = request.getInput(DUMMY_MODEL_INPUT_NAME, &requestTensor);
+    ASSERT_NE(nullptr, requestTensor);
+    const Buffer* buffer = requestTensor->getBuffer();
+    EXPECT_EQ(tensor.data(), buffer->data());
+    EXPECT_EQ(tensor.get_byte_size(), buffer->getByteSize());
+}
+
+class DeserializeCAPITensor : public CAPIPredict {};
+class DeserializeCAPITensorProtoNegative : public CAPIPredict {};
 
 class GRPCPredictRequest : public TensorflowGRPCPredict {
 public:
@@ -193,6 +274,15 @@ TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
                                << " should return nullptr";
 }
 
+TEST_P(DeserializeCAPITensorProtoNegative, ShouldReturnNullptrForPrecision) {
+    ovms::Precision testedPrecision = GetParam();
+    tensorMap[tensorName]->setPrecision(testedPrecision);
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(*tensorCapi, tensorMap[tensorName]);
+    EXPECT_FALSE((bool)tensor) << "Unsupported OVMS precision:"
+                               << toString(testedPrecision)
+                               << " should return nullptr";
+}
+
 TEST_P(DeserializeTFTensorProto, ShouldReturnValidTensor) {
     ovms::Precision testedPrecision = GetParam();
     SetUpTensorProto(getPrecisionAsDataType(testedPrecision));
@@ -201,6 +291,17 @@ TEST_P(DeserializeTFTensorProto, ShouldReturnValidTensor) {
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid tensor ptr";
+    EXPECT_EQ(ovElementTypeToOvmsPrecision(tensor.get_element_type()), testedPrecision);
+}
+TEST_P(DeserializeCAPITensor, ShouldReturnValidTensor) {
+    ovms::Precision testedPrecision = GetParam();
+    SetUpTensorProto(getPrecisionAsOVMSDataType(testedPrecision));
+    tensorMap[tensorName]->setPrecision(testedPrecision);
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(*tensorCapi, tensorMap[tensorName]);
+    EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
+                              << toString(testedPrecision)
+                              << " should return valid tensor ptr";
+    EXPECT_EQ(ovElementTypeToOvmsPrecision(tensor.get_element_type()), testedPrecision);
 }
 
 class KserveGRPCPredict : public ::testing::TestWithParam<std::pair<ovms::Precision, bool>> {
@@ -338,6 +439,7 @@ TEST_P(DeserializeKFSTensorProto, ShouldReturnValidTensor) {
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid tensor ptr";
+    EXPECT_EQ(ovElementTypeToOvmsPrecision(tensor.get_element_type()), testedPrecision);
 }
 
 TEST_F(KserveGRPCPredict, ShouldReturnValidTensor) {
@@ -482,9 +584,24 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
+    DeserializeCAPITensorProtoNegative,
+    ::testing::ValuesIn(UNSUPPORTED_CAPI_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<DeserializeCAPITensorProtoNegative::ParamType>& info) {
+        return toString(info.param);
+    });
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
     DeserializeTFTensorProto,
     ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<DeserializeTFTensorProto::ParamType>& info) {
+        return toString(info.param);
+    });
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    DeserializeCAPITensor,
+    ::testing::ValuesIn(SUPPORTED_CAPI_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<DeserializeCAPITensor::ParamType>& info) {
         return toString(info.param);
     });
 
