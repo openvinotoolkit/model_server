@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <sysexits.h>
 
-#include "pocapi.h"  // NOLINT
+#include "ovms.h"  // NOLINT
 #include "stringutils.hpp"
 
 namespace {
