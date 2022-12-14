@@ -54,13 +54,29 @@ if __name__ == '__main__':
                         dest='pipeline_name')
     parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='Add demultiplexer dimension at front', dest='dag-batch-size-auto')
     parser.add_argument('--binary_data', default=False, action='store_true', help='Send input data in binary format', dest='binary_data')
+    parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with gRPC endpoint')
+    parser.add_argument('--server_cert', required=False, help='Path to server certificate', default=None)
+    parser.add_argument('--client_cert', required=False, help='Path to client certificate', default=None)
+    parser.add_argument('--client_key', required=False, help='Path to client key', default=None)
 
     args = vars(parser.parse_args())
 
     address = "{}:{}".format(args['http_address'],args['http_port'])
 
+    if args['tls']:
+        ssl_options = {
+            'keyfile':args['client_key'],
+            'cert_file':args['client_cert'],
+            'ca_certs':args['server_cert']
+        }
+    else:
+        ssl_options = None
+
+
     triton_client = httpclient.InferenceServerClient(
                 url=address,
+                ssl=args['tls'],
+                ssl_options=ssl_options,
                 verbose=False)
 
     processing_times = np.zeros((0),int)
