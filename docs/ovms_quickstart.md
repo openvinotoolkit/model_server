@@ -64,7 +64,7 @@ Start the container:
 
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/face-detection -p 9000:9000 openvino/model_server:latest \
---model_path /models/face-detection --model_name face-detection --port 9000
+--model_path /models/face-detection --model_name face-detection --port 9000 --shape auto
 ```
 During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage from which the server will access models.
 
