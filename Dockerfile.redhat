@@ -72,7 +72,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             yum-utils \
             unzip \
             vim \
-            xz && \
+            xz \
+            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
 
 # Build and install pugixml
