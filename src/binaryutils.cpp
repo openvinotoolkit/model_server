@@ -222,7 +222,7 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const ::KFSRequest::InferInputTensor& src,
     const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
-    bool rawInputsContentsUsed = (buffer == nullptr);
+    bool rawInputsContentsUsed = (buffer != nullptr);
     auto status = validateLayout(tensorInfo);
     if (!status.ok()) {
         return status;
@@ -234,7 +234,7 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_SHAPE;
     }
 
-    size_t batchSize = rawInputsContentsUsed ? src.contents().bytes_contents_size() : 1;
+    size_t batchSize = !rawInputsContentsUsed ? src.contents().bytes_contents_size() : 1;
     if (checkBatchSizeMismatch(tensorInfo, batchSize)) {
         SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
             tensorInfo->getMappedName(),
@@ -247,7 +247,7 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::BYTES_CONTENTS_EMPTY;
     }
 
-    if(rawInputsContentsUsed) {
+    if(!rawInputsContentsUsed) {
         for (size_t i = 0; i < batchSize; i++) {
             if (src.contents().bytes_contents(i).size() <= 0) {
                 SPDLOG_DEBUG("Tensor: {} {}th image of the batch is empty.", src.name(), i);
@@ -262,8 +262,6 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
                 return StatusCode::BYTES_CONTENTS_EMPTY;
         }
     }
-
-
 
     return StatusCode::OK;
 }
@@ -355,10 +353,10 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
     bool resizeSupported = isResizeSupported(tensorInfo);
     bool enforceResolutionAlignment = !resizeSupported;
 
-    bool rawInputsContentsUsed = (buffer == nullptr);
-    int numberOfInputs = (rawInputsContentsUsed ? getBinaryInputsSize(src) : 1);
+    bool rawInputsContentsUsed = (buffer != nullptr);
+    int numberOfInputs = (!rawInputsContentsUsed ? getBinaryInputsSize(src) : 1);
     for (int i = 0; i < numberOfInputs; i++) {
-        cv::Mat image = convertStringToMat(rawInputsContentsUsed ? getBinaryInput(src, i) : *buffer);
+        cv::Mat image = convertStringToMat(!rawInputsContentsUsed ? getBinaryInput(src, i) : *buffer);
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);

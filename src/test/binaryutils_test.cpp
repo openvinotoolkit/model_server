@@ -630,57 +630,50 @@ INSTANTIATE_TEST_SUITE_P(
         return toString(info.param);
     });
 
-    // template <typename TensorType>
-    // class BinaryUtilsTestKFSRawInputsContents : public BinaryUtilsTest<::KFSRequest::InferInputTensor> {
-    // public:
-    //     TensorType requestTensor;
-    //     void SetUp() override {
-    //         prepareBinaryTensor(requestTensor);
-    //     }
+    class BinaryUtilsTestKFSRawInputsContents : public ::testing::Test {
+    public:
+        ::KFSRequest::InferInputTensor requestTensor;
+        std::string buffer;
+        void SetUp() override {
+            prepareBinaryTensor(requestTensor);
+        }
 
-    //     void prepareBinaryTensor(tensorflow::TensorProto& tensor, std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
-    //         for (size_t i = 0; i < batchSize; i++) {
-    //             tensor.add_string_val(image_bytes.get(), filesize);
-    //         }
-    //         tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
-    //         tensor.set_dtype(tensorflow::DataType::DT_STRING);
-    //     }
-    //     void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
-    //         for (size_t i = 0; i < batchSize; i++) {
-    //             tensor.mutable_contents()->add_bytes_contents(image_bytes.get(), filesize);
-    //         }
-    //         tensor.mutable_shape()->Add(batchSize);
-    //         tensor.set_datatype("BYTES");
-    //     }
-    //     void prepareBinaryRequest(::KFSRequest& tensor, std::string& image_bytes) {
-    //         if (image_bytes.size() > 0) {
-    //             std::string* raw_contents = tensor.add_raw_input_contents();
-    //             raw_contents->reserve(image_bytes.size());
-    //             raw_contents->append(image_bytes.data(), image_bytes.size());
-    //         }
-    //     }
-    //     void prepareBinaryTensor(tensorflow::TensorProto& tensor) {
-    //         size_t filesize;
-    //         std::unique_ptr<char[]> image_bytes;
+        void prepareBuffer(std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
+            for (size_t i = 0; i < batchSize; i++) {
+                buffer.append(image_bytes.get(), filesize);
+            }
+        }
 
-    //         readRgbJpg(filesize, image_bytes);
-    //         prepareBinaryTensor(tensor, image_bytes, filesize);
-    //     }
-    //     void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor) {
-    //         size_t filesize;
-    //         std::unique_ptr<char[]> image_bytes;
+        void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, size_t batchSize = 1) {
+            tensor.mutable_shape()->Add(batchSize);
+            tensor.set_datatype("BYTES");
+            
+            size_t filesize;
+            std::unique_ptr<char[]> image_bytes;
 
-    //         readRgbJpg(filesize, image_bytes);
-    //         prepareBinaryTensor(tensor, image_bytes, filesize);
-    //     }
+            readRgbJpg(filesize, image_bytes);
+            prepareBuffer(image_bytes, filesize);
+        }
+    };
 
-    //     void prepareBinaryTensor(tensorflow::TensorProto& tensor, std::string input) {
-    //         tensor.set_dtype(tensorflow::DataType::DT_STRING);
-    //         tensor.add_string_val(input);
-    //     }
-    //     void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, std::string input) {
-    //         tensor.mutable_contents()->add_bytes_contents(input);
-    //         tensor.set_datatype("BYTES");
-    //     }
-    // };
+    TEST_F(BinaryUtilsTestKFSRawInputsContents, Positive) {
+        uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
+
+        ov::Tensor tensor;
+
+        std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
+
+        ASSERT_EQ(convertBinaryRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::OK);
+        ASSERT_EQ(tensor.get_size(), 3);
+        uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+        EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
+    }
+
+    TEST_F(BinaryUtilsTestKFSRawInputsContents, Negative_batchSizeBiggerThan1) {
+        ov::Tensor tensor;
+
+        std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, Layout{"NHWC"});
+
+        ASSERT_EQ(convertBinaryRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::INVALID_BATCH_SIZE);
+    }
 }  // namespace
