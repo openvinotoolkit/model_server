@@ -73,8 +73,8 @@ static bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision) 
 
 static cv::Mat convertStringToMat(const std::string& image) {
     OVMS_PROFILE_FUNCTION();
-    std::vector<uint8_t> data(image.begin(), image.end());
-    cv::Mat dataMat(data);
+    std::vector<unsigned char> data(image.begin(), image.end());
+    cv::Mat dataMat(data, true);
 
     try {
         return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
@@ -165,7 +165,7 @@ static Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::
 static bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
     OVMS_PROFILE_FUNCTION();
-    if (!tensorInfo->getBatchSize().has_value()) {
+    if (!tensorInfo->getBatchSize().has_value() || batchSize == 0) {
         return true;
     }
     return !tensorInfo->getBatchSize().value().match(batchSize);
@@ -241,10 +241,6 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
             tensorInfo->getBatchSize().has_value() ? tensorInfo->getBatchSize().value().toString() : std::string{"none"},
             src.contents().bytes_contents_size());
         return StatusCode::INVALID_BATCH_SIZE;
-    }
-
-    if (batchSize <= 0) {
-        return StatusCode::BYTES_CONTENTS_EMPTY;
     }
 
     if (!rawInputsContentsUsed) {
