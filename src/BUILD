@@ -538,9 +538,9 @@ cc_binary(
 # POC which can start OVMS with C-API built by bazel
 # Standalone example for building outside of bazel (with bare g++ is inside MakefileCapi)
 cc_binary(
-    name = "poc3",
+    name = "capi_cpp_example",
     srcs = [
-        "main3.cpp",
+        "main_capi.cpp",
     ],
     linkopts = [
         "-lxml2",

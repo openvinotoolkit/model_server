@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 
     // prepare request
     OVMS_InferenceRequest* request{nullptr};
-    OVMS_InferenceRequestNew(&request, MODEL_NAME, MODEL_VERSION);
+    OVMS_InferenceRequestNew(&request, srv, MODEL_NAME, MODEL_VERSION);
     OVMS_InferenceRequestAddInput(request, INPUT_NAME, OVMS_DATATYPE_FP32, SHAPE, DIM_COUNT);
     std::array<float, SHAPE[1]> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     OVMS_InferenceRequestInputSetData(request, INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, 0);
