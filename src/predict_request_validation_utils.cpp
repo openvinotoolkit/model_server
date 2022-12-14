@@ -801,8 +801,8 @@ bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTe
     return false;
 }
 
-template <>
-static bool shouldValidateBinaryBatchSizeMismatch(const TFSRequestType& request) {
+template <typename RequestType>
+static bool shouldValidateBinaryBatchSizeMismatch(const RequestType& request) {
     return true;
 }
 
