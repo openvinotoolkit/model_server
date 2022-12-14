@@ -43,8 +43,8 @@ private:
          */
     const std::string empty;
 
-    ServerSettingsImpl go;
-    ModelsSettingsImpl mmo;
+    ServerSettingsImpl serverSettings;
+    ModelsSettingsImpl modelsSettings;
 
 public:
     /**

@@ -91,9 +91,9 @@ OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
 //// OVMS_ServerSettings
 //// Structure for server settings for both: single and multi (with config.json) management
 ////
-// Allocates memory for server server settings and returns ptr
+// Allocates memory for server settings and returns ptr
 OVMS_Status* OVMS_ServerSettingsNew(OVMS_ServerSettings** settings);
-// Deallocates server server settings memory for given ptr
+// Deallocates server settings memory for given ptr
 void OVMS_ServerSettingsDelete(OVMS_ServerSettings* settings);
 
 // --port
@@ -155,10 +155,12 @@ OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* settings,
 ////
 //// OVMS_ModelsSettings
 //// Options for starting multi model server controlled by config.json file
+//// Models management settings for starting OVMS. Right now only using config.json file
+//// is supported
 ////
-// Allocates memory for multi model server settings and returns ptr
+// Allocates memory for models settings and returns ptr
 OVMS_Status* OVMS_ModelsSettingsNew(OVMS_ModelsSettings** settings);
-// Deallocates settings memory for given ptr
+// Deallocates models settings memory for given ptr
 void OVMS_ModelsSettingsDelete(OVMS_ModelsSettings* settings);
 
 // --config_path

@@ -37,18 +37,18 @@ const uint64_t MAX_REST_WORKERS = 10'000;
 // TODO: Not used in OVMS - get rid of. Used only in tests.
 Config& Config::parse(int argc, char** argv) {
     ovms::CLIParser p;
-    ovms::ServerSettingsImpl go;
-    ovms::ModelsSettingsImpl mmo;
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
     p.parse(argc, argv);
-    p.prepare(&go, &mmo);
-    if (!this->parse(&go, &mmo))
+    p.prepare(&serverSettings, &modelsSettings);
+    if (!this->parse(&serverSettings, &modelsSettings))
         exit(EX_USAGE);
     return *this;
 }
 
-bool Config::parse(ServerSettingsImpl* go, ModelsSettingsImpl* mmo) {
-    this->go = *go;
-    this->mmo = *mmo;
+bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+    this->serverSettings = *serverSettings;
+    this->modelsSettings = *modelsSettings;
     return validate();
 }
 
@@ -85,8 +85,8 @@ bool Config::validate() {
         return false;
     }
 
-    if (!configPath().empty() && (!this->mmo.batchSize.empty() || !shape().empty() ||
-                                     nireq() != 0 || !modelVersionPolicy().empty() || !this->mmo.targetDevice.empty() ||
+    if (!configPath().empty() && (!this->modelsSettings.batchSize.empty() || !shape().empty() ||
+                                     nireq() != 0 || !modelVersionPolicy().empty() || !this->modelsSettings.targetDevice.empty() ||
                                      !pluginConfig().empty())) {
         std::cerr << "Model parameters in CLI are exclusive with the config file" << std::endl;
         return false;
@@ -104,7 +104,7 @@ bool Config::validate() {
         return false;
     }
 
-    if (this->go.restWorkers.has_value() && restPort() == 0) {
+    if (this->serverSettings.restWorkers.has_value() && restPort() == 0) {
         std::cerr << "rest_workers is set but rest_port is not set. rest_port is required to start rest servers" << std::endl;
         return false;
     }
@@ -166,51 +166,51 @@ bool Config::validate() {
         return false;
     }
     // check stateful flags:
-    if ((this->mmo.lowLatencyTransformation.has_value() || this->mmo.maxSequenceNumber.has_value() || this->mmo.idleSequenceCleanup.has_value()) && !stateful()) {
+    if ((this->modelsSettings.lowLatencyTransformation.has_value() || this->modelsSettings.maxSequenceNumber.has_value() || this->modelsSettings.idleSequenceCleanup.has_value()) && !stateful()) {
         std::cerr << "Setting low_latency_transformation, max_sequence_number and idle_sequence_cleanup require setting stateful flag for the model." << std::endl;
         return false;
     }
     return true;
 }
 
-const std::string& Config::configPath() const { return this->mmo.configPath; }
-uint32_t Config::port() const { return this->go.grpcPort; }
-const std::string Config::cpuExtensionLibraryPath() const { return this->go.cpuExtensionLibraryPath; }
-const std::string Config::grpcBindAddress() const { return this->go.grpcBindAddress; }
-uint32_t Config::restPort() const { return this->go.restPort; }
-const std::string Config::restBindAddress() const { return this->go.restBindAddress; }
-uint32_t Config::grpcWorkers() const { return this->go.grpcWorkers; }
-uint32_t Config::restWorkers() const { return this->go.restWorkers.value_or(DEFAULT_REST_WORKERS); }
-const std::string& Config::modelName() const { return this->mmo.modelName; }
-const std::string& Config::modelPath() const { return this->mmo.modelPath; }
+const std::string& Config::configPath() const { return this->modelsSettings.configPath; }
+uint32_t Config::port() const { return this->serverSettings.grpcPort; }
+const std::string Config::cpuExtensionLibraryPath() const { return this->serverSettings.cpuExtensionLibraryPath; }
+const std::string Config::grpcBindAddress() const { return this->serverSettings.grpcBindAddress; }
+uint32_t Config::restPort() const { return this->serverSettings.restPort; }
+const std::string Config::restBindAddress() const { return this->serverSettings.restBindAddress; }
+uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
+uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.value_or(DEFAULT_REST_WORKERS); }
+const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
+const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
 const std::string& Config::batchSize() const {
     static const std::string defaultBatch = "0";
-    return this->mmo.batchSize.empty() ? defaultBatch : this->mmo.batchSize;
+    return this->modelsSettings.batchSize.empty() ? defaultBatch : this->modelsSettings.batchSize;
 }
-const std::string& Config::Config::shape() const { return this->mmo.shape; }
-const std::string& Config::layout() const { return this->mmo.layout; }
-const std::string& Config::modelVersionPolicy() const { return this->mmo.modelVersionPolicy; }
-uint32_t Config::nireq() const { return this->mmo.nireq; }
+const std::string& Config::Config::shape() const { return this->modelsSettings.shape; }
+const std::string& Config::layout() const { return this->modelsSettings.layout; }
+const std::string& Config::modelVersionPolicy() const { return this->modelsSettings.modelVersionPolicy; }
+uint32_t Config::nireq() const { return this->modelsSettings.nireq; }
 const std::string& Config::targetDevice() const {
     static const std::string defaultTargetDevice = "CPU";
-    return this->mmo.targetDevice.empty() ? defaultTargetDevice : this->mmo.targetDevice;
+    return this->modelsSettings.targetDevice.empty() ? defaultTargetDevice : this->modelsSettings.targetDevice;
 }
-const std::string& Config::Config::pluginConfig() const { return this->mmo.pluginConfig; }
-bool Config::stateful() const { return this->mmo.stateful.value_or(false); }
-bool Config::metricsEnabled() const { return this->go.metricsEnabled; }
-std::string Config::metricsList() const { return this->go.metricsList; }
-bool Config::idleSequenceCleanup() const { return this->mmo.idleSequenceCleanup.value_or(true); }
-uint32_t Config::maxSequenceNumber() const { return this->mmo.maxSequenceNumber.value_or(DEFAULT_MAX_SEQUENCE_NUMBER); }
-bool Config::lowLatencyTransformation() const { return this->mmo.lowLatencyTransformation.value_or(false); }
-const std::string& Config::logLevel() const { return this->go.logLevel; }
-const std::string& Config::logPath() const { return this->go.logPath; }
+const std::string& Config::Config::pluginConfig() const { return this->modelsSettings.pluginConfig; }
+bool Config::stateful() const { return this->modelsSettings.stateful.value_or(false); }
+bool Config::metricsEnabled() const { return this->serverSettings.metricsEnabled; }
+std::string Config::metricsList() const { return this->serverSettings.metricsList; }
+bool Config::idleSequenceCleanup() const { return this->modelsSettings.idleSequenceCleanup.value_or(true); }
+uint32_t Config::maxSequenceNumber() const { return this->modelsSettings.maxSequenceNumber.value_or(DEFAULT_MAX_SEQUENCE_NUMBER); }
+bool Config::lowLatencyTransformation() const { return this->modelsSettings.lowLatencyTransformation.value_or(false); }
+const std::string& Config::logLevel() const { return this->serverSettings.logLevel; }
+const std::string& Config::logPath() const { return this->serverSettings.logPath; }
 #ifdef MTR_ENABLED
-const std::string& Config::tracePath() const { return this->go.tracePath; }
+const std::string& Config::tracePath() const { return this->serverSettings.tracePath; }
 #endif
-const std::string& Config::grpcChannelArguments() const { return this->go.grpcChannelArguments; }
-uint32_t Config::filesystemPollWaitSeconds() const { return this->go.filesystemPollWaitSeconds; }
-uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->go.sequenceCleanerPollWaitMinutes; }
-uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->go.resourcesCleanerPollWaitSeconds; }
-const std::string Config::cacheDir() const { return this->go.cacheDir; }
+const std::string& Config::grpcChannelArguments() const { return this->serverSettings.grpcChannelArguments; }
+uint32_t Config::filesystemPollWaitSeconds() const { return this->serverSettings.filesystemPollWaitSeconds; }
+uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->serverSettings.sequenceCleanerPollWaitMinutes; }
+uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
+const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
 
 }  // namespace ovms
