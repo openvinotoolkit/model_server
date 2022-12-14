@@ -34,7 +34,7 @@ namespace tc = triton::client;
         }                                                                \
     }
 
-std::vector<uint8_t> Load(std::string fileName) {
+std::vector<uint8_t> Load(const std::string& fileName) {
     std::ifstream fileImg(fileName, std::ios::binary);
     fileImg.seekg(0, std::ios::end);
     int bufferLength = fileImg.tellg();
@@ -54,8 +54,8 @@ int main(int argc, char** argv) {
     ("h,help", "Show this help message and exit")
     ("images_list", "Path to a file with a list of labeled images. ", cxxopts::value<std::string>(), "IMAGES")
     ("labels_list", "Path to a file with a list of labels. ", cxxopts::value<std::string>(), "LABELS")
-    ("http_address", "Specify url to rest service. ", cxxopts::value<std::string>()->default_value("localhost"), "GRPC_ADDRESS")
-    ("http_port", "Specify port to rest service. ", cxxopts::value<std::string>()->default_value("9000"), "PORT")
+    ("http_address", "Specify url to REST service. ", cxxopts::value<std::string>()->default_value("localhost"), "GRPC_ADDRESS")
+    ("http_port", "Specify port to REST service. ", cxxopts::value<std::string>()->default_value("9000"), "PORT")
     ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("0"), "INPUT_NAME")
     ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("1463"), "OUTPUT_NAME")
     ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("resnet"), "MODEL_NAME")
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
         err);
 
     std::string img;
-    int label;
+    int label = -1;
     std::vector<std::string> imgs;
     std::vector<int> labels;
     std::ifstream images(args["images_list"].as<std::string>());
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
         classes.push_back(tmp);
     }
 
-    float acc = 0;
+    int acc = 0;
     for (int i = 0; i < imgs.size(); i++) {
         std::shared_ptr<tc::InferResult> results_ptr;
         results_ptr.reset(results[i]);
@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
         std::cout << std::endl;
     }
 
-    std::cout << "Accuracy " << acc / imgs.size() * 100 << "%\n";
+    std::cout << "Accuracy " << float(acc) / imgs.size() * 100 << "%\n";
 
     tc::InferStat infer_stat;
     client->ClientInferStat(&infer_stat);
