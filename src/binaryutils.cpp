@@ -247,19 +247,17 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::BYTES_CONTENTS_EMPTY;
     }
 
-    if(!rawInputsContentsUsed) {
+    if (!rawInputsContentsUsed) {
         for (size_t i = 0; i < batchSize; i++) {
             if (src.contents().bytes_contents(i).size() <= 0) {
                 SPDLOG_DEBUG("Tensor: {} {}th image of the batch is empty.", src.name(), i);
                 return StatusCode::BYTES_CONTENTS_EMPTY;
             }
         }
-    }
-    else
-    {
+    } else {
         if (buffer->size() <= 0) {
-                SPDLOG_DEBUG("Tensor: {} raw_inputs_contents is empty", src.name());
-                return StatusCode::BYTES_CONTENTS_EMPTY;
+            SPDLOG_DEBUG("Tensor: {} raw_inputs_contents is empty", src.name());
+            return StatusCode::BYTES_CONTENTS_EMPTY;
         }
     }
 

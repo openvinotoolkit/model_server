@@ -573,7 +573,6 @@ INSTANTIATE_TEST_SUITE_P(
 
 class BinaryUtilsKFSPrecisionTest : public ::testing::TestWithParam<ovms::Precision> {
 protected:
-
     void SetUp() override {
         readRgbJpg(filesize, image_bytes);
         inferTensorContent.mutable_contents()->add_bytes_contents(image_bytes.get(), filesize);
@@ -630,50 +629,50 @@ INSTANTIATE_TEST_SUITE_P(
         return toString(info.param);
     });
 
-    class BinaryUtilsTestKFSRawInputsContents : public ::testing::Test {
-    public:
-        ::KFSRequest::InferInputTensor requestTensor;
-        std::string buffer;
-        void SetUp() override {
-            prepareBinaryTensor(requestTensor);
-        }
-
-        void prepareBuffer(std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
-            for (size_t i = 0; i < batchSize; i++) {
-                buffer.append(image_bytes.get(), filesize);
-            }
-        }
-
-        void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, size_t batchSize = 1) {
-            tensor.mutable_shape()->Add(batchSize);
-            tensor.set_datatype("BYTES");
-            
-            size_t filesize;
-            std::unique_ptr<char[]> image_bytes;
-
-            readRgbJpg(filesize, image_bytes);
-            prepareBuffer(image_bytes, filesize);
-        }
-    };
-
-    TEST_F(BinaryUtilsTestKFSRawInputsContents, Positive) {
-        uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
-
-        ov::Tensor tensor;
-
-        std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
-
-        ASSERT_EQ(convertBinaryRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::OK);
-        ASSERT_EQ(tensor.get_size(), 3);
-        uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-        EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
+class BinaryUtilsTestKFSRawInputsContents : public ::testing::Test {
+public:
+    ::KFSRequest::InferInputTensor requestTensor;
+    std::string buffer;
+    void SetUp() override {
+        prepareBinaryTensor(requestTensor);
     }
 
-    TEST_F(BinaryUtilsTestKFSRawInputsContents, Negative_batchSizeBiggerThan1) {
-        ov::Tensor tensor;
-
-        std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, Layout{"NHWC"});
-
-        ASSERT_EQ(convertBinaryRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::INVALID_BATCH_SIZE);
+    void prepareBuffer(std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
+        for (size_t i = 0; i < batchSize; i++) {
+            buffer.append(image_bytes.get(), filesize);
+        }
     }
+
+    void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, size_t batchSize = 1) {
+        tensor.mutable_shape()->Add(batchSize);
+        tensor.set_datatype("BYTES");
+
+        size_t filesize;
+        std::unique_ptr<char[]> image_bytes;
+
+        readRgbJpg(filesize, image_bytes);
+        prepareBuffer(image_bytes, filesize);
+    }
+};
+
+TEST_F(BinaryUtilsTestKFSRawInputsContents, Positive) {
+    uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
+
+    ov::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
+
+    ASSERT_EQ(convertBinaryRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::OK);
+    ASSERT_EQ(tensor.get_size(), 3);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
+}
+
+TEST_F(BinaryUtilsTestKFSRawInputsContents, Negative_batchSizeBiggerThan1) {
+    ov::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, Layout{"NHWC"});
+
+    ASSERT_EQ(convertBinaryRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::INVALID_BATCH_SIZE);
+}
 }  // namespace

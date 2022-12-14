@@ -417,12 +417,12 @@ Status deserializePredictRequest(
                     return status;
                 }
             } else {
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);
-            if (!tensor) {
-                status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
-                SPDLOG_DEBUG(status.string());
-                return status;
-            }
+                tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);
+                if (!tensor) {
+                    status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+                    SPDLOG_DEBUG(status.string());
+                    return status;
+                }
             }
 
             const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
