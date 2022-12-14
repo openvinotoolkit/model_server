@@ -593,8 +593,7 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
 }
 
 static Status binaryDataSizeCanBeCalculated(::KFSRequest::InferInputTensor& input, bool onlyOneInput) {
-    if (input.datatype() == "BYTES" && (!onlyOneInput || input.shape_size() != 1 || input.shape()[0] != 1))
-    {
+    if (input.datatype() == "BYTES" && (!onlyOneInput || input.shape_size() != 1 || input.shape()[0] != 1)) {
         SPDLOG_DEBUG("Tensor: {} with datatype BYTES has no binary_data_size parameter and the size of the data cannot be calculated from shape.", input.name());
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     }
