@@ -82,7 +82,7 @@ RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$
 WORKDIR /ovms
 RUN cp -v /ovms/release_files/LICENSE /ovms_release/
 RUN cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
-RUN mkdir -vp /ovms/release_files/include && cp /ovms/src/pocapi.h /capi_release/include
+RUN mkdir -vp /ovms_release/include && cp /ovms/src/pocapi.h /ovms_release/include
 
 RUN ls -lahR /ovms_release/
 
