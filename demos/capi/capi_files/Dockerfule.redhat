@@ -18,13 +18,13 @@ ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.6
 FROM $BASE_IMAGE as base_build
 RUN yum install -y xz
 WORKDIR /
-COPY capi.tar.xz /
+COPY ovms.tar.xz /
 RUN env
-RUN tar -xf capi.tar.xz
+RUN tar -xf ovms.tar.xz
 RUN groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
-    chown -R ovms:ovms /capi
-RUN mkdir /licenses && ln -s /capi/LICENSE /licenses && ln -s /capi/thirdparty-licenses /licenses/thirdparty-licenses
+    chown -R ovms:ovms /ovms
+RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.6 as release
@@ -40,10 +40,10 @@ RUN microdnf install shadow-utils make gcc gcc-c++; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-COPY --from=base_build /capi /capi
+COPY --from=base_build /ovms /ovms
 COPY --from=base_build /licenses /licenses
 
-WORKDIR /capi/demos
+WORKDIR /ovms/demos
 RUN make -f MakefileCapi cpp
 RUN make -f MakefileCapi c
 

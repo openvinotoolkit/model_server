@@ -23,19 +23,25 @@ OVMS_CPP_IMAGE_TAG ?= latest
 BASE_OS ?= ubuntu
 DIST_OS ?= $(BASE_OS)
 
+ifeq ($(BASE_OS),ubuntu)
+  BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
+endif
+ifeq ($(BASE_OS),redhat)
+  BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
+  DIST_OS=redhat
+endif
+
 all:
-	rm -vrf capi/$(DIST_OS) && mkdir -vp capi/$(DIST_OS) && cd capi/$(DIST_OS) && \
+	rm -vrf capi/$(DIST_OS) && mkdir -vp capi/$(DIST_OS)/demos && cd capi/$(DIST_OS) && \
 		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
 			"tar -c -C / ovms.tar* ; sleep 2" | tar -x
 	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG))
 	cd capi/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
 	cd capi/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
-	cp -vR ../../release_files/thirdparty-licenses capi/$(DIST_OS)/
-	cp -vR ../../release_files/drivers capi/$(DIST_OS)/
-	cp -vR ../../release_files/LICENSE capi/$(DIST_OS)/
-	cp -r ../../src/test/dummy /capi_files
-	sed -i s+/ovms/src/test/c_api/config.json+/capi/demos/config.json+ capi_files/demos/main3.c*
 	cp -vR capi_files/* capi/$(DIST_OS)/
+	cp -r ../../src/test/dummy capi/$(DIST_OS)/demos
+	cp -r ../../src/main3.c* capi/$(DIST_OS)/demos
+	sed -i s+/ovms/src/test/c_api/config.json+/capi/demos/config.json+ ovms/demos/main3.c*
 	cd capi/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \

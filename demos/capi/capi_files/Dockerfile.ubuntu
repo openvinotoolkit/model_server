@@ -22,9 +22,9 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
              --gid 5000 --shell /bin/bash --skel /dev/null ovms
 
-COPY capi.tar.gz /
-RUN tar -xf capi.tar.gz
-RUN chown -R ovms:ovms /capi
+COPY ovms.tar.gz /
+RUN tar -xf ovms.tar.gz
+RUN chown -R ovms:ovms /ovms
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 ARG BASE_IMAGE=ubuntu:20.04
@@ -38,15 +38,15 @@ RUN	set -e ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY drivers /drivers
-COPY --from=base_build /capi /capi
+COPY --from=base_build /ovms /ovms
 
-ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5"
+ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb2"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${BUILD_DEPENDENCIES} && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
-WORKDIR /capi/demos
+WORKDIR /ovms/demos
 RUN make -f MakefileCapi cpp
 RUN make -f MakefileCapi c
 
