@@ -117,28 +117,6 @@ TYPED_TEST(BinaryUtilsTest, tensorWithEmptyTensor) {
         EXPECT_EQ(convertBinaryRequestTensorToOVTensor(requestTensorEmptyInput, tensor, tensorInfo, nullptr), StatusCode::BYTES_CONTENTS_EMPTY);
 }
 
-// TYPED_TEST(BinaryUtilsTest, requestWithEmptyTensor) {
-//     ::KFSRequest requestTensorEmptyInput;
-//     std::string emptyInput = "";
-//     this->prepareBinaryRequest(requestTensorEmptyInput, emptyInput);
-
-//     ov::Tensor tensor;
-
-//     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
-//     EXPECT_EQ(convertBinaryRequestTensorToOVTensor(requestTensorEmptyInput, tensor, tensorInfo), StatusCode::BYTES_CONTENTS_EMPTY);
-// }
-
-// TYPED_TEST(BinaryUtilsTest, requestWithInvalidImage) {
-//     ::KFSRequest requestTensorInvalidImage;
-//     std::string invalidImage = "INVALID IMAGE";
-//     this->prepareBinaryRequest(requestTensorInvalidImage, invalidImage);
-
-//     ov::Tensor tensor;
-
-//     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
-
-//     EXPECT_EQ(convertBinaryRequestTensorToOVTensor(requestTensorInvalidImage, tensor, tensorInfo), ovms::StatusCode::IMAGE_PARSING_FAILED);
-// }
 TYPED_TEST(BinaryUtilsTest, tensorWithNonSupportedLayout) {
     ov::Tensor tensor;
 
@@ -651,4 +629,58 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<BinaryUtilsTFSInvalidPrecisionTest::ParamType>& info) {
         return toString(info.param);
     });
+
+    // template <typename TensorType>
+    // class BinaryUtilsTestKFSRawInputsContents : public BinaryUtilsTest<::KFSRequest::InferInputTensor> {
+    // public:
+    //     TensorType requestTensor;
+    //     void SetUp() override {
+    //         prepareBinaryTensor(requestTensor);
+    //     }
+
+    //     void prepareBinaryTensor(tensorflow::TensorProto& tensor, std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
+    //         for (size_t i = 0; i < batchSize; i++) {
+    //             tensor.add_string_val(image_bytes.get(), filesize);
+    //         }
+    //         tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
+    //         tensor.set_dtype(tensorflow::DataType::DT_STRING);
+    //     }
+    //     void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
+    //         for (size_t i = 0; i < batchSize; i++) {
+    //             tensor.mutable_contents()->add_bytes_contents(image_bytes.get(), filesize);
+    //         }
+    //         tensor.mutable_shape()->Add(batchSize);
+    //         tensor.set_datatype("BYTES");
+    //     }
+    //     void prepareBinaryRequest(::KFSRequest& tensor, std::string& image_bytes) {
+    //         if (image_bytes.size() > 0) {
+    //             std::string* raw_contents = tensor.add_raw_input_contents();
+    //             raw_contents->reserve(image_bytes.size());
+    //             raw_contents->append(image_bytes.data(), image_bytes.size());
+    //         }
+    //     }
+    //     void prepareBinaryTensor(tensorflow::TensorProto& tensor) {
+    //         size_t filesize;
+    //         std::unique_ptr<char[]> image_bytes;
+
+    //         readRgbJpg(filesize, image_bytes);
+    //         prepareBinaryTensor(tensor, image_bytes, filesize);
+    //     }
+    //     void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor) {
+    //         size_t filesize;
+    //         std::unique_ptr<char[]> image_bytes;
+
+    //         readRgbJpg(filesize, image_bytes);
+    //         prepareBinaryTensor(tensor, image_bytes, filesize);
+    //     }
+
+    //     void prepareBinaryTensor(tensorflow::TensorProto& tensor, std::string input) {
+    //         tensor.set_dtype(tensorflow::DataType::DT_STRING);
+    //         tensor.add_string_val(input);
+    //     }
+    //     void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, std::string input) {
+    //         tensor.mutable_contents()->add_bytes_contents(input);
+    //         tensor.set_datatype("BYTES");
+    //     }
+    // };
 }  // namespace
