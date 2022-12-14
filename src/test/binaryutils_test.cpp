@@ -602,17 +602,6 @@ public:
     ::KFSRequest::InferInputTensor requestTensor;
     std::string buffer;
     void SetUp() override {
-        prepareBinaryTensor(requestTensor);
-    }
-
-private:
-    void prepareBuffer(std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
-        for (size_t i = 0; i < batchSize; i++) {
-            buffer.append(image_bytes.get(), filesize);
-        }
-    }
-
-    void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, size_t batchSize = 1) {
         tensor.mutable_shape()->Add(batchSize);
         tensor.set_datatype("BYTES");
 
@@ -620,7 +609,7 @@ private:
         std::unique_ptr<char[]> image_bytes;
 
         readRgbJpg(filesize, image_bytes);
-        prepareBuffer(image_bytes, filesize);
+        buffer.append(image_bytes.get(), filesize);
     }
 };
 
