@@ -602,8 +602,8 @@ public:
     ::KFSRequest::InferInputTensor requestTensor;
     std::string buffer;
     void SetUp() override {
-        tensor.mutable_shape()->Add(batchSize);
-        tensor.set_datatype("BYTES");
+        requestTensor.mutable_shape()->Add(1);
+        requestTensor.set_datatype("BYTES");
 
         size_t filesize;
         std::unique_ptr<char[]> image_bytes;
