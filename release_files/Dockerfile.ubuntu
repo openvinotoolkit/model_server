@@ -153,6 +153,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -
 COPY --from=base_build /usr/local/lib/ /ovms/lib/
 COPY --from=base_build /ovms /ovms
 
+# Remove capi library
+RUN if [ -f /ovms/lib/libovms_shared.so ] ; then true ; else exit 0 ; fi ;\
+	rm -rf  /ovms/lib/libovms_shared.so
+
 # for HDDL
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

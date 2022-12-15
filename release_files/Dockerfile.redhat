@@ -117,6 +117,11 @@ RUN     set -e ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=base_build /ovms /ovms
+
+# Remove capi library
+RUN if [ -f /ovms/lib/libovms_shared.so ] ; then true ; else exit 0 ; fi ;\
+	rm -rf  /ovms/lib/libovms_shared.so
+
 COPY --from=base_build /licenses /licenses
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
