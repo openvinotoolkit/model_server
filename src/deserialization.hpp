@@ -462,7 +462,7 @@ Status deserializePredictRequest(
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
             ov::Tensor tensor;
-            // TODO binary input handling
+            // binary input handling
             /* if (requestInputPtr->getDataType() == "BYTES") {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
                 return StatusCode::NOT_IMPLEMENTED;

@@ -365,7 +365,7 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
             return StatusCode::SERVER_ALREADY_STARTED;
         auto& config = ovms::Config::instance();
         if (!config.parse(serverSettings, modelsSettings))
-            return StatusCode::OPTIONS_USAGE_ERROR;  // TODO: Have separate code for each option validation failure
+            return StatusCode::OPTIONS_USAGE_ERROR;
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);
         return this->startModules(config);

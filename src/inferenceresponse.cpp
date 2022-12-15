@@ -41,7 +41,6 @@ model_version_t InferenceResponse::getServableVersion() const {
 }
 
 Status InferenceResponse::addOutput(const std::string& name, OVMS_DataType datatype, const size_t* shape, size_t dimCount) {
-    // TODO insert tensor with wrong shape/datatype/name/dimcount
     auto it = std::find_if(outputs.begin(),
         outputs.end(),
         [&name](const std::pair<std::string, InferenceTensor>& pair) {
@@ -101,5 +100,5 @@ uint32_t InferenceResponse::getParameterCount() const {
 void InferenceResponse::Clear() {
     outputs.clear();
     parameters.clear();
-}  // TODO remove
+}
 }  // namespace ovms

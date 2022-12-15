@@ -22,7 +22,6 @@
 namespace ovms {
 size_t DataTypeToByteSize(OVMS_DataType datatype);
 
-// TODO should we own our own copy of value?
 class InferenceParameter {
     const std::string name;
     OVMS_DataType datatype;

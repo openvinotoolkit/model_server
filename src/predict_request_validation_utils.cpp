@@ -657,7 +657,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
            << "; is missing buffer for tensor: " << bufferId;
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
-        return Status(StatusCode::INVALID_CONTENT_SIZE, details);  // TODO separate code?
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
     size_t expectedValueCount = 1;
     for (size_t i = 0; i < tensor.getShape().size(); i++) {
@@ -797,7 +797,7 @@ bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorTyp
 }
 template <>
 bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkIfBinaryInputUsed(const InferenceTensor& tensor, const std::string inputName) const {
-    // TODO no strig no bytes currently, will implement one of those types with binary input.
+    // no strig no bytes currently, will implement one of those types with binary input.
     return false;
 }
 

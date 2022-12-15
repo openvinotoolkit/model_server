@@ -43,7 +43,7 @@ enum class Precision {
     DYNAMIC,
     MIXED,
     Q78,
-    BIN,  // TODO remove BIN,Q78, DYNAMIC, CUSTOM, MIXED
+    BIN,
     PRECISION_END
 };
 
