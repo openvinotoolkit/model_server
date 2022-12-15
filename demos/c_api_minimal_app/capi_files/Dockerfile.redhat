@@ -17,7 +17,7 @@
 ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.7
 FROM $BASE_IMAGE as base_build
 SHELL ["/bin/bash", "-c"]
-RUN yum install -y xz
+RUN yum install -y xz git shadow-utils make gcc gcc-c++
 WORKDIR /
 COPY ovms.tar.xz /
 RUN env
@@ -26,6 +26,14 @@ RUN groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
     chown -R ovms:ovms /ovms
 RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
+
+RUN yum install -y cmake
+# Build and install pugixml
+RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
+    cd pugixml && \
+    cmake -DBUILD_SHARED_LIBS=ON && \
+    make all && \
+    cp libpugixml.so* /usr/lib64/
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7 as release
@@ -42,8 +50,11 @@ RUN microdnf install shadow-utils make gcc gcc-c++; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
+RUN rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
+
 COPY --from=base_build /ovms /ovms
 COPY --from=base_build /licenses /licenses
+COPY --from=base_build /usr/lib64/libpugixml.so* /usr/lib64/
 COPY demos /ovms/demos
 
 WORKDIR /ovms/demos
