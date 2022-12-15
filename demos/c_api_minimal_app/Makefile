@@ -42,9 +42,9 @@ all:
 	cd capi/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
 	cp -vR capi_files/* capi/$(DIST_OS)/
 	cp -r ../../src/test/dummy capi/$(DIST_OS)/demos
-	cp -r ../../src/main3.c* capi/$(DIST_OS)/demos
-	sed -i s+/ovms/src/test/c_api/config.json+/ovms/demos/config.json+ capi/$(DIST_OS)/demos/main3.c
-	sed -i s+/ovms/src/test/c_api/config_standard_dummy.json+/ovms/demos/config_standard_dummy.json+ capi/$(DIST_OS)/demos/main3.cpp
+	cp -r ../../src/main_capi.c* capi/$(DIST_OS)/demos
+	sed -i s+/ovms/src/test/c_api/config.json+/ovms/demos/config.json+ capi/$(DIST_OS)/demos/main_capi.c
+	sed -i s+/ovms/src/test/c_api/config_standard_dummy.json+/ovms/demos/config_standard_dummy.json+ capi/$(DIST_OS)/demos/main_capi.cpp
 	cd capi/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \

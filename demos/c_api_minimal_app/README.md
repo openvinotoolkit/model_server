@@ -22,12 +22,12 @@ make
 The make command executes the capi/capi_files/demos/MakefileCapi to build the applications.
 And executes the /ovms/bin/demo1 application and /ovms/bin/demo2_c application in the image environment.
 
-You can find the source code for the example applications in the ovms repository path src/main3.c and src/main3.cpp.
+You can find the source code for the example applications in the ovms repository path src/main_capi.c and src/main_capi.cpp.
 or make modifications in the built image:
 ```bash
 docker run -it openvino/model_server-capi:latest
-cat main3.c
-cat main3.cpp
+cat main_capi.c
+cat main_capi.cpp
 ```
 
 And rebuild and run the modified examples using the MakefileCapi rules:
@@ -36,9 +36,9 @@ make -f MakefileCapi c
 make -f MakefileCapi cpp
 ```
 
-It will link the main3.cpp binary with the `libovms_shared.so` library from /ovms/lib and use the headers from /ovms/include directory:
+It will link the main_capi.cpp binary with the `libovms_shared.so` library from /ovms/lib and use the headers from /ovms/include directory:
 ```
-g++ main3.cpp -I/ovms/include -L/ovms/lib -lovms_shared
+g++ main_capi.cpp -I/ovms/include -L/ovms/lib -lovms_shared
 ```
 
 The example output is:
