@@ -78,7 +78,7 @@ No more job to be done, will shut down
 [2022-12-15 12:08:18.220][22][serving][info][servablemanagermodule.cpp:57] ServableManagerModule shutdown
 ```
 
-It is also possible to use custom model but that requires uploading it to the built image and adjust the configs and example applications accordingly.
+It is also possible to use custom model but that requires copying it to the built image and adjust the configs and example applications accordingly.
 To make the changes permanent in the resulting demo image you can modify the specific dockerfiles in capi/capi_files/ directory 
 Dockerfile.ubuntu
 Dockerfile.redhat
