@@ -87,7 +87,7 @@ cc_shared_library(
 
 cc_library(
     name = "ovms_lib",
-    hdrs = ["pocapi.h"],
+    hdrs = ["ovms.h"],
     srcs = [
         "aliases.hpp",
         "azurestorage.hpp",
@@ -96,6 +96,7 @@ cc_library(
         "azurefilesystem.hpp",
         "buffer.cpp",
         "buffer.hpp",
+        "capi_frontend/capi.cpp",
         "capi_frontend/capi_utils.cpp",
         "capi_frontend/capi_utils.hpp",
         "cleaner_utils.cpp",
@@ -226,6 +227,7 @@ cc_library(
         "ovinferrequestsqueue.hpp",
         "ov_utils.cpp",
         "ov_utils.hpp",
+        "ovms.h",
         "pipeline.cpp",
         "pipeline.hpp",
         "pipelinedefinition.cpp",
@@ -237,10 +239,6 @@ cc_library(
         "pipelineeventqueue.hpp",
         "pipeline_factory.cpp",
         "pipeline_factory.hpp",
-        "pocapi.h",
-        "pocapiinternal.cpp",
-        "pocapiinternal.hpp",
-        "pocapi.cpp",
         "precision.cpp",
         "precision.hpp",
         "prediction_service.cpp",
@@ -265,7 +263,7 @@ cc_library(
         "serialization.hpp",
         "servablemanagermodule.cpp",
         "servablemanagermodule.hpp",
-        "server_options.hpp",
+        "server_settings.hpp",
         "server.cpp",
         "server.hpp",
         "session_id.hpp",
@@ -540,9 +538,9 @@ cc_binary(
 # POC which can start OVMS with C-API built by bazel
 # Standalone example for building outside of bazel (with bare g++ is inside MakefileCapi)
 cc_binary(
-    name = "poc3",
+    name = "capi_cpp_example",
     srcs = [
-        "main3.cpp",
+        "main_capi.cpp",
     ],
     linkopts = [
         "-lxml2",
@@ -561,7 +559,7 @@ cc_binary(
 # Use for dynamic linking when neccessary
 cc_import(
   name = "shared_lib",
-  hdrs = ["pocapi.h"],
+  hdrs = ["ovms.h"],
   shared_library = "ovms_shared",
 )
 

@@ -24,8 +24,8 @@ extern "C" {
 typedef struct OVMS_Server_ OVMS_Server;
 typedef struct OVMS_Status_ OVMS_Status;
 
-typedef struct OVMS_ServerGeneralaOptions_ OVMS_ServerGeneralOptions;
-typedef struct OVMS_ServerMultiModelOptions_ OVMS_ServerMultiModelOptions;
+typedef struct OVMS_ServerSettings_ OVMS_ServerSettings;
+typedef struct OVMS_ModelsSettings_ OVMS_ModelsSettings;
 
 // TODO reuse this in precision.hpp
 typedef enum OVMS_DataType_enum {
@@ -88,81 +88,83 @@ OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
     const char** details);
 
 ////
-//// OVMS_ServerGeneralOptions
-//// Structure for general options for both: single and multi (with config.json) management
+//// OVMS_ServerSettings
+//// Structure for server settings for both: single and multi (with config.json) management
 ////
-// Allocates memory for server general options and returns ptr
-OVMS_Status* OVMS_ServerGeneralOptionsNew(OVMS_ServerGeneralOptions** options);
-// Deallocates server general options memory for given ptr
-void OVMS_ServerGeneralOptionsDelete(OVMS_ServerGeneralOptions* options);
+// Allocates memory for server settings and returns ptr
+OVMS_Status* OVMS_ServerSettingsNew(OVMS_ServerSettings** settings);
+// Deallocates server settings memory for given ptr
+void OVMS_ServerSettingsDelete(OVMS_ServerSettings* settings);
 
 // --port
-OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcPort(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetGrpcPort(OVMS_ServerSettings* settings,
     uint32_t grpc_port);
 
 // --rest_port
-OVMS_Status* OVMS_ServerGeneralOptionsSetRestPort(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetRestPort(OVMS_ServerSettings* settings,
     uint32_t rest_port);
 
 // --grpc_workers
-OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcWorkers(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetGrpcWorkers(OVMS_ServerSettings* settings,
     uint32_t grpc_workers);
 
 // --grpc_bind_address
-OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcBindAddress(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetGrpcBindAddress(OVMS_ServerSettings* settings,
     const char* grpc_bind_address);
 
 // --rest_workers
-OVMS_Status* OVMS_ServerGeneralOptionsSetRestWorkers(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetRestWorkers(OVMS_ServerSettings* settings,
     uint32_t rest_workers);
 
 // --rest_bind_address
-OVMS_Status* OVMS_ServerGeneralOptionsSetRestBindAddress(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetRestBindAddress(OVMS_ServerSettings* settings,
     const char* rest_bind_address);
 
 // --grpc_channel_arguments
-OVMS_Status* OVMS_ServerGeneralOptionsSetGrpcChannelArguments(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetGrpcChannelArguments(OVMS_ServerSettings* settings,
     const char* grpc_channel_arguments);
 
 // --file_system_poll_wait_seconds
-OVMS_Status* OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds);
 
 // --sequence_cleaner_poll_wait_minutes
-OVMS_Status* OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSettings* settings,
     uint32_t minutes);
 
 // --custom_node_resources_cleaner_interval_seconds
-OVMS_Status* OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds);
 
 // --cpu_extension
-OVMS_Status* OVMS_ServerGeneralOptionsSetCpuExtensionPath(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetCpuExtensionPath(OVMS_ServerSettings* settings,
     const char* cpu_extension_path);
 
 // --cache_dir
-OVMS_Status* OVMS_ServerGeneralOptionsSetCacheDir(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetCacheDir(OVMS_ServerSettings* settings,
     const char* cache_dir);
 
 // --log_level
-OVMS_Status* OVMS_ServerGeneralOptionsSetLogLevel(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetLogLevel(OVMS_ServerSettings* settings,
     OVMS_LogLevel log_level);
 
 // --log_path
-OVMS_Status* OVMS_ServerGeneralOptionsSetLogPath(OVMS_ServerGeneralOptions* options,
+OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* settings,
     const char* log_path);
 
 ////
-//// OVMS_ServerMultiModelOptions
+//// OVMS_ModelsSettings
 //// Options for starting multi model server controlled by config.json file
+//// Models management settings for starting OVMS. Right now only using config.json file
+//// is supported
 ////
-// Allocates memory for multi model server options and returns ptr
-OVMS_Status* OVMS_ServerMultiModelOptionsNew(OVMS_ServerMultiModelOptions** options);
-// Deallocates options memory for given ptr
-void OVMS_ServerMultiModelOptionsDelete(OVMS_ServerMultiModelOptions* options);
+// Allocates memory for models settings and returns ptr
+OVMS_Status* OVMS_ModelsSettingsNew(OVMS_ModelsSettings** settings);
+// Deallocates models settings memory for given ptr
+void OVMS_ModelsSettingsDelete(OVMS_ModelsSettings* settings);
 
 // --config_path
-OVMS_Status* OVMS_ServerMultiModelOptionsSetConfigPath(OVMS_ServerMultiModelOptions* options,
+OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
     const char* config_path);
 
 ////
@@ -177,14 +179,14 @@ void OVMS_ServerDelete(OVMS_Server* server);
 // Start with configuration file config.json
 // Return error if already started
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
-    OVMS_ServerGeneralOptions* general_options,
-    OVMS_ServerMultiModelOptions* multi_model_specific_options);  // in fact only --config_path
+    OVMS_ServerSettings* server_settings,
+    OVMS_ModelsSettings* models_settings);  // in fact only --config_path
 // Unload all and cleanup
 // TODO: Should not be possible to re-start?
 // OVMS_Status* OVMS_ServerStop(OVMS_Server* server);
 
 // OVMS_InferenceRequest
-OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, const char* servableName, uint32_t servableVersion);  // TODO add passing server here
+OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, uint32_t servableVersion);
 void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount);

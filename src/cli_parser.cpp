@@ -20,7 +20,7 @@
 
 #include <sysexits.h>
 
-#include "server_options.hpp"
+#include "server_settings.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -181,89 +181,89 @@ void CLIParser::parse(int argc, char** argv) {
     }
 }
 
-void CLIParser::prepare(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
-    go->grpcPort = result->operator[]("port").as<uint32_t>();
-    go->restPort = result->operator[]("rest_port").as<uint32_t>();
+void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+    serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
+    serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
 
     if (result->count("model_name"))
-        mmo->modelName = result->operator[]("model_name").as<std::string>();
+        modelsSettings->modelName = result->operator[]("model_name").as<std::string>();
     if (result->count("model_path"))
-        mmo->modelPath = result->operator[]("model_path").as<std::string>();
+        modelsSettings->modelPath = result->operator[]("model_path").as<std::string>();
 
     if (result->count("max_sequence_number"))
-        mmo->maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
+        modelsSettings->maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
 
     if (result != nullptr && result->count("cpu_extension")) {
-        go->cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
+        serverSettings->cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
     }
 
     if (result->count("grpc_bind_address"))
-        go->grpcBindAddress = result->operator[]("grpc_bind_address").as<std::string>();
+        serverSettings->grpcBindAddress = result->operator[]("grpc_bind_address").as<std::string>();
 
     if (result->count("rest_bind_address"))
-        go->restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
+        serverSettings->restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
 
-    go->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
+    serverSettings->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("rest_workers"))
-        go->restWorkers = result->operator[]("rest_workers").as<uint32_t>();
+        serverSettings->restWorkers = result->operator[]("rest_workers").as<uint32_t>();
 
     if (result->count("batch_size"))
-        mmo->batchSize = result->operator[]("batch_size").as<std::string>();
+        modelsSettings->batchSize = result->operator[]("batch_size").as<std::string>();
 
     if (result->count("shape"))
-        mmo->shape = result->operator[]("shape").as<std::string>();
+        modelsSettings->shape = result->operator[]("shape").as<std::string>();
 
     if (result->count("layout"))
-        mmo->layout = result->operator[]("layout").as<std::string>();
+        modelsSettings->layout = result->operator[]("layout").as<std::string>();
 
     if (result->count("model_version_policy"))
-        mmo->modelVersionPolicy = result->operator[]("model_version_policy").as<std::string>();
+        modelsSettings->modelVersionPolicy = result->operator[]("model_version_policy").as<std::string>();
 
     if (result->count("nireq"))
-        mmo->nireq = result->operator[]("nireq").as<uint32_t>();
+        modelsSettings->nireq = result->operator[]("nireq").as<uint32_t>();
 
     if (result->count("target_device"))
-        mmo->targetDevice = result->operator[]("target_device").as<std::string>();
+        modelsSettings->targetDevice = result->operator[]("target_device").as<std::string>();
 
     if (result->count("plugin_config"))
-        mmo->pluginConfig = result->operator[]("plugin_config").as<std::string>();
+        modelsSettings->pluginConfig = result->operator[]("plugin_config").as<std::string>();
 
     if (result->count("stateful"))
-        mmo->stateful = result->operator[]("stateful").as<bool>();
+        modelsSettings->stateful = result->operator[]("stateful").as<bool>();
 
-    go->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
-    go->metricsList = result->operator[]("metrics_list").as<std::string>();
+    serverSettings->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
+    serverSettings->metricsList = result->operator[]("metrics_list").as<std::string>();
 
     if (result->count("idle_sequence_cleanup"))
-        mmo->idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
+        modelsSettings->idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
 
     if (result->count("low_latency_transformation"))
-        mmo->lowLatencyTransformation = result->operator[]("low_latency_transformation").as<bool>();
+        modelsSettings->lowLatencyTransformation = result->operator[]("low_latency_transformation").as<bool>();
 
     if (result->count("log_level"))
-        go->logLevel = result->operator[]("log_level").as<std::string>();
+        serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
     if (result->count("log_path"))
-        go->logPath = result->operator[]("log_path").as<std::string>();
+        serverSettings->logPath = result->operator[]("log_path").as<std::string>();
 
 #ifdef MTR_ENABLED
     if (result->count("trace_path"))
-        go->tracePath = result->operator[]("trace_path").as<std::string>();
+        serverSettings->tracePath = result->operator[]("trace_path").as<std::string>();
 #endif
 
     if (result->count("grpc_channel_arguments"))
-        go->grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
+        serverSettings->grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
 
-    go->filesystemPollWaitSeconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>();
-    go->sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
-    go->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
+    serverSettings->filesystemPollWaitSeconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>();
+    serverSettings->sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
+    serverSettings->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
 
     if (result != nullptr && result->count("cache_dir")) {
-        go->cacheDir = result->operator[]("cache_dir").as<std::string>();
+        serverSettings->cacheDir = result->operator[]("cache_dir").as<std::string>();
     }
 
     if (result->count("config_path"))
-        mmo->configPath = result->operator[]("config_path").as<std::string>();
+        modelsSettings->configPath = result->operator[]("config_path").as<std::string>();
 }
 
 }  // namespace ovms

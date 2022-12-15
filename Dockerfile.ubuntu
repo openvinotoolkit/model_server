@@ -299,7 +299,7 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
 
 # C api app with bazel
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example
 # C-API benchmark app
 RUN bazel build //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
 

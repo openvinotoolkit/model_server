@@ -17,24 +17,24 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pocapi.h"
+#include "ovms.h"
 
 int main() {
-    OVMS_ServerGeneralOptions* go = 0;
-    OVMS_ServerMultiModelOptions* mmo = 0;
+    OVMS_ServerSettings* serverSettings = 0;
+    OVMS_ModelsSettings* modelsSettings = 0;
     OVMS_Server* srv;
 
-    OVMS_ServerGeneralOptionsNew(&go);
-    OVMS_ServerMultiModelOptionsNew(&mmo);
+    OVMS_ServerSettingsNew(&serverSettings);
+    OVMS_ModelsSettingsNew(&modelsSettings);
     OVMS_ServerNew(&srv);
 
-    OVMS_ServerGeneralOptionsSetGrpcPort(go, 11337);
-    OVMS_ServerGeneralOptionsSetRestPort(go, 11338);
+    OVMS_ServerSettingsSetGrpcPort(serverSettings, 11337);
+    OVMS_ServerSettingsSetRestPort(serverSettings, 11338);
 
-    OVMS_ServerGeneralOptionsSetLogLevel(go, OVMS_LOG_DEBUG);
-    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config.json");
+    OVMS_ServerSettingsSetLogLevel(serverSettings, OVMS_LOG_DEBUG);
+    OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json");
 
-    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
+    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
 
     if (res) {
         uint32_t code = 0;
@@ -48,8 +48,8 @@ int main() {
         OVMS_StatusDelete(res);
 
         OVMS_ServerDelete(srv);
-        OVMS_ServerMultiModelOptionsDelete(mmo);
-        OVMS_ServerGeneralOptionsDelete(go);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
         return 1;
     }
 
@@ -68,7 +68,7 @@ int main() {
     }
 
     OVMS_InferenceRequest* request = NULL;
-    OVMS_InferenceRequestNew(&request, "dummy", 1);
+    OVMS_InferenceRequestNew(&request, srv, "dummy", 1);
     OVMS_InferenceRequestAddInput(request, "b", OVMS_DATATYPE_FP32, SHAPE, 2);
     OVMS_InferenceRequestInputSetData(request, "b", inputData, DATA_SIZE, OVMS_BUFFERTYPE_CPU, 0);
 
@@ -88,8 +88,8 @@ int main() {
         OVMS_InferenceRequestDelete(request);
 
         OVMS_ServerDelete(srv);
-        OVMS_ServerMultiModelOptionsDelete(mmo);
-        OVMS_ServerGeneralOptionsDelete(go);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
         return 1;
     }
 
@@ -115,8 +115,8 @@ int main() {
 
         OVMS_ServerDelete(srv);
 
-        OVMS_ServerMultiModelOptionsDelete(mmo);
-        OVMS_ServerGeneralOptionsDelete(go);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
         return 1;
     } else {
         printf("output is correct\n");
@@ -128,8 +128,8 @@ int main() {
     printf("No more job to be done, will shut down\n");
 
     OVMS_ServerDelete(srv);
-    OVMS_ServerMultiModelOptionsDelete(mmo);
-    OVMS_ServerGeneralOptionsDelete(go);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
 
     printf("main() exit\n");
     return 0;

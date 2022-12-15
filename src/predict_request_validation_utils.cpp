@@ -30,7 +30,6 @@
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "modelconfig.hpp"
-#include "pocapiinternal.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
