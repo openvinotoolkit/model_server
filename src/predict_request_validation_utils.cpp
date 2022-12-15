@@ -858,6 +858,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 if (!status.ok())
                     return status;
             } else if (batchSize != 1) {
+                SPDLOG_DEBUG("When the image is placed in raw_inputs_contents batch size cannot be bigger than 1.");
                 return StatusCode::INVALID_BATCH_SIZE;
             }
 
