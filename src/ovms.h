@@ -116,18 +116,18 @@ OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
 ////
 // Allocates memory for server settings and returns ptr
 //
-// \param settings The settings pointer to be created
+// \param settings The server settings object to be created
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsNew(OVMS_ServerSettings** settings);
 
-// Deallocates server settings memory for given ptr
+// Deallocates server settings object for given ptr
 //
 // \param settings The settings object to be removed
 void OVMS_ServerSettingsDelete(OVMS_ServerSettings* settings);
 
 // Set the gRPC port of starting OVMS. Equivalent of using --port parameter from OVMS CLI
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param grpc_port The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetGrpcPort(OVMS_ServerSettings* settings,
@@ -137,7 +137,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcPort(OVMS_ServerSettings* settings,
 // Equivalent of starting server with
 // --rest_port
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param grpc_port The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetRestPort(OVMS_ServerSettings* settings,
@@ -147,7 +147,7 @@ OVMS_Status* OVMS_ServerSettingsSetRestPort(OVMS_ServerSettings* settings,
 // Equivalent of starting server with
 // --grpc_workers
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param grpc_workers The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetGrpcWorkers(OVMS_ServerSettings* settings,
@@ -157,7 +157,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcWorkers(OVMS_ServerSettings* settings,
 // Equivalent of starting server with
 // --grpc_bind_address
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param grpc_bind_address The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetGrpcBindAddress(OVMS_ServerSettings* settings,
@@ -167,7 +167,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcBindAddress(OVMS_ServerSettings* settings
 // Equivalent of starting server with
 // --rest_workers
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param rest_workers The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetRestWorkers(OVMS_ServerSettings* settings,
@@ -177,7 +177,7 @@ OVMS_Status* OVMS_ServerSettingsSetRestWorkers(OVMS_ServerSettings* settings,
 // Equivalent of starting server with
 // --rest_bind_address
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param rest_bind_address The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetRestBindAddress(OVMS_ServerSettings* settings,
@@ -187,7 +187,7 @@ OVMS_Status* OVMS_ServerSettingsSetRestBindAddress(OVMS_ServerSettings* settings
 // Equivalent of starting server with
 // --grpc_channel_arguments
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param grpc_channel_arguments The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetGrpcChannelArguments(OVMS_ServerSettings* settings,
@@ -197,7 +197,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcChannelArguments(OVMS_ServerSettings* set
 // Equivalent of starting server with
 // --file_system_poll_wait_seconds
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param seconds The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings* settings,
@@ -207,7 +207,7 @@ OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings
 // Equivalent of starting server with
 // --sequence_cleaner_poll_wait_minutes
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param minutes The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSettings* settings,
@@ -217,7 +217,7 @@ OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSet
 // Equivalent of starting server with
 // --custom_node_resources_cleaner_interval_seconds
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param seconds The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerSettings* settings,
@@ -226,7 +226,7 @@ OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVM
 // Set cpu extension path server setting. Equivalent of starting server with
 // --cpu_extension
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param cpu_extension_path The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetCpuExtensionPath(OVMS_ServerSettings* settings,
@@ -235,7 +235,7 @@ OVMS_Status* OVMS_ServerSettingsSetCpuExtensionPath(OVMS_ServerSettings* setting
 // Set cache dir server setting. Equivalent of starting server with
 // --cache_dir
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param cache_dir The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetCacheDir(OVMS_ServerSettings* settings,
@@ -244,7 +244,7 @@ OVMS_Status* OVMS_ServerSettingsSetCacheDir(OVMS_ServerSettings* settings,
 // Set log level server setting. Equivalent of starting server with
 // --log_level
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param log_level The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetLogLevel(OVMS_ServerSettings* settings,
@@ -253,7 +253,7 @@ OVMS_Status* OVMS_ServerSettingsSetLogLevel(OVMS_ServerSettings* settings,
 // Set the server log_path setting. Equivalent of starting server with
 // --log_path
 //
-// \param settings The settings object to be set
+// \param settings The server settings object to be set
 // \param log_path The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* settings,
@@ -267,19 +267,19 @@ OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* settings,
 ////
 // Allocates memory for models settings and returns ptr
 //
-// \param settings The settings object to be created
+// \param settings The models settings object to be created
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ModelsSettingsNew(OVMS_ModelsSettings** settings);
 
 // Deallocates models settings memory for given ptr
 //
-// \param settings The settings object to be removed
+// \param settings The models settings object to be removed
 void OVMS_ModelsSettingsDelete(OVMS_ModelsSettings* settings);
 
 // Set the server configuration file path. Equivalent of starting server with
 // --config_path
 //
-// \param settings The settings object to be set
+// \param settings The models settings object to be set
 // \param config_path The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
