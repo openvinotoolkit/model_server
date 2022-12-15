@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2022 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,38 +82,39 @@ WORKDIR /
 
 COPY drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# hadolint ignore=DL3003,SC2164
 RUN	apt-get update -y ; \
     apt-get install -y curl libpugixml1v5 libtbb2 --no-install-recommends && \
 	if [ "$GPU" == "1" ] ; then \
                 apt-get update && apt-get  install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
 	        case $INSTALL_DRIVER_VERSION in \
                 "20.35.17767") \
-                        mkdir /tmp/gpu_deps && \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-gmmlib_20.2.4_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-igc-core_1.0.4756_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-igc-opencl_1.0.4756_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-opencl_20.35.17767_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-ocloc_20.35.17767_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-level-zero-gpu_1.0.17767_amd64.deb ; \
-                        dpkg -i /tmp/gpu_deps/intel*.deb && rm -Rf /tmp/gpu_deps ; \
+                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "21.48.21782") \
-                        mkdir /tmp/gpu_deps && \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-gmmlib_21.3.3_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-core_1.0.9441_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-opencl_1.0.9441_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-opencl-icd_21.48.21782_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-level-zero-gpu_1.2.21782_amd64.deb ; \
-                        dpkg -i /tmp/gpu_deps/intel*.deb && rm -Rf /tmp/gpu_deps ; \
+                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "22.10.22597") \
-                        mkdir /tmp/gpu_deps && \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-gmmlib_22.0.2_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-core_1.0.10409_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-opencl_1.0.10409_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-opencl-icd_22.10.22597_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-level-zero-gpu_1.3.22597_amd64.deb ; \
-                        dpkg -i /tmp/gpu_deps/intel*.deb && rm -Rf /tmp/gpu_deps ; \
+                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "22.35.24055") \
                         apt-get update && apt-get install -y --no-install-recommends gpg-agent && \
@@ -131,7 +132,9 @@ RUN	apt-get update -y ; \
                 *) \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
                         apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
-                        dpkg-scanpackages /drivers/${INSTALL_DRIVER_VERSION} > Packages && \
+                        cd /drivers/${INSTALL_DRIVER_VERSION} && \
+                            dpkg-scanpackages .  > Packages && \
+                            cd - ; \
                         echo "deb [trusted=yes arch=amd64] file:/drivers/${INSTALL_DRIVER_VERSION} ./" > /etc/apt/sources.list.d/intel-graphics-${INSTALL_DRIVER_VERSION}.list ; \
                         apt-get update && \
                         apt-get install -y --no-install-recommends \
@@ -166,11 +169,11 @@ RUN apt-get update && \
 RUN if [ -f /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules ]; then mkdir -p /etc/udev/rules.d/ && cp /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules /etc/udev/rules.d/ && ldconfig ; fi
 # for NVIDIA
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
-    apt-get update && \
+    apt-get update -y && \
     apt-get install -y --no-install-recommends curl && \
     curl -o /etc/apt/preferences.d/cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin ; \
-    apt-get update && apt-get install -y --no-install-recommends libcudnn8 libcutensor1 libpng16-16 &&  \
-    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+    apt-get update && apt-get install -y --no-install-recommends libcudnn8 libcutensor1 libpng16-16 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*qg
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
