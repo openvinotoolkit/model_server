@@ -125,7 +125,8 @@ OVMS_Status* OVMS_ServerSettingsNew(OVMS_ServerSettings** settings);
 // \param settings The settings object to be removed
 void OVMS_ServerSettingsDelete(OVMS_ServerSettings* settings);
 
-// Set the gRPC port of starting OVMS. Equivalent of using --port parameter from OVMS CLI
+// Set the gRPC port of starting OVMS. Equivalent of using --port parameter from OVMS CLI.
+// If not set server will start with gRPC port set to 9178
 //
 // \param settings The server settings object to be set
 // \param grpc_port The value to be set
@@ -138,7 +139,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcPort(OVMS_ServerSettings* settings,
 // --rest_port
 //
 // \param settings The server settings object to be set
-// \param grpc_port The value to be set
+// \param rest_port The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetRestPort(OVMS_ServerSettings* settings,
     uint32_t rest_port);
@@ -300,21 +301,21 @@ OVMS_Status* OVMS_ServerNew(OVMS_Server** server);
 // \param server The server object to be removed
 void OVMS_ServerDelete(OVMS_Server* server);
 
-// Start with configuration file config.json
-// Return error if already started
+// Start server with configuration file config.json.
+// Return error if already started or any other loading, configuration error occured.
 //
-// \param settings The settings object to be set
-// \param grpc_port The value to be set
+// \param server The server object to be started
+// \param server_settings The server settings to be used
+// \param models_settings The models settings to be used
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerSettings* server_settings,
     OVMS_ModelsSettings* models_settings);  // in fact only --config_path
 
-// Unload all and cleanup
-
 // OVMS_InferenceRequest
 //
-// Create new inference request object
+// Create new inference request object. In case of servable version set to 0 server will choose
+// the default servable version
 //
 // \param request The request object to be created
 // \param server The server object
@@ -337,7 +338,7 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const
 // Set the data of the input buffer. Ownership of data needs to be maintained during inference
 //
 // \param request The request object
-// \param inputName The name of the input with data to be removed
+// \param inputName The name of the input with data to be set
 // \param data The data of the input
 // \param byteSize The byte size of the data
 // \param bufferType The buffer type of the data
