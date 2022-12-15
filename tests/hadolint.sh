@@ -31,7 +31,6 @@ files_no_proxy_setting=(
 
 docker run --rm -i hadolint/hadolint:latest hadolint -v -V
 
-# TODO: Add allowed registries
 has_issues=0
 while IFS= read -r -d '' dockerfile
     do
