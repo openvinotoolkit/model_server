@@ -29,7 +29,7 @@
 #include "../buffer.hpp"
 #include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
-#include "../inferenceparameter.hpp"  // TODO move bytesize util
+#include "../inferenceparameter.hpp"
 #include "../inferencerequest.hpp"
 #include "../inferenceresponse.hpp"
 #include "../inferencetensor.hpp"
@@ -52,9 +52,6 @@ using ovms::InferenceResponse;
 using ovms::InferenceTensor;
 using ovms::StatusCode;
 
-// TODO: These tests test both TFS and KFS for prediction,
-// but output is always serialized to TFS, therefore we only test TFS serialization here.
-// TODO: Add C-API tests when predict/infer becomes ready.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
 void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
@@ -235,7 +232,7 @@ public:
             << readableError(expectedValues.data(), actualValues.data(), expectedValues.size() * sizeof(float));
     }
     static void checkOutputValues(const ovms::InferenceResponse& res, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
-        InferenceResponse& response = const_cast<InferenceResponse&>(res);  // TODO decide if output should be const
+        InferenceResponse& response = const_cast<InferenceResponse&>(res);
         size_t outputCount = response.getOutputCount();
         ASSERT_GE(1, outputCount);
         size_t outputId = 0;
@@ -354,7 +351,7 @@ void TestPredict<CAPIInterface>::checkOutputShape(const ovms::InferenceResponse&
     while (outputId < outputCount) {
         const std::string* cppName;
         InferenceTensor* tensor;
-        InferenceResponse& response = const_cast<InferenceResponse&>(cresponse);  // TODO decide if output should be const
+        InferenceResponse& response = const_cast<InferenceResponse&>(cresponse);
         auto status = response.getOutput(outputId, &cppName, &tensor);
         EXPECT_EQ(status, StatusCode::OK) << status.string();
         EXPECT_NE(nullptr, tensor);

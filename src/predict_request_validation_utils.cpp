@@ -797,7 +797,7 @@ bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorTyp
 }
 template <>
 bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkIfBinaryInputUsed(const InferenceTensor& tensor, const std::string inputName) const {
-    // no strig no bytes currently, will implement one of those types with binary input.
+    // no string no bytes currently, will implement one of those types with binary input.
     return false;
 }
 
