@@ -633,4 +633,13 @@ TEST_F(BinaryUtilsTestKFSRawInputsContents, Negative_batchSizeBiggerThan1) {
 
     ASSERT_EQ(convertBinaryRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::INVALID_BATCH_SIZE);
 }
+
+TEST_F(BinaryUtilsTestKFSRawInputsContents, Negative_emptyString) {
+    ov::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
+
+    std::string empty;
+    ASSERT_EQ(convertBinaryRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &empty), ovms::StatusCode::BYTES_CONTENTS_EMPTY);
+}
 }  // namespace
