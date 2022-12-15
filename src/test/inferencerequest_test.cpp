@@ -41,7 +41,7 @@ using ovms::StatusCode;
 namespace {
 const std::string MODEL_NAME{"SomeModelName"};
 const uint64_t MODEL_VERSION{42};
-const std::string PARAMETER_NAME{"SEQUENCE_ID"};  // TODO check if in ovms there is such constant
+const std::string PARAMETER_NAME{"SEQUENCE_ID"};
 const OVMS_DataType PARAMETER_DATATYPE{OVMS_DATATYPE_I32};
 
 const uint32_t PARAMETER_VALUE{13};
@@ -196,4 +196,3 @@ TEST(InferenceResponse, CreateAndReadData) {
     status = response.addParameter(PARAMETER_NAME.c_str(), PARAMETER_DATATYPE, reinterpret_cast<const void*>(&PARAMETER_VALUE));
     ASSERT_EQ(status, StatusCode::DOUBLE_PARAMETER_INSERT) << status.string();
 }
-// TODO logging

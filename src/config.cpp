@@ -34,7 +34,6 @@ const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
 const uint64_t MAX_REST_WORKERS = 10'000;
 
-// TODO: Not used in OVMS - get rid of. Used only in tests.
 Config& Config::parse(int argc, char** argv) {
     ovms::CLIParser p;
     ovms::ServerSettingsImpl serverSettings;

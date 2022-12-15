@@ -182,7 +182,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcBindAddress(OVMS_ServerSettings* settings
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (grpc_bind_address == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->grpcBindAddress.assign(grpc_bind_address);
@@ -205,7 +205,7 @@ OVMS_Status* OVMS_ServerSettingsSetRestBindAddress(OVMS_ServerSettings* settings
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (rest_bind_address == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->restBindAddress.assign(rest_bind_address);
@@ -218,7 +218,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcChannelArguments(OVMS_ServerSettings* set
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (grpc_channel_arguments == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->grpcChannelArguments.assign(grpc_channel_arguments);
@@ -261,7 +261,7 @@ OVMS_Status* OVMS_ServerSettingsSetCpuExtensionPath(OVMS_ServerSettings* setting
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (cpu_extension_path == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->cpuExtensionLibraryPath.assign(cpu_extension_path);
@@ -274,7 +274,7 @@ OVMS_Status* OVMS_ServerSettingsSetCacheDir(OVMS_ServerSettings* settings,
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (cache_dir == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->cacheDir.assign(cache_dir);
@@ -315,7 +315,7 @@ OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* settings,
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (log_path == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->logPath.assign(log_path);
@@ -328,7 +328,7 @@ OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
     }
     if (config_path == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));  // TODO name->string
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
     }
     ovms::ModelsSettingsImpl* modelsSettings = reinterpret_cast<ovms::ModelsSettingsImpl*>(settings);
     modelsSettings->configPath.assign(config_path);
@@ -336,7 +336,6 @@ OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
 }
 // inference API
 OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, uint32_t servableVersion) {
-    // TODO should we allow to create requests to not yet loaded models?
     if (request == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
     }
@@ -503,7 +502,7 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
     *shape = tensor->getShape().data();
     *dimCount = tensor->getShape().size();
     *bufferType = buffer->getBufferType();
-    *deviceId = buffer->getDeviceId().value_or(0);  // TODO how discriminate betwen undefined & actual device 0
+    *deviceId = buffer->getDeviceId().value_or(0);
     // possibly it is not neccessary to discriminate
     *data = buffer->data();
     *bytesize = buffer->getByteSize();
@@ -578,7 +577,6 @@ static Status getModelInstance(ovms::Server& server, const InferenceRequest* req
     }
     const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     if (!servableModule) {
-        // TODO: Should we wait for servable manager to appear? And for model to get loaded?
         return ovms::Status(ovms::StatusCode::INTERNAL_ERROR, "missing servable manager");
     }
     auto& modelManager = dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();

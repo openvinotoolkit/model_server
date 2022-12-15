@@ -202,7 +202,6 @@ Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow:
     this->sequenceId = sequenceProcessingSpec.getSequenceId();
     if (!sequenceManager.sequenceExists(this->sequenceId.value()))
         return StatusCode::INTERNAL_ERROR;
-    // TODO should be able to search & get in one go
     sequence = &sequenceManager.getSequence(this->sequenceId.value());
 
     sequenceLock = std::make_unique<std::unique_lock<std::mutex>>(sequence->getMutex());

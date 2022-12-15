@@ -61,7 +61,7 @@ public:
     Status setTimeoutMicorseconds(uint64_t microseconds);
     InferenceParameter* getInferenceParameter(const char* name);
     InferenceTensor* getTensor(const char* name);
-    // TODO add tests & seek if those can be removed by potentialy exposing inputs map?
+
     Status getBatchSize(size_t& batchSize, size_t batchSizeIndex) const;
     std::map<std::string, shape_t> getRequestShapes() const;
 };
