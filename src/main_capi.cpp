@@ -26,7 +26,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-#include "./pocapi.h"
+#include "ovms.h"  // NOLINT
 
 const char* MODEL_NAME = "dummy";
 const uint64_t MODEL_VERSION = 1;
@@ -72,21 +72,23 @@ static void installSignalHandlers() {
 
 int main(int argc, char** argv) {
     installSignalHandlers();
-    OVMS_ServerGeneralOptions* go = 0;
-    OVMS_ServerMultiModelOptions* mmo = 0;
+
+    OVMS_ServerSettings* serverSettings = 0;
+    OVMS_ModelsSettings* modelsSettings = 0;
     OVMS_Server* srv;
 
-    OVMS_ServerGeneralOptionsNew(&go);
-    OVMS_ServerMultiModelOptionsNew(&mmo);
+    OVMS_ServerSettingsNew(&serverSettings);
+    OVMS_ModelsSettingsNew(&modelsSettings);
     OVMS_ServerNew(&srv);
 
-    OVMS_ServerGeneralOptionsSetGrpcPort(go, 9178);
-    OVMS_ServerGeneralOptionsSetRestPort(go, 11338);
+    OVMS_ServerSettingsSetGrpcPort(serverSettings, 9178);
+    OVMS_ServerSettingsSetRestPort(serverSettings, 11338);
 
-    OVMS_ServerGeneralOptionsSetLogLevel(go, OVMS_LOG_DEBUG);
-    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json");
+    OVMS_ServerSettingsSetLogLevel(serverSettings, OVMS_LOG_DEBUG);
+    OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json");
 
-    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
+    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
+
     if (res) {
         uint32_t code = 0;
         const char* details = nullptr;
@@ -98,8 +100,8 @@ int main(int argc, char** argv) {
         OVMS_StatusDelete(res);
 
         OVMS_ServerDelete(srv);
-        OVMS_ServerMultiModelOptionsDelete(mmo);
-        OVMS_ServerGeneralOptionsDelete(go);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
         return 1;
     }
 
@@ -107,7 +109,7 @@ int main(int argc, char** argv) {
 
     // prepare request
     OVMS_InferenceRequest* request{nullptr};
-    OVMS_InferenceRequestNew(&request, MODEL_NAME, MODEL_VERSION);
+    OVMS_InferenceRequestNew(&request, srv, MODEL_NAME, MODEL_VERSION);
     OVMS_InferenceRequestAddInput(request, INPUT_NAME, OVMS_DATATYPE_FP32, SHAPE, DIM_COUNT);
     std::array<float, SHAPE[1]> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     OVMS_InferenceRequestInputSetData(request, INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, 0);
@@ -163,7 +165,9 @@ int main(int argc, char** argv) {
     std::cout << "No more job to be done, will shut down" << std::endl;
 
     OVMS_ServerDelete(srv);
-    OVMS_ServerMultiModelOptionsDelete(mmo);
-    OVMS_ServerGeneralOptionsDelete(go);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
+
+    fprintf(stdout, "main() exit\n");
     return 0;
 }

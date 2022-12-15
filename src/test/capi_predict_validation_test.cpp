@@ -412,7 +412,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectInputWithNoBuffer) {
     std::array<size_t, 4> shape{1, 1, 1, 1};
     request.addInput("Input_FP32_1_1_1_1_NHWC", OVMS_DATATYPE_FP32, shape.data(), shape.size());
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();  // TODO change retcode?
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
 
 TEST_F(CAPIPredictValidation, RequestIncorrectContentSizeZero) {
@@ -791,8 +791,6 @@ TEST_F(CAPIPredictValidationDynamicModel, RequestDimensionInRangeWrongTensorCont
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
-
-// TODO: Add request parameters name validation tests
 
 class CAPIPredictValidationPrecision : public ::testing::TestWithParam<ovms::Precision> {
 protected:

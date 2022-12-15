@@ -46,7 +46,7 @@ WORKDIR /
 RUN     set -e ; \
         set -x ; \
         microdnf upgrade -y ; \
-        microdnf install -y pkg-config ; \
+        microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
         if [ "$GPU" == "1" ] ; then \
                 case $INSTALL_DRIVER_VERSION in \
                 "20.35.17767") \

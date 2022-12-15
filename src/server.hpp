@@ -26,8 +26,8 @@ namespace ovms {
 class Config;
 class Status;
 
-class GeneralOptionsImpl;
-class MultiModelOptionsImpl;
+class ServerSettingsImpl;
+class ModelsSettingsImpl;
 
 extern const std::string PROFILER_MODULE_NAME;
 extern const std::string GRPC_SERVER_MODULE_NAME;
@@ -46,7 +46,7 @@ protected:
 public:
     static Server& instance();
     int start(int argc, char** argv);
-    Status start(GeneralOptionsImpl*, MultiModelOptionsImpl*);
+    Status start(ServerSettingsImpl*, ModelsSettingsImpl*);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;
     bool isReady() const;

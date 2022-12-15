@@ -53,6 +53,10 @@ if __name__ == '__main__':
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
     parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='Add demultiplexer dimension at front', dest='dag-batch-size-auto')
+    parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with gRPC endpoint')
+    parser.add_argument('--server_cert', required=False, help='Path to server certificate', default=None)
+    parser.add_argument('--client_cert', required=False, help='Path to client certificate', default=None)
+    parser.add_argument('--client_key', required=False, help='Path to client key', default=None)
 
     args = vars(parser.parse_args())
 
@@ -60,6 +64,10 @@ if __name__ == '__main__':
 
     triton_client = grpcclient.InferenceServerClient(
                 url=address,
+                ssl=args['tls'],
+                root_certificates=args['server_cert'],
+                private_key=args['client_key'],
+                certificate_chain=args['client_cert'],
                 verbose=False)
 
     processing_times = np.zeros((0),int)

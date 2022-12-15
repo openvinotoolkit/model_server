@@ -19,29 +19,27 @@
 
 #include <gtest/gtest.h>
 
-// TODO we should not include classes from OVMS here
-// consider how to workaround test_utils
 #include "../inferenceresponse.hpp"
-#include "../pocapi.h"
+#include "../ovms.h"
 #include "test_utils.hpp"
 
 using namespace ovms;
 using testing::ElementsAreArray;
 
-static void testDefaultSingleModelOptions(MultiModelOptionsImpl* mmo) {
-    EXPECT_EQ(mmo->modelName, "");
-    EXPECT_EQ(mmo->modelPath, "");
-    EXPECT_EQ(mmo->batchSize, "");
-    EXPECT_EQ(mmo->shape, "");
-    EXPECT_EQ(mmo->layout, "");
-    EXPECT_EQ(mmo->modelVersionPolicy, "");
-    EXPECT_EQ(mmo->nireq, 0);
-    EXPECT_EQ(mmo->targetDevice, "");
-    EXPECT_EQ(mmo->pluginConfig, "");
-    EXPECT_EQ(mmo->stateful, std::nullopt);
-    EXPECT_EQ(mmo->lowLatencyTransformation, std::nullopt);
-    EXPECT_EQ(mmo->maxSequenceNumber, std::nullopt);
-    EXPECT_EQ(mmo->idleSequenceCleanup, std::nullopt);
+static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
+    EXPECT_EQ(modelsSettings->modelName, "");
+    EXPECT_EQ(modelsSettings->modelPath, "");
+    EXPECT_EQ(modelsSettings->batchSize, "");
+    EXPECT_EQ(modelsSettings->shape, "");
+    EXPECT_EQ(modelsSettings->layout, "");
+    EXPECT_EQ(modelsSettings->modelVersionPolicy, "");
+    EXPECT_EQ(modelsSettings->nireq, 0);
+    EXPECT_EQ(modelsSettings->targetDevice, "");
+    EXPECT_EQ(modelsSettings->pluginConfig, "");
+    EXPECT_EQ(modelsSettings->stateful, std::nullopt);
+    EXPECT_EQ(modelsSettings->lowLatencyTransformation, std::nullopt);
+    EXPECT_EQ(modelsSettings->maxSequenceNumber, std::nullopt);
+    EXPECT_EQ(modelsSettings->idleSequenceCleanup, std::nullopt);
 }
 
 #define ASSERT_CAPI_STATUS_NULL(C_API_CALL)   \
@@ -84,120 +82,120 @@ static void testDefaultSingleModelOptions(MultiModelOptionsImpl* mmo) {
     }
 
 TEST(CApiConfigTest, MultiModelConfiguration) {
-    OVMS_ServerGeneralOptions* _go = 0;
-    OVMS_ServerMultiModelOptions* _mmo = 0;
+    OVMS_ServerSettings* _serverSettings = 0;
+    OVMS_ModelsSettings* _modelsSettings = 0;
 
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsNew(nullptr), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsNew(&_go));
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerMultiModelOptionsNew(nullptr), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsNew(&_mmo));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsNew(nullptr), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&_serverSettings));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsNew(nullptr), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&_modelsSettings));
 
-    ASSERT_NE(_go, nullptr);
-    ASSERT_NE(_mmo, nullptr);
+    ASSERT_NE(_serverSettings, nullptr);
+    ASSERT_NE(_modelsSettings, nullptr);
 
-    GeneralOptionsImpl* go = reinterpret_cast<GeneralOptionsImpl*>(_go);
-    MultiModelOptionsImpl* mmo = reinterpret_cast<MultiModelOptionsImpl*>(_mmo);
+    ServerSettingsImpl* serverSettings = reinterpret_cast<ServerSettingsImpl*>(_serverSettings);
+    ModelsSettingsImpl* modelsSettings = reinterpret_cast<ModelsSettingsImpl*>(_modelsSettings);
 
     // Test default values
-    EXPECT_EQ(go->grpcPort, 9178);
-    EXPECT_EQ(go->restPort, 0);
-    EXPECT_EQ(go->grpcWorkers, 1);
-    EXPECT_EQ(go->grpcBindAddress, "0.0.0.0");
-    EXPECT_EQ(go->restWorkers, std::nullopt);
-    EXPECT_EQ(go->restBindAddress, "0.0.0.0");
-    EXPECT_EQ(go->metricsEnabled, false);
-    EXPECT_EQ(go->metricsList, "");
-    EXPECT_EQ(go->cpuExtensionLibraryPath, "");
-    EXPECT_EQ(go->logLevel, "INFO");
-    EXPECT_EQ(go->logPath, "");
+    EXPECT_EQ(serverSettings->grpcPort, 9178);
+    EXPECT_EQ(serverSettings->restPort, 0);
+    EXPECT_EQ(serverSettings->grpcWorkers, 1);
+    EXPECT_EQ(serverSettings->grpcBindAddress, "0.0.0.0");
+    EXPECT_EQ(serverSettings->restWorkers, std::nullopt);
+    EXPECT_EQ(serverSettings->restBindAddress, "0.0.0.0");
+    EXPECT_EQ(serverSettings->metricsEnabled, false);
+    EXPECT_EQ(serverSettings->metricsList, "");
+    EXPECT_EQ(serverSettings->cpuExtensionLibraryPath, "");
+    EXPECT_EQ(serverSettings->logLevel, "INFO");
+    EXPECT_EQ(serverSettings->logPath, "");
     // trace path  // not tested since it is not supported in C-API
-    EXPECT_EQ(go->grpcChannelArguments, "");
-    EXPECT_EQ(go->filesystemPollWaitSeconds, 1);
-    EXPECT_EQ(go->sequenceCleanerPollWaitMinutes, 5);
-    EXPECT_EQ(go->resourcesCleanerPollWaitSeconds, 1);
-    EXPECT_EQ(go->cacheDir, "");
+    EXPECT_EQ(serverSettings->grpcChannelArguments, "");
+    EXPECT_EQ(serverSettings->filesystemPollWaitSeconds, 1);
+    EXPECT_EQ(serverSettings->sequenceCleanerPollWaitMinutes, 5);
+    EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 1);
+    EXPECT_EQ(serverSettings->cacheDir, "");
 
-    testDefaultSingleModelOptions(mmo);
-    EXPECT_EQ(mmo->configPath, "");
+    testDefaultSingleModelOptions(modelsSettings);
+    EXPECT_EQ(modelsSettings->configPath, "");
 
     // Set non default values
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetGrpcPort(_go, 5555));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetRestPort(_go, 6666));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetGrpcWorkers(_go, 30));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetGrpcBindAddress(_go, "2.2.2.2"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetRestWorkers(_go, 31));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetRestBindAddress(_go, "3.3.3.3"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetGrpcChannelArguments(_go, "grpcargs"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(_go, 2));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(_go, 3));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(_go, 4));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetCpuExtensionPath(_go, "/ovms/src/test"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetCacheDir(_go, "/tmp/cache"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_INFO));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_ERROR));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_DEBUG));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_WARNING));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogLevel(_go, OVMS_LOG_TRACE));
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetLogLevel(_go, static_cast<OVMS_LogLevel>(99)), StatusCode::NONEXISTENT_LOG_LEVEL);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetLogPath(_go, "/logs"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsSetConfigPath(_mmo, "/config"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(_serverSettings, 5555));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(_serverSettings, 6666));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcWorkers(_serverSettings, 30));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcBindAddress(_serverSettings, "2.2.2.2"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestWorkers(_serverSettings, 31));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestBindAddress(_serverSettings, "3.3.3.3"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcChannelArguments(_serverSettings, "grpcargs"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(_serverSettings, 2));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(_serverSettings, 3));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(_serverSettings, 4));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCpuExtensionPath(_serverSettings, "/ovms/src/test"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCacheDir(_serverSettings, "/tmp/cache"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_INFO));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_ERROR));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_DEBUG));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_WARNING));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_TRACE));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogLevel(_serverSettings, static_cast<OVMS_LogLevel>(99)), StatusCode::NONEXISTENT_LOG_LEVEL);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogPath(_serverSettings, "/logs"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(_modelsSettings, "/config"));
     // check nullptr
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetGrpcPort(nullptr, 5555), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetRestPort(nullptr, 6666), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetGrpcWorkers(nullptr, 30), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetGrpcBindAddress(nullptr, "2.2.2.2"), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetGrpcBindAddress(_go, nullptr), StatusCode::NONEXISTENT_STRING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetRestWorkers(nullptr, 31), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetRestBindAddress(nullptr, "3.3.3.3"), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetRestBindAddress(_go, nullptr), StatusCode::NONEXISTENT_STRING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetGrpcChannelArguments(nullptr, "grpcargs"), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetGrpcChannelArguments(_go, nullptr), StatusCode::NONEXISTENT_STRING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetFileSystemPollWaitSeconds(nullptr, 2), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetSequenceCleanerPollWaitMinutes(nullptr, 3), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetCustomNodeResourcesCleanerIntervalSeconds(nullptr, 4), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetCpuExtensionPath(nullptr, "/ovms/src/test"), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetCpuExtensionPath(_go, nullptr), StatusCode::NONEXISTENT_STRING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetCacheDir(nullptr, "/tmp/cache"), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetCacheDir(_go, nullptr), StatusCode::NONEXISTENT_STRING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetLogLevel(nullptr, OVMS_LOG_TRACE), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetLogPath(nullptr, "/logs"), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsSetLogPath(_go, nullptr), StatusCode::NONEXISTENT_STRING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerMultiModelOptionsSetConfigPath(nullptr, "/config"), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerMultiModelOptionsSetConfigPath(_mmo, nullptr), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcPort(nullptr, 5555), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestPort(nullptr, 6666), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcWorkers(nullptr, 30), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcBindAddress(nullptr, "2.2.2.2"), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcBindAddress(_serverSettings, nullptr), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestWorkers(nullptr, 31), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestBindAddress(nullptr, "3.3.3.3"), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestBindAddress(_serverSettings, nullptr), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcChannelArguments(nullptr, "grpcargs"), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcChannelArguments(_serverSettings, nullptr), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(nullptr, 2), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(nullptr, 3), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(nullptr, 4), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCpuExtensionPath(nullptr, "/ovms/src/test"), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCpuExtensionPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCacheDir(nullptr, "/tmp/cache"), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCacheDir(_serverSettings, nullptr), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogLevel(nullptr, OVMS_LOG_TRACE), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogPath(nullptr, "/logs"), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsSetConfigPath(nullptr, "/config"), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsSetConfigPath(_modelsSettings, nullptr), StatusCode::NONEXISTENT_STRING);
 
     // Test non default values
-    EXPECT_EQ(go->grpcPort, 5555);
-    EXPECT_EQ(go->restPort, 6666);
-    EXPECT_EQ(go->grpcWorkers, 30);
-    EXPECT_EQ(go->grpcBindAddress, "2.2.2.2");
-    EXPECT_EQ(go->restWorkers, 31);
-    EXPECT_EQ(go->restBindAddress, "3.3.3.3");
-    // EXPECT_EQ(go->metricsEnabled, false);  // TODO: enable testing once metrics will be configurable via api
-    // EXPECT_EQ(go->metricsList, "");
-    EXPECT_EQ(go->cpuExtensionLibraryPath, "/ovms/src/test");
-    EXPECT_EQ(go->logLevel, "TRACE");
-    EXPECT_EQ(go->logPath, "/logs");
+    EXPECT_EQ(serverSettings->grpcPort, 5555);
+    EXPECT_EQ(serverSettings->restPort, 6666);
+    EXPECT_EQ(serverSettings->grpcWorkers, 30);
+    EXPECT_EQ(serverSettings->grpcBindAddress, "2.2.2.2");
+    EXPECT_EQ(serverSettings->restWorkers, 31);
+    EXPECT_EQ(serverSettings->restBindAddress, "3.3.3.3");
+    // EXPECT_EQ(serverSettings->metricsEnabled, false);
+    // EXPECT_EQ(serverSettings->metricsList, "");
+    EXPECT_EQ(serverSettings->cpuExtensionLibraryPath, "/ovms/src/test");
+    EXPECT_EQ(serverSettings->logLevel, "TRACE");
+    EXPECT_EQ(serverSettings->logPath, "/logs");
     // trace path  // not tested since it is not supported in C-API
-    EXPECT_EQ(go->grpcChannelArguments, "grpcargs");
-    EXPECT_EQ(go->filesystemPollWaitSeconds, 2);
-    EXPECT_EQ(go->sequenceCleanerPollWaitMinutes, 3);
-    EXPECT_EQ(go->resourcesCleanerPollWaitSeconds, 4);
-    EXPECT_EQ(go->cacheDir, "/tmp/cache");
+    EXPECT_EQ(serverSettings->grpcChannelArguments, "grpcargs");
+    EXPECT_EQ(serverSettings->filesystemPollWaitSeconds, 2);
+    EXPECT_EQ(serverSettings->sequenceCleanerPollWaitMinutes, 3);
+    EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 4);
+    EXPECT_EQ(serverSettings->cacheDir, "/tmp/cache");
 
-    testDefaultSingleModelOptions(mmo);
-    EXPECT_EQ(mmo->configPath, "/config");
+    testDefaultSingleModelOptions(modelsSettings);
+    EXPECT_EQ(modelsSettings->configPath, "/config");
 
     // Test config parser
     ConstructorEnabledConfig cfg;
-    ASSERT_TRUE(cfg.parse(go, mmo));
+    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings));
     EXPECT_EQ(cfg.port(), 5555);
     EXPECT_EQ(cfg.restPort(), 6666);
     EXPECT_EQ(cfg.grpcWorkers(), 30);
     EXPECT_EQ(cfg.grpcBindAddress(), "2.2.2.2");
     EXPECT_EQ(cfg.restWorkers(), 31);
     EXPECT_EQ(cfg.restBindAddress(), "3.3.3.3");
-    // EXPECT_EQ(go->metricsEnabled, false);  // TODO: enable testing once metrics will be configurable via api
-    // EXPECT_EQ(go->metricsList, "");
+    // EXPECT_EQ(serverSettings->metricsEnabled, false);
+    // EXPECT_EQ(serverSettings->metricsList, "");
     EXPECT_EQ(cfg.cpuExtensionLibraryPath(), "/ovms/src/test");
     EXPECT_EQ(cfg.logLevel(), "TRACE");
     EXPECT_EQ(cfg.logPath(), "/logs");
@@ -224,10 +222,10 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
 
     EXPECT_EQ(cfg.configPath(), "/config");
 
-    OVMS_ServerMultiModelOptionsDelete(nullptr);
-    OVMS_ServerMultiModelOptionsDelete(_mmo);
-    OVMS_ServerGeneralOptionsDelete(nullptr);
-    OVMS_ServerGeneralOptionsDelete(_go);
+    OVMS_ModelsSettingsDelete(nullptr);
+    OVMS_ModelsSettingsDelete(_modelsSettings);
+    OVMS_ServerSettingsDelete(nullptr);
+    OVMS_ServerSettingsDelete(_serverSettings);
 }
 
 TEST(CApiConfigTest, SingleModelConfiguration) {
@@ -246,41 +244,39 @@ TEST(CApiStartTest, InitializingMultipleServers) {
 
 TEST(CApiStartTest, StartFlow) {
     OVMS_Server* srv = 0;
-    OVMS_ServerGeneralOptions* go = 0;
-    OVMS_ServerMultiModelOptions* mmo = 0;
+    OVMS_ServerSettings* serverSettings = 0;
+    OVMS_ModelsSettings* modelsSettings = 0;
 
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerNew(nullptr), StatusCode::NONEXISTENT_SERVER);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerGeneralOptionsNew(nullptr), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerMultiModelOptionsNew(nullptr), StatusCode::NONEXISTENT_OPTIONS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsNew(nullptr), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsNew(nullptr), StatusCode::NONEXISTENT_SETTINGS);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&srv));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsNew(&go));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsNew(&mmo));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
 
     ASSERT_NE(srv, nullptr);
-    ASSERT_NE(go, nullptr);
-    ASSERT_NE(mmo, nullptr);
+    ASSERT_NE(serverSettings, nullptr);
+    ASSERT_NE(modelsSettings, nullptr);
 
     // Cannot start due to configuration error
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetGrpcPort(go, 5555));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetRestPort(go, 5555));  // The same port
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 5555));  // The same port
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json"));
 
     // Expect fail
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, go, mmo),
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings),
         StatusCode::OPTIONS_USAGE_ERROR);
 
     // Fix and expect ok
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetRestPort(go, 6666));  // Different port
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(srv, go, mmo));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 6666));  // Different port
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings));
 
     // Try to start again, expect failure
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, go, mmo),
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings),
         StatusCode::SERVER_ALREADY_STARTED);
 
-    // TODO: Is infer ok?
-
-    OVMS_ServerMultiModelOptionsDelete(mmo);
-    OVMS_ServerGeneralOptionsDelete(go);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
     OVMS_ServerDelete(srv);
 }
 
@@ -306,9 +302,31 @@ TEST(CApiStatusTest, GetCodeAndDetails) {
 class CapiInference : public ::testing::Test {};
 
 TEST_F(CapiInference, Basic) {
+    //////////////////////
+    // start server
+    //////////////////////
+    // remove when C-API start implemented
+    std::string port = "9000";
+    randomizePort(port);
+    // prepare options
+    OVMS_ServerSettings* serverSettings = 0;
+    OVMS_ModelsSettings* modelsSettings = 0;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_NE(serverSettings, nullptr);
+    ASSERT_NE(modelsSettings, nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json"));
+
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ASSERT_NE(cserver, nullptr);
+    ///////////////////////
     // request creation
+    ///////////////////////
     OVMS_InferenceRequest* request{nullptr};
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, "dummy", 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_NE(nullptr, request);
 
     // adding input
@@ -328,23 +346,6 @@ TEST_F(CapiInference, Basic) {
     //////////////////
     //  INFERENCE
     //////////////////
-    // remove when C-API start implemented
-    std::string port = "9000";
-    randomizePort(port);
-    // prepare options
-    OVMS_ServerGeneralOptions* go = 0;
-    OVMS_ServerMultiModelOptions* mmo = 0;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsNew(&go));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsNew(&mmo));
-    ASSERT_NE(go, nullptr);
-    ASSERT_NE(mmo, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetGrpcPort(go, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json"));
-
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, go, mmo));
-    ASSERT_NE(cserver, nullptr);
 
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
@@ -443,28 +444,28 @@ TEST_F(CapiInference, NegativeInference) {
     std::string port = "9000";
     randomizePort(port);
     // prepare options
-    OVMS_ServerGeneralOptions* go = 0;
-    OVMS_ServerMultiModelOptions* mmo = 0;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsNew(&go));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsNew(&mmo));
-    ASSERT_NE(go, nullptr);
-    ASSERT_NE(mmo, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerGeneralOptionsSetGrpcPort(go, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerMultiModelOptionsSetConfigPath(mmo, "/ovms/src/test/c_api/config_standard_dummy.json"));
+    OVMS_ServerSettings* serverSettings = 0;
+    OVMS_ModelsSettings* modelsSettings = 0;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_NE(serverSettings, nullptr);
+    ASSERT_NE(modelsSettings, nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json"));
 
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(nullptr, go, mmo), StatusCode::NONEXISTENT_SERVER);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(cserver, nullptr, mmo), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(cserver, go, nullptr), StatusCode::NONEXISTENT_OPTIONS);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, go, mmo));
-    // TODO add check for server ready strict in 2022.3 not available in C-API
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(nullptr, serverSettings, modelsSettings), StatusCode::NONEXISTENT_SERVER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(cserver, nullptr, modelsSettings), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, nullptr), StatusCode::NONEXISTENT_SETTINGS);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
 
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(nullptr, "dummy", 1), StatusCode::NONEXISTENT_REQUEST);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(&request, nullptr, 1), StatusCode::NONEXISTENT_STRING);
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, "dummy", 1));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(nullptr, cserver, "dummy", 1), StatusCode::NONEXISTENT_REQUEST);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(&request, cserver, nullptr, 1), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestNew(&request, nullptr, "dummy", 1), StatusCode::NONEXISTENT_SERVER);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_NE(nullptr, request);
     // negative no inputs
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_NO_OF_INPUTS);
@@ -505,7 +506,7 @@ TEST_F(CapiInference, NegativeInference) {
     // negative inference with non existing model
     OVMS_InferenceRequest* requestNoModel{nullptr};
     OVMS_InferenceResponse* reponseNoModel{nullptr};
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, "NONEXISTENT_MODEL", 13));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "NONEXISTENT_MODEL", 13));
     // negative no model
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::NOT_IMPLEMENTED);
 
@@ -518,12 +519,10 @@ TEST_F(CapiInference, NegativeInference) {
     OVMS_ServerDelete(nullptr);
 }
 
-// TODO negative test -> validate at the infer stage
-// TODO reuse request after inference
 namespace {
 const std::string MODEL_NAME{"SomeModelName"};
 const uint64_t MODEL_VERSION{42};
-const std::string PARAMETER_NAME{"sequence_id"};  // TODO check if in ovms there is such constant
+const std::string PARAMETER_NAME{"sequence_id"};
 const OVMS_DataType PARAMETER_DATATYPE{OVMS_DATATYPE_I32};
 
 const uint32_t PARAMETER_VALUE{13};
@@ -621,7 +620,7 @@ TEST_F(CapiInference, CallInferenceServerNotStarted) {
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, "dummy", 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_NE(nullptr, cserver);
     ASSERT_NE(nullptr, request);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
@@ -633,5 +632,3 @@ TEST_F(CapiInference, CallInferenceServerNotStarted) {
     OVMS_InferenceRequestDelete(request);
     OVMS_ServerDelete(cserver);
 }
-// TODO make cleaner error codes reporting
-// todo decide either use remove or delete for consistency

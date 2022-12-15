@@ -72,7 +72,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             yum-utils \
             unzip \
             vim \
-            xz && \
+            xz \
+            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
 
 # Build and install pugixml
@@ -206,7 +207,7 @@ RUN cd /ovms/src/example/SampleCpuExtension/ && make
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
 
 # C api app with bazel
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example
 # C-API benchmark app
 RUN bazel build //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
 

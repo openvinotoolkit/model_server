@@ -23,8 +23,6 @@ Buffer::Buffer(const void* pptr, size_t byteSize, OVMS_BufferType bufferType, st
     byteSize(byteSize),
     bufferType(bufferType),
     bufferDeviceId(bufferDeviceId) {
-    // TODO in later stages
-    // it can be advantageous to have custom made release fn especially with buffers passed by external users
     if (!createCopy)
         return;
     ownedCopy = std::make_unique<char[]>(byteSize);

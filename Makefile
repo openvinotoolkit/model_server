@@ -47,6 +47,7 @@ NVIDIA ?=0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= master
+OV_CONTRIB_BRANCH ?= master
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -80,14 +81,14 @@ ifeq ($(BASE_OS),ubuntu)
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   endif
   INSTALL_DRIVER_VERSION ?= "22.35.24055"
-  DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/0357a97c40a41be0f362a3d0907e378b236b3c71/swf_drop/packages/releases/l_openvino_toolkit_ubuntu20_2022.3.0.8963.0357a97c40a_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/releases/2022/3/commit/b84161848eaf02d8004f92cb530c1f092eac5782/swf_drop/packages/releases/l_openvino_toolkit_ubuntu20_2022.3.0.9038.b84161848ea_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "22.28.23726"
-  DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/0357a97c40a41be0f362a3d0907e378b236b3c71/swf_drop/packages/releases/l_openvino_toolkit_rhel8_2022.3.0.8963.0357a97c40a_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/releases/2022/3/commit/b84161848eaf02d8004f92cb530c1f092eac5782/swf_drop/packages/releases/l_openvino_toolkit_rhel8_2022.3.0.9038.b84161848ea_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -212,7 +213,7 @@ endif
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg NVIDIA=$(NVIDIA) \
+		--build-arg NVIDIA=$(NVIDIA) --build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg JOBS=$(JOBS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \

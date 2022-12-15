@@ -27,10 +27,10 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "capi_frontend/capi_utils.hpp"
 #include "inferenceresponse.hpp"
 #include "inferencetensor.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "pocapiinternal.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
@@ -213,7 +213,7 @@ Status serializePredictResponse(
         }
         const std::string* outputNameFromCapiTensor = nullptr;
         status = response->getOutput(outputId, &outputNameFromCapiTensor, &outputTensor);
-        ++outputId;  // TODO C-API test serialization 2 outputs
+        ++outputId;
         if (!status.ok()) {
             SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted input",
                 outputName, response->getServableName(), response->getServableVersion());

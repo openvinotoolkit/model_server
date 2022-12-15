@@ -18,9 +18,8 @@
 
 #include <stdexcept>
 
-#include "./pocapi.h"
+#include "ovms.h"  // NOLINT
 namespace ovms {
-// TODO should we own our own copy of value?
 //
 size_t DataTypeToByteSize(OVMS_DataType datatype) {
     static std::unordered_map<OVMS_DataType, size_t> datatypeSizeMap{
@@ -40,7 +39,7 @@ size_t DataTypeToByteSize(OVMS_DataType datatype) {
         {OVMS_DATATYPE_FP32, 4},
         {OVMS_DATATYPE_FP64, 8},
         {OVMS_DATATYPE_BF16, 2},
-        // {"BYTES", }, TODO
+        // {"BYTES", },
     };
     auto it = datatypeSizeMap.find(datatype);
     if (it == datatypeSizeMap.end()) {

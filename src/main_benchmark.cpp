@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <sysexits.h>
 
-#include "pocapi.h"  // NOLINT
+#include "ovms.h"  // NOLINT
 #include "stringutils.hpp"
 
 namespace {
@@ -41,7 +41,7 @@ public:
 
     BenchmarkCLIParser() = default;
     void parse(int argc, char** argv);
-    void prepare(OVMS_ServerGeneralOptions*, OVMS_ServerMultiModelOptions*);
+    void prepare(OVMS_ServerSettings*, OVMS_ModelsSettings*);
 };
 
 void BenchmarkCLIParser::parse(int argc, char** argv) {
@@ -177,12 +177,12 @@ static void installSignalHandlers() {
 
 using shape_t = std::vector<size_t>;
 
-OVMS_InferenceRequest* prepareRequest(const std::string& servableName, uint32_t servableVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
+OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& servableName, uint32_t servableVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
     OVMS_InferenceRequest* request{nullptr};
-    OVMS_InferenceRequestNew(&request, servableName.c_str(), servableVersion);
+    OVMS_InferenceRequestNew(&request, server, servableName.c_str(), servableVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
     size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);  // TODO sizeof
+    OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);
     return request;
 }
 
@@ -220,31 +220,24 @@ void triggerInferenceInALoop(
     averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
 }
 }  // namespace
-// TODO support more than 1 input
-// TODO support 3 modes:
-// * fair play -> don't recreate request, but set buffer inputs
-// * full request prepare -> recreate request
-// * inference only -> dont reset buffers
-// TODO change plugin_config
-// TODO change nireq in model
 
 int main(int argc, char** argv) {
     installSignalHandlers();
     BenchmarkCLIParser cliparser;
     cliparser.parse(argc, argv);
 
-    OVMS_ServerGeneralOptions* go = 0;
-    OVMS_ServerMultiModelOptions* mmo = 0;
+    OVMS_ServerSettings* serverSettings = 0;
+    OVMS_ModelsSettings* modelsSettings = 0;
     OVMS_Server* srv;
 
-    OVMS_ServerGeneralOptionsNew(&go);
-    OVMS_ServerMultiModelOptionsNew(&mmo);
+    OVMS_ServerSettingsNew(&serverSettings);
+    OVMS_ModelsSettingsNew(&modelsSettings);
     OVMS_ServerNew(&srv);
 
     uint32_t grpcPort = cliparser.result->operator[]("port").as<uint32_t>();
     uint32_t restPort = cliparser.result->operator[]("rest_port").as<uint32_t>();
-    OVMS_ServerGeneralOptionsSetGrpcPort(go, grpcPort);
-    OVMS_ServerGeneralOptionsSetRestPort(go, restPort);
+    OVMS_ServerSettingsSetGrpcPort(serverSettings, grpcPort);
+    OVMS_ServerSettingsSetRestPort(serverSettings, restPort);
 
     std::string cliLogLevel(cliparser.result->operator[]("log_level").as<std::string>());
     OVMS_LogLevel_enum logLevel;
@@ -262,10 +255,10 @@ int main(int argc, char** argv) {
         std::cout << __LINE__ << std::endl;
         return EX_USAGE;
     }
-    OVMS_ServerGeneralOptionsSetLogLevel(go, logLevel);
-    OVMS_ServerMultiModelOptionsSetConfigPath(mmo, cliparser.result->operator[]("config_path").as<std::string>().c_str());
+    OVMS_ServerSettingsSetLogLevel(serverSettings, logLevel);
+    OVMS_ModelsSettingsSetConfigPath(modelsSettings, cliparser.result->operator[]("config_path").as<std::string>().c_str());
 
-    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, go, mmo);
+    OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
 
     if (res) {
         uint32_t code = 0;
@@ -275,8 +268,8 @@ int main(int argc, char** argv) {
         std::cout << "Error starting the server. Code:" << code
                   << "; details:" << details << std::endl;
         OVMS_ServerDelete(srv);
-        OVMS_ServerMultiModelOptionsDelete(mmo);
-        OVMS_ServerGeneralOptionsDelete(go);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
         return 1;
     }
 
@@ -295,7 +288,6 @@ int main(int argc, char** argv) {
         return EX_USAGE;
     }
     std::string inputName = inputsNames[0];
-    // TODO add support for many shapes/inputs
     // datatype handling
     OVMS_DataType datatype = OVMS_DATATYPE_FP32;
     // shape handling
@@ -323,7 +315,7 @@ int main(int argc, char** argv) {
     ///////////////////////
     // prepare requests
     ///////////////////////
-    OVMS_InferenceRequest* request = prepareRequest(servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
+    OVMS_InferenceRequest* request = prepareRequest(srv, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
     ///////////////////////
     // check request
     ///////////////////////
@@ -339,8 +331,8 @@ int main(int argc, char** argv) {
         OVMS_StatusDelete(res);
         OVMS_InferenceRequestDelete(request);
         OVMS_ServerDelete(srv);
-        OVMS_ServerMultiModelOptionsDelete(mmo);
-        OVMS_ServerGeneralOptionsDelete(go);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
         exit(EX_CONFIG);
     }
     OVMS_InferenceResponseDelete(response);
@@ -402,7 +394,6 @@ int main(int argc, char** argv) {
             }));
     }
     // sleep to allow all threads to initialize
-    // TODO rework to use signals
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     ///////////////////////
     // start workload
@@ -427,8 +418,8 @@ int main(int argc, char** argv) {
     std::cout << "Average latency pure C-API inference:" << totalPure << "ms" << std::endl;
     // OVMS cleanup
     OVMS_ServerDelete(srv);
-    OVMS_ServerMultiModelOptionsDelete(mmo);
-    OVMS_ServerGeneralOptionsDelete(go);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
     std::cout << "main() exit" << std::endl;
     return 0;
 }

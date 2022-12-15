@@ -18,7 +18,7 @@
 #include <optional>
 #include <string>
 
-#include "./pocapi.h"
+#include "ovms.h"  // NOLINT
 #include "shape.hpp"
 
 namespace ovms {

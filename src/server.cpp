@@ -48,7 +48,7 @@
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"
-#include "server_options.hpp"
+#include "server_settings.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -338,11 +338,11 @@ static int statusToExitCode(const Status& status) {
 int Server::start(int argc, char** argv) {
     installSignalHandlers();
     CLIParser parser;
-    GeneralOptionsImpl go;
-    MultiModelOptionsImpl mmo;
+    ServerSettingsImpl serverSettings;
+    ModelsSettingsImpl modelsSettings;
     parser.parse(argc, argv);
-    parser.prepare(&go, &mmo);
-    Status ret = start(&go, &mmo);
+    parser.prepare(&serverSettings, &modelsSettings);
+    Status ret = start(&serverSettings, &modelsSettings);
     ModulesShutdownGuard shutdownGuard(*this);
     if (!ret.ok()) {
         // Handle OVMS main() return code
@@ -359,13 +359,13 @@ int Server::start(int argc, char** argv) {
 }
 
 // C-API Start
-Status Server::start(GeneralOptionsImpl* go, MultiModelOptionsImpl* mmo) {
+Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
         if (this->isLive())
             return StatusCode::SERVER_ALREADY_STARTED;
         auto& config = ovms::Config::instance();
-        if (!config.parse(go, mmo))
-            return StatusCode::OPTIONS_USAGE_ERROR;  // TODO: Have separate code for each option validation failure
+        if (!config.parse(serverSettings, modelsSettings))
+            return StatusCode::OPTIONS_USAGE_ERROR;
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);
         return this->startModules(config);

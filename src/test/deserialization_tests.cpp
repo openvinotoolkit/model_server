@@ -29,11 +29,11 @@
 #pragma GCC diagnostic pop
 
 #include "../buffer.hpp"
+#include "../capi_frontend/capi_utils.hpp"
 #include "../deserialization.hpp"
 #include "../inferencerequest.hpp"
 #include "../inferencetensor.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
-#include "../pocapiinternal.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 

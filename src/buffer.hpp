@@ -17,7 +17,7 @@
 #include <memory>
 #include <optional>
 
-#include "./pocapi.h"
+#include "ovms.h"  // NOLINT
 namespace ovms {
 
 class Buffer {

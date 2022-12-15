@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE
 FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
@@ -66,6 +66,7 @@ RUN apt-get update && apt-get install -y \
             libtool \
             libxml2-dev \
             libnuma-dev \
+            libtbb2 \
             libssl-dev \
             nlohmann-json3-dev \
             patch \
@@ -104,7 +105,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"; \
     apt-get update && apt install -y \
       libzstd-dev \
-      cuda \
+      cuda-11-8 \
       libcudnn8 \
       libcudnn8-dev \
       libcutensor1 \
@@ -239,7 +240,7 @@ ENV OPENVINO_HOME=/openvino
 ENV OPENVINO_CONTRIB=/openvino_contrib
 
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    git clone --recurse-submodules --branch=$ov_contrib_branch https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && \
+    git clone https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive && \
     mkdir ${OPENVINO_BUILD_PATH} && \
     cd "${OPENVINO_BUILD_PATH}" && \
     cmake "${OPENVINO_HOME}" \
@@ -298,7 +299,7 @@ RUN if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
 
 # C api app with bazel
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:poc3
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example
 # C-API benchmark app
 RUN bazel build //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
 
