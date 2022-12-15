@@ -78,7 +78,7 @@ No more job to be done, will shut down
 ```
 
 It is also possible to use custom model but that requires uploading it to the built image and adjust the configs and example applications accordingly.
-To make the changes permament in the resulting demo image you can modify the specific dockerfiles in capi/capi_files/ directory 
+To make the changes permanent in the resulting demo image you can modify the specific dockerfiles in capi/capi_files/ directory 
 Dockerfile.ubuntu
 Dockerfile.redhat
 
