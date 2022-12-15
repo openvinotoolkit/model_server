@@ -15,11 +15,11 @@ make
 Next enter the directory with the example and build the demo docker with all dependencies and examples that will be named `openvino/model_server-capi`.
 The example image also contains dummy model and config.json required for the applications.
 ```bash
-cd demos/capi
+cd demos/c_api_minimal_app
 make
 ```
 
-The make command executes the capi/capi_files/demos/MakefileCapi to build the applications.
+The make command executes the c_api_minimal_app/capi_files/demos/MakefileCapi to build the applications.
 And executes the /ovms/bin/demo1 application and /ovms/bin/demo2_c application in the image environment.
 
 You can find the source code for the example applications in the ovms repository path src/main_capi.c and src/main_capi.cpp.
@@ -79,12 +79,12 @@ No more job to be done, will shut down
 ```
 
 It is also possible to use custom model but that requires copying it to the built image and adjust the configs and example applications accordingly.
-To make the changes permanent in the resulting demo image you can modify the specific dockerfiles in capi/capi_files/ directory 
+To make the changes permanent in the resulting demo image you can modify the specific dockerfiles in c_api_minimal_app/capi_files/ directory 
 Dockerfile.ubuntu
 Dockerfile.redhat
 
 And run the demo make with os specific arguments:
 ```bash
-cd demos/capi
+cd demos/c_api_minimal_app
 make BASE_OS=redhat
 ```
