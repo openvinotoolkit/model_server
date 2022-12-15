@@ -1,9 +1,10 @@
 # C and C++ API inference demo (C/C++)
 
-This demo creates a new docker image openvino/model_server-capi with two example applications that are using c or c++ ovms API.
+This demo demonstrate how to use C API from the OpenVINO Model Server to create C and C++ application.
+Building the application is executed inside the docker container to illustrate end to end usage flow.
 
-## Build ovms_shared.so
-To build the capi docker image, you must first build the ovms.tar.gz package with the libovms_shared.so library and ovms.h header. 
+## Build libovms_shared.so
+To build the capi docker image, you must first build the `ovms.tar.gz` package with the `libovms_shared.so` library and `ovms.h` header. 
 run `make` command in ovms git main directory.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
@@ -35,7 +36,7 @@ make -f MakefileCapi c
 make -f MakefileCapi cpp
 ```
 
-It will link the main3.cpp binary with the libovms_shared.so library from /ovms/lib and use the headers from /ovms/include directory:
+It will link the main3.cpp binary with the `libovms_shared.so` library from /ovms/lib and use the headers from /ovms/include directory:
 ```
 g++ main3.cpp -I/ovms/include -L/ovms/lib -lovms_shared
 ```

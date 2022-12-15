@@ -30,7 +30,7 @@ RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-l
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7 as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2022.1"
+LABEL "version"="2022.3"
 LABEL "release"="2022"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
