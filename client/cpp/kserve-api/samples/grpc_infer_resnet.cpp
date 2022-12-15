@@ -89,6 +89,10 @@ int main(int argc, char** argv) {
     int label = -1;
     std::vector<std::string> imgs;
     std::vector<int> labels;
+    if(!args.count("image_list")){
+        std::cout<<"error: option \"images_list\" has no value\n";
+        exit(1);
+    }
     std::ifstream images(args["images_list"].as<std::string>());
     while (images >> img >> label) {
         imgs.push_back(img);
@@ -110,8 +114,12 @@ int main(int argc, char** argv) {
     tc::InferOptions options(model_name);
     if (args.count("model_version"))
         options.model_version_ = args["model_version"].as<std::string>();
-    options.client_timeout_ = args["timeout"].as<int>();
-
+    try{
+        options.client_timeout_ = args["timeout"].as<int>();
+    } catch (cxxopts::argument_incorrect_type e) {
+        std::cout << "The provided argument is of a wrong type" << std::endl;
+        exit(1);
+    }
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
 
     std::vector<tc::InferResult*> results;
@@ -128,6 +136,10 @@ int main(int argc, char** argv) {
     }
 
     std::vector<std::string> classes;
+    if(!args.count("labels_list")){
+        std::cout<<"error: option \"labels_list\" has no value\n";
+        exit(1);
+    }
     std::ifstream lb_f(args["labels_list"].as<std::string>());
     std::string tmp;
     while (std::getline(lb_f, tmp)) {
