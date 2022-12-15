@@ -39,11 +39,13 @@ while IFS= read -r -d '' dockerfile
                   --ignore DL3016 \
                   --ignore DL3018 \
                   --ignore DL3028 \
+                  --ignore DL3033 \
+                  --ignore DL4001 \
                   - < "$dockerfile" || has_issues=1
+            grep -in proxy "$dockerfile" && has_issues=1 || true
         else
             echo "Skipping $dockerfile"
         fi
-        #grep -in proxy "$dockerfile" && has_issues=1 || true
     done <  <(find ./ \( -name 'Dockerfile*' \) -print0)
 
 exit "$has_issues"
