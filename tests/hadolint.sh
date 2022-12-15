@@ -24,6 +24,11 @@ files_to_scan=(
     "./Dockerfile.redhat"
 )
 
+files_no_proxy_setting=(
+    "./release_files/Dockerfile.ubuntu"
+    "./release_files/Dockerfile.redhat"
+)
+
 docker run --rm -i hadolint/hadolint:latest hadolint -v -V
 
 # TODO: Add allowed registries
@@ -42,9 +47,12 @@ while IFS= read -r -d '' dockerfile
                   --ignore DL3033 \
                   --ignore DL4001 \
                   - < "$dockerfile" || has_issues=1
-            grep -in proxy "$dockerfile" && has_issues=1 || true
         else
             echo "Skipping $dockerfile"
+        fi
+        if printf '%s\0' "${files_no_proxy_setting[@]}" | grep -Fxqz -- $dockerfile; then
+            echo "Searching for proxy in $dockerfile"
+            grep -in proxy "$dockerfile" && has_issues=1 || true
         fi
     done <  <(find ./ \( -name 'Dockerfile*' \) -print0)
 

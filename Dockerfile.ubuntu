@@ -19,16 +19,10 @@ FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
 
-ARG INSTALL_DIR=/opt/intel/openvino
-ARG INSTALL_DIR=/opt/intel/openvino
-ARG TEMP_DIR=/tmp/openvino_installer
-ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
-ARG DL_DIR=/tmp
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
 ARG JOBS
 ARG APT_OV_PACKAGE=openvino-2022.1.0
-ARG CHECK_COVERAGE=0
-ARG NVIDIA=0
-ARG http_proxy
 ARG CMAKE_BUILD_TYPE=Release
 
 # build_type=[ opt, dbg ]
@@ -39,7 +33,6 @@ ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/exter
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
-SHELL ["/bin/bash", "-c"]
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libboost-atomic1.71.0 \
             libboost-chrono1.71.0 \
@@ -90,8 +83,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
 
+ARG NVIDIA=0
 
 # Add Nvidia dev tool if needed
+# hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     wget -nv https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin -O /etc/apt/preferences.d/cuda-repository-pin-600 ; \
     set -exuo pipefail ; \
@@ -118,9 +113,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     chmod a+x /usr/local/bin/sccache ; \
     curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 ; \
     curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv ; \
-    cd ccache-4.3 ; \
-    mkdir build ; \
-    cd build ; \
+    mkdir -p ccache-4.3/build ; cd ccache-4.3/build ; \
     cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. ; \
     ninja -v install
 
@@ -131,13 +124,13 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
     chmod +x bazel-*.sh && \
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
 
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
+# hadolint ignore=DL3003
 RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.69.0/boost_1_69_0.tar.gz && \
 tar xvf boost_1_69_0.tar.gz && cd boost_1_69_0 && ./bootstrap.sh && \
 ./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
@@ -151,27 +144,22 @@ COPY third_party /ovms/third_party/
 ####### Azure SDK
 WORKDIR /azure
 RUN apt-get update && apt-get install --no-install-recommends -y uuid uuid-dev && rm -rf /var/lib/apt/lists/*
-RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.18 -b v2.10.18 && git submodule update --init
+RUN git clone --recurse-submodules --depth 1 --branch v2.10.16 https://github.com/Microsoft/cpprestsdk.git && \
+    git clone --depth 1 --branch v7.5.0 https://github.com/Azure/azure-storage-cpp.git && \
+    patch -d /azure/cpprestsdk/ -p1 < /ovms/third_party/cpprest/rest_sdk_v2.10.16.patch && \
+    patch -d /azure/azure-storage-cpp/ -p1 </ovms/third_party/azure/azure_sdk.patch
 
-RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage-cpp/Microsoft.WindowsAzure.Storage && git checkout tags/v7.5.0 && mkdir build.release
+WORKDIR /azure/cpprestsdk/Release/build.release
+RUN cmake .. -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DWERROR=OFF -DBUILD_SAMPLES=OFF -DBUILD_TESTS=OFF && make --jobs=$JOBS install
 
-WORKDIR /
-RUN cp -rf /ovms/third_party/cpprest/rest_sdk_v2.10.16.patch /azure/cpprestsdk/
-RUN cd /azure/cpprestsdk/ && patch -p1 < rest_sdk_v2.10.16.patch
-RUN cp -rf /ovms/third_party/azure/azure_sdk.patch /azure/azure-storage-cpp/
-RUN cd /azure/azure-storage-cpp/ && patch -p1 < azure_sdk.patch
-WORKDIR /azure
-
-RUN cd cpprestsdk && mkdir Release/build.release && cd Release/build.release && cmake .. -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DWERROR=OFF -DBUILD_SAMPLES=OFF -DBUILD_TESTS=OFF && make --jobs=$JOBS install
-RUN cd azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release && CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=ON && make --jobs=$JOBS && make --jobs=$JOBS install
-
+WORKDIR /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release
+RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=ON && make --jobs=$JOBS && make --jobs=$JOBS install
 ####### End of Azure SDK
 
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
 WORKDIR /awssdk/build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
-RUN make --jobs=$JOBS
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " .. && make --jobs=$JOBS
 
 ####### End of AWS S3 SDK
 
@@ -187,7 +175,7 @@ ARG ov_contrib_branch=master
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout $ov_source_branch; git submodule update --init --recursive
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino --recurse-submodules --branch $ov_source_branch --depth 1 /openvino
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
@@ -201,8 +189,10 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /opt/intel/openvino /opt/intel/openvino_2022
 ################## END OF OPENVINO SOURCE BUILD ######################
 
+ARG TEMP_DIR=/tmp/openvino_installer
+
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
-WORKDIR /
+WORKDIR $TEMP_DIR
 # OV toolkit package
 #RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
 #    wget $DLDT_PACKAGE_URL && \
@@ -212,13 +202,14 @@ WORKDIR /
 #    ln -s /opt/intel/openvino_2022 /opt/intel/openvino
 
 # OV toolkit package
-RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
     wget -nv $DLDT_PACKAGE_URL && \
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2022
 
+WORKDIR /
 # apt package
 RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; else exit 0 ; fi ; \
     echo "installing apt package" && \
@@ -239,6 +230,7 @@ ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
 ENV OPENVINO_HOME=/openvino
 ENV OPENVINO_CONTRIB=/openvino_contrib
 
+# hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     git clone https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive && \
     mkdir ${OPENVINO_BUILD_PATH} && \
@@ -265,8 +257,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y python-is-pytho
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
 # Patch apple build scripts
-RUN cp -rf /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch $(bazel info output_base)/external/build_bazel_rules_apple/
-RUN cd $(bazel info output_base)/external/build_bazel_rules_apple/ && patch -p1 < bazel_rules_apple.patch
+# hadolint ignore=SC2046
+RUN patch -d $(bazel info output_base)/external/build_bazel_rules_apple/ -p1 < /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch
 
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
@@ -275,9 +267,13 @@ WORKDIR /example_cpp_client
 COPY demos/common/cpp /example_cpp_client/cpp
 COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
 
-WORKDIR /ovms
-
 COPY src/ /ovms/src/
+
+# Sample CPU Extension
+WORKDIR /ovms/src/example/SampleCpuExtension/
+RUN make
+
+WORKDIR /ovms
 
 ARG PROJECT_VERSION="2022.2"
 ARG PROJECT_NAME="OpenVINO Model Server"
@@ -286,36 +282,40 @@ LABEL description=${PROJECT_NAME}
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$build_type" == "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}-debug|g' /ovms/src/version.hpp" ; else bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" ; fi ;
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+'`#g" /ovms/src/version.hpp
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12`#g" /ovms/src/version.hpp
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 COPY check_coverage.bat /ovms/
+
+ARG CHECK_COVERAGE=0
 # Test Coverage
-RUN if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml $(bazel info output_path)/_coverage/_coverage_report.dat ; fi ; \
+RUN if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
     bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG}
 
 # C api shared library
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
 
 # C api app with bazel
+# hadolint ignore=DL3059
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example
+
 # C-API benchmark app
 RUN bazel build //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
 
-# Copy binary for //src:ovms
+# OVMS
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs=$JOBS //src:ovms
+
+# hadolint ignore=DL3059
 RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 
-RUN cd /ovms/src/example/SampleCpuExtension/ && OPENVINO_PATH=/opt/intel/openvino make
-
 # C-api C/C++ app with gcc
-RUN cd /ovms && make -f MakefileCapi cpp && make -f MakefileCapi c
+RUN make -f MakefileCapi cpp && make -f MakefileCapi c
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
 
-RUN cd bazel-bin/src/ && ./ovms --version && ./ovms && cd /ovms
+RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
 
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE

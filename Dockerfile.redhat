@@ -22,7 +22,6 @@ LABEL version="1.0.0"
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG ov_source_branch=releases/2021/2
-ARG ovms_metadata_file
 
 ARG JOBS
 
@@ -204,7 +203,7 @@ RUN if [ "$CHECK_COVERAGE" = "1" ] ; then bazel coverage --combined_report=lcov 
     bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG}
 
 # C api shared library
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared //src:capi_cpp_example
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
 
 # C api app with bazel
 # hadolint ignore=DL3059
@@ -222,6 +221,7 @@ RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 # C-api C/C++ app with gcc
 RUN make -f MakefileCapi cpp && make -f MakefileCapi c
 
+ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
 
 RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
