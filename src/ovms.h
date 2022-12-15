@@ -27,7 +27,6 @@ typedef struct OVMS_Status_ OVMS_Status;
 typedef struct OVMS_ServerSettings_ OVMS_ServerSettings;
 typedef struct OVMS_ModelsSettings_ OVMS_ModelsSettings;
 
-// TODO reuse this in precision.hpp
 typedef enum OVMS_DataType_enum {
     OVMS_DATATYPE_BF16,
     OVMS_DATATYPE_FP64,
@@ -182,22 +181,17 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerSettings* server_settings,
     OVMS_ModelsSettings* models_settings);  // in fact only --config_path
 // Unload all and cleanup
-// TODO: Should not be possible to re-start?
-// OVMS_Status* OVMS_ServerStop(OVMS_Server* server);
 
 // OVMS_InferenceRequest
 OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, uint32_t servableVersion);
 void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount);
-// OVMS_Status* OVMS_InferenceRequestAddInputRaw(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype);  // TODO consider no datatype & handle the parameters NOT IMPLEMENTED
 
 // ownership of data needs to be maintained during inference
 OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* request, const char* inputName, const void* data, size_t bufferSize, OVMS_BufferType bufferType, uint32_t deviceId);
 OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* request, const char* inputName);
 OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* request, const char* inputName);  // this will allow for reuse of request but with different input data
-// OVMS_Status* OVMS_InferenceRequestRemoveAllInputs(OVMS_InferenceRequest* request);
-// OVMS_Status* OVMS_InferenceRequestAddRequestedOutput(OVMS_InferenceRequest* request, char* inputName);  // TODO consider the other way around - add not usefull outputs
 OVMS_Status* OVMS_InferenceRequestAddParameter(OVMS_InferenceRequest* request, const char* parameterName, OVMS_DataType datatype, const void* data, size_t byteSize);
 OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* request, const char* parameterName);
 

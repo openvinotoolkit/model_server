@@ -19,8 +19,6 @@
 
 #include <gtest/gtest.h>
 
-// TODO we should not include classes from OVMS here
-// consider how to workaround test_utils
 #include "../inferenceresponse.hpp"
 #include "../ovms.h"
 #include "test_utils.hpp"
@@ -172,7 +170,7 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->grpcBindAddress, "2.2.2.2");
     EXPECT_EQ(serverSettings->restWorkers, 31);
     EXPECT_EQ(serverSettings->restBindAddress, "3.3.3.3");
-    // EXPECT_EQ(serverSettings->metricsEnabled, false);  // TODO: enable testing once metrics will be configurable via api
+    // EXPECT_EQ(serverSettings->metricsEnabled, false);
     // EXPECT_EQ(serverSettings->metricsList, "");
     EXPECT_EQ(serverSettings->cpuExtensionLibraryPath, "/ovms/src/test");
     EXPECT_EQ(serverSettings->logLevel, "TRACE");
@@ -196,7 +194,7 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.grpcBindAddress(), "2.2.2.2");
     EXPECT_EQ(cfg.restWorkers(), 31);
     EXPECT_EQ(cfg.restBindAddress(), "3.3.3.3");
-    // EXPECT_EQ(serverSettings->metricsEnabled, false);  // TODO: enable testing once metrics will be configurable via api
+    // EXPECT_EQ(serverSettings->metricsEnabled, false);
     // EXPECT_EQ(serverSettings->metricsList, "");
     EXPECT_EQ(cfg.cpuExtensionLibraryPath(), "/ovms/src/test");
     EXPECT_EQ(cfg.logLevel(), "TRACE");
@@ -276,8 +274,6 @@ TEST(CApiStartTest, StartFlow) {
     // Try to start again, expect failure
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings),
         StatusCode::SERVER_ALREADY_STARTED);
-
-    // TODO: Is infer ok?
 
     OVMS_ModelsSettingsDelete(modelsSettings);
     OVMS_ServerSettingsDelete(serverSettings);
@@ -463,7 +459,6 @@ TEST_F(CapiInference, NegativeInference) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(cserver, nullptr, modelsSettings), StatusCode::NONEXISTENT_SETTINGS);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, nullptr), StatusCode::NONEXISTENT_SETTINGS);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
-    // TODO add check for server ready strict in 2022.3 not available in C-API
 
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
@@ -524,12 +519,10 @@ TEST_F(CapiInference, NegativeInference) {
     OVMS_ServerDelete(nullptr);
 }
 
-// TODO negative test -> validate at the infer stage
-// TODO reuse request after inference
 namespace {
 const std::string MODEL_NAME{"SomeModelName"};
 const uint64_t MODEL_VERSION{42};
-const std::string PARAMETER_NAME{"sequence_id"};  // TODO check if in ovms there is such constant
+const std::string PARAMETER_NAME{"sequence_id"};
 const OVMS_DataType PARAMETER_DATATYPE{OVMS_DATATYPE_I32};
 
 const uint32_t PARAMETER_VALUE{13};
@@ -639,5 +632,3 @@ TEST_F(CapiInference, CallInferenceServerNotStarted) {
     OVMS_InferenceRequestDelete(request);
     OVMS_ServerDelete(cserver);
 }
-// TODO make cleaner error codes reporting
-// todo decide either use remove or delete for consistency

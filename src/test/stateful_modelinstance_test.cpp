@@ -226,7 +226,7 @@ public:
         if (!status.ok())
             return status;
 
-        if (waitBeforeSequenceLock) {  // TODO remove since right now it is in singel step
+        if (waitBeforeSequenceLock) {
             std::cout << "Waiting before waitBeforeSequenceLock" << std::endl;
             waitBeforeSequenceLock->get();
         }

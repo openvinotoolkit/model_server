@@ -91,13 +91,13 @@ const InferenceParameter* InferenceRequest::getParameter(const char* name) const
 }
 Status InferenceRequest::getBatchSize(size_t& batchSize, size_t batchSizeIndex) const {
     if (inputs.size() == 0) {
-        return StatusCode::INTERNAL_ERROR;  // TODO test
+        return StatusCode::INTERNAL_ERROR;
     }
     // we make here the same assumption as with bs=auto in TFS/KFS API
     const InferenceTensor& tensor = inputs.begin()->second;
     const auto& shape = tensor.getShape();
     if (batchSizeIndex >= shape.size()) {
-        return StatusCode::INTERNAL_ERROR;  // TODO test
+        return StatusCode::INTERNAL_ERROR;
     }
     batchSize = shape[batchSizeIndex];
     return StatusCode::OK;

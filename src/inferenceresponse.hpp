@@ -30,15 +30,15 @@ class Status;
 class InferenceResponse {
     const std::string& servableName;
     const model_version_t servableVersion;
-    std::vector<InferenceParameter> parameters;                    // TODO after benchmark app verify if additional map<int, name> wouldn't be better
-    std::vector<std::pair<std::string, InferenceTensor>> outputs;  // TODO after benchmark app verify if additional map<int, name> wouldn't be better
+    std::vector<InferenceParameter> parameters;
+    std::vector<std::pair<std::string, InferenceTensor>> outputs;
 
 public:
     // this constructor can be removed with prediction tests overhaul
     InferenceResponse();
     InferenceResponse(const std::string& servableName, model_version_t servableVersion);
     Status addOutput(const std::string& name, OVMS_DataType datatype, const size_t* shape, size_t dimCount);
-    Status getOutput(uint32_t id, const std::string** name, const InferenceTensor** tensor) const;  // TODO consider in the future if we need getOutput by name
+    Status getOutput(uint32_t id, const std::string** name, const InferenceTensor** tensor) const;
     Status getOutput(uint32_t id, const std::string** name, InferenceTensor** tensor);
 
     Status addParameter(const char* parameterName, OVMS_DataType datatype, const void* data);
@@ -52,7 +52,7 @@ public:
     Status setId();
     Status getId();
     InferenceParameter* getInferenceParameter(const char* name);
-    // TODO this can be removed with prediction tests overhaul
+
     void Clear();
 };
 }  // namespace ovms
