@@ -430,7 +430,7 @@ TEST_P(DeserializeKFSTensorProtoNegative, ShouldReturnNullptrForPrecision) {
 TEST_P(DeserializeKFSTensorProto, ShouldReturnValidTensor) {
     auto [testedPrecision, getInputFromRawInputContents] = GetParam();
     std::string* bufferPtr = (getInputFromRawInputContents ? &buffer : nullptr);
-    if (!getInputFromRawInputContents && (ovms::Precision::FP16 == testedPrecision)) {
+    if ((!getInputFromRawInputContents && (ovms::Precision::FP16 == testedPrecision))) {
         GTEST_SKIP() << "Not supported";
     }
     SetUpTensorProto(TensorInfo::getPrecisionAsString(testedPrecision), getInputFromRawInputContents);
