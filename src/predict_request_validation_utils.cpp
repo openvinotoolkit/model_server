@@ -130,7 +130,7 @@ public:
     Status validateTensorContent(const InputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const;
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     Status validatePrecision(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
-    bool checkIfBinaryInputUsed(const InputTensorType& proto, const std::string inputName) const;
+    bool checkIfNativeFileFormatUsed(const InputTensorType& proto, const std::string inputName) const;
     Status validateRequestCoherency() const;
     Status validate();
 };
@@ -657,7 +657,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
            << "; is missing buffer for tensor: " << bufferId;
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
-        return Status(StatusCode::INVALID_CONTENT_SIZE, details);  // TODO separate code?
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
     size_t expectedValueCount = 1;
     for (size_t i = 0; i < tensor.getShape().size(); i++) {
@@ -780,7 +780,7 @@ static Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& 
 }
 
 template <>
-bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::checkIfBinaryInputUsed(const TFSInputTensorType& proto, const std::string inputName) const {
+bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::checkIfNativeFileFormatUsed(const TFSInputTensorType& proto, const std::string inputName) const {
     if (proto.dtype() == tensorflow::DataType::DT_STRING) {
         SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.string_val_size());
         return true;
@@ -788,7 +788,7 @@ bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterator
     return false;
 }
 template <>
-bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::checkIfBinaryInputUsed(const KFSTensorInputProto& proto, const std::string inputName) const {
+bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::checkIfNativeFileFormatUsed(const KFSTensorInputProto& proto, const std::string inputName) const {
     if (proto.datatype() == "BYTES") {
         SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.contents().bytes_contents_size());
         return true;
@@ -796,9 +796,21 @@ bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorTyp
     return false;
 }
 template <>
-bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkIfBinaryInputUsed(const InferenceTensor& tensor, const std::string inputName) const {
+bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkIfNativeFileFormatUsed(const InferenceTensor& tensor, const std::string inputName) const {
     // TODO no strig no bytes currently, will implement one of those types with binary input.
     return false;
+}
+
+static bool shouldValidateBinaryBatchSizeMismatch(const ovms::InferenceRequest& request) {
+    return true;
+}
+
+static bool shouldValidateBinaryBatchSizeMismatch(const TFSRequestType& request) {
+    return true;
+}
+
+static bool shouldValidateBinaryBatchSizeMismatch(const KFSRequest& request) {
+    return request.raw_input_contents().size() <= 0;
 }
 
 template <typename RequestType, typename InputTensorType, typename IteratorType, typename ShapeType>
@@ -836,14 +848,19 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         }
         const Dimension& batchSize = inputInfo->getShape()[batchIndex.value()];
         Mode shapeMode = getShapeMode(shapeInfo, name);
-        if (checkIfBinaryInputUsed(proto, name)) {
+        if (checkIfNativeFileFormatUsed(proto, name)) {
             status = validateNumberOfBinaryInputShapeDimensions(proto);
             if (!status.ok())
                 return status;
 
-            status = checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
-            if (!status.ok())
-                return status;
+            if (shouldValidateBinaryBatchSizeMismatch(request)) {
+                status = checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
+                if (!status.ok())
+                    return status;
+            } else if (batchSize != 1) {
+                SPDLOG_DEBUG("When the image is placed in raw_inputs_contents batch size cannot be bigger than 1.");
+                return StatusCode::INVALID_BATCH_SIZE;
+            }
 
             continue;
         }

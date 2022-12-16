@@ -102,7 +102,7 @@ std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, co
     size_t bs = 0;
     auto status = request->getBatchSize(bs, batchSizeIndex);
     if (!status.ok()) {
-        return std::nullopt;  // TODO sth different?
+        return std::nullopt;
     }
     return bs;
 }

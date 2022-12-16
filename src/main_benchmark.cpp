@@ -182,7 +182,7 @@ OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& se
     OVMS_InferenceRequestNew(&request, server, servableName.c_str(), servableVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
     size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);  // TODO sizeof
+    OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);
     return request;
 }
 
@@ -220,13 +220,6 @@ void triggerInferenceInALoop(
     averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
 }
 }  // namespace
-// TODO support more than 1 input
-// TODO support 3 modes:
-// * fair play -> don't recreate request, but set buffer inputs
-// * full request prepare -> recreate request
-// * inference only -> dont reset buffers
-// TODO change plugin_config
-// TODO change nireq in model
 
 int main(int argc, char** argv) {
     installSignalHandlers();
@@ -295,7 +288,6 @@ int main(int argc, char** argv) {
         return EX_USAGE;
     }
     std::string inputName = inputsNames[0];
-    // TODO add support for many shapes/inputs
     // datatype handling
     OVMS_DataType datatype = OVMS_DATATYPE_FP32;
     // shape handling
@@ -402,7 +394,6 @@ int main(int argc, char** argv) {
             }));
     }
     // sleep to allow all threads to initialize
-    // TODO rework to use signals
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     ///////////////////////
     // start workload

@@ -785,6 +785,58 @@ TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
     EXPECT_TRUE(status.ok());
 }
 
+TEST_F(KFSPredictValidation, ValidRequestBinaryInputs_RawInputsContents) {
+    modelConfig.setBatchingParams("auto");
+    std::string inputName = "Binary_Input";
+    ::KFSRequest binaryInputRequest;
+
+    auto input = binaryInputRequest.add_inputs();
+    input->set_name(inputName);
+    input->set_datatype("BYTES");
+    const int requestBatchSize = 1;
+    std::string bytes_contents = "BYTES_CONTENTS";
+    auto content = binaryInputRequest.add_raw_input_contents();
+    *content = bytes_contents;
+    input->mutable_shape()->Add(requestBatchSize);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {1, 3, 224, 224};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::FP32,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST_F(KFSPredictValidation, RawInputsContentsBatchSizeBiggerThan1) {
+    modelConfig.setBatchingParams("auto");
+    std::string inputName = "Binary_Input";
+    ::KFSRequest binaryInputRequest;
+
+    auto input = binaryInputRequest.add_inputs();
+    input->set_name(inputName);
+    input->set_datatype("BYTES");
+    const int requestBatchSize = 2;
+    std::string bytes_contents = "BYTES_CONTENTS";
+    auto content = binaryInputRequest.add_raw_input_contents();
+    *content = bytes_contents;
+    input->mutable_shape()->Add(requestBatchSize);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {2, 3, 224, 224};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::FP32,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
 TEST_F(KFSPredictValidation, RequestWrongBatchSizeBinaryInputs) {
     std::string inputName = "Binary_Input";
     ::KFSRequest binaryInputRequest;

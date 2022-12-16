@@ -26,9 +26,12 @@
 #include "status.hpp"
 
 namespace ovms {
+
+const std::string RESPONSE_SERVABLE_NAME_USED_ONLY_IN_PREDICTION_TESTS = "CONSTRUCTOR_USED_ONLY_IN_PREDICTION_TESTS";
+
 // this constructor can be removed with prediction tests overhaul
 InferenceResponse::InferenceResponse() :
-    InferenceResponse("CONSTRUCTOR_USED_ONLY_IN_PREDICTION_TESTS", 42) {}
+    InferenceResponse(RESPONSE_SERVABLE_NAME_USED_ONLY_IN_PREDICTION_TESTS, 42) {}
 InferenceResponse::InferenceResponse(const std::string& servableName, model_version_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {}
@@ -41,7 +44,6 @@ model_version_t InferenceResponse::getServableVersion() const {
 }
 
 Status InferenceResponse::addOutput(const std::string& name, OVMS_DataType datatype, const size_t* shape, size_t dimCount) {
-    // TODO insert tensor with wrong shape/datatype/name/dimcount
     auto it = std::find_if(outputs.begin(),
         outputs.end(),
         [&name](const std::pair<std::string, InferenceTensor>& pair) {
@@ -101,5 +103,5 @@ uint32_t InferenceResponse::getParameterCount() const {
 void InferenceResponse::Clear() {
     outputs.clear();
     parameters.clear();
-}  // TODO remove
+}
 }  // namespace ovms
