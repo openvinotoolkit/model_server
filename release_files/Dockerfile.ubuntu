@@ -86,7 +86,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN	apt-get update -y ; \
     apt-get install -y curl libpugixml1v5 libtbb2 --no-install-recommends && \
 	if [ "$GPU" == "1" ] ; then \
-                apt-get update && apt-get  install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
+            apt-get update && apt-get install -y ca-certificates libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
 	        case $INSTALL_DRIVER_VERSION in \
                 "20.35.17767") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
@@ -118,7 +118,7 @@ RUN	apt-get update -y ; \
                 ;; \
                 "22.35.24055") \
                         apt-get update && apt-get install -y --no-install-recommends gpg gpg-agent && \
-                        curl https://repositories.intel.com/graphics/intel-graphics.key |gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+                        curl https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
                         echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
                         apt-get update && \
                         apt-get install -y --no-install-recommends \
@@ -154,17 +154,7 @@ COPY --from=base_build /usr/local/lib/ /ovms/lib/
 COPY --from=base_build /ovms /ovms
 
 # for HDDL
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libboost-filesystem1.71.0 \
-        libboost-thread1.71.0 \
-        libboost-thread1.71.0 \
-        libboost-program-options1.71.0 \
-        libboost-chrono1.71.0 \
-        libboost-date-time1.71.0 \
-        libboost-atomic1.71.0 \
-        libjson-c4 && \
-    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
 # for NCS
 RUN if [ -f /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules ]; then mkdir -p /etc/udev/rules.d/ && cp /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules /etc/udev/rules.d/ && ldconfig ; fi
 # for NVIDIA
