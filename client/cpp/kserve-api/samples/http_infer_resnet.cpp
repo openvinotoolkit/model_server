@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
     int label = -1;
     std::vector<std::string> imgs;
     std::vector<int> labels;
-    if(!args.count("image_list")){
+    if(args.count("image_list")){
         std::cout<<"error: option \"images_list\" has no value\n";
         exit(1);
     }
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
     }
 
     std::vector<std::string> classes;
-    if(!args.count("labels_list")){
+    if(args.count("labels_list")){
         std::cout<<"error: option \"labels_list\" has no value\n";
         exit(1);
     }
