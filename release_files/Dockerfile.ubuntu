@@ -65,6 +65,8 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
              --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
     chown -R ovms:ovms /ovms
 
+# Remove capi library
+RUN if [ -f /ovms/lib/libovms_shared.so ] ; then rm -rf  /ovms/lib/libovms_shared.so ; fi
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM $BASE_IMAGE as release
