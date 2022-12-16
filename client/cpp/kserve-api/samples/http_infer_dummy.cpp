@@ -59,13 +59,13 @@ void ValidateShapeAndDatatype(
 }  // namespace
 
 int main(int argc, char** argv) {
-    cxxopts::Options opt("http_infer_dummy", "Sends requests via KServe rest API.");
+    cxxopts::Options opt("http_infer_dummy", "Sends requests via KServe REST API.");
 
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
-    ("http_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"), "HTTP_ADDRESS")
-    ("http_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("8000"), "PORT")
+    ("http_address", "Specify url to REST service. ", cxxopts::value<std::string>()->default_value("localhost"), "HTTP_ADDRESS")
+    ("http_port", "Specify port to REST service. ", cxxopts::value<std::string>()->default_value("8000"), "PORT")
     ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("b"), "INPUT_NAME")
     ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("a"), "OUTPUT_NAME")
     ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"), "MODEL_NAME")
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     tc::InferRequestedOutput* output;
 
     FAIL_IF_ERR(
-        tc::InferRequestedOutput::Create(&output, "a"),
+        tc::InferRequestedOutput::Create(&output, output_name),
         "unable to get output");
     std::shared_ptr<tc::InferRequestedOutput> output_ptr;
     output_ptr.reset(output);     

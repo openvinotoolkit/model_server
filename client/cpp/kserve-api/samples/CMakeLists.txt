@@ -27,6 +27,7 @@ function(sample sample_name)
 endfunction()
 
 sample(infer_dummy)
+sample(infer_resnet)
 sample(server_live)
 sample(server_ready)
 sample(server_metadata)
