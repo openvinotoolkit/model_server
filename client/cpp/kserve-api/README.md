@@ -492,7 +492,7 @@ Latency: 9.6651 ms
 Requests per second: 103.465
 ```
 
-### Run the Client to perform inference using rest api
+### Run the Client to perform inference using REST API
 ```Bash
 ./http_infer_resnet --help
 Sends requests via KServe rest API.
