@@ -45,7 +45,8 @@ LABEL "release"="2022"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
 
-RUN microdnf install shadow-utils make gcc gcc-c++; \
+RUN microdnf upgrade -y
+RUN microdnf install pkg-config shadow-utils make gcc gcc-c++; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
