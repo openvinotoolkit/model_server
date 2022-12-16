@@ -38,7 +38,6 @@
         "name": "pvb_face_multi_version",
         "base_path": "{path}/pvb_face_multi_version",
         "model_version_policy": {"all": {}},
-        "plugin_config": {"CPU_THROUGHPUT_STREAMS":  "CPU_THROUGHPUT_AUTO"},
         "target_device": "{target_device}"
       }
     },
