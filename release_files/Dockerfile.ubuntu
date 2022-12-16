@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2022 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ RUN ./bootstrap.sh && \
     make -j4
 
 WORKDIR /opt/libusb-1.0.22/libusb
+# hadolint ignore=DL3003
 RUN /bin/mkdir -p '/usr/local/lib' && \
     /bin/bash ../libtool   --mode=install /usr/bin/install -c   libusb-1.0.la '/usr/local/lib' && \
     /bin/mkdir -p '/usr/local/include/libusb-1.0' && \
@@ -80,13 +81,12 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /
 
 COPY drivers /drivers
-
-RUN	set -e ; \
-	set -x ; \
-        apt update -y ; \
-        apt install -y curl libpugixml1v5 libtbb2 && \
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# hadolint ignore=DL3003,SC2164
+RUN	apt-get update -y ; \
+    apt-get install -y curl libpugixml1v5 libtbb2 --no-install-recommends && \
 	if [ "$GPU" == "1" ] ; then \
-                apt-get update && apt-get  install -y libnuma1 ocl-icd-libopencl1 && rm -rf /var/lib/apt/lists/* && \
+            apt-get update && apt-get install -y ca-certificates libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
 	        case $INSTALL_DRIVER_VERSION in \
                 "20.35.17767") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
@@ -117,27 +117,27 @@ RUN	set -e ; \
                         dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "22.35.24055") \
-                        apt-get update && apt-get install -y gpg-agent && \
-                        curl https://repositories.intel.com/graphics/intel-graphics.key |gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+                        apt-get update && apt-get install -y --no-install-recommends gpg gpg-agent && \
+                        curl https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
                         echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
                         apt-get update && \
-                        apt-get install -y \
+                        apt-get install -y --no-install-recommends \
                         intel-opencl-icd=22.35.24055+i815~u20.04 \
                         intel-level-zero-gpu=1.3.24055+i815~u20.04 \
                         level-zero=1.8.5+i815~u20.04 && \
-                        apt-get purge gpg-agent --yes && apt-get --yes autoremove && \
-                        apt clean ; \
+                        apt-get purge gpg gpg-agent --yes && apt-get --yes autoremove && \
+                        apt-get clean ; \
                         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
                 ;; \
                 *) \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
-                        apt-get update && apt-get -y install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
+                        apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
                         cd /drivers/${INSTALL_DRIVER_VERSION} && \
                             dpkg-scanpackages .  > Packages && \
                             cd - ; \
                         echo "deb [trusted=yes arch=amd64] file:/drivers/${INSTALL_DRIVER_VERSION} ./" > /etc/apt/sources.list.d/intel-graphics-${INSTALL_DRIVER_VERSION}.list ; \
                         apt-get update && \
-                        apt-get install -y \
+                        apt-get install -y --no-install-recommends \
                             intel-opencl-icd \
                             intel-level-zero-gpu level-zero \
                             intel-media-va-driver-non-free libmfx1 && \
@@ -154,26 +154,16 @@ COPY --from=base_build /usr/local/lib/ /ovms/lib/
 COPY --from=base_build /ovms /ovms
 
 # for HDDL
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libboost-filesystem1.71.0 \
-        libboost-thread1.71.0 \
-        libboost-thread1.71.0 \
-        libboost-program-options1.71.0 \
-        libboost-chrono1.71.0 \
-        libboost-date-time1.71.0 \
-        libboost-atomic1.71.0 \
-        libjson-c4 && \
-    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
 # for NCS
 RUN if [ -f /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules ]; then mkdir -p /etc/udev/rules.d/ && cp /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules /etc/udev/rules.d/ && ldconfig ; fi
 # for NVIDIA
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
-    apt update -y && \
-    apt install -y curl && \
-    cd etc/apt/preferences.d && curl -o cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin ; \
-    apt update && apt install -y --no-install-recommends libcudnn8 libcutensor1 libpng16-16 &&  \
-    apt clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+    apt-get update -y && \
+    apt-get install -y --no-install-recommends curl && \
+    curl -o /etc/apt/preferences.d/cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin ; \
+    apt-get update && apt-get install -y --no-install-recommends libcudnn8 libcutensor1 libpng16-16 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*qg
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
