@@ -16,8 +16,8 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include <cxxopts.hpp>
 
@@ -30,7 +30,7 @@ namespace tc = triton::client;
         tc::Error err = (X);                                             \
         if (!err.IsOk()) {                                               \
             std::cerr << "error: " << (MSG) << ": " << err << std::endl; \
-            exit(1);                                                     \
+            return 1;                                                    \
         }                                                                \
     }
 
@@ -65,10 +65,17 @@ int main(int argc, char** argv) {
     // clang-format on
 
     auto args = opt.parse(argc, argv);
-
+    if (!args.count("images_list")) {
+        std::cout << "error: option \"images_list\" has no value\n";
+        return 1;
+    }
+    if (!args.count("labels_list")) {
+        std::cout << "error: option \"labels_list\" has no value\n";
+        return 1;
+    }
     if (args.count("help")) {
         std::cout << opt.help() << std::endl;
-        exit(0);
+        return 0;
     }
 
     std::string input_name(args["input_name"].as<std::string>());
@@ -89,16 +96,11 @@ int main(int argc, char** argv) {
     int label = -1;
     std::vector<std::string> imgs;
     std::vector<int> labels;
-    if(args.count("image_list")){
-        std::cout<<"error: option \"images_list\" has no value\n";
-        exit(1);
-    }
     std::ifstream images(args["images_list"].as<std::string>());
     while (images >> img >> label) {
         imgs.push_back(img);
         labels.push_back(label);
     }
-
 
     std::vector<int64_t> shape{1};
 
@@ -114,11 +116,11 @@ int main(int argc, char** argv) {
     tc::InferOptions options(model_name);
     if (args.count("model_version"))
         options.model_version_ = args["model_version"].as<std::string>();
-    try{
+    try {
         options.client_timeout_ = args["timeout"].as<int>();
     } catch (cxxopts::argument_incorrect_type e) {
         std::cout << "The provided argument is of a wrong type" << std::endl;
-        exit(1);
+        return 1;
     }
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
 
@@ -136,10 +138,6 @@ int main(int argc, char** argv) {
     }
 
     std::vector<std::string> classes;
-    if(args.count("labels_list")){
-        std::cout<<"error: option \"labels_list\" has no value\n";
-        exit(1);
-    }
     std::ifstream lb_f(args["labels_list"].as<std::string>());
     std::string tmp;
     while (std::getline(lb_f, tmp)) {
@@ -177,11 +175,11 @@ int main(int argc, char** argv) {
     std::cout << "Number of requests: "
               << infer_stat.completed_request_count << std::endl;
     std::cout << "Total processing time: "
-              << double(infer_stat.cumulative_total_request_time_ns)/1.0e+6 << " ms" << std::endl;
+              << double(infer_stat.cumulative_total_request_time_ns) / 1.0e+6 << " ms" << std::endl;
     std::cout << "Latency: "
-              << double(infer_stat.cumulative_total_request_time_ns/infer_stat.completed_request_count)/1.0e+6 << " ms" << std::endl;
+              << double(infer_stat.cumulative_total_request_time_ns / infer_stat.completed_request_count) / 1.0e+6 << " ms" << std::endl;
     std::cout << "Requests per second: "
-              << double(1.0e+9/(infer_stat.cumulative_total_request_time_ns/infer_stat.completed_request_count)) << std::endl;
+              << double(1.0e+9 / (infer_stat.cumulative_total_request_time_ns / infer_stat.completed_request_count)) << std::endl;
 
     return 0;
 }
