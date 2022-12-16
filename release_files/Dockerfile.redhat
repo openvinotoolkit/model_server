@@ -119,10 +119,6 @@ RUN     microdnf upgrade -y ; \
 
 COPY --from=base_build /ovms /ovms
 
-# Remove capi library
-RUN if [ -f /ovms/lib/libovms_shared.so ] ; then true ; else exit 0 ; fi ;\
-	rm -rf  /ovms/lib/libovms_shared.so
-
 COPY --from=base_build /licenses /licenses
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
