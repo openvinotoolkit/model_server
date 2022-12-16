@@ -50,7 +50,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 ## C++
 | Demo | Description |
 |---|---|
-|[C API applications](c_api_minimal_app/cpp/README.md)|How to use C API from the OpenVINO Model Server to create C and C++ application.|
+|[C API applications](c_api_minimal_app/README.md)|How to use C API from the OpenVINO Model Server to create C and C++ application.|
 |[Image Classification](image_classification/cpp/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
 |[Benchmark App](benchmark/cpp/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
 
