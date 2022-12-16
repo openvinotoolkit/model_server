@@ -66,6 +66,11 @@ int main(int argc, char** argv) {
 
     auto args = opt.parse(argc, argv);
 
+    if (args.count("help")) {
+        std::cout << opt.help() << std::endl;
+        return 0;
+    }
+
     if (!args.count("images_list")) {
         std::cout << "error: option \"images_list\" has no value\n";
         return 1;
@@ -74,11 +79,6 @@ int main(int argc, char** argv) {
         std::cout << "error: option \"labels_list\" has no value\n";
         return 1;
     }
-    if (args.count("help")) {
-        std::cout << opt.help() << std::endl;
-        return 0;
-    }
-
     std::string input_name(args["input_name"].as<std::string>());
     std::string output_name(args["output_name"].as<std::string>());
 
