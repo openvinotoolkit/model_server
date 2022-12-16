@@ -47,7 +47,7 @@ std::vector<uint8_t> Load(const std::string& fileName) {
 }
 
 int main(int argc, char** argv) {
-    cxxopts::Options opt("http_infer_resnet", "Sends requests via KServe rest API.");
+    cxxopts::Options opt("http_infer_resnet", "Sends requests via KServe REST API.");
 
     // clang-format off
     opt.add_options()

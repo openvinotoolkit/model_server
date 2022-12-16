@@ -250,15 +250,15 @@ Requests per second: 189.041
 
 ```Bash
 ./http_server_live --help
-Sends requests via KServe rest API to check if server is alive.
+Sends requests via KServe REST API to check if server is alive.
 Usage:
   http_server_live [OPTION...]
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to REST service.  (default: 
                                 localhost)
-      --http_port PORT          Specify port to grpc service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default: 
                                 8000)
       --timeout TIMEOUT         Request timeout. (default: 0)
 ```
@@ -276,15 +276,15 @@ Server Live: True
 
 ```Bash
 ./http_server_ready --help
-Sends requests via KServe rest API to check if server is ready.
+Sends requests via KServe REST API to check if server is ready.
 Usage:
   http_server_ready [OPTION...]
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to REST service.  (default: 
                                 localhost)
-      --http_port PORT          Specify port to grpc service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default: 
                                 8000)
       --timeout TIMEOUT         Request timeout. (default: 0)
 ```
@@ -302,15 +302,15 @@ Server Ready: True
 
 ```Bash
 ./http_server_metadata --help
-Sends requests via KServe rest API to get server metadata.
+Sends requests via KServe REST API to get server metadata.
 Usage:
   http_server_metadata [OPTION...]
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to REST service.  (default: 
                                 localhost)
-      --http_port PORT          Specify port to grpc service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default: 
                                 8000)
       --timeout TIMEOUT         Request timeout. (default: 0)
 ```
@@ -328,15 +328,15 @@ Usage:
 
 ```Bash
 ./http_model_ready --help
-Sends requests via KServe rest API to check if model is ready for inference.
+Sends requests via KServe REST API to check if model is ready for inference.
 Usage:
   http_model_ready [OPTION...]
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to REST service.  (default: 
                                 localhost)
-      --http_port PORT          Specify port to grpc service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default: 
                                 8000)
       --model_name MODEL_NAME   Define model name, must be same as is in 
                                 service.  (default: dummy)
@@ -358,15 +358,15 @@ Model Ready: True
 
 ```Bash
 ./http_model_metadata --help
-Sends requests via KServe rest API to get model metadata.
+Sends requests via KServe REST API to get model metadata.
 Usage:
   http_ready [OPTION...]
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to REST service.  (default: 
                                 localhost)
-      --http_port PORT          Specify port to grpc service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default: 
                                 8000)
       --model_name MODEL_NAME   Define model name, must be same as is in 
                                 service.  (default: dummy)
@@ -387,15 +387,15 @@ Usage:
 
 ```Bash
 ./http_infer_dummy --help
-Sends requests via KServe rest API.
+Sends requests via KServe REST API.
 Usage:
   http_infer_dummy [OPTION...]
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to REST service.  (default: 
                                 localhost)
-      --http_port PORT          Specify port to grpc service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default: 
                                 8000)
       --input_name INPUT_NAME   Specify input tensor name.  (default: b)
       --output_name OUTPUT_NAME
@@ -495,7 +495,7 @@ Requests per second: 103.465
 ### Run the Client to perform inference using REST API
 ```Bash
 ./http_infer_resnet --help
-Sends requests via KServe rest API.
+Sends requests via KServe REST API.
 Usage:
   http_infer_resnet [OPTION...]
 
@@ -504,9 +504,9 @@ Usage:
                                 images. 
       --labels_list LABELS      Path to a file with a list of labels. 
       --http_address GRPC_ADDRESS
-                                Specify url to rest service.  (default: 
+                                Specify url to REST service.  (default: 
                                 localhost)
-      --http_port PORT          Specify port to rest service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default: 
                                 9000)
       --input_name INPUT_NAME   Specify input tensor name.  (default: 0)
       --output_name OUTPUT_NAME
