@@ -25,6 +25,8 @@ RUN groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
     chown -R ovms:ovms /ovms
 RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
+# Remove capi library
+RUN if [ -f /ovms/lib/libovms_shared.so ] ; then rm -rf  /ovms/lib/libovms_shared.so ; else exit 0 ; fi ;
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7 as release

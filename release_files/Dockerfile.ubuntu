@@ -64,6 +64,8 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
              --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
     chown -R ovms:ovms /ovms
 
+# Remove capi library
+RUN if [ -f /ovms/lib/libovms_shared.so ] ; then rm -rf  /ovms/lib/libovms_shared.so ; else exit 0 ; fi ;
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM $BASE_IMAGE as release
@@ -152,10 +154,6 @@ RUN	set -e ; \
 RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 COPY --from=base_build /usr/local/lib/ /ovms/lib/
 COPY --from=base_build /ovms /ovms
-
-# Remove capi library
-RUN if [ -f /ovms/lib/libovms_shared.so ] ; then true ; else exit 0 ; fi ;\
-	rm -rf  /ovms/lib/libovms_shared.so
 
 # for HDDL
 RUN apt-get update && \
