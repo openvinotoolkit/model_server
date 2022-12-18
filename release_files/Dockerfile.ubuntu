@@ -86,9 +86,9 @@ COPY drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,SC2164
 RUN	apt-get update -y ; \
-    apt-get install -y curl libpugixml1v5 libtbb2 --no-install-recommends && \
+    apt-get install -y curl ca-certificates libpugixml1v5 libtbb2 --no-install-recommends && \
 	if [ "$GPU" == "1" ] ; then \
-            apt-get update && apt-get install -y ca-certificates libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
+            apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
 	        case $INSTALL_DRIVER_VERSION in \
                 "20.35.17767") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
