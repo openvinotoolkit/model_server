@@ -86,6 +86,8 @@ When creating a Python-based client application, you can use Triton client libra
 
 For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/python/kserve-api/samples).
 
+## C++ Client
+
 @sphinxdirective
 .. raw:: html
 
