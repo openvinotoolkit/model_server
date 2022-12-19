@@ -73,10 +73,35 @@ If everything is set up correctly, you will see 'zebra' prediction in the output
 
 ## Deploying Model Server on Baremetal
 
-There are two ways to start the server:
+To deploy Model Server on baremetal, use pre-compiled binaries for your target OS:
+- [ovms.tar.gz](http://repository.toolbox.iotg.sclab.intel.com/projects/ovms-c/2022.3-RC2/RC2/dist/ubuntu/ovms.tar.gz) Ubuntu 20.04
+- [ovms.tar.gz](http://repository.toolbox.iotg.sclab.intel.com/projects/ovms-c/2022.3-RC1/RC1/dist/redhat/ovms.tar.gz) RedHat 8.7
 
-- using the ```./ovms/bin/ovms --help``` command from inside the directory where OVMS is installed
-- in interactive mode as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements
+```bash
+# download
+wget http://repository.toolbox.iotg.sclab.intel.com/projects/ovms-c/2022.3-RC2/RC2/dist/ubuntu/ovms.tar.gz
+
+# unpack
+tar -xzvf ovms.tar.gz
+```
+
+> **NOTE**: Alternatively it is possible to build package from scratch using `make docker_build` command.
+
+Install required libraries depending on the OS:
+```bash
+# Ubuntu 20.04
+apt install -y libpugixml1v5 libtbb2
+# RedHat 8.7
+microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
+```
+
+Start the server:
+
+```bash
+./ovms/bin/ovms --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary
+```
+
+or start as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
 
 Learn more about model server [starting parameters](parameters.md).
 
