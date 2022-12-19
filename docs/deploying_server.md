@@ -106,7 +106,7 @@ Start the server:
 
 or start as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
 
-All the Model Server documentation use docker to deploy the service, but the same can be achieved outside the container.  
+Most of the Model Server documentation use docker to deploy the service, but the same can be achieved outside the container.  
 Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
