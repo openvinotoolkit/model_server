@@ -3,23 +3,16 @@
 This demo demonstrate how to use C API from the OpenVINO Model Server to create C and C++ application.
 Building the application is executed inside the docker container to illustrate end to end usage flow.
 
-## Build libovms_shared.so
-To build the capi docker image, you must first build the `ovms.tar.gz` package with the `libovms_shared.so` library and `ovms.h` header. 
-run `make` command in ovms git main directory.
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-make
-```
-
 ## Prepare demo image
-Next enter the directory with the example and build the demo docker with all dependencies and examples that will be named `openvino/model_server-capi`.
+Enter the directory with the example and build the demo docker with all dependencies and examples that will be named `openvino/model_server-capi`.
 The example image also contains dummy model and config.json required for the applications.
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
 cd demos/c_api_minimal_app
 make
 ```
 
-The make command executes the c_api_minimal_app/capi_files/demos/MakefileCapi to build the applications.
+The make command downloads the `ovms.tar.gz` package from web and executes the c_api_minimal_app/capi_files/demos/MakefileCapi to build the applications.
 And executes the /ovms/bin/demo1 application and /ovms/bin/demo2_c application in the image environment.
 
 You can find the source code for the example applications in the ovms repository path src/main_capi.c and src/main_capi.cpp.
@@ -90,4 +83,18 @@ And run the demo make with os specific arguments:
 ```bash
 cd demos/c_api_minimal_app
 make BASE_OS=redhat
+```
+
+## Build libovms_shared.so
+Alternative to getting `ovms.tar.gz` package from web you can build it yourself from sources. To build the capi docker image, you must first build the `ovms.tar.gz` package with the `libovms_shared.so` library and `ovms.h` header. 
+run `make` command in ovms git main directory.
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+make
+```
+
+And then execute the alternative make target:
+```bash
+cd demos/c_api_minimal_app
+make all_docker
 ```
