@@ -121,7 +121,7 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 
 ```
 
-GPU device can be used also on Windows hosts with Windows Subsystem for Linux 2 (WSL2). In such scenario, there are needed extra docker parameters like below:
+GPU device can be used also on Windows hosts with Windows Subsystem for Linux 2 (WSL2). In such scenario, there are needed extra docker parameters. See the command below:
 ```bash
 
 docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
@@ -248,7 +248,7 @@ THROUGHPUT
 
 ## Using NVIDIA Plugin
 
-OpenVINO Model Server can be used also with NVIDIA GPU cards. It is implemented thanks to NVIDIA plugin from the [github repo openvino_contrib](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin).
+OpenVINO Model Server can be used also with NVIDIA GPU cards by using NVIDIA plugin from the [github repo openvino_contrib](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin).
 The docker image of OpenVINO Model Server including support for NVIDIA can be built from sources
 
 ```bash

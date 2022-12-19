@@ -10,7 +10,7 @@ To use models trained in other formats you need to convert them first. To do so,
 OpenVINO’s [Model Optimizer](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) for IR, or different
 [converters](https://onnx.ai/supported-tools.html) for ONNX.
 
-The feature of direct import of Tensorflow models is currently a preview feature. It supports currently only the frozen graph and not all topologies can be used that way.
+The feature of direct import of Tensorflow models is currently a preview feature. Currently it supports only the frozen graph and not all topologies can be used that way.
 For unsupported models you can use the Model Optimizer to convert the model to IR format.
 
 The models need to be placed and mounted in a particular directory structure and according to the following rules:

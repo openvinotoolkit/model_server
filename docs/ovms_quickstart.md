@@ -1,7 +1,7 @@
 # Quickstart Guide {#ovms_docs_quick_start_guide}
 
 OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) 
-or [ONNX](https://onnx.ai/), PaddlePaddle[https://github.com/PaddlePaddle/Paddle] or TensorFlow format [https://www.tensorflow.org/]. You can get them by:
+, [ONNX](https://onnx.ai/), PaddlePaddle[https://github.com/PaddlePaddle/Paddle] or TensorFlow format [https://www.tensorflow.org/]. You can get them by:
 
 - downloading models from [Open Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/public/2022.1/)
 - converting other formats using [Model Optimizer](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html)
@@ -125,6 +125,6 @@ In our case, it will be a modified input image with bounding boxes indicating de
 ![Inference results](quickstart_result.jpg)
 
 Note: Similar steps can be performed with an ONNX model. Check the inference [use case example](../demos/using_onnx_model/python/README.md) with a public ResNet model in ONNX format
-or with [TensorFlow model demo](../demos/image_classification_using_tf_model/python/README.md ).
+or [TensorFlow model demo](../demos/image_classification_using_tf_model/python/README.md ).
 
 Congratulations, you have completed the Quickstart guide. Try Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.
