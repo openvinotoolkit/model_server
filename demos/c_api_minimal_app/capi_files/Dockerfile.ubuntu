@@ -49,6 +49,5 @@ WORKDIR /ovms/demos
 RUN make -f MakefileCapi cpp
 RUN make -f MakefileCapi c
 
-RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
 ENTRYPOINT ["/bin/bash"]
