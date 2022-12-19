@@ -61,7 +61,9 @@ RUN if [ -f /ovms_release/lib/libjava.so ] ; then true ; else exit 0 ; fi ;cd /o
 
 # Remove capi temp libraries
 RUN if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then true ; else exit 0 ; fi ;\
-	rm -rf  /ovms_release/lib/libsrc_Slibovms_Ushared.so
+	rm -rf  /ovms_release/lib/libsrc_Slibovms_Ushared.so \
+	/ovms_release/lib/libprediction_service_proto.so-2.params \
+	/ovms_release/lib/libovms_shared.so-2.params
 
 RUN find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 RUN find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;

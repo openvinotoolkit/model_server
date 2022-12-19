@@ -165,7 +165,7 @@ static Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::
 static bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
     OVMS_PROFILE_FUNCTION();
-    if (!tensorInfo->getBatchSize().has_value()) {
+    if (!tensorInfo->getBatchSize().has_value() || batchSize == 0) {
         return true;
     }
     return !tensorInfo->getBatchSize().value().match(batchSize);
@@ -188,7 +188,8 @@ static Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const
 }
 
 static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
-    const tensorflow::TensorProto& src) {
+    const tensorflow::TensorProto& src,
+    const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
     auto status = validateLayout(tensorInfo);
     if (!status.ok()) {
@@ -214,13 +215,14 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
             return StatusCode::STRING_VAL_EMPTY;
         }
     }
-
     return StatusCode::OK;
 }
 
 static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
-    const ::KFSRequest::InferInputTensor& src) {
+    const ::KFSRequest::InferInputTensor& src,
+    const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
+    bool rawInputsContentsUsed = (buffer != nullptr);
     auto status = validateLayout(tensorInfo);
     if (!status.ok()) {
         return status;
@@ -232,7 +234,8 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_SHAPE;
     }
 
-    if (checkBatchSizeMismatch(tensorInfo, src.contents().bytes_contents_size())) {
+    size_t batchSize = !rawInputsContentsUsed ? src.contents().bytes_contents_size() : 1;
+    if (checkBatchSizeMismatch(tensorInfo, batchSize)) {
         SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
             tensorInfo->getMappedName(),
             tensorInfo->getBatchSize().has_value() ? tensorInfo->getBatchSize().value().toString() : std::string{"none"},
@@ -240,14 +243,18 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
-    for (int i = 0; i < src.contents().bytes_contents_size(); i++) {
-        if (src.contents().bytes_contents(i).size() <= 0) {
+    if (!rawInputsContentsUsed) {
+        for (size_t i = 0; i < batchSize; i++) {
+            if (src.contents().bytes_contents(i).size() <= 0) {
+                SPDLOG_DEBUG("Tensor: {} {}th image of the batch is empty.", src.name(), i);
+                return StatusCode::BYTES_CONTENTS_EMPTY;
+            }
+        }
+    } else {
+        if (buffer->size() <= 0) {
+            SPDLOG_DEBUG("Tensor: {} raw_inputs_contents is empty", src.name());
             return StatusCode::BYTES_CONTENTS_EMPTY;
         }
-    }
-
-    if (src.contents().bytes_contents_size() <= 0) {
-        return StatusCode::BYTES_CONTENTS_EMPTY;
     }
 
     return StatusCode::OK;
@@ -331,7 +338,7 @@ inline static int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tens
 }
 
 template <typename TensorType>
-static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
     Dimension targetHeight = getTensorInfoHeightDim(tensorInfo);
     Dimension targetWidth = getTensorInfoWidthDim(tensorInfo);
@@ -340,8 +347,10 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
     bool resizeSupported = isResizeSupported(tensorInfo);
     bool enforceResolutionAlignment = !resizeSupported;
 
-    for (int i = 0; i < getBinaryInputsSize(src); i++) {
-        cv::Mat image = convertStringToMat(getBinaryInput(src, i));
+    bool rawInputsContentsUsed = (buffer != nullptr);
+    int numberOfInputs = (!rawInputsContentsUsed ? getBinaryInputsSize(src) : 1);
+    for (int i = 0; i < numberOfInputs; i++) {
+        cv::Mat image = convertStringToMat(!rawInputsContentsUsed ? getBinaryInput(src, i) : *buffer);
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
@@ -349,7 +358,6 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
         if (status != StatusCode::OK) {
             return status;
         }
-
         if (i == 0) {
             updateTargetResolution(targetHeight, targetWidth, image);
         }
@@ -381,10 +389,8 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
         // if (i == 0 && src.contents().bytes_contents_size() > 1) {
         //     // Multiply src.string_val_size() * image resolution * precision size
         // }
-
         images.push_back(image);
     }
-
     return StatusCode::OK;
 }
 
@@ -437,15 +443,14 @@ static ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::s
 }
 
 template <typename TensorType>
-static Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo) {
+static Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
-    auto status = validateTensor(tensorInfo, src);
+    auto status = validateTensor(tensorInfo, src, buffer);
     if (status != StatusCode::OK) {
         return status;
     }
-
     std::vector<cv::Mat> images;
-    status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
+    status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo, buffer);
     if (!status.ok()) {
         return status;
     }
@@ -456,6 +461,6 @@ static Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Te
     return StatusCode::OK;
 }
 
-template Status convertBinaryRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
-template Status convertBinaryRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
+template Status convertBinaryRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
+template Status convertBinaryRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 }  // namespace ovms
