@@ -11,6 +11,7 @@
    ovms_demo_optical_character_recognition
    ovms_demo_face_detection
    ovms_demo_face_blur_pipeline
+   ovms_demo_capi_inference_demo
    ovms_demo_single_face_analysis_pipeline
    ovms_demo_multi_faces_analysis_pipeline
    ovms_docs_demo_ensemble
@@ -50,6 +51,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 ## C++
 | Demo | Description |
 |---|---|
+|[C API applications](c_api_minimal_app/README.md)|How to use C API from the OpenVINO Model Server to create C and C++ application.|
 |[Image Classification](image_classification/cpp/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
 |[Benchmark App](benchmark/cpp/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
 
