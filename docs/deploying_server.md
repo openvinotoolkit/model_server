@@ -71,28 +71,31 @@ zebra
 ```
 If everything is set up correctly, you will see 'zebra' prediction in the output.
 
-## Deploying Model Server on Baremetal
-
-To deploy Model Server on baremetal, use pre-compiled binaries for your target OS:
-- [ovms.tar.gz](http://repository.toolbox.iotg.sclab.intel.com/projects/ovms-c/2022.3-RC2/RC2/dist/ubuntu/ovms.tar.gz) Ubuntu 20.04
-- [ovms.tar.gz](http://repository.toolbox.iotg.sclab.intel.com/projects/ovms-c/2022.3-RC1/RC1/dist/redhat/ovms.tar.gz) RedHat 8.7
+## Deploying Model Server on Baremetal (without docker)
+It is possible to deploy Model Server outside of docker container.
+To deploy Model Server on baremetal, use pre-compiled binaries for your target OS from latest release.
+Alternatively it is possible to build package from scratch:
 
 ```bash
-# download
-wget http://repository.toolbox.iotg.sclab.intel.com/projects/ovms-c/2022.3-RC2/RC2/dist/ubuntu/ovms.tar.gz
-
-# unpack
-tar -xzvf ovms.tar.gz
+git clone https://github.com/openvinotoolkit/model_server
+cd model_server
 ```
 
-> **NOTE**: Alternatively it is possible to build package from scratch using `make docker_build` command.
+The `ovms.tar.gz` package will appear in `dist/ubuntu` or `dist/redhat` directory.  
+Unpack the package:
 
-Install required libraries depending on the OS:
 ```bash
-# Ubuntu 20.04
-apt install -y libpugixml1v5 libtbb2
-# RedHat 8.7
-microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
+tar -xzvf dist/ubuntu/ovms.tar.gz
+```
+
+Install required libraries depending on the OS.  
+For Ubuntu 20.04:
+```bash
+apt update -y && apt install -y libpugixml1v5 libtbb2
+```
+For RedHat 8.7:
+```bash
+microdnf upgrade -y && microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
 ```
 
 Start the server:
@@ -103,6 +106,7 @@ Start the server:
 
 or start as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
 
+All the Model Server documentation use docker to deploy the service, but the same can be achieved outside the container.  
 Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
