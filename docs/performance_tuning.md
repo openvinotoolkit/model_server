@@ -67,7 +67,7 @@ GPU
                --target_device GPU
    ```
 
-> **NOTE**: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
+> **NOTE**: KEY_NUM_STREAMS and PERFORMANCE_HINT should not be used together.
 
 ## Adjusting the number of streams in CPU and GPU target devices
 
@@ -77,19 +77,19 @@ It is particularly efficient for models which cannot effectively consume all CPU
 
 By default, for `CPU` target device, OpenVINO Model Server sets the value CPU_THROUGHPUT_AUTO and GPU_THROUGHPUT_AUTO for `GPU` target device. It calculates the number of streams based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
 
-If this default configuration is not suitable, adjust it with the `CPU_THROUGHPUT_STREAMS` parameter defined as part 
+If this default configuration is not suitable, adjust it with the `KEY_NUM_STREAMS` parameter defined as part 
 of the device plugin configuration. 
 
 In a scenario where the number of parallel connections is close to 1, set the following parameter:
 
-`--plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}'`
+`--plugin_config '{"KEY_NUM_STREAMS": "1"}'`
 
 When the number of concurrent requests is higher, increase the number of streams. Make sure, however, that the number of streams is lower than the average volume of concurrent inference operations. Otherwise, the server might not be fully utilized.
 Number of streams should not exceed the number of CPU cores.
 
 For example, with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
 
-`--plugin_config '{"CPU_THROUGHPUT_STREAMS": "24"}'`
+`--plugin_config '{"KEY_NUM_STREAMS": "24"}'`
 
 ## Input data in REST API calls
 
@@ -114,20 +114,20 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 | Parameters      | Description |
 | :---        |    :----   |
 | CPU_THREADS_NUM       | Specifies the number of threads that CPU plugin should use for inference.     |
-| CPU_BIND_THREAD   |   Binds inference threads to CPU cores.      |
-| CPU_THROUGHPUT_STREAMS | Specifies number of CPU "execution" streams for the throughput mode |
+| AFFINITY   |   Binds inference threads to CPU cores.      |
+| KEY_NUM_STREAMS | Specifies number of CPU "execution" streams for the throughput mode |
 
 
 > **NOTE:** For additional information about all parameters read [OpenVINO supported plugins](https://docs.openvino.ai/2022.2/namespaceInferenceEngine_1_1PluginConfigParams.html?#detailed-documentation).
 
 - Example:
 1. While passing the plugin configuration, omit the `KEY_` phase. 
-2. Following docker command will set `KEY_CPU_THROUGHPUT_STREAMS` parameter to a value `KEY_CPU_THROUGHPUT_NUMA`:
+2. Following docker command will set `KEY_NUM_STREAMS` parameter to a value `KEY_CPU_THROUGHPUT_NUMA`:
 
 ```bash
 docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 \
---plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}'
+--plugin_config '{"KEY_NUM_STREAMS": "1"}'
 
 ```
 
