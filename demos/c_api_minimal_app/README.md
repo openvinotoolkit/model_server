@@ -43,39 +43,42 @@ g++ main_capi.cpp -I/ovms/include -L/ovms/lib -lovms_shared
 
 The example output is:
 ```
-[2022-12-15 12:08:18.024][22][serving][info][model.cpp:88] Updating default version for model: dummy, from: 0
-[2022-12-15 12:08:18.024][22][serving][info][model.cpp:98] Updated default version for model: dummy, to: 1
-[2022-12-15 12:08:18.024][22][modelmanager][info][modelmanager.cpp:478] Configuration file doesn't have custom node libraries property.
-[2022-12-15 12:08:18.024][22][modelmanager][info][modelmanager.cpp:495] Configuration file doesn't have pipelines property.
-[2022-12-15 12:08:18.025][486][modelmanager][info][modelmanager.cpp:900] Started model manager thread
-[2022-12-15 12:08:18.025][22][serving][info][servablemanagermodule.cpp:44] ServableManagerModule started
+[2022-12-19 11:39:41.428][14][serving][info][modelinstance.cpp:797] Loaded model dummy; version: 1; batch size: 30; No of InferRequests: 12
+[2022-12-19 11:39:41.428][14][serving][debug][modelversionstatus.cpp:88] setAvailable: dummy - 1 (previous state: LOADING) -> error: OK
+[2022-12-19 11:39:41.428][14][serving][info][modelversionstatus.cpp:113] STATUS CHANGE: Version 1 of model dummy status change. New status: ( "state": "AVAILABLE", "error_code": "OK" )
+[2022-12-19 11:39:41.428][14][serving][info][model.cpp:88] Updating default version for model: dummy, from: 0
+[2022-12-19 11:39:41.428][14][serving][info][model.cpp:98] Updated default version for model: dummy, to: 1
+[2022-12-19 11:39:41.428][14][modelmanager][info][modelmanager.cpp:478] Configuration file doesn't have custom node libraries property.
+[2022-12-19 11:39:41.428][14][modelmanager][info][modelmanager.cpp:495] Configuration file doesn't have pipelines property.
+[2022-12-19 11:39:41.428][14][serving][info][servablemanagermodule.cpp:44] ServableManagerModule started
 Server ready for inference
-[2022-12-15 12:08:18.025][487][modelmanager][info][modelmanager.cpp:920] Started cleaner thread
-[2022-12-15 12:08:18.025][22][serving][debug][pocapi.cpp:604] Processing C-API request for model: dummy; version: 1
-[2022-12-15 12:08:18.025][22][serving][debug][modelmanager.cpp:1350] Requesting model: dummy; version: 1.
-[2022-12-15 12:08:18.025][22][serving][debug][modelinstance.cpp:1013] Model: dummy, version: 1 already loaded
-[2022-12-15 12:08:18.025][22][serving][debug][modelinstance.cpp:1186] Getting infer req duration in model dummy, version 1, nireq 0: 0.002 ms
-[2022-12-15 12:08:18.025][22][serving][debug][modelinstance.cpp:1194] Preprocessing duration in model dummy, version 1, nireq 0: 0.000 ms
-[2022-12-15 12:08:18.025][22][serving][debug][modelinstance.cpp:1204] Deserialization duration in model dummy, version 1, nireq 0: 0.016 ms
-[2022-12-15 12:08:18.025][22][serving][debug][modelinstance.cpp:1212] Prediction duration in model dummy, version 1, nireq 0: 0.494 ms
-[2022-12-15 12:08:18.025][22][serving][debug][modelinstance.cpp:1221] Serialization duration in model dummy, version 1, nireq 0: 0.009 ms
-[2022-12-15 12:08:18.025][22][serving][debug][modelinstance.cpp:1229] Postprocessing duration in model dummy, version 1, nireq 0: 0.000 ms
-[2022-12-15 12:08:18.025][22][serving][debug][pocapi.cpp:650] Total C-API req processing time: 0.586 ms
+[2022-12-19 11:39:41.428][14][serving][debug][capi.cpp:606] Processing C-API request for model: dummy; version: 1
+[2022-12-19 11:39:41.428][14][serving][debug][modelmanager.cpp:1350] Requesting model: dummy; version: 1.
+[2022-12-19 11:39:41.428][14][serving][debug][modelinstance.cpp:1013] Model: dummy, version: 1 already loaded
+[2022-12-19 11:39:41.428][14][serving][debug][modelinstance.cpp:1187] Getting infer req duration in model dummy, version 1, nireq 0: 0.002 ms
+[2022-12-19 11:39:41.428][478][modelmanager][info][modelmanager.cpp:900] Started model manager thread
+[2022-12-19 11:39:41.428][14][serving][debug][modelinstance.cpp:1195] Preprocessing duration in model dummy, version 1, nireq 0: 0.000 ms
+[2022-12-19 11:39:41.428][14][serving][debug][modelinstance.cpp:1205] Deserialization duration in model dummy, version 1, nireq 0: 0.019 ms
+[2022-12-19 11:39:41.428][479][modelmanager][info][modelmanager.cpp:920] Started cleaner thread
+[2022-12-19 11:39:41.429][14][serving][debug][modelinstance.cpp:1213] Prediction duration in model dummy, version 1, nireq 0: 0.369 ms
+[2022-12-19 11:39:41.429][14][serving][debug][modelinstance.cpp:1222] Serialization duration in model dummy, version 1, nireq 0: 0.011 ms
+[2022-12-19 11:39:41.429][14][serving][debug][modelinstance.cpp:1230] Postprocessing duration in model dummy, version 1, nireq 0: 0.000 ms
+[2022-12-19 11:39:41.429][14][serving][debug][capi.cpp:650] Total C-API req processing time: 0.474 ms
 output is correct
 No more job to be done, will shut down
-[2022-12-15 12:08:18.025][22][serving][info][grpcservermodule.cpp:177] GRPCServerModule shutting down
-[2022-12-15 12:08:18.025][22][serving][info][grpcservermodule.cpp:180] Shutdown gRPC server
-[2022-12-15 12:08:18.025][22][serving][info][grpcservermodule.cpp:184] GRPCServerModule shutdown
-[2022-12-15 12:08:18.025][22][serving][info][httpservermodule.cpp:54] HTTPServerModule shutting down
+[2022-12-19 11:39:41.429][14][serving][info][grpcservermodule.cpp:177] GRPCServerModule shutting down
+[2022-12-19 11:39:41.429][14][serving][info][grpcservermodule.cpp:180] Shutdown gRPC server
+[2022-12-19 11:39:41.429][14][serving][info][grpcservermodule.cpp:184] GRPCServerModule shutdown
+[2022-12-19 11:39:41.429][14][serving][info][httpservermodule.cpp:54] HTTPServerModule shutting down
 [evhttp_server.cc : 320] NET_LOG: event_base_loopexit() exits with value 0
 [evhttp_server.cc : 253] NET_LOG: event_base_dispatch() exits with value 1
-[2022-12-15 12:08:18.219][22][serving][info][httpservermodule.cpp:59] Shutdown HTTP server
-[2022-12-15 12:08:18.220][22][serving][info][servablemanagermodule.cpp:54] ServableManagerModule shutting down
-[2022-12-15 12:08:18.220][486][modelmanager][info][modelmanager.cpp:916] Stopped model manager thread
-[2022-12-15 12:08:18.220][487][modelmanager][info][modelmanager.cpp:930] Stopped cleaner thread
-[2022-12-15 12:08:18.220][22][serving][info][modelmanager.cpp:985] Shutdown model manager
-[2022-12-15 12:08:18.220][22][serving][info][modelmanager.cpp:993] Shutdown cleaner thread
-[2022-12-15 12:08:18.220][22][serving][info][servablemanagermodule.cpp:57] ServableManagerModule shutdown
+[2022-12-19 11:39:41.604][14][serving][info][httpservermodule.cpp:59] Shutdown HTTP server
+[2022-12-19 11:39:41.604][14][serving][info][servablemanagermodule.cpp:54] ServableManagerModule shutting down
+[2022-12-19 11:39:41.604][478][modelmanager][info][modelmanager.cpp:916] Stopped model manager thread
+[2022-12-19 11:39:41.604][479][modelmanager][info][modelmanager.cpp:930] Stopped cleaner thread
+[2022-12-19 11:39:41.604][14][serving][info][modelmanager.cpp:985] Shutdown model manager
+[2022-12-19 11:39:41.604][14][serving][info][modelmanager.cpp:993] Shutdown cleaner thread
+[2022-12-19 11:39:41.604][14][serving][info][servablemanagermodule.cpp:57] ServableManagerModule shutdown
 ```
 
 It is also possible to use custom model but that requires copying it to the built image and adjust the configs and example applications accordingly.
