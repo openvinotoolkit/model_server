@@ -15,7 +15,7 @@ Read [release notes](https://github.com/openvinotoolkit/model_server/releases) t
 Review the [Architecture concept](https://docs.openvino.ai/2022.2/ovms_docs_architecture.html) document for more details.
 
 Key features: 
-- support for multiple frameworks, such as Caffe, TensorFlow, MXNet, PaddlePaddle and ONNX
+- support for multiple frameworks, such as Caffe, TensorFlow, MXNet, PaddlePaddle, ONNX and TensorFlow
 - online deployment of new [model versions](https://docs.openvino.ai/2022.2/ovms_docs_model_version_policy.html)
 - [configuration updates in runtime](https://docs.openvino.ai/2022.2/ovms_docs_online_config_changes.html)
 - support for AI accelerators, such as 

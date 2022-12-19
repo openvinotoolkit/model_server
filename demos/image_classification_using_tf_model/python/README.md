@@ -1,4 +1,4 @@
-## Overview
+# Model Server demo with a direct import of TensorFlow model {#ovms_demo_tf_classification}
 
 This guide demonstrates how to run inference requests for TensorFlow model with OpenVINO Model Server.
 As an example, we will use [InceptionResNetV2](https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/inception_resnet_v2_2018_04_27.tgz) to perform classification of an image.

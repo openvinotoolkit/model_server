@@ -16,6 +16,7 @@
    ovms_docs_demo_ensemble
    ovms_docs_image_classification
    ovms_demo_using_onnx_model
+   ovms_demo_tf_classification
    ovms_demo_person_vehicle_bike_detection
    ovms_demo_vehicle_analysis_pipeline
    ovms_demo_real_time_stream_analysis
