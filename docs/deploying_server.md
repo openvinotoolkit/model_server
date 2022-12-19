@@ -79,6 +79,7 @@ Alternatively it is possible to build package from source:
 ```bash
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
+make docker_build
 ```
 
 The `ovms.tar.gz` package will appear in `dist/ubuntu` or `dist/redhat` directory.  
