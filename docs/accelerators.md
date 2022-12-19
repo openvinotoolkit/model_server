@@ -81,7 +81,7 @@ Example:
 make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
 ```
 
-## Starting a Docker Container with Intel GPU
+## Starting a Docker Container with Intel integrated GPU, Intel® Data Center GPU Flex Series and Intel® Arc™ GPU
 
 The [GPU plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html) uses the Intel Compute Library for 
 Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including 
@@ -121,15 +121,24 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 
 ```
 
-> **NOTE**:
-> The public docker image includes the OpenCL drivers for GPU in version 21.38.21026 (RedHat) and 21.48.21782 (Ubuntu).
-
-Support for [Intel Arc](https://www.intel.com/content/www/us/en/architecture-and-technology/visual-technology/arc-discrete-graphics.html), which is in preview now, requires newer driver version `22.10.22597`. You can build OpenVINO Model server with ubuntu base image and that driver using the command below:
+GPU device can be used also on Windows hosts with Windows Subsystem for Linux 2 (WSL2). In such scenario, there are needed extra docker parameters. See the command below.
+Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make docker_build INSTALL_DRIVER_VERSION=22.10.22597
+
+docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+
+-v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+
+--model_path /opt/model --model_name resnet --port 9001 --target_device GPU
+
 ```
+
+
+> **NOTE**:
+> The public docker image includes the OpenCL drivers for GPU in version 22.28 (RedHat) and 22.35 (Ubuntu).
+
+If you need to build the OpenVINO Model Server with different driver version, refer to the [building from sources](https://github.com/openvinotoolkit/model_server/blob/develop/docs/build_from_source.md)
+
 ## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
@@ -240,15 +249,22 @@ THROUGHPUT
 
 ## Using NVIDIA Plugin
 
-*Note:* To build container with NVIDIA plugin use commands:
+OpenVINO Model Server can be used also with NVIDIA GPU cards by using NVIDIA plugin from the [github repo openvino_contrib](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin).
+The docker image of OpenVINO Model Server including support for NVIDIA can be built from sources
+
 ```bash
    git clone https://github.com/openvinotoolkit/model_server.git
    cd model_server
-   make docker_build NVIDIA=1 OV_USE_BINARY=0
+   make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=releases/2022/3 OV_CONTRIB_BRANCH=releases/2022/3
 ```
+Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/develop/docs/build_from_source.md).
 
 Example command to run container with NVIDIA support:
 
 ```bash
    docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --target_device NVIDIA
 ```
+
+Check the supported [configuration parameters](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-configuration-parameters) and [supported layers](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-layers-and-limitations)
+
+Currently the AUTO, MULTI and HETERO virual plugins do not support NVIDIA plugin as an alternative device.
