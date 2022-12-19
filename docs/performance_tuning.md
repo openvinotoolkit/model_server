@@ -112,7 +112,7 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 
 | Parameters      | Description |
 | :---        |    :----   |
-| CPU_THREADS_NUM       | Specifies the number of threads that CPU plugin should use for inference.     |
+| INFERENCE_NUM_THREADS       | Specifies the number of threads that CPU plugin should use for inference.     |
 | AFFINITY   |   Binds inference threads to CPU cores.      |
 | NUM_STREAMS | Specifies number of execution streams for the throughput mode |
 
