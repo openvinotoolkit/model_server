@@ -10,6 +10,7 @@
    ovms_docs_grpc_api_kfs
    ovms_docs_rest_api_tfs
    ovms_docs_rest_api_kfs
+   ovms_docs_c_api
 
 @endsphinxdirective
 
