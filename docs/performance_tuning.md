@@ -75,8 +75,7 @@ OpenVINO&trade; Model Server can be tuned to a single client use case or a high 
 execution streams. They split the available resources to perform parallel execution of multiple requests.
 It is particularly efficient for models which cannot effectively consume all CPU cores or for CPUs with high number of cores.
 
-By default, for `CPU` target device, OpenVINO Model Server sets the value CPU_THROUGHPUT_AUTO and GPU_THROUGHPUT_AUTO for `GPU` target device. It calculates the number of streams based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
-
+By default, number of streams is calculated based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
 If this default configuration is not suitable, adjust it with the `NUM_STREAMS` parameter defined as part 
 of the device plugin configuration. 
 
