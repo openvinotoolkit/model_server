@@ -74,7 +74,7 @@ If everything is set up correctly, you will see 'zebra' prediction in the output
 ## Deploying Model Server on Baremetal (without docker)
 It is possible to deploy Model Server outside of docker container.
 To deploy Model Server on baremetal, use pre-compiled binaries for your target OS from latest release.
-Alternatively it is possible to build package from scratch:
+Alternatively it is possible to build package from source:
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server
