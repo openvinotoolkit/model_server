@@ -23,7 +23,7 @@ cat main_capi.c
 cat main_capi.cpp
 ```
 
-And rebuild and run the modified examples using the MakefileCapi rules:
+Afterwars rebuild and run the modified examples using the MakefileCapi rules:
 ```bash
 make -f MakefileCapi c
 make -f MakefileCapi cpp
