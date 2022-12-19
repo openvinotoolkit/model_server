@@ -90,10 +90,9 @@ For complete usage examples see [Kserve samples](https://github.com/openvinotool
 
 @sphinxdirective
 .. raw:: html
-
     <div id="switcher-cpp" class="switcher-anchor">C++</div>
 @endsphinxdirective
 
 Creating a client application in C++ follows the same principles as Python. When creating a C++-based client application, you can use Triton client library - [tritonclient](https://github.com/triton-inference-server).
 
-See our [C++ samples](../client/cpp/kserve-api/README.md) to learn how to build a sample C++ client application. 
+See our [C++ samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/cpp/kserve-api/README.md) to learn how to build a sample C++ client application. 
