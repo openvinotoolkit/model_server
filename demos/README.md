@@ -11,6 +11,7 @@
    ovms_demo_optical_character_recognition
    ovms_demo_face_detection
    ovms_demo_face_blur_pipeline
+   ovms_demo_capi_inference_demo
    ovms_demo_single_face_analysis_pipeline
    ovms_demo_multi_faces_analysis_pipeline
    ovms_docs_demo_ensemble

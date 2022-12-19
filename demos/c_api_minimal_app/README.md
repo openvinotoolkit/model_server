@@ -1,4 +1,4 @@
-# C API inference demo (C/C++)
+# C API inference demo (C/C++) {#ovms_demo_capi_inference_demo}
 
 This demo demonstrate how to use C API from the OpenVINO Model Server to create C and C++ application.
 Building the application is executed inside the docker container to illustrate end to end usage flow.
