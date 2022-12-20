@@ -20,7 +20,7 @@ Key features:
 [Intel Movidius Myriad VPUs](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_MYRIAD.html), 
 [GPU](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html), and 
 [HDDL](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_HDDL.html) 
-- works with Bare Metal Hosts as well as [Docker containers](https://docs.openvino.ai/2022.2/ovms_docs_deploying_server.html) 
+- works with Bare Metal Hosts as well as [Docker containers](https://docs.openvino.ai/2022.3/ovms_docs_deploying_server.html) 
 - [model reshaping](https://docs.openvino.ai/2022.2/ovms_docs_shape_batch_layout.html) in runtime
 - [directed Acyclic Graph Scheduler](https://docs.openvino.ai/2022.2/ovms_docs_dag.html) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
 - [custom nodes in DAG pipelines](https://docs.openvino.ai/2022.2/ovms_docs_custom_node_development.html) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
@@ -43,9 +43,9 @@ For more information on using Model Server in various scenarios you can check th
 
 * [Model repository configuration](https://docs.openvino.ai/2022.2/ovms_docs_models_repository.html)
 
-* [Using a docker container](https://docs.openvino.ai/2022.2/ovms_docs_deploying_server.html)
+* [Using a docker container](https://docs.openvino.ai/2022.3/ovms_docs_deploying_server.html)
 
-* [Landing on bare metal or virtual machine](https://docs.openvino.ai/2022.2/ovms_docs_deploying_server.html)
+* [Landing on bare metal or virtual machine](https://docs.openvino.ai/2022.3/ovms_docs_deploying_server.html)
 
 * [Performance tuning](https://docs.openvino.ai/2022.2/ovms_docs_performance_tuning.html)
 
