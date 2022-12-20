@@ -46,9 +46,29 @@ dist/ubuntu
 
 ## Building Options
 
+### `BASE_OS`
+
+Select base OS:
+- `ubuntu` for Ubuntu 20.04 (default)
+- `redhat` for RedHat 8.7
+
+```bash
+make docker_build BASE_OS=redhat
+```
+
+<hr />
+
+Example:
+
 ### `INSTALL_DRIVER_VERSION`
 
-Parameter used to control which GPU driver version will be installed. Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.
+Parameter used to control which GPU driver version will be installed. Supported versions:
+| OS | Versions |
+|---|---|
+| Ubuntu | 22.35.24055 (default), <br />22.10.22597, <br />21.48.21782, <br />20.35.17767 |
+| RedHat | 22.28.23726 (default), <br />22.10.22597, <br />21.38.21026, <br />20.35.17767 |
+
+Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.
 
 Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
 
@@ -94,5 +114,4 @@ make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=releases/2022/3 OV_C
 docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --target_device NVIDIA
 ```
 
-Read more detailed usage in [developer guide](b/develop/docs/developer_guide.md).
- 
+Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/develop/docs/developer_guide.md).
