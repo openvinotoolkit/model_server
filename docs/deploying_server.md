@@ -71,13 +71,44 @@ zebra
 ```
 If everything is set up correctly, you will see 'zebra' prediction in the output.
 
-## Deploying Model Server on Baremetal
+## Deploying Model Server on Baremetal (without container)
+It is possible to deploy Model Server outside of container.
+To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20 or RHEL8.
+Find latest binary package in [release](https://github.com/openvinotoolkit/model_server/releases) page.
+Alternatively it is possible to build package from source:
 
-There are two ways to start the server:
+```bash
+git clone https://github.com/openvinotoolkit/model_server
+cd model_server
+make docker_build
+```
 
-- using the ```./ovms/bin/ovms --help``` command from inside the directory where OVMS is installed
-- in interactive mode as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements
+The `ovms.tar.gz` package will appear in `dist/ubuntu` or `dist/redhat` directory.  
+Unpack the package:
 
+```bash
+tar -xzvf dist/ubuntu/ovms.tar.gz
+```
+
+Install required libraries depending on the OS.  
+For Ubuntu 20.04:
+```bash
+apt update -y && apt install -y libpugixml1v5 libtbb2
+```
+For RedHat 8.7:
+```bash
+microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
+```
+
+Start the server:
+
+```bash
+./ovms/bin/ovms --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary
+```
+
+or start as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
+
+Most of the Model Server documentation demonstrate containers usage, but the same can be achieved with just the binary package.  
 Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
