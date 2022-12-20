@@ -1,6 +1,6 @@
 # Building from source
 
-This document gives information how to build docker images from source with different variants.
+This document gives information how to build docker images and the binary package from source with different variants.
 
 ## Prerequisites
 
