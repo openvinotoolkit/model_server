@@ -85,3 +85,14 @@ When creating a Python-based client application, you can use Triton client libra
 @endsphinxdirective
 
 For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/python/kserve-api/samples).
+
+## C++ Client
+
+@sphinxdirective
+.. raw:: html
+    <div id="switcher-cpp" class="switcher-anchor">C++</div>
+@endsphinxdirective
+
+Creating a client application in C++ follows the same principles as Python. When creating a C++-based client application, you can use Triton client library - [tritonclient](https://github.com/triton-inference-server/client).
+
+See our [C++ samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/cpp/kserve-api/README.md) to learn how to build a sample C++ client application. 
