@@ -226,7 +226,7 @@ python3 grpc_infer_resnet.py --help
 usage: grpc_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--grpc_address GRPC_ADDRESS]
                             [--grpc_port GRPC_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--transpose_input {False,True}]
                             [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
-                            [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto]
+                            [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto] [--tls] [--server_cert SERVER_CERT] [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
 
 Sends requests via KServe gRPC API using images in numpy format. It displays performance statistics and optionally the model accuracy
 
@@ -258,6 +258,13 @@ optional arguments:
                         Define pipeline name, must be same as is in service
   --dag-batch-size-auto
                         Add demultiplexer dimension at front
+  --tls                 use TLS communication with gRPC endpoint
+  --server_cert SERVER_CERT
+                        Path to server certificate
+  --client_cert CLIENT_CERT
+                        Path to client certificate
+  --client_key CLIENT_KEY
+                        Path to client key
 ```
 
 - Usage Example
@@ -544,7 +551,7 @@ python3 ./http_infer_resnet.py --help
 usage: http_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--http_address HTTP_ADDRESS]
                             [--http_port HTTP_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--transpose_input {False,True}]
                             [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
-                            [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto] [--binary_data]
+                            [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto] [--binary_data] [--tls] [--server_cert SERVER_CERT] [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
 
 Sends requests via KServe REST API using images in numpy format. It displays performance statistics and optionally the model accuracy
 
@@ -577,6 +584,13 @@ optional arguments:
   --dag-batch-size-auto
                         Add demultiplexer dimension at front
   --binary_data         Send input data in binary format
+  --tls                 use TLS communication with gRPC endpoint
+  --server_cert SERVER_CERT
+                        Path to server certificate
+  --client_cert CLIENT_CERT
+                        Path to client certificate
+  --client_key CLIENT_KEY
+                        Path to client key
 ```
 
 - Usage Example #1 - Input data placed in JSON object.

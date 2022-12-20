@@ -94,6 +94,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Invalid number of shape dimensions"},
     {StatusCode::INVALID_BATCH_SIZE, "Invalid input batch size"},
     {StatusCode::INVALID_SHAPE, "Invalid input shape"},
+    {StatusCode::INVALID_BUFFER_TYPE, "Invalid input buffer type"},
+    {StatusCode::INVALID_DEVICE_ID, "Invalid input buffer device id"},
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
     {StatusCode::INVALID_CONTENT_SIZE, "Invalid content size of tensor proto"},
@@ -259,5 +261,34 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_METRICS_ENDPOINT, "Metrics config endpoint path is invalid"},
     {StatusCode::INVALID_METRICS_FAMILY_NAME, "Invalid name in metrics_list"},
     {StatusCode::METRICS_REST_PORT_MISSING, "Missing rest_port parameter in server CLI"},
+
+    // C-API
+    {StatusCode::DOUBLE_BUFFER_SET, "Cannot set buffer more than once to the same tensor"},
+    {StatusCode::DOUBLE_TENSOR_INSERT, "Cannot insert more than one tensor with the same name"},
+    {StatusCode::DOUBLE_PARAMETER_INSERT, "Cannot insert more than one parameter with the same name"},
+    {StatusCode::NONEXISTENT_BUFFER_FOR_REMOVAL, "Tried to remove nonexisting buffer"},
+    {StatusCode::NONEXISTENT_DATA, "Tried to use nonexisting data"},
+    {StatusCode::NONEXISTENT_STRING, "Tried to use nonexisting string"},
+    {StatusCode::NONEXISTENT_NUMBER, "Tried to use nonexisting number"},
+    {StatusCode::NONEXISTENT_SETTINGS, "Tried to use nonexisting settings"},
+    {StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL, "Tried to remove nonexisting parameter"},
+    {StatusCode::NONEXISTENT_RESPONSE, "Tried to use nonexisting response"},
+    {StatusCode::NONEXISTENT_REQUEST, "Tried to use nonexisting request"},
+    {StatusCode::NONEXISTENT_SERVER, "Tried to use nonexisting server"},
+    {StatusCode::NONEXISTENT_TABLE, "Tried to use nonexisting table"},
+    {StatusCode::NONEXISTENT_TENSOR, "Tried to get nonexisting tensor"},
+    {StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER, "Tried to set buffer for nonexisting tensor"},
+    {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER, "Tried to remove buffer for nonexisting tensor"},
+    {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
+    {StatusCode::NONEXISTENT_STATUS, "Tried to use nonexisting status"},
+    {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
+    {StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "Server not in a state to perform inference"},
+
+    // Server Start errors
+    {StatusCode::OPTIONS_USAGE_ERROR, "options validation error"},
+    {StatusCode::FAILED_TO_START_GRPC_SERVER, "Failed to start gRPC server"},
+    {StatusCode::FAILED_TO_START_REST_SERVER, "Failed to start REST server"},
+    {StatusCode::SERVER_ALREADY_STARTED, "Server has already started"},
+    {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
 };
 }  // namespace ovms

@@ -33,13 +33,13 @@ namespace tc = triton::client;
 
 
 int main(int argc, char** argv) {
-    cxxopts::Options opt("http_server_metadata", "Sends requests via KServe rest API to get server metadata.");
+    cxxopts::Options opt("http_server_metadata", "Sends requests via KServe REST API to get server metadata.");
 
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
-    ("http_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"), "HTTP_ADDRESS")
-    ("http_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("8000"), "PORT")
+    ("http_address", "Specify url to REST service. ", cxxopts::value<std::string>()->default_value("localhost"), "HTTP_ADDRESS")
+    ("http_port", "Specify port to REST service. ", cxxopts::value<std::string>()->default_value("8000"), "PORT")
     ("timeout", "Request timeout.", cxxopts::value<int>()->default_value("0"), "TIMEOUT")
     ;
     // clang-format on

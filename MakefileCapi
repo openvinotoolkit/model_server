@@ -1,0 +1,25 @@
+#
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+cpp:
+	bazel build //src:ovms_shared
+	g++ src/main_capi.cpp -I/ovms/src/ -L/ovms/bazel-bin/src/ -lovms_shared -fPIC --std=c++17 -o /ovms/bazel-bin/src/capi_cpp_example
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/ /ovms/bazel-bin/src/capi_cpp_example
+
+c:
+	bazel build //src:ovms_shared
+	gcc -c src/main_capi.c -o /ovms/bazel-bin/src/main_capi.o -std=c99
+	gcc -o /ovms/bazel-bin/src/capi_c_example /ovms/bazel-bin/src/main_capi.o -lovms_shared -L/ovms/bazel-bin/src/
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/ /ovms/bazel-bin/src/capi_c_example

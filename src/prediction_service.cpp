@@ -110,7 +110,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);
         }
-        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
+        SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return grpc(status);
     }
 

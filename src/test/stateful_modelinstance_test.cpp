@@ -30,6 +30,7 @@
 #include "../get_model_metadata_impl.hpp"
 #include "../global_sequences_viewer.hpp"
 #include "../modelinstanceunloadguard.hpp"
+#include "../modelversion.hpp"
 #include "../ov_utils.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"
@@ -41,6 +42,8 @@
 using testing::Return;
 
 namespace {
+const std::string UNUSED_NAME{"UNUSED_NAME"};
+const ovms::model_version_t UNUSED_VERSION{0};
 static bool testWarningPrinted = false;
 
 enum SequenceTimeoutScenarios {
@@ -147,8 +150,12 @@ public:
     MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version, ov::Core& ieCore) :
         StatefulModelInstance(name, version, ieCore, nullptr, nullptr, &sequencesViewer) {}
 
-    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request, ovms::SequenceProcessingSpec& processingSpec) {
-        return validate(request, processingSpec);
+    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
+        ovms::StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> sp(*this->getSequenceManager());
+        auto status = sp.extractRequestParameters(request);
+        if (!status.ok())
+            return status;
+        return validate(request);
     }
 };
 
@@ -203,8 +210,11 @@ public:
         };
         ovms::Timer<TIMER_END> timer;
         using std::chrono::microseconds;
-        ovms::SequenceProcessingSpec sequenceProcessingSpec;
-        auto status = validate(requestProto, sequenceProcessingSpec);
+        ovms::StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse> requestProcessor(*this->getSequenceManager());
+        auto status = requestProcessor.extractRequestParameters(requestProto);
+        if (!status.ok())
+            return status;
+        status = validate(requestProto);
         if (!status.ok())
             return status;
 
@@ -212,22 +222,14 @@ public:
             std::cout << "Waiting before sequenceManagerLock" << std::endl;
             waitBeforeManagerLock->get();
         }
-        std::unique_lock<std::mutex> sequenceManagerLock(sequenceManager->getMutex());
-        status = sequenceManager->processRequestedSpec(sequenceProcessingSpec);
+        status = requestProcessor.prepare();
         if (!status.ok())
             return status;
-        const uint64_t sequenceId = sequenceProcessingSpec.getSequenceId();
-        if (!sequenceManager->sequenceExists(sequenceId))
-            return ovms::StatusCode::INTERNAL_ERROR;
-        ovms::Sequence& sequence = sequenceManager->getSequence(sequenceId);
 
         if (waitBeforeSequenceLock) {
             std::cout << "Waiting before waitBeforeSequenceLock" << std::endl;
             waitBeforeSequenceLock->get();
         }
-
-        std::unique_lock<std::mutex> sequenceLock(sequence.getMutex());
-        sequenceManagerLock.unlock();
 
         timer.start(GET_INFER_REQUEST);
         ovms::ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
@@ -235,7 +237,7 @@ public:
         timer.stop(GET_INFER_REQUEST);
 
         timer.start(PREPROCESS);
-        status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
+        status = requestProcessor.preInferenceProcessing(inferRequest);
         if (!status.ok())
             return status;
         timer.stop(PREPROCESS);
@@ -257,13 +259,13 @@ public:
 
         timer.start(SERIALIZE);
         ovms::OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-        status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, ovms::getTensorInfoName);
+        status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, getOutputsInfo(), responseProto, ovms::getTensorInfoName);
         timer.stop(SERIALIZE);
         if (!status.ok())
             return status;
 
         timer.start(POSTPROCESS);
-        status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
+        status = requestProcessor.postInferenceProcessing(responseProto, inferRequest);
         timer.stop(POSTPROCESS);
         if (!status.ok())
             return status;
@@ -272,16 +274,8 @@ public:
             std::cout << "Waiting before waitBeforeSequenceUnlocked" << std::endl;
             waitBeforeSequenceUnlocked->get();
         }
-
-        sequenceLock.unlock();
-        if (sequenceProcessingSpec.getSequenceControlInput() == ovms::SEQUENCE_END) {
-            sequenceManagerLock.lock();
-            status = sequenceManager->removeSequence(sequenceId);
-            if (!status.ok())
-                return status;
-        }
-
-        return ovms::StatusCode::OK;
+        status = requestProcessor.release();
+        return status;
     }
 };
 
@@ -1119,21 +1113,21 @@ TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, ovms::SEQUENCE_START);
 
-    auto status = modelInstance->mockValidate(&request, spec);
+    auto status = modelInstance->mockValidate(&request);
     ASSERT_TRUE(status.ok());
 
     preparePredictRequest(request, modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, ovms::SEQUENCE_END);
 
-    status = modelInstance->mockValidate(&request, spec);
+    status = modelInstance->mockValidate(&request);
     ASSERT_TRUE(status.ok());
 
     preparePredictRequest(request, modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
 
-    status = modelInstance->mockValidate(&request, spec);
+    status = modelInstance->mockValidate(&request);
     ASSERT_TRUE(status.ok());
 }
 
@@ -1144,7 +1138,7 @@ TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
     preparePredictRequest(request, modelInput);
     setRequestSequenceControl(&request, ovms::SEQUENCE_END);
 
-    auto status = modelInstance->mockValidate(&request, spec);
+    auto status = modelInstance->mockValidate(&request);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
@@ -1157,7 +1151,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
 
     uint64_t seqId = 0;
     setRequestSequenceId(&request, seqId);
-    auto status = modelInstance->mockValidate(&request, spec);
+    auto status = modelInstance->mockValidate(&request);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
@@ -1170,7 +1164,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
 
     uint64_t seqId = 0;
     setRequestSequenceId(&request, seqId);
-    auto status = modelInstance->mockValidate(&request, spec);
+    auto status = modelInstance->mockValidate(&request);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
@@ -1183,7 +1177,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
     input.set_dtype(tensorflow::DataType::DT_UINT64);
     input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint64_val(12);
-    auto status = modelInstance->mockValidate(&request, spec);
+    auto status = modelInstance->mockValidate(&request);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_NOT_PROVIDED);
 }
 
@@ -1196,7 +1190,7 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
     input.set_dtype(tensorflow::DataType::DT_UINT32);
     input.mutable_tensor_shape()->add_dim()->set_size(1);
     input.add_uint32_val(999);
-    auto status = modelInstance->mockValidate(&request, spec);
+    auto status = modelInstance->mockValidate(&request);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::INVALID_SEQUENCE_CONTROL_INPUT);
 }
 
@@ -1210,7 +1204,7 @@ TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
         input.set_dtype(tensorflow::DataType::DT_UINT32);
         input.mutable_tensor_shape()->add_dim()->set_size(1);
         input.add_uint32_val(12);
-        auto status = modelInstance->mockValidate(&request, spec);
+        auto status = modelInstance->mockValidate(&request);
         ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_ID_BAD_TYPE);
     }
     {
@@ -1220,7 +1214,7 @@ TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
         input.set_dtype(tensorflow::DataType::DT_UINT64);
         input.mutable_tensor_shape()->add_dim()->set_size(1);
         input.add_uint64_val(1);
-        auto status = modelInstance->mockValidate(&request, spec);
+        auto status = modelInstance->mockValidate(&request);
         ASSERT_EQ(status.getCode(), ovms::StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE);
     }
 }

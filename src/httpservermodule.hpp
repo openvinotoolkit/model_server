@@ -31,7 +31,8 @@ class HTTPServerModule : public Module {
 public:
     HTTPServerModule(Server& ovmsServer);
     ~HTTPServerModule();
-    int start(const Config& config) override;
+    Status start(const ovms::Config& config) override;
+
     void shutdown() override;
 };
 }  // namespace ovms

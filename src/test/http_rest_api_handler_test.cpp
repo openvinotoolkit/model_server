@@ -101,8 +101,8 @@ public:
 
             auto& config = ovms::Config::instance();
             auto retCode = ovmsServer.startModules(config);
-            EXPECT_EQ(EXIT_SUCCESS, retCode);
-            if (retCode)
+            EXPECT_TRUE(retCode.ok()) << retCode.string();
+            if (!retCode.ok())
                 throw std::runtime_error("Failed to start modules");
             serverGuard = std::make_unique<ServerShutdownGuard>(ovmsServer);
             auto modulePtr = ovmsServer.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);

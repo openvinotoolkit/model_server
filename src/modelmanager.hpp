@@ -165,8 +165,6 @@ private:
      * 
      */
     std::unordered_map<std::string, ModelConfig> servedModelConfigs;
-    // TODO we should either dispose this member or at least keep it as a pointer
-    // so we do not disclose details about ModelConfig to all modelmanager users
 
     /**
      * @brief Retires models non existing in config file
@@ -212,14 +210,6 @@ public:
      * @brief Mutex for blocking concurrent add & find of model
      */
     mutable std::shared_mutex modelsMtx;
-
-    /**
-     * @brief Gets the instance of ModelManager
-     */
-    static ModelManager& getInstance() {
-        static ModelManager instance;
-        return instance;
-    }
 
     /**
      *  @brief Gets the watcher interval timestep in seconds
