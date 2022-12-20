@@ -810,7 +810,9 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     uint16_t numberOfThreadsWaitingOnStart = 30;
     uint16_t numberOfThreadsWaitingOnEnd = 30;
 
-    std::vector<std::promise<void>> releaseWaitBeforeSequenceStarted(numberOfThreadsWaitingOnStart + numberOfThreadsWaitingOnEnd), releaseWaitAfterSequenceStarted(numberOfThreadsWaitingOnStart), releaseWaitBeforeSequenceFinished(numberOfThreadsWaitingOnEnd);
+    std::vector<std::promise<void>> releaseWaitBeforeSequenceStarted(numberOfThreadsWaitingOnStart + numberOfThreadsWaitingOnEnd);
+    std::vector<std::promise<void>> releaseWaitAfterSequenceStarted(numberOfThreadsWaitingOnStart);
+    std::vector<std::promise<void>> releaseWaitBeforeSequenceFinished(numberOfThreadsWaitingOnEnd);
     std::vector<std::thread> inferThreads;
 
     for (auto i = 0u; i < numberOfThreadsWaitingOnStart; ++i) {

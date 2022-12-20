@@ -1864,7 +1864,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictL
         allowedLoadResults);
 }
 TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPredictLoad) {
-    // we change used PARAM durign load. This change does not effect results, but is should be enough to verify
+    // we change used PARAM during load. This change does not effect results, but should be enough to verify
     // correctness of this operation - no segfaults etc.
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
