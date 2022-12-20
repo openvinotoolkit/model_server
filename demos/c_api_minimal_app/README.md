@@ -2,6 +2,7 @@
 
 This demo demonstrate how to use C API from the OpenVINO Model Server to create C and C++ application.
 Building the application is executed inside the docker container to illustrate end to end usage flow.
+Check C API full documentation [here](../docs/model_server_c_api.md).
 
 ## Prepare demo image
 Enter the directory with the example and build the demo docker with all dependencies and examples that will be named `openvino/model_server-capi`.
