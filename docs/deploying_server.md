@@ -73,7 +73,7 @@ If everything is set up correctly, you will see 'zebra' prediction in the output
 
 ## Deploying Model Server on Baremetal (without container)
 It is possible to deploy Model Server outside of container.
-To deploy Model Server on baremetal, use pre-compiled binaries for your target OS from latest release.
+To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20 or RHEL8.
 Find latest binary package in [release](https://github.com/openvinotoolkit/model_server/releases) page.
 Alternatively it is possible to build package from source:
 
@@ -97,7 +97,7 @@ apt update -y && apt install -y libpugixml1v5 libtbb2
 ```
 For RedHat 8.7:
 ```bash
-microdnf upgrade -y && microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
+microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
 ```
 
 Start the server:
@@ -108,7 +108,7 @@ Start the server:
 
 or start as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
 
-Most of the Model Server documentation uses docker to deploy the service, but the same can be achieved outside the container.  
+Most of the Model Server documentation demonstrate containers usage, but the same can be achieved with just the binary package.  
 Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
