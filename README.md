@@ -43,9 +43,7 @@ For more information on using Model Server in various scenarios you can check th
 
 * [Model repository configuration](https://docs.openvino.ai/2022.2/ovms_docs_models_repository.html)
 
-* [Using a docker container](https://docs.openvino.ai/2022.3/ovms_docs_deploying_server.html)
-
-* [Landing on bare metal or virtual machine](https://docs.openvino.ai/2022.3/ovms_docs_deploying_server.html)
+* [Deployment options](https://docs.openvino.ai/2022.3/ovms_docs_deploying_server.html)
 
 * [Performance tuning](https://docs.openvino.ai/2022.2/ovms_docs_performance_tuning.html)
 
