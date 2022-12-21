@@ -56,31 +56,6 @@ Check out our recommendations for [throughput optimization on HDDL](performance_
 > It requires RW permissions in the docker container security context. 
 > It is recommended to start the docker container in the same context as the account starting _hddldaemon_. For example, if you start the _hddldaemon_ as root, add `--user root` to the `docker run` command.
 
-## Model Server image with Intel® Data Center GPU Flex Series and Intel® Arc™ GPU support (Ubuntu 20.04)
-
-To build the image, you need to have NEO Runtime packages available. Contact Intel representative to get the access to the preproduction drivers.
-
-Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
-```
-drivers
-└── dg2
-     ├── intel-igc-core_<version>_amd64.deb
-     ├── intel-igc-opencl_<version>_amd64.deb
-     ├── intel-level-zero-gpu-dbgsym_<version>_amd64.ddeb
-     ├── intel-level-zero-gpu_<version>_amd64.deb
-     ├── intel-opencl-icd-dbgsym_<version>_amd64.ddeb
-     ├── intel-opencl-icd_<version>_amd64.deb
-     ├── libigdgmm12_<version>_amd64.deb
-     └── libigdgmm12_<version>_amd64.deb
-```
-
-and run `make docker_build` with parameter: `INSTALL_DRIVER_VERSION=dg2`.
-
-Example:
-```
-make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
-```
-
 ## Starting a Docker Container with Intel integrated GPU, Intel® Data Center GPU Flex Series and Intel® Arc™ GPU
 
 The [GPU plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html) uses the Intel Compute Library for 
