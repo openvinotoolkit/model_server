@@ -45,7 +45,9 @@ Run inference with requested model or [DAG](./dag_scheduler.md).
 
 Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-1).
 
-> **NOTE**: Inference supports putting tensor buffers either in `ModelInferRequest`'s [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155) and [raw_input_contents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202). There is no support for BF16 data type and there is no support for using FP16 in `InferTensorContents`. In case of sending raw images jpeg files BYTES data type should be used and data should be put in `InferTensorContents`'s `bytes_contents`.
+> **NOTE**: Inference supports putting tensor buffers either in `ModelInferRequest`'s [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155) and [raw_input_contents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202). There is no support for BF16 data type and there is no support for using FP16 in `InferTensorContents`. In case of sending raw images jpeg files BYTES data type should be used and data should be put in `InferTensorContents`'s `bytes_contents` or `raw_input_contents` for batch size equal to 1.
+
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
 ## See Also
 
