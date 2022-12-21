@@ -20,7 +20,7 @@ from json.decoder import JSONDecodeError
 import requests
 from http import HTTPStatus
 from numpy import array, int32, float32, float128
-from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
+from ovmsclient.tfs_compat.protos.tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 
 from ovmsclient.tfs_compat.base.errors import InvalidInputError, ModelNotFoundError
 from config import CallCount, PATH_VALID # noqa
@@ -41,11 +41,15 @@ PREDICT_REQUEST_INVALID_INPUTS = [
     ({
         "input1": [[1.0, 2.0], [1.0, 2.0, 3.0]]
     }, 'model_name', 0, ValueError,
-     ("argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]] - "
-      "got shape [2], but wanted [2, 2]")),
+     ("setting an array element with a sequence. "
+      "The requested array has an inhomogeneous shape after 1 dimensions. "
+      "The detected shape was (2,) + inhomogeneous part.")),
     ({
         "input1": [[(1, 2, 3)], [(1, 2)], [(1, 2, 3)]]
-    }, 'model_name', 0, TypeError, "provided values type is not valid"),
+    }, 'model_name', 0, ValueError,
+     ("setting an array element with a sequence. "
+      "The requested array has an inhomogeneous shape after 2 dimensions. "
+      "The detected shape was (3, 1) + inhomogeneous part.")),
     ({
         "input1": float128(2.5)
     }, 'model_name', 0, TypeError, "provided values type is not valid"),
@@ -122,11 +126,15 @@ PARSE_INPUT_DATA_VALID = [
 # expected_exception, expected_message)
 PARSE_INPUT_DATA_INVALID = [
     ([[1.0, 2.0], [1.0, 2.0, 3.0]], ValueError,
-     ("argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]] - "
-      "got shape [2], but wanted [2, 2]")),
+     ("setting an array element with a sequence. "
+      "The requested array has an inhomogeneous shape after 1 dimensions. "
+      "The detected shape was (2,) + inhomogeneous part.")),
 
     ([[(1, 2, 3)], [(1, 2)], [(1, 2, 3)]],
-     TypeError, "provided values type is not valid"),
+     ValueError,
+     ("setting an array element with a sequence. "
+      "The requested array has an inhomogeneous shape after 2 dimensions. "
+      "The detected shape was (3, 1) + inhomogeneous part.")),
 
     ([1, 2, 3, "str"],
      TypeError, "provided values type is not valid"),

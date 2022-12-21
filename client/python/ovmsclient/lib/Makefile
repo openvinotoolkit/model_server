@@ -15,10 +15,11 @@
 #
 
 VIRTUALENV_EXE := python3 -m virtualenv -p python3
-VIRTUALENV_DIR := .venv
+VIRTUALENV_DIR := .venv-ovmsclient
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 
-PACKAGE_PATH := dist/ovmsclient-2022.2-py3-none-any.whl
+PACKAGE_PATH := dist/ovmsclient-2022.3-py3-none-any.whl
+TEST_TYPE := BASIC
 
 .PHONY: build-deps build-package build test clean style
 
@@ -55,9 +56,15 @@ test: venv
 	@. $(ACTIVATE); pip3 install $(PACKAGE_PATH) --force-reinstall
 	@echo "Running ovmsclient tests"
 	@. $(ACTIVATE); pytest -v tests/
+ifeq ($(TEST_TYPE), FULL)
+	@echo "Installing NumPy version: 1.23"
+	@. $(ACTIVATE); pip3 install numpy==1.23
+	@echo "Rerunning ovmsclient tests with NumPy 1.23"
+	@. $(ACTIVATE); pytest -v tests/
+endif
 
 clean:
-	@rm -rf tf/ tfs/ tensorflow/ tensorflow_serving/ build/ dist/
+	@rm -rf tf/ tfs/ compiled_protos/ build/ dist/ ovmsclient/tfs_compat/protos
 
 style: venv
 	@. $(ACTIVATE); pip3 install flake8==5.0.1
