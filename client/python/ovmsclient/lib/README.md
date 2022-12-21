@@ -6,7 +6,7 @@ OVMS client library contains only the necessary dependencies, so the whole packa
 
 As OpenVINO Model Server API is compatible with TensorFlow Serving, it's possible to use `ovmsclient` with TensorFlow Serving instances on: Predict, GetModelMetadata and GetModelStatus endpoints.
 
-See [API documentation](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/ovmsclient/lib/docs/README.md) for details on what the library provides.
+See [API documentation](https://github.com/openvinotoolkit/model_server/blob/releases/2022/3/client/python/ovmsclient/lib/docs/README.md) for details on what the library provides.
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
@@ -44,7 +44,7 @@ Assuming you have TFS API built, you can use `make build-package` target to buil
 
 **To install the package run:**
 ```bash
-pip3 install --force-reinstall --no-deps dist/ovmsclient-2022.2-py3-none-any.whl
+pip3 install --force-reinstall --no-deps dist/ovmsclient-2022.3-py3-none-any.whl
 ```
 
 *Note*: For development purposes you may want to repeatedly reinstall the package.
@@ -61,7 +61,7 @@ make build-package
 ```
  - `make test` - runs tests on `ovmsclient` package. By default the package located in `dist/` directory is used. To specify custom package path pass `PACKAGE_PATH` option like: 
 
-   `make test PACKAGE_PATH=/opt/packages/ovmsclient-2022.2-py3-none-any.whl`
+   `make test PACKAGE_PATH=/opt/packages/ovmsclient-2022.3-py3-none-any.whl`
 ```bash
 make test
 ```
@@ -136,4 +136,4 @@ results = client.predict(inputs=inputs, model_name="model")
 #
 ```
 
-For more details on `ovmsclient` see [API reference](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/ovmsclient/lib/docs/README.md)
+For more details on `ovmsclient` see [API reference](https://github.com/openvinotoolkit/model_server/blob/releases/2022/3/client/python/ovmsclient/lib/docs/README.md)

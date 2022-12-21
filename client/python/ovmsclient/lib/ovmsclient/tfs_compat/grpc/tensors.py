@@ -42,7 +42,8 @@ NP_TO_TENSOR_MAP = {
     np.uint64: TensorType(TensorDtype=DataType.DT_UINT64, TensorProtoField="uint64_val"),
     np.complex64: TensorType(TensorDtype=DataType.DT_COMPLEX64, TensorProtoField="scomplex_val"),
     np.complex128: TensorType(TensorDtype=DataType.DT_COMPLEX128, TensorProtoField="dcomplex_val"),
-    np.bool: TensorType(TensorDtype=DataType.DT_BOOL, TensorProtoField="bool_val"),
+    np.bool_: TensorType(TensorDtype=DataType.DT_BOOL, TensorProtoField="bool_val"), # previously deperecated np.bool is now removed 
+    bool: TensorType(TensorDtype=DataType.DT_BOOL, TensorProtoField="bool_val"), # standard Python bool and np.bool_ replace np.bool
     np.bytes_: TensorType(TensorDtype=DataType.DT_STRING, TensorProtoField="string_val")
 }
 
@@ -77,18 +78,16 @@ def _cast_bytes_to_dtype(values, dtype):
         raise ValueError(f'could not cast bytes to {dtype}. {e_info}')
 
 
-def _get_dense_dimensions(values):
-    if not isinstance(values, (list, np.ndarray)):
-        return []
-    elif len(values) == 0:
-        return [0]
-    else:
-        return [len(values)] + _get_dense_dimensions(values[0])
-
-
 def _is_bytes_shape_valid(inferred_shape, tensor_values):
     return (len(inferred_shape) > 1 or (len(tensor_values.shape) > 1 and inferred_shape == []))
 
+def _check_if_array_homogeneous(tensor_values):
+    # Exception details match numpy ValueError thrown on attempt to create inhomogeneous numpy array in versions >=1.24
+    # This function has been created to provide the same user experience for both pre and post 1.24 numpy versions
+    if tensor_values.dtype.type is np.object_ or tensor_values.dtype.type is object:
+            raise ValueError('setting an array element with a sequence. The requested array '
+                             f'has an inhomogeneous shape after {len(tensor_values.shape)} dimensions. ' 
+                             f'The detected shape was {tensor_values.shape} + inhomogeneous part.')
 
 @ovmsclient_export("make_tensor_proto", grpcclient="make_tensor_proto")
 def make_tensor_proto(values, dtype=None, shape=None):
@@ -146,11 +145,8 @@ def make_tensor_proto(values, dtype=None, shape=None):
     if isinstance(values, np.ndarray):
         tensor_values = values
     elif isinstance(values, list):
-        dense_dimensions = _get_dense_dimensions(values)
         tensor_values = np.array(values)
-        if (list(tensor_values.shape) != dense_dimensions):
-            raise ValueError(f'argument must be a dense tensor: {values} - got shape '
-                             f'{list(tensor_values.shape)}, but wanted {dense_dimensions}')
+        _check_if_array_homogeneous(tensor_values)
     elif np.isscalar(values):
         tensor_values = np.array([values])
     else:
@@ -274,7 +270,7 @@ def make_ndarray(tensor_proto):
     elif np_dtype == np.complex128:
         it = iter(tensor_proto.dcomplex_val)
         values = np.array([complex(x[0], x[1]) for x in zip(it, it)], dtype=np_dtype)
-    elif np_dtype == np.bool:
+    elif np_dtype == np.bool_ or np_dtype == bool:
         values = np.fromiter(tensor_proto.bool_val, dtype=np_dtype)
     else:
         raise TypeError("Unsupported tensor type: %s" % tensor_proto.dtype)

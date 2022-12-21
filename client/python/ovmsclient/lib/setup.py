@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 Intel Corporation
+# Copyright (c) 2021-2022 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,17 +49,17 @@ long_description = (this_directory / "docs/pypi_overview.md").read_text()
 
 setuptools.setup(
      name="ovmsclient",
-     version="2022.2",
+     version="2022.3",
      license="Apache License 2.0",
      author="Intel Corporation",
      author_email="ovms.engineering@intel.com",
      description="Python client for OpenVINO Model Server",
      long_description=long_description,
      long_description_content_type="text/markdown",
-     url="https://github.com/openvinotoolkit/model_server/tree/releases/2022/2/client/python/ovmsclient/lib",
+     url="https://github.com/openvinotoolkit/model_server/tree/releases/2022/3/client/python/ovmsclient/lib",
      cmdclass={
         "build_apis": BuildApis,
      },
      packages=setuptools.find_namespace_packages(include=["ovmsclient*", "tensorflow*", "tensorflow_serving*"]),
-     install_requires=["grpcio==1.47.0", "protobuf>=3.19.4,<4.0.0", "numpy>=1.16.6,<=1.23.1", "requests==2.27.1"],
+     install_requires=["grpcio>=1.47.0", "protobuf>=3.19.4", "numpy>=1.16.6", "requests>=2.27.1"],
  )

@@ -20,7 +20,8 @@ import numpy as np
 from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRequest,
                                                  ModelStatusRequest, _check_model_spec)
 from ovmsclient.tfs_compat.grpc.tensors import (NP_TO_TENSOR_MAP, DataType,
-                                                _get_dense_dimensions, _is_bytes_shape_valid)
+                                                _is_bytes_shape_valid, 
+                                                _check_if_array_homogeneous)
 
 
 class HttpPredictRequest(PredictRequest):
@@ -172,11 +173,8 @@ def _parse_input_data(values):
     if isinstance(values, np.ndarray):
         tensor_values = values
     elif isinstance(values, list):
-        dense_dimensions = _get_dense_dimensions(values)
         tensor_values = np.array(values)
-        if (list(tensor_values.shape) != dense_dimensions):
-            raise ValueError(f'argument must be a dense tensor: {values} - got shape '
-                             f'{list(tensor_values.shape)}, but wanted {dense_dimensions}')
+        _check_if_array_homogeneous(tensor_values)
     elif np.isscalar(values):
         tensor_values = np.array([values])
     else:

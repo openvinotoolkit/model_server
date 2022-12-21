@@ -539,14 +539,15 @@ def test_make_tensor_proto_invalid_shape_element_values():
     assert str(exception) == "shape type should be list or tuple with unsigned integers"
 
 
-@pytest.mark.causes_deprecation_warning
+@pytest.mark.causes_deprecation_warning(triggered_by="numpy<1.24")
 def test_make_tensor_proto_invalid_dimensions():
     values = [[1.0, 2.0], [1.0, 2.0, 3.0]]
     with pytest.raises(ValueError) as exception_info:
         make_tensor_proto(values=values, shape=[2, 3], dtype=DataType.DT_FLOAT)
     exception = exception_info.value
-    assert str(exception) == ("argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]] "
-                              "- got shape [2], but wanted [2, 2]")
+    assert str(exception) == ("setting an array element with a sequence. "
+                              "The requested array has an inhomogeneous shape after 1 dimensions. " 
+                              "The detected shape was (2,) + inhomogeneous part.")
 
 
 def test_make_tensor_proto_invalid_string_to_float_dtype():
@@ -558,36 +559,38 @@ def test_make_tensor_proto_invalid_string_to_float_dtype():
                               "buffer size must be a multiple of element size")
 
 
-@pytest.mark.causes_deprecation_warning
+@pytest.mark.causes_deprecation_warning(triggered_by="numpy<1.24")
 def test_make_tensor_proto_invalid_string_dimensions():
     values = bytes([0x13, 0x00])
     with pytest.raises(ValueError) as exception_info:
         make_tensor_proto(values=[[values, values, values], [values, values]],
                           shape=None, dtype=DataType.DT_STRING)
     exception = exception_info.value
-    assert str(exception) == ("argument must be a dense tensor: "
-                              f"{[[values, values, values], [values, values]]} "
-                              "- got shape [2], but wanted [2, 3]")
+    assert str(exception) == ("setting an array element with a sequence. "
+                              "The requested array has an inhomogeneous shape after 1 dimensions. " 
+                              "The detected shape was (2,) + inhomogeneous part.")
 
 
-@pytest.mark.causes_deprecation_warning
+@pytest.mark.causes_deprecation_warning(triggered_by="numpy<1.24")
 def test_make_tensor_proto_invalid_dimensions_2():
     values = [[(1, 2, 3)], [(1, 2)], [(1, 2, 3)]]
     with pytest.raises(ValueError) as exception_info:
         make_tensor_proto(values=values, shape=[2, 3], dtype=DataType.DT_FLOAT)
     exception = exception_info.value
-    assert str(exception) == ("could not cast values to <class 'numpy.float32'>. "
-                              "setting an array element with a sequence.")
+    assert str(exception) == ("setting an array element with a sequence. "
+                              "The requested array has an inhomogeneous shape after 2 dimensions. " 
+                              "The detected shape was (3, 1) + inhomogeneous part.")
 
 
-@pytest.mark.causes_deprecation_warning
+@pytest.mark.causes_deprecation_warning(triggered_by="numpy<1.24")
 def test_make_tensor_proto_invalid_dimensions_no_shape_provided():
-    values = [[1, 2, 3], [4, 5]]
+    values = [[[1,2], [3,4]], [[1,2], [3,4]], [[1,2,3],[4]]]
     with pytest.raises(ValueError) as exception_info:
         make_tensor_proto(values=values, shape=None, dtype=DataType.DT_INT8)
     exception = exception_info.value
-    assert str(exception) == ("argument must be a dense tensor: [[1, 2, 3], [4, 5]] "
-                              "- got shape [2], but wanted [2, 3]")
+    assert str(exception) == ("setting an array element with a sequence. "
+                              "The requested array has an inhomogeneous shape after 2 dimensions. " 
+                              "The detected shape was (3, 2) + inhomogeneous part.")
 
 
 def test_make_tensor_proto_invalid_shape_type():

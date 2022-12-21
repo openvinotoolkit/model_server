@@ -118,7 +118,7 @@ def test_make_predict_request_invalid_model_spec(mocker, name, version,
     mock_method.assert_called_once()
 
 
-@pytest.mark.causes_deprecation_warning
+@pytest.mark.causes_deprecation_warning(triggered_by="numpy<1.24")
 @pytest.mark.parametrize("""inputs, name, version,
                             expected_exception, expected_message""", PREDICT_REQUEST_INVALID_INPUTS)
 def test_make_predict_request_invalid_inputs(mocker, inputs, name, version,
