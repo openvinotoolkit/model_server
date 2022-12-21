@@ -114,4 +114,16 @@ make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=releases/2022/3 OV_C
 docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --target_device NVIDIA
 ```
 
+<hr />
+
+### `OV_USE_BINARY`
+
+By default set to `1`. When set to `0`, OpenVINO will be built from sources and `DLDT_PACKAGE_URL` will be omitted.  
+Use `OV_SOURCE_BRANCH` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch. By default `master` will be used.
+
+Example:
+```bash
+make docker_build OV_USE_BINARY=0 OV_SOURCE_BRANCH=<commit or branch>
+```
+  
 Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/develop/docs/developer_guide.md).
