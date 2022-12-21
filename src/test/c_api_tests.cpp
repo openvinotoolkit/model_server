@@ -121,7 +121,9 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     // Set non default values
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(_serverSettings, 5555));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(_serverSettings, 6666));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcWorkers(_serverSettings, 30));
+    // Skipped due to underlying requirement that gRPC workers should be in range from [1-available cores].
+    // We cannot be sure that machine running unit tests will have more than 1 core
+    // ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcWorkers(_serverSettings, 30));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcBindAddress(_serverSettings, "2.2.2.2"));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestWorkers(_serverSettings, 31));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestBindAddress(_serverSettings, "3.3.3.3"));
@@ -166,7 +168,7 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     // Test non default values
     EXPECT_EQ(serverSettings->grpcPort, 5555);
     EXPECT_EQ(serverSettings->restPort, 6666);
-    EXPECT_EQ(serverSettings->grpcWorkers, 30);
+    // EXPECT_EQ(serverSettings->grpcWorkers, 30);
     EXPECT_EQ(serverSettings->grpcBindAddress, "2.2.2.2");
     EXPECT_EQ(serverSettings->restWorkers, 31);
     EXPECT_EQ(serverSettings->restBindAddress, "3.3.3.3");
@@ -190,7 +192,7 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings));
     EXPECT_EQ(cfg.port(), 5555);
     EXPECT_EQ(cfg.restPort(), 6666);
-    EXPECT_EQ(cfg.grpcWorkers(), 30);
+    // EXPECT_EQ(cfg.grpcWorkers(), 30);
     EXPECT_EQ(cfg.grpcBindAddress(), "2.2.2.2");
     EXPECT_EQ(cfg.restWorkers(), 31);
     EXPECT_EQ(cfg.restBindAddress(), "3.3.3.3");
