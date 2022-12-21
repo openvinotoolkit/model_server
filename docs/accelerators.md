@@ -221,7 +221,7 @@ Below is an example of the command with AUTO Plugin as target device. It include
 
 The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
 
-> **NOTE**: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
+> **NOTE**: NUM_STREAMS and PERFORMANCE_HINT should not be used together.
 
 To enable Performance Hints for your application, use the following command:
 
