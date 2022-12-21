@@ -16,11 +16,12 @@
 #pragma once
 #include <memory>
 
-#include "server.hpp"
+#include "module.hpp"
 
 namespace ovms {
 class Config;
 class ModelManager;
+class Server;
 
 class ServableManagerModule : public Module {
 protected:
@@ -29,7 +30,8 @@ protected:
 public:
     ServableManagerModule(ovms::Server& ovmsServer);
     ~ServableManagerModule();
-    int start(const ovms::Config& config) override;
+    Status start(const ovms::Config& config) override;
+
     void shutdown() override;
     virtual ModelManager& getServableManager() const;
 };

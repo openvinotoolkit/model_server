@@ -19,6 +19,7 @@
 #include "logging.hpp"
 #include "nodeinputhandler.hpp"
 #include "nodeoutputhandler.hpp"
+#include "status.hpp"
 #include "tensor_utils.hpp"
 #include "timer.hpp"
 
@@ -33,7 +34,7 @@ Status NodeSession::setInput(const std::string& inputName, TensorWithSource& ten
     return inputHandler->setInput(inputName, tensor, shardId);
 }
 
-std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, const CollapseDetails& collapsingDetails) {
+static std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, const CollapseDetails& collapsingDetails) {
     if (collapsingDetails.collapsedSessionNames.size() == 0) {
         return std::make_unique<NodeInputHandler>(inputsCount);
     } else {

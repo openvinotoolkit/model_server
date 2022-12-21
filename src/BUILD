@@ -44,16 +44,65 @@ cc_library(
 
 load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
 
+cc_shared_library(
+    name = "ovms_shared",
+    dynamic_deps = [],
+    static_deps = ["@tensorflow_serving//:__subpackages__",
+        "@minitrace//:__subpackages__",
+        "@rapidjson//:__subpackages__",
+        "@spdlog//:__subpackages__",
+        "@fmtlib//:__subpackages__",
+        "@cxxopts//:__subpackages__",
+        "@awssdk//:__subpackages__",
+        "@boost//:__subpackages__",
+        "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
+        "@curl//:__subpackages__",
+        "@com_github_google_crc32c//:__subpackages__",
+        "@com_github_googleapis_google_cloud_cpp_common//:__subpackages__",
+        "@com_github_libevent_libevent//:__subpackages__",
+        "@com_google_protobuf//:__subpackages__",
+        "@com_github_tencent_rapidjson//:__subpackages__",
+        "@org_tensorflow//:__subpackages__",
+        "@com_google_absl//:__subpackages__",
+        "@gif//:__subpackages__",
+        "@libjpeg_turbo//:__subpackages__",
+        "@farmhash_archive//:__subpackages__",
+        "@fft2d//:__subpackages__",
+        "@highwayhash//:__subpackages__",
+        "@com_googlesource_code_re2//:__subpackages__",
+        "@snappy//:__subpackages__",
+        "@double_conversion//:__subpackages__",
+        "@nsync//:__subpackages__",
+        "@eigen_archive//:__subpackages__",
+        "@openvino//:__subpackages__",
+        "@com_github_jupp0r_prometheus_cpp//:__subpackages__",
+        "@//:__subpackages__",
+        "@com_github_grpc_grpc//:__subpackages__",
+        "@upb//:__subpackages__",
+        "@zlib//:__subpackages__",
+    ],
+    features = [],
+    roots = ["//src:ovms_lib"],
+)
+
 cc_library(
     name = "ovms_lib",
-    linkstatic = 1,
+    hdrs = ["ovms.h"],
     srcs = [
         "aliases.hpp",
         "azurestorage.hpp",
         "azurestorage.cpp",
         "azurefilesystem.cpp",
         "azurefilesystem.hpp",
+        "buffer.cpp",
+        "buffer.hpp",
+        "capi_frontend/capi.cpp",
+        "capi_frontend/capi_utils.cpp",
+        "capi_frontend/capi_utils.hpp",
+        "cleaner_utils.cpp",
         "cleaner_utils.hpp",
+        "cli_parser.cpp",
+        "cli_parser.hpp",
         "config.cpp",
         "config.hpp",
         "custom_node.cpp",
@@ -109,10 +158,22 @@ cc_library(
         "gatherexitnodeinputhandler.hpp",
         "gcsfilesystem.cpp",
         "gcsfilesystem.hpp",
+        "grpc_utils.cpp",
+        "grpc_utils.hpp",
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
-        "kfs_grpc_inference_service.cpp",
-        "kfs_grpc_inference_service.hpp",
+        "inferenceparameter.cpp",
+        "inferenceparameter.hpp",
+        "inferenceresponse.cpp",
+        "inferenceresponse.hpp",
+        "inferencerequest.cpp",
+        "inferencerequest.hpp",
+        "inferencetensor.cpp",
+        "inferencetensor.hpp",
+        "kfs_frontend/kfs_grpc_inference_service.cpp",
+        "kfs_frontend/kfs_grpc_inference_service.hpp",
+        "kfs_frontend/kfs_utils.cpp",
+        "kfs_frontend/kfs_utils.hpp",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",
@@ -166,10 +227,12 @@ cc_library(
         "ovinferrequestsqueue.hpp",
         "ov_utils.cpp",
         "ov_utils.hpp",
+        "ovms.h",
         "pipeline.cpp",
         "pipeline.hpp",
         "pipelinedefinition.cpp",
         "pipelinedefinition.hpp",
+        "pipelinedefinitionstatus.cpp",
         "pipelinedefinitionstatus.hpp",
         "pipelinedefinitionunloadguard.cpp",
         "pipelinedefinitionunloadguard.hpp",
@@ -200,6 +263,7 @@ cc_library(
         "serialization.hpp",
         "servablemanagermodule.cpp",
         "servablemanagermodule.hpp",
+        "server_settings.hpp",
         "server.cpp",
         "server.hpp",
         "session_id.hpp",
@@ -254,7 +318,6 @@ cc_library(
         "@openvino//:openvino",
         "@opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
-        #":kfserving_api_cpp",
         "//src/kfserving_api:kfserving_api_cpp",
     ],
     local_defines = [
@@ -265,6 +328,15 @@ cc_library(
         "-Wno-unknown-pragmas",
         "-Werror",
     ],
+    visibility = [
+        "//visibility:public",
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+    ]
 )
 
 cc_binary(
@@ -463,6 +535,63 @@ cc_binary(
     ]
 )
 
+# POC which can start OVMS with C-API built by bazel
+# Standalone example for building outside of bazel (with bare g++ is inside MakefileCapi)
+cc_binary(
+    name = "capi_cpp_example",
+    srcs = [
+        "main_capi.cpp",
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+    ],
+    copts = [
+    ],
+    deps = [
+        "//src:ovms_lib",
+    ],
+    linkstatic = True,
+)
+
+# Use for dynamic linking when neccessary
+cc_import(
+  name = "shared_lib",
+  hdrs = ["ovms.h"],
+  shared_library = "ovms_shared",
+)
+
+cc_library(
+    name = "cpp_headers",
+    srcs = ["server.hpp",
+        "module.hpp",],
+    deps = ["//src:shared_lib"]
+)
+
+cc_binary(
+    name = "capi_benchmark",
+    srcs = [
+        "main_benchmark.cpp",
+        "stringutils.cpp",
+        "stringutils.hpp",
+    ],
+    linkopts = [
+        "-lpthread",
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+    ],
+    copts = [
+    ],
+    deps = [
+        "//src:ovms_lib",
+    ],
+    linkstatic = True,
+)
+
 cc_binary(
     name = "ovms",
     srcs = [
@@ -473,6 +602,7 @@ cc_binary(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
+        # "-lovms_shared",  # Use for dynamic linking when neccessary
     ],
     copts = [
         "-Wconversion",
@@ -480,7 +610,9 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-    ]
+        # "//src:cpp_headers",  # Use for dynamic linking when neccessary
+    ],
+    # linkstatic = False,  # Use for dynamic linking when neccessary
 )
 
 cc_test(
@@ -489,6 +621,7 @@ cc_test(
     srcs = [
         "test/azurefilesystem_test.cpp",
         "test/binaryutils_test.cpp",
+        "test/c_api_tests.cpp",
         "test/custom_loader_test.cpp",
         "test/custom_node_output_allocator_test.cpp",
         "test/custom_node_buffersqueue_test.cpp",
@@ -507,6 +640,7 @@ cc_test(
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/http_rest_api_handler_test.cpp",
+        "test/inferencerequest_test.cpp",
         "test/kfs_metadata_test.cpp",
         "test/kfs_rest_test.cpp",
         "test/layout_test.cpp",
@@ -529,6 +663,7 @@ cc_test(
         "test/ovinferrequestqueue_test.cpp",
         "test/ov_utils_test.cpp",
         "test/pipelinedefinitionstatus_test.cpp",
+        "test/capi_predict_validation_test.cpp",
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
         "test/tfs_rest_parser_row_test.cpp",

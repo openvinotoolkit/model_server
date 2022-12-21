@@ -21,10 +21,9 @@
 #include <utility>
 #include <vector>
 
-#include "customloaderinterface.hpp"
-#include "status.hpp"
-
 namespace ovms {
+class CustomLoaderInterface;
+class Status;
 /**
      * @brief Provides all customloaders
      */

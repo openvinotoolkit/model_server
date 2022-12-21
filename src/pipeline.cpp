@@ -21,10 +21,13 @@
 #include <string>
 #include <utility>
 
+#include "execution_context.hpp"
 #include "logging.hpp"
 #include "node.hpp"
+#include "nodesession.hpp"
 #include "pipelineeventqueue.hpp"
 #include "profiler.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
@@ -60,7 +63,7 @@ void printNodeConnections(const std::string& nodeName, const std::string& source
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, ss.str());
 }
 
-void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newFailStatus) {
+inline static void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newFailStatus) {
     if (earlierStatusCode.ok()) {
         earlierStatusCode = newFailStatus;
     }

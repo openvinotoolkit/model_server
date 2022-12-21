@@ -19,6 +19,7 @@
 #include <string>
 
 #include "rest_utils.hpp"
+#include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
@@ -311,7 +312,7 @@ bool TFSRestParser::setDimOrValidate(tensorflow::TensorProto& proto, int dim, in
     }
 }
 
-bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
+static bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
     if (!isBinary(value)) {
         return false;
     }
@@ -321,7 +322,7 @@ bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
 }
 
 template <typename T>
-bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
+static bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
     if (sizeof(T) != DataTypeSize(proto.dtype())) {
         return false;
     }
@@ -330,7 +331,7 @@ bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
 }
 
 template <typename T>
-bool addToTensorContent(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
+static bool addToTensorContent(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
     if (value.IsDouble()) {
         return addToTensorContent<T>(proto, static_cast<T>(value.GetDouble()));
     }
@@ -350,7 +351,7 @@ bool addToTensorContent(tensorflow::TensorProto& proto, const rapidjson::Value& 
     return false;
 }
 
-bool addToHalfVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
+static bool addToHalfVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
     if (value.IsDouble()) {
         proto.add_half_val(value.GetDouble());
         return true;
@@ -375,7 +376,7 @@ bool addToHalfVal(tensorflow::TensorProto& proto, const rapidjson::Value& value)
     return false;
 }
 
-bool addToIntVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
+static bool addToIntVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
     if (value.IsDouble()) {
         proto.add_int_val(value.GetDouble());
         return true;
@@ -501,10 +502,10 @@ Status KFSRestParser::parseId(rapidjson::Value& node) {
 Status KFSRestParser::parseRequestParameters(rapidjson::Value& node){
     PARSE_PARAMETER(requestProto)}
 
-Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor& input){
+Status KFSRestParser::parseInputParameters(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input){
     PARSE_PARAMETER(input)}
 
-Status KFSRestParser::parseOutputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferRequestedOutputTensor& output){
+Status KFSRestParser::parseOutputParameters(rapidjson::Value& node, ::KFSRequest::InferRequestedOutputTensor& output){
     PARSE_PARAMETER(output)}
 
 Status KFSRestParser::parseOutput(rapidjson::Value& node) {
@@ -542,47 +543,47 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
     return StatusCode::OK;
 }
 
-#define HANDLE_VALUE(CONTENTS, TYPE_GETTER, TYPE_CHECK)                  \
-    for (auto& value : node.GetArray()) {                                \
-        if (value.IsArray()) {                                           \
-            for (auto& v : node.GetArray()) {                            \
-                auto status = parseData(v, input);                       \
-                if (!status.ok()) {                                      \
-                    return status;                                       \
-                }                                                        \
-            }                                                            \
-            return StatusCode::OK;                                       \
-        }                                                                \
-        if (!value.TYPE_CHECK()) {                                       \
-            return StatusCode::REST_COULD_NOT_PARSE_INPUT;               \
-        }                                                                \
-        input->mutable_contents()->CONTENTS()->Add(value.TYPE_GETTER()); \
+#define HANDLE_VALUE(CONTENTS, TYPE_GETTER, TYPE_CHECK)                 \
+    for (auto& value : node.GetArray()) {                               \
+        if (value.IsArray()) {                                          \
+            for (auto& v : node.GetArray()) {                           \
+                auto status = parseData(v, input);                      \
+                if (!status.ok()) {                                     \
+                    return status;                                      \
+                }                                                       \
+            }                                                           \
+            return StatusCode::OK;                                      \
+        }                                                               \
+        if (!value.TYPE_CHECK()) {                                      \
+            return StatusCode::REST_COULD_NOT_PARSE_INPUT;              \
+        }                                                               \
+        input.mutable_contents()->CONTENTS()->Add(value.TYPE_GETTER()); \
     }
 
-Status KFSRestParser::parseData(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input) {
-    if (input->datatype() == "FP32") {
+Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input) {
+    if (input.datatype() == "FP32") {
         HANDLE_VALUE(mutable_fp32_contents, GetFloat, IsNumber)
-    } else if (input->datatype() == "INT64") {
+    } else if (input.datatype() == "INT64") {
         HANDLE_VALUE(mutable_int64_contents, GetInt64, IsInt)
-    } else if (input->datatype() == "INT32") {
+    } else if (input.datatype() == "INT32") {
         HANDLE_VALUE(mutable_int_contents, GetInt, IsInt)
-    } else if (input->datatype() == "INT16") {
+    } else if (input.datatype() == "INT16") {
         HANDLE_VALUE(mutable_int_contents, GetInt, IsInt)
-    } else if (input->datatype() == "INT8") {
+    } else if (input.datatype() == "INT8") {
         HANDLE_VALUE(mutable_int_contents, GetInt, IsInt)
-    } else if (input->datatype() == "UINT64") {
+    } else if (input.datatype() == "UINT64") {
         HANDLE_VALUE(mutable_uint64_contents, GetUint64, IsUint)
-    } else if (input->datatype() == "UINT32") {
+    } else if (input.datatype() == "UINT32") {
         HANDLE_VALUE(mutable_uint_contents, GetUint, IsUint)
-    } else if (input->datatype() == "UINT16") {
+    } else if (input.datatype() == "UINT16") {
         HANDLE_VALUE(mutable_uint_contents, GetUint, IsUint)
-    } else if (input->datatype() == "UINT8") {
+    } else if (input.datatype() == "UINT8") {
         HANDLE_VALUE(mutable_uint_contents, GetUint, IsUint)
-    } else if (input->datatype() == "FP64") {
+    } else if (input.datatype() == "FP64") {
         HANDLE_VALUE(mutable_fp64_contents, GetFloat, IsNumber)
-    } else if (input->datatype() == "BOOL") {
+    } else if (input.datatype() == "BOOL") {
         HANDLE_VALUE(mutable_bool_contents, GetBool, IsBool)
-    } else if (input->datatype() == "BYTES") {
+    } else if (input.datatype() == "BYTES") {
         SPDLOG_DEBUG("For REST datatype BYTES is supported only with binary data extension");
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     } else {
@@ -591,7 +592,15 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::inference::ModelInferR
     return StatusCode::OK;
 }
 
-Status KFSRestParser::parseInput(rapidjson::Value& node) {
+static Status binaryDataSizeCanBeCalculated(::KFSRequest::InferInputTensor& input, bool onlyOneInput) {
+    if (input.datatype() == "BYTES" && (!onlyOneInput || input.shape_size() != 1 || input.shape()[0] != 1)) {
+        SPDLOG_DEBUG("Tensor: {} with datatype BYTES has no binary_data_size parameter and the size of the data cannot be calculated from shape.", input.name());
+        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+    }
+    return StatusCode::OK;
+}
+
+Status KFSRestParser::parseInput(rapidjson::Value& node, bool onlyOneInput) {
     if (!node.IsObject()) {
         return StatusCode::REST_COULD_NOT_PARSE_INPUT;
     }
@@ -633,14 +642,13 @@ Status KFSRestParser::parseInput(rapidjson::Value& node) {
         if (!(dataItr->value.IsArray())) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
-        return parseData(dataItr->value, input);
+        return parseData(dataItr->value, *input);
     } else {
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
         if (binary_data_size_parameter != input->parameters().end()) {
             return StatusCode::OK;
-        } else {
-            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
+        return binaryDataSizeCanBeCalculated(*input, onlyOneInput);
     }
 }
 
@@ -653,7 +661,7 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
     }
     requestProto.mutable_inputs()->Clear();
     for (auto& input : node.GetArray()) {
-        auto status = parseInput(input);
+        auto status = parseInput(input, (node.GetArray().Size() == 1));
         if (!status.ok()) {
             return status;
         }

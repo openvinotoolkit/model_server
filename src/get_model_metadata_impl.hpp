@@ -25,18 +25,18 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "execution_context.hpp"
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
 
 using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
 
+class ExecutionContext;
 class ModelInstance;
 class ModelManager;
 class PipelineDefinition;
 class Server;
+class Status;
 
 class GetModelMetadataImpl {
     ModelManager& modelManager;

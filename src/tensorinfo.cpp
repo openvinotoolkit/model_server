@@ -21,7 +21,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 
 namespace ovms {
@@ -133,14 +133,6 @@ const std::string& TensorInfo::getPrecisionAsString() const {
     return getPrecisionAsString(precision);
 }
 
-const std::string& TensorInfo::getPrecisionAsKFSPrecision(Precision precision) {
-    return ovmsPrecisionToKFSPrecision(precision);
-}
-
-const std::string& TensorInfo::getPrecisionAsKFSPrecision() const {
-    return getPrecisionAsKFSPrecision(precision);
-}
-
 const std::string& TensorInfo::getStringFromLayout(const Layout& layout) {
     return layout;
 }
@@ -177,11 +169,11 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPref
     copy->influencedByDemultiplexer = true;
     copy->shape.emplace(copy->shape.begin(), dim);
     copy->layout = this->getLayout();
-    auto batchPosition = copy->layout.find(BATCH_DIMENSION_LETTER);
+    auto batchPosition = copy->layout.find(Layout::BATCH_DIMENSION_LETTER);
     if (batchPosition != std::string::npos) {
-        copy->layout.replace(batchPosition, 1, std::string(1, UNDEFINED_DIMENSION_CHAR));
+        copy->layout.replace(batchPosition, 1, std::string(1, Layout::UNDEFINED_DIMENSION_CHAR));
     }
-    copy->layout = std::string(1, BATCH_DIMENSION_LETTER[0]) + copy->layout;
+    copy->layout = std::string(1, Layout::BATCH_DIMENSION_LETTER[0]) + copy->layout;
     return copy;
 }
 
@@ -235,21 +227,6 @@ std::string TensorInfo::shapeToString(const shape_t& shape) {
     std::ostringstream oss;
     oss << "(";
     size_t i = 0;
-    if (shape.size() > 0) {
-        for (; i < shape.size() - 1; i++) {
-            oss << shape[i] << ",";
-        }
-        oss << shape[i];
-    }
-    oss << ")";
-
-    return oss.str();
-}
-
-std::string tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& shape) {
-    std::ostringstream oss;
-    oss << "(";
-    int i = 0;
     if (shape.size() > 0) {
         for (; i < shape.size() - 1; i++) {
             oss << shape[i] << ",";

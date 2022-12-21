@@ -31,6 +31,7 @@
 #include "../pipelinedefinition.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
+#include "../stringutils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -42,16 +43,18 @@ using testing::Return;
 
 static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
-static const char* stressTestPipelineOneDummyConfig = R"(
+std::string createStressTestPipelineOneDummyConfig() {
+    return R"(
 {
     "monitoring": {
         "metrics": {
             "enable": true,
             "metrics_list": [
-                "ovms_current_requests",
-                "ovms_infer_req_active",
-                "ovms_requests_success",
-                "ovms_infer_req_queue_size"]
+                ")" +
+           METRIC_NAME_CURRENT_REQUESTS +
+           R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+           R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+           R"(",")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE + R"("]
         }
     },
     "model_config_list": [
@@ -93,6 +96,7 @@ static const char* stressTestPipelineOneDummyConfig = R"(
         }
     ]
 })";
+}
 static const char* stressTestPipelineOneDummyRemovedConfig = R"(
 {
     "model_config_list": [
@@ -1030,7 +1034,7 @@ public:
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         modelPath = directoryPath + "/dummy/";
-        SetUpConfig(stressTestPipelineOneDummyConfig);
+        SetUpConfig(createStressTestPipelineOneDummyConfig());
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     }
     void defaultVersionRemove() {
@@ -1126,17 +1130,17 @@ public:
         ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric\n"
                                                                                                                      << metricOutput;
         std::regex findActualMetricRgx(std::string{".*"} + metricName + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
-        std::regex findRequestsSuccessMetricRgx(std::string{".*ovms_requests_success\\{api=\"TensorFlowServing\",interface=\"gRPC\",method=\"Predict\",name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findRequestsSuccessMetricRgx(std::string{".*"} + METRIC_NAME_REQUESTS_SUCCESS + std::string{"\\{api=\"TensorFlowServing\",interface=\"gRPC\",method=\"Predict\",name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
         ASSERT_TRUE(std::regex_search(metricOutput, match, findActualMetricRgx)) << "cannot find dummys " << metricName << " metric\n"
                                                                                  << metricOutput;
         auto actualVal = ovms::stoi64(match[1]);
-        ASSERT_TRUE(std::regex_search(metricOutput, match, findRequestsSuccessMetricRgx)) << "cannot find dummys ovms_requests_success metric\n"
+        ASSERT_TRUE(std::regex_search(metricOutput, match, findRequestsSuccessMetricRgx)) << "cannot find dummys " << METRIC_NAME_REQUESTS_SUCCESS << " metric\n"
                                                                                           << metricOutput;
         auto requestsSuccessCounter = ovms::stoi64(match[1]);
-        ASSERT_TRUE(requestsSuccessCounter.has_value()) << "cannot parse ovms_requests_success\n"
+        ASSERT_TRUE(requestsSuccessCounter.has_value()) << "cannot parse " << METRIC_NAME_REQUESTS_SUCCESS << "\n"
                                                         << metricOutput;
-        SPDLOG_DEBUG("ovms_requests_success value: {}", requestsSuccessCounter.value());
+        SPDLOG_DEBUG("{} value: {}", METRIC_NAME_REQUESTS_SUCCESS, requestsSuccessCounter.value());
         ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number\n"
                                            << metricOutput;
         // In case of sporadic error here consider checking ovms_requests_success value (if 0, it could mean the load did not start yet (could happen on slower machines))
@@ -1145,8 +1149,8 @@ public:
     }
     void checkActiveNireqSmallerThanTotal() {
         std::string metricOutput = manager.getMetricRegistry()->collect();
-        std::regex findNireqTotalRgx(std::string{".*ovms_infer_req_queue_size\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
-        std::regex findNireqActiveRgx(std::string{".*ovms_infer_req_active\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findNireqTotalRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
+        std::regex findNireqActiveRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_ACTIVE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
         ASSERT_TRUE(std::regex_search(metricOutput, match, findNireqTotalRgx)) << "cannot find dummys total nireq in metric\n"
                                                                                << metricOutput;
@@ -1160,8 +1164,8 @@ public:
     }
     void testCurrentRequestsMetric() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        checkMetricGreaterThan("ovms_current_requests", 0);
-        checkMetricGreaterThan("ovms_infer_req_active", 0);
+        checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0);
+        checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0);
         checkActiveNireqSmallerThanTotal();
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -1325,7 +1329,6 @@ public:
         const std::set<StatusCode>& allowedLoadResults,
         std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
         tensorflow::serving::GetModelMetadataRequest request;
-        tensorflow::serving::GetModelMetadataResponse response;
         startSignal.get();
         // stressIterationsCounter is additional safety measure
         auto stressIterationsCounter = stressIterationsLimit;
@@ -1336,6 +1339,7 @@ public:
                 break;
             }
             auto status = ovms::GetModelMetadataImpl::createGrpcRequest(pipelineName, 1, &request);
+            tensorflow::serving::GetModelMetadataResponse response;
             status = ovms::GetModelMetadataImpl::getModelStatus(&request, &response, manager, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata));
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
@@ -1360,7 +1364,6 @@ public:
         const std::set<StatusCode>& allowedLoadResults,
         std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
         tensorflow::serving::GetModelStatusRequest request;
-        tensorflow::serving::GetModelStatusResponse response;
         startSignal.get();
         // stressIterationsCounter is additional safety measure
         // for getModelStatus requests it must be much higher since the response time is much lower
@@ -1373,6 +1376,7 @@ public:
                 break;
             }
             auto status = ovms::GetModelStatusImpl::createGrpcRequest(getServableName(), 1, &request);
+            tensorflow::serving::GetModelStatusResponse response;
             status = ovms::GetModelStatusImpl::getModelStatus(&request, &response, manager, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelStatus));
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
@@ -1901,10 +1905,11 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringGet
 TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
-        StatusCode::MODEL_NAME_MISSING,     // until first model is loaded
-        StatusCode::MODEL_VERSION_MISSING,  // this should be hit if test is stressing enough, pottentially to be moved to allowed
-        StatusCode::OK};                    // we expect full continuouity of operation
-    std::set<StatusCode> allowedLoadResults = {};
+        StatusCode::MODEL_NAME_MISSING,  // until first model is loaded
+        StatusCode::OK};                 // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MODEL_VERSION_MISSING  // this should be hit if test is stressing enough, sporadically does not happen
+    };
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
         &StressPipelineConfigChanges::addFirstModel,

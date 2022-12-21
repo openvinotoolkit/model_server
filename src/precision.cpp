@@ -85,103 +85,6 @@ Precision fromString(const std::string& s) {
     return it->second;
 }
 
-Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
-    static std::unordered_map<KFSDataType, Precision> precisionMap{
-        {"BOOL", Precision::BOOL},
-        {"FP64", Precision::FP64},
-        {"FP32", Precision::FP32},
-        {"FP16", Precision::FP16},
-        {"INT64", Precision::I64},
-        {"INT32", Precision::I32},
-        {"INT16", Precision::I16},
-        {"INT8", Precision::I8},
-        {"UINT64", Precision::U64},
-        {"UINT32", Precision::U32},
-        {"UINT16", Precision::U16},
-        // {"BYTES", Precision::??},
-        {"UINT8", Precision::U8}};
-    auto it = precisionMap.find(datatype);
-    if (it == precisionMap.end()) {
-        return Precision::UNDEFINED;
-    }
-    return it->second;
-}
-
-Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype) {
-    static std::unordered_map<TFSDataType, Precision> precisionMap{
-        {TFSDataType::DT_FLOAT, Precision::FP32},
-        {TFSDataType::DT_DOUBLE, Precision::FP64},
-        {TFSDataType::DT_HALF, Precision::FP16},
-        {TFSDataType::DT_INT64, Precision::I64},
-        {TFSDataType::DT_INT32, Precision::I32},
-        {TFSDataType::DT_INT16, Precision::I16},
-        {TFSDataType::DT_INT8, Precision::I8},
-        {TFSDataType::DT_UINT64, Precision::U64},
-        {TFSDataType::DT_UINT16, Precision::U16},
-        {TFSDataType::DT_UINT8, Precision::U8},
-        {TFSDataType::DT_BOOL, Precision::BOOL}};
-    auto it = precisionMap.find(datatype);
-    if (it == precisionMap.end()) {
-        return Precision::UNDEFINED;
-    }
-    return it->second;
-}
-
-size_t KFSDataTypeSize(const KFSDataType& datatype) {
-    static std::unordered_map<KFSDataType, size_t> datatypeSizeMap{
-        {"BOOL", 1},
-        {"UINT8", 1},
-        {"UINT16", 2},
-        {"UINT32", 4},
-        {"UINT64", 8},
-        {"INT8", 1},
-        {"INT16", 2},
-        {"INT32", 4},
-        {"INT64", 8},
-        {"FP16", 2},
-        {"FP32", 4},
-        {"FP64", 8}
-        // {"BYTES", },
-    };
-    auto it = datatypeSizeMap.find(datatype);
-    if (it == datatypeSizeMap.end()) {
-        return 0;
-    }
-    return it->second;
-}
-
-const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision) {
-    static std::unordered_map<Precision, KFSDataType> precisionMap{
-        {Precision::FP64, "FP64"},
-        {Precision::FP32, "FP32"},
-        {Precision::FP16, "FP16"},
-        {Precision::I64, "INT64"},
-        {Precision::I32, "INT32"},
-        {Precision::I16, "INT16"},
-        {Precision::I8, "INT8"},
-        {Precision::U64, "UINT64"},
-        {Precision::U32, "UINT32"},
-        {Precision::U16, "UINT16"},
-        {Precision::U8, "UINT8"},
-        {Precision::BOOL, "BOOL"}};
-    // {Precision::BF16, ""},
-    // {Precision::U4, ""},
-    // {Precision::U1, ""},
-    // {Precision::CUSTOM, ""},
-    // {Precision::DYNAMIC, ""},
-    // {Precision::MIXED, ""},
-    // {Precision::Q78, ""},
-    // {Precision::BIN, ""},
-    // {Precision::I4, ""},
-    // {Precision::UNDEFINED, "UNDEFINED"}};
-    auto it = precisionMap.find(precision);
-    if (it == precisionMap.end()) {
-        static const std::string invalid{"INVALID"};
-        return invalid;
-    }
-    return it->second;
-}
-
 ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
     static std::unordered_map<Precision, ov::element::Type_t> precisionMap{
         {Precision::FP64, ov::element::Type_t::f64},
@@ -199,6 +102,7 @@ ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
         {Precision::U4, ov::element::Type_t::u4},
         {Precision::U1, ov::element::Type_t::u1},
         {Precision::BOOL, ov::element::Type_t::boolean},
+        {Precision::BF16, ov::element::Type_t::bf16},
         {Precision::UNDEFINED, ov::element::Type_t::undefined},
         {Precision::DYNAMIC, ov::element::Type_t::dynamic}
         //    {Precision::MIXED, ov::element::Type_t::MIXED},

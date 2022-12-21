@@ -19,7 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../predict_request_validation_utils.hpp"
@@ -32,32 +32,17 @@ using ::testing::ReturnRef;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
-class MockModelInstance : public ovms::ModelInstance {
-public:
-    MockModelInstance(ov::Core& ieCore) :
-        ModelInstance("UNUSED_NAME", 42, ieCore) {}
-    MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
-    MOCK_METHOD(ovms::Dimension, getBatchSize, (), (const, override));
-    MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
-    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
-        return validate(request);
-    }
-    const ovms::Status mockValidate(const ::inference::ModelInferRequest* request) {
-        return validate(request);
-    }
-};
-
 class TfsPredictValidation : public ::testing::Test {
 protected:
     std::unique_ptr<ov::Core> ieCore;
-    std::unique_ptr<NiceMock<MockModelInstance>> instance;
+    std::unique_ptr<NiceMock<MockedMetadataModelIns>> instance;
     tensorflow::serving::PredictRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
-        instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore);
+        instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
 
         servableInputs = ovms::tensor_map_t({
             {"Input_FP32_1_224_224_3_NHWC",
@@ -678,14 +663,14 @@ INSTANTIATE_TEST_SUITE_P(
 class KFSPredictValidation : public ::testing::Test {
 protected:
     std::unique_ptr<ov::Core> ieCore;
-    std::unique_ptr<NiceMock<MockModelInstance>> instance;
-    ::inference::ModelInferRequest request;
+    std::unique_ptr<NiceMock<MockedMetadataModelIns>> instance;
+    ::KFSRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
-        instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore);
+        instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
 
         servableInputs = ovms::tensor_map_t({
             {"Input_FP32_1_224_224_3_NHWC",
@@ -776,7 +761,7 @@ TEST_F(KFSPredictValidation, RequestWrongBatchSizeAuto) {
 TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
     modelConfig.setBatchingParams("auto");
     std::string inputName = "Binary_Input";
-    ::inference::ModelInferRequest binaryInputRequest;
+    ::KFSRequest binaryInputRequest;
 
     auto input = binaryInputRequest.add_inputs();
     input->set_name(inputName);
@@ -800,9 +785,61 @@ TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
     EXPECT_TRUE(status.ok());
 }
 
+TEST_F(KFSPredictValidation, ValidRequestBinaryInputs_RawInputsContents) {
+    modelConfig.setBatchingParams("auto");
+    std::string inputName = "Binary_Input";
+    ::KFSRequest binaryInputRequest;
+
+    auto input = binaryInputRequest.add_inputs();
+    input->set_name(inputName);
+    input->set_datatype("BYTES");
+    const int requestBatchSize = 1;
+    std::string bytes_contents = "BYTES_CONTENTS";
+    auto content = binaryInputRequest.add_raw_input_contents();
+    *content = bytes_contents;
+    input->mutable_shape()->Add(requestBatchSize);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {1, 3, 224, 224};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::FP32,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST_F(KFSPredictValidation, RawInputsContentsBatchSizeBiggerThan1) {
+    modelConfig.setBatchingParams("auto");
+    std::string inputName = "Binary_Input";
+    ::KFSRequest binaryInputRequest;
+
+    auto input = binaryInputRequest.add_inputs();
+    input->set_name(inputName);
+    input->set_datatype("BYTES");
+    const int requestBatchSize = 2;
+    std::string bytes_contents = "BYTES_CONTENTS";
+    auto content = binaryInputRequest.add_raw_input_contents();
+    *content = bytes_contents;
+    input->mutable_shape()->Add(requestBatchSize);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {2, 3, 224, 224};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::FP32,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
 TEST_F(KFSPredictValidation, RequestWrongBatchSizeBinaryInputs) {
     std::string inputName = "Binary_Input";
-    ::inference::ModelInferRequest binaryInputRequest;
+    ::KFSRequest binaryInputRequest;
 
     auto input = binaryInputRequest.add_inputs();
     input->set_name(inputName);
@@ -829,7 +866,7 @@ TEST_F(KFSPredictValidation, RequestWrongBatchSizeBinaryInputs) {
 TEST_F(KFSPredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     modelConfig.setBatchingParams("auto");
     std::string inputName = "Binary_Input";
-    ::inference::ModelInferRequest binaryInputRequest;
+    ::KFSRequest binaryInputRequest;
 
     auto input = binaryInputRequest.add_inputs();
     input->set_name(inputName);
@@ -1002,14 +1039,14 @@ TEST_F(KFSPredictValidation, RequestIncorrectContentSizeShapeAuto) {
 class KFSPredictValidationInputTensorContent : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     std::unique_ptr<ov::Core> ieCore;
-    std::unique_ptr<NiceMock<MockModelInstance>> instance;
-    ::inference::ModelInferRequest request;
+    std::unique_ptr<NiceMock<MockedMetadataModelIns>> instance;
+    ::KFSRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
-        instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore);
+        instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
     }
 };
 
@@ -1058,14 +1095,14 @@ TEST_P(KFSPredictValidationInputTensorContent, RequestCorrectContentSizeInputTen
 class KFSPredictValidationInputTensorContentNegative : public ::testing::Test {
 protected:
     std::unique_ptr<ov::Core> ieCore;
-    std::unique_ptr<NiceMock<MockModelInstance>> instance;
-    ::inference::ModelInferRequest request;
+    std::unique_ptr<NiceMock<MockedMetadataModelIns>> instance;
+    ::KFSRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
-        instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore);
+        instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
 
         servableInputs = ovms::tensor_map_t({
             {"Input_FP32_1_224_224_3_NHWC",
@@ -1258,7 +1295,7 @@ protected:
         auto precision = ovms::Precision::FP32;
         mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(tensorName, precision, ovms::shape_t{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Layout{"NC"});
     }
-    ::inference::ModelInferRequest request;
+    ::KFSRequest request;
     const char* tensorName = DUMMY_MODEL_INPUT_NAME;
     ovms::tensor_map_t mockedInputsInfo;
 };

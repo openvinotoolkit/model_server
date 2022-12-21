@@ -13,11 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <memory>
+#include <sstream>
 #include <unordered_set>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../ovms.h"
 #include "../status.hpp"
 #include "test_utils.hpp"
 
@@ -34,6 +37,21 @@ TEST(StatusCodeTest, AllStatusCodesMapped) {
     for (auto statusCode = StatusCode::OK; statusCode != StatusCode::STATUS_CODE_END; ++statusCode) {
         Status status = Status(statusCode);
         ASSERT_NE(status.string(), "Undefined error");
+    }
+}
+
+TEST(StatusCodeTest, CApi) {
+    for (auto statusCode = StatusCode::OK; statusCode != StatusCode::STATUS_CODE_END; ++statusCode) {
+        Status status = Status(statusCode);
+        OVMS_Status* sts = reinterpret_cast<OVMS_Status*>(&status);
+        uint32_t code = 0;
+        ASSERT_EQ(OVMS_StatusGetCode(sts, &code), nullptr);
+        EXPECT_EQ(code, static_cast<uint32_t>(statusCode));
+        const char* details = nullptr;
+        ASSERT_EQ(OVMS_StatusGetDetails(sts, &details), nullptr);
+        std::stringstream ss;
+        ss << Status(statusCode).string();
+        EXPECT_EQ(std::string(details), ss.str());
     }
 }
 }  // namespace ovms

@@ -25,6 +25,6 @@ export DATA_PATH=/tmp
 source $OVMS_PATH/.venv/bin/activate
 cd $OVMS_PATH/demos/speech_recognition_with_kaldi_model/python
 ./asr_demo/prepare_model_inputs.sh $1
-python grpc_stateful_client.py --input_path $DATA_PATH/feats.ark,$DATA_PATH/ivectors.ark --output_path $DATA_PATH/scores.ark --grpc_address $2 --grpc_port $3 --input_name input,ivector --output_name Final_affine --model_name aspire --cw_l 17 --cw_r 12
+python grpc_stateful_client.py --input_path $DATA_PATH/feats.ark,$DATA_PATH/ivectors.ark --output_path $DATA_PATH/scores.ark --grpc_address $2 --grpc_port $3 --input_name input:0,ivector:0 --output_name Final_affine:0 --model_name aspire --cw_l 17 --cw_r 12
 ./asr_demo/read_model_output.sh $1
 rm $DATA_PATH/*

@@ -16,12 +16,12 @@
 #pragma once
 #include <memory>
 
-#include "metric_registry.hpp"
-#include "server.hpp"
+#include "module.hpp"
 
 namespace ovms {
 
 class Config;
+class MetricRegistry;
 
 class MetricModule : public Module {
 protected:
@@ -29,7 +29,9 @@ protected:
 
 public:
     MetricModule();
-    int start(const Config& config) override;
+    ~MetricModule();
+    Status start(const Config& config) override;
+
     void shutdown() override;
 
     MetricRegistry& getRegistry() const;

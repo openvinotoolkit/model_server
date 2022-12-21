@@ -22,10 +22,11 @@
 #include <gtest/gtest.h>
 
 #include "../cleaner_utils.hpp"
-#include "../kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
 #include "../prediction_service_utils.hpp"
@@ -87,8 +88,8 @@ public:
     }
     void verifyModelReady(const std::string& modelName, grpc::StatusCode expectedStatus = grpc::StatusCode::OK, bool ready = true) {
         ClientContext context;
-        ::inference::ModelReadyRequest request;
-        ::inference::ModelReadyResponse response;
+        ::KFSGetModelStatusRequest request;
+        ::KFSGetModelStatusResponse response;
         request.set_name(modelName);
 
         ASSERT_NE(nullptr, stub_);
@@ -99,8 +100,8 @@ public:
 
     void verifyServerMetadata(grpc::StatusCode expectedStatus = grpc::StatusCode::OK) {
         ClientContext context;
-        ::inference::ServerMetadataRequest request;
-        ::inference::ServerMetadataResponse response;
+        ::KFSServerMetadataRequest request;
+        ::KFSServerMetadataResponse response;
         ASSERT_NE(nullptr, stub_);
         auto status = stub_->ServerMetadata(&context, request, &response);
         ASSERT_EQ(status.error_code(), expectedStatus);
@@ -156,7 +157,7 @@ public:
     bool waitWithChangingState = true;
     MockedServableManagerModule(ovms::Server& ovmsServer) :
         ovms::ServableManagerModule(ovmsServer) {}
-    int start(const Config& config) override {
+    ovms::Status start(const Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
         auto start = std::chrono::high_resolution_clock::now();
@@ -172,10 +173,10 @@ public:
 
             state = ModuleState::INITIALIZED;
             SPDLOG_INFO("Mocked {} started", SERVABLE_MANAGER_MODULE_NAME);
-            return EXIT_SUCCESS;
+            return status;
         }
         SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());
-        return EXIT_FAILURE;
+        return status;
     }
 };
 

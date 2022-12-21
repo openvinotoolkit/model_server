@@ -1,0 +1,53 @@
+#
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+ARG BASE_IMAGE=ubuntu:20.04
+FROM $BASE_IMAGE as base_build
+
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
+             --gid 5000 --shell /bin/bash --skel /dev/null ovms
+
+COPY ovms.tar.gz /
+RUN tar -xf ovms.tar.gz
+RUN chown -R ovms:ovms /ovms
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+ARG BASE_IMAGE=ubuntu:20.04
+FROM $BASE_IMAGE as release
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-c"]
+WORKDIR /
+RUN	set -e ; \
+	set -x ; \
+        groupadd --gid 5000 ovms ; \
+        useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+
+ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb2"
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ${BUILD_DEPENDENCIES} && \
+    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
+COPY --from=base_build /ovms /ovms
+COPY demos /ovms/demos
+WORKDIR /ovms/demos
+RUN make -f MakefileCapi cpp
+RUN make -f MakefileCapi c
+
+USER ovms
+ENTRYPOINT ["/bin/bash"]

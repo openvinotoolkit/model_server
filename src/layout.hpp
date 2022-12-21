@@ -22,16 +22,10 @@
 #include <openvino/openvino.hpp>
 
 #include "shape.hpp"
-#include "status.hpp"
 
 namespace ovms {
 
-static const std::string ALLOWED_DIMENSION_LETTERS = "NCHWD";
-static const char ETC_CHAR = '.';
-static const char UNDEFINED_DIMENSION_CHAR = '?';
-static const std::string ALLOWED_DIMENSION_LETTERS_AND_CHARS = ALLOWED_DIMENSION_LETTERS + ETC_CHAR + UNDEFINED_DIMENSION_CHAR;
-static const std::string ETC_LAYOUT_DELIMETER = "...";
-static const std::string BATCH_DIMENSION_LETTER = "N";
+class Status;
 
 class Layout : public std::string {
     std::optional<size_t> batchIndex = std::nullopt;
@@ -42,6 +36,13 @@ class Layout : public std::string {
     std::string::size_type getNumberOfKnownDimensions() const;
 
 public:
+    static const std::string ALLOWED_DIMENSION_LETTERS;
+    static const char ETC_CHAR;
+    static const char UNDEFINED_DIMENSION_CHAR;
+    static const std::string ALLOWED_DIMENSION_LETTERS_AND_CHARS;
+    static const std::string ETC_LAYOUT_DELIMETER;
+    static const std::string BATCH_DIMENSION_LETTER;
+
     Layout() = default;
     Layout(const std::string& str);
 

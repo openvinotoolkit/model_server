@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <any>
 #include <csignal>
 #include <memory>
 #include <shared_mutex>
@@ -25,6 +24,10 @@
 
 namespace ovms {
 class Config;
+class Status;
+
+class ServerSettingsImpl;
+class ModelsSettingsImpl;
 
 extern const std::string PROFILER_MODULE_NAME;
 extern const std::string GRPC_SERVER_MODULE_NAME;
@@ -41,11 +44,9 @@ protected:
     virtual std::unique_ptr<Module> createModule(const std::string& name);
 
 public:
-    static Server& instance() {
-        static Server global;
-        return global;
-    }
+    static Server& instance();
     int start(int argc, char** argv);
+    Status start(ServerSettingsImpl*, ModelsSettingsImpl*);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;
     bool isReady() const;
@@ -54,7 +55,7 @@ public:
     void setShutdownRequest(int i);
     virtual ~Server();
 
-    int startModules(ovms::Config& config);
+    Status startModules(ovms::Config& config);
     void shutdownModules();
 
 private:

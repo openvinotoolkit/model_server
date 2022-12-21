@@ -217,7 +217,7 @@ Classification accuracy: 100.00
 
 Using binary inputs feature requires loading model with layout set to `--layout NHWC:NCHW`:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000 --layout NHWC:NCHW
+docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 ```bash
 python grpc_predict_binary_resnet.py --help
@@ -246,7 +246,7 @@ usage: grpc_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
 
 - Usage example
 ```bash
-python grpc_predict_binary_resnet.py --grpc_address localhost --model_name resnet --input_name data --output_name prob --grpc_port 9000 --images input_images.txt
+python grpc_predict_binary_resnet.py --grpc_address localhost --model_name resnet --input_name 0 --output_name 1463 --grpc_port 9000 --images input_images.txt
 
 Start processing:
         Model name: resnet
@@ -532,11 +532,11 @@ time standard deviation: 2.93
 time variance: 8.56
 Classification accuracy: 100.00
 ```
-#### **Submitting gRPC requests with data in binary format:**
+#### **Submitting REST requests with data in binary format:**
 
 Using binary inputs feature requires loading model with layout set to `--layout NHWC:NCHW`:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000 --layout NHWC:NCHW
+docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
 ```bash

@@ -21,14 +21,18 @@
 #include <sstream>
 #include <utility>
 
+#include "customloaderinterface.hpp"
 #include "customloaders.hpp"
+#include "filesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
+#include "modelinstance.hpp"
 #include "pipelinedefinition.hpp"
+#include "statefulmodelinstance.hpp"
 
 namespace ovms {
 
-StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t> versions) {
+static StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t> versions) {
     if (versions->size() == 0) {
         return StatusCode::OK;
     }

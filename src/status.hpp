@@ -21,16 +21,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include <grpcpp/server_context.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
-#pragma GCC diagnostic pop
-
 namespace ovms {
-
-namespace net_http = tensorflow::serving::net_http;
 
 enum class StatusCode {
     OK, /*!< Success */
@@ -106,6 +97,8 @@ enum class StatusCode {
     INVALID_VALUE_COUNT,            /*!< Invalid value count error status for uint16 and half float data types */
     INVALID_CONTENT_SIZE,           /*!< Invalid content size error status for types using tensor_content() */
     INVALID_MESSAGE_STRUCTURE,      /*!< Buffers can't be both in raw_input_content & input tensor content */
+    INVALID_BUFFER_TYPE,            /*!< Invalid buffer type */
+    INVALID_DEVICE_ID,              /*!< Invalid buffer device id */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
@@ -280,6 +273,35 @@ enum class StatusCode {
     INVALID_METRICS_FAMILY_NAME,
     METRICS_REST_PORT_MISSING,
 
+    // C-API
+    DOUBLE_BUFFER_SET,
+    DOUBLE_TENSOR_INSERT,
+    DOUBLE_PARAMETER_INSERT,
+    NONEXISTENT_BUFFER_FOR_REMOVAL,
+    NONEXISTENT_DATA,
+    NONEXISTENT_STRING,
+    NONEXISTENT_NUMBER,
+    NONEXISTENT_SETTINGS,
+    NONEXISTENT_PARAMETER_FOR_REMOVAL,  // rename to non existen parameter
+    NONEXISTENT_SERVER,
+    NONEXISTENT_RESPONSE,
+    NONEXISTENT_REQUEST,
+    NONEXISTENT_TABLE,
+    NONEXISTENT_TENSOR,
+    NONEXISTENT_TENSOR_FOR_SET_BUFFER,
+    NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER,
+    NONEXISTENT_TENSOR_FOR_REMOVAL,
+    NONEXISTENT_STATUS,
+    NONEXISTENT_LOG_LEVEL,
+    SERVER_NOT_READY_FOR_INFERENCE,
+
+    // Server Start errors
+    OPTIONS_USAGE_ERROR,
+    FAILED_TO_START_GRPC_SERVER,
+    FAILED_TO_START_REST_SERVER,
+    SERVER_ALREADY_STARTED,
+    MODULE_ALREADY_INSERTED,
+
     STATUS_CODE_END
 };
 
@@ -288,8 +310,6 @@ class Status {
     std::unique_ptr<std::string> message;
 
     static const std::unordered_map<const StatusCode, const std::string> statusMessageMap;
-    static const std::unordered_map<const StatusCode, grpc::StatusCode> grpcStatusMap;
-    static const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap;
 
     void appendDetails(const std::string& details) {
         ensureMessageAllocated();
@@ -357,35 +377,12 @@ public:
         return this->code != status.code;
     }
 
-    const grpc::Status grpc() const {
-        auto it = grpcStatusMap.find(code);
-        if (it != grpcStatusMap.end()) {
-            return grpc::Status(it->second,
-                this->message ? *this->message : "");
-        } else {
-            return grpc::Status(grpc::StatusCode::UNKNOWN, "Unknown error");
-        }
-    }
-
-    operator grpc::Status() const {
-        return this->grpc();
-    }
-
     const std::string& string() const {
         return this->message ? *this->message : statusMessageMap.at(code);
     }
 
     operator const std::string&() const {
         return this->string();
-    }
-
-    const net_http::HTTPStatusCode http() const {
-        auto it = httpStatusMap.find(code);
-        if (it != httpStatusMap.end()) {
-            return it->second;
-        } else {
-            return net_http::HTTPStatusCode::ERROR;
-        }
     }
 };
 

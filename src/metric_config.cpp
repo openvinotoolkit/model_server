@@ -26,9 +26,23 @@
 #include "logging.hpp"
 #include "rapidjson/document.h"
 #include "schema.hpp"
+#include "status.hpp"
 #include "stringutils.hpp"
 
 namespace ovms {
+
+const std::string METRIC_NAME_REQUESTS_SUCCESS = "ovms_requests_success";
+const std::string METRIC_NAME_REQUESTS_FAIL = "ovms_requests_fail";
+
+const std::string METRIC_NAME_STREAMS = "ovms_streams";
+const std::string METRIC_NAME_INFER_REQ_QUEUE_SIZE = "ovms_infer_req_queue_size";
+
+const std::string METRIC_NAME_INFER_REQ_ACTIVE = "ovms_infer_req_active";
+
+const std::string METRIC_NAME_INFERENCE_TIME = "ovms_inference_time_us";
+const std::string METRIC_NAME_CURRENT_REQUESTS = "ovms_current_requests";
+const std::string METRIC_NAME_REQUEST_TIME = "ovms_request_time_us";
+const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME = "ovms_wait_for_infer_req_time_us";
 
 bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");

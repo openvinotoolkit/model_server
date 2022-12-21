@@ -56,7 +56,7 @@ Check out our recommendations for [throughput optimization on HDDL](performance_
 > It requires RW permissions in the docker container security context. 
 > It is recommended to start the docker container in the same context as the account starting _hddldaemon_. For example, if you start the _hddldaemon_ as root, add `--user root` to the `docker run` command.
 
-## Starting a Docker Container with Intel GPU
+## Starting a Docker Container with Intel integrated GPU, Intel® Data Center GPU Flex Series and Intel® Arc™ GPU
 
 The [GPU plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html) uses the Intel Compute Library for 
 Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including 
@@ -96,15 +96,23 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 
 ```
 
-> **NOTE**:
-> The public docker image includes the OpenCL drivers for GPU in version 21.38.21026 (RedHat) and 21.48.21782 (Ubuntu).
-
-Support for [Intel Arc](https://www.intel.com/content/www/us/en/architecture-and-technology/visual-technology/arc-discrete-graphics.html), which is in preview now, requires newer driver version `22.10.22597`. You can build OpenVINO Model server with ubuntu base image and that driver using the command below:
+GPU device can be used also on Windows hosts with Windows Subsystem for Linux 2 (WSL2). In such scenario, there are needed extra docker parameters. See the command below.
+Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make docker_build INSTALL_DRIVER_VERSION=22.10.22597
+
+docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+
+-v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+
+--model_path /opt/model --model_name resnet --port 9001 --target_device GPU
+
 ```
+
+
+> **NOTE**:
+> The public docker image includes the OpenCL drivers for GPU in version 22.28 (RedHat) and 22.35 (Ubuntu).
+
+If you need to build the OpenVINO Model Server with different driver version, refer to the [building from sources](https://github.com/openvinotoolkit/model_server/blob/develop/docs/build_from_source.md)
 
 ## Using Multi-Device Plugin
 
@@ -147,7 +155,6 @@ docker run -d --net=host -u root --privileged --name ie-serving --rm -v ${PWD}/m
 The deployed model will perform inference on both Intel Movidius Neural Compute Stick and CPU. 
 The total throughput will be roughly equal to the sum of CPU and Intel Movidius Neural Compute Stick throughputs.
  
-
 ## Using Heterogeneous Plugin
 
 The [HETERO plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_Hetero_execution.html) makes it possible to distribute inference load of one model 
@@ -181,7 +188,7 @@ Make sure you have passed the devices and access to the devices you want to use 
 Below is an example of the command with AUTO Plugin as target device. It includes extra docker parameters to enable GPU (/dev/dri) , beside CPU.
 
 ```bash
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)\
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
             -u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
             --target_device AUTO
@@ -189,7 +196,7 @@ Below is an example of the command with AUTO Plugin as target device. It include
 
 The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
 
-> **NOTE**: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
+> **NOTE**: NUM_STREAMS and PERFORMANCE_HINT should not be used together.
 
 To enable Performance Hints for your application, use the following command:
 
@@ -203,14 +210,36 @@ LATENCY
             --target_device AUTO
 ```
 
-THROUGHTPUT
+THROUGHPUT
 
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
             -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
+            --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
             --target_device AUTO
 ```
 
 > **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
+
+## Using NVIDIA Plugin
+
+OpenVINO Model Server can be used also with NVIDIA GPU cards by using NVIDIA plugin from the [github repo openvino_contrib](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin).
+The docker image of OpenVINO Model Server including support for NVIDIA can be built from sources
+
+```bash
+   git clone https://github.com/openvinotoolkit/model_server.git
+   cd model_server
+   make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=releases/2022/3 OV_CONTRIB_BRANCH=releases/2022/3
+```
+Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/develop/docs/build_from_source.md).
+
+Example command to run container with NVIDIA support:
+
+```bash
+   docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --target_device NVIDIA
+```
+
+Check the supported [configuration parameters](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-configuration-parameters) and [supported layers](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-layers-and-limitations)
+
+Currently the AUTO, MULTI and HETERO virual plugins do not support NVIDIA plugin as an alternative device.

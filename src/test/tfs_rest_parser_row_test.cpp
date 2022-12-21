@@ -16,6 +16,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow/core/framework/tensor.h"
+#pragma GCC diagnostic pop
+
 #include "../rest_parser.hpp"
 #include "absl/strings/escaping.h"
 #include "test_utils.hpp"
@@ -25,7 +30,6 @@ using namespace ovms;
 using namespace testing;
 using ::testing::ElementsAre;
 
-using tensorflow::DataType;
 using tensorflow::DataTypeSize;
 
 const char* predictRequestRowNamedJson = R"({
@@ -76,12 +80,12 @@ TEST(TFSRestParserRow, ParseValid2Inputs) {
     ASSERT_EQ(parser.getProto().inputs().count("inputB"), 1);
     const auto& inputA = parser.getProto().inputs().at("inputA");
     const auto& inputB = parser.getProto().inputs().at("inputB");
-    EXPECT_EQ(inputA.dtype(), DataType::DT_FLOAT);
-    EXPECT_EQ(inputB.dtype(), DataType::DT_FLOAT);
+    EXPECT_EQ(inputA.dtype(), tensorflow::DataType::DT_FLOAT);
+    EXPECT_EQ(inputB.dtype(), tensorflow::DataType::DT_FLOAT);
     EXPECT_THAT(asVector(inputA.tensor_shape()), ElementsAre(2, 2, 3, 2));
     EXPECT_THAT(asVector(inputB.tensor_shape()), ElementsAre(2, 2, 3));
-    ASSERT_EQ(inputA.tensor_content().size(), 2 * 2 * 3 * 2 * DataTypeSize(DataType::DT_FLOAT));
-    ASSERT_EQ(inputB.tensor_content().size(), 2 * 2 * 3 * DataTypeSize(DataType::DT_FLOAT));
+    ASSERT_EQ(inputA.tensor_content().size(), 2 * 2 * 3 * 2 * DataTypeSize(tensorflow::DataType::DT_FLOAT));
+    ASSERT_EQ(inputB.tensor_content().size(), 2 * 2 * 3 * DataTypeSize(tensorflow::DataType::DT_FLOAT));
     EXPECT_THAT(asVector<float>(inputA.tensor_content()), ElementsAre(
                                                               1.0, 2.0,
                                                               3.0, 4.0,

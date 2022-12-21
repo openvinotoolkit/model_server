@@ -20,6 +20,12 @@
 #include <string>
 #include <utility>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -31,8 +37,12 @@
 #include "../exit_node.hpp"
 #include "../metric_registry.hpp"
 #include "../model_metric_reporter.hpp"
+#include "../modelinstance.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../node_library.hpp"
 #include "../node_library_utils.hpp"
+#include "../nodestreamidguard.hpp"
+#include "../pipeline.hpp"
 #include "../pipelinedefinition.hpp"
 #include "../precision.hpp"
 #include "../stringutils.hpp"

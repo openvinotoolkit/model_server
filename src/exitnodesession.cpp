@@ -18,6 +18,7 @@
 #include <memory>
 
 #include "gatherexitnodeinputhandler.hpp"
+#include "nodesessionmetadata.hpp"
 
 namespace ovms {
 
@@ -38,9 +39,9 @@ template <typename ResponseType>
 ExitNodeSession<ResponseType>::~ExitNodeSession() = default;
 
 template ExitNodeSession<tensorflow::serving::PredictResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, tensorflow::serving::PredictResponse* response);
-template ExitNodeSession<::inference::ModelInferResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ::inference::ModelInferResponse* response);
+template ExitNodeSession<::KFSResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ::KFSResponse* response);
 
 template const TensorMap& ExitNodeSession<tensorflow::serving::PredictResponse>::getInputTensors() const;
-template const TensorMap& ExitNodeSession<::inference::ModelInferResponse>::getInputTensors() const;
+template const TensorMap& ExitNodeSession<::KFSResponse>::getInputTensors() const;
 
 }  // namespace ovms

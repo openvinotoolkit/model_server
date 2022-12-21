@@ -25,12 +25,14 @@
 #include "../dl_node.hpp"
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../metric_registry.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
+#include "../nodestreamidguard.hpp"
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
 #include "../pipelinedefinition.hpp"
@@ -81,7 +83,7 @@ public:
         preparePredictRequest(request, inputs_info_t{{customPipelineInputName, {shape, ovms::Precision::FP32}}}, requestData);
     }
 
-    void prepareRequest(const std::vector<float>& requestData, KFSRequestType& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+    void prepareRequest(const std::vector<float>& requestData, KFSRequest& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
         request.Clear();
         prepareKFSInferInputTensor(request, customPipelineInputName, std::make_tuple(shape, ovmsPrecisionToKFSPrecision(ovms::Precision::FP32)), requestData);
     }
@@ -1671,12 +1673,23 @@ TEST_F(EnsembleFlowTest, OrderOfScheduling) {
     pipeline.push(std::move(node_3));
 
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    EXPECT_THAT(order, ElementsAre(
-                           1,    // try to schedule node_1 with success
-                           2,    // try to schedule node_2, defer (with order ticket #1)
-                           3,    // after node_1 ends, try to run next node (node_3), defer with order ticket #2
-                           2,    // also try to schedule previously deferred nodes, node_2 gets scheduled with success
-                           3));  // node_2 ends, try to schedule previously deferred node_3 with success
+    std::vector<int> expectedOrder = {
+        1,   // try to schedule node_1 with success
+        2,   // try to schedule node_2, defer (with order ticket #1)
+        3,   // after node_1 ends, try to run next node (node_3), defer with order ticket #2
+        2,   // also try to schedule previously deferred nodes, node_2 gets scheduled with success
+        3};  // node_2 ends, try to schedule previously deferred node_3 with success
+    int expectedOrderIt = 0;
+    int lastValue = 0;
+    for (int orderElement : order) {
+        if (orderElement != lastValue) {
+            EXPECT_EQ(orderElement, expectedOrder[expectedOrderIt]);
+            expectedOrderIt++;
+        }
+        lastValue = orderElement;
+    }
+    // This fragment above is implemented that way because amount of scheduling retries may differ between different machines
+    // depending on the inference time of the dummy model
     /*
          -----O1-----O3----
     O---<                  >----O
@@ -1738,7 +1751,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
 
 class DLNodeFailInFetch : public DLNode {
 public:
-    DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
+    DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager) :
         DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
     ovms::Status fetchResults(NodeSession& nodeSession, SessionResults& sessionResults) override {
         // no release is called as in dl_node.cpp when on error path
@@ -2608,12 +2621,13 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_DefinitionMissing) {
+    ConstructorEnabledModelManager manager;
     PipelineFactory factory;
 
     PredictRequest request;
     PredictResponse response;
     std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, manager), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {

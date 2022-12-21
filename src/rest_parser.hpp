@@ -25,13 +25,13 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
+class Status;
 
 /**
  * @brief Request order types
@@ -220,20 +220,20 @@ public:
 };
 
 class KFSRestParser : RestParser {
-    ::inference::ModelInferRequest requestProto;
+    ::KFSRequest requestProto;
     Status parseId(rapidjson::Value& node);
     Status parseRequestParameters(rapidjson::Value& node);
-    Status parseInputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor& input);
-    Status parseOutputParameters(rapidjson::Value& node, ::inference::ModelInferRequest::InferRequestedOutputTensor& input);
+    Status parseInputParameters(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input);
+    Status parseOutputParameters(rapidjson::Value& node, ::KFSRequest::InferRequestedOutputTensor& input);
     Status parseOutput(rapidjson::Value& node);
     Status parseOutputs(rapidjson::Value& node);
-    Status parseData(rapidjson::Value& node, ::inference::ModelInferRequest::InferInputTensor* input);
-    Status parseInput(rapidjson::Value& node);
+    Status parseData(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input);
+    Status parseInput(rapidjson::Value& node, bool onlyOneInput);
     Status parseInputs(rapidjson::Value& node);
 
 public:
     Status parse(const char* json);
-    ::inference::ModelInferRequest& getProto() { return requestProto; }
+    ::KFSRequest& getProto() { return requestProto; }
 };
 
 }  // namespace ovms

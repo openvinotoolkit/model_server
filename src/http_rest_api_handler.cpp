@@ -17,12 +17,15 @@
 
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
@@ -30,17 +33,24 @@
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_utils.hpp"
 #include "metric_module.hpp"
 #include "metric_registry.hpp"
 #include "model_metric_reporter.hpp"
 #include "model_service.hpp"
+#include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
+#include "modelmanager.hpp"
+#include "pipeline.hpp"
 #include "pipelinedefinition.hpp"
+#include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
+#include "servablemanagermodule.hpp"
 #include "server.hpp"
+#include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
 
@@ -121,12 +131,12 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
     return StatusCode::OK;
 }
 
-void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)> f) {
+void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)> f) {
     handlers[type] = f;
 }
 
 void HttpRestApiHandler::registerAll() {
-    registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, &response);
@@ -136,39 +146,39 @@ void HttpRestApiHandler::registerAll() {
         }
     });
 
-    registerHandler(GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    registerHandler(GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) {
         return processModelMetadataRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(GetModelStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    registerHandler(GetModelStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) {
         return processModelStatusRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processConfigReloadRequest(response, this->modelManager);
     });
-    registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processConfigStatusRequest(response, this->modelManager);
     });
-    registerHandler(KFS_GetModelReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetModelReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processModelReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processModelMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_Infer, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
-        return processInferKFSRequest(request_components, response, request_body);
+    registerHandler(KFS_Infer, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+        return processInferKFSRequest(request_components, response, request_body, response_components.inferenceHeaderContentLength);
     });
-    registerHandler(KFS_GetServerReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetServerReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processServerReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerLive, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetServerLive, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processServerLiveKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(KFS_GetServerMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processServerMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+    registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processMetrics(request_components, response, request_body);
     });
 }
@@ -192,8 +202,8 @@ Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponen
 }
 
 Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ServerMetadataRequest grpc_request;
-    ::inference::ServerMetadataResponse grpc_response;
+    ::KFSServerMetadataRequest grpc_request;
+    ::KFSServerMetadataResponse grpc_response;
     Status gstatus = kfsGrpcImpl.ServerMetadataImpl(nullptr, &grpc_request, &grpc_response);
     if (!gstatus.ok()) {
         return gstatus;
@@ -230,45 +240,7 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
     }
 }
 
-std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body) {
-    static std::unordered_map<std::string, std::string> types = {
-        {"BOOL", "bool_contents"},
-        {"INT8", "int_contents"},
-        {"INT16", "int_contents"},
-        {"INT32", "int_contents"},
-        {"INT64", "int64_contents"},
-        {"UINT8", "uint_contents"},
-        {"UINT16", "uint_contents"},
-        {"UINT32", "uint_contents"},
-        {"UINT64", "uint64_contents"},
-        {"FP32", "fp32_contents"},
-        {"FP64", "fp64_contents"},
-        {"BYTES", "bytes_contents"}};
-
-    Document doc;
-    doc.Parse(request_body.c_str());
-    Value& inputs = doc["inputs"];
-    for (SizeType i = 0; i < inputs.Size(); i++) {
-        Value data = inputs[i].GetObject()["data"].GetArray();
-        Value contents(rapidjson::kObjectType);
-        Value datatype(types[inputs[i].GetObject()["datatype"].GetString()].c_str(), doc.GetAllocator());
-        contents.AddMember(datatype, data, doc.GetAllocator());
-        inputs[i].AddMember("contents", contents, doc.GetAllocator());
-        parseParams(inputs[i], doc);
-    }
-    Value& outputs = doc["outputs"];
-    for (SizeType i = 0; i < outputs.Size(); i++) {
-        parseParams(outputs[i], doc);
-    }
-    parseParams(doc, doc);
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-
-    return buffer.GetString();
-}
-
-Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
+static Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
     std::stringstream streamData(comma_separated_numbers);
     std::vector<int> sizes_;
 
@@ -286,59 +258,59 @@ Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, 
     return StatusCode::OK;
 }
 
-Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, size_t binary_input_size, const char* buffer) {
-    if (input->datatype() == "FP32") {
+static Status parseBinaryInput(KFSTensorInputProto& input, size_t binary_input_size, const char* buffer) {
+    if (input.datatype() == "FP32") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(float)) {
-            auto value = input->mutable_contents()->mutable_fp32_contents()->Add();
+            auto value = input.mutable_contents()->mutable_fp32_contents()->Add();
             *value = (*(reinterpret_cast<const float*>(buffer + i)));
         }
-    } else if (input->datatype() == "INT64") {
+    } else if (input.datatype() == "INT64") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(int64_t)) {
-            auto value = input->mutable_contents()->mutable_int64_contents()->Add();
+            auto value = input.mutable_contents()->mutable_int64_contents()->Add();
             *value = (*(reinterpret_cast<const int64_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "INT32") {
+    } else if (input.datatype() == "INT32") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(int32_t)) {
-            auto value = input->mutable_contents()->mutable_int_contents()->Add();
+            auto value = input.mutable_contents()->mutable_int_contents()->Add();
             *value = (*(reinterpret_cast<const int32_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "INT16") {
+    } else if (input.datatype() == "INT16") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(int16_t)) {
-            auto value = input->mutable_contents()->mutable_int_contents()->Add();
+            auto value = input.mutable_contents()->mutable_int_contents()->Add();
             *value = (*(reinterpret_cast<const int16_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "INT8") {
+    } else if (input.datatype() == "INT8") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(int8_t)) {
-            auto value = input->mutable_contents()->mutable_int_contents()->Add();
+            auto value = input.mutable_contents()->mutable_int_contents()->Add();
             *value = (*(reinterpret_cast<const int8_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "UINT64") {
+    } else if (input.datatype() == "UINT64") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(uint64_t)) {
-            auto value = input->mutable_contents()->mutable_uint64_contents()->Add();
+            auto value = input.mutable_contents()->mutable_uint64_contents()->Add();
             *value = (*(reinterpret_cast<const uint64_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "UINT32") {
+    } else if (input.datatype() == "UINT32") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(uint32_t)) {
-            auto value = input->mutable_contents()->mutable_uint_contents()->Add();
+            auto value = input.mutable_contents()->mutable_uint_contents()->Add();
             *value = (*(reinterpret_cast<const uint32_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "UINT16") {
+    } else if (input.datatype() == "UINT16") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(uint16_t)) {
-            auto value = input->mutable_contents()->mutable_uint_contents()->Add();
+            auto value = input.mutable_contents()->mutable_uint_contents()->Add();
             *value = (*(reinterpret_cast<const uint16_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "UINT8") {
+    } else if (input.datatype() == "UINT8") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(uint8_t)) {
-            auto value = input->mutable_contents()->mutable_uint_contents()->Add();
+            auto value = input.mutable_contents()->mutable_uint_contents()->Add();
             *value = (*(reinterpret_cast<const uint8_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "FP64") {
+    } else if (input.datatype() == "FP64") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(double)) {
-            auto value = input->mutable_contents()->mutable_fp64_contents()->Add();
+            auto value = input.mutable_contents()->mutable_fp64_contents()->Add();
             *value = (*(reinterpret_cast<const double*>(buffer + i)));
         }
-    } else if (input->datatype() == "BYTES") {
-        input->mutable_contents()->add_bytes_contents(buffer, binary_input_size);
+    } else if (input.datatype() == "BYTES") {
+        input.mutable_contents()->add_bytes_contents(buffer, binary_input_size);
     } else {
         return StatusCode::REST_UNSUPPORTED_PRECISION;
     }
@@ -348,59 +320,59 @@ Status parseBinaryInput(::inference::ModelInferRequest_InferInputTensor* input, 
 
 #define CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE " contents is not empty. Content field should be empty when using binary inputs extension."
 
-Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputTensor* input) {
-    if (input->datatype() == "FP32") {
-        if (input->contents().fp32_contents_size() > 0) {
+static Status validateContentFieldsEmptiness(KFSTensorInputProto& input) {
+    if (input.datatype() == "FP32") {
+        if (input.contents().fp32_contents_size() > 0) {
             SPDLOG_DEBUG("FP32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "INT64") {
-        if (input->contents().int64_contents_size() > 0) {
+    } else if (input.datatype() == "INT64") {
+        if (input.contents().int64_contents_size() > 0) {
             SPDLOG_DEBUG("INT64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "INT32") {
-        if (input->contents().int_contents_size() > 0) {
+    } else if (input.datatype() == "INT32") {
+        if (input.contents().int_contents_size() > 0) {
             SPDLOG_DEBUG("INT32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "INT16") {
-        if (input->contents().int_contents_size() > 0) {
+    } else if (input.datatype() == "INT16") {
+        if (input.contents().int_contents_size() > 0) {
             SPDLOG_DEBUG("INT16" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "INT8") {
-        if (input->contents().int_contents_size() > 0) {
+    } else if (input.datatype() == "INT8") {
+        if (input.contents().int_contents_size() > 0) {
             SPDLOG_DEBUG("INT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "UINT64") {
-        if (input->contents().uint64_contents_size() > 0) {
+    } else if (input.datatype() == "UINT64") {
+        if (input.contents().uint64_contents_size() > 0) {
             SPDLOG_DEBUG("UINT64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "UINT32") {
-        if (input->contents().uint_contents_size() > 0) {
+    } else if (input.datatype() == "UINT32") {
+        if (input.contents().uint_contents_size() > 0) {
             SPDLOG_DEBUG("UINT32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "UINT16") {
-        if (input->contents().uint_contents_size() > 0) {
+    } else if (input.datatype() == "UINT16") {
+        if (input.contents().uint_contents_size() > 0) {
             SPDLOG_DEBUG("UINT16" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "UINT8") {
-        if (input->contents().uint_contents_size() > 0) {
+    } else if (input.datatype() == "UINT8") {
+        if (input.contents().uint_contents_size() > 0) {
             SPDLOG_DEBUG("UINT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "FP64") {
-        if (input->contents().fp64_contents_size() > 0) {
+    } else if (input.datatype() == "FP64") {
+        if (input.contents().fp64_contents_size() > 0) {
             SPDLOG_DEBUG("FP64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "BYTES") {
-        if (input->contents().bytes_contents_size() > 0) {
+    } else if (input.datatype() == "BYTES") {
+        if (input.contents().bytes_contents_size() > 0) {
             SPDLOG_DEBUG("BYTES" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
@@ -411,32 +383,72 @@ Status validateContentFieldsEmptiness(::inference::ModelInferRequest_InferInputT
     return StatusCode::OK;
 }
 
-Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
+static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
+    if (input.datatype() == "FP32")
+        return input.contents().fp32_contents_size() == 0;
+    if (input.datatype() == "INT64")
+        return input.contents().int64_contents_size() == 0;
+    if (input.datatype() == "INT32")
+        return input.contents().int_contents_size() == 0;
+    if (input.datatype() == "INT16")
+        return input.contents().int_contents_size() == 0;
+    if (input.datatype() == "INT8")
+        return input.contents().int_contents_size() == 0;
+    if (input.datatype() == "UINT64")
+        return input.contents().uint64_contents_size() == 0;
+    if (input.datatype() == "UINT32")
+        return input.contents().uint_contents_size() == 0;
+    if (input.datatype() == "UINT16")
+        return input.contents().uint_contents_size() == 0;
+    if (input.datatype() == "UINT8")
+        return input.contents().uint_contents_size() == 0;
+    if (input.datatype() == "FP64")
+        return input.contents().fp64_contents_size() == 0;
+    if (input.datatype() == "BYTES")
+        return input.contents().bytes_contents_size() == 0;
+    return true;
+}
+
+static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input) {
+    if (binary_input_offset + binary_input_size > binary_buffer_size) {
+        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
+        return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
+    }
+    auto status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Parsing binary inputs failed");
+        return status;
+    }
+    binary_input_offset += binary_input_size;
+    return StatusCode::OK;
+}
+
+static size_t calculateBinaryDataSize(::KFSRequest::InferInputTensor& input, size_t& binary_data_size) {
+    auto element_size = KFSDataTypeSize(input.datatype());
+    size_t elements_number = std::accumulate(std::begin(input.shape()), std::end(input.shape()), 1, std::multiplies<size_t>());
+    binary_data_size = elements_number * element_size;
+    return binary_data_size;
+}
+
+static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
     const char* binary_inputs = &(request_body[endOfJson]);
-    size_t binary_inputs_size = request_body.length() - endOfJson;
+    size_t binary_buffer_size = request_body.length() - endOfJson;
 
     size_t binary_input_offset = 0;
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
         auto input = grpc_request.mutable_inputs()->Mutable(i);
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
         if (binary_data_size_parameter != input->parameters().end()) {
-            auto status = validateContentFieldsEmptiness(input);
+            auto status = validateContentFieldsEmptiness(*input);
             if (!status.ok()) {
                 SPDLOG_DEBUG("Request contains both data in json and binary inputs");
                 return status;
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 auto binary_input_size = binary_data_size_parameter->second.int64_param();
-                if (binary_input_offset + binary_input_size > binary_inputs_size) {
-                    SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_inputs_size);
-                    return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
-                }
-                status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("Parsing binary inputs failed");
+                auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+                if (!status.ok())
                     return status;
-                }
-                binary_input_offset += binary_input_size;
             } else if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
                 std::vector<int> binary_inputs_sizes;
                 status = convertStringToVectorOfSizes(binary_data_size_parameter->second.string_param(), binary_inputs_sizes);
@@ -444,11 +456,11 @@ Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const st
                     return status;
                 }
                 for (auto size : binary_inputs_sizes) {
-                    if (binary_input_offset + size > binary_inputs_size) {
-                        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_inputs_size);
+                    if (binary_input_offset + size > binary_buffer_size) {
+                        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
                         return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
                     }
-                    status = parseBinaryInput(input, size, binary_inputs + binary_input_offset);
+                    status = parseBinaryInput(*input, size, binary_inputs + binary_input_offset);
                     if (!status.ok()) {
                         SPDLOG_DEBUG("Parsing binary inputs failed");
                         return status;
@@ -459,12 +471,25 @@ Status handleBinaryInputs(::inference::ModelInferRequest& grpc_request, const st
                 SPDLOG_DEBUG("binary_data_size parameter type should be int64 or string");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
             }
+        } else {
+            if (!isInputEmpty(*input))
+                continue;
+            if (grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
+                auto status = handleBinaryInput(binary_buffer_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+                if (!status.ok())
+                    return status;
+                continue;
+            }
+            size_t binary_data_size = calculateBinaryDataSize(*input, binary_data_size);
+            auto status = handleBinaryInput(binary_data_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+            if (!status.ok())
+                return status;
         }
     }
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::inference::ModelInferRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
@@ -485,14 +510,41 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+static std::set<std::string> getRequestedBinaryOutputsNames(::KFSRequest& grpc_request) {
+    std::set<std::string> binaryOutputs;
+    bool byDefaultBinaryOutpuRequested = false;
+    for (auto& parameter : grpc_request.parameters()) {
+        if (parameter.second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam) {
+            if (parameter.first == "binary_data_output") {
+                byDefaultBinaryOutpuRequested = parameter.second.bool_param();
+                break;
+            }
+        }
+    }
+    for (const inference::ModelInferRequest_InferRequestedOutputTensor& output : grpc_request.outputs()) {
+        bool specificBinaryOutputRequested = byDefaultBinaryOutpuRequested;
+        for (auto& parameter : output.parameters()) {
+            if ((parameter.second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) &&
+                (parameter.first == "binary_data")) {
+                specificBinaryOutputRequested = parameter.second.bool_param();
+                break;
+            }
+        }
+        if (specificBinaryOutputRequested) {
+            binaryOutputs.insert(output.name());
+        }
+    }
+    return binaryOutputs;
+}
+
+Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength) {
     Timer<TIMER_END> timer;
     timer.start(TOTAL);
     ServableMetricReporter* reporter = nullptr;
     std::string modelName(request_components.model_name);
     std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
-    ::inference::ModelInferRequest grpc_request;
+    ::KFSRequest grpc_request;
     timer.start(PREPARE_GRPC_REQUEST);
     using std::chrono::microseconds;
     auto status = prepareGrpcRequest(modelName, request_components.model_version, request_body, grpc_request, request_components.inferenceHeaderContentLength);
@@ -507,18 +559,18 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     }
     timer.stop(PREPARE_GRPC_REQUEST);
     SPDLOG_DEBUG("Preparing grpc request time: {} ms", timer.elapsed<std::chrono::microseconds>(PREPARE_GRPC_REQUEST) / 1000);
-    ::inference::ModelInferResponse grpc_response;
+    ::KFSResponse grpc_response;
     const Status gstatus = kfsGrpcImpl.ModelInferImpl(nullptr, &grpc_request, &grpc_response, executionContext, reporter);
     if (!gstatus.ok()) {
         return gstatus;
     }
+    std::set<std::string> requestedBinaryOutputsNames = getRequestedBinaryOutputsNames(grpc_request);
     std::string output;
-    google::protobuf::util::JsonPrintOptions opts_out;
-    status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
+    status = ovms::makeJsonFromPredictResponse(grpc_response, &output, inferenceHeaderContentLength, requestedBinaryOutputsNames);
     if (!status.ok()) {
         return status;
     }
-    response = output;
+    response = std::move(output);
     timer.stop(TOTAL);
     double totalTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total REST request processing time: {} ms", totalTime / 1000);
@@ -529,11 +581,12 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
 Status HttpRestApiHandler::dispatchToProcessor(
     const std::string& request_body,
     std::string* response,
-    const HttpRequestComponents& request_components) {
+    const HttpRequestComponents& request_components,
+    HttpResponseComponents& response_components) {
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
-        return handler->second(request_components, *response, request_body);
+        return handler->second(request_components, *response, request_body, response_components);
     } else {
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
@@ -559,8 +612,8 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
 }
 
 Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ModelReadyRequest grpc_request;
-    ::inference::ModelReadyResponse grpc_response;
+    ::KFSGetModelStatusRequest grpc_request;
+    ::KFSGetModelStatusResponse grpc_response;
     std::string modelName(request_components.model_name);
     grpc_request.set_name(modelName);
     if (request_components.model_version.has_value()) {
@@ -592,8 +645,8 @@ void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
 }
 
 Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ModelMetadataRequest grpc_request;
-    ::inference::ModelMetadataResponse grpc_response;
+    ::KFSModelMetadataRequest grpc_request;
+    ::KFSModelMetadataResponse grpc_response;
     std::string modelName(request_components.model_name);
     grpc_request.set_name(modelName);
     if (request_components.model_version.has_value()) {
@@ -626,7 +679,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     return StatusCode::OK;
 }
 
-Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
+static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
     const std::vector<std::pair<std::string, std::string>>& headers) {
     for (auto header : headers) {
         if (header.first == "Inference-Header-Content-Length") {
@@ -762,7 +815,8 @@ Status HttpRestApiHandler::processRequest(
     const std::string_view request_path,
     const std::string& request_body,
     std::vector<std::pair<std::string, std::string>>* headers,
-    std::string* response) {
+    std::string* response,
+    HttpResponseComponents& responseComponents) {
 
     std::smatch sm;
     std::string request_path_str(request_path);
@@ -780,7 +834,7 @@ Status HttpRestApiHandler::processRequest(
 
     if (!status.ok())
         return status;
-    return dispatchToProcessor(request_body, response, requestComponents);
+    return dispatchToProcessor(request_body, response, requestComponents, responseComponents);
 }
 
 Status HttpRestApiHandler::processPredictRequest(
@@ -1003,7 +1057,7 @@ Status HttpRestApiHandler::processModelStatusRequest(
     return StatusCode::OK;
 }
 
-std::string createErrorJsonWithMessage(std::string message) {
+inline static std::string createErrorJsonWithMessage(std::string message) {
     return "{\n\t\"error\": \"" + message + "\"\n}";
 }
 

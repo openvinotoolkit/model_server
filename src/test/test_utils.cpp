@@ -17,6 +17,9 @@
 
 #include <functional>
 
+#include "../capi_frontend/capi_utils.hpp"
+#include "../inferenceparameter.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
@@ -26,11 +29,22 @@ using tensorflow::serving::PredictResponse;
 
 using ovms::TensorInfo;
 
-void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool putBufferInInputTensorContent) {
+void prepareBinaryPredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }         // CAPI binary not supported
+void prepareBinaryPredictRequestNoShape(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }  // CAPI binary not supported
+void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }      // CAPI binary not supported
+
+void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool putBufferInInputTensorContent) {
     request.mutable_inputs()->Clear();
     request.mutable_raw_input_contents()->Clear();
     for (auto const& it : requestInputs) {
         prepareKFSInferInputTensor(request, it.first, it.second, data, putBufferInInputTensorContent);
+    }
+}
+
+void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
+    request.removeAllInputs();
+    for (auto const& it : requestInputs) {
+        prepareCAPIInferInputTensor(request, it.first, it.second, data, decrementBufferSize, bufferType, deviceId);
     }
 }
 
@@ -152,7 +166,7 @@ void checkDummyResponse(const std::string outputName,
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    ::inference::ModelInferRequest& request, ::inference::ModelInferResponse& response, int seriesLength, int batchSize) {
+    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize) {
     ASSERT_EQ(response.outputs_size(), 1);
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.outputs().begin()->name(), outputName) << "Did not find:" << outputName;
@@ -212,7 +226,7 @@ bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vecto
     return same;
 }
 
-extern bool isShapeTheSame(const google::protobuf::RepeatedField<int64_t>& actual, const std::vector<int64_t>&& expected) {
+bool isShapeTheSame(const KFSShapeType& actual, const std::vector<int64_t>&& expected) {
     bool same = true;
     int a_size = actual.size();
     if (a_size != int(expected.size())) {
@@ -271,7 +285,7 @@ void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, c
     tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
 }
 
-void prepareBinaryPredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize) {
+void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize) {
     request.add_inputs();
     auto tensor = request.mutable_inputs()->Mutable(0);
     tensor->set_name(inputName);
@@ -298,7 +312,7 @@ void prepareBinaryPredictRequestNoShape(tensorflow::serving::PredictRequest& req
     tensor.set_dtype(tensorflow::DataType::DT_STRING);
 }
 
-void prepareBinaryPredictRequestNoShape(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize) {
+void prepareBinaryPredictRequestNoShape(::KFSRequest& request, const std::string& inputName, const int batchSize) {
     request.add_inputs();
     auto tensor = request.mutable_inputs()->Mutable(0);
     tensor->set_name(inputName);
@@ -325,7 +339,7 @@ void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request
     tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
 }
 
-void prepareBinary4x4PredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize) {
+void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize) {
     request.add_inputs();
     auto tensor = request.mutable_inputs()->Mutable(0);
     tensor->set_name(inputName);
@@ -340,7 +354,7 @@ void prepareBinary4x4PredictRequest(::inference::ModelInferRequest& request, con
     tensor->mutable_shape()->Add(batchSize);
 }
 
-::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name) {
+::KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name) {
     auto it = request.mutable_inputs()->begin();
     while (it != request.mutable_inputs()->end()) {
         if (it->name() == name)
@@ -350,7 +364,7 @@ void prepareBinary4x4PredictRequest(::inference::ModelInferRequest& request, con
     return it == request.mutable_inputs()->end() ? nullptr : &(*it);
 }
 
-std::string* findKFSInferInputTensorContentInRawInputs(::inference::ModelInferRequest& request, const std::string& name) {
+std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name) {
     auto it = request.mutable_inputs()->begin();
     size_t bufferId = 0;
     std::string* content = nullptr;
@@ -365,15 +379,41 @@ std::string* findKFSInferInputTensorContentInRawInputs(::inference::ModelInferRe
     }
     return content;
 }
-void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, bool putBufferInInputTensorContent) {
     auto [shape, type] = inputInfo;
     prepareKFSInferInputTensor(request, name,
-        {shape, TensorInfo::getPrecisionAsKFSPrecision(type)},
+        {shape, ovmsPrecisionToKFSPrecision(type)},
         data, putBufferInInputTensorContent);
 }
 
-void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+    const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
+    auto [shape, type] = inputInfo;
+    prepareCAPIInferInputTensor(request, name,
+        {shape, getPrecisionAsOVMSDataType(type)},
+        data, decrementBufferSize, bufferType, deviceId);
+}
+
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, OVMS_DataType>& inputInfo,
+    const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
+    auto [shape, datatype] = inputInfo;
+    size_t elementsCount = 1;
+    for (auto const& dim : shape) {
+        ASSERT_GE(dim, 0);
+        elementsCount *= dim;
+    }
+
+    request.addInput(name.c_str(), datatype, shape.data(), shape.size());
+
+    size_t dataSize = elementsCount * ovms::DataTypeToByteSize(datatype);
+    if (decrementBufferSize)
+        dataSize -= decrementBufferSize;
+
+    request.setInputBuffer(name.c_str(), data.data(), dataSize, bufferType, deviceId);
+}
+
+void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
     const std::vector<float>& data, bool putBufferInInputTensorContent) {
     auto it = request.mutable_inputs()->begin();
     size_t bufferId = 0;
@@ -383,7 +423,7 @@ void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const s
         ++it;
         ++bufferId;
     }
-    ::inference::ModelInferRequest_InferInputTensor* tensor;
+    KFSTensorInputProto* tensor;
     std::string* content = nullptr;
     if (it != request.mutable_inputs()->end()) {
         tensor = &*it;

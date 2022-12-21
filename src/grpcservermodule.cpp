@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -32,7 +33,7 @@
 #include <unistd.h>
 
 #include "config.hpp"
-#include "kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
@@ -45,11 +46,9 @@
 using grpc::ServerBuilder;
 
 namespace ovms {
-}  // namespace ovms
-using namespace ovms;
 static const int GIGABYTE = 1024 * 1024 * 1024;
 
-bool isPortAvailable(uint64_t port) {
+static bool isPortAvailable(uint64_t port) {
     struct sockaddr_in addr;
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if (s == -1) {
@@ -75,13 +74,13 @@ struct GrpcChannelArgument {
 
 // Parses a comma separated list of gRPC channel arguments into list of
 // ChannelArgument.
-Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vector<GrpcChannelArgument>& result) {
+static Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vector<GrpcChannelArgument>& result) {
     const std::vector<std::string> channel_arguments = tokenize(channel_arguments_str, ',');
 
     for (const std::string& channel_argument : channel_arguments) {
         std::vector<std::string> key_val = tokenize(channel_argument, '=');
         if (key_val.size() != 2) {
-            return StatusCode::GRPC_CHANNEL_ARG_WRONG_FORMAT;
+            return Status(StatusCode::GRPC_CHANNEL_ARG_WRONG_FORMAT, channel_arguments_str);
         }
         erase_spaces(key_val[0]);
         erase_spaces(key_val[1]);
@@ -91,7 +90,7 @@ Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vecto
     return StatusCode::OK;
 }
 
-uint getGRPCServersCount(const ovms::Config& config) {
+static uint getGRPCServersCount(const ovms::Config& config) {
     const char* environmentVariableBuffer = std::getenv("GRPC_SERVERS");
     if (environmentVariableBuffer) {
         auto result = stou32(environmentVariableBuffer);
@@ -112,14 +111,14 @@ GRPCServerModule::GRPCServerModule(Server& server) :
     tfsPredictService(this->server),
     tfsModelService(this->server),
     kfsGrpcInferenceService(this->server) {}
-int GRPCServerModule::start(const ovms::Config& config) {
+Status GRPCServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", GRPC_SERVER_MODULE_NAME);
     std::vector<GrpcChannelArgument> channel_arguments;
     auto status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
     if (!status.ok()) {
-        SPDLOG_ERROR("grpc channel arguments passed in wrong format: {}", config.grpcChannelArguments());
-        return EXIT_FAILURE;
+        SPDLOG_ERROR(status.string());
+        return status;
     }
 
     ServerBuilder builder;
@@ -148,21 +147,27 @@ int GRPCServerModule::start(const ovms::Config& config) {
     SPDLOG_DEBUG("Starting gRPC servers: {}", grpcServersCount);
 
     if (!isPortAvailable(config.port())) {
-        SPDLOG_ERROR("Failed to start gRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
-        return EXIT_FAILURE;
+        std::stringstream ss;
+        ss << "at " << config.grpcBindAddress() << ":" << std::to_string(config.port()) << " - port is busy";
+        auto status = Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
+        SPDLOG_ERROR(status.string());
+        return status;
     }
     for (uint i = 0; i < grpcServersCount; ++i) {
         std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
         if (server == nullptr) {
-            SPDLOG_ERROR("Failed to start gRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
-            return EXIT_FAILURE;
+            std::stringstream ss;
+            ss << "at " << config.grpcBindAddress() << ":" << std::to_string(config.port());
+            auto status = Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
+            SPDLOG_ERROR(status.string());
+            return status;
         }
         servers.push_back(std::move(server));
     }
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", GRPC_SERVER_MODULE_NAME);
     SPDLOG_INFO("Started gRPC server on port {}", config.port());
-    return EXIT_SUCCESS;
+    return StatusCode::OK;
 }
 
 void GRPCServerModule::shutdown() {
@@ -185,3 +190,4 @@ const GetModelMetadataImpl& GRPCServerModule::getTFSModelMetadataImpl() const {
 KFSInferenceServiceImpl& GRPCServerModule::getKFSGrpcImpl() const {
     return this->kfsGrpcInferenceService;
 }
+}  // namespace ovms

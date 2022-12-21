@@ -24,10 +24,9 @@
 #include <spdlog/spdlog.h>
 
 #include "modelconfig.hpp"
-#include "status.hpp"
 
 namespace ovms {
-
+class Status;
 class TensorInfo;
 
 Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape);

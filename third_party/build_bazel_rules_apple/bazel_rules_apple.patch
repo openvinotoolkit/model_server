@@ -1,0 +1,30 @@
+diff -uraN a/apple/internal/rule_factory.bzl b/apple/internal/rule_factory.bzl
+--- a/apple/internal/rule_factory.bzl    2020-04-03 18:27:03.000000000 +0000
++++ b/apple/internal/rule_factory2.bzl   2022-10-19 15:31:40.437342517 +0000
+@@ -230,7 +230,7 @@
+
+ def _common_binary_linking_attrs(rule_descriptor):
+     deps_aspects = [
+-        apple_common.objc_proto_aspect,
++#        apple_common.objc_proto_aspect,
+         apple_resource_aspect,
+         framework_import_aspect,
+         swift_usage_aspect,
+@@ -250,7 +250,7 @@
+     """,
+         ),
+         "bundle_loader": attr.label(
+-            aspects = [apple_common.objc_proto_aspect],
++#            aspects = [apple_common.objc_proto_aspect],
+             providers = [[apple_common.AppleExecutableBinary]],
+             doc = """
+ This attribute is public as an implementation detail while we migrate the architecture of the rules.
+@@ -258,7 +258,7 @@
+     """,
+         ),
+         "dylibs": attr.label_list(
+-            aspects = [apple_common.objc_proto_aspect],
++#            aspects = [apple_common.objc_proto_aspect],
+             doc = """
+ This attribute is public as an implementation detail while we migrate the architecture of the rules.
+ Do not change its value.

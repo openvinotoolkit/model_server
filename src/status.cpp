@@ -94,6 +94,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Invalid number of shape dimensions"},
     {StatusCode::INVALID_BATCH_SIZE, "Invalid input batch size"},
     {StatusCode::INVALID_SHAPE, "Invalid input shape"},
+    {StatusCode::INVALID_BUFFER_TYPE, "Invalid input buffer type"},
+    {StatusCode::INVALID_DEVICE_ID, "Invalid input buffer device id"},
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
     {StatusCode::INVALID_CONTENT_SIZE, "Invalid content size of tensor proto"},
@@ -259,182 +261,34 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_METRICS_ENDPOINT, "Metrics config endpoint path is invalid"},
     {StatusCode::INVALID_METRICS_FAMILY_NAME, "Invalid name in metrics_list"},
     {StatusCode::METRICS_REST_PORT_MISSING, "Missing rest_port parameter in server CLI"},
+
+    // C-API
+    {StatusCode::DOUBLE_BUFFER_SET, "Cannot set buffer more than once to the same tensor"},
+    {StatusCode::DOUBLE_TENSOR_INSERT, "Cannot insert more than one tensor with the same name"},
+    {StatusCode::DOUBLE_PARAMETER_INSERT, "Cannot insert more than one parameter with the same name"},
+    {StatusCode::NONEXISTENT_BUFFER_FOR_REMOVAL, "Tried to remove nonexisting buffer"},
+    {StatusCode::NONEXISTENT_DATA, "Tried to use nonexisting data"},
+    {StatusCode::NONEXISTENT_STRING, "Tried to use nonexisting string"},
+    {StatusCode::NONEXISTENT_NUMBER, "Tried to use nonexisting number"},
+    {StatusCode::NONEXISTENT_SETTINGS, "Tried to use nonexisting settings"},
+    {StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL, "Tried to remove nonexisting parameter"},
+    {StatusCode::NONEXISTENT_RESPONSE, "Tried to use nonexisting response"},
+    {StatusCode::NONEXISTENT_REQUEST, "Tried to use nonexisting request"},
+    {StatusCode::NONEXISTENT_SERVER, "Tried to use nonexisting server"},
+    {StatusCode::NONEXISTENT_TABLE, "Tried to use nonexisting table"},
+    {StatusCode::NONEXISTENT_TENSOR, "Tried to get nonexisting tensor"},
+    {StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER, "Tried to set buffer for nonexisting tensor"},
+    {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER, "Tried to remove buffer for nonexisting tensor"},
+    {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
+    {StatusCode::NONEXISTENT_STATUS, "Tried to use nonexisting status"},
+    {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
+    {StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "Server not in a state to perform inference"},
+
+    // Server Start errors
+    {StatusCode::OPTIONS_USAGE_ERROR, "options validation error"},
+    {StatusCode::FAILED_TO_START_GRPC_SERVER, "Failed to start gRPC server"},
+    {StatusCode::FAILED_TO_START_REST_SERVER, "Failed to start REST server"},
+    {StatusCode::SERVER_ALREADY_STARTED, "Server has already started"},
+    {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
 };
-
-const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
-    {StatusCode::OK, grpc::StatusCode::OK},
-
-    {StatusCode::PATH_INVALID, grpc::StatusCode::INTERNAL},
-    {StatusCode::FILE_INVALID, grpc::StatusCode::INTERNAL},
-    {StatusCode::NO_MODEL_VERSION_AVAILABLE, grpc::StatusCode::INTERNAL},
-    {StatusCode::MODEL_NOT_LOADED, grpc::StatusCode::INTERNAL},
-    {StatusCode::JSON_INVALID, grpc::StatusCode::INTERNAL},
-    {StatusCode::MODELINSTANCE_NOT_FOUND, grpc::StatusCode::INTERNAL},
-    {StatusCode::SHAPE_WRONG_FORMAT, grpc::StatusCode::INTERNAL},
-    {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, grpc::StatusCode::INTERNAL},
-    {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, grpc::StatusCode::INTERNAL},
-    {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, grpc::StatusCode::INTERNAL},
-    {StatusCode::RESHAPE_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
-    {StatusCode::MODEL_MISSING, grpc::StatusCode::NOT_FOUND},
-    {StatusCode::MODEL_NAME_MISSING, grpc::StatusCode::NOT_FOUND},
-    {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, grpc::StatusCode::NOT_FOUND},
-    {StatusCode::MODEL_VERSION_MISSING, grpc::StatusCode::NOT_FOUND},
-    {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
-    {StatusCode::MODEL_VERSION_NOT_LOADED_YET, grpc::StatusCode::NOT_FOUND},
-    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
-    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::NOT_FOUND},
-    {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::MODEL_VERSION_INVALID_FORMAT, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, grpc::StatusCode::ABORTED},
-    {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
-
-    // Sequence management
-    {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::NOT_FOUND},
-    {StatusCode::SEQUENCE_ALREADY_EXISTS, grpc::StatusCode::ALREADY_EXISTS},
-    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::SEQUENCE_ID_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::SEQUENCE_TERMINATED, grpc::StatusCode::FAILED_PRECONDITION},
-    {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, grpc::StatusCode::UNAVAILABLE},
-
-    // Predict request validation
-    {StatusCode::INVALID_NO_OF_INPUTS, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_MISSING_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_BATCH_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_SHAPE, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_PRECISION, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_VALUE_COUNT, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_CONTENT_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::INVALID_MESSAGE_STRUCTURE, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::UNSUPPORTED_LAYOUT, grpc::StatusCode::INVALID_ARGUMENT},
-
-    // Deserialization
-
-    // Should never occur - ModelInstance::validate takes care of that
-    {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, grpc::StatusCode::INTERNAL},
-    {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR, grpc::StatusCode::INTERNAL},
-
-    // Inference
-    {StatusCode::OV_INTERNAL_INFERENCE_ERROR, grpc::StatusCode::INTERNAL},
-
-    // Serialization
-
-    // Should never occur - it should be validated during model loading
-    {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, grpc::StatusCode::INTERNAL},
-    {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, grpc::StatusCode::INTERNAL},
-
-    // GetModelStatus
-    {StatusCode::INTERNAL_ERROR, grpc::StatusCode::INTERNAL},
-
-    // Binary input
-    {StatusCode::INVALID_NO_OF_CHANNELS, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::STRING_VAL_EMPTY, grpc::StatusCode::INVALID_ARGUMENT},
-    {StatusCode::BYTES_CONTENTS_EMPTY, grpc::StatusCode::INVALID_ARGUMENT},
-};
-
-const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
-    {StatusCode::OK, net_http::HTTPStatusCode::OK},
-    {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
-    {StatusCode::OK_NOT_RELOADED, net_http::HTTPStatusCode::OK},
-
-    // REST handler failure
-    {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_UNSUPPORTED_METHOD, net_http::HTTPStatusCode::NONE_ACC},
-    {StatusCode::REST_NOT_FOUND, net_http::HTTPStatusCode::NOT_FOUND},
-
-    // REST parser failure
-    {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_PREDICT_UNKNOWN_ORDER, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_INSTANCES_NOT_AN_ARRAY, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_INPUT_NOT_PREALLOCATED, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::REST_NO_INSTANCES_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_INPUTS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_NO_INPUTS_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_COULD_NOT_PARSE_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
-
-    {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::MODEL_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::PRECOND_FAILED},
-    {StatusCode::MODELINSTANCE_NOT_FOUND, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::SHAPE_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::RESHAPE_ERROR, net_http::HTTPStatusCode::PRECOND_FAILED},
-    {StatusCode::MODEL_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-    {StatusCode::MODEL_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-    {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-    {StatusCode::MODEL_VERSION_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-    {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-    {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
-    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
-    {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-    {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
-    {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
-
-    // Sequence management
-    {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-    {StatusCode::SEQUENCE_ALREADY_EXISTS, net_http::HTTPStatusCode::CONFLICT},
-    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::SEQUENCE_ID_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::SEQUENCE_TERMINATED, net_http::HTTPStatusCode::PRECOND_FAILED},
-    {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, net_http::HTTPStatusCode::SERVICE_UNAV},
-
-    // Predict request validation
-    {StatusCode::INVALID_NO_OF_INPUTS, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_MISSING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_BATCH_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::INVALID_MESSAGE_STRUCTURE, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::UNSUPPORTED_LAYOUT, net_http::HTTPStatusCode::BAD_REQUEST},
-
-    // Deserialization
-
-    // Should never occur - ModelInstance::validate takes care of that
-    {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
-
-    // Inference
-    {StatusCode::OV_INTERNAL_INFERENCE_ERROR, net_http::HTTPStatusCode::ERROR},
-
-    // Serialization
-
-    // Should never occur - it should be validated during model loading
-    {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
-
-    // GetModelStatus
-    {StatusCode::INTERNAL_ERROR, net_http::HTTPStatusCode::ERROR},
-
-    // Binary input
-    {StatusCode::INVALID_NO_OF_CHANNELS, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, net_http::HTTPStatusCode::BAD_REQUEST},
-    {StatusCode::STRING_VAL_EMPTY, net_http::HTTPStatusCode::BAD_REQUEST},
-};
-
 }  // namespace ovms

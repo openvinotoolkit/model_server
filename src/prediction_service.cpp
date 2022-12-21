@@ -29,9 +29,12 @@
 
 #include "execution_context.hpp"
 #include "get_model_metadata_impl.hpp"
+#include "grpc_utils.hpp"
+#include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
+#include "pipeline.hpp"
 #include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"
@@ -107,8 +110,8 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);
         }
-        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
-        return status.grpc();
+        SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
+        return grpc(status);
     }
 
     ExecutionContext executionContext{
@@ -124,7 +127,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     }
 
     if (!status.ok()) {
-        return status.grpc();
+        return grpc(status);
     }
 
     timer.stop(TOTAL);
@@ -143,7 +146,7 @@ grpc::Status PredictionServiceImpl::GetModelMetadata(
     const tensorflow::serving::GetModelMetadataRequest* request,
     tensorflow::serving::GetModelMetadataResponse* response) {
     OVMS_PROFILE_FUNCTION();
-    return getModelMetadataImpl.getModelStatus(request, response, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelMetadata)).grpc();
+    return grpc(getModelMetadataImpl.getModelStatus(request, response, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelMetadata)));
 }
 
 const GetModelMetadataImpl& PredictionServiceImpl::getTFSModelMetadataImpl() const {

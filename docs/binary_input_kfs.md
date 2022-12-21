@@ -68,13 +68,16 @@ KServe API also allows sending binary encoded data via HTTP interface. The tenso
 ```
 
 For binary inputs, the `parameters` map in the JSON part contains `binary_data_size` field for each binary input that indicates the size of the data on the input. Since there's no strict limitations on image resolution and format (as long as it can be loaded by OpenCV), images might be of different sizes. Therefore, to send a batch of different images, specify their sizes in `binary_data_size` field as a list with sizes of all images in the batch.
-The list must be formed as a string, so for example, for 3 images in the batch, you may pass - `"9821,12302,7889"`
+The list must be formed as a string, so for example, for 3 images in the batch, you may pass - `"9821,12302,7889"`.
+If the request contains only one input `binary_data_size` parameter can be omitted - in this case whole buffer is treated as a input image.
 
 For HTTP request headers, `Inference-Header-Content-Length` header must be provided to give the length of the JSON object, and `Content-Length` continues to give the full body length (as HTTP requires). See an extended example with the request headers, and multiple images in the batch:
 
 ```
 POST /v2/models/my_model/infer HTTP/1.1
 Host: localhost:5000
+```
+```JSON
 Content-Type: application/octet-stream
 Inference-Header-Content-Length: <xx>
 Content-Length: <xx+(9821+12302+7889)>
@@ -112,6 +115,8 @@ Getting back to the example from the previous section with 3 images in a batch, 
 ```
 POST /v2/models/my_model/infer HTTP/1.1
 Host: localhost:5000
+```
+```JSON
 Content-Type: application/octet-stream
 Inference-Header-Content-Length: <xx>
 Content-Length: <xx+(3 x 1080000)>
@@ -132,6 +137,47 @@ Content-Length: <xx+(3 x 1080000)>
 <3240000 bytes of the whole data batch for model_input tensor>
 ```
 
+For the Raw Data binary inputs `binary_data_size` parameter can be omitted since the size of particular input can be calculated from its shape.
+
+### Binary Outputs
+
+Outputs of response can be send in binary format similar to the binary inputs. To force a output to be sent in binary format you need to use "binary_data" : true parameter in request JSON. For example:
+```JSON
+{
+  "model_name" : "mymodel",
+  "inputs" : [...],
+  "outputs" : [
+    {
+      "name" : "output0",
+      "parameters" : {
+        "binary_data" : true
+      }
+    }
+  ]
+}
+```
+
+Assuming the output datatype is FP32 and shape is [ 2, 2 ] response to this request would be:
+
+```JSON
+HTTP/1.1 200 OK
+Content-Type: application/octet-stream
+Inference-Header-Content-Length: <yy>
+Content-Length: <yy+16>
+{
+  "outputs" : [
+    {
+      "name" : "output0",
+      "shape" : [ 2, 2 ],
+      "datatype"  : "FP32",
+      "parameters" : {
+        "binary_data_size" : 16
+      }
+    }
+  ]
+}
+<16 bytes of data for output0 tensor>
+```
 
 
 ## API Reference

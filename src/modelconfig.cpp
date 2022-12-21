@@ -27,10 +27,46 @@
 #include <spdlog/spdlog.h>
 
 #include "logging.hpp"
+#include "model_version_policy.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
 
 namespace ovms {
+ModelConfig::ModelConfig(const std::string& name,
+    const std::string& basePath,
+    const std::string& targetDevice,
+    const std::string& configBatchSize,
+    uint64_t nireq,
+    bool stateful,
+    bool idleSequenceCleanup,
+    bool lowLatencyTransformation,
+    uint32_t maxSequenceNumber,
+    const std::string& cacheDir,
+    model_version_t version,
+    const std::string& localPath) :
+    name(name),
+    basePath(basePath),
+    localPath(localPath),
+    targetDevice(targetDevice),
+    modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
+    nireq(nireq),
+    stateful(stateful),
+    idleSequenceCleanup(idleSequenceCleanup),
+    lowLatencyTransformation(lowLatencyTransformation),
+    maxSequenceNumber(maxSequenceNumber),
+    cacheDir(cacheDir),
+    version(version),
+    pluginConfig({}),
+    layout(""),
+    shapes({}),
+    layouts({}),
+    mappingInputs({}),
+    mappingOutputs({}) {
+    setBatchingParams(configBatchSize);
+}
+
+const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
+const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
 bool ModelConfig::isDeviceUsed(const std::string& device) const {
     if (this->isSingleDeviceUsed(device))
@@ -253,11 +289,46 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
 
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (it->value.IsString()) {
-            pluginConfig[it->name.GetString()] = it->value.GetString();
+            if (((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("CPU_THROUGHPUT_AUTO"))) || ((it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("GPU_THROUGHPUT_AUTO")))) {
+                pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
+                SPDLOG_WARN("{} plugin config key is deprecated. Use PERFORMANCE_HINT instead", it->name.GetString());
+            } else {
+                if ((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) || (it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS"))) {
+                    pluginConfig["NUM_STREAMS"] = it->value.GetString();
+                    SPDLOG_WARN("{} plugin config key is deprecated. Use NUM_STREAMS instead", it->name.GetString());
+                } else if (it->name.GetString() == std::string("CPU_BIND_THREAD")) {
+                    if (it->value.GetString() == std::string("YES")) {
+                        pluginConfig["AFFINITY"] = "CORE";
+                        SPDLOG_WARN("{} plugin config key is deprecated. Use AFFINITY instead", it->name.GetString());
+                    } else if (it->value.GetString() == std::string("NO")) {
+                        pluginConfig["AFFINITY"] = "NONE";
+                        SPDLOG_WARN("{} plugin config key is deprecated. Use AFFINITY instead", it->name.GetString());
+                    } else {
+                        SPDLOG_ERROR("{} plugin config key has invalid value and is deprecated. Use AFFINITY key instead", it->name.GetString());
+                        return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
+                    }
+                } else if (it->name.GetString() == std::string("CPU_THREADS_NUM")) {
+                    pluginConfig["INFERENCE_NUM_THREADS"] = it->value.GetString();
+                    SPDLOG_WARN("{} plugin config key is deprecated. Use INFERENCE_NUM_THREADS instead", it->name.GetString());
+                } else {
+                    pluginConfig[it->name.GetString()] = it->value.GetString();
+                }
+            }
+
         } else if (it->value.IsInt64()) {
-            pluginConfig[it->name.GetString()] = std::to_string(it->value.GetInt64());
+            if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
+                pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetInt64());
+                SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead", it->name.GetString());
+            } else {
+                pluginConfig[it->name.GetString()] = std::to_string(it->value.GetInt64());
+            }
         } else if (it->value.IsDouble()) {
-            pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
+            if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
+                pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetDouble());
+                SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead", it->name.GetString());
+            } else {
+                pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
+            }
         } else {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
@@ -481,7 +552,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                     for (auto& sh : s.value.GetArray()) {
                         if (sh.IsUint64()) {
                             size_t dim = sh.GetUint64();
-                            if (dim > std::numeric_limits<dimension_value_t>::max()) {
+                            if (dim > static_cast<size_t>(std::numeric_limits<dimension_value_t>::max())) {
                                 SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
                                 if (!firstErrorStatus.ok()) {
                                     firstErrorStatus = StatusCode::SHAPE_WRONG_FORMAT;
