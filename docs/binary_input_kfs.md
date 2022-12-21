@@ -203,7 +203,7 @@ pip install -r requirements.txt
 ```
 
 ### Run the gRPC client sending JPEG images
-([see the code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/grpc_infer_binary_resnet.py))
+([see the code](https://github.com/openvinotoolkit/model_server/blob/v2022.3/client/python/kserve-api/samples/grpc_infer_binary_resnet.py))
 ```bash
 python3 ./grpc_infer_binary_resnet.py --grpc_port 9000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
@@ -253,7 +253,7 @@ Classification accuracy: 100.00
 
 
 ### Run the REST client sending JPEG images
-([see the code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_binary_resnet.py))
+([see the code](https://github.com/openvinotoolkit/model_server/blob/v2022.3/client/python/kserve-api/samples/http_infer_binary_resnet.py))
 ```bash
 python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
@@ -302,7 +302,7 @@ Classification accuracy: 100.00
 ```
 
 ### Run the REST client with raw data sent in binary representation
-([see the code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_resnet.py))
+([see the code](https://github.com/openvinotoolkit/model_server/blob/v2022.3/client/python/kserve-api/samples/http_infer_resnet.py))
 ```bash
 python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
 Image data range: 0.0 : 255.0
