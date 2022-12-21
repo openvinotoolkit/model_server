@@ -797,7 +797,6 @@ bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorTyp
 }
 template <>
 bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkIfNativeFileFormatUsed(const InferenceTensor& tensor, const std::string inputName) const {
-    // TODO no strig no bytes currently, will implement one of those types with binary input.
     return false;
 }
 
