@@ -50,7 +50,7 @@ dist/ubuntu
 
 Select base OS:
 - `ubuntu` for Ubuntu 20.04 (default)
-- `redhat` for RedHat 8.7
+- `redhat` for Red Hat UBI 8.7
 
 ```bash
 make docker_build BASE_OS=redhat
