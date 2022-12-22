@@ -103,7 +103,7 @@ private:
     Shape getNodeGatherShape(const NodeInfo& info) const;
 
 public:
-    static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
+    static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
     PipelineDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
