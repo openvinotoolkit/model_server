@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <atomic>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -318,17 +319,26 @@ void RunStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance
 void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId,
     std::future<void>* waitBeforeSequenceStarted,
     std::future<void>* waitAfterSequenceStarted,
-    std::future<void>* waitBeforeSequenceFinished) {
+    std::future<void>* waitBeforeSequenceFinished,
+    std::atomic<int>* numberOfThreads_notFinishedLoadYet = nullptr,
+    std::atomic<int>* numberOfThreads_notStartedYet = nullptr,
+    std::condition_variable* cv = nullptr) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
 
     if (waitBeforeSequenceStarted) {
-        std::cout << "Waiting before StartStatefulPredict" << std::endl;
+        SPDLOG_INFO("Waiting before StartStatefulPredict ID: {}", seqId);
         waitBeforeSequenceStarted->get();
     }
 
     RunStatefulPredict(modelInstance, modelInput, seqId, ovms::SEQUENCE_START);
+    if (numberOfThreads_notStartedYet) {
+        (*numberOfThreads_notStartedYet)--;
+    }
+    if (cv) {
+        cv->notify_all();
+    }
     if (waitAfterSequenceStarted) {
-        std::cout << "Waiting after StartStatefulPredict" << std::endl;
+        SPDLOG_INFO("Waiting after StartStatefulPredict ID: {}", seqId);
         waitAfterSequenceStarted->get();
     }
     for (int i = 1; i < numberOfNoControlRequests; i++) {
@@ -345,11 +355,18 @@ void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstanc
     }
 
     if (waitBeforeSequenceFinished) {
-        std::cout << "Waiting before EndStatefulPredict" << std::endl;
+        SPDLOG_INFO("Waiting before EndStatefulPredict ID: {}", seqId);
         waitBeforeSequenceFinished->get();
     }
 
     RunStatefulPredict(modelInstance, modelInput, seqId, ovms::SEQUENCE_END);
+
+    if (numberOfThreads_notFinishedLoadYet) {
+        (*numberOfThreads_notFinishedLoadYet)--;
+    }
+    if (cv) {
+        cv->notify_all();
+    }
 }
 
 void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
@@ -814,19 +831,28 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     std::vector<std::promise<void>> releaseWaitAfterSequenceStarted(numberOfThreadsWaitingOnStart);
     std::vector<std::promise<void>> releaseWaitBeforeSequenceFinished(numberOfThreadsWaitingOnEnd);
     std::vector<std::thread> inferThreads;
+    std::atomic<int> numberOfThreads_notFinishedLoadYet = 30;
+    std::atomic<int> numberOfThreads_notStartedYet = 60;
+
+    std::condition_variable cv;
+    std::mutex cv_m;
+    std::unique_lock<std::mutex> lk(cv_m);
 
     for (auto i = 0u; i < numberOfThreadsWaitingOnStart; ++i) {
         startingSequenceId++;
 
         inferThreads.emplace_back(
             std::thread(
-                [this, &releaseWaitBeforeSequenceStarted, &releaseWaitAfterSequenceStarted, i, startingSequenceId, modelInstance]() {
+                [this, &releaseWaitBeforeSequenceStarted, &releaseWaitAfterSequenceStarted, i, startingSequenceId, modelInstance, &numberOfThreads_notFinishedLoadYet, &numberOfThreads_notStartedYet, &cv]() {
                     std::future<void> fut1 = releaseWaitBeforeSequenceStarted[i].get_future();
                     std::future<void> fut2 = releaseWaitAfterSequenceStarted[i].get_future();
-                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                    RunStatefulPredicts(modelInstance, modelInput, 25, startingSequenceId,
                         &fut1,
                         &fut2,
-                        nullptr);
+                        nullptr,
+                        &numberOfThreads_notFinishedLoadYet,
+                        &numberOfThreads_notStartedYet,
+                        &cv);
                 }));
     }
 
@@ -834,13 +860,16 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
         startingSequenceId++;
         inferThreads.emplace_back(
             std::thread(
-                [this, &releaseWaitBeforeSequenceStarted, &releaseWaitBeforeSequenceFinished, i, startingSequenceId, modelInstance, numberOfThreadsWaitingOnStart]() {
+                [this, &releaseWaitBeforeSequenceStarted, &releaseWaitBeforeSequenceFinished, i, startingSequenceId, modelInstance, numberOfThreadsWaitingOnStart, &numberOfThreads_notFinishedLoadYet, &numberOfThreads_notStartedYet, &cv]() {
                     std::future<void> fut1 = releaseWaitBeforeSequenceStarted[numberOfThreadsWaitingOnStart + i].get_future();
                     std::future<void> fut2 = releaseWaitBeforeSequenceFinished[i].get_future();
-                    RunStatefulPredicts(modelInstance, modelInput, 100, startingSequenceId,
+                    RunStatefulPredicts(modelInstance, modelInput, 25, startingSequenceId,
                         &fut1,
                         nullptr,
-                        &fut2);
+                        &fut2,
+                        &numberOfThreads_notFinishedLoadYet,
+                        &numberOfThreads_notStartedYet,
+                        &cv);
                 }));
     }
 
@@ -848,7 +877,11 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     for (auto& promise : releaseWaitBeforeSequenceStarted) {
         promise.set_value();
     }
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    auto now = std::chrono::system_clock::now();
+    const auto maxWaitTime = std::chrono::seconds(5);
+
+    ASSERT_TRUE((bool)cv.wait_until(lk, now + maxWaitTime, [&numberOfThreads_notStartedYet] { return numberOfThreads_notStartedYet <= 0; })) << "timed out";
 
     auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
 
@@ -859,7 +892,8 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     }
 
     // Sleep to allow half threads to work
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    now = std::chrono::system_clock::now();
+    ASSERT_TRUE((bool)cv.wait_until(lk, now + maxWaitTime, [&numberOfThreads_notFinishedLoadYet] { return numberOfThreads_notFinishedLoadYet <= 0; })) << "timed out";
     ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
 
     for (auto& promise : releaseWaitBeforeSequenceFinished) {
