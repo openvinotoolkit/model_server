@@ -126,4 +126,4 @@ Example:
 make docker_build OV_USE_BINARY=0 OV_SOURCE_BRANCH=<commit or branch>
 ```
   
-Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/v2022.3/docs/developer_guide.md).
+Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/releases/2022/3/docs/developer_guide.md).
