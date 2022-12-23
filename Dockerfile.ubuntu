@@ -103,8 +103,8 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
       cuda-11-8 \
       libcudnn8 \
       libcudnn8-dev \
-      libcutensor1 \
-      libcutensor-dev; \
+      libcutensor1=1.6.1.5-1 \
+      libcutensor-dev=1.6.1.5-1 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     pip3 install --no-cache-dir cython && \

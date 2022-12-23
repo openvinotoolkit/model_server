@@ -164,8 +164,8 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
     apt-get update -y && \
     apt-get install -y --no-install-recommends curl && \
     curl -o /etc/apt/preferences.d/cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin ; \
-    apt-get update && apt-get install -y --no-install-recommends libcudnn8 libcutensor1 libpng16-16 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*qg
+    apt-get update && apt-get install -y --no-install-recommends libcudnn8 libcutensor1=1.6.1.5-1 libpng16-16 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
