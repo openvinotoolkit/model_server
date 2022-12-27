@@ -77,7 +77,7 @@ usage: grpc_server_ready [OPTION]...
 
 ```Bash
 java -cp target/grpc-client.jar clients.grpc_server_ready --grpc_port 9000 --grpc_address localhost
-Server Live: true
+Server Ready: true
 ```
 
 ### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
@@ -97,7 +97,8 @@ usage: grpc_server_metadata [OPTION]...
 ```Bash
 java -cp target/grpc-client.jar clients.grpc_server_metadata --grpc_port 9000 --grpc_address localhost
 Name: OpenVINO Model Server
-Version: 2022.2.c290da85
+name: "OpenVINO Model Server"
+version: "2022.3.befa4df9"
 ```
 
 ### Run the Client to get model readiness <a name="grpc-model-ready"></a>
