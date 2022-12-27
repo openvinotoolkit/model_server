@@ -76,25 +76,22 @@ public class grpc_infer_dummy {
 
 		// Generate the request
 		ModelInferRequest.Builder request = ModelInferRequest.newBuilder();
-		request.setModelName(cmd.getOptionValue("n", "dummy"));
+		request.setModelName(cmd.getOptionValue("n", "resnet"));
 		request.setModelVersion(cmd.getOptionValue("v", ""));
 
 		// Input data
-		List<Float> lst = Arrays.asList(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f, 9f);
 		InferTensorContents.Builder input_data = InferTensorContents.newBuilder();
-		input_data.addAllFp32Contents(lst);
 
 		// Populate the inputs in inference request
 		ModelInferRequest.InferInputTensor.Builder input = ModelInferRequest.InferInputTensor
 				.newBuilder();
 		String defaultInputName = "b";
 		input.setName(cmd.getOptionValue("i", defaultInputName));
-		input.setDatatype("FP32");
+		input.setDatatype("BYTES");
 		input.addShape(1);
-		input.addShape(10);
-		input.setContents(input_data);
 
 		request.addInputs(0, input);
+		request.addRawInputContents();
 
 		ModelInferResponse response = grpc_stub.modelInfer(request.build());
 

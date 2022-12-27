@@ -26,7 +26,7 @@ cd model_server
 
 ### Start the Model Server Container with Dummy Model
 ```Bash
-docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 
+docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 
 ```
 
 ### Build client library and samples
@@ -35,11 +35,133 @@ cd client/java/kserve-api
 mvn install
 ```
 
+## GRPC Examples <a name="grpc-api"></a>
+
+
+## GRPC Examples with Dummy Model
+
+This section demonstrates inference on a simple model, which increments each provided value. 
+
+### Run the Client to get server liveness <a name="grpc-server-live"></a>
+
+- Command
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_server_live --help
+usage: grpc_server_live [OPTION]...
+ -a,--grpc_address <GRPC_ADDRESS>   Specify url to grpc service.
+ -h,--help                          Show this help message and exit
+ -p,--grpc_port <GRPC_PORT>         Specify port to grpc service.
+```
+
+- Usage Example 
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_server_live --grpc_port 9000 --grpc_address localhost
+Server Live: true
+```
+
+### Run the Client to get server readiness <a name="grpc-server-ready"></a>
+
+- Command
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_server_ready --help
+usage: grpc_server_ready [OPTION]...
+ -a,--grpc_address <GRPC_ADDRESS>   Specify url to grpc service.
+ -h,--help                          Show this help message and exit
+ -p,--grpc_port <GRPC_PORT>         Specify port to grpc service.
+```
+
+- Usage Example
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_server_ready --grpc_port 9000 --grpc_address localhost
+Server Live: true
+```
+
+### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
+
+- Command
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_server_metadata --help
+usage: grpc_server_metadata [OPTION]...
+ -a,--grpc_address <GRPC_ADDRESS>   Specify url to grpc service.
+ -h,--help                          Show this help message and exit
+ -p,--grpc_port <GRPC_PORT>         Specify port to grpc service.
+```
+
+- Usage Example
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_server_metadata --grpc_port 9000 --grpc_address localhost
+Name: OpenVINO Model Server
+Version: 2022.2.c290da85
+```
+
+### Run the Client to get model readiness <a name="grpc-model-ready"></a>
+
+- Command
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_model_ready --help
+usage: grpc_model_ready [OPTION]...
+ -a,--grpc_address <GRPC_ADDRESS>     Specify url to grpc service.
+ -h,--help                            Show this help message and exit
+ -n,--model_name <MODEL_NAME>         Define model name, must be same as
+                                      is in service
+ -p,--grpc_port <GRPC_PORT>           Specify port to grpc service.
+ -v,--model_version <MODEL_VERSION>   Define model version.
+```
+
+- Usage Example
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_model_ready --grpc_port 9000 --grpc_address localhost --model_name dummy
+Model Ready: true
+```
+
+### Run the Client to get metadata <a name="grpc-model-metadata"></a>
+
+- Command
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_model_metadata --help
+usage: grpc_model_metadata [OPTION]...
+ -a,--grpc_address <GRPC_ADDRESS>     Specify url to grpc service.
+ -h,--help                            Show this help message and exit
+ -n,--model_name <MODEL_NAME>         Define model name, must be same as
+                                      is in service
+ -p,--grpc_port <GRPC_PORT>           Specify port to grpc service.
+ -v,--model_version <MODEL_VERSION>   Define model version.
+```
+
+- Usage Example
+
+```Bash
+java -cp target/grpc-client.jar clients.grpc_model_ready --grpc_port 9000 --grpc_address localhost --model_name dummy
+name: "dummy"
+versions: "1"
+platform: "OpenVINO"
+inputs {
+  name: "b"
+  datatype: "FP32"
+  shape: 1
+  shape: 10
+}
+outputs {
+  name: "a"
+  datatype: "FP32"
+  shape: 1
+  shape: 10
+}
+```
 
 ### Run the Client to perform inference
 ```Bash
 java -cp target/grpc-client.jar clients.grpc_infer_dummy --help
-usage: grpc_infer_dummy
+usage: grpc_infer_dummy [OPTION]...
  -a,--grpc_address <GRPC_ADDRESS>     Specify url to grpc service.
  -h,--help                            Show this help message and exit
  -i,--input_name <INPUT_NAME>         Specify input tensor name.

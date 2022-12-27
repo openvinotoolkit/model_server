@@ -16,11 +16,6 @@
 
 package clients;
 
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
-import java.util.Arrays;
-import java.util.List;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -31,13 +26,12 @@ import org.apache.commons.cli.ParseException;
 
 import inference.GRPCInferenceServiceGrpc;
 import inference.GRPCInferenceServiceGrpc.GRPCInferenceServiceBlockingStub;
-import inference.GrpcPredictV2.InferTensorContents;
-import inference.GrpcPredictV2.ModelInferRequest;
-import inference.GrpcPredictV2.ModelInferResponse;
+import inference.GrpcPredictV2.ModelMetadataRequest;
+import inference.GrpcPredictV2.ModelMetadataResponse;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
-public class grpc_infer_dummy {
+public class grpc_model_metadata {
 
 	public static void main(String[] args) {
 		Options opt = new Options();
@@ -46,10 +40,6 @@ public class grpc_infer_dummy {
 				.argName("GRPC_ADDRESS").build());
 		opt.addOption(Option.builder("p").longOpt("grpc_port").hasArg().desc("Specify port to grpc service. ")
 				.argName("GRPC_PORT").build());
-		opt.addOption(Option.builder("i").longOpt("input_name").hasArg().desc("Specify input tensor name. ")
-				.argName("INPUT_NAME").build());
-		opt.addOption(Option.builder("o").longOpt("output_name").hasArg().desc("Specify output tensor name. ")
-				.argName("OUTPUT_NAME").build());
 		opt.addOption(Option.builder("n").longOpt("model_name").hasArg()
 				.desc("Define model name, must be same as is in service").argName("MODEL_NAME").build());
 		opt.addOption(Option.builder("v").longOpt("model_version").hasArg().desc("Define model version. ")
@@ -65,7 +55,7 @@ public class grpc_infer_dummy {
 
 		if (cmd.hasOption("h")) {
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("grpc_infer_dummy [OPTION]...", opt);
+			formatter.printHelp("grpc_model_metadata [OPTION]...", opt);
 			System.exit(0);
 		}
 
@@ -75,41 +65,14 @@ public class grpc_infer_dummy {
 		GRPCInferenceServiceBlockingStub grpc_stub = GRPCInferenceServiceGrpc.newBlockingStub(channel);
 
 		// Generate the request
-		ModelInferRequest.Builder request = ModelInferRequest.newBuilder();
-		request.setModelName(cmd.getOptionValue("n", "dummy"));
-		request.setModelVersion(cmd.getOptionValue("v", ""));
+		ModelMetadataRequest.Builder request = ModelMetadataRequest.newBuilder();
+		request.setName(cmd.getOptionValue("n", "dummy"));
+		request.setVersion(cmd.getOptionValue("v", ""));
 
-		// Input data
-		List<Float> lst = Arrays.asList(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f, 9f);
-		InferTensorContents.Builder input_data = InferTensorContents.newBuilder();
-		input_data.addAllFp32Contents(lst);
-
-		// Populate the inputs in inference request
-		ModelInferRequest.InferInputTensor.Builder input = ModelInferRequest.InferInputTensor
-				.newBuilder();
-		String defaultInputName = "b";
-		input.setName(cmd.getOptionValue("i", defaultInputName));
-		input.setDatatype("FP32");
-		input.addShape(1);
-		input.addShape(10);
-		input.setContents(input_data);
-
-		request.addInputs(0, input);
-
-		ModelInferResponse response = grpc_stub.modelInfer(request.build());
+		ModelMetadataResponse response = grpc_stub.modelMetadata(request.build());
 
 		// Get the response outputs
-		FloatBuffer fb = response.getRawOutputContentsList().get(0).asReadOnlyByteBuffer()
-				.order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
-		float[] op = new float[fb.remaining()];
-		fb.get(op);
-
-		for (int i = 0; i < op.length; i++) {
-			System.out.println(
-					Float.toString(lst.get(i)) + " => " +
-							Float.toString(op[i]));
-		}
-
+		System.out.print(response.toString());
 		channel.shutdownNow();
 
 	}
