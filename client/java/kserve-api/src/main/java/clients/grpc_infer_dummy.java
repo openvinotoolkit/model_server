@@ -118,10 +118,7 @@ public class grpc_infer_dummy {
 
 	public static float[] toArray(FloatBuffer b) {
 		if (b.hasArray()) {
-			if (b.arrayOffset() == 0)
-				return b.array();
-
-			return Arrays.copyOfRange(b.array(), b.arrayOffset(), b.array().length);
+			return b.array();
 		}
 
 		b.rewind();
