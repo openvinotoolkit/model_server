@@ -37,9 +37,23 @@ mvn install
 
 
 ### Run the Client to perform inference
+```Bash
+java -cp target/grpc-client.jar clients.grpc_infer_dummy --help
+usage: grpc_infer_dummy
+ -a,--grpc_address <GRPC_ADDRESS>     Specify url to grpc service.
+ -h,--help                            Show this help message and exit
+ -i,--input_name <INPUT_NAME>         Specify input tensor name.
+ -n,--model_name <MODEL_NAME>         Define model name, must be same as
+                                      is in service
+ -o,--output_name <OUTPUT_NAME>       Specify output tensor name.
+ -p,--grpc_port <GRPC_PORT>           Specify port to grpc service.
+ -v,--model_version <MODEL_VERSION>   Define model version.
+```
+
+- Usage Example
 
 ```Bash
-java -cp target/grpc-client.jar clients.grpc_infer_dummy
+java -cp target/grpc-client.jar clients.grpc_infer_dummy --grpc_port 9000 --grpc_address localhost
 0.0 => 1.0
 1.0 => 2.0
 2.0 => 3.0

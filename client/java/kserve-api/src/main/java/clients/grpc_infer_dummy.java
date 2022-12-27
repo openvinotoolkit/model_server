@@ -24,6 +24,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 import inference.GRPCInferenceServiceGrpc;
 import inference.GRPCInferenceServiceGrpc.GRPCInferenceServiceBlockingStub;
 import inference.GrpcPredictV2.InferTensorContents;
@@ -37,20 +45,37 @@ import io.grpc.ManagedChannelBuilder;
 public class grpc_infer_dummy {
 
 	public static void main(String[] args) {
+		Options opt = new Options();
+		opt.addOption("h", "help", false,"Show this help message and exit");
+		opt.addOption(Option.builder("a").longOpt("grpc_address").hasArg().desc("Specify url to grpc service. ").argName("GRPC_ADDRESS").build());
+		opt.addOption(Option.builder("p").longOpt("grpc_port").hasArg().desc("Specify port to grpc service. ").argName("GRPC_PORT").build());
+		opt.addOption(Option.builder("i").longOpt("input_name").hasArg().desc("Specify input tensor name. ").argName("INPUT_NAME").build());
+		opt.addOption(Option.builder("o").longOpt("output_name").hasArg().desc("Specify output tensor name. ").argName("OUTPUT_NAME").build());
+		opt.addOption(Option.builder("n").longOpt("model_name").hasArg().desc("Define model name, must be same as is in service").argName("MODEL_NAME").build());
+		opt.addOption(Option.builder("v").longOpt("model_version").hasArg().desc("Define model version. ").argName("MODEL_VERSION").build());
+		CommandLineParser parser = new DefaultParser();
+		CommandLine cmd = null;
+		try {
+			cmd = parser.parse(opt, args);
+		}
+		catch (ParseException exp) {
+			System.err.println("Parsing failed.  Reason: " + exp.getMessage());
+			System.exit(1);
+		}
 
-		String host = args.length > 0 ? args[0] : "localhost";
-		int port = args.length > 1 ? Integer.parseInt(args[1]) : 9000;
+		if(cmd.hasOption("h")){
+			HelpFormatter formatter = new HelpFormatter();
+			formatter.printHelp("grpc_infer_dummy [OPTION]...", opt);
+			System.exit(0);
+		}
 
-		String model_name = "dummy";
-		String model_version = "";
-
-		ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
+		ManagedChannel channel = ManagedChannelBuilder.forAddress(cmd.getOptionValue("a", "localhost"), Integer.parseInt(cmd.getOptionValue("p", "9000"))).usePlaintext().build();
 		GRPCInferenceServiceBlockingStub grpc_stub = GRPCInferenceServiceGrpc.newBlockingStub(channel);
 
 		// Generate the request
 		ModelInferRequest.Builder request = ModelInferRequest.newBuilder();
-		request.setModelName(model_name);
-		request.setModelVersion(model_version);
+		request.setModelName(cmd.getOptionValue("n", "dummy"));
+		request.setModelVersion(cmd.getOptionValue("v", ""));
 
 		// Input data
 		List<Float> lst = Arrays.asList(0f,1f,2f,3f,4f,5f,6f,7f,8f,9f);
@@ -60,7 +85,7 @@ public class grpc_infer_dummy {
 		// Populate the inputs in inference request
 		ModelInferRequest.InferInputTensor.Builder input = ModelInferRequest.InferInputTensor
 				.newBuilder();
-		input.setName("b");
+		input.setName(cmd.getOptionValue("i", "b"));
 		input.setDatatype("FP32");
 		input.addShape(1);
 		input.addShape(10);
@@ -72,7 +97,7 @@ public class grpc_infer_dummy {
 		// Populate the outputs in the inference request
 		ModelInferRequest.InferRequestedOutputTensor.Builder output = ModelInferRequest.InferRequestedOutputTensor
 				.newBuilder();
-		output.setName("a");
+		output.setName(cmd.getOptionValue("o", "a"));
 
 
 		request.addOutputs(0, output);
