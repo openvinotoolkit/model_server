@@ -41,6 +41,7 @@ BASE_OS_TAG_REDHAT ?= 8.7
 INSTALL_RPMS_FROM_URL ?=
 
 CHECK_COVERAGE ?=0
+RUN_TESTS ?= 1
 NVIDIA ?=0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
@@ -172,7 +173,7 @@ clang-format: venv
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
 
 .PHONY: docker_build
-docker_build: ovms_build targz_package ovms_docker capi_docker
+docker_build: ovms_build targz_package ovms_docker
 ovms_build:
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
@@ -207,7 +208,7 @@ endif
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
-		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
+		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) --build-arg RUN_TESTS=$(RUN_TESTS)\
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
