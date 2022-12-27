@@ -91,20 +91,14 @@ public class grpc_infer_dummy {
 		// Populate the inputs in inference request
 		ModelInferRequest.InferInputTensor.Builder input = ModelInferRequest.InferInputTensor
 				.newBuilder();
-		input.setName(cmd.getOptionValue("i", "b"));
+		String defaultInputName = "b";
+		input.setName(cmd.getOptionValue("i", defaultInputName));
 		input.setDatatype("FP32");
 		input.addShape(1);
 		input.addShape(10);
 		input.setContents(input_data);
 
 		request.addInputs(0, input);
-
-		// Populate the outputs in the inference request
-		ModelInferRequest.InferRequestedOutputTensor.Builder output = ModelInferRequest.InferRequestedOutputTensor
-				.newBuilder();
-		output.setName(cmd.getOptionValue("o", "a"));
-
-		request.addOutputs(0, output);
 
 		ModelInferResponse response = grpc_stub.modelInfer(request.build());
 
