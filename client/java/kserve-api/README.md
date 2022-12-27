@@ -158,7 +158,7 @@ outputs {
 }
 ```
 
-### Run the Client to perform inference
+### Run the Client to perform inference<a name="grpc-model-infer"></a>
 ```Bash
 java -cp target/grpc-client.jar clients.grpc_infer_dummy --help
 usage: grpc_infer_dummy [OPTION]...
