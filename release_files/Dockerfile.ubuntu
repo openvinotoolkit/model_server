@@ -152,10 +152,6 @@ RUN	apt-get update -y ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
-COPY --from=base_build /usr/local/lib/ /ovms/lib/
-COPY --from=base_build /ovms /ovms
-
-# for HDDL
 
 # for NCS
 RUN if [ -f /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules ]; then mkdir -p /etc/udev/rules.d/ && cp /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules /etc/udev/rules.d/ && ldconfig ; fi
@@ -166,6 +162,9 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
     curl -o /etc/apt/preferences.d/cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin ; \
     apt-get update && apt-get install -y --no-install-recommends libcudnn8 libcutensor1=1.6.1.5-1 libpng16-16 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
+COPY --from=base_build /usr/local/lib/ /ovms/lib/
+COPY --from=base_build /ovms /ovms
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
