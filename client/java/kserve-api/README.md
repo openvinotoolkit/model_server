@@ -141,7 +141,7 @@ usage: grpc_model_metadata [OPTION]...
 - Usage Example
 
 ```Bash
-java -cp target/grpc-client.jar clients.grpc_model_ready --grpc_port 9000 --grpc_address localhost --model_name dummy
+java -cp target/grpc-client.jar clients.grpc_model_metadata --grpc_port 9000 --grpc_address localhost --model_name dummy
 name: "dummy"
 versions: "1"
 platform: "OpenVINO"
