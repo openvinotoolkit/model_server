@@ -103,8 +103,10 @@ public class grpc_infer_dummy {
 		ModelInferResponse response = grpc_stub.modelInfer(request.build());
 
 		// Get the response outputs
-		float[] op = toArray(response.getRawOutputContentsList().get(0).asReadOnlyByteBuffer()
-				.order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer());
+		FloatBuffer fb = response.getRawOutputContentsList().get(0).asReadOnlyByteBuffer()
+				.order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
+		float[] op = new float[fb.remaining()];
+		fb.get(op);
 
 		for (int i = 0; i < op.length; i++) {
 			System.out.println(
@@ -115,17 +117,4 @@ public class grpc_infer_dummy {
 		channel.shutdownNow();
 
 	}
-
-	public static float[] toArray(FloatBuffer b) {
-		if (b.hasArray()) {
-			return b.array();
-		}
-
-		b.rewind();
-		float[] tmp = new float[b.remaining()];
-		b.get(tmp);
-
-		return tmp;
-	}
-
 }
