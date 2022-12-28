@@ -661,7 +661,7 @@ TEST_F(StatefulModelInstanceTempDir, idleSequencesCleanup) {
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
     auto modelInstance = manager.findModelInstance(dummyModelName);
-    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+    auto statefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
     uint64_t sequenceCounter = 10;
 
     for (uint64_t i = 1; i < sequenceCounter + 1; i++) {
@@ -673,12 +673,12 @@ TEST_F(StatefulModelInstanceTempDir, idleSequencesCleanup) {
         tensorflow::serving::PredictResponse response3;
 
         // Do the inference
-        ASSERT_EQ(stetefulMockedModelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
+        ASSERT_EQ(statefulMockedModelInstance->infer(&request, &response3, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
     }
 
-    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
+    ASSERT_EQ(statefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
     // First sequence cleaner check sets idle flag on each sequence to true
-    stetefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
+    statefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
     uint64_t activeSequencesNumber = 7;
     for (uint64_t i = 1; i < activeSequencesNumber + 1; i++) {
         tensorflow::serving::PredictRequest request;
@@ -689,12 +689,12 @@ TEST_F(StatefulModelInstanceTempDir, idleSequencesCleanup) {
         tensorflow::serving::PredictResponse response;
 
         // Do the inference -> set idle flag to false
-        ASSERT_EQ(stetefulMockedModelInstance->infer(&request, &response, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
+        ASSERT_EQ(statefulMockedModelInstance->infer(&request, &response, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
     }
 
     // Second sequence cleaner check removes sequences with idle flag == true
-    stetefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
-    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), activeSequencesNumber);
+    statefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
+    ASSERT_EQ(statefulMockedModelInstance->getSequenceManager()->getSequencesCount(), activeSequencesNumber);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
@@ -705,7 +705,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
     auto modelInstance = manager.findModelInstance(dummyModelName);
-    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+    auto statefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
     uint64_t sequenceCounter = 10;
 
     for (uint64_t i = 1; i < sequenceCounter + 1; i++) {
@@ -717,28 +717,28 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferManagerMutexTest) {
         tensorflow::serving::PredictResponse response;
 
         // Do the inference
-        ASSERT_EQ(stetefulMockedModelInstance->infer(&request, &response, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
+        ASSERT_EQ(statefulMockedModelInstance->infer(&request, &response, unload_guard, nullptr, nullptr, nullptr), ovms::StatusCode::OK);
     }
 
-    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
+    ASSERT_EQ(statefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
 
     std::promise<void> cleanerStartPromise, cleanerEndPromise;
     std::future<void> cleanerStartFuture = cleanerStartPromise.get_future();
     std::future<void> cleanerEndFuture = cleanerEndPromise.get_future();
-    std::thread cleanerThread([&stetefulMockedModelInstance, &cleanerStartFuture, &cleanerEndPromise]() {
+    std::thread cleanerThread([&statefulMockedModelInstance, &cleanerStartFuture, &cleanerEndPromise]() {
         cleanerStartFuture.get();
-        stetefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
+        statefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
         cleanerEndPromise.set_value();
     });
 
-    stetefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
-    std::unique_lock<std::mutex> sequenceManagerLock(stetefulMockedModelInstance->getSequenceManager()->getMutex());
+    statefulMockedModelInstance->getSequencesViewer()->removeIdleSequences();
+    std::unique_lock<std::mutex> sequenceManagerLock(statefulMockedModelInstance->getSequenceManager()->getMutex());
     cleanerStartPromise.set_value();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
+    ASSERT_EQ(statefulMockedModelInstance->getSequenceManager()->getSequencesCount(), sequenceCounter);
     sequenceManagerLock.unlock();
     cleanerEndFuture.get();
-    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
+    ASSERT_EQ(statefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
     cleanerThread.join();
 }
 
@@ -750,7 +750,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreadsSequenceTimeout
     auto status = manager.loadConfig(configFilePath);
     ASSERT_TRUE(status.ok());
     auto modelInstance = manager.findModelInstance(dummyModelName);
-    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+    auto statefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
     uint64_t seqId = 0;
     uint16_t numberOfThreads = 8;
@@ -760,26 +760,26 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreadsSequenceTimeout
         seqId++;
         inferThreads.emplace_back(
             std::thread(
-                [this, seqId, stetefulMockedModelInstance]() {
-                    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
+                [this, seqId, statefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferEnd(statefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
                 }));
         seqId++;
         inferThreads.emplace_back(
             std::thread(
-                [this, seqId, stetefulMockedModelInstance]() {
-                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_AFTER_SEQUENCE_UNLOCKED);
+                [this, seqId, statefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferMiddle(statefulMockedModelInstance, modelInput, seqId, WAIT_AFTER_SEQUENCE_UNLOCKED);
                 }));
         seqId++;
         inferThreads.emplace_back(
             std::thread(
-                [this, seqId, stetefulMockedModelInstance]() {
-                    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, WAIT_AFTER_SEQUENCE_UNLOCKED);
+                [this, seqId, statefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferStart(statefulMockedModelInstance, modelInput, seqId, WAIT_AFTER_SEQUENCE_UNLOCKED);
                 }));
         seqId++;
         inferThreads.emplace_back(
             std::thread(
-                [this, seqId, stetefulMockedModelInstance]() {
-                    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
+                [this, seqId, statefulMockedModelInstance]() {
+                    RunStatefulPredictsOnMockedInferMiddle(statefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
                 }));
     }
 
@@ -787,7 +787,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreadsSequenceTimeout
         thread.join();
     }
 
-    ASSERT_EQ(stetefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
+    ASSERT_EQ(statefulMockedModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
 TEST_F(StatefulModelInstanceTempDir, modelInstanceFactory) {
@@ -810,9 +810,9 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleInferences) {
     uint64_t seqId = 1;
 
     RunStatefulPredicts(modelInstance, modelInput, 100, seqId, nullptr, nullptr, nullptr);
-    auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
+    auto statefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
 
-    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
+    ASSERT_EQ(statefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
@@ -888,9 +888,9 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     // Wait for all threads to finish sending SEQUENCE_START. Max 5s.
     ASSERT_TRUE((bool)cv.wait_until(lk, now + maxWaitTime, [&numberOfThreads_notStartedYet] { return numberOfThreads_notStartedYet <= 0; })) << "timed out";
 
-    auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
+    auto statefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
 
-    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd + numberOfThreadsWaitingOnStart);
+    ASSERT_EQ(statefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd + numberOfThreadsWaitingOnStart);
 
     for (auto& promise : releaseWaitAfterSequenceStarted) {
         promise.set_value();
@@ -899,7 +899,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     // Wait for half of the threads to finish sending regular stateful load. Max 5s.
     now = std::chrono::system_clock::now();
     ASSERT_TRUE((bool)cv.wait_until(lk, now + maxWaitTime, [&numberOfThreads_notFinishedLoadYet] { return numberOfThreads_notFinishedLoadYet <= 0; })) << "timed out";
-    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
+    ASSERT_EQ(statefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
 
     for (auto& promise : releaseWaitBeforeSequenceFinished) {
         promise.set_value();
@@ -909,7 +909,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
         thread.join();
     }
 
-    ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
+    ASSERT_EQ(statefulModelInstance->getSequenceManager()->getSequencesCount(), 0);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceStartTimeout) {
@@ -922,12 +922,12 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceStartTimeout) {
     auto modelInstance = manager.findModelInstance(dummyModelName);
     uint64_t seqId = 1;
 
-    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+    auto statefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
-    RunStatefulPredictsOnMockedInferStart(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferStart(statefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
+    RunStatefulPredictsOnMockedInferStart(statefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
+    RunStatefulPredictsOnMockedInferStart(statefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferStart(statefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceNoControlTimeout) {
@@ -940,12 +940,12 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceNoControlTimeout) {
     auto modelInstance = manager.findModelInstance(dummyModelName);
     uint64_t seqId = 1;
 
-    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+    auto statefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
-    RunStatefulPredictsOnMockedInferMiddle(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferMiddle(statefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
+    RunStatefulPredictsOnMockedInferMiddle(statefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
+    RunStatefulPredictsOnMockedInferMiddle(statefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferMiddle(statefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
@@ -957,12 +957,12 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceEndTimeout) {
     ASSERT_TRUE(status.ok());
     auto modelInstance = manager.findModelInstance(dummyModelName);
     uint64_t seqId = 1;
-    auto stetefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
+    auto statefulMockedModelInstance = std::static_pointer_cast<MockedStatefulModelInstance>(modelInstance);
 
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
-    RunStatefulPredictsOnMockedInferEnd(stetefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferEnd(statefulMockedModelInstance, modelInput, seqId, WAIT_BEFORE_MANAGER_LOCKED);
+    RunStatefulPredictsOnMockedInferEnd(statefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_LOCKED);
+    RunStatefulPredictsOnMockedInferEnd(statefulMockedModelInstance, modelInput, seqId++, WAIT_BEFORE_SEQUENCE_UNLOCKED);
+    RunStatefulPredictsOnMockedInferEnd(statefulMockedModelInstance, modelInput, seqId++, WAIT_AFTER_SEQUENCE_UNLOCKED);
 }
 
 TEST_F(StatefulModelInstanceTempDir, statefulInferSequenceMissing) {
@@ -1112,7 +1112,7 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
         true,          // is stateful
         true,          // idle sequence cleanup enabled
         false,         // low latency transformation enabled
-        44,            // steteful sequence max number,
+        44,            // stateful sequence max number,
         "",            // cache dir
         modelVersion,  // version
         modelPath,     // local path
@@ -1132,7 +1132,7 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
         true,          // is stateful
         true,          // idle sequence cleanup enabled
         true,          // low latency transformation enabled
-        11,            // steteful sequence max number
+        11,            // stateful sequence max number
         "",            // cache dir
         modelVersion,  // version
         modelPath,     // local path
