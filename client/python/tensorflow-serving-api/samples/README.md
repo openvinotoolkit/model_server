@@ -246,11 +246,11 @@ usage: grpc_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
 
 - Usage example
 ```bash
-python grpc_predict_binary_resnet.py --grpc_address localhost --model_name resnet --input_name 0 --output_name 1463 --grpc_port 9000 --images input_images.txt
+python grpc_predict_binary_resnet.py --grpc_address localhost --model_name resnet --input_name 0 --output_name 1463 --grpc_port 9000 --images ../../common/resnet_input_images.txt
 
 Start processing:
         Model name: resnet
-        Images list file: input_images.txt
+        Images list file: ../../common/resnet_input_images.txt
 Batch: 0; Processing time: 31.59 ms; speed 31.65 fps
          1 airliner 404 ; Correct match.
 Batch: 1; Processing time: 30.08 ms; speed 33.24 fps
@@ -567,11 +567,11 @@ usage: rest_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
 
 - Usage example
 ```bash
-python rest_predict_binary_resnet.py --rest_url http://localhost:8000 --model_name resnet --input_name data --output_name prob  --images input_images.txt
+python rest_predict_binary_resnet.py --rest_url http://localhost:8000 --model_name resnet --input_name data --output_name prob  --images ../../common/resnet_input_images.txt
 
 Start processing:
         Model name: resnet
-        Images list file: input_images.txt
+        Images list file: ../../common/resnet_input_images.txt
 Batch: 0; Processing time: 21.47 ms; speed 46.57 fps
 output shape: (1, 1000)
          1 airliner 404 ; Correct match.
