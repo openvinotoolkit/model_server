@@ -175,6 +175,11 @@ clang-format: venv
 .PHONY: docker_build
 docker_build: ovms_builder_image targz_package ovms_release_image
 ovms_builder_image:
+ifeq ($(CHECK_COVERAGE),1)
+  ifeq ($(RUN_TESTS),0)
+	@echo "Cannot test coverage without running tetes. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
+  endif
+endif
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
