@@ -831,8 +831,12 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     std::vector<std::promise<void>> releaseWaitAfterSequenceStarted(numberOfThreadsWaitingOnStart);
     std::vector<std::promise<void>> releaseWaitBeforeSequenceFinished(numberOfThreadsWaitingOnEnd);
     std::vector<std::thread> inferThreads;
-    std::atomic<int> numberOfThreads_notFinishedLoadYet = 30;
+
+    // Each thread will decrease this counter to signal main test thread when all START sequences have been sent.
     std::atomic<int> numberOfThreads_notStartedYet = 60;
+
+    // Each thread will decrease this counter when regular stateful load has finished. Only half of the threads need to signal it.
+    std::atomic<int> numberOfThreads_notFinishedLoadYet = 30;
 
     std::condition_variable cv;
     std::mutex cv_m;
@@ -881,6 +885,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
     auto now = std::chrono::system_clock::now();
     const auto maxWaitTime = std::chrono::seconds(5);
 
+    // Wait for all threads to finish sending SEQUENCE_START. Max 5s.
     ASSERT_TRUE((bool)cv.wait_until(lk, now + maxWaitTime, [&numberOfThreads_notStartedYet] { return numberOfThreads_notStartedYet <= 0; })) << "timed out";
 
     auto stetefulModelInstance = std::static_pointer_cast<ovms::StatefulModelInstance>(modelInstance);
@@ -891,7 +896,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferMultipleThreads) {
         promise.set_value();
     }
 
-    // Sleep to allow half threads to work
+    // Wait for half of the threads to finish sending regular stateful load. Max 5s.
     now = std::chrono::system_clock::now();
     ASSERT_TRUE((bool)cv.wait_until(lk, now + maxWaitTime, [&numberOfThreads_notFinishedLoadYet] { return numberOfThreads_notFinishedLoadYet <= 0; })) << "timed out";
     ASSERT_EQ(stetefulModelInstance->getSequenceManager()->getSequencesCount(), numberOfThreadsWaitingOnEnd);
