@@ -38,6 +38,7 @@
         "name": "pvb_face_multi_version",
         "base_path": "{path}/pvb_face_multi_version",
         "model_version_policy": {"all": {}},
+        "plugin_config": {"PERFORMANCE_HINT": "THROUGHPUT"},
         "target_device": "{target_device}"
       }
     },
