@@ -10,7 +10,7 @@ This guide shows how to interact with KServe API endpoints over gRPC. It covers 
   - <a href="#grpc-model-ready">grpc_model_ready</a>
   - <a href="#grpc-model-metadata">grpc_model_metadata</a>
   - <a href="#grpc-model-infer">grpc_infer_dummy</a>
-  - <a href="#grpc-model-infer-resnet">grpc_infer_dummy</a>
+  - <a href="#grpc-model-infer-resnet">grpc_infer_resnet</a>
 
 ## Before you run the samples
 
