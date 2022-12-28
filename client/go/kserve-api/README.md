@@ -139,11 +139,11 @@ name:"dummy" versions:"1" platform:"OpenVINO" inputs:{name:"b" datatype:"FP32" s
 ```Bash
 ./grpc_infer_dummy --help
 Usage of ./grpc_infer_dummy:
-  -m string
+  -n string
         Name of model being served.  (default "dummy")
   -u string
         Inference Server URL.  (default "localhost:9000")
-  -x string
+  -v string
         Version of model.
 ```
 
