@@ -10,6 +10,7 @@ This guide shows how to interact with KServe API endpoints over gRPC. It covers 
   - <a href="#grpc-model-ready">grpc_model_ready</a>
   - <a href="#grpc-model-metadata">grpc_model_metadata</a>
   - <a href="#grpc-model-infer">grpc_infer_dummy</a>
+  - <a href="#grpc-model-infer-resnet">grpc_infer_dummy</a>
 
 ## Before you run the samples
 
@@ -188,7 +189,7 @@ java -cp target/grpc-client.jar clients.grpc_infer_dummy --grpc_port 9000 --grpc
 9.0 => 10.0
 ```
 
-## Examples with Resnet Model
+## Examples with Resnet Model<a name="grpc-model-infer-resnet"></a>
 
 ### Download the Pretrained Model
 Download the model files and store them in the `models` directory
