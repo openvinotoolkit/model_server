@@ -43,8 +43,8 @@ type Flags struct {
 
 func parseFlags() Flags {
 	var flags Flags
-	flag.StringVar(&flags.ModelName, "m", "dummy", "Name of model being served. ")
-	flag.StringVar(&flags.ModelVersion, "x", "", "Version of model. ")
+	flag.StringVar(&flags.ModelName, "n", "dummy", "Name of model being served. ")
+	flag.StringVar(&flags.ModelVersion, "v", "", "Version of model. ")
 	flag.StringVar(&flags.URL, "u", "localhost:9000", "Inference Server URL. ")
 	flag.Parse()
 	return flags

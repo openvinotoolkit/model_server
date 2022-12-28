@@ -33,13 +33,107 @@ cd build
 
 ## GRPC Examples <a name="grpc-api"></a>
 
-
 ## GRPC Examples with Dummy Model
 
 This section demonstrates inference on a simple model, which increments each provided value. 
 
-### Run the Client to get server liveness <a name="grpc-model-infer"></a>
+### Run the Client to get server liveness <a name="grpc-server-live"></a>
 
+- Command
+
+```Bash
+./grpc_server_live --help
+Usage of ./grpc_server_live:
+  -u string
+        Inference Server URL.  (default "localhost:9000")
+```
+
+- Usage Example 
+
+```Bash
+./grpc_server_live -u localhost:9000
+Server Live: true
+```
+
+### Run the Client to get server readiness <a name="grpc-server-ready"></a>
+
+- Command
+
+```Bash
+./grpc_server_ready --help
+Usage of ./grpc_server_ready:
+  -u string
+        Inference Server URL.  (default "localhost:9000")
+```
+
+- Usage Example
+
+```Bash
+./grpc_server_ready -u localhost:9000
+Server Ready: true
+```
+
+### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
+
+- Command
+
+```Bash
+./grpc_server_metadata --help
+Usage of ./grpc_server_metadata:
+  -u string
+        Inference Server URL.  (default "localhost:9000")
+```
+
+- Usage Example
+
+```Bash
+./grpc_server_metadata -u localhost:9000
+name:"OpenVINO Model Server" version:"2022.3.8fb11b33"
+```
+
+### Run the Client to get model readiness <a name="grpc-model-ready"></a>
+
+- Command
+
+```Bash
+./grpc_model_ready --help
+Usage of ./grpc_model_ready:
+  -n string
+        Name of model being served.  (default "dummy")
+  -u string
+        Inference Server URL.  (default "localhost:9000")
+  -v string
+        Version of model. 
+```
+
+- Usage Example
+
+```Bash
+./grpc_model_ready -u localhost:9000
+Model Ready: true
+```
+
+### Run the Client to get metadata <a name="grpc-model-metadata"></a>
+
+- Command
+
+```Bash
+./grpc_model_metadata --help
+Usage of ./grpc_model_metadata:
+  -n string
+        Name of model being served.  (default "dummy")
+  -u string
+        Inference Server URL.  (default "localhost:9000")
+  -v string
+        Version of model. 
+```
+
+- Usage Example
+
+```Bash
+./grpc_model_metadata -u localhost:9000
+name:"dummy" versions:"1" platform:"OpenVINO" inputs:{name:"b" datatype:"FP32" shape:1 shape:10} outputs:{name:"a" datatype:"FP32" shape:1 shape:10}
+```
 - Command
 
 ```Bash
