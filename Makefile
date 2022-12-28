@@ -174,7 +174,7 @@ clang-format: venv
 
 .PHONY: docker_build
 docker_build: ovms_build targz_package ovms_docker
-ovms_build:
+ovms_builder_image:
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
