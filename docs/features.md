@@ -14,6 +14,7 @@
    ovms_docs_stateful_models
    ovms_docs_metrics
    ovms_docs_dynamic_input
+   ovms_docs_c_api
    ovms_docs_advanced
 
 @endsphinxdirective
@@ -60,6 +61,11 @@ Use the metrics endpoint compatible with the Prometheus to access performance an
 Configure served models to accept data with variable batch sizes and input shapes.
 
 [Learn more](dynamic_input.md)
+
+## Model Server C API
+Use in process inference via model server to leverage the model management and model pipelines functionality of OpenVINO Model Server within an application. This allows to reuse existing OVMS functionality to execute inference locally without network overhead.
+
+[Learn more](model_server_c_api.md)
 
 ## Advanced Features
 Use CPU Extensions, model cache feature or a custom model loader.

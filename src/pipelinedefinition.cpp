@@ -186,7 +186,7 @@ void PipelineDefinition::retire(ModelManager& manager) {
 Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
     unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
 
-    const uint waitLoadedTimestepMicroseconds = 100;
+    const uint waitLoadedTimestepMicroseconds = 1000;
     const uint waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
     uint waitCheckpointsCounter = waitCheckpoints;
     std::mutex cvMtx;

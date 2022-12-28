@@ -67,7 +67,7 @@ GPU
                --target_device GPU
    ```
 
-> **NOTE**: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
+> **NOTE**: NUM_STREAMS and PERFORMANCE_HINT should not be used together.
 
 ## Adjusting the number of streams in CPU and GPU target devices
 
@@ -75,27 +75,26 @@ OpenVINO&trade; Model Server can be tuned to a single client use case or a high 
 execution streams. They split the available resources to perform parallel execution of multiple requests.
 It is particularly efficient for models which cannot effectively consume all CPU cores or for CPUs with high number of cores.
 
-By default, for `CPU` target device, OpenVINO Model Server sets the value CPU_THROUGHPUT_AUTO and GPU_THROUGHPUT_AUTO for `GPU` target device. It calculates the number of streams based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
-
-If this default configuration is not suitable, adjust it with the `CPU_THROUGHPUT_STREAMS` parameter defined as part 
+By default, number of streams is calculated based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
+If this default configuration is not suitable, adjust it with the `NUM_STREAMS` parameter defined as part 
 of the device plugin configuration. 
 
 In a scenario where the number of parallel connections is close to 1, set the following parameter:
 
-`--plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}'`
+`--plugin_config '{"NUM_STREAMS": "1"}'`
 
 When the number of concurrent requests is higher, increase the number of streams. Make sure, however, that the number of streams is lower than the average volume of concurrent inference operations. Otherwise, the server might not be fully utilized.
 Number of streams should not exceed the number of CPU cores.
 
 For example, with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
 
-`--plugin_config '{"CPU_THROUGHPUT_STREAMS": "24"}'`
+`--plugin_config '{"NUM_STREAMS": "24"}'`
 
 ## Input data in REST API calls
 
 While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. Here are some tips to effectively use REST interface when working with OpenVINO Model Server:
 
-- use [binary data format](binary_input.md) when possible - binary data representation is smaller in terms of request size and easier to process on the server side. 
+- use [binary data format](binary_input.md) when possible(for TFS API binary data format is support ony for JPEG/PNG inputs, for KFS API there are no such limitations ) - binary data representation is smaller in terms of request size and easier to process on the server side. 
 - when working with images, consider sending JPEG/PNG directly - compressed data will greatly reduce the traffic and speed up the communication.
 - with JPEG/PNG it is the most efficient to send the images with the resolution of the configured model. It will avoid image resizing on the server to fit the model.
 - if you decide to send data inside JSON object, try to adjust the numerical data type to reduce the message size i.e. reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 
@@ -113,21 +112,20 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 
 | Parameters      | Description |
 | :---        |    :----   |
-| CPU_THREADS_NUM       | Specifies the number of threads that CPU plugin should use for inference.     |
-| CPU_BIND_THREAD   |   Binds inference threads to CPU cores.      |
-| CPU_THROUGHPUT_STREAMS | Specifies number of CPU "execution" streams for the throughput mode |
+| INFERENCE_NUM_THREADS       | Specifies the number of threads that CPU plugin should use for inference.     |
+| AFFINITY   |   Binds inference threads to CPU cores.      |
+| NUM_STREAMS | Specifies number of execution streams for the throughput mode |
 
 
-> **NOTE:** For additional information about all parameters read [OpenVINO supported plugins](https://docs.openvino.ai/2022.2/namespaceInferenceEngine_1_1PluginConfigParams.html?#detailed-documentation).
+> **NOTE:** For additional information about all parameters read [OpenVINO supported plugins](https://docs.openvino.ai/latest/groupov_runtime_cpp_prop_api.html?#detailed-documentation).
 
 - Example:
-1. While passing the plugin configuration, omit the `KEY_` phase. 
-2. Following docker command will set `KEY_CPU_THROUGHPUT_STREAMS` parameter to a value `KEY_CPU_THROUGHPUT_NUMA`:
+Following docker command will set `NUM_STREAMS` parameter to a value `1`:
 
 ```bash
 docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 \
---plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}'
+--plugin_config '{"NUM_STREAMS": "1"}'
 
 ```
 
@@ -157,16 +155,16 @@ The default value is 1 second which ensures prompt response to creating new mode
 
 Depending on the device employed to run the inference operation, you can tune the execution behavior with a set of parameters. Each device is handled by its OpenVINO plugin.
 
-> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/2022.2/namespaceInferenceEngine_1_1PluginConfigParams.html?#detailed-documentation).
+> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/latest/groupov_runtime_cpp_prop_api.html?#detailed-documentation).
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter. 
 
-Following docker command sets a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `32` and `KEY_CPU_BIND_THREAD` to `NUMA`.
+Following docker command sets a parameter `NUM_STREAMS` to a value `32` and `AFFINITY` to `NUMA`.
 
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
---plugin_config '{"CPU_THROUGHPUT_STREAMS": "32", "CPU_BIND_THREAD": "NUMA"}'
+--plugin_config '{"NUM_STREAMS": "32", "AFFINITY": "NUMA"}'
 ```
 
 ## Analyzing performance issues

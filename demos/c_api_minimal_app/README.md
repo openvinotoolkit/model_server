@@ -2,13 +2,14 @@
 
 This demo demonstrate how to use C API from the OpenVINO Model Server to create C and C++ application.
 Building the application is executed inside the docker container to illustrate end to end usage flow.
+Check C API full documentation [here](../../docs/model_server_c_api.md).
 
 ## Prepare demo image
 Enter the directory with the example and build the demo docker with all dependencies and examples that will be named `openvino/model_server-capi`.
 The example image also contains dummy model and config.json required for the applications.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
-cd demos/c_api_minimal_app
+cd model_server/demos/c_api_minimal_app
 make
 ```
 
@@ -35,7 +36,7 @@ g++ main_capi.cpp -I/ovms/include -L/ovms/lib -lovms_shared
 ```
 
 The example output is:
-```
+```bash
 [2022-12-19 11:39:41.428][14][serving][info][modelinstance.cpp:797] Loaded model dummy; version: 1; batch size: 30; No of InferRequests: 12
 [2022-12-19 11:39:41.428][14][serving][debug][modelversionstatus.cpp:88] setAvailable: dummy - 1 (previous state: LOADING) -> error: OK
 [2022-12-19 11:39:41.428][14][serving][info][modelversionstatus.cpp:113] STATUS CHANGE: Version 1 of model dummy status change. New status: ( "state": "AVAILABLE", "error_code": "OK" )
@@ -81,7 +82,6 @@ Dockerfile.redhat
 
 And run the demo make with os specific arguments:
 ```bash
-cd demos/c_api_minimal_app
 make BASE_OS=redhat
 ```
 
@@ -90,6 +90,7 @@ Alternative to getting `ovms.tar.gz` package from web you can build it yourself 
 run `make` command in ovms git main directory.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
 make
 ```
 

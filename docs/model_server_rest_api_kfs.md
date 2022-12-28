@@ -225,6 +225,28 @@ $request_output =
 }
 ```
 
+Besides numerical values, it is possible to pass binary inputs using Binary Data extension:
+
+```JSON
+{
+"model_name" : "my_model",
+"inputs" : [
+   {
+      "name" : "model_input",
+      "shape" : [ 1 ],
+      "datatype" : "BYTES",
+      "parameters" : {
+         "binary_data_size" : "9472"
+      }
+   }
+]
+}
+<9472 bytes of data for model_input tensor>
+```
+
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
+
+
 **Response Format**
 
 If successful:
