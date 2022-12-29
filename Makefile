@@ -41,6 +41,7 @@ BASE_OS_TAG_REDHAT ?= 8.7
 INSTALL_RPMS_FROM_URL ?=
 
 CHECK_COVERAGE ?=0
+RUN_TESTS ?= 1
 NVIDIA ?=0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
@@ -172,7 +173,13 @@ clang-format: venv
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
 
 .PHONY: docker_build
-docker_build:
+docker_build: ovms_builder_image targz_package ovms_release_image
+ovms_builder_image:
+ifeq ($(CHECK_COVERAGE),1)
+  ifeq ($(RUN_TESTS),0)
+	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
+  endif
+endif
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
@@ -206,7 +213,7 @@ endif
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
-		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
+		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) --build-arg RUN_TESTS=$(RUN_TESTS)\
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
@@ -216,12 +223,16 @@ endif
 		--build-arg NVIDIA=$(NVIDIA) --build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg JOBS=$(JOBS)
+
+targz_package: ovms_builder_image
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) --build-arg BASE_OS=$(BASE_OS) \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg BASE_OS=$(BASE_OS) \
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+
+ovms_release_image: targz_package
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
 		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
 			"tar -c -C / ovms.tar* ; sleep 2" | tar -x
@@ -275,6 +286,7 @@ test_checksec:
 	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,DSO,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
  		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." && exit 1;\
 	fi
+	@echo "Running checksec on ovms binary..."
 	@checksec --file=/tmp/ovms --format=csv > checksec.txt
 	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
  		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues." && exit 1;\

@@ -45,6 +45,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             bc \
             build-essential \
             cmake \
+            ccache \
             automake \
             autoconf \
             curl \
@@ -110,12 +111,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     pip3 install --no-cache-dir cython && \
     curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin ; \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
-    chmod a+x /usr/local/bin/sccache ; \
-    curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 ; \
-    curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv ; \
-    mkdir -p ccache-4.3/build ; cd ccache-4.3/build ; \
-    cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. ; \
-    ninja -v install
+    chmod a+x /usr/local/bin/sccache ;
 
 # Set up Bazel
 ENV BAZEL_VERSION 5.3.1
@@ -125,8 +121,6 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     chmod +x bazel-*.sh && \
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
-
-
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -289,9 +283,10 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:
 COPY check_coverage.bat /ovms/
 
 ARG CHECK_COVERAGE=0
+ARG RUN_TESTS=1
 # Test Coverage
-RUN if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
-    bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG}
+RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
+    bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
 
 # C api shared library
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
