@@ -22,7 +22,6 @@ LABEL version="1.0.0"
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS
-ARG CMAKE_BUILD_TYPE=Release
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libboost-atomic1.71.0 \
@@ -109,7 +108,7 @@ WORKDIR /boost
 # hadolint ignore=DL3003
 RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.69.0/boost_1_69_0.tar.gz && \
 tar xvf boost_1_69_0.tar.gz && cd boost_1_69_0 && ./bootstrap.sh && \
-./b2  -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 --with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
 --with-random --with-thread --with-atomic --with-regex \
 --with-log --with-locale \
@@ -214,6 +213,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             unzip \
             wget \
             unzip \
+            uuid \
+            uuid-dev \
             vim \
             xz-utils \
             zlib1g-dev && \
@@ -356,8 +357,9 @@ COPY --from=base_build /awssdk/aws-cpp-sdk-s3/include/ /awssdk/aws-cpp-sdk-s3/in
 COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries
 COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes
 COPY --from=base_build /azure/cpprestsdk/Release/build.release/Binaries /azure/cpprestsdk/Release/build.release/Binaries
-COPY --from=base_build /azure/cpprestsdk/Release/include /azure/cpprestsdk/Release/include
-COPY --from=base_build /usr/local/include/boost /usr/local/include/boost
+
+COPY --from=base_build /usr/local/include /usr/local/include
+COPY --from=base_build /usr/local/lib/libboost* /usr/local/lib/
 
 # Test Coverage
 COPY check_coverage.bat /ovms/
