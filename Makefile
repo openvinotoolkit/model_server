@@ -177,7 +177,7 @@ docker_build: ovms_builder_image targz_package ovms_release_image
 ovms_builder_image:
 ifeq ($(CHECK_COVERAGE),1)
   ifeq ($(RUN_TESTS),0)
-	@echo "Cannot test coverage without running tetes. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
+	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
   endif
 endif
 ifeq ($(NVIDIA),1)
