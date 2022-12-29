@@ -104,15 +104,6 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
     chmod a+x /usr/local/bin/sccache ;
 
-# Set up Bazel
-ENV BAZEL_VERSION 5.3.1
-WORKDIR /bazel
-RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
-
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
@@ -302,6 +293,15 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
       -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && \
       cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS
 
+# Set up Bazel
+ENV BAZEL_VERSION 5.3.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
@@ -311,6 +311,10 @@ COPY MakefileCapi /ovms/
 RUN apt-get update && apt-get install --no-install-recommends -y python-is-python3 && rm -rf /var/lib/apt/lists/*
 
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+
+# FROM BASE BUILD
+COPY --from=base_build /opt/opencv /opt/opencv/
+COPY third_party /ovms/third_party/
 
 # Patch apple build scripts
 # hadolint ignore=SC2046
@@ -342,11 +346,23 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-COPY check_coverage.bat /ovms/
+# Copy build dependencies
+COPY --from=base_build /awssdk/build/.deps /awssdk/build/.deps
+COPY --from=base_build /awssdk/build/aws-cpp-sdk-core/libaws-cpp-sdk-core.a /awssdk/build/aws-cpp-sdk-core/libaws-cpp-sdk-core.a
+COPY --from=base_build /awssdk/build/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.a /awssdk/build/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.a
+COPY --from=base_build /awssdk/aws-cpp-sdk-core/include /awssdk/aws-cpp-sdk-core/include
+COPY --from=base_build /awssdk/aws-cpp-sdk-s3/include/ /awssdk/aws-cpp-sdk-s3/include/
 
+COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries
+COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes
+COPY --from=base_build /azure/cpprestsdk/Release/build.release/Binaries /azure/cpprestsdk/Release/build.release/Binaries
+COPY --from=base_build /azure/cpprestsdk/Release/include /azure/cpprestsdk/Release/include
+COPY --from=base_build /usr/local/include/boost /usr/local/include/boost
+
+# Test Coverage
+COPY check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 ARG RUN_TESTS=1
-# Test Coverage
 RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
     bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
 

@@ -209,6 +209,7 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
+WORKDIR /ovms
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
@@ -248,11 +249,23 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:
 RUN wget -nv https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
     yum install -y lcov-1.16-1.noarch.rpm && yum clean all
 
-COPY check_coverage.bat /ovms/
+# Copy build dependencies
+COPY --from=base_build /awssdk/build/.deps /awssdk/build/.deps
+COPY --from=base_build /awssdk/build/aws-cpp-sdk-core/libaws-cpp-sdk-core.a /awssdk/build/aws-cpp-sdk-core/libaws-cpp-sdk-core.a
+COPY --from=base_build /awssdk/build/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.a /awssdk/build/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.a
+COPY --from=base_build /awssdk/aws-cpp-sdk-core/include /awssdk/aws-cpp-sdk-core/include
+COPY --from=base_build /awssdk/aws-cpp-sdk-s3/include/ /awssdk/aws-cpp-sdk-s3/include/
 
+COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries
+COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes
+COPY --from=base_build /azure/cpprestsdk/Release/build.release/Binaries /azure/cpprestsdk/Release/build.release/Binaries
+COPY --from=base_build /azure/cpprestsdk/Release/include /azure/cpprestsdk/
+COPY --from=base_build /usr/local/include/boost /usr/local/include/boost
+
+# Test Coverage
+COPY check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 ARG RUN_TESTS=1
-# Test Coverage
 RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" = "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
     bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
 
