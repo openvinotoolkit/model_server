@@ -21,16 +21,7 @@ LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG ov_source_branch=releases/2021/2
-
 ARG JOBS
-
-# build_type=[ opt, dbg ]
-ARG build_type=dbg
-ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
-ARG minitrace_flags
-ENV TF_SYSTEM_LIBS="curl"
-ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             boost169-atomic \
@@ -80,15 +71,6 @@ RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
     make all && \
     cp libpugixml.so* /usr/lib64/
 
-# Set up Bazel
-ENV BAZEL_VERSION 5.3.1
-WORKDIR /bazel
-RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
-
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
@@ -130,6 +112,68 @@ WORKDIR /ovms/third_party/opencv
 RUN ./install_opencv.sh
 ####### End of OpenCV
 
+################### BASE BUILD ##########################
+FROM $BASE_IMAGE as final_build
+
+LABEL version="1.0.0"
+
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+ARG ov_source_branch=releases/2021/2
+
+ARG JOBS
+
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+            boost169-atomic \
+            boost169-chrono \
+            boost169-filesystem \
+            boost169-program-options \
+            boost169-thread \
+            boost169-system \
+            boost169-date-time \
+            bc \
+            cmake \
+            curl \
+            gcc-c++ \
+            gdb \
+            git \
+            java-11-openjdk-devel \
+            libgusb.x86_64 \
+            libusbx \
+            libcurl-devel \
+            libtool \
+            libuuid-devel \
+            libxml2-devel \
+            make \
+            openssl-devel \
+            patch \
+            pkg-config \
+            python3 \
+            python3-pip \
+            python3-devel \
+            python3-setuptools \
+            python3-virtualenv \
+            python3-numpy \
+            wget \
+            which \
+            yum-utils \
+            unzip \
+            vim \
+            xz \
+            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+            yum clean all
+
+# FROM BASE BUILD
+COPY --from=base_build /usr/lib64/libpugixml.so* /usr/lib64/
+COPY --from=base_build /opt/opencv /opt/opencv/
+
+# build_type=[ opt, dbg ]
+ARG build_type=dbg
+ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
+ARG minitrace_flags
+ENV TF_SYSTEM_LIBS="curl"
+ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
+
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
@@ -155,6 +199,15 @@ COPY third_party /ovms/third_party/
 COPY MakefileCapi /ovms/
 
 RUN alternatives --set python /usr/bin/python3
+
+# Set up Bazel
+ENV BAZEL_VERSION 5.3.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
