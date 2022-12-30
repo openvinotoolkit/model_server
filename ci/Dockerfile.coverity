@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BUILD_IMAGE=mkulakow_coverity-build:latest
+ARG BUILD_IMAGE=openvino/model_server-build:latest
 FROM $BUILD_IMAGE
 
 COPY ./cov-analysis-linux64-2022.6.0 /cov
