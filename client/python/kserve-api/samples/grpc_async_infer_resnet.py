@@ -16,14 +16,14 @@
 from tritonclient.utils import InferenceServerException
 import tritonclient.grpc as grpcclient
 import time
+import multiprocessing
 from functools import partial
-from client_utils import print_statistics, prepare_certs
 import argparse
 import datetime
-import classes
 import numpy as np
 import sys
 sys.path.append("../../../../demos/common/python")
+import classes
 
 
 if __name__ == '__main__':
@@ -125,11 +125,15 @@ if __name__ == '__main__':
     iteration = 0
     is_pipeline_request = bool(args.get('pipeline_name'))
 
+    condition = multiprocessing.Condition()
+
     def callback(user_data, i, result, error):
         if error:
             user_data.append(error)
         else:
             user_data.append([result, i])
+        with condition:
+            condition.notify()
 
     while iteration < iterations:
         data = []
@@ -158,13 +162,9 @@ if __name__ == '__main__':
                 inputs=inputs,
                 outputs=outputs)
 
-        timeout = int(args.get('timeout'))
-        while ((len(data) != iterations) and timeout > 0):
-            timeout = timeout - 1
-            time.sleep(1)
-        if len(data) != iterations:
-            print("Timeout")
-            sys.exit(1)
+        timeout = int(args.get("timeout"))
+        with condition:
+            condition.wait_for(lambda: len(data) == iterations, None if timeout == 0 else timeout)
         for x in range(iterations):
             if type(data[x]) == InferenceServerException:
                 print(data[x])
