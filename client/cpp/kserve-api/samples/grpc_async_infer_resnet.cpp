@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <condition_variable>
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <mutex>
 #include <string>
 #include <vector>
-#include <mutex>
-#include <condition_variable>
 
 #include <cxxopts.hpp>
 
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
         std::cout << "error: option \"labels_list\" has no value\n";
         return 1;
     }
-    
+
     std::string input_name(args["input_name"].as<std::string>());
     std::string output_name(args["output_name"].as<std::string>());
 
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
         classes.push_back(tmp);
     }
 
-    std::vector<std::vector<uint8_t>> input_data; 
+    std::vector<std::vector<uint8_t>> input_data;
     input_data.reserve(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
         input_data.push_back(Load(imgs[i]));
@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
             input_ptr->AppendRaw(input_data[i]),
             "unable to set data for input");
         client->AsyncInfer(
-            [&, i](tc::InferResult* result){
+            [&, i](tc::InferResult* result) {
                 {
                     std::shared_ptr<tc::InferResult> result_ptr;
                     result_ptr.reset(result);
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
 
                     int lb = std::distance(output_data, std::max_element(output_data, output_data + 1000));
                     std::cout << imgs[i] << " classified as "
-                            << lb << " " << classes[lb] << " ";
+                              << lb << " " << classes[lb] << " ";
                     if (lb != labels[i]) {
                         std::cout << "should be " << labels[i] << " " << classes[labels[i]];
                     } else {
@@ -173,17 +173,18 @@ int main(int argc, char** argv) {
                     std::cout << std::endl;
                 }
                 cv.notify_all();
-            }, options, inputs);
+            },
+            options, inputs);
         input->Reset();
     }
     {
         std::unique_lock<std::mutex> lk(mtx);
         cv.wait(lk, [&]() {
-        if (c >= imgs.size()) {
-            return true;
-        } else {
-            return false;
-        }
+            if (c >= imgs.size()) {
+                return true;
+            } else {
+                return false;
+            }
         });
     }
     std::cout << "Accuracy " << float(acc) / imgs.size() * 100 << "%\n";
