@@ -364,7 +364,7 @@ void KFSInferenceServiceImpl::convert(
     KFSModelMetadataResponse::TensorMetadata* to) {
     to->set_name(from.first);
     to->set_datatype(ovmsPrecisionToKFSPrecision(from.second->getPrecision()));
-    for (auto dim : from.second->getShape()) {
+    for (auto& dim : from.second->getShape()) {
         if (dim.isStatic()) {
             to->add_shape(dim.getStaticValue());
         } else {

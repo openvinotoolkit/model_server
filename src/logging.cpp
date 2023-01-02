@@ -47,7 +47,7 @@ static void set_log_level(const std::string log_level, std::shared_ptr<spdlog::l
     }
 }
 
-static void register_loggers(const std::string log_level, std::vector<spdlog::sink_ptr> sinks) {
+static void register_loggers(const std::string& log_level, std::vector<spdlog::sink_ptr> sinks) {
     auto serving_logger = std::make_shared<spdlog::logger>("serving", begin(sinks), end(sinks));
     serving_logger->set_pattern(default_pattern);
     gcs_logger->set_pattern(default_pattern);
@@ -56,7 +56,7 @@ static void register_loggers(const std::string log_level, std::vector<spdlog::si
     modelmanager_logger->set_pattern(default_pattern);
     dag_executor_logger->set_pattern(default_pattern);
     sequence_manager_logger->set_pattern(default_pattern);
-    for (auto sink : sinks) {
+    for (auto& sink : sinks) {
         gcs_logger->sinks().push_back(sink);
         azurestorage_logger->sinks().push_back(sink);
         s3_logger->sinks().push_back(sink);

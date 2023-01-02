@@ -345,13 +345,13 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         } else if (tensor.datatype() == "BYTES") {
             if (seekDataInValField) {
                 size_t bytesContentsSize = 0;
-                for (auto bytesStr : tensor.contents().bytes_contents()) {
+                for (auto& bytesStr : tensor.contents().bytes_contents()) {
                     bytesContentsSize += bytesStr.size();
                 }
                 auto status = checkValField(bytesContentsSize, expectedElementsNumber);
                 if (!status.ok())
                     return status;
-                for (auto bytesStr : tensor.contents().bytes_contents()) {
+                for (auto& bytesStr : tensor.contents().bytes_contents()) {
                     bytesOutputsBuffer.append(bytesStr);
                 }
             } else {
