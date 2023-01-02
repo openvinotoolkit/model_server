@@ -525,23 +525,23 @@ Usage:
 - Usage Example
 
 ```Bash
-./grpc_async_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --grpc_port 9000
-../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
+./grpc_async_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --grpc_port 9111
+../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
 ../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
+../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
 ../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass 
 ../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock 
-../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
-../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
-../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
 ../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
-../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
 ../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
+../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
+../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
 Accuracy 100%
 ======Client Statistics======
 Number of requests: 10
-Total processing time: 283.336 ms
-Latency: 28.3336 ms
-Requests per second: 35.2938
+Total processing time: 31 ms
+Latency: 28.9219 ms
+Requests per second: 34.5759
 ```
 
 ### Run the Client to perform inference using REST API <a name="http-model-infer-resnet"></a>
@@ -622,7 +622,7 @@ Usage:
 - Usage Example
 
 ```Bash
-./http_async_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --http_port 8000
+./http_async_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --http_port 9110
 ../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
 ../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
 ../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
@@ -636,7 +636,7 @@ Usage:
 Accuracy 100%
 ======Client Statistics======
 Number of requests: 10
-Total processing time: 421.91 ms
-Latency: 42.191 ms
-Requests per second: 23.7018
+Total processing time: 178 ms
+Latency: 42.5398 ms
+Requests per second: 23.5074
 ```

@@ -20,6 +20,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include <cxxopts.hpp>
 
@@ -143,6 +144,7 @@ int main(int argc, char** argv) {
     std::mutex mtx;
     std::condition_variable cv;
     int c = 0;
+    auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < imgs.size(); i++) {
         FAIL_IF_ERR(
             input_ptr->AppendRaw(input_data[i]),
@@ -187,6 +189,8 @@ int main(int argc, char** argv) {
             }
         });
     }
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
     std::cout << "Accuracy " << float(acc) / imgs.size() * 100 << "%\n";
 
     tc::InferStat infer_stat;
@@ -195,7 +199,7 @@ int main(int argc, char** argv) {
     std::cout << "Number of requests: "
               << infer_stat.completed_request_count << std::endl;
     std::cout << "Total processing time: "
-              << double(infer_stat.cumulative_total_request_time_ns) / 1.0e+6 << " ms" << std::endl;
+              << duration.count() << " ms" << std::endl;
     std::cout << "Latency: "
               << double(infer_stat.cumulative_total_request_time_ns / infer_stat.completed_request_count) / 1.0e+6 << " ms" << std::endl;
     std::cout << "Requests per second: "
