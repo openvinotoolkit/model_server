@@ -108,12 +108,12 @@ bool Config::validate() {
         return false;
     }
 
-    if (port() && ((port() > MAX_PORT_NUMBER) || (port() < 0))) {
+    if (port() && (port() > MAX_PORT_NUMBER)) {
         std::cerr << "port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
         return false;
     }
 
-    if (restPort() != 0 && ((restPort() > MAX_PORT_NUMBER) || (restPort() < 0))) {
+    if (restPort() && (restPort() > MAX_PORT_NUMBER)) {
         std::cerr << "rest_port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
         return false;
     }
