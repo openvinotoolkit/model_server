@@ -10,6 +10,7 @@ This guide shows how to interact with KServe API endpoints over gRPC. It covers 
   - <a href="#grpc-model-ready">grpc_model_ready</a>
   - <a href="#grpc-model-metadata">grpc_model_metadata</a>
   - <a href="#grpc-model-infer">grpc_infer_dummy</a>
+  - <a href="#grpc-model-infer-resnet">grpc_infer_resnet</a>
 
 ## Before you run the samples
 
@@ -164,4 +165,52 @@ Checking Inference Outputs
 7.000000 => 8.000000
 8.000000 => 9.000000
 9.000000 => 10.000000
+```
+
+## Examples with Resnet Model<a name="grpc-model-infer-resnet"></a>
+
+### Download the Pretrained Model
+Download the model files and store them in the `models` directory
+```Bash
+mkdir -p models/resnet/1
+curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+```
+
+### Start the Model Server Container with Resnet Model
+```Bash
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --layout NHWC:NCHW --plugin_config '{"PERFORMANCE_HINT":"LATENCY"}'
+```
+
+Once you finish above steps, you are ready to run the samples.
+
+### Run the Client to perform inference using gRPC API
+```Bash
+./grpc_infer_resnet --help
+Usage of ./grpc_infer_resnet:
+  -i string
+        Path to a file with a list of labeled images.
+  -l string
+        Path to a file with a list of labels.
+  -n string
+        Name of model being served.  (default "resnet")
+  -u string
+        Inference Server URL.  (default "localhost:9000")
+  -v string
+        Version of model. 
+```
+
+- Usage Example
+
+```Bash
+./grpc_infer_resnet -i ../resnet_input_images.txt -l ../resnet_labels.txt -u localhost:9000 
+../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra
+../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus
+../../../../demos/common/static/images/bee.jpeg classified as 309 bee
+../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever
+../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla
+../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass
+../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock
+../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican
+../../../../demos/common/static/images/snail.jpeg classified as 113 snail
 ```

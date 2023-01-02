@@ -149,7 +149,7 @@ func main() {
 		max := outputData[0]
 		maxi := -1
 		for i :=1; i < 1000; i++ {
-			if max > outputData[i] {
+			if max < outputData[i] {
 				max = outputData[i]
 				maxi = i
 			}
