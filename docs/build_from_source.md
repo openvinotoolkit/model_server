@@ -70,7 +70,8 @@ Parameter used to control which GPU driver version will be installed. Supported 
 | Ubuntu | 22.35.24055 (default), <br />22.10.22597, <br />21.48.21782, <br />20.35.17767 |
 | RedHat | 22.28.23726 (default), <br />22.10.22597, <br />21.38.21026, <br />20.35.17767 |
 
-Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.
+Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.  
+Warning: _Maintained only for Ubuntu base OS._
 
 Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
 
@@ -121,7 +122,8 @@ docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt
 ### `OV_USE_BINARY`
 
 By default set to `1`. When set to `0`, OpenVINO will be built from sources and `DLDT_PACKAGE_URL` will be omitted.  
-Use `OV_SOURCE_BRANCH` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch. By default `master` will be used.
+Use `OV_SOURCE_BRANCH` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch. By default `master` will be used.  
+Warning: _Maintained only for Ubuntu base OS._
 
 Example:
 ```bash
