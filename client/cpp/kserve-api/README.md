@@ -492,6 +492,54 @@ Latency: 9.6651 ms
 Requests per second: 103.465
 ```
 
+### Run the Client to perform asynchronous inference using gRPC API
+```Bash
+./grpc_async_infer_resnet --help
+Sends requests via KServe gRPC API.
+Usage:
+  grpc_async_infer_resnet [OPTION...]
+
+  -h, --help                    Show this help message and exit
+      --images_list IMAGES      Path to a file with a list of labeled 
+                                images. 
+      --labels_list LABELS      Path to a file with a list of labels. 
+      --grpc_address GRPC_ADDRESS
+                                Specify url to grpc service.  (default: 
+                                localhost)
+      --grpc_port PORT          Specify port to grpc service.  (default: 
+                                9000)
+      --input_name INPUT_NAME   Specify input tensor name.  (default: 0)
+      --output_name OUTPUT_NAME
+                                Specify input tensor name.  (default: 1463)
+      --model_name MODEL_NAME   Define model name, must be same as is in 
+                                service.  (default: resnet)
+      --model_version MODEL_VERSION
+                                Define model version.
+      --timeout TIMEOUT         Request timeout. (default: 0)
+```
+
+- Usage Example
+
+```Bash
+./grpc_async_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --grpc_port 9000
+../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
+../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
+../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass 
+../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock 
+../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
+../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
+../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
+../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
+../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
+Accuracy 100%
+======Client Statistics======
+Number of requests: 10
+Total processing time: 283.336 ms
+Latency: 28.3336 ms
+Requests per second: 35.2938
+```
+
 ### Run the Client to perform inference using REST API
 ```Bash
 ./http_infer_resnet --help
@@ -539,4 +587,52 @@ Number of requests: 10
 Total processing time: 115.804 ms
 Latency: 11.5804 ms
 Requests per second: 86.3526
+```
+
+### Run the Client to perform asynchronous inference using REST API
+```Bash
+./http_async_infer_resnet --help
+Sends requests via KServe REST API.
+Usage:
+  http_async_infer_resnet [OPTION...]
+
+  -h, --help                    Show this help message and exit
+      --images_list IMAGES      Path to a file with a list of labeled 
+                                images. 
+      --labels_list LABELS      Path to a file with a list of labels. 
+      --http_address GRPC_ADDRESS
+                                Specify url to REST service.  (default: 
+                                localhost)
+      --http_port PORT          Specify port to REST service.  (default: 
+                                8000)
+      --input_name INPUT_NAME   Specify input tensor name.  (default: 0)
+      --output_name OUTPUT_NAME
+                                Specify input tensor name.  (default: 1463)
+      --model_name MODEL_NAME   Define model name, must be same as is in 
+                                service.  (default: resnet)
+      --model_version MODEL_VERSION
+                                Define model version.
+      --timeout TIMEOUT         Request timeout. (default: 0)
+```
+
+- Usage Example
+
+```Bash
+./http_async_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --http_port 8000
+../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
+../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
+../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
+../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
+../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
+../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass 
+../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock 
+../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
+../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
+Accuracy 100%
+======Client Statistics======
+Number of requests: 10
+Total processing time: 421.91 ms
+Latency: 42.191 ms
+Requests per second: 23.7018
 ```
