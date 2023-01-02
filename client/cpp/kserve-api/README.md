@@ -10,6 +10,8 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
   - <a href="#grpc-model-ready">grpc_model_ready</a>
   - <a href="#grpc-model-metadata">grpc_model_metadata</a>
   - <a href="#grpc-model-infer">grpc_infer_dummy</a>
+  - <a href="#grpc-model-infer-resnet">grpc_infer_resnet</a>
+  - <a href="#grpc-model-async-infer-resnet">grpc_async_infer_resnet</a>
 - <a href="#http-api">HTTP API Example</a>
   - <a href="#http-server-live">http_server_live</a>
   - <a href="#http-server-ready">http_server_ready</a>
@@ -17,6 +19,8 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
   - <a href="#http-model-ready">http_model_ready</a>
   - <a href="#http-model-metadata">http_model_metadata</a>
   - <a href="#http-model-infer">http_infer_dummy</a>
+  - <a href="#http-model-infer-resnet">http_infer_resnet</a>
+  - <a href="#http-model-async-infer-resnet">http_async_infer_resnet</a>
 
 ## Before you run the samples
 
@@ -197,7 +201,7 @@ outputs {
   shape: 10
 }
 ```
-### Run the Client to perform inference
+### Run the Client to perform inference <a name="grpc-model-infer"></a>
 
 ```Bash
 ./grpc_infer_dummy --help
@@ -444,7 +448,7 @@ docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/m
 
 Once you finish above steps, you are ready to run the samples.
 
-### Run the Client to perform inference using gRPC API
+### Run the Client to perform inference using gRPC API <a name="grpc-model-infer-resnet"></a>
 ```Bash
 ./grpc_infer_resnet --help
 Sends requests via KServe gRPC API.
@@ -492,7 +496,7 @@ Latency: 9.6651 ms
 Requests per second: 103.465
 ```
 
-### Run the Client to perform asynchronous inference using gRPC API
+### Run the Client to perform asynchronous inference using gRPC API <a name="grpc-model-async-infer-resnet"></a>
 ```Bash
 ./grpc_async_infer_resnet --help
 Sends requests via KServe gRPC API.
@@ -540,7 +544,7 @@ Latency: 28.3336 ms
 Requests per second: 35.2938
 ```
 
-### Run the Client to perform inference using REST API
+### Run the Client to perform inference using REST API <a name="http-model-infer-resnet"></a>
 ```Bash
 ./http_infer_resnet --help
 Sends requests via KServe REST API.
@@ -589,7 +593,7 @@ Latency: 11.5804 ms
 Requests per second: 86.3526
 ```
 
-### Run the Client to perform asynchronous inference using REST API
+### Run the Client to perform asynchronous inference using REST API <a name="grpc-model-async-infer-resnet"></a>
 ```Bash
 ./http_async_infer_resnet --help
 Sends requests via KServe REST API.
