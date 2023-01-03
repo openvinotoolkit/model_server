@@ -15,9 +15,9 @@
 #
 
 from typing import NamedTuple
-from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
-from tensorflow.core.framework.tensor_pb2 import TensorProto
-from tensorflow.core.framework.types_pb2 import DataType
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_pb2 import TensorProto
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.types_pb2 import DataType
 import numpy as np
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export

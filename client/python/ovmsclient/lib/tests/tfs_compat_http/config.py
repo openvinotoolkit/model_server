@@ -20,7 +20,7 @@ from json.decoder import JSONDecodeError
 import requests
 from http import HTTPStatus
 from numpy import array, int32, float32, float128
-from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
+from ovmsclient.tfs_compat.protos.tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 
 from ovmsclient.tfs_compat.base.errors import InvalidInputError, ModelNotFoundError
 from config import CallCount, PATH_VALID # noqa

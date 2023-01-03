@@ -16,9 +16,9 @@
 
 import pytest
 
-from tensorflow.core.framework.tensor_pb2 import TensorProto
-from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
-from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_pb2 import TensorProto
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest # noqa
 
 from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcPredictRequest,
                                                  make_metadata_request, make_predict_request,
@@ -27,7 +27,7 @@ from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcP
 from tfs_compat_grpc.config import (PREDICT_REQUEST_INVALID_INPUTS, PREDICT_REQUEST_VALID)
 from config import (MODEL_SPEC_INVALID, MODEL_SPEC_VALID)
 
-from tensorflow_serving.apis.predict_pb2 import PredictRequest
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)

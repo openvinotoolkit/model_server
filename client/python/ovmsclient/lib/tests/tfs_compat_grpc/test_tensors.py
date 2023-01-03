@@ -15,9 +15,9 @@
 #
 
 import pytest
-from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
-from tensorflow.core.framework.tensor_pb2 import TensorProto
-from tensorflow.core.framework.types_pb2 import DataType
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_pb2 import TensorProto
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.types_pb2 import DataType
 from ovmsclient.tfs_compat.grpc.tensors import TENSOR_TO_NP_MAP, make_ndarray, make_tensor_proto
 import numpy as np
 

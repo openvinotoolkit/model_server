@@ -18,10 +18,10 @@ from numpy import ndarray
 from numpy.core.numeric import array_equal
 import pytest
 
-from tensorflow.core.framework.types_pb2 import DataType
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.types_pb2 import DataType
 
-from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
-from tensorflow_serving.apis.predict_pb2 import PredictResponse
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.predict_pb2 import PredictResponse
 
 from ovmsclient.tfs_compat.grpc.responses import (GrpcModelMetadataResponse,
                                                   GrpcModelStatusResponse,

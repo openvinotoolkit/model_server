@@ -16,7 +16,7 @@
 
 import json
 import numpy as np
-from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
+from ovmsclient.tfs_compat.protos.tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 from ovmsclient.tfs_compat.base.responses import (PredictResponse, ModelMetadataResponse,
                                                   ModelStatusResponse)
 from ovmsclient.tfs_compat.base.errors import raise_from_http_response

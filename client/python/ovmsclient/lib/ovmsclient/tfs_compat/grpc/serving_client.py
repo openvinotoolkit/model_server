@@ -16,8 +16,8 @@
 
 from grpc import RpcError, ssl_channel_credentials, secure_channel, insecure_channel
 
-from tensorflow_serving.apis import prediction_service_pb2_grpc
-from tensorflow_serving.apis import model_service_pb2_grpc
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis import prediction_service_pb2_grpc
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis import model_service_pb2_grpc
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.grpc.requests import (make_status_request,

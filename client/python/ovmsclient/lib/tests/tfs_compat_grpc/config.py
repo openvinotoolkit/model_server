@@ -20,14 +20,14 @@ from ovmsclient.tfs_compat.base.errors import ModelNotFoundError, InvalidInputEr
 
 from config import CallCount, PATH_VALID # noqa
 
-from tensorflow.core.framework.tensor_pb2 import TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
-from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
-from tensorflow.core.framework.types_pb2 import DataType
-from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
-from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
-from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
-from tensorflow_serving.apis.predict_pb2 import PredictRequest
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_pb2 import TensorProto
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus # noqa
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.types_pb2 import DataType
+from ovmsclient.tfs_compat.protos.tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcModelStatusRequest,
                                                  GrpcPredictRequest)
