@@ -77,13 +77,12 @@ const Status StatefulModelInstance::extractSequenceControlInput(const tensorflow
 
 Status StatefulModelInstance::loadModel(const ModelConfig& config) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    autoCleanupEnabled = config.getIdleSequenceCleanup();
 
     Status status = ModelInstance::loadModel(config);
     if (!status.ok())
         return status;
 
-    if (autoCleanupEnabled) {
+    if (this->config.getIdleSequenceCleanup()) {
         status = globalSequencesViewer->registerForCleanup(getName(), getVersion(), sequenceManager);
         if (!status.ok())
             return status;
@@ -94,7 +93,7 @@ Status StatefulModelInstance::loadModel(const ModelConfig& config) {
 Status StatefulModelInstance::reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     Status status;
-    if (autoCleanupEnabled && this->status.getState() == ModelVersionState::AVAILABLE) {
+    if (this->config.getIdleSequenceCleanup() && this->status.getState() == ModelVersionState::AVAILABLE) {
         status = globalSequencesViewer->unregisterFromCleanup(getName(), getVersion());
         if (!status.ok())
             return status;
@@ -102,9 +101,8 @@ Status StatefulModelInstance::reloadModel(const ModelConfig& config, const Dynam
     status = ModelInstance::reloadModel(config, parameter);
     if (!status.ok())
         return status;
-    autoCleanupEnabled = config.getIdleSequenceCleanup();
 
-    if (autoCleanupEnabled) {
+    if (this->config.getIdleSequenceCleanup()) {
         status = globalSequencesViewer->registerForCleanup(getName(), getVersion(), sequenceManager);
         if (!status.ok())
             return status;
@@ -114,7 +112,7 @@ Status StatefulModelInstance::reloadModel(const ModelConfig& config, const Dynam
 
 void StatefulModelInstance::retireModel(bool isPermanent) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    if (isPermanent && autoCleanupEnabled) {
+    if (isPermanent && this->config.getIdleSequenceCleanup()) {
         globalSequencesViewer->unregisterFromCleanup(getName(), getVersion());
     }
     ModelInstance::retireModel(isPermanent);

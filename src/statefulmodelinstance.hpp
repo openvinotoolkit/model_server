@@ -80,8 +80,6 @@ protected:
 
     bool performLowLatencyTransformation;
 
-    bool autoCleanupEnabled;
-
     GlobalSequencesViewer* globalSequencesViewer;
 
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
