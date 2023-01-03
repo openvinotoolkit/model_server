@@ -42,8 +42,9 @@ NP_TO_TENSOR_MAP = {
     np.uint64: TensorType(TensorDtype=DataType.DT_UINT64, TensorProtoField="uint64_val"),
     np.complex64: TensorType(TensorDtype=DataType.DT_COMPLEX64, TensorProtoField="scomplex_val"),
     np.complex128: TensorType(TensorDtype=DataType.DT_COMPLEX128, TensorProtoField="dcomplex_val"),
-    np.bool_: TensorType(TensorDtype=DataType.DT_BOOL, TensorProtoField="bool_val"), # previously deperecated np.bool is now removed 
-    bool: TensorType(TensorDtype=DataType.DT_BOOL, TensorProtoField="bool_val"), # standard Python bool and np.bool_ replace np.bool
+    # Standard Python bool and np.bool_ replace deprecated np.bool type
+    np.bool_: TensorType(TensorDtype=DataType.DT_BOOL, TensorProtoField="bool_val"),
+    bool: TensorType(TensorDtype=DataType.DT_BOOL, TensorProtoField="bool_val"),
     np.bytes_: TensorType(TensorDtype=DataType.DT_STRING, TensorProtoField="string_val")
 }
 
@@ -81,13 +82,16 @@ def _cast_bytes_to_dtype(values, dtype):
 def _is_bytes_shape_valid(inferred_shape, tensor_values):
     return (len(inferred_shape) > 1 or (len(tensor_values.shape) > 1 and inferred_shape == []))
 
+
 def _check_if_array_homogeneous(tensor_values):
-    # Exception details match numpy ValueError thrown on attempt to create inhomogeneous numpy array in versions >=1.24
-    # This function has been created to provide the same user experience for both pre and post 1.24 numpy versions
+    #  Exception details match numpy ValueError thrown on attempt to create inhomogeneous
+    #  numpy array in versions >=1.24. This function has been created to provide
+    #  the same user experience for both pre and post 1.24 numpy versions.
     if tensor_values.dtype.type is np.object_ or tensor_values.dtype.type is object:
-            raise ValueError('setting an array element with a sequence. The requested array '
-                             f'has an inhomogeneous shape after {len(tensor_values.shape)} dimensions. ' 
-                             f'The detected shape was {tensor_values.shape} + inhomogeneous part.')
+        raise ValueError('setting an array element with a sequence. The requested array has '
+                         f'an inhomogeneous shape after {len(tensor_values.shape)} dimensions. '
+                         f'The detected shape was {tensor_values.shape} + inhomogeneous part.')
+
 
 @ovmsclient_export("make_tensor_proto", grpcclient="make_tensor_proto")
 def make_tensor_proto(values, dtype=None, shape=None):

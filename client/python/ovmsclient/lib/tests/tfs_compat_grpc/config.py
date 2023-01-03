@@ -161,13 +161,13 @@ PREDICT_REQUEST_INVALID_INPUTS = [
         "input1": [[1.0, 2.0], [1.0, 2.0, 3.0]]
     }, 'model_name', 0, ValueError,
      ("setting an array element with a sequence. "
-      "The requested array has an inhomogeneous shape after 1 dimensions. " 
+      "The requested array has an inhomogeneous shape after 1 dimensions. "
       "The detected shape was (2,) + inhomogeneous part.")),
     ({
         "input1": [[(1, 2, 3)], [(1, 2)], [(1, 2, 3)]]
-    }, 'model_name', 0, ValueError, 
+    }, 'model_name', 0, ValueError,
      ("setting an array element with a sequence. "
-      "The requested array has an inhomogeneous shape after 2 dimensions. " 
+      "The requested array has an inhomogeneous shape after 2 dimensions. "
       "The detected shape was (3, 1) + inhomogeneous part.")),
     ({
         "input1": float128(2.5)

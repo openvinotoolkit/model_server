@@ -546,7 +546,7 @@ def test_make_tensor_proto_invalid_dimensions():
         make_tensor_proto(values=values, shape=[2, 3], dtype=DataType.DT_FLOAT)
     exception = exception_info.value
     assert str(exception) == ("setting an array element with a sequence. "
-                              "The requested array has an inhomogeneous shape after 1 dimensions. " 
+                              "The requested array has an inhomogeneous shape after 1 dimensions. "
                               "The detected shape was (2,) + inhomogeneous part.")
 
 
@@ -567,7 +567,7 @@ def test_make_tensor_proto_invalid_string_dimensions():
                           shape=None, dtype=DataType.DT_STRING)
     exception = exception_info.value
     assert str(exception) == ("setting an array element with a sequence. "
-                              "The requested array has an inhomogeneous shape after 1 dimensions. " 
+                              "The requested array has an inhomogeneous shape after 1 dimensions. "
                               "The detected shape was (2,) + inhomogeneous part.")
 
 
@@ -578,18 +578,18 @@ def test_make_tensor_proto_invalid_dimensions_2():
         make_tensor_proto(values=values, shape=[2, 3], dtype=DataType.DT_FLOAT)
     exception = exception_info.value
     assert str(exception) == ("setting an array element with a sequence. "
-                              "The requested array has an inhomogeneous shape after 2 dimensions. " 
+                              "The requested array has an inhomogeneous shape after 2 dimensions. "
                               "The detected shape was (3, 1) + inhomogeneous part.")
 
 
 @pytest.mark.causes_deprecation_warning(triggered_by="numpy<1.24")
 def test_make_tensor_proto_invalid_dimensions_no_shape_provided():
-    values = [[[1,2], [3,4]], [[1,2], [3,4]], [[1,2,3],[4]]]
+    values = [[[1, 2], [3, 4]], [[1, 2], [3, 4]], [[1, 2, 3], [4]]]
     with pytest.raises(ValueError) as exception_info:
         make_tensor_proto(values=values, shape=None, dtype=DataType.DT_INT8)
     exception = exception_info.value
     assert str(exception) == ("setting an array element with a sequence. "
-                              "The requested array has an inhomogeneous shape after 2 dimensions. " 
+                              "The requested array has an inhomogeneous shape after 2 dimensions. "
                               "The detected shape was (3, 2) + inhomogeneous part.")
 
 

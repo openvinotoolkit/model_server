@@ -20,7 +20,7 @@ import numpy as np
 from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRequest,
                                                  ModelStatusRequest, _check_model_spec)
 from ovmsclient.tfs_compat.grpc.tensors import (NP_TO_TENSOR_MAP, DataType,
-                                                _is_bytes_shape_valid, 
+                                                _is_bytes_shape_valid,
                                                 _check_if_array_homogeneous)
 
 
