@@ -391,7 +391,7 @@ test_functional: venv
 test_client_lib:
 	@cd client/python/ovmsclient/lib && \
 		make style || exit 1 && \
-		. .venv-ovmsclient/bin/activate; pip3 install protobuf==3.19.4; make build || exit 1 && \
+		. .venv-ovmsclient/bin/activate; make build || exit 1 && \
 		make test TEST_TYPE=FULL || exit 1 && \
 		make clean
 
