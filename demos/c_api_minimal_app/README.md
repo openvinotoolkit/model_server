@@ -5,7 +5,7 @@ Building the application is executed inside the docker container to illustrate e
 Check C API full documentation [here](../../docs/model_server_c_api.md).
 
 ## Prepare demo image
-Enter the directory with the example and build the demo docker with all dependencies and examples that will be named `openvino/model_server-capi`.
+Enter the directory with the example and build the demo docker image with all dependencies and examples that will be named `openvino/model_server-capi`.
 The example image also contains dummy model and config.json required for the applications.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
@@ -24,7 +24,7 @@ cat main_capi.c
 cat main_capi.cpp
 ```
 
-Afterwars rebuild and run the modified examples using the MakefileCapi rules:
+Afterwards rebuild and run the modified examples using the MakefileCapi rules:
 ```bash
 make -f MakefileCapi c
 make -f MakefileCapi cpp
