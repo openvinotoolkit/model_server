@@ -157,6 +157,7 @@ if __name__ == '__main__':
                 inputs=inputs,
                 outputs=outputs))
 
+        for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
             output = data[x].get_result().as_numpy(args['output_name'])
             nu = np.array(output)
             # Comment out this section for non imagenet datasets
