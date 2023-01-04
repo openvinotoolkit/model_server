@@ -14,15 +14,14 @@
 # limitations under the License.
 #
 import tritonclient.http as httpclient
-from client_utils import print_statistics, prepare_certs
 import time
 from functools import partial
 import argparse
 import datetime
-import classes
 import numpy as np
 import sys
 sys.path.append("../../../../demos/common/python")
+import classes
 
 
 if __name__ == '__main__':
@@ -88,6 +87,7 @@ if __name__ == '__main__':
         url=address,
         ssl=args['tls'],
         ssl_options=ssl_options,
+        concurrency = 10,
         verbose=False)
 
     processing_times = np.zeros((0), int)
