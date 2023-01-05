@@ -43,7 +43,7 @@ NodeStreamIdGuard::~NodeStreamIdGuard() {
         DECREMENT_IF_ENABLED(this->reporter.inferReqActive);
         this->inferRequestsQueue_.returnStream(this->streamId.value());
     }
-    if(!disarmed) {
+    if (!disarmed) {
         DECREMENT_IF_ENABLED(this->reporter.currentRequests);
     }
 }
