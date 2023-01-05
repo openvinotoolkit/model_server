@@ -113,6 +113,7 @@ def check_dir(start_dir):
         'vehicle_images.txt',
         'bazel_rules_apple.patch',
         "pom.xml",
+        "go.sum",
         ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
