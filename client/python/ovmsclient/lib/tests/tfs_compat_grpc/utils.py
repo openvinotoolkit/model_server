@@ -14,12 +14,12 @@
 # limitations under the License.
 #
 
-from tensorflow.core.protobuf.meta_graph_pb2 import SignatureDef, TensorInfo
-from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
-from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataResponse, SignatureDefMap
-from tensorflow_serving.apis.model_pb2 import ModelSpec
-from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
-from tensorflow_serving.util.status_pb2 import StatusProto
+from ovmsclient.tfs_compat.protos.tensorflow.core.protobuf.meta_graph_pb2 import SignatureDef, TensorInfo # noqa
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataResponse, SignatureDefMap # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.model_pb2 import ModelSpec
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.util.status_pb2 import StatusProto
 
 from google.protobuf.any_pb2 import Any
 
