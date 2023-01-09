@@ -193,7 +193,7 @@ A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#spe
 }
 ```
 
-Besides numerical values, it is possible to pass binary inputs. They must be Base64 encoded in passed in `b64` key like below:
+Besides numerical values, it is possible to pass JPEG / PNG encoded images as binary inputs. They must be Base64 encoded in passed in `b64` key like below:
 
 ```JSON
 {
@@ -208,7 +208,9 @@ Besides numerical values, it is possible to pass binary inputs. They must be Bas
 }
 ```
 
-Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
+On the server side, the binary encoded data is loaded using OpenCV which then converts it to OpenVINO-friendly data format for inference.
+
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more informations.
 
 Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
 
