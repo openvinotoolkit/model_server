@@ -477,7 +477,7 @@ Usage:
 - Usage Example
 
 ```Bash
-./grpc_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --grpc_port 9000  
+./grpc_infer_resnet --images_list ../../../common/resnet_input_images.txt --labels_list ../../../common/resnet_labels.txt --grpc_port 9000  
 ../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
 ../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
 ../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
@@ -574,7 +574,7 @@ Usage:
 - Usage Example
 
 ```Bash
- ./http_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --http_port 8000
+ ./http_infer_resnet --images_list ../../../common/resnet_input_images.txt --labels_list ../../../common/resnet_labels.txt --http_port 8000
 ../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
 ../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
 ../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
