@@ -227,24 +227,47 @@ $request_output =
 
 Besides numerical values, it is possible to pass binary inputs using Binary Data extension:
 
+As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. For encoded inputs datatype `BYTES` is reserved.
+
 ```JSON
+Content-Type: application/octet-stream
+Inference-Header-Content-Length: <xx>
+Content-Length: <xx+9472>
 {
 "model_name" : "my_model",
 "inputs" : [
    {
       "name" : "model_input",
       "shape" : [ 1 ],
-      "datatype" : "BYTES",
-      "parameters" : {
-         "binary_data_size" : "9472"
-      }
+      "datatype" : "BYTES"
    }
 ]
 }
 <9472 bytes of data for model_input tensor>
 ```
 
-Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
+
+As a raw data - it means it wont be preprocessed by OVMS. To send raw data using Binary Data extension use other datatypes than `BYTES`.
+
+```JSON
+Content-Type: application/octet-stream
+Inference-Header-Content-Length: <xx>
+Content-Length: <xx+(3 x 1080000)>
+{
+"model_name" : "my_model",
+"inputs" : [
+   {
+      "name" : "model_input",
+      "shape" : [ 3, 300, 300, 3 ],
+      "datatype" : "FP32"
+   },
+
+]
+}
+<3240000 bytes of the whole data batch for model_input tensor>
+```
+
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more informations.
 
 
 **Response Format**
@@ -279,6 +302,44 @@ Else:
 {
   "error": <error message string>
 }
+```
+
+Outputs of response can be send in binary format using Binary Data extension. To force a output to be sent in binary format you need to use "binary_data" : true parameter in request JSON. For example:
+```JSON
+{
+  "model_name" : "mymodel",
+  "inputs" : [...],
+  "outputs" : [
+    {
+      "name" : "output0",
+      "parameters" : {
+        "binary_data" : true
+      }
+    }
+  ]
+}
+```
+
+Assuming the output datatype is FP32 and shape is [ 2, 2 ] response to this request would be:
+
+```JSON
+HTTP/1.1 200 OK
+Content-Type: application/octet-stream
+Inference-Header-Content-Length: <yy>
+Content-Length: <yy+16>
+{
+  "outputs" : [
+    {
+      "name" : "output0",
+      "shape" : [ 2, 2 ],
+      "datatype"  : "FP32",
+      "parameters" : {
+        "binary_data_size" : 16
+      }
+    }
+  ]
+}
+<16 bytes of data for output0 tensor>
 ```
 
 For detailed description of request and response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference).

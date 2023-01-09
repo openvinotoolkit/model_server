@@ -44,7 +44,7 @@ Endpoint for running an inference with loaded models or [DAGs](./dag_scheduler.m
 
 Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/tensorflow-serving-api/samples/README.md#predict-api)
 
-Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
+Also, using `string_val` field it is possible to send binary encoded images that would be preprocessed by OVMS using opencv and converted to OpenVINO-friendly format. For more information check [how binary data is handled in OpenVINO Model Server](./binary_input_tfs.md)
 
 ## See Also
 
