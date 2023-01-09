@@ -135,12 +135,13 @@ When creating a Python-based client application, you can use Triton client libra
                 # Check model readiness
                 model_ready = client.is_model_ready("model_name")
 
-.. tab:: curl
-        .. code-block:: sh  
-                curl http://localhost:9000/v2/health/live
-                curl http://localhost:9000/v2/health/ready
-                curl http://localhost:9000/v2
+.. tab:: curl    
 
+    .. code-block:: sh  
+
+        curl http://localhost:9000/v2/health/live
+        curl http://localhost:9000/v2/health/ready
+        curl http://localhost:9000/v2
 
 @endsphinxdirective
 
