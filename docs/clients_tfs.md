@@ -47,10 +47,10 @@ When creating a Python-based client application, there are two packages on PyPi 
 
     .. code-block:: python
 
-        from ovmsclient import make_grpc_client
+        from ovmsclient import make_http_client
 
-        client = make_grpc_client("10.20.30.40:9000")
-        model_status = client.get_model_status(model_name="my_model")
+        client = make_http_client("10.20.30.40:9000")
+        status = client.get_model_status(model_name="my_model", model_version="", 10.0)
 
 
 .. tab:: tensorflow-serving-api
@@ -103,10 +103,10 @@ When creating a Python-based client application, there are two packages on PyPi 
 
     .. code-block:: python
 
-        from ovmsclient import make_grpc_client
+        from ovmsclient import make_http_client
 
-        client = make_grpc_client("10.20.30.40:9000")
-        model_metadata = client.get_model_metadata(model_name="my_model")
+        client = make_http_client("10.20.30.40:9000")
+        model_metadata = client.get_model_metadata(model_name="my_model", model_version="", 10.0)
 
 
 .. tab:: tensorflow-serving-api
@@ -183,13 +183,15 @@ When creating a Python-based client application, there are two packages on PyPi 
 
     .. code-block:: python
 
-        from ovmsclient import make_grpc_client
+        from ovmsclient import make_http_client
 
-        client = make_grpc_client("10.20.30.40:9000")
+        client = make_http_client("10.20.30.40:9000")
+        model_metadata = client.get_model_metadata(model_name="my_model", model_version="", 10.0)
+
         with open("img.jpeg", "rb") as f:
             data = f.read()
         inputs = {"input_name": data}    
-        results = client.predict(inputs=inputs, model_name="my_model")
+        results = client.predict(inputs=inputs, model_name="my_model", model_version="", 10.0)
 
 
 .. tab:: tensorflow-serving-api
@@ -240,12 +242,14 @@ When creating a Python-based client application, there are two packages on PyPi 
     .. code-block:: python
 
         import numpy as np
-        from ovmsclient import make_grpc_client
+        from ovmsclient import make_http_client
 
-        client = make_grpc_client("10.20.30.40:9000")
+        client = make_http_client("10.20.30.40:9000")
+        model_metadata = client.get_model_metadata(model_name="my_model", model_version="", 10.0)
+
         data = np.array([1.0, 2.0, ..., 1000.0])
         inputs = {"input_name": data}
-        results = client.predict(inputs=inputs, model_name="my_model")
+        results = client.predict(inputs=inputs, model_name="my_model", model_version="", 10.0)
 
 .. tab:: tensorflow-serving-api  
 
