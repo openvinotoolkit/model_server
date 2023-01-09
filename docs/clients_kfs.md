@@ -23,7 +23,7 @@ When creating a Python-based client application, you can use Triton client libra
 
 @sphinxdirective
 
-.. tab:: python [GRPC]
+.. tab:: python-grpc
 
         .. code-block:: python
 
@@ -40,7 +40,7 @@ When creating a Python-based client application, you can use Triton client libra
                 # Check model readiness
                 model_ready = client.is_model_ready("model_name")
 
-.. tab:: python [REST]
+.. tab:: python-rest
 
         .. code-block:: python
 
@@ -57,7 +57,7 @@ When creating a Python-based client application, you can use Triton client libra
                 # Check model readiness
                 model_ready = client.is_model_ready("model_name")
 
-.. tab:: cpp [GRPC]
+.. tab:: cpp-grpc
 
         .. code-block:: cpp
 
@@ -75,7 +75,7 @@ When creating a Python-based client application, you can use Triton client libra
                         bool modelReady = client->IsModelReady(&modelReady, "model_name", "model_version");
                 }
 
-.. tab:: cpp [REST]
+.. tab:: cpp-rest
 
         .. code-block:: python
 
@@ -155,7 +155,7 @@ When creating a Python-based client application, you can use Triton client libra
 
 @sphinxdirective
 
-.. tab:: python [GRPC]
+.. tab:: python-grpc
 
         .. code-block:: python
 
@@ -164,7 +164,7 @@ When creating a Python-based client application, you can use Triton client libra
                 client = grpcclient.InferenceServerClient("localhost:9000")
                 server_metadata = client.get_server_metadata()
 
-.. tab:: python [REST]
+.. tab:: python-rest
 
         .. code-block:: python
 
@@ -173,7 +173,7 @@ When creating a Python-based client application, you can use Triton client libra
                 client = grpcclient.InferenceServerClient("localhost:9000")
                 server_metadata = client.get_server_metadata()
 
-.. tab:: cpp [GRPC]
+.. tab:: cpp-grpc
 
         .. code-block:: python
 
@@ -182,7 +182,7 @@ When creating a Python-based client application, you can use Triton client libra
                 client = grpcclient.InferenceServerClient("localhost:9000")
                 server_metadata = client.get_server_metadata()
 
-.. tab:: cpp [REST]
+.. tab:: cpp-rest
 
         .. code-block:: python
 
@@ -223,7 +223,7 @@ When creating a Python-based client application, you can use Triton client libra
 ### Request Model Metadata
 
 @sphinxdirective
-.. tab:: python [GRPC]
+.. tab:: python-grpc
 
         .. code-block:: python
 
@@ -231,16 +231,7 @@ When creating a Python-based client application, you can use Triton client libra
 
                 client = grpcclient.InferenceServerClient("localhost:9000")
                 model_metadata = client.get_model_metadata("model_name")
-.. tab:: python [REST]
-
-        .. code-block:: python
-
-                import tritonclient.grpc as grpcclient
-
-                client = grpcclient.InferenceServerClient("localhost:9000")
-                model_metadata = client.get_model_metadata("model_name")
-
-.. tab:: cpp [GRPC]
+.. tab:: python-rest
 
         .. code-block:: python
 
@@ -249,7 +240,16 @@ When creating a Python-based client application, you can use Triton client libra
                 client = grpcclient.InferenceServerClient("localhost:9000")
                 model_metadata = client.get_model_metadata("model_name")
 
-.. tab:: cpp [REST]
+.. tab:: cpp-grpc
+
+        .. code-block:: python
+
+                import tritonclient.grpc as grpcclient
+
+                client = grpcclient.InferenceServerClient("localhost:9000")
+                model_metadata = client.get_model_metadata("model_name")
+
+.. tab:: cpp-rest
 
         .. code-block:: python
 
@@ -290,7 +290,7 @@ When creating a Python-based client application, you can use Triton client libra
 ### Request Prediction on a Numpy Array
 
 @sphinxdirective
-.. tab:: python [GRPC]
+.. tab:: python-grpc
 
         .. code-block:: python
 
@@ -303,7 +303,7 @@ When creating a Python-based client application, you can use Triton client libra
                 infer_input.set_data_from_numpy(data)
                 results = client.infer("model_name", [infer_input])
 
-.. tab:: python [REST]
+.. tab:: python-rest
 
         .. code-block:: python
 
@@ -316,7 +316,7 @@ When creating a Python-based client application, you can use Triton client libra
                 infer_input.set_data_from_numpy(data)
                 results = client.infer("model_name", [infer_input])
 
-.. tab:: cpp [GRPC]
+.. tab:: cpp-grpc
 
         .. code-block:: python
 
@@ -329,7 +329,7 @@ When creating a Python-based client application, you can use Triton client libra
                 infer_input.set_data_from_numpy(data)
                 results = client.infer("model_name", [infer_input])
 
-.. tab:: cpp [REST]
+.. tab:: cpp-rest
 
         .. code-block:: python
 
