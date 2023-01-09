@@ -38,11 +38,14 @@
 // OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#include <condition_variable>
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <mutex>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include <cxxopts.hpp>
 
@@ -72,7 +75,7 @@ std::vector<uint8_t> load(const std::string& fileName) {
 }
 
 int main(int argc, char** argv) {
-    cxxopts::Options opt("grpc_infer_resnet", "Sends requests via KServe gRPC API.");
+    cxxopts::Options opt("grpc_async_infer_resnet", "Sends requests via KServe gRPC API.");
 
     // clang-format off
     opt.add_options()
@@ -102,7 +105,7 @@ int main(int argc, char** argv) {
         std::cout << "error: option \"labels_list\" has no value\n";
         return 1;
     }
-    
+
     std::string input_name(args["input_name"].as<std::string>());
     std::string output_name(args["output_name"].as<std::string>());
 
@@ -149,19 +152,6 @@ int main(int argc, char** argv) {
     }
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
 
-    std::vector<tc::InferResult*> results;
-    results.resize(imgs.size());
-    for (int i = 0; i < imgs.size(); i++) {
-        std::vector<uint8_t> input_data = load(imgs[i]);
-        FAIL_IF_ERR(
-            input_ptr->AppendRaw(input_data),
-            "unable to set data for input");
-        FAIL_IF_ERR(
-            client->Infer(&(results[i]), options, inputs),
-            "unable to run model");
-        input->Reset();
-    }
-
     std::vector<std::string> classes;
     std::ifstream lb_f(args["labels_list"].as<std::string>());
     std::string tmp;
@@ -169,29 +159,63 @@ int main(int argc, char** argv) {
         classes.push_back(tmp);
     }
 
-    int acc = 0;
+    std::vector<std::vector<uint8_t>> input_data;
+    input_data.reserve(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
-        std::shared_ptr<tc::InferResult> results_ptr;
-        results_ptr.reset(results[i]);
-        // Get pointers to the result returned...
-        float* output_data;
-        size_t output_byte_size;
-        FAIL_IF_ERR(
-            results_ptr->RawData(
-                output_name, (const uint8_t**)&output_data, &output_byte_size),
-            "unable to get result data for output");
-
-        int lb = std::distance(output_data, std::max_element(output_data, output_data + 1000));
-        std::cout << imgs[i] << " classified as "
-                  << lb << " " << classes[lb] << " ";
-        if (lb != labels[i]) {
-            std::cout << "should be " << labels[i] << " " << classes[labels[i]];
-        } else {
-            acc++;
-        }
-        std::cout << std::endl;
+        input_data.push_back(load(imgs[i]));
     }
 
+    int acc = 0;
+    std::mutex mtx;
+    std::condition_variable cv;
+    int completedRequestCount = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < imgs.size(); i++) {
+        FAIL_IF_ERR(
+            input_ptr->AppendRaw(input_data[i]),
+            "unable to set data for input");
+        client->AsyncInfer(
+            [&, i](tc::InferResult* result) {
+                {
+                    std::shared_ptr<tc::InferResult> result_ptr;
+                    result_ptr.reset(result);
+                    std::lock_guard<std::mutex> lk(mtx);
+                    completedRequestCount++;
+                    // Get pointers to the result returned...
+                    float* output_data;
+                    size_t output_byte_size;
+                    FAIL_IF_ERR(
+                        result_ptr->RawData(
+                            output_name, (const uint8_t**)&output_data, &output_byte_size),
+                        "unable to get result data for output");
+
+                    int lb = std::distance(output_data, std::max_element(output_data, output_data + 1000));
+                    std::cout << imgs[i] << " classified as "
+                              << lb << " " << classes[lb] << " ";
+                    if (lb != labels[i]) {
+                        std::cout << "should be " << labels[i] << " " << classes[labels[i]];
+                    } else {
+                        acc++;
+                    }
+                    std::cout << std::endl;
+                }
+                cv.notify_all();
+            },
+            options, inputs);
+        input->Reset();
+    }
+    {
+        std::unique_lock<std::mutex> lk(mtx);
+        cv.wait(lk, [&]() {
+            if (completedRequestCount >= imgs.size()) {
+                return true;
+            } else {
+                return false;
+            }
+        });
+    }
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
     std::cout << "Accuracy " << float(acc) / imgs.size() * 100 << "%\n";
 
     tc::InferStat infer_stat;
@@ -200,7 +224,7 @@ int main(int argc, char** argv) {
     std::cout << "Number of requests: "
               << infer_stat.completed_request_count << std::endl;
     std::cout << "Total processing time: "
-              << double(infer_stat.cumulative_total_request_time_ns) / 1.0e+6 << " ms" << std::endl;
+              << duration.count() << " ms" << std::endl;
     std::cout << "Latency: "
               << double(infer_stat.cumulative_total_request_time_ns / infer_stat.completed_request_count) / 1.0e+6 << " ms" << std::endl;
     std::cout << "Requests per second: "
