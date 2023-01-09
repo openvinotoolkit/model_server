@@ -20,8 +20,8 @@ HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
 BASE_OS_TAG_UBUNTU ?= 20.04
 BASE_OS_TAG_REDHAT ?= 8.7
-REDHAT_PACKAGE_URL ?="http://repository.toolbox.iotg.sclab.intel.com/projects/ovms-c/2022.3-RC1/RC1/dist/redhat/ovms.tar.gz"
-UBUNTU_PACKAGE_URL ?="http://repository.toolbox.iotg.sclab.intel.com/projects/ovms-c/2022.3-RC2/RC2/dist/ubuntu/ovms.tar.gz"
+REDHAT_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2022.3/ovms_redhat.tar.gz"
+UBUNTU_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2022.3/ovms_ubuntu.tar.gz"
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
@@ -49,6 +49,7 @@ from_docker:
 
 from_web:
 	wget -P capi/$(DIST_OS) ${PACKAGE_URL}
+	mv capi/$(DIST_OS)/*.tar.gz capi/$(DIST_OS)/ovms.tar.gz
 
 build_image:
 	cp -vR capi_files/* capi/$(DIST_OS)/
