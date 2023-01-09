@@ -42,9 +42,9 @@ When creating a Python-based client application, you can use Triton client libra
 .. tab:: python [REST]
         .. code-block:: python
 
-                import tritonclient.grpc as grpcclient
+                import tritonclient.http as httpclient
 
-                client = grpcclient.InferenceServerClient("localhost:9000")
+                client = httpclient.InferenceServerClient("localhost:9000")
 
                 # Check server liveness
                 server_live = client.is_server_live()
@@ -56,52 +56,68 @@ When creating a Python-based client application, you can use Triton client libra
                 model_ready = client.is_model_ready("model_name")
 
 .. tab:: cpp [GRPC]
-        .. code-block:: python
+        .. code-block:: cpp
 
-                import tritonclient.grpc as grpcclient
+                #include "grpc_client.h"
 
-                client = grpcclient.InferenceServerClient("localhost:9000")
+                namespace tc = triton::client;
+                int main() {
+                        std::unique_ptr<tc::InferenceServerGrpcClient> client;
+                        tc::InferenceServerGrpcClient::Create(&client, "localhost:9000");
 
-                # Check server liveness
-                server_live = client.is_server_live()
+                        bool serverLive = client->IsServerLive(&serverLive);
 
-                # Check server readiness
-                server_ready = client.is_server_ready()
+                        bool serverReady = client->IsServerReady(&serverReady);
 
-                # Check model readiness
-                model_ready = client.is_model_ready("model_name")
+                        bool modelReady = client->IsModelReady(&modelReady, "model_name", "model_version");
+                }
 
 .. tab:: cpp [REST]
         .. code-block:: python
 
-                import tritonclient.grpc as grpcclient
+                #include "http_client.h"
 
-                client = grpcclient.InferenceServerClient("localhost:9000")
+                namespace tc = triton::client;
+                int main() {
+                        std::unique_ptr<tc::InferenceServerHttpClient> client;
+                        tc::InferenceServerHttpClient::Create(&client, "localhost:9000");
 
-                # Check server liveness
-                server_live = client.is_server_live()
+                        bool serverLive = client->IsServerLive(&serverLive);
 
-                # Check server readiness
-                server_ready = client.is_server_ready()
+                        bool serverReady = client->IsServerReady(&serverReady);
 
-                # Check model readiness
-                model_ready = client.is_model_ready("model_name")
+                        bool modelReady = client->IsModelReady(&modelReady, "model_name", "model_version");
+                }
 
 .. tab:: java
-        .. code-block:: python
+        .. code-block:: java
 
-                import tritonclient.grpc as grpcclient
+                public static void main(String[] args) {
+                        ManagedChannel channel = ManagedChannelBuilder
+                                        .forAddress("localhost", 9000)
+                                        .usePlaintext().build();
+                        GRPCInferenceServiceBlockingStub grpc_stub = GRPCInferenceServiceGrpc.newBlockingStub(channel);
 
-                client = grpcclient.InferenceServerClient("localhost:9000")
+                        ServerLiveRequest.Builder serverLiveRequest = ServerLiveRequest.newBuilder();
+                        ServerLiveResponse serverLiveResponse = grpc_stub.serverLive(serverLiveRequest.build());
 
-                # Check server liveness
-                server_live = client.is_server_live()
+                        bool serverLive = serverLiveResponse.getLive();
 
-                # Check server readiness
-                server_ready = client.is_server_ready()
+                        ServerReadyRequest.Builder serverReadyRequest = ServerReadyRequest.newBuilder();
+		        ServerReadyResponse serverReadyResponse = grpc_stub.serverReady(serverReadyRequest.build());
 
-                # Check model readiness
-                model_ready = client.is_model_ready("model_name")
+                        bool serverReady = serverReadyResponse.getReady();
+
+                        ModelReadyRequest.Builder modelReadyRequest = ModelReadyRequest.newBuilder();
+                        modelReadyRequest.setName("model_name");
+                        modelReadyRequest.setVersion("version");
+                        ModelReadyResponse modelReadyResponse = grpc_stub.modelReady(modelReadyRequest.build());
+
+                        bool modelReady = modelReadyResponse.getReady();
+                        
+                        channel.shutdownNow();
+                }
+
 
 .. tab:: golang
         .. code-block:: python
@@ -139,6 +155,7 @@ When creating a Python-based client application, you can use Triton client libra
 
                 client = grpcclient.InferenceServerClient("localhost:9000")
                 server_metadata = client.get_server_metadata()
+
 .. tab:: python [REST]
         .. code-block:: python
 
