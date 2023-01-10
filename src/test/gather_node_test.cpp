@@ -22,21 +22,21 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../dl_node.hpp"
-#include "../dlnodesession.hpp"
-#include "../entry_node.hpp"
-#include "../exit_node.hpp"
-#include "../gatherexitnodeinputhandler.hpp"
-#include "../gathernodeinputhandler.hpp"
+#include "../dags/dl_node.hpp"
+#include "../dags/dlnodesession.hpp"
+#include "../dags/entry_node.hpp"
+#include "../dags/exit_node.hpp"
+#include "../dags/gatherexitnodeinputhandler.hpp"
+#include "../dags/gathernodeinputhandler.hpp"
+#include "../dags/nodeinputhandler.hpp"
+#include "../dags/nodestreamidguard.hpp"
+#include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
+#include "../dags/pipelinedefinition.hpp"
 #include "../logging.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#include "../nodeinputhandler.hpp"
-#include "../nodestreamidguard.hpp"
 #include "../ov_utils.hpp"
-#include "../pipeline.hpp"
-#include "../pipeline_factory.hpp"
-#include "../pipelinedefinition.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "test_utils.hpp"
@@ -279,12 +279,12 @@ protected:
 };
 
 TEST_F(TFSGatherExitNodeInputHandlerTest, IsBufferSet) {
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::OK);
     EXPECT_NE(buffer, nullptr);
 }
 
 TEST_F(TFSGatherExitNodeInputHandlerTest, BufferPointsToDataInProto) {
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::OK);
     auto it = response.mutable_outputs()->find(tensorName);
     ASSERT_NE(it, response.mutable_outputs()->end());
     auto& proto = it->second;
@@ -292,7 +292,7 @@ TEST_F(TFSGatherExitNodeInputHandlerTest, BufferPointsToDataInProto) {
 }
 
 TEST_F(TFSGatherExitNodeInputHandlerTest, BufferHasCorrectSize) {
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::OK);
     auto it = response.mutable_outputs()->find(tensorName);
     ASSERT_NE(it, response.mutable_outputs()->end());
     auto& proto = it->second;
@@ -302,7 +302,7 @@ TEST_F(TFSGatherExitNodeInputHandlerTest, BufferHasCorrectSize) {
 TEST_F(TFSGatherExitNodeInputHandlerTest, TensorAlreadyExistsInProto) {
     auto& existingProto = (*response.mutable_outputs())[tensorName];
     (void)existingProto;
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::INTERNAL_ERROR);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::INTERNAL_ERROR);
 }
 
 class KFSGatherExitNodeInputHandlerTest : public GatherExitNodeInputHandlerTest {
@@ -323,12 +323,12 @@ protected:
 };
 
 TEST_F(KFSGatherExitNodeInputHandlerTest, IsBufferSet) {
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::OK);
     EXPECT_NE(buffer, nullptr);
 }
 
 TEST_F(KFSGatherExitNodeInputHandlerTest, HasTensorWithExpectedName) {
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::OK);
     bool hasExpectedTensor = false;
     for (int i = 0; i < response.outputs_size(); i++) {
         auto* output = response.mutable_outputs(i);
@@ -341,19 +341,19 @@ TEST_F(KFSGatherExitNodeInputHandlerTest, HasTensorWithExpectedName) {
 }
 
 TEST_F(KFSGatherExitNodeInputHandlerTest, HasOneTensor) {
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::OK);
     ASSERT_EQ(response.outputs_size(), 1);
     ASSERT_EQ(response.raw_output_contents_size(), 1);
 }
 
 TEST_F(KFSGatherExitNodeInputHandlerTest, ReturnedBufferMatchesRawOutputContentPtr) {
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::OK);
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.mutable_raw_output_contents(0)->data(), buffer);
 }
 
 TEST_F(KFSGatherExitNodeInputHandlerTest, BufferHasCorrectSizeBufferHasCorrectSize) {
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::OK);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::OK);
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.mutable_raw_output_contents(0)->size(), requestedBufferSize);
 }
@@ -362,5 +362,5 @@ TEST_F(KFSGatherExitNodeInputHandlerTest, TensorAlreadyExistsInProto) {
     auto* existingProto = response.add_outputs();
     existingProto->set_name(tensorName);
     response.add_raw_output_contents();
-    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::INTERNAL_ERROR);
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::INTERNAL_ERROR);
 }

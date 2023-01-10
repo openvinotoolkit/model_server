@@ -30,11 +30,11 @@
 #include "tensorflow_serving/apis/model_service.pb.h"
 #pragma GCC diagnostic pop
 
+#include "dags/pipelinedefinition.hpp"
 #include "execution_context.hpp"
 #include "grpc_utils.hpp"
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"
-#include "pipelinedefinition.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
 #include "status.hpp"

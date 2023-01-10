@@ -35,6 +35,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "../config.hpp"
+#include "../dags/node_library.hpp"
 #include "../execution_context.hpp"
 #include "../inferencerequest.hpp"
 #include "../inferenceresponse.hpp"
@@ -42,7 +43,6 @@
 #include "../metric_registry.hpp"
 #include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
-#include "../node_library.hpp"
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;

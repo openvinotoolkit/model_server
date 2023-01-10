@@ -28,9 +28,20 @@ Buffer::Buffer(const void* pptr, size_t byteSize, OVMS_BufferType bufferType, st
     ownedCopy = std::make_unique<char[]>(byteSize);
     std::memcpy(ownedCopy.get(), pptr, byteSize);
 }
+Buffer::Buffer(size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> bufferDeviceId) :
+    ptr(nullptr),
+    byteSize(byteSize),
+    bufferType(bufferType),
+    bufferDeviceId(bufferDeviceId) {
+    ownedCopy = std::make_unique<char[]>(byteSize);
+}
 
 const void* Buffer::data() const {
     return (ptr != nullptr) ? ptr : ownedCopy.get();
+}
+
+void* Buffer::data() {
+    return (ptr != nullptr) ? nullptr : ownedCopy.get();
 }
 
 size_t Buffer::getByteSize() const {
