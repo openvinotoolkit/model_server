@@ -25,7 +25,7 @@
 
 namespace ovms {
 const char* CPUSET_FILENAME = "/sys/fs/cgroup/cpuset/cpuset.cpus";
-uint16_t getCPUCountLimit() {
+uint16_t getCoreCount() {
     std::ifstream fs;
     auto status = getCPUSetFile(fs, CPUSET_FILENAME);
     if (!status.ok()) {
@@ -33,6 +33,6 @@ uint16_t getCPUCountLimit() {
     }
     std::string cpusets;
     fs >> cpusets;
-    return getCPUCountLimitImpl(cpusets);
+    return getCoreCountImpl(cpusets);
 }
 }  // namespace ovms

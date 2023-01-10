@@ -21,5 +21,5 @@ namespace ovms {
  * @brief Get cpu core count on system. This can be limited by the container environment. In case of error returns 1
  * @return uint16_t Available number of cores in the system
  */
-uint16_t getCPUCountLimit();
+uint16_t getCoreCount();
 }  // namespace ovms

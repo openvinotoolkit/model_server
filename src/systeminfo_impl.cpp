@@ -22,7 +22,7 @@
 #include "stringutils.hpp"
 
 namespace ovms {
-uint16_t getCPUCountLimitImpl(const std::string& cpusets) {
+uint16_t getCoreCountImpl(const std::string& cpusets) {
     auto sets = tokenize(cpusets, ',');
     uint16_t totalCount = 0;
     for (auto& set : sets) {

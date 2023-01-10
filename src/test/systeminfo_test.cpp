@@ -25,44 +25,44 @@
 #include "../systeminfo_impl.hpp"
 
 using namespace testing;
-using ovms::getCPUCountLimit;
-using ovms::getCPUCountLimitImpl;
+using ovms::getCoreCount;
+using ovms::getCoreCountImpl;
 using ovms::getCPUSetFile;
 
-TEST(SystemInfoImpl, getCPUCountImplPositive) {
-    EXPECT_EQ(1, getCPUCountLimitImpl("1"));
-    EXPECT_EQ(1, getCPUCountLimitImpl("3"));
+TEST(SystemInfoImpl, getCoreCountImplPositive) {
+    EXPECT_EQ(1, getCoreCountImpl("1"));
+    EXPECT_EQ(1, getCoreCountImpl("3"));
 
-    EXPECT_EQ(2, getCPUCountLimitImpl("0-1"));
-    EXPECT_EQ(3, getCPUCountLimitImpl("1-3"));
+    EXPECT_EQ(2, getCoreCountImpl("0-1"));
+    EXPECT_EQ(3, getCoreCountImpl("1-3"));
 
-    EXPECT_EQ(4, getCPUCountLimitImpl("0,2-4"));
-    EXPECT_EQ(4, getCPUCountLimitImpl("2-4,9"));
+    EXPECT_EQ(4, getCoreCountImpl("0,2-4"));
+    EXPECT_EQ(4, getCoreCountImpl("2-4,9"));
 
-    EXPECT_EQ(7, getCPUCountLimitImpl("2-4,9-12"));
-    EXPECT_EQ(10, getCPUCountLimitImpl("2-4,9-12,123-125"));
+    EXPECT_EQ(7, getCoreCountImpl("2-4,9-12"));
+    EXPECT_EQ(10, getCoreCountImpl("2-4,9-12,123-125"));
 
-    EXPECT_EQ(5, getCPUCountLimitImpl("3,8,124,1096,1098"));
-    EXPECT_EQ(8, getCPUCountLimitImpl("3,8,124,1096,1098,1099-1101"));
+    EXPECT_EQ(5, getCoreCountImpl("3,8,124,1096,1098"));
+    EXPECT_EQ(8, getCoreCountImpl("3,8,124,1096,1098,1099-1101"));
     uint64_t nprocs = sysconf(_SC_NPROCESSORS_ONLN);
-    EXPECT_EQ(nprocs, getCPUCountLimit()) << nprocs;
+    EXPECT_EQ(nprocs, getCoreCount()) << nprocs;
 }
-TEST(SystemInfoImpl, getCPUCountImplNegative) {
-    EXPECT_EQ(1, getCPUCountLimitImpl("-1"));
-    EXPECT_EQ(1, getCPUCountLimitImpl("-33"));
+TEST(SystemInfoImpl, getCoreCountImplNegative) {
+    EXPECT_EQ(1, getCoreCountImpl("-1"));
+    EXPECT_EQ(1, getCoreCountImpl("-33"));
 
-    EXPECT_EQ(1, getCPUCountLimitImpl("35-33"));
+    EXPECT_EQ(1, getCoreCountImpl("35-33"));
 
-    EXPECT_EQ(1, getCPUCountLimitImpl("33-35-37"));
+    EXPECT_EQ(1, getCoreCountImpl("33-35-37"));
 
-    EXPECT_EQ(1, getCPUCountLimitImpl("1234567890123456789012345678901234567890"));
+    EXPECT_EQ(1, getCoreCountImpl("1234567890123456789012345678901234567890"));
     // TODO test against maximum values
     std::ifstream ifs;
     EXPECT_EQ(getCPUSetFile(ifs, "/sys/fs/illegal_file"), ovms::StatusCode::FILESYSTEM_ERROR);
 }
 
-TEST(SystemInfo, getCPUCount) {
-    uint16_t cpuCount = getCPUCountLimit();
+TEST(SystemInfo, getCoreCount) {
+    uint16_t cpuCount = getCoreCount();
     EXPECT_GE(cpuCount, 1);
     EXPECT_LE(cpuCount, std::thread::hardware_concurrency());
 }

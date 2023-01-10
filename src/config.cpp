@@ -29,7 +29,7 @@
 
 namespace ovms {
 
-const uint AVAILABLE_CORES = getCPUCountLimit();
+const uint AVAILABLE_CORES = getCoreCount();
 const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
 
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;

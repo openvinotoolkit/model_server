@@ -21,6 +21,6 @@
 
 namespace ovms {
 class Status;
-uint16_t getCPUCountLimitImpl(const std::string& cpusets);
+uint16_t getCoreCountImpl(const std::string& cpusets);
 Status getCPUSetFile(std::ifstream& ifs, const std::string& filename);
 }  // namespace ovms
