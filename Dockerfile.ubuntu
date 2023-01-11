@@ -71,6 +71,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             python3 \
             python3-pip \
             python3-dev \
+            python-is-python3 \
             python3-setuptools \
             python3-virtualenv \
             python3-numpy \
@@ -83,44 +84,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             zlib1g-dev && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
-
-ARG NVIDIA=0
-
-# Add Nvidia dev tool if needed
-# hadolint ignore=DL3003
-RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    wget -nv https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin -O /etc/apt/preferences.d/cuda-repository-pin-600 ; \
-    set -exuo pipefail ; \
-    rm -f /etc/apt/apt.conf.d/docker-clean ; \
-    apt-get update && \
-    apt-get install --no-install-recommends -y \
-      gnupg2 \
-      software-properties-common; \
-    if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
-    apt-key adv --keyserver-options http-proxy=$http_proxy --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub ; \
-    add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"; \
-    apt-get update && apt-get install --no-install-recommends -y \
-      libzstd-dev \
-      cuda-11-8 \
-      libcudnn8 \
-      libcudnn8-dev \
-      libcutensor1=1.6.1.5-1 \
-      libcutensor-dev=1.6.1.5-1 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    pip3 install --no-cache-dir cython && \
-    curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin ; \
-    curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
-    chmod a+x /usr/local/bin/sccache ;
-
-# Set up Bazel
-ENV BAZEL_VERSION 5.3.1
-WORKDIR /bazel
-RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -149,6 +112,44 @@ RUN cmake .. -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD
 WORKDIR /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release
 RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=ON && make --jobs=$JOBS && make --jobs=$JOBS install
 ####### End of Azure SDK
+
+ARG NVIDIA=0
+
+# Add Nvidia dev tool if needed
+# hadolint ignore=DL3003
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
+    wget -nv https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin -O /etc/apt/preferences.d/cuda-repository-pin-600 ; \
+    set -exuo pipefail ; \
+    rm -f /etc/apt/apt.conf.d/docker-clean ; \
+#    apt-get update && \
+#    apt-get install --no-install-recommends -y \
+#      gnupg2 \
+#      software-properties-common; \
+    if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
+#    apt-key adv --keyserver-options http-proxy=$http_proxy --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub ; \
+#    add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"; \
+    apt-get update && apt-get install --no-install-recommends -y \
+      libzstd-dev \
+      libcudnn8 \
+      libcudnn8-dev \
+      libcutensor1=1.6.1.5-1 \
+      libcutensor-dev=1.6.1.5-1 && \
+    apt-get install --no-install-recommends -y cuda-11-8 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip3 install --no-cache-dir cython && \
+    curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin ; \
+    curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
+    chmod a+x /usr/local/bin/sccache ;
+
+# Set up Bazel
+ENV BAZEL_VERSION 5.3.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
@@ -245,8 +246,6 @@ WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 COPY MakefileCapi /ovms/
-
-RUN apt-get update && apt-get install --no-install-recommends -y python-is-python3 && rm -rf /var/lib/apt/lists/*
 
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
