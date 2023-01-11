@@ -757,17 +757,17 @@ Status ModelManager::loadConfig(const std::string& jsonFilename, const bool over
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
-        if(overrideMetricsEnable){
-            if(!configJson.HasMember("monitoring")){
+        if (overrideMetricsEnable) {
+            if (!configJson.HasMember("monitoring")) {
                 configJson.AddMember("monitoring", rapidjson::Value(rapidjson::kObjectType), configJson.GetAllocator());
             }
-            if(!configJson["monitoring"].HasMember("metrics")){
+            if (!configJson["monitoring"].HasMember("metrics")) {
                 configJson["monitoring"].AddMember("metrics", rapidjson::Value(rapidjson::kObjectType), configJson.GetAllocator());
             }
-            if(!configJson["monitoring"]["metrics"].HasMember("enable")){
+            if (!configJson["monitoring"]["metrics"].HasMember("enable")) {
                 configJson["monitoring"]["metrics"].AddMember("enable", true, configJson.GetAllocator());
 
-            }else{
+            } else {
                 configJson["monitoring"]["metrics"]["enable"].SetBool(true);
             }
         }

@@ -20,12 +20,12 @@
 #include <regex>
 #include <thread>
 
+#include <spdlog/spdlog.h>
 #include <sysexits.h>
 
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
 #include "server_settings.hpp"
-#include <spdlog/spdlog.h>
 
 namespace ovms {
 
