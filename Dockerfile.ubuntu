@@ -121,13 +121,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     wget -nv https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin -O /etc/apt/preferences.d/cuda-repository-pin-600 ; \
     set -exuo pipefail ; \
     rm -f /etc/apt/apt.conf.d/docker-clean ; \
-#    apt-get update && \
-#    apt-get install --no-install-recommends -y \
-#      gnupg2 \
-#      software-properties-common; \
     if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
-#    apt-key adv --keyserver-options http-proxy=$http_proxy --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub ; \
-#    add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"; \
     apt-get update && apt-get install --no-install-recommends -y \
       libzstd-dev \
       libcudnn8 \
