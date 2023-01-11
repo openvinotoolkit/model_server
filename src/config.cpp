@@ -25,6 +25,7 @@
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
 #include "server_settings.hpp"
+#include <spdlog/spdlog.h>
 
 namespace ovms {
 
@@ -126,8 +127,7 @@ bool Config::validate() {
 
     // metrics on rest port
     if ((metricsEnabled() || !metricsList().empty()) && !configPath().empty()) {
-        std::cerr << "metrics_enable or metrics_list and config_path cant be used together. Use json config file to enable metrics when using config_path." << std::endl;
-        return false;
+        SPDLOG_WARN("metrics_enable will override config contents");
     }
 
     // metrics_list without metrics_enable

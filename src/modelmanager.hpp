@@ -328,7 +328,7 @@ public:
      * @param filename
      * @return status
      */
-    Status startFromFile(const std::string& jsonFilename);
+    Status startFromFile(const std::string& jsonFilename, const bool overrideMetricsEnable = false);
 
     /**
      * @brief Starts model manager using command line arguments
@@ -436,7 +436,7 @@ public:
      * @param jsonFilename configuration file
      * @return Status 
      */
-    Status loadConfig(const std::string& jsonFilename);
+    Status loadConfig(const std::string& jsonFilename, const bool overrideMetricsEnable = false);
 
     /**
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions

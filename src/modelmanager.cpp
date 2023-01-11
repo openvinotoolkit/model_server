@@ -158,7 +158,7 @@ Status ModelManager::start(const Config& config) {
     Status status;
     bool startFromConfigFile = (config.configPath() != "");
     if (startFromConfigFile) {
-        status = startFromFile(config.configPath());
+        status = startFromFile(config.configPath(), config.metricsEnabled());
     } else {
         status = startFromConfig();
     }
@@ -273,8 +273,8 @@ Status ModelManager::startFromConfig() {
     return reloadModelWithVersions(modelConfig);
 }
 
-Status ModelManager::startFromFile(const std::string& jsonFilename) {
-    Status status = loadConfig(jsonFilename);
+Status ModelManager::startFromFile(const std::string& jsonFilename, const bool overrideMetricsEnable) {
+    Status status = loadConfig(jsonFilename, overrideMetricsEnable);
     if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID || status == StatusCode::METRICS_REST_PORT_MISSING || status == StatusCode::INVALID_METRICS_ENDPOINT || status == StatusCode::INVALID_METRICS_FAMILY_NAME) {
         return status;
     }
@@ -711,7 +711,7 @@ public:
     }
 };
 
-Status ModelManager::loadConfig(const std::string& jsonFilename) {
+Status ModelManager::loadConfig(const std::string& jsonFilename, const bool overrideMetricsEnable) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
     lastConfigFileMD5 = getConfigFileMD5();
@@ -757,6 +757,20 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
+        if(overrideMetricsEnable){
+            if(!configJson.HasMember("monitoring")){
+                configJson.AddMember("monitoring", rapidjson::Value(rapidjson::kObjectType), configJson.GetAllocator());
+            }
+            if(!configJson["monitoring"].HasMember("metrics")){
+                configJson["monitoring"].AddMember("metrics", rapidjson::Value(rapidjson::kObjectType), configJson.GetAllocator());
+            }
+            if(!configJson["monitoring"]["metrics"].HasMember("enable")){
+                configJson["monitoring"]["metrics"].AddMember("enable", true, configJson.GetAllocator());
+
+            }else{
+                configJson["monitoring"]["metrics"]["enable"].SetBool(true);
+            }
+        }
         status = loadMetricsConfig(configJson);
         if (!status.ok()) {
             return status;
