@@ -66,7 +66,12 @@ std::vector<uint8_t> load(const std::string& fileName) {
     fileImg.seekg(0, std::ios::beg);
 
     char* buffer = new char[bufferLength];
-    fileImg.read(buffer, bufferLength);
+    try {
+        fileImg.read(buffer, bufferLength);
+    }
+    catch(std::bad_alloc) {
+        throw;
+    }
 
     return std::vector<uint8_t>(buffer, buffer + bufferLength);
 }
@@ -127,6 +132,11 @@ int main(int argc, char** argv) {
         labels.push_back(label);
     }
 
+    if(imgs.size() == 0) {
+        std::cout<<"[ERROR] Path to image_list file is invalid or the file does not contain valid image paths. \n";
+        return 0;
+    }
+
     std::vector<int64_t> shape{1};
 
     // Initialize the inputs with the data.
@@ -152,7 +162,14 @@ int main(int argc, char** argv) {
     std::vector<tc::InferResult*> results;
     results.resize(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
-        std::vector<uint8_t> input_data = load(imgs[i]);
+        std::vector<uint8_t> input_data;
+        try {
+            input_data = load(imgs[i]);
+        }
+        catch(std::bad_alloc) {
+            std::cout<< "[ERROR] Loading image:" + imgs[i] + " failed. \n";
+            return 0;
+        }
         FAIL_IF_ERR(
             input_ptr->AppendRaw(input_data),
             "unable to set data for input");
