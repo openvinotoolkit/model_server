@@ -270,6 +270,28 @@ static const char* modelMetricsMissingPort = R"(
         }
 })";
 
+static const char* modelMetricsMissingPortWithDisabledMetrics = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "monitoring":
+        {
+            "metrics":
+            {
+                "enable" : false
+            }
+        }
+})";
 TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
     SetUpConfig(modelMetricsMissingPort);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
@@ -277,6 +299,16 @@ TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
 
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::METRICS_REST_PORT_MISSING);
+}
+
+TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithConfigDisabledMetrics) {
+    SetUpConfig(modelMetricsMissingPortWithDisabledMetrics);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(configFilePath, true);
     EXPECT_EQ(status, ovms::StatusCode::METRICS_REST_PORT_MISSING);
 }
 
