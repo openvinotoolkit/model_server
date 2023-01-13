@@ -330,7 +330,7 @@ When creating a Python-based client application, you can use Triton client libra
         
 @endsphinxdirective
 
-### Request Prediction on a Encoded Image
+### Request Prediction on an Encoded Image
 
 @sphinxdirective
 .. tab:: python [GRPC]
@@ -511,7 +511,7 @@ When creating a Python-based client application, you can use Triton client libra
 
     .. code-block:: sh  
 
-        echo -n ‘{"inputs” : [{"name" : "0", "shape" : [1], "datatype" : "BYTES"}]}’ > request.json
+        echo -n '{"inputs” : [{"name" : "0", "shape" : [1], "datatype" : "BYTES"}]}' > request.json
         stat --format=%s request.json
         66
         cat ./image.jpeg >> request.json
