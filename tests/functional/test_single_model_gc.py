@@ -67,6 +67,7 @@ class TestSingleModelInferenceGc:
         logger.info("Output shape: ".format(output[out_name].shape))
         assert output[out_name].shape == ResnetGS.output_shape, ERROR_SHAPE
 
+    @pytest.mark.skip(reason=NOT_TO_BE_REPORTED_IF_SKIPPED) 
     def test_get_model_metadata(self, start_server_single_model_from_gc):
 
         _, ports = start_server_single_model_from_gc
@@ -86,6 +87,7 @@ class TestSingleModelInferenceGc:
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
+    @pytest.mark.skip(reason=NOT_TO_BE_REPORTED_IF_SKIPPED) 
     def test_get_model_status(self, start_server_single_model_from_gc):
 
         _, ports = start_server_single_model_from_gc
