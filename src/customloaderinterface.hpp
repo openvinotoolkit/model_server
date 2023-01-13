@@ -44,8 +44,8 @@ public:
     CustomLoaderInterface() {
     }
     /**
-         * @brief Destructor
-         */
+      * @brief Destructor
+      */
     virtual ~CustomLoaderInterface() {
     }
 
@@ -97,7 +97,8 @@ public:
     virtual CustomLoaderStatus unloadModel(const std::string& modelName, const int version) = 0;
 
     /**
-         * @brief Retire the model from customloader when OVMS retires the model
+         * @brief Retire the model from customloader when OVMS retires the model.
+         * This unloads all model versions.
          *
          * @param model name which is being retired
          * @return status

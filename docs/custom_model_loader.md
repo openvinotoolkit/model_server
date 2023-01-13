@@ -14,7 +14,7 @@ A new section is added to the config file syntax to define customloader:
                 "config":{
                 "loader_name": "#custom loader name",
                 "library_path": "#Shared library path",
-                "loader_config_file": "#Seperate config file with custom loader speicific details in json format"
+                "loader_config_file": "#Seperate config file with custom loader specific details in json format"
                 }
         }
         ]
