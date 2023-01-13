@@ -30,7 +30,7 @@ from utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+@pytest.mark.skip(reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 @devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_CUDA])
 class TestSingleModelInferenceGc:
 
