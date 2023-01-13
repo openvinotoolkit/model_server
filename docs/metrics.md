@@ -69,8 +69,9 @@ To enable default metrics set you need to specify the `metrics_enable` flag or j
 CLI
 
    ```bash
-         docker run --rm -d -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-                --model_name resnet --model_path gs://ovms-public-eu/resnet50  --port 9000 \
+         wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+         docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+                --model_name resnet --model_path /models/resnet50  --port 9000 \
                 --rest_port 8000 \
                 --metrics_enable
    ```
@@ -79,12 +80,13 @@ CONFIG JSON
 
    ```bash
    mkdir workspace
+   wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
    echo '{
     "model_config_list": [
         {
            "config": {
                 "name": "resnet",
-                "base_path": "gs://ovms-public-eu/resnet50"
+                "base_path": "/workspace/models/resnet50 "
            }
         }
     ],
@@ -101,7 +103,7 @@ CONFIG JSON
 CONFIG CMD
 
    ```bash
-         docker run --rm -d -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+         docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
                 --config_path /workspace/config.json \
                 --port 9000 --rest_port 8000
    ```
@@ -115,8 +117,9 @@ To enable specific set of metrics you need to specify the metrics_list flag or j
 CLI
 
    ```bash
-         docker run --rm -d -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-               --model_name resnet --model_path gs://ovms-public-eu/resnet50  --port 9000 \
+         wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+         docker run -d -u $(id -u) -v $(pwd)/models:/models-p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+               --model_name resnet --model_path /models/resnet50  --port 9000 \
                --rest_port 8000 \
                --metrics_enable \
                --metrics_list ovms_requests_success,ovms_infer_req_queue_size
@@ -125,12 +128,13 @@ CLI
 CONFIG JSON
 
    ```bash
+   wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
    echo '{
     "model_config_list": [
         {
            "config": {
                 "name": "resnet",
-                "base_path": "gs://ovms-public-eu/resnet50"
+                "base_path": "/workspace/models/resnet50"
            }
         }
     ],
@@ -148,7 +152,7 @@ CONFIG JSON
 CONFIG CMD
 
    ```bash
-         docker run --rm -d -v -d -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+         docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
             --config_path /workspace/config.json \
             --port 9000 --rest_port 8000
    ```
@@ -161,7 +165,7 @@ CONFIG JSON WITH ALL METRICS ENABLED
         {
            "config": {
                 "name": "resnet",
-                "base_path": "gs://ovms-public-eu/resnet50"
+                "base_path": "/workspace/models/resnet50"
            }
         }
     ],
@@ -188,7 +192,7 @@ CONFIG JSON WITH ALL METRICS ENABLED
 CONFIG CMD
 
    ```bash
-         docker run --rm -d -v -d -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+         docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
             --config_path /workspace/config.json \
             --port 9000 --rest_port 8000
    ```

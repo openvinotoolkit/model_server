@@ -28,7 +28,8 @@ pip3 install -r requirements.txt
 Access to Google Cloud Storage might require proper configuration of https_proxy in the docker engine or in the docker container.
 In the examples listed below, OVMS can be started using a command:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet50 --port 9000 --rest_port 8000
 ```
 
 ## gRPC API Client Examples <a name="grpc-api"></a>
@@ -217,7 +218,8 @@ Classification accuracy: 100.00
 
 Using binary inputs feature requires loading model with layout set to `--layout NHWC:NCHW`:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --port 9000 --rest_port 8000 --layout NHWC:NCHW
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet50 --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 ```bash
 python grpc_predict_binary_resnet.py --help
@@ -281,7 +283,8 @@ Average latency= 28.2 ms
 Access to Google Cloud Storage might require proper configuration of https_proxy in the docker engine or in the docker container.
 In the examples listed below, OVMS can be started using a command:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet50 --port 9000 --rest_port 8000
 ```
 
 ### Model Status API
@@ -536,7 +539,8 @@ Classification accuracy: 100.00
 
 Using binary inputs feature requires loading model with layout set to `--layout NHWC:NCHW`:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --port 9000 --rest_port 8000 --layout NHWC:NCHW
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet50 --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
 ```bash
