@@ -104,9 +104,9 @@ python grpc_get_model_metadata.py --grpc_port 9000 --model_name resnet --model_v
 
 Getting model metadata for model: resnet
 Inputs metadata:
-	Input name: data; shape: [1, 3, 224, 224]; dtype: DT_FLOAT
+	Input name: 0; shape: [1, 3, 224, 224]; dtype: DT_FLOAT
 Outputs metadata:
-	Output name: prob; shape: [1, 1000]; dtype: DT_FLOAT
+	Output name: 1463; shape: [1, 1000]; dtype: DT_FLOAT
 ```
 
 ### Predict API 
@@ -373,7 +373,7 @@ python rest_get_model_metadata.py --rest_port 8000
    "signatureDef": {
     "serving_default": {
      "inputs": {
-      "data": {
+      "0": {
        "dtype": "DT_FLOAT",
        "tensorShape": {
         "dim": [
@@ -400,7 +400,7 @@ python rest_get_model_metadata.py --rest_port 8000
       }
      },
      "outputs": {
-      "prob": {
+      "1463": {
        "dtype": "DT_FLOAT",
        "tensorShape": {
         "dim": [

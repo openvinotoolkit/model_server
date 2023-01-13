@@ -89,7 +89,7 @@ Examples below assumes OVMS has been started with ResNet50 binary model:
 ```bash
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
 docker run -d --rm -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest \
---model_name resnet --model_path /models/resnet50 --layout NHWC:NCHW --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}' \
+--model_name resnet --model_path /models/resnet50 --layout NHWC:NCHW --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
 --port 9000 --rest_port 8000
 ```
 
