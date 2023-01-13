@@ -1218,8 +1218,8 @@ Status ModelInstance::infer(const RequestType* requestProto,
         return status;
     SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
-    if(targetDevice == "AUTO")
-        for(std::string device :compiledModel->get_property(ov::execution_devices))
+    if (targetDevice == "AUTO")
+        for (std::string device : compiledModel->get_property(ov::execution_devices))
             SPDLOG_DEBUG("Used device: {}", device);
 
     status = requestProcessor->release();
