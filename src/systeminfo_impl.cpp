@@ -22,7 +22,7 @@
 #include "stringutils.hpp"
 
 namespace ovms {
-uint16_t getCoreCountImpl(const std::string& cpusets) {
+Status getCoreCountImpl(const std::string& cpusets, uint16_t& coreCount) {
     auto sets = tokenize(cpusets, ',');
     uint16_t totalCount = 0;
     for (auto& set : sets) {
@@ -30,30 +30,31 @@ uint16_t getCoreCountImpl(const std::string& cpusets) {
             if (stou32(set).has_value()) {
                 totalCount += 1;
             } else {
-                return 1;
+                return StatusCode::FILESYSTEM_ERROR;
             }
         } else {
             auto bounds = tokenize(set, '-');
             // this handles both single minus numbers as well as two range sets
             if (bounds.size() != 2) {
-                return 1;
+                return StatusCode::FILESYSTEM_ERROR;
             }
             auto rbound = stou32(bounds[1]);
             if (!rbound.has_value()) {
-                return 1;
+                return StatusCode::FILESYSTEM_ERROR;
             }
             auto lbound = stou32(bounds[0]);
             if (!lbound.has_value()) {
-                return 1;
+                return StatusCode::FILESYSTEM_ERROR;
             }
             if (rbound <= lbound) {
-                return 1;
+                return StatusCode::FILESYSTEM_ERROR;
             }
             uint16_t setCount = rbound.value() - lbound.value() + 1;
             totalCount += setCount;
         }
     }
-    return totalCount;
+    coreCount = totalCount;
+    return StatusCode::OK;
 }
 Status getCPUSetFile(std::ifstream& ifs, const std::string& filename) {
     ifs.open(filename, std::ios_base::in);

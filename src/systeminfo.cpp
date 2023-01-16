@@ -18,6 +18,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <thread>
 
 #include "logging.hpp"
 #include "status.hpp"
@@ -27,12 +28,23 @@ namespace ovms {
 const char* CPUSET_FILENAME = "/sys/fs/cgroup/cpuset/cpuset.cpus";
 uint16_t getCoreCount() {
     std::ifstream fs;
+    uint16_t coreCount = 1;
     auto status = getCPUSetFile(fs, CPUSET_FILENAME);
-    if (!status.ok()) {
-        return 1;
+    if (status.ok()) {
+        std::string cpusets;
+        fs >> cpusets;
+        status = getCoreCountImpl(cpusets, coreCount);
     }
-    std::string cpusets;
-    fs >> cpusets;
-    return getCoreCountImpl(cpusets);
+    if (status.ok()) {
+        return coreCount;
+    } else {
+        SPDLOG_ERROR("Failed to read system core count from cpuset file. Falling back to std::thread::hardware_concurrency");
+        auto hwConcurrency = std::thread::hardware_concurrency();
+        if (hwConcurrency == 0) {
+            SPDLOG_ERROR("Failed to read core count number of system. Fallback to treating system as 1 core only");
+            return 1;
+        }
+        return hwConcurrency;
+    }
 }
 }  // namespace ovms

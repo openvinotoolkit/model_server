@@ -18,7 +18,7 @@
 
 namespace ovms {
 /**
- * @brief Get cpu core count on system. This can be limited by the container environment. In case of error returns 1
+ * @brief Get cpu core count on system. This can be limited by the container environment. In case of failure reading system constraints it will return total number of available cores. If it won't work the function will return 1
  * @return uint16_t Available number of cores in the system
  */
 uint16_t getCoreCount();
