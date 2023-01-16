@@ -158,6 +158,7 @@ ARG ov_contrib_branch=master
 
 LABEL version="1.0.0"
 
+ARG APT_OV_PACKAGE=openvino-2022.1.0
 ARG CMAKE_BUILD_TYPE=Release
 
 # build_type=[ opt, dbg ]
