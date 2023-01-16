@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import torch
 import logging as log
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -28,5 +28,3 @@ tokenizer.save_pretrained('local-pt-checkpoint')
 log.info("Saving the model to pytorch format...")
 model.save_pretrained('local-pt-checkpoint')
 log.info("Done.")
-
-

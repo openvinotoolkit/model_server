@@ -1,26 +1,33 @@
-# GPT-J demo
+# GPT-J Causal Language Modeling Demo {#ovms_demo_gptj_causal_lm}
+
+### Introduction
+This demo illustrates usage of GPT-like models in OpenVINO™ Model Server. GPT-J 6B model used in this example can be found at [huggingface](https://huggingface.co/EleutherAI/gpt-j-6B) (~25GB). Steps below automate download and conversion steps to be able to load it using OpenVINO™. Example python client provided at the end of the document requests Model Server for the next word of the sentence until `EOS` (end of sequence) token is received. 
+
 
 ### Download the model
 
 Prepare the environment:
-```
+```bash
+virtualenv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Download the GPT-J-6b model from huggingface and save to disk in pytorch format:
+Download the GPT-J-6b model from huggingface and save to disk in pytorch format using script below.
+> NOTE: First download might take a while since the model is ~25GB. Subsequent script runs will use the model from cache.
+```bash
+python3 download_model.py
 ```
-python3 download_mode.py
-```
+The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.
 
 ### Convert the model
 The model needs to be converted to ONNX format in order to load in OVMS:
-```
-./convert_model.sh
+```bash
+chmod +x convert_model.sh && ./convert_model.sh
 ```
 The model will reside in `onnx/1` directory.
 
-There should be output with visible successful model validation results:
-
+The script should provide result confirming successful model conversion:
 ```
 Validating ONNX model...
         -[✓] ONNX model output names match reference model ({'logits'})
@@ -30,24 +37,23 @@ Validating ONNX model...
 All good, model saved at: onnx/1/model.onnx
 ```
 
-### Start OVMS with GPT-J-6b model
+### Start OVMS with prepared GPT-J-6b model
 
-```
-docker run -it --rm -p 9000:9000 -v $(pwd)/onnx:/model:ro openvino/model_server \
+```bash
+docker run -d --rm -p 9000:9000 -v $(pwd)/onnx:/model:ro openvino/model_server \
     --port 9000 \
     --model_name gpt-j-6b \
     --model_path /model \
-    --plugin_config '{"PERFORMANCE_HINT":"LATENCY","NUM_STREAMS":1}' \
-    --log_level DEBUG
+    --plugin_config '{"PERFORMANCE_HINT":"LATENCY","NUM_STREAMS":1}'
 ```
 
-### Run the OVMS client
-
-```
+### Run the OVMS simple client script
+The script will validate the configuration and setup of OVMS.
+```bash
 python3 infer_ovms.py --url localhost:9000 --model_name gpt-j-6b
 ```
 
-Output:
+Desired output:
 ```
 [[[ 8.407803   7.2024884  5.114844  ... -6.691438  -6.7890754 -6.6537027]
   [ 6.97011    9.89741    8.216569  ... -3.891536  -3.6937592 -3.6568289]
@@ -60,7 +66,7 @@ predicted word:  a
 
 ### Run the inference with pytorch
 We run the inference with pytorch to compare the result:
-```
+```bash
 python3 infer_torch.py
 ```
 
@@ -80,7 +86,7 @@ predicted word:  a
 
 Run `app.py` script to run interactive demo predicting the next word in a loop until end of sentence token is encountered.
 
-```
+```bash
 python3 app.py --input "Neurons are fascinating"
 ```
 

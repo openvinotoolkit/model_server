@@ -22,6 +22,7 @@ python3 -m transformers.onnx \
     --framework pt \
     onnx/1
 
+# Desired output:
 # Validating ONNX model...
 #         -[✓] ONNX model output names match reference model ({'logits'})
 #         - Validating ONNX Model output "logits":
