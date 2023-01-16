@@ -51,7 +51,7 @@ echo '{
                "name": "resnet",
                "base_path": "/models/resnet",
                "plugin_config": {
-                   "CPU_THROUGHPUT_STREAMS" : "1"
+                   "NUM_STREAMS" : "1"
                }
            }
        }
