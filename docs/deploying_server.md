@@ -37,8 +37,9 @@ docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 
 ```bash
 # start the container with the model
-docker run -p 9000:9000 openvino/model_server:latest \ 
---model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \ 
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest \ 
+--model_name resnet --model_path /models/resnet50 \ 
 --layout NHWC:NCHW --port 9000 
 
 # download input files: an image and a label mapping file
@@ -103,7 +104,8 @@ microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/App
 Start the server:
 
 ```bash
-./ovms/bin/ovms --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+./ovms/bin/ovms --model_name resnet --model_path models/resnet50
 ```
 
 or start as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.

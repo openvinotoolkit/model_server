@@ -25,10 +25,10 @@ Install client dependencies:
 pip3 install -r requirements.txt
 ```
 
-Access to Google Cloud Storage might require proper configuration of https_proxy in the docker engine or in the docker container.
 In the examples listed below, OVMS can be started using a command:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet50 --port 9000 --rest_port 8000
 ```
 
 ## gRPC API Client Examples <a name="grpc-api"></a>
@@ -103,9 +103,9 @@ python grpc_get_model_metadata.py --grpc_port 9000 --model_name resnet --model_v
 
 Getting model metadata for model: resnet
 Inputs metadata:
-	Input name: data; shape: [1, 3, 224, 224]; dtype: DT_FLOAT
+	Input name: 0; shape: [1, 3, 224, 224]; dtype: DT_FLOAT
 Outputs metadata:
-	Output name: prob; shape: [1, 1000]; dtype: DT_FLOAT
+	Output name: 1463; shape: [1, 1000]; dtype: DT_FLOAT
 ```
 
 ### Predict API 
@@ -161,7 +161,7 @@ usage: grpc_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 - Usage example
 
 ```bash
-python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy_path ../../lbs.npy
+python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --input_name 0 --output_name 1463 --transpose_input False --labels_numpy_path ../../lbs.npy
 
 Image data range: 0.0 : 255.0
 Start processing:
@@ -217,7 +217,8 @@ Classification accuracy: 100.00
 
 Using binary inputs feature requires loading model with layout set to `--layout NHWC:NCHW`:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --port 9000 --rest_port 8000 --layout NHWC:NCHW
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet50 --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 ```bash
 python grpc_predict_binary_resnet.py --help
@@ -281,7 +282,8 @@ Average latency= 28.2 ms
 Access to Google Cloud Storage might require proper configuration of https_proxy in the docker engine or in the docker container.
 In the examples listed below, OVMS can be started using a command:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet50 --port 9000 --rest_port 8000
 ```
 
 ### Model Status API
@@ -370,7 +372,7 @@ python rest_get_model_metadata.py --rest_port 8000
    "signatureDef": {
     "serving_default": {
      "inputs": {
-      "data": {
+      "0": {
        "dtype": "DT_FLOAT",
        "tensorShape": {
         "dim": [
@@ -393,11 +395,11 @@ python rest_get_model_metadata.py --rest_port 8000
         ],
         "unknownRank": false
        },
-       "name": "data"
+       "name": "0"
       }
      },
      "outputs": {
-      "prob": {
+      "1463": {
        "dtype": "DT_FLOAT",
        "tensorShape": {
         "dim": [
@@ -412,7 +414,7 @@ python rest_get_model_metadata.py --rest_port 8000
         ],
         "unknownRank": false
        },
-       "name": "prob"
+       "name": "1463"
       }
      },
      "methodName": ""
@@ -471,7 +473,7 @@ usage: rest_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 
 - Usage Example
 ```bash
-python rest_predict_resnet.py --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name data --output_name prob --rest_port 8000 --transpose_input False
+python rest_predict_resnet.py --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --rest_port 8000 --transpose_input False
 
 Image data range: 0 : 255
 Start processing:
@@ -536,7 +538,8 @@ Classification accuracy: 100.00
 
 Using binary inputs feature requires loading model with layout set to `--layout NHWC:NCHW`:
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --port 9000 --rest_port 8000 --layout NHWC:NCHW
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet50 --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
 ```bash
@@ -567,7 +570,7 @@ usage: rest_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
 
 - Usage example
 ```bash
-python rest_predict_binary_resnet.py --rest_url http://localhost:8000 --model_name resnet --input_name data --output_name prob  --images ../../resnet_input_images.txt
+python rest_predict_binary_resnet.py --rest_url http://localhost:8000 --model_name resnet --input_name 0 --output_name 1463  --images ../../resnet_input_images.txt
 
 Start processing:
         Model name: resnet
