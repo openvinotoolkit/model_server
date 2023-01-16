@@ -66,47 +66,47 @@ It is required to enable REST in the model server by setting the parameter --res
 
 To enable default metrics set you need to specify the `metrics_enable` flag or json setting:
 
-CLI
+### Option 1: CLI
 
-   ```bash
-         wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-         docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-                --model_name resnet --model_path /models/resnet50  --port 9000 \
-                --rest_port 8000 \
-                --metrics_enable
-   ```
+ ```bash
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+       --model_name resnet --model_path /models/resnet50 --port 9000 \
+       --rest_port 8000 \
+       --metrics_enable
+ ```
 
-CONFIG JSON
+### Option 2: Configuration file
 
-   ```bash
-   mkdir workspace
-   wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P workspace/models/resnet50/1
-   echo '{
-    "model_config_list": [
-        {
-           "config": {
-                "name": "resnet",
-                "base_path": "/workspace/models/resnet50"
-           }
+```bash
+mkdir workspace
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P workspace/models/resnet50/1
+echo '{
+ "model_config_list": [
+     {
+        "config": {
+             "name": "resnet",
+             "base_path": "/workspace/models/resnet50"
         }
-    ],
-    "monitoring":
-        {
-            "metrics":
-            {
-                "enable" : true
-            }
-        }
-   }' >> workspace/config.json
-   ```
+     }
+ ],
+ "monitoring":
+     {
+         "metrics":
+         {
+             "enable" : true
+         }
+     }
+}' >> workspace/config.json
+```
 
-CONFIG CMD
+### Start with configuration file
 
-   ```bash
-         docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-                --config_path /workspace/config.json \
-                --port 9000 --rest_port 8000
-   ```
+```bash
+docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+       --config_path /workspace/config.json \
+       --port 9000 --rest_port 8000
+```
 
 ## Change the default list of metrics
 
@@ -114,95 +114,95 @@ You can enable from one up to all the metrics available at once.
 
 To enable specific set of metrics you need to specify the metrics_list flag or json setting:
 
-CLI
+### Option 1: CLI
 
-   ```bash
-         wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-         docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-               --model_name resnet --model_path /models/resnet50  --port 9000 \
-               --rest_port 8000 \
-               --metrics_enable \
-               --metrics_list ovms_requests_success,ovms_infer_req_queue_size
-   ```
+```bash
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+      --model_name resnet --model_path /models/resnet50  --port 9000 \
+      --rest_port 8000 \
+      --metrics_enable \
+      --metrics_list ovms_requests_success,ovms_infer_req_queue_size
+```
 
-CONFIG JSON
+### Option 2: Configuration file
 
-   ```bash
-   wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-   echo '{
-    "model_config_list": [
-        {
-           "config": {
-                "name": "resnet",
-                "base_path": "/workspace/models/resnet50"
-           }
+```bash
+wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+echo '{
+ "model_config_list": [
+     {
+        "config": {
+             "name": "resnet",
+             "base_path": "/workspace/models/resnet50"
         }
-    ],
-    "monitoring":
-        {
-            "metrics":
-            {
-                "enable" : true,
-                "metrics_list": ["ovms_requests_success", "ovms_infer_req_queue_size"]
-            }
+     }
+ ],
+ "monitoring":
+     {
+         "metrics":
+         {
+             "enable" : true,
+             "metrics_list": ["ovms_requests_success", "ovms_infer_req_queue_size"]
+         }
+     }
+}' > workspace/config.json
+```
+
+### Start with configuration file
+
+```bash
+docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+   --config_path /workspace/config.json \
+   --port 9000 --rest_port 8000
+```
+
+### Configuration file with all metrics enabled
+
+```bash
+echo '{
+ "model_config_list": [
+     {
+        "config": {
+             "name": "resnet",
+             "base_path": "/workspace/models/resnet50"
         }
-   }' > workspace/config.json
-   ```
+     }
+ ],
+ "monitoring":
+     {
+         "metrics":
+         {
+             "enable" : true,
+             "metrics_list": 
+                 [ "ovms_requests_success",
+                 "ovms_requests_fail",
+                 "ovms_inference_time_us",
+                 "ovms_wait_for_infer_req_time_us",
+                 "ovms_request_time_us",
+                 "ovms_current_requests",
+                 "ovms_infer_req_active",
+                 "ovms_streams",
+                 "ovms_infer_req_queue_size"]
+         }
+     }
+}' > workspace/config.json
+```
 
-CONFIG CMD
+### Start with the configuration file above
 
-   ```bash
-         docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-            --config_path /workspace/config.json \
-            --port 9000 --rest_port 8000
-   ```
-
-CONFIG JSON WITH ALL METRICS ENABLED
-
-   ```bash
-   echo '{
-    "model_config_list": [
-        {
-           "config": {
-                "name": "resnet",
-                "base_path": "/workspace/models/resnet50"
-           }
-        }
-    ],
-    "monitoring":
-        {
-            "metrics":
-            {
-                "enable" : true,
-                "metrics_list": 
-                    [ "ovms_requests_success",
-                    "ovms_requests_fail",
-                    "ovms_inference_time_us",
-                    "ovms_wait_for_infer_req_time_us",
-                    "ovms_request_time_us",
-                    "ovms_current_requests",
-                    "ovms_infer_req_active",
-                    "ovms_streams",
-                    "ovms_infer_req_queue_size"]
-            }
-        }
-   }' > workspace/config.json
-   ```
-
-CONFIG CMD
-
-   ```bash
-         docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-            --config_path /workspace/config.json \
-            --port 9000 --rest_port 8000
-   ```
+```bash
+docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+   --config_path /workspace/config.json \
+   --port 9000 --rest_port 8000
+```
 
 ## Example response from metrics endpoint
 
 To use data from metrics endpoint you can use the curl command:
-   ```bash
-    curl http://localhost:8000/metrics
-   ```
+```bash
+curl http://localhost:8000/metrics
+```
 [Example metrics output](https://raw.githubusercontent.com/openvinotoolkit/model_server/v2022.2/docs/metrics_output.out)
 
 ## Metrics implementation for DAG pipelines

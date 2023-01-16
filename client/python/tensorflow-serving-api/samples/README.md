@@ -25,7 +25,6 @@ Install client dependencies:
 pip3 install -r requirements.txt
 ```
 
-Access to Google Cloud Storage might require proper configuration of https_proxy in the docker engine or in the docker container.
 In the examples listed below, OVMS can be started using a command:
 ```bash
 wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
@@ -396,7 +395,7 @@ python rest_get_model_metadata.py --rest_port 8000
         ],
         "unknownRank": false
        },
-       "name": "data"
+       "name": "0"
       }
      },
      "outputs": {
@@ -415,7 +414,7 @@ python rest_get_model_metadata.py --rest_port 8000
         ],
         "unknownRank": false
        },
-       "name": "prob"
+       "name": "1463"
       }
      },
      "methodName": ""
