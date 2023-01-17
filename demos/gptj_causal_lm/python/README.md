@@ -15,12 +15,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Download the GPT-J-6b model from huggingface and save to disk in pytorch format using script below.
-> NOTE: First download might take a while since the model is ~25GB. Subsequent script runs will use the model from cache.
+Download the GPT-J-6b model from huggingface and save to disk in pytorch format using script below.  
+> NOTE: First download might take a while since the model is ~25GB. Subsequent script runs will use the model from cache located in `~/.cache/huggingface` directory.
 ```bash
 python3 download_model.py
 ```
-The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.
+The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.  
 > NOTE: Loading the model into CPU device takes ~48GB of RAM. Read more about in the [model specification](https://huggingface.co/docs/transformers/v4.15.0/model_doc/gptj#overview).
 
 ### Convert the model
