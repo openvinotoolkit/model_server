@@ -21,7 +21,7 @@ Download the GPT-J-6b model from huggingface and save to disk in pytorch format 
 python3 download_model.py
 ```
 The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.  
-> NOTE: Loading the model into CPU device takes ~48GB of RAM. Read more about in the [model specification](https://huggingface.co/docs/transformers/v4.15.0/model_doc/gptj#overview).
+> NOTE: Loading the model into CPU device takes ~48GB of RAM. Read more in the [model specification](https://huggingface.co/docs/transformers/v4.15.0/model_doc/gptj#overview).
 
 ### Convert the model
 The model needs to be converted to ONNX format in order to load in OVMS:

@@ -32,20 +32,30 @@ client = ovmsclient.make_grpc_client(args['url'])
 tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-j-6B")
 
 input_sentence = args['input']
-eos_token_id = args['eos_token_id']
+print(input_sentence, end='', flush=True)
 
 iteration = 0
+min_latency = -1
+max_latency = -1
 while True:
     inputs = tokenizer(input_sentence, return_tensors="np")
     start_time = time.time()
     results = client.predict(inputs=dict(inputs), model_name=args['model_name'])
     last_latency = time.time() - start_time
+    if min_latency == -1 or last_latency < min_latency:
+        min_latency = last_latency
+    if max_latency == -1 or last_latency > max_latency:
+        max_latency = last_latency
     predicted_token_id = token = torch.argmax(torch.nn.functional.softmax(torch.Tensor(results[0,-1,:]),dim=-1),dim=-1)
     word = tokenizer.decode(predicted_token_id)
     input_sentence += word
-    os.system('cls' if os.name == 'nt' else 'clear')
-    print(f"Iteration: {iteration}\nLast predicted token: {predicted_token_id}\nLast latency: {last_latency}s\n{input_sentence}")
+    # print(f"Iteration: {iteration}\nLast predicted token: {predicted_token_id}\nLast latency: {last_latency}s\n{input_sentence}")
+    print(word, end='', flush=True)
     iteration += 1
-    if predicted_token_id == eos_token_id:
+    if predicted_token_id == args['eos_token_id']:
         break
 
+# split line below to 3 different lines
+print(f"Number of iterations: {iteration}")
+print(f"Min latency: {min_latency}s")
+print(f"Max latency: {max_latency}s")
