@@ -42,8 +42,6 @@ NodeStreamIdGuard::~NodeStreamIdGuard() {
         SPDLOG_DEBUG("Returning streamId: {}", this->streamId.value());
         DECREMENT_IF_ENABLED(this->reporter.inferReqActive);
         this->inferRequestsQueue_.returnStream(this->streamId.value());
-    }
-    if (!disarmed) {
         DECREMENT_IF_ENABLED(this->reporter.currentRequests);
     }
 }
