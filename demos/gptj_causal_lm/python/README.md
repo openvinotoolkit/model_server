@@ -20,8 +20,8 @@ Download the GPT-J-6b model from huggingface and save to disk in pytorch format 
 ```bash
 python3 download_model.py
 ```
-The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.y
-> NOTE: Loading the model into CPU device takes ~48GB of RAM. Read more about the [model specification](https://huggingface.co/docs/transformers/v4.15.0/model_doc/gptj#overview).
+The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.
+> NOTE: Loading the model into CPU device takes ~48GB of RAM. Read more about in the [model specification](https://huggingface.co/docs/transformers/v4.15.0/model_doc/gptj#overview).
 
 ### Convert the model
 The model needs to be converted to ONNX format in order to load in OVMS:
@@ -50,8 +50,25 @@ docker run -d --rm -p 9000:9000 -v $(pwd)/onnx:/model:ro openvino/model_server \
     --plugin_config '{"PERFORMANCE_HINT":"LATENCY","NUM_STREAMS":1}'
 ```
 
+### Interactive OVMS demo
+
+Run `app.py` script to run interactive demo predicting the next word in a loop until end of sentence token is encountered.
+
+```bash
+python3 app.py --url localhost:9000 --model_name gpt-j-6b --input "Neurons are fascinating"
+```
+
+Output:
+```bash
+Iteration: 61
+Last predicted token: 198
+Last latency: 0.9536168575286865s
+Neurons are fascinating cells that are able to communicate with each other and with other cells in the body. Neurons are the cells that make up the nervous system, which is responsible for the control of all body functions. Neurons are also responsible for the transmission of information from one part of the body to another.
+```
+
+## Validating the accuracy
 ### Run the OVMS simple client script
-The script will validate the configuration and setup of OVMS.
+The script will display raw outputs for example input.
 ```bash
 python3 infer_ovms.py --url localhost:9000 --model_name gpt-j-6b
 ```
@@ -85,18 +102,3 @@ tensor([[[ 8.4078,  7.2025,  5.1148,  ..., -6.6914, -6.7891, -6.6537],
 predicted word:  a
 ```
 
-### Interactive OVMS demo
-
-Run `app.py` script to run interactive demo predicting the next word in a loop until end of sentence token is encountered.
-
-```bash
-python3 app.py --input "Neurons are fascinating"
-```
-
-Output:
-```bash
-Iteration: 61
-Last predicted token: 198
-Last latency: 0.9536168575286865s
-Neurons are fascinating cells that are able to communicate with each other and with other cells in the body. Neurons are the cells that make up the nervous system, which is responsible for the control of all body functions. Neurons are also responsible for the transmission of information from one part of the body to another.
-```

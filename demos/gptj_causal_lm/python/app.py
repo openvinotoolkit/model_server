@@ -23,10 +23,12 @@ from transformers import AutoTokenizer
 parser = argparse.ArgumentParser(description='Demo for GPT-J causal LM requests using ovmsclient gRPC API')
 
 parser.add_argument('--input', required=True, help='Beginning of a sentence', type=str)
+parser.add_argument('--url', required=False, help='Url to connect to', type=str, default='localhost:9000')
+parser.add_argument('--model_name', required=False, help='Model name in the serving', type=str, default='gpt-j-6b')
 parser.add_argument('--eos_token_id', required=False, help='End of sentence token', type=int, default=198)
 args = vars(parser.parse_args())
 
-client = ovmsclient.make_grpc_client("localhost:11340")
+client = ovmsclient.make_grpc_client(args['url'])
 tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-j-6B")
 
 input_sentence = args['input']
@@ -36,7 +38,7 @@ iteration = 0
 while True:
     inputs = tokenizer(input_sentence, return_tensors="np")
     start_time = time.time()
-    results = client.predict(inputs=dict(inputs), model_name='resnet')
+    results = client.predict(inputs=dict(inputs), model_name=args['model_name'])
     last_latency = time.time() - start_time
     predicted_token_id = token = torch.argmax(torch.nn.functional.softmax(torch.Tensor(results[0,-1,:]),dim=-1),dim=-1)
     word = tokenizer.decode(predicted_token_id)
