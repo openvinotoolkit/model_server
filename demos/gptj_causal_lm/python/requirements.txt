@@ -1,5 +1,6 @@
+accelerate
 transformers
 transformers[onnx]
 onnxruntime
 torch
-ovmsclient==2022.2
+ovmsclient

@@ -8,6 +8,8 @@ This demo illustrates usage of GPT-like models in OpenVINO™ Model Server. GPT-
 
 Prepare the environment:
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/gptj_causal_lm/python
 virtualenv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -18,7 +20,8 @@ Download the GPT-J-6b model from huggingface and save to disk in pytorch format 
 ```bash
 python3 download_model.py
 ```
-The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.
+The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.y
+> NOTE: Loading the model into CPU device takes ~48GB of RAM. Read more about the [model specification](https://huggingface.co/docs/transformers/v4.15.0/model_doc/gptj#overview).
 
 ### Convert the model
 The model needs to be converted to ONNX format in order to load in OVMS:
@@ -28,7 +31,7 @@ chmod +x convert_model.sh && ./convert_model.sh
 The model will reside in `onnx/1` directory.
 
 The script should provide result confirming successful model conversion:
-```
+```bash
 Validating ONNX model...
         -[✓] ONNX model output names match reference model ({'logits'})
         - Validating ONNX Model output "logits":
@@ -54,7 +57,7 @@ python3 infer_ovms.py --url localhost:9000 --model_name gpt-j-6b
 ```
 
 Desired output:
-```
+```bash
 [[[ 8.407803   7.2024884  5.114844  ... -6.691438  -6.7890754 -6.6537027]
   [ 6.97011    9.89741    8.216569  ... -3.891536  -3.6937592 -3.6568289]
   [ 8.199201  10.721757   8.502647  ... -6.340912  -6.247861  -6.1362333]
@@ -71,7 +74,7 @@ python3 infer_torch.py
 ```
 
 Output:
-```
+```bash
 tensor([[[ 8.4078,  7.2025,  5.1148,  ..., -6.6914, -6.7891, -6.6537],
          [ 6.9701,  9.8974,  8.2166,  ..., -3.8915, -3.6938, -3.6568],
          [ 8.1992, 10.7218,  8.5026,  ..., -6.3409, -6.2479, -6.1362],
@@ -91,7 +94,7 @@ python3 app.py --input "Neurons are fascinating"
 ```
 
 Output:
-```
+```bash
 Iteration: 61
 Last predicted token: 198
 Last latency: 0.9536168575286865s
