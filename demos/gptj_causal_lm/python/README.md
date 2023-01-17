@@ -60,10 +60,10 @@ python3 app.py --url localhost:9000 --model_name gpt-j-6b --input "Neurons are f
 
 Output:
 ```bash
-Iteration: 61
-Last predicted token: 198
-Last latency: 0.9536168575286865s
 Neurons are fascinating cells that are able to communicate with each other and with other cells in the body. Neurons are the cells that make up the nervous system, which is responsible for the control of all body functions. Neurons are also responsible for the transmission of information from one part of the body to another.
+Number of iterations: 62
+First latency: 0.37613916397094727s
+Last latency: 1.100903034210205s
 ```
 
 ## Validating the accuracy
@@ -101,4 +101,3 @@ tensor([[[ 8.4078,  7.2025,  5.1148,  ..., -6.6914, -6.7891, -6.6537],
        grad_fn=<ViewBackward0>)
 predicted word:  a
 ```
-

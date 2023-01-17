@@ -35,17 +35,16 @@ input_sentence = args['input']
 print(input_sentence, end='', flush=True)
 
 iteration = 0
-min_latency = -1
-max_latency = -1
+first_latency = -1
+last_latency = -1
 while True:
     inputs = tokenizer(input_sentence, return_tensors="np")
     start_time = time.time()
     results = client.predict(inputs=dict(inputs), model_name=args['model_name'])
-    last_latency = time.time() - start_time
-    if min_latency == -1 or last_latency < min_latency:
-        min_latency = last_latency
-    if max_latency == -1 or last_latency > max_latency:
-        max_latency = last_latency
+    latency = time.time() - start_time
+    if first_latency == -1:
+        first_latency = latency
+    last_latency = latency
     predicted_token_id = token = torch.argmax(torch.nn.functional.softmax(torch.Tensor(results[0,-1,:]),dim=-1),dim=-1)
     word = tokenizer.decode(predicted_token_id)
     input_sentence += word
@@ -57,5 +56,5 @@ while True:
 
 # split line below to 3 different lines
 print(f"Number of iterations: {iteration}")
-print(f"Min latency: {min_latency}s")
-print(f"Max latency: {max_latency}s")
+print(f"First latency: {first_latency}s")
+print(f"Last latency: {last_latency}s")
