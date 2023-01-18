@@ -42,8 +42,8 @@ NodeStreamIdGuard::~NodeStreamIdGuard() {
         SPDLOG_DEBUG("Returning streamId: {}", this->streamId.value());
         DECREMENT_IF_ENABLED(this->reporter.inferReqActive);
         this->inferRequestsQueue_.returnStream(this->streamId.value());
+        DECREMENT_IF_ENABLED(this->reporter.currentRequests);
     }
-    DECREMENT_IF_ENABLED(this->reporter.currentRequests);
 }
 
 std::optional<int> NodeStreamIdGuard::tryGetId(const uint microseconds) {
@@ -62,6 +62,7 @@ bool NodeStreamIdGuard::tryDisarm(const uint microseconds) {
         this->streamId = this->futureStreamId.get();
         SPDLOG_DEBUG("Returning streamId:", this->streamId.value());
         this->inferRequestsQueue_.returnStream(this->streamId.value());
+        DECREMENT_IF_ENABLED(this->reporter.currentRequests);
         this->disarmed = true;
     }
     return this->disarmed;

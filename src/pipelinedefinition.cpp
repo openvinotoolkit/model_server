@@ -1034,7 +1034,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
 
     const bool isMultiBatchAllowed = !std::any_of(nodeInfos.begin(), nodeInfos.end(), [](const auto& node) { return node.demultiplyCount; });
     for (const auto& node : nodeInfos) {
-        auto findByName = [node](const NodeInfo& nodeInfo) {
+        auto findByName = [&node](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == node.nodeName;
         };
 

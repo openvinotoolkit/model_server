@@ -86,7 +86,7 @@ std::string NodeSessionMetadata::createSessionKey(const std::set<std::string>& i
     for (int32_t i = sessionsLevels.size() - 1; i >= 0; --i, ++j) {
         if ((ignoredNodeNames.size() > 0) &&
             (ignoredNodeNames.size() > j) &&
-            ((sessionsLevels.size() - ignoredNodeNames.size()) >= 0) &&
+            (sessionsLevels.size() >= ignoredNodeNames.size()) &&
             (ignoredNodeNames.find(sessionsLevels[i]) == ignoredNodeNames.end())) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse sessions not in LIFO order. Should collapse: {} first", sessionsLevels[i]);
             throw std::logic_error("Cannot collapse sessions not in LIFO order");

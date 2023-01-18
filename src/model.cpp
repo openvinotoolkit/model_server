@@ -217,7 +217,7 @@ void Model::retireAllVersions() {
         }
     }
 
-    for (const auto versionModelInstancePair : modelVersions) {
+    for (const auto& versionModelInstancePair : modelVersions) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
         versionModelInstancePair.second->retireModel();
@@ -237,7 +237,7 @@ void Model::cleanupAllVersions() {
         }
     }
 
-    for (const auto versionModelInstancePair : modelVersions) {
+    for (const auto& versionModelInstancePair : modelVersions) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
         versionModelInstancePair.second->cleanupFailedLoad();

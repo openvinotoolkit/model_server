@@ -706,9 +706,9 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
-    for (const auto pair : pluginConfig) {
-        const auto key = pair.first;
-        const auto value = pair.second;
+    for (const auto& pair : pluginConfig) {
+        const auto& key = pair.first;
+        const auto& value = pair.second;
         SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
 
