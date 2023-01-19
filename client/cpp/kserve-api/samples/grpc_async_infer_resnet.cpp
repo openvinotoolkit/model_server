@@ -69,12 +69,7 @@ std::vector<uint8_t> load(const std::string& fileName) {
     fileImg.seekg(0, std::ios::beg);
 
     char* buffer = new char[bufferLength];
-    try {
-        fileImg.read(buffer, bufferLength);
-    }
-    catch(std::bad_alloc) {
-        throw;
-    }
+    fileImg.read(buffer, bufferLength);
 
     return std::vector<uint8_t>(buffer, buffer + bufferLength);
 }
@@ -97,7 +92,15 @@ int main(int argc, char** argv) {
     ;
     // clang-format on
 
-    auto args = opt.parse(argc, argv);
+    cxxopts::ParseResult args;
+    try {
+        args = opt.parse(argc, argv);
+    }
+    catch(cxxopts::option_not_exists_exception e) {
+        std::cerr << "error: cli options parsing failed - " << e.what();
+        return 1;
+    }
+    
     if (args.count("help")) {
         std::cout << opt.help() << std::endl;
         return 0;
@@ -136,8 +139,8 @@ int main(int argc, char** argv) {
     }
 
     if(imgs.size() == 0) {
-        std::cout<<"[ERROR] Path to image_list file is invalid or the file does not contain valid image paths. \n";
-        return 0;
+        std::cerr << "error: Path to image_list file is invalid or the file does not contain valid image paths. \n";
+        return 1;
     }
 
     std::vector<int64_t> shape{1};
@@ -175,9 +178,9 @@ int main(int argc, char** argv) {
         try {
             input_data.push_back(load(imgs[i]));
         }
-        catch(std::bad_alloc) {
-            std::cout<< "[ERROR] Loading image:" + imgs[i] + " failed. \n";
-            return 0;
+        catch(const std::bad_alloc&) {
+            std::cerr<< "error: Loading image:" + imgs[i] + " failed. \n";
+            return 1;
         }
     }
 
