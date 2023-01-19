@@ -33,14 +33,24 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 @sphinxdirective
 
-.. tab:: ovmsclient
+.. tab:: ovmsclient [GRPC]
 
     .. code-block:: python
 
         from ovmsclient import make_grpc_client
 
-        client = make_grpc_client("10.20.30.40:9000")
-        model_status = client.get_model_status(model_name="my_model")
+        client = make_grpc_client("localhost:9000")
+        status = client.get_model_status(model_name="my_model")
+
+
+.. tab:: ovmsclient [REST]
+
+    .. code-block:: python
+
+        from ovmsclient import make_http_client
+
+        client = make_http_client("localhost:8000")
+        status = client.get_model_status(model_name="my_model")
 
 
 .. tab:: tensorflow-serving-api
@@ -51,7 +61,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         from tensorflow_serving.apis import model_service_pb2_grpc, get_model_status_pb2
         from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 
-        channel = grpc.insecure_channel("10.20.30.40:9000")
+        channel = grpc.insecure_channel("localhost:9000")
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
 
         status_request = get_model_status_pb2.GetModelStatusRequest()
@@ -66,7 +76,12 @@ When creating a Python-based client application, there are two packages on PyPi 
                 ('error_code', model_version.status.error_code),
                 ('error_message', model_version.status.error_message),
             ])
-        
+
+.. tab:: curl    
+
+    .. code-block:: sh  
+
+        curl http://localhost:8000/v1/models/my_model
     
 @endsphinxdirective
 
@@ -74,13 +89,23 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 @sphinxdirective
 
-.. tab:: ovmsclient
+.. tab:: ovmsclient [GRPC]
 
     .. code-block:: python
 
         from ovmsclient import make_grpc_client
 
-        client = make_grpc_client("10.20.30.40:9000")
+        client = make_grpc_client("localhost:9000")
+        model_metadata = client.get_model_metadata(model_name="my_model")
+
+
+.. tab:: ovmsclient [REST]
+
+    .. code-block:: python
+
+        from ovmsclient import make_http_client
+
+        client = make_http_client("localhost:8000")
         model_metadata = client.get_model_metadata(model_name="my_model")
 
 
@@ -92,7 +117,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         from tensorflow_serving.apis import prediction_service_pb2_grpc, get_model_metadata_pb2
         from tensorflow.core.framework.types_pb2 import DataType
 
-        channel = grpc.insecure_channel("10.20.30.40:9000")
+        channel = grpc.insecure_channel("localhost:9000")
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
         metadata_request = get_model_metadata_pb2.GetModelMetadataRequest()
@@ -129,19 +154,39 @@ When creating a Python-based client application, there are two packages on PyPi 
             ("outputs", outputs_metadata)
         ])
 
+.. tab:: curl
+
+    .. code-block:: sh  
+
+        curl http://localhost:8000/v1/models/my_model/metadata
+
+
 @endsphinxdirective
 
 ### Request Prediction on a Binary Input
 
 @sphinxdirective
 
-.. tab:: ovmsclient
+.. tab:: ovmsclient [GRPC]
 
     .. code-block:: python
 
         from ovmsclient import make_grpc_client
 
-        client = make_grpc_client("10.20.30.40:9000")
+        client = make_grpc_client("localhost:9000")
+        with open("img.jpeg", "rb") as f:
+            data = f.read()
+        inputs = {"input_name": data}    
+        results = client.predict(inputs=inputs, model_name="my_model")
+
+.. tab:: ovmsclient [REST]
+
+    .. code-block:: python
+
+        from ovmsclient import make_http_client
+
+        client = make_http_client("localhost:8000")
+
         with open("img.jpeg", "rb") as f:
             data = f.read()
         inputs = {"input_name": data}    
@@ -156,7 +201,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
         from tensorflow import make_tensor_proto, make_ndarray
 
-        channel = grpc.insecure_channel("10.20.30.40:9000")
+        channel = grpc.insecure_channel("localhost:9000")
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
         with open("img.jpeg", "rb") as f:
@@ -167,24 +212,44 @@ When creating a Python-based client application, there are two packages on PyPi 
         predict_response = prediction_service_stub.Predict(predict_request, 10.0)
         results = make_ndarray(predict_response.outputs["output_name"])
 
+.. tab:: curl
+
+    .. code-block:: sh  
+
+    curl -X POST http://localhost:8000/v1/models/my_model:predict
+    -H 'Content-Type: application/json'
+    -d '{"instances": [{"input_name": {"b64":"YXdlc29tZSBpbWFnZSBieXRlcw=="}}]}'
+
 @endsphinxdirective
 
 ### Request Prediction on a Numpy Array
 
 @sphinxdirective
 
-.. tab:: ovmsclient
+.. tab:: ovmsclient [GRPC]
 
     .. code-block:: python
 
         import numpy as np
         from ovmsclient import make_grpc_client
 
-        client = make_grpc_client("10.20.30.40:9000")
+        client = make_grpc_client("localhost:9000")
         data = np.array([1.0, 2.0, ..., 1000.0])
         inputs = {"input_name": data}
         results = client.predict(inputs=inputs, model_name="my_model")
 
+.. tab:: ovmsclient [REST]
+
+    .. code-block:: python
+
+        import numpy as np
+        from ovmsclient import make_http_client
+
+        client = make_http_client("localhost:8000")
+
+        data = np.array([1.0, 2.0, ..., 1000.0])
+        inputs = {"input_name": data}
+        results = client.predict(inputs=inputs, model_name="my_model")
 
 .. tab:: tensorflow-serving-api  
 
@@ -194,7 +259,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
         from tensorflow import make_tensor_proto
 
-        channel = grpc.insecure_channel("10.20.30.40:9000")
+        channel = grpc.insecure_channel("localhost:9000")
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
         data = np.array([1.0, 2.0, ..., 1000.0])
@@ -203,6 +268,14 @@ When creating a Python-based client application, there are two packages on PyPi 
         predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
         predict_response = prediction_service_stub.Predict(predict_request, 10.0)
         results = make_ndarray(predict_response.outputs["output_name"])
+
+.. tab:: curl
+
+    .. code-block:: sh  
+
+        curl -X POST http://localhost:8000/v1/models/my_model:predict
+        -H 'Content-Type: application/json'
+        -d '{"instances": [{"input_name": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}]}'
 
 @endsphinxdirective
 
