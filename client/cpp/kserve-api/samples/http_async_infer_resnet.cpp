@@ -92,7 +92,15 @@ int main(int argc, char** argv) {
     ;
     // clang-format on
 
-    auto args = opt.parse(argc, argv);
+    cxxopts::ParseResult args;
+    try {
+        args = opt.parse(argc, argv);
+    }
+    catch(cxxopts::option_not_exists_exception e) {
+        std::cerr << "error: cli options parsing failed - " << e.what();
+        return 1;
+    }
+    
     if (args.count("help")) {
         std::cout << opt.help() << std::endl;
         return 0;
@@ -128,6 +136,11 @@ int main(int argc, char** argv) {
     while (images >> img >> label) {
         imgs.push_back(img);
         labels.push_back(label);
+    }
+
+    if(imgs.size() == 0) {
+        std::cerr << "error: Path to image_list file is invalid or the file does not contain valid image paths. \n";
+        return 1;
     }
 
     std::vector<int64_t> shape{1};
@@ -171,7 +184,13 @@ int main(int argc, char** argv) {
     std::vector<std::vector<uint8_t>> input_data;
     input_data.reserve(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
-        input_data.push_back(load(imgs[i]));
+        try {
+            input_data.push_back(load(imgs[i]));
+        }
+        catch(const std::bad_alloc&) {
+            std::cerr<< "error: Loading image:" + imgs[i] + " failed. \n";
+            return 1;
+        }
     }
     int acc = 0;
     std::mutex mtx;

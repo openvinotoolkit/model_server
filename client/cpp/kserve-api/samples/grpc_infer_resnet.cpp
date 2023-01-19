@@ -89,7 +89,15 @@ int main(int argc, char** argv) {
     ;
     // clang-format on
 
-    auto args = opt.parse(argc, argv);
+    cxxopts::ParseResult args;
+    try {
+        args = opt.parse(argc, argv);
+    }
+    catch(cxxopts::option_not_exists_exception e) {
+        std::cerr << "error: cli options parsing failed - " << e.what();
+        return 1;
+    }
+    
     if (args.count("help")) {
         std::cout << opt.help() << std::endl;
         return 0;
@@ -127,6 +135,11 @@ int main(int argc, char** argv) {
         labels.push_back(label);
     }
 
+    if(imgs.size() == 0) {
+        std::cerr << "error: Path to image_list file is invalid or the file does not contain valid image paths. \n";
+        return 1;
+    }
+
     std::vector<int64_t> shape{1};
 
     // Initialize the inputs with the data.
@@ -152,7 +165,14 @@ int main(int argc, char** argv) {
     std::vector<tc::InferResult*> results;
     results.resize(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
-        std::vector<uint8_t> input_data = load(imgs[i]);
+        std::vector<uint8_t> input_data;
+        try {
+            input_data = load(imgs[i]);
+        }
+        catch(const std::bad_alloc&) {
+            std::cerr<< "error: Loading image:" + imgs[i] + " failed. \n";
+            return 1;
+        }
         FAIL_IF_ERR(
             input_ptr->AppendRaw(input_data),
             "unable to set data for input");
