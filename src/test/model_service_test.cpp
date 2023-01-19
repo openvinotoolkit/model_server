@@ -25,12 +25,12 @@
 #include "tensorflow_serving/apis/model_service.pb.h"
 #pragma GCC diagnostic pop
 
+#include "../dags/pipelinedefinition.hpp"
 #include "../execution_context.hpp"
 #include "../model_service.hpp"
 #include "../model_version_policy.hpp"
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
-#include "../pipelinedefinition.hpp"
 #include "../server.hpp"
 #include "gtest/gtest.h"
 #include "test_utils.hpp"

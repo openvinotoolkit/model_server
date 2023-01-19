@@ -111,10 +111,7 @@ std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request)
     return request->getRequestShapes();
 }
 
-bool useSharedOutputContent(const tensorflow::serving::PredictRequest* request) {
-    return true;
-}
-
+template <>
 bool useSharedOutputContent(const ::inference::ModelInferRequest* request) {
     return request->raw_input_contents().size() > 0;
 }

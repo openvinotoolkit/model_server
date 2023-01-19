@@ -206,6 +206,12 @@ Status serializePredictResponse(
             getPrecisionAsOVMSDataType(actualPrecision),
             tensor.get_shape().data(),
             tensor.get_shape().size());
+        if (status == StatusCode::DOUBLE_TENSOR_INSERT) {
+            // DAG demultiplexer CAPI handling
+            // there is performance optimization so that during gather stage we do not double copy nodes
+            // outputs first to intermediate shard tensors and then to gathered tensor in response
+            return StatusCode::OK;
+        }
         if (!status.ok()) {
             SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: duplicate output name",
                 outputName, response->getServableName(), response->getServableVersion());

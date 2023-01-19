@@ -128,13 +128,11 @@ $(ACTIVATE):
 	@. $(ACTIVATE); pip3 install -qq -r tests/requirements.txt --use-deprecated=legacy-resolver
 	@touch $(ACTIVATE)
 
-style: venv clang-format
-	@echo "Style-checking codebase..."
-	@git diff --exit-code || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
-	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
-	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+cppclean: venv
 	@echo "Checking cppclean..."
 	@. $(ACTIVATE); bash -c "./cppclean.sh"
+
+style: venv clang-format-check cpplint cppclean
 
 sdl-check: venv
 	@echo "Checking SDL requirements..."
@@ -168,9 +166,18 @@ sdl-check: venv
 	fi
 	@rm forbidden_functions.txt
 
+cpplint: venv
+	@echo "Style-checking codebase..."
+	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+
 clang-format: venv
 	@echo "Formatting files with clang-format.."
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
+
+clang-format-check: clang-format
+	@echo "Checking if clang-format changes were committed ..."
+	@git diff --exit-code || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
+	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
 
 .PHONY: docker_build
 docker_build: ovms_builder_image targz_package ovms_release_image
