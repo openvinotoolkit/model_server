@@ -153,6 +153,5 @@ Status isNativeFileFormatUsed(const KFSRequest& request, const std::string& name
 
 bool isNativeFileFormatUsed(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
-    // return proto.contents().bytes_contents_size() > 0;
 }
 }  // namespace ovms
