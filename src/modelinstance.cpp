@@ -694,15 +694,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         return status;
     }
 
-    uint32_t numberOfStreams = 0;
-    try {
-        numberOfStreams = getNumOfStreams();
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numberOfStreams);
-    } catch (ov::Exception& e) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
-    } catch (...) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
-    }
+    uint32_t numberOfStreams = getNumOfStreams();
     SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
@@ -1251,8 +1243,32 @@ const size_t ModelInstance::getBatchSizeIndex() const {
     return batchIndex.value();
 }
 
-uint32_t ModelInstance::getNumOfStreams() const {
-    return compiledModel->get_property(ov::num_streams);
+uint32_t ModelInstance::getOptimalNumberOfInferRequests() const {
+    try {
+        uint32_t numOptimalInferRequests = compiledModel->get_property(ov::optimal_number_of_infer_requests);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numOptimalInferRequests);
+        return numOptimalInferRequests;
+    } catch (ov::Exception& e) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of optimal infer requests with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
+    } catch (...) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of optimal infer requests; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+    }
+    return 0;
+}
+
+uint32_t ModelInstance::getNumOfStreams() const{
+    try {
+        uint32_t numStreams = compiledModel->get_property(ov::num_streams);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numStreams);
+        return numStreams;
+    } catch (ov::Exception& e) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Number of streams will be set to number of optimal infer requests.");
+    } catch (...) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Number of streams will be set to number of optimal infer requests.");
+    }
+    return getOptimalNumberOfInferRequests();
 }
 
 std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {

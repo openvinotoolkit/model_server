@@ -555,6 +555,7 @@ public:
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
 
+    uint32_t getOptimalNumberOfInferRequests() const;
     uint32_t getNumOfStreams() const;
 
     template <class ArrayType>
