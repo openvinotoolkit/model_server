@@ -115,7 +115,7 @@ When creating a Python-based client application, you can use Triton client libra
             bool modelReady = modelReadyResponse.getReady();
             
             channel.shutdownNow();
-}
+        }
 
 
 .. tab:: golang

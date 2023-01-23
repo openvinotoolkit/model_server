@@ -216,9 +216,9 @@ When creating a Python-based client application, there are two packages on PyPi 
 
     .. code-block:: sh  
 
-    curl -X POST http://localhost:8000/v1/models/my_model:predict
-    -H 'Content-Type: application/json'
-    -d '{"instances": [{"input_name": {"b64":"YXdlc29tZSBpbWFnZSBieXRlcw=="}}]}'
+        curl -X POST http://localhost:8000/v1/models/my_model:predict
+        -H 'Content-Type: application/json'
+        -d '{"instances": [{"input_name": {"b64":"YXdlc29tZSBpbWFnZSBieXRlcw=="}}]}'
 
 @endsphinxdirective
 
