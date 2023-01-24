@@ -145,7 +145,7 @@ ovms::tensor_map_t prepareTensors(
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    PredictRequest& request, PredictResponse& response, int seriesLength, int batchSize, std::string servableName) {
+    PredictRequest& request, PredictResponse& response, int seriesLength, int batchSize, const std::string& servableName) {
     ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
     const auto& output_proto = response.outputs().at(outputName);
 
@@ -166,7 +166,7 @@ void checkDummyResponse(const std::string outputName,
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize, std::string servableName) {
+    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize, const std::string& servableName) {
     ASSERT_EQ(response.model_name(), servableName);
     ASSERT_EQ(response.outputs_size(), 1);
     ASSERT_EQ(response.raw_output_contents_size(), 1);

@@ -88,7 +88,7 @@ public:
         prepareKFSInferInputTensor(request, customPipelineInputName, std::make_tuple(shape, ovmsPrecisionToKFSPrecision(ovms::Precision::FP32)), requestData);
     }
 
-    void checkDummyResponse(int seriesLength, int batchSize = 1, std::string servableName = "") {
+    void checkDummyResponse(int seriesLength, int batchSize = 1, std::string& servableName = "") {
         ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize, servableName);
     }
 
