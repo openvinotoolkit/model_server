@@ -63,9 +63,8 @@ Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& 
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
     OutputGetter<const TensorMap&> outputGetter(inputTensors);
-    static const std::string name{""};
     static const model_version_t version{1};
-    return serializePredictResponse(outputGetter, name, version, this->outputsInfo, this->response, getOutputMapKeyName);
+    return serializePredictResponse(outputGetter, pipelineName, version, this->outputsInfo, this->response, getOutputMapKeyName);
 }
 
 template <typename ResponseType>

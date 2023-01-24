@@ -35,13 +35,15 @@ class ExitNode : public Node {
     ResponseType* response;
     const tensor_map_t outputsInfo;
     bool useSharedOutputContent;
+    const std::string pipelineName;
 
 public:
-    ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool useSharedOutputContent = true) :
+    ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool useSharedOutputContent = true, const std::string pipelineName = "") :
         Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode),
         response(response),
         outputsInfo(outputsInfo),
-        useSharedOutputContent(useSharedOutputContent) {
+        useSharedOutputContent(useSharedOutputContent),
+        pipelineName(pipelineName) {
     }
 
     // Exit node does not have execute logic.
