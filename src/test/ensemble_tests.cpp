@@ -88,8 +88,8 @@ public:
         prepareKFSInferInputTensor(request, customPipelineInputName, std::make_tuple(shape, ovmsPrecisionToKFSPrecision(ovms::Precision::FP32)), requestData);
     }
 
-    void checkDummyResponse(int seriesLength, int batchSize = 1) {
-        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize);
+    void checkDummyResponse(int seriesLength, int batchSize = 1, const std::string& servableName = "") {
+        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize, servableName);
     }
 
     ModelConfig config;
@@ -248,7 +248,9 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
     auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", this->dummyModelName, this->requestedModelVersion, managerWithDummyModel);
     const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
-    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
+    std::set<std::string> gatherFromNode = {};
+    std::string pipelineName = "test_pipeline";
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, gatherFromNode, true, pipelineName);
     Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
@@ -259,7 +261,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
 
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
-    this->checkDummyResponse(dummySeriallyConnectedCount);
+    this->checkDummyResponse(dummySeriallyConnectedCount, 1, pipelineName);
 }
 
 TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {

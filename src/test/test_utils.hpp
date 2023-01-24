@@ -190,11 +190,11 @@ void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
+    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "");
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1);
+    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "");
 
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
