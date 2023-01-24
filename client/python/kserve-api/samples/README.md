@@ -446,7 +446,7 @@ optional arguments:
   --pipeline_name PIPELINE_NAME
                         Define pipeline name, must be same as is in service
   --dag-batch-size-auto
-                        Add demultiplexer dimension at frontinfer_resnet.py
+                        Add demultiplexer dimension at front
   --tls                 use TLS communication with gRPC endpoint
   --server_cert SERVER_CERT
                         Path to server certificate
