@@ -1256,7 +1256,7 @@ uint32_t ModelInstance::getOptimalNumberOfInferRequests() const {
     return 0;
 }
 
-uint32_t ModelInstance::getNumOfStreams() const{
+uint32_t ModelInstance::getNumOfStreams() const {
     try {
         uint32_t numStreams = compiledModel->get_property(ov::num_streams);
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numStreams);
