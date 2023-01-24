@@ -555,7 +555,7 @@ Usage:
       --images_list IMAGES      Path to a file with a list of labeled 
                                 images. 
       --labels_list LABELS      Path to a file with a list of labels. 
-      --http_address GRPC_ADDRESS
+      --http_address HTTP_ADDRESS
                                 Specify url to REST service.  (default: 
                                 localhost)
       --http_port PORT          Specify port to REST service.  (default: 
@@ -604,7 +604,7 @@ Usage:
       --images_list IMAGES      Path to a file with a list of labeled 
                                 images. 
       --labels_list LABELS      Path to a file with a list of labels. 
-      --http_address GRPC_ADDRESS
+      --http_address HTTP_ADDRESS
                                 Specify url to REST service.  (default: 
                                 localhost)
       --http_port PORT          Specify port to REST service.  (default: 

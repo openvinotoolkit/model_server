@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
     ("h,help", "Show this help message and exit")
     ("images_list", "Path to a file with a list of labeled images. ", cxxopts::value<std::string>(), "IMAGES")
     ("labels_list", "Path to a file with a list of labels. ", cxxopts::value<std::string>(), "LABELS")
-    ("http_address", "Specify url to REST service. ", cxxopts::value<std::string>()->default_value("localhost"), "GRPC_ADDRESS")
+    ("http_address", "Specify url to REST service. ", cxxopts::value<std::string>()->default_value("localhost"), "HTTP_ADDRESS")
     ("http_port", "Specify port to REST service. ", cxxopts::value<std::string>()->default_value("9000"), "PORT")
     ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("0"), "INPUT_NAME")
     ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("1463"), "OUTPUT_NAME")
