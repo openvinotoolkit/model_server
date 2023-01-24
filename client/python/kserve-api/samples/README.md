@@ -446,7 +446,7 @@ optional arguments:
   --pipeline_name PIPELINE_NAME
                         Define pipeline name, must be same as is in service
   --dag-batch-size-auto
-                        Add demultiplexer dimension at front
+                        Add demultiplexer dimension at frontinfer_resnet.py
   --tls                 use TLS communication with gRPC endpoint
   --server_cert SERVER_CERT
                         Path to server certificate
@@ -460,7 +460,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 grpc_async_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+python3 grpc_async_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -924,7 +924,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 http_async_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+python3 http_async_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
