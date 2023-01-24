@@ -35,7 +35,7 @@ class ExitNode : public Node {
     ResponseType* response;
     const tensor_map_t outputsInfo;
     bool useSharedOutputContent;
-    const std::string pipelineName;
+    const std::string& pipelineName;
 
 public:
     ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool useSharedOutputContent = true, const std::string& pipelineName = "") :
