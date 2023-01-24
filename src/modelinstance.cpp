@@ -1248,8 +1248,6 @@ uint32_t ModelInstance::getOptimalNumberOfInferRequests() const {
         uint32_t numOptimalInferRequests = compiledModel->get_property(ov::optimal_number_of_infer_requests);
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numOptimalInferRequests);
         return numOptimalInferRequests;
-    } catch (ov::Exception& e) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of optimal infer requests with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
     } catch (...) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of optimal infer requests; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
     }
@@ -1261,12 +1259,8 @@ uint32_t ModelInstance::getNumOfStreams() const {
         uint32_t numStreams = compiledModel->get_property(ov::num_streams);
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numStreams);
         return numStreams;
-    } catch (ov::Exception& e) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Number of streams will be set to number of optimal infer requests.");
     } catch (...) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Number of streams will be set to number of optimal infer requests.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get property ov::num_streams device: {}. Number of streams will be set to number of optimal infer requests.", config.getTargetDevice());
     }
     return getOptimalNumberOfInferRequests();
 }
