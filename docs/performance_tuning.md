@@ -150,6 +150,7 @@ The default value is 1 second which ensures prompt response to creating new mode
   or even disable it. For example, with cloud storage, it could cause a cost for API calls to the storage cloud provider. Detecting new versions 
   can be disabled with a value `0`.
 
+- While metrics have minimal-to-zero performance overhead when used with standard models, when used with lightweight, fast models, the metric incrementation can take significant amount of CPU time compared to actual inference. Consider disabling metrics for such models.
 
 ## Plugin configuration
 
