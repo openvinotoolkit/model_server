@@ -70,8 +70,6 @@ const char* NIREQ = "NIREQ";
 
 const uint MAX_NIREQ_COUNT = 100000;
 
-const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
-
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
 ModelInstance::~ModelInstance() = default;

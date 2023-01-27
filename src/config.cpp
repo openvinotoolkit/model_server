@@ -25,10 +25,11 @@
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
 #include "server_settings.hpp"
+#include "systeminfo.hpp"
 
 namespace ovms {
 
-const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
+const uint AVAILABLE_CORES = getCoreCount();
 const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
 
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
