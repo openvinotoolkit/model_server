@@ -127,7 +127,7 @@ bool Config::validate() {
 
     // metrics on rest port
     if ((metricsEnabled() || !metricsList().empty()) && !configPath().empty()) {
-        SPDLOG_WARN("metrics related parameters in CLI will overwrite metrics configuration from the config file.");
+        SPDLOG_WARN("When used cli param config.json cannot contain metrics configuration");
     }
 
     // metrics_list without metrics_enable
