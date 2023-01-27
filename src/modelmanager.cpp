@@ -595,7 +595,7 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     } else {
         if(config.metricsEnabled()){
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "When used cli param config.json cannot contain metrics configuration");
-            return StatusCode::INTERNAL_ERROR;
+            return StatusCode::CONFIG_FILE_INVALID;
         }
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");

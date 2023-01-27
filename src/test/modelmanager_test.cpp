@@ -283,6 +283,21 @@ static const char* modelMetricsMissingPortWithDisabledMetrics = R"(
                 "shape": {"b": "(1,10) "}
             }
         }
+    ]
+})";
+static const char* modelMetricsMissingPortWithDisabledMetricsV2 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
     ],
     "monitoring":
         {
@@ -302,16 +317,29 @@ TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
     EXPECT_EQ(status, ovms::StatusCode::METRICS_REST_PORT_MISSING);
 }
 
-TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithConfigDisabledMetrics) {
+TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetricsV2) {
+    SetUpConfig(modelMetricsMissingPortWithDisabledMetricsV2);
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000"};
+    int arg_count = 8;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::CONFIG_FILE_INVALID);
+}
+
+TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetrics) {
     SetUpConfig(modelMetricsMissingPortWithDisabledMetrics);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
-
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000"};
+    int arg_count = 8;
+    ovms::Config::instance().parse(arg_count, n_argv);
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile(configFilePath);
-    EXPECT_EQ(status, ovms::StatusCode::METRICS_REST_PORT_MISSING);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
 }
-
 TEST_F(ModelManager, ConfigParseEmpty) {
     std::string configFile = createConfigFileWithContent("\n");
     auto status = fixtureManager.startFromFile(configFile);
