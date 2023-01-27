@@ -587,13 +587,13 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     const auto itr2 = configJson.FindMember("monitoring");
     auto& config = ovms::Config::instance();
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
-        if(config.metricsEnabled()){
+        if (config.metricsEnabled()) {
             return this->metricConfig.loadFromCLIString(true, config.metricsList());
         }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
         return StatusCode::OK;
     } else {
-        if(config.metricsEnabled()){
+        if (config.metricsEnabled()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "When used cli param config.json cannot contain metrics configuration");
             return StatusCode::CONFIG_FILE_INVALID;
         }
