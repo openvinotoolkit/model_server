@@ -308,7 +308,7 @@ TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithConfigDisabledMetrics) 
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile(configFilePath, true);
+    auto status = manager.startFromFile(configFilePath);
     EXPECT_EQ(status, ovms::StatusCode::METRICS_REST_PORT_MISSING);
 }
 

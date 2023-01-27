@@ -158,7 +158,7 @@ Status ModelManager::start(const Config& config) {
     Status status;
     bool startFromConfigFile = (config.configPath() != "");
     if (startFromConfigFile) {
-        status = startFromFile(config.configPath(), config.metricsEnabled());
+        status = startFromFile(config.configPath());
     } else {
         status = startFromConfig();
     }
@@ -273,8 +273,8 @@ Status ModelManager::startFromConfig() {
     return reloadModelWithVersions(modelConfig);
 }
 
-Status ModelManager::startFromFile(const std::string& jsonFilename, const bool overrideMetricsEnable) {
-    Status status = loadConfig(jsonFilename, overrideMetricsEnable);
+Status ModelManager::startFromFile(const std::string& jsonFilename) {
+    Status status = loadConfig(jsonFilename);
     if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID || status == StatusCode::METRICS_REST_PORT_MISSING || status == StatusCode::INVALID_METRICS_ENDPOINT || status == StatusCode::INVALID_METRICS_FAMILY_NAME) {
         return status;
     }
@@ -585,10 +585,18 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
 
 Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     const auto itr2 = configJson.FindMember("monitoring");
+    auto& config = ovms::Config::instance();
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
+        if(config.metricsEnabled()){
+            return this->metricConfig.loadFromCLIString(true, config.metricsList());
+        }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
         return StatusCode::OK;
     } else {
+        if(config.metricsEnabled()){
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "When used cli param config.json cannot contain metrics configuration");
+            return StatusCode::INTERNAL_ERROR;
+        }
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
         bool forceFailureIfMetricsAreEnabled = ovms::Config::instance().restPort() == 0;
@@ -711,7 +719,7 @@ public:
     }
 };
 
-Status ModelManager::loadConfig(const std::string& jsonFilename, const bool overrideMetricsEnable) {
+Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
     lastConfigFileMD5 = getConfigFileMD5();
@@ -757,20 +765,6 @@ Status ModelManager::loadConfig(const std::string& jsonFilename, const bool over
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
-        if (overrideMetricsEnable) {
-            if (!configJson.HasMember("monitoring")) {
-                configJson.AddMember("monitoring", rapidjson::Value(rapidjson::kObjectType), configJson.GetAllocator());
-            }
-            if (!configJson["monitoring"].HasMember("metrics")) {
-                configJson["monitoring"].AddMember("metrics", rapidjson::Value(rapidjson::kObjectType), configJson.GetAllocator());
-            }
-            if (!configJson["monitoring"]["metrics"].HasMember("enable")) {
-                configJson["monitoring"]["metrics"].AddMember("enable", true, configJson.GetAllocator());
-
-            } else {
-                configJson["monitoring"]["metrics"]["enable"].SetBool(true);
-            }
-        }
         status = loadMetricsConfig(configJson);
         if (!status.ok()) {
             return status;
