@@ -333,8 +333,8 @@ TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetrics) {
     SetUpConfig(modelMetricsMissingPortWithDisabledMetrics);
     std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
-    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000"};
-    int arg_count = 8;
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000", (char*)"--metrics_list", (char*)"ovms_streams"};
+    int arg_count = 10;
     ovms::Config::instance().parse(arg_count, n_argv);
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile(configFilePath);
