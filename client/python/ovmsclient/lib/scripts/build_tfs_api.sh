@@ -21,7 +21,7 @@ set -e
 cleanup_tmp_dirs() {
     ARG=$?
     echo "Cleaning up temp directories"
-    rm -rf tf/ tfs/
+    rm -rf tf/ tfs/ compiled_protos/
     exit $ARG
 }
 
@@ -30,6 +30,7 @@ trap cleanup_tmp_dirs EXIT
 git clone --branch v2.5.0 --depth 1 https://github.com/tensorflow/tensorflow.git tf
 git clone --branch 2.5.1 --depth 1 https://github.com/tensorflow/serving.git tfs
 
+rm -rf ovmsclient/tfs_compat/protos compiled_protos
 mkdir -p ovmsclient/tfs_compat/protos
 mkdir compiled_protos
 cp -R tf/tensorflow ovmsclient/tfs_compat/protos/tensorflow
