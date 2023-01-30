@@ -16,15 +16,15 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../dl_node.hpp"
-#include "../dlnodesession.hpp"
-#include "../gathernodeinputhandler.hpp"
+#include "../dags/dl_node.hpp"
+#include "../dags/dlnodesession.hpp"
+#include "../dags/gathernodeinputhandler.hpp"
+#include "../dags/node.hpp"
+#include "../dags/nodeinputhandler.hpp"
+#include "../dags/nodestreamidguard.hpp"
 #include "../logging.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
-#include "../node.hpp"
-#include "../nodeinputhandler.hpp"
-#include "../nodestreamidguard.hpp"
 #include "../ov_utils.hpp"
 #include "test_utils.hpp"
 

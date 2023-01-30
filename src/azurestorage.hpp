@@ -187,7 +187,7 @@ private:
 
 class AzureStorageFactory {
 public:
-    std::shared_ptr<AzureStorageAdapter> getNewAzureStorageObject(const std::string& path, as::cloud_storage_account account);
+    std::shared_ptr<AzureStorageAdapter> getNewAzureStorageObject(const std::string& path, as::cloud_storage_account& account);
 
 private:
     bool isBlobStoragePath(std::string path);

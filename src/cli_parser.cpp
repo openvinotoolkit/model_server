@@ -16,6 +16,7 @@
 #include "cli_parser.hpp"
 
 #include <iostream>
+#include <stdexcept>
 #include <string>
 
 #include <sysexits.h>
@@ -133,7 +134,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>()->default_value("CPU"),
                 "TARGET_DEVICE")
             ("plugin_config",
-                "A dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
+                "A dictionary of plugin configuration keys and their values, eg \"{\\\"NUM_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
                 cxxopts::value<std::string>(),
                 "PLUGIN_CONFIG")
             ("stateful",
@@ -182,6 +183,9 @@ void CLIParser::parse(int argc, char** argv) {
 }
 
 void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+    if (nullptr == result) {
+        throw std::logic_error("Tried to prepare server and model settings without parse result");
+    }
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
     serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
 
@@ -193,7 +197,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (result->count("max_sequence_number"))
         modelsSettings->maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
 
-    if (result != nullptr && result->count("cpu_extension")) {
+    if (result->count("cpu_extension")) {
         serverSettings->cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
     }
 

@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../custom_node_output_allocator.hpp"
+#include "../dags/custom_node_output_allocator.hpp"
 #include "../precision.hpp"
 #include "../shape.hpp"
 

@@ -22,17 +22,7 @@ LABEL version="1.0.0"
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS
-ARG APT_OV_PACKAGE=openvino-2022.1.0
-ARG CMAKE_BUILD_TYPE=Release
-
-# build_type=[ opt, dbg ]
-ARG build_type=opt
-ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
-ARG minitrace_flags
-ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV DEBIAN_FRONTEND=noninteractive
-ENV TF_SYSTEM_LIBS="curl"
-ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libboost-atomic1.71.0 \
             libboost-chrono1.71.0 \
@@ -90,7 +80,7 @@ WORKDIR /boost
 # hadolint ignore=DL3003
 RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.69.0/boost_1_69_0.tar.gz && \
 tar xvf boost_1_69_0.tar.gz && cd boost_1_69_0 && ./bootstrap.sh && \
-./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 --with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
 --with-random --with-thread --with-atomic --with-regex \
 --with-log --with-locale \
@@ -114,7 +104,6 @@ RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_
 ####### End of Azure SDK
 
 ARG NVIDIA=0
-
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
@@ -136,15 +125,6 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
     chmod a+x /usr/local/bin/sccache ;
 
-# Set up Bazel
-ENV BAZEL_VERSION 5.3.1
-WORKDIR /bazel
-RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
-
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
 WORKDIR /awssdk/build
@@ -157,10 +137,26 @@ WORKDIR /ovms/third_party/opencv
 RUN ./install_opencv.sh
 ####### End of OpenCV
 
+################### BASE BUILD ##########################
+FROM $BASE_IMAGE as final_build
+
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+ARG JOBS
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG ov_source_branch=master
 ARG ov_contrib_branch=master
+ARG APT_OV_PACKAGE=openvino-2022.1.0
+ARG CMAKE_BUILD_TYPE=Release
+
+# build_type=[ opt, dbg ]
+ARG build_type=opt
+ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
+ARG minitrace_flags
+ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
+ENV TF_SYSTEM_LIBS="curl"
+ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
@@ -235,6 +231,15 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
       -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && \
       cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS
 
+# Set up Bazel
+ENV BAZEL_VERSION 5.3.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
@@ -242,6 +247,10 @@ COPY external /ovms/external/
 COPY MakefileCapi /ovms/
 
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+
+# FROM BASE BUILD
+COPY --from=base_build /opt/opencv /opt/opencv/
+COPY third_party /ovms/third_party/
 
 # Patch apple build scripts
 # hadolint ignore=SC2046
@@ -273,11 +282,24 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-COPY check_coverage.bat /ovms/
+# Copy build dependencies
+COPY --from=base_build /awssdk/build/.deps /awssdk/build/.deps
+COPY --from=base_build /awssdk/build/aws-cpp-sdk-core/libaws-cpp-sdk-core.a /awssdk/build/aws-cpp-sdk-core/libaws-cpp-sdk-core.a
+COPY --from=base_build /awssdk/build/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.a /awssdk/build/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.a
+COPY --from=base_build /awssdk/aws-cpp-sdk-core/include /awssdk/aws-cpp-sdk-core/include
+COPY --from=base_build /awssdk/aws-cpp-sdk-s3/include/ /awssdk/aws-cpp-sdk-s3/include/
 
+COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries
+COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes
+COPY --from=base_build /azure/cpprestsdk/Release/build.release/Binaries /azure/cpprestsdk/Release/build.release/Binaries
+
+COPY --from=base_build /usr/local/include /usr/local/include
+COPY --from=base_build /usr/local/lib/libboost* /usr/local/lib/
+
+# Test Coverage
+COPY check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 ARG RUN_TESTS=1
-# Test Coverage
 RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" == "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
     bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
 

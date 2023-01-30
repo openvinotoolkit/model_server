@@ -213,7 +213,7 @@ const InferenceTensor& RequestValidator<ovms::InferenceRequest, InferenceTensor,
 template <>
 Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateNumberOfInputs() const {
     size_t expectedNumberOfInputs = inputsInfo.size();
-    for (auto optionalAllowedInputName : optionalAllowedInputNames) {
+    for (auto& optionalAllowedInputName : optionalAllowedInputNames) {
         if (request.inputs().count(optionalAllowedInputName))
             expectedNumberOfInputs++;
     }

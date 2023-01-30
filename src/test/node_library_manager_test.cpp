@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../custom_node_library_manager.hpp"
+#include "../dags/custom_node_library_manager.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
