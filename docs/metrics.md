@@ -206,7 +206,7 @@ curl http://localhost:8000/metrics
 [Example metrics output](https://raw.githubusercontent.com/openvinotoolkit/model_server/v2022.2/docs/metrics_output.out)
 
 ## Performance considerations
-Collecting metrics has negligible performance overhead when used with typical models. However when used with very lightweight, fast models which inference time is very short, the metric incrementation can take noticeable proportion of the processing time. Consider it while enabling metrics for such models.
+Collecting metrics has negligible performance overhead when used with models of average size and complexity. However when used with very lightweight, fast models which inference time is very short, the metric incrementation can take noticeable proportion of the processing time. Consider it while enabling metrics for such models.
 
 ## Metrics implementation for DAG pipelines
 
