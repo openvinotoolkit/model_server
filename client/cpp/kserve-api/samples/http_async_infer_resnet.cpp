@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     if (!args.count("labels_list")) {
-        std::coucerrt << "error: option \"labels_list\" has no value\n";
+        std::cerr  << "error: option \"labels_list\" has no value\n";
         return 1;
     }
 
