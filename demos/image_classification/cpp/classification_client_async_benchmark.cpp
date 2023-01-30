@@ -273,6 +273,8 @@ public:
         for (size_t i = 0; i < predictedLabels.size(); i++) {
             if (predictedLabels[i] == selectedEntries[i].expectedLabel) {
                 numberOfCorrectLabels++;
+            } else {
+                std::cout << "incorrect prediction; expected " << selectedEntries[i].expectedLabel << ", got " << predictedLabels[i] << std::endl;
             }
         }
         this->numberOfCorrectLabels += numberOfCorrectLabels;

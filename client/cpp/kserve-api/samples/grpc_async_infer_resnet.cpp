@@ -62,6 +62,32 @@ namespace tc = triton::client;
         }                                                                \
     }
 
+std::vector<uint8_t> load2(const std::string& fileName) {
+    // open the file:
+    std::ifstream file(fileName, std::ios::binary);
+
+    // Stop eating new lines in binary mode!!!
+    file.unsetf(std::ios::skipws);
+
+    // get its size:
+    std::streampos fileSize;
+
+    file.seekg(0, std::ios::end);
+    fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    // reserve capacity
+    std::vector<uint8_t> vec;
+    vec.reserve(fileSize);
+
+    // read the data:
+    vec.insert(vec.begin(),
+               std::istream_iterator<uint8_t>(file),
+               std::istream_iterator<uint8_t>());
+
+    return vec;
+}
+
 std::vector<uint8_t> load(const std::string& fileName) {
     std::ifstream fileImg(fileName, std::ios::binary);
     fileImg.seekg(0, std::ios::end);
@@ -106,11 +132,11 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (!args.count("images_list")) {
-        std::cout << "error: option \"images_list\" has no value\n";
+        std::cerr << "error: option \"images_list\" has no value\n";
         return 1;
     }
     if (!args.count("labels_list")) {
-        std::cout << "error: option \"labels_list\" has no value\n";
+        std::cerr << "error: option \"labels_list\" has no value\n";
         return 1;
     }
 
@@ -160,7 +186,7 @@ int main(int argc, char** argv) {
     try {
         options.client_timeout_ = args["timeout"].as<int>();
     } catch (cxxopts::argument_incorrect_type e) {
-        std::cout << "The provided argument is of a wrong type" << std::endl;
+        std::cerr << "The provided argument is of a wrong type" << std::endl;
         return 1;
     }
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
