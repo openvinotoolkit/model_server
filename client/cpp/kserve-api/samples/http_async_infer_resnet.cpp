@@ -112,11 +112,11 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (!args.count("images_list")) {
-        std::cout << "error: option \"images_list\" has no value\n";
+        std::cerr << "error: option \"images_list\" has no value\n";
         return 1;
     }
     if (!args.count("labels_list")) {
-        std::cout << "error: option \"labels_list\" has no value\n";
+        std::coucerrt << "error: option \"labels_list\" has no value\n";
         return 1;
     }
 
@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
     try {
         options.client_timeout_ = args["timeout"].as<int>();
     } catch (cxxopts::argument_incorrect_type e) {
-        std::cout << "The provided argument is of a wrong type" << std::endl;
+        std::cerr << "The provided argument is of a wrong type" << std::endl;
         return 1;
     }
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
@@ -194,7 +194,7 @@ int main(int argc, char** argv) {
             input_data.push_back(load(imgs[i]));
         }
         catch(const std::bad_alloc&) {
-            std::cerr<< "error: Loading image:" + imgs[i] + " failed. \n";
+            std::cerr << "error: Loading image:" + imgs[i] + " failed. \n";
             return 1;
         }
     }
