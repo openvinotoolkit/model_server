@@ -63,15 +63,21 @@ namespace tc = triton::client;
     }
 
 std::vector<uint8_t> load(const std::string& fileName) {
-    std::ifstream fileImg(fileName, std::ios::binary);
-    fileImg.seekg(0, std::ios::end);
-    int bufferLength = fileImg.tellg();
-    fileImg.seekg(0, std::ios::beg);
+    std::ifstream file(fileName, std::ios::binary);
+    file.unsetf(std::ios::skipws);
+    std::streampos fileSize;
 
-    char* buffer = new char[bufferLength];
-    fileImg.read(buffer, bufferLength);
+    file.seekg(0, std::ios::end);
+    fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
 
-    return std::vector<uint8_t>(buffer, buffer + bufferLength);
+    std::vector<uint8_t> vec;
+    vec.reserve(fileSize);
+
+    vec.insert(vec.begin(),
+               std::istream_iterator<uint8_t>(file),
+               std::istream_iterator<uint8_t>());
+    return vec;
 }
 
 int main(int argc, char** argv) {
