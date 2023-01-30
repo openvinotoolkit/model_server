@@ -247,6 +247,82 @@ TEST_F(ModelManagerMetricsTest, WrongConfigFileMetricName) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_METRICS_FAMILY_NAME);
 }
 
+static const char* modelDummyNireq100 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "nireq": 100
+            }
+        }
+    ]
+})";
+
+static const char* emptyModelConfig = R"(
+{
+    "model_config_list": []
+})";
+
+static const char* mappingConfigContent = R"(
+{
+    "inputs": {"b": "input"},
+    "outputs": {"a": "output"}
+})";
+
+class ModelManagerMappingTest : public TestWithTempDir {
+public:
+    std::string configFilePath;
+    std::string ovmsConfig;
+    std::string modelPath;
+
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+    }
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/config.json";
+    }
+};
+
+TEST_F(ModelManagerMappingTest, MappingConfig) {
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    SetUpConfig(modelDummyNireq100);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    createConfigFileWithContent(mappingConfigContent, modelPath + "/1/mapping_config.json");
+
+    // Load config with single dummy
+    ConstructorEnabledModelManager manager;
+    auto status = manager.loadConfig(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    // Remove model from config
+    createConfigFileWithContent(emptyModelConfig, configFilePath);
+    status = manager.loadConfig(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    // Revert back dummy model
+    SetUpConfig(modelDummyNireq100);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    status = manager.loadConfig(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    // Check for mapping
+    auto modelInstance = manager.findModelInstance("dummy", 1);
+    EXPECT_NE(modelInstance, nullptr);
+    auto inputsInfo = modelInstance->getInputsInfo();
+    ASSERT_EQ(inputsInfo.size(), 1);
+    EXPECT_EQ(inputsInfo.begin()->second->getMappedName(), "input");
+    auto outputsInfo = modelInstance->getOutputsInfo();
+    ASSERT_EQ(outputsInfo.size(), 1);
+    EXPECT_EQ(outputsInfo.begin()->second->getMappedName(), "output");
+}
+
 static const char* modelMetricsMissingPort = R"(
 {
     "model_config_list": [
