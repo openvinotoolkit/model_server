@@ -75,8 +75,8 @@ bool AzureStorageAdapter::isAbsolutePath(const std::string& path) {
     return !path.empty() && (path[0] == '/');
 }
 
-AzureStorageBlob::AzureStorageBlob(const std::string& path, as::cloud_storage_account account) {
-    account_ = std::move(account);
+AzureStorageBlob::AzureStorageBlob(const std::string& path, as::cloud_storage_account& account) {
+    account_ = account;
     as_blob_client_ = account_.create_cloud_blob_client();
     isPathValidationOk_ = false;
 }
@@ -594,8 +594,8 @@ StatusCode AzureStorageBlob::parseFilePath(const std::string& path) {
     return StatusCode::OK;
 }
 
-AzureStorageFile::AzureStorageFile(const std::string& path, as::cloud_storage_account account) {
-    account_ = std::move(account);
+AzureStorageFile::AzureStorageFile(const std::string& path, as::cloud_storage_account& account) {
+    account_ = account;
     as_file_client_ = account_.create_cloud_file_client();
     isPathValidationOk_ = false;
 }
