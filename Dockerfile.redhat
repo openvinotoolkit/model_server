@@ -45,7 +45,6 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             patch \
             pkg-config \
             wget \
-            which \
             yum-utils \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
@@ -115,11 +114,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             java-11-openjdk-devel \
             libgusb.x86_64 \
             libusbx \
-            libcurl-devel \
             libtool \
             openssl-devel \
-            patch \
-            pkg-config \
             python3 \
             python3-pip \
             python3-devel \
@@ -213,9 +209,6 @@ RUN if [ "$build_type" = "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_VE
 RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
-
-RUN wget -nv https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
-    yum install -y lcov-1.16-1.noarch.rpm && yum clean all
 
 # Test Coverage
 COPY check_coverage.bat /ovms/
