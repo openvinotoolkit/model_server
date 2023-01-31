@@ -150,7 +150,7 @@ The default value is 1 second which ensures prompt response to creating new mode
   or even disable it. For example, with cloud storage, it could cause a cost for API calls to the storage cloud provider. Detecting new versions 
   can be disabled with a value `0`.
 
-- While collecting metrics has negligible performance overhead when used with models of average size and complexity, when used with lightweight, fast models, the metric incrementation can consume noticeable proportion of CPU time compared to actual inference. Take it into account while enabled metrics for such models.
+- Collecting metrics has negligible performance overhead when used with models of average size and complexity. However, when used with lightweight, fast models, the metric incrementation can consume noticeable proportion of CPU time compared to actual inference. Take it into account while enabled metrics for such models.
 
 - Log level `DEBUG` produces significant amount of logs. Usually the impact of generating logs on overall performance is negligible, but for very high throughput use cases consider using `--log_level INFO` which is also the default setting.
 
