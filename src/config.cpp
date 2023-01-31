@@ -125,11 +125,6 @@ bool Config::validate() {
         return false;
     }
 
-    // metrics on rest port
-    if ((metricsEnabled() || !metricsList().empty()) && !configPath().empty()) {
-        SPDLOG_WARN("When used cli param config.json cannot contain metrics configuration");
-    }
-
     // metrics_list without metrics_enable
     if (!metricsEnabled() && !metricsList().empty()) {
         std::cerr << "metrics_enable setting is missing, required when metrics_list is provided" << std::endl;

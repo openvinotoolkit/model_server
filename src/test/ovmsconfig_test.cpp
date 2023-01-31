@@ -129,7 +129,7 @@ TEST_F(OvmsConfigDeathTest, negativeConfigPathWithTargetDevice) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
-TEST_F(OvmsConfigDeathTest, metricListInCli) {
+TEST_F(OvmsConfigDeathTest, OVMSDuplicatedMetricsConfig) {
     char* n_argv[] = {"ovms", "--config_path", "/path/to/config", "--metrics_enable", "--rest_port", "8080"};
     int arg_count = 6;
     ovms::Config::instance().parse(arg_count, n_argv);

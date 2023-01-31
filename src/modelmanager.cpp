@@ -594,7 +594,7 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
         return StatusCode::OK;
     } else {
         if (config.metricsEnabled()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "When used cli param config.json cannot contain metrics configuration");
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metrics configuration duplicated in configuration file and CLI parameters");
             return StatusCode::CONFIG_FILE_INVALID;
         }
         const auto& metrics = itr2->value.GetObject();
