@@ -423,7 +423,7 @@ public:
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
         auto totalTime = (duration.count() / 1000);
-        float accurracy = (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.producers * config.batchSize);
+        float accurracy = (client.getNumberOfCorrectLabels() * 100.0f) / (config.iterations * config.producers * config.batchSize);
         float avgFps = (1000 / ((float)totalTime / (float)(config.iterations * config.producers * config.batchSize)));
 
         std::cout << "========================\n        Summary\n========================" << std::endl;
