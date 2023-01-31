@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
             input_ptr->AppendRaw(input_data[i]),
             "unable to set data for input");
         client->AsyncInfer(
-            [&, i](tc::InferResult* result) {
+            [&, i](tc::InferResult* result) -> int {
                 {
                     std::shared_ptr<tc::InferResult> result_ptr;
                     result_ptr.reset(result);
@@ -217,6 +217,9 @@ int main(int argc, char** argv) {
                     // Get pointers to the result returned...
                     float* output_data;
                     size_t output_byte_size;
+                    FAIL_IF_ERR(
+                        result_ptr->RequestStatus(),
+                        "unable to get result");
                     FAIL_IF_ERR(
                         result_ptr->RawData(
                             output_name, (const uint8_t**)&output_data, &output_byte_size),
@@ -233,6 +236,7 @@ int main(int argc, char** argv) {
                     std::cout << std::endl;
                 }
                 cv.notify_all();
+                return 0;
             },
             options, inputs, outputs);
         input->Reset();
