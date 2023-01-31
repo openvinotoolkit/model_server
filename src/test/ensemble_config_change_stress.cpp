@@ -1143,9 +1143,9 @@ public:
         ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number\n"
                                            << metricOutput;
         result = actualVal.value() > value;
-        if(!result)
+        if (!result)
             std::cerr << metricName << " metric needs to be greater than " << value << std::endl
-                                           << metricOutput;
+                      << metricOutput;
     }
     void checkActiveNireqSmallerThanTotal() {
         std::string metricOutput = manager.getMetricRegistry()->collect();
@@ -1166,13 +1166,15 @@ public:
         SPDLOG_INFO("{} start", __FUNCTION__);
         bool current_reqests_pass, infer_req_active_pass;
         int retries = 3;
-        for(int i = 0; i < retries; i++){
+        for (int i = 0; i < retries; i++) {
             std::string metricOutput = manager.getMetricRegistry()->collect();
             checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0, metricOutput, current_reqests_pass);
             checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0, metricOutput, infer_req_active_pass);
-            if(current_reqests_pass && infer_req_active_pass) break;
+            if (current_reqests_pass && infer_req_active_pass)
+                break;
         }
-        if(!current_reqests_pass || !infer_req_active_pass ) FAIL();
+        if (!current_reqests_pass || !infer_req_active_pass)
+            FAIL();
         checkActiveNireqSmallerThanTotal();
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
