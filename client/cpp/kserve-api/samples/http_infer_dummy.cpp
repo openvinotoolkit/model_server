@@ -13,6 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+// Copyright 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//  * Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//  * Neither the name of NVIDIA CORPORATION nor the names of its
+//    contributors may be used to endorse or promote products derived
+//    from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <string>
 
@@ -59,13 +84,13 @@ void ValidateShapeAndDatatype(
 }  // namespace
 
 int main(int argc, char** argv) {
-    cxxopts::Options opt("http_infer_dummy", "Sends requests via KServe rest API.");
+    cxxopts::Options opt("http_infer_dummy", "Sends requests via KServe REST API.");
 
     // clang-format off
     opt.add_options()
     ("h,help", "Show this help message and exit")
-    ("http_address", "Specify url to grpc service. ", cxxopts::value<std::string>()->default_value("localhost"), "HTTP_ADDRESS")
-    ("http_port", "Specify port to grpc service. ", cxxopts::value<std::string>()->default_value("8000"), "PORT")
+    ("http_address", "Specify url to REST service. ", cxxopts::value<std::string>()->default_value("localhost"), "HTTP_ADDRESS")
+    ("http_port", "Specify port to REST service. ", cxxopts::value<std::string>()->default_value("8000"), "PORT")
     ("input_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("b"), "INPUT_NAME")
     ("output_name", "Specify input tensor name. ", cxxopts::value<std::string>()->default_value("a"), "OUTPUT_NAME")
     ("model_name", "Define model name, must be same as is in service. ", cxxopts::value<std::string>()->default_value("dummy"), "MODEL_NAME")
@@ -74,7 +99,14 @@ int main(int argc, char** argv) {
     ;
     // clang-format on
 
-    auto args = opt.parse(argc, argv);
+    cxxopts::ParseResult args;
+    try {
+        args = opt.parse(argc, argv);
+    }
+    catch(cxxopts::option_not_exists_exception e) {
+        std::cerr << "error: cli options parsing failed - " << e.what();
+        return 1;
+    }
 
     if (args.count("help")) {
         std::cout << opt.help() << std::endl;
@@ -120,7 +152,7 @@ int main(int argc, char** argv) {
     tc::InferRequestedOutput* output;
 
     FAIL_IF_ERR(
-        tc::InferRequestedOutput::Create(&output, "a"),
+        tc::InferRequestedOutput::Create(&output, output_name),
         "unable to get output");
     std::shared_ptr<tc::InferRequestedOutput> output_ptr;
     output_ptr.reset(output);     

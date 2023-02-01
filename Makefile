@@ -41,12 +41,14 @@ BASE_OS_TAG_REDHAT ?= 8.7
 INSTALL_RPMS_FROM_URL ?=
 
 CHECK_COVERAGE ?=0
+RUN_TESTS ?= 1
 NVIDIA ?=0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= master
+OV_CONTRIB_BRANCH ?= master
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -80,14 +82,14 @@ ifeq ($(BASE_OS),ubuntu)
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   endif
   INSTALL_DRIVER_VERSION ?= "22.35.24055"
-  DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/0357a97c40a41be0f362a3d0907e378b236b3c71/swf_drop/packages/releases/l_openvino_toolkit_ubuntu20_2022.3.0.8963.0357a97c40a_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2022.3.0.9121.567eac4d8fb_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "22.28.23726"
-  DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/0357a97c40a41be0f362a3d0907e378b236b3c71/swf_drop/packages/releases/l_openvino_toolkit_rhel8_2022.3.0.8963.0357a97c40a_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2022.3.0.9121.567eac4d8fb_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -126,18 +128,16 @@ $(ACTIVATE):
 	@. $(ACTIVATE); pip3 install -qq -r tests/requirements.txt --use-deprecated=legacy-resolver
 	@touch $(ACTIVATE)
 
-style: venv clang-format
-	@echo "Style-checking codebase..."
-	@git diff --exit-code || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
-	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
-	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+cppclean: venv
 	@echo "Checking cppclean..."
 	@. $(ACTIVATE); bash -c "./cppclean.sh"
+
+style: venv clang-format-check cpplint cppclean
 
 sdl-check: venv
 	@echo "Checking SDL requirements..."
 	@echo "Checking docker files..."
-	@bash -c "if [ $$(find . -type f -name 'Dockerfile.*' -exec grep ADD {} \; | wc -l | xargs ) -eq 0 ]; then echo 'ok'; else echo 'replace ADD with COPY in dockerfiles'; exit 1 ; fi"
+	@./tests/hadolint.sh
 
 	@echo "Checking python files..."
 	@. $(ACTIVATE); bash -c "bandit -x demos/benchmark/python -r demos/*/python > bandit.txt"
@@ -166,12 +166,27 @@ sdl-check: venv
 	fi
 	@rm forbidden_functions.txt
 
+cpplint: venv
+	@echo "Style-checking codebase..."
+	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+
 clang-format: venv
 	@echo "Formatting files with clang-format.."
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
 
+clang-format-check: clang-format
+	@echo "Checking if clang-format changes were committed ..."
+	@git diff --exit-code || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
+	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
+
 .PHONY: docker_build
-docker_build:
+docker_build: ovms_builder_image targz_package ovms_release_image
+ovms_builder_image:
+ifeq ($(CHECK_COVERAGE),1)
+  ifeq ($(RUN_TESTS),0)
+	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
+  endif
+endif
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
@@ -205,22 +220,26 @@ endif
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
-		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
+		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) --build-arg RUN_TESTS=$(RUN_TESTS)\
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg NVIDIA=$(NVIDIA) \
+		--build-arg NVIDIA=$(NVIDIA) --build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg JOBS=$(JOBS)
+
+targz_package: ovms_builder_image
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) --build-arg BASE_OS=$(BASE_OS) \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg BASE_OS=$(BASE_OS) \
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+
+ovms_release_image: targz_package
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
 		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
 			"tar -c -C / ovms.tar* ; sleep 2" | tar -x
@@ -255,7 +274,7 @@ get_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms/genhtml/ .  || true
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@if [ -d genhtml/src ]; then $(MAKE) check_coverage; \
 	else echo "ERROR: genhtml/src was not generated during build"; \
 	fi
@@ -264,17 +283,24 @@ check_coverage:
 	@docker run $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
 	
 test_checksec:
-	@echo "Running checksec on ovms binary..."
+	@echo "Running checksec on libovms_shared library..."
 	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/lib/libovms_shared.so /tmp
 	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
+	@checksec --file=/tmp/libovms_shared.so --format=csv > checksec.txt
+	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,DSO,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
+ 		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." && exit 1;\
+	fi
+	@echo "Running checksec on ovms binary..."
 	@checksec --file=/tmp/ovms --format=csv > checksec.txt
 	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
- 		error Run checksec on ovms binary and fix issues.;\
+ 		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues." && exit 1;\
 	fi
 	@rm -f checksec.txt
 	@rm -f /tmp/ovms
+	@rm -f /tmp/libovms_shared.so
 	@echo "Checksec check success."
 
 test_perf: venv
@@ -384,8 +410,8 @@ test_functional: venv
 test_client_lib:
 	@cd client/python/ovmsclient/lib && \
 		make style || exit 1 && \
-		. .venv/bin/activate; make build || exit 1 && \
-		make test || exit 1 && \
+		. .venv-ovmsclient/bin/activate; make build || exit 1 && \
+		make test TEST_TYPE=FULL || exit 1 && \
 		make clean
 
 tools_get_deps:

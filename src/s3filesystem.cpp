@@ -549,8 +549,12 @@ StatusCode S3FileSystem::downloadModelVersions(const std::string& path,
 }
 
 StatusCode S3FileSystem::deleteFileFolder(const std::string& path) {
-    remove(path.c_str());
-    return StatusCode::OK;
+    SPDLOG_LOGGER_DEBUG(s3_logger, "Deleting local file folder {}", path);
+    if (::remove(path.c_str()) == 0) {
+        return StatusCode::OK;
+    } else {
+        SPDLOG_LOGGER_ERROR(s3_logger, "Unable to remove local path: {}", path);
+        return StatusCode::FILE_INVALID;
+    }
 }
-
 }  // namespace ovms

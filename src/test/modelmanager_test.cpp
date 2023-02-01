@@ -18,12 +18,12 @@
 
 #include "../cleaner_utils.hpp"
 #include "../config.hpp"
-#include "../custom_node_library_internal_manager_wrapper.hpp"
+#include "../dags/custom_node_library_internal_manager_wrapper.hpp"
+#include "../dags/node_library.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelmanager.hpp"
-#include "../node_library.hpp"
 #include "../prediction_service_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
@@ -112,17 +112,20 @@ public:
     }
 };
 
-TEST(ModelManager, ConfigParseNoModels) {
+class ModelManager : public ::testing::Test {
+protected:
+    ConstructorEnabledModelManager fixtureManager;
+};
+
+TEST_F(ModelManager, ConfigParseNoModels) {
     std::string configFile = createConfigFileWithContent("{ \"model_config_list\": [ ] }\n");
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = fixtureManager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
-TEST(ModelManager, WrongConfigFile) {
+TEST_F(ModelManager, WrongConfigFile) {
     std::string configFile = "123/tmp/not_a_valid_file_name";
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = fixtureManager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::CONFIG_FILE_INVALID);
 }
 
@@ -146,7 +149,6 @@ public:
         int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
 
-        // Prepare manager
         modelPath = directoryPath + "/dummy/";
         configFilePath = directoryPath + "/ovms_config2.json";
     }
@@ -172,7 +174,6 @@ public:
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
 
-        // Prepare manager
         modelPath = directoryPath + "/dummy/";
         configFilePath = directoryPath + "/ovms_config.json";
     }
@@ -246,6 +247,82 @@ TEST_F(ModelManagerMetricsTest, WrongConfigFileMetricName) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_METRICS_FAMILY_NAME);
 }
 
+static const char* modelDummyNireq100 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "nireq": 100
+            }
+        }
+    ]
+})";
+
+static const char* emptyModelConfig = R"(
+{
+    "model_config_list": []
+})";
+
+static const char* mappingConfigContent = R"(
+{
+    "inputs": {"b": "input"},
+    "outputs": {"a": "output"}
+})";
+
+class ModelManagerMappingTest : public TestWithTempDir {
+public:
+    std::string configFilePath;
+    std::string ovmsConfig;
+    std::string modelPath;
+
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+    }
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        modelPath = directoryPath + "/dummy/";
+        configFilePath = directoryPath + "/config.json";
+    }
+};
+
+TEST_F(ModelManagerMappingTest, MappingConfig) {
+    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    SetUpConfig(modelDummyNireq100);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    createConfigFileWithContent(mappingConfigContent, modelPath + "/1/mapping_config.json");
+
+    // Load config with single dummy
+    ConstructorEnabledModelManager manager;
+    auto status = manager.loadConfig(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    // Remove model from config
+    createConfigFileWithContent(emptyModelConfig, configFilePath);
+    status = manager.loadConfig(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    // Revert back dummy model
+    SetUpConfig(modelDummyNireq100);
+    createConfigFileWithContent(ovmsConfig, configFilePath);
+    status = manager.loadConfig(configFilePath);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    // Check for mapping
+    auto modelInstance = manager.findModelInstance("dummy", 1);
+    EXPECT_NE(modelInstance, nullptr);
+    auto inputsInfo = modelInstance->getInputsInfo();
+    ASSERT_EQ(inputsInfo.size(), 1);
+    EXPECT_EQ(inputsInfo.begin()->second->getMappedName(), "input");
+    auto outputsInfo = modelInstance->getOutputsInfo();
+    ASSERT_EQ(outputsInfo.size(), 1);
+    EXPECT_EQ(outputsInfo.begin()->second->getMappedName(), "output");
+}
+
 static const char* modelMetricsMissingPort = R"(
 {
     "model_config_list": [
@@ -279,28 +356,25 @@ TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
     EXPECT_EQ(status, ovms::StatusCode::METRICS_REST_PORT_MISSING);
 }
 
-TEST(ModelManager, ConfigParseEmpty) {
+TEST_F(ModelManager, ConfigParseEmpty) {
     std::string configFile = createConfigFileWithContent("\n");
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = fixtureManager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(ModelManager, ConfigNotAJson) {
+TEST_F(ModelManager, ConfigNotAJson) {
     std::string configFile = createConfigFileWithContent("abcdfgh");
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = fixtureManager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(ModelManager, ConfigParseEmptyJson) {
+TEST_F(ModelManager, ConfigParseEmptyJson) {
     std::string configFile = createConfigFileWithContent("{}\n");
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = fixtureManager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(ModelManager, ConfigParseNodeConfigWithoutNameKey) {
+TEST_F(ModelManager, ConfigParseNodeConfigWithoutNameKey) {
     const char* configWithoutNameKey = R"({
        "model_config_list": [
        {
@@ -311,12 +385,11 @@ TEST(ModelManager, ConfigParseNodeConfigWithoutNameKey) {
     })";
 
     std::string configFile = createConfigFileWithContent(configWithoutNameKey);
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = fixtureManager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(ModelManager, ConfigParseNodeConfigWihoutBasePathKey) {
+TEST_F(ModelManager, ConfigParseNodeConfigWihoutBasePathKey) {
     const char* configWithoutBasePathKey = R"({
        "model_config_list": [
        {
@@ -327,12 +400,11 @@ TEST(ModelManager, ConfigParseNodeConfigWihoutBasePathKey) {
     })";
 
     std::string configFile = createConfigFileWithContent(configWithoutBasePathKey);
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
+    auto status = fixtureManager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
-TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
+TEST_F(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
     const char* configWithPipelineDefinitionMatchSchema = R"({
         "model_config_list": [
             {
@@ -391,7 +463,7 @@ void setupModelsDirs() {
     std::filesystem::create_directory("/tmp/models/dummy2");
 }
 
-TEST(ModelManager, configRelodNotNeededManyThreads) {
+TEST(ModelManagerWatcher, configRelodNotNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
@@ -421,7 +493,7 @@ TEST(ModelManager, configRelodNotNeededManyThreads) {
     modelMock.reset();
 }
 
-TEST(ModelManager, configRelodNeededManyThreads) {
+TEST(ModelManagerWatcher, configRelodNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
@@ -457,7 +529,7 @@ TEST(ModelManager, configRelodNeededManyThreads) {
     modelMock.reset();
 }
 
-TEST(ModelManager, configReloadNeededChange) {
+TEST(ModelManagerWatcher, configReloadNeededChange) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
@@ -480,7 +552,7 @@ TEST(ModelManager, configReloadNeededChange) {
     modelMock.reset();
 }
 
-TEST(ModelManager, loadConfigManyThreads) {
+TEST(ModelManagerWatcher, loadConfigManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
@@ -509,7 +581,7 @@ TEST(ModelManager, loadConfigManyThreads) {
     modelMock.reset();
 }
 
-TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
+TEST(ModelManagerWatcher, configReloadNeededBeforeConfigLoad) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
@@ -537,7 +609,7 @@ TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
     modelMock.reset();
 }
 
-TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
+TEST(ModelManagerWatcher, parseConfigWhenOnlyPipelineDefinitionProvided) {
     const char* configWithOnlyPipelineDefinitionProvided = R"({
     "pipeline_config_list": 
     {
@@ -569,7 +641,7 @@ TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
     modelMock.reset();
 }
 
-TEST(ModelManager, ReadsVersionsFromDisk) {
+TEST_F(ModelManager, ReadsVersionsFromDisk) {
     const std::string path = "/tmp/test_model/";
 
     for (auto i : {1, 5, 8, 10}) {
@@ -580,35 +652,35 @@ TEST(ModelManager, ReadsVersionsFromDisk) {
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
 
-    auto status = ovms::ModelManager::getInstance().readAvailableVersions(fs, path, versions);
+    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
 
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
 }
 
-TEST(ModelManager, PathEscapeError1) {
+TEST_F(ModelManager, PathEscapeError1) {
     const std::string path = "/tmp/../test_model/";
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
 
-    auto status = ovms::ModelManager::getInstance().readAvailableVersions(fs, path, versions);
+    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
 
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
-TEST(ModelManager, PathEscapeError2) {
+TEST_F(ModelManager, PathEscapeError2) {
     const std::string path = "../tmp/test_model/";
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
 
-    auto status = ovms::ModelManager::getInstance().readAvailableVersions(fs, path, versions);
+    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
 
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
-TEST(ModelManager, ReadVersionsInvalidPath) {
+TEST_F(ModelManager, ReadVersionsInvalidPath) {
     const std::string path = "/tmp/inexisting_path/8bt4kv";
 
     try {
@@ -618,11 +690,11 @@ TEST(ModelManager, ReadVersionsInvalidPath) {
 
     std::vector<ovms::model_version_t> versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
-    auto status = ovms::ModelManager::getInstance().readAvailableVersions(fs, path, versions);
+    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
-TEST(ModelManager, StartFromFile) {
+TEST(ModelManagerWatcher, StartFromFile) {
     std::filesystem::create_directories(model_1_path);
     std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file1.json";
@@ -639,7 +711,7 @@ TEST(ModelManager, StartFromFile) {
     modelMock.reset();
 }
 
-TEST(ModelManager, StartFromFileWhenModelFilesMissing) {
+TEST(ModelManagerWatcher, StartFromFileWhenModelFilesMissing) {
     std::filesystem::create_directories(model_1_path);
     std::string fileToReload = "/tmp/ovms_config_file1.json";
     createConfigFileWithContent(config_1_model, fileToReload);
@@ -650,7 +722,7 @@ TEST(ModelManager, StartFromFileWhenModelFilesMissing) {
     manager.join();
 }
 
-TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
+TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
     std::filesystem::create_directories(model_1_path);
     std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file2.json";
@@ -695,7 +767,7 @@ public:
     }
 };
 
-TEST(ModelManager, ConfigReloadShouldCleanupResources) {
+TEST(ModelManagerCleaner, ConfigReloadShouldCleanupResources) {
     ResourcesAccessModelManager manager;
     manager.startCleaner();
     ASSERT_EQ(manager.getResourcesSize(), 0);
@@ -866,30 +938,28 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIn
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
-TEST(ModelManager, ConfigReloadingWithWrongInputName) {
-    ConstructorEnabledModelManager manager;
+TEST_F(ModelManager, ConfigReloadingWithWrongInputName) {
     ovms::ModelConfig config;
     config.parseShapeParameter("{\"wrong_input_name\": \"(1,3,224,224)\"}");
     config.setBasePath("/ovms/src/test/dummy");
-    auto status = manager.reloadModelWithVersions(config);
+    auto status = fixtureManager.reloadModelWithVersions(config);
     ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
 }
 
-TEST(ModelManager, ConfigReloadingStatefulDynamic) {
-    ConstructorEnabledModelManager manager;
+TEST_F(ModelManager, ConfigReloadingStatefulDynamic) {
     auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    ASSERT_EQ(fixtureManager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     config.setStateful(true);
     config.setBatchingMode(ovms::Mode::AUTO);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
+    ASSERT_EQ(fixtureManager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
 
     config.setBatchingMode(ovms::Mode::FIXED);
     config.setShapes({{"A", {ovms::Mode::AUTO, {1, 3, 224, 224}}}});
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
+    ASSERT_EQ(fixtureManager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
 }
 
-TEST(ModelManager, ConfigReloadingNonStateful) {
+TEST_F(ModelManager, ConfigReloadingNonStateful) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -899,7 +969,7 @@ TEST(ModelManager, ConfigReloadingNonStateful) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
 }
 
-TEST(ModelManager, ConfigReloadingStatelessToStateful) {
+TEST_F(ModelManager, ConfigReloadingStatelessToStateful) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -908,7 +978,7 @@ TEST(ModelManager, ConfigReloadingStatelessToStateful) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_MODEL_TYPE_CHANGE);
 }
 
-TEST(ModelManager, ConfigReloadingStatefulToStateless) {
+TEST_F(ModelManager, ConfigReloadingStatefulToStateless) {
     ConstructorEnabledModelManager manager;
     auto config = DUMMY_MODEL_CONFIG;
     config.setStateful(true);
@@ -950,7 +1020,7 @@ public:
     }
 };
 
-TEST(ModelManager, HandlingInvalidLastVersion) {
+TEST_F(ModelManager, HandlingInvalidLastVersion) {
     DummyModelDirectoryStructure modelDirectory("HandlingInvalidLastVersion");
     bool validVersion = true;
     // valid version 1 and 2, invalid 3
@@ -1005,7 +1075,7 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     ASSERT_EQ(modelInstance2->getStatus().getErrorCode(), ovms::ModelVersionStatusErrorCode::OK);
 }
 
-TEST(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatus) {
+TEST_F(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatus) {
     DummyModelDirectoryStructure modelDirectory("InitialFailedLoadingVersionSavesModelVersionWithProperStatus");
     bool validVersion = true;
     modelDirectory.addVersion(1, !validVersion);
@@ -1024,7 +1094,7 @@ TEST(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatus)
     ASSERT_EQ(versionIt->second.getStatus().getState(), ovms::ModelVersionState::LOADING);
 }
 
-TEST(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
+TEST_F(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
     DummyModelDirectoryStructure modelDirectory("ModelVersionFailedReloadReportsFailedStatus");
     bool validVersion = true;
     modelDirectory.addVersion(1, validVersion);
@@ -1039,7 +1109,7 @@ TEST(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE);
 }
 
-TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
+TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
     const char* configWithTwoSameNames = R"({
    "model_config_list": [
     {
@@ -1093,7 +1163,7 @@ private:
     std::vector<ovms::model_version_t> toRegister;
 };
 
-TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJson) {
+TEST_F(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJson) {
     std::filesystem::create_directories(model_1_path);
     std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file2.json";

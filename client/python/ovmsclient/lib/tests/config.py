@@ -342,8 +342,9 @@ PREDICT_INVALID_PARAMS = [
     ),
     (
         [{"input": [[1, 2], [3, 4, 5]]}, "model_name", 1, 1],
-        ValueError, "argument must be a dense tensor: [[1, 2], [3, 4, 5]] "
-                    "- got shape [2], but wanted [2, 2]"
+        ValueError, "setting an array element with a sequence. "
+                    "The requested array has an inhomogeneous shape after 1 dimensions. "
+                    "The detected shape was (2,) + inhomogeneous part."
     ),
     # Model name check
     ([{"input": 1.0}, ("model", "name"), 1, 10], TypeError,

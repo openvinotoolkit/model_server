@@ -27,14 +27,24 @@
 #include "shape.hpp"
 
 namespace ovms {
+class InferenceRequest;
 
 std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const size_t batchSizeIndex);
-
 std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request);
 
 std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request, const size_t batchSizeIndex);
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
 
-bool useSharedOutputContent(const tensorflow::serving::PredictRequest* request);
-bool useSharedOutputContent(const ::inference::ModelInferRequest* request);
+std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex);
+std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request);
+
+/**
+ * This is specific check required for passing KFS API related info
+ * which informs how response should be formated. Therefore return value should not have an impact for
+ * any other frontend.
+ */
+template <typename RequestType>
+bool useSharedOutputContent(const RequestType* request) {
+    return true;
+}
 }  // namespace ovms

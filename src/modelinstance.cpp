@@ -54,9 +54,11 @@
 namespace {
 enum : unsigned int {
     GET_INFER_REQUEST,
+    PREPROCESS,
     DESERIALIZE,
     PREDICTION,
     SERIALIZE,
+    POSTPROCESS,
     TIMER_END
 };
 }  // namespace
@@ -68,10 +70,9 @@ const char* NIREQ = "NIREQ";
 
 const uint MAX_NIREQ_COUNT = 100000;
 
-const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
-
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
+ModelInstance::~ModelInstance() = default;
 ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) :
     ieCore(ieCore),
     name(name),
@@ -691,21 +692,13 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         return status;
     }
 
-    uint32_t numberOfStreams = 0;
-    try {
-        numberOfStreams = getNumOfStreams();
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numberOfStreams);
-    } catch (ov::Exception& e) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
-    } catch (...) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
-    }
+    uint32_t numberOfStreams = getNumOfStreams();
     SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
-    for (const auto pair : pluginConfig) {
-        const auto key = pair.first;
-        const auto value = pair.second;
+    for (const auto& pair : pluginConfig) {
+        const auto& key = pair.first;
+        const auto& value = pair.second;
         SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
 
@@ -1101,20 +1094,25 @@ void ModelInstance::unloadModelComponents() {
     }
 }
 
+const std::set<std::string>& ModelInstance::getOptionalInputNames() {
+    static const std::set<std::string> optionalInputNames = {};
+    return optionalInputNames;
+}
+
 template <typename RequestType>
 const Status ModelInstance::validate(const RequestType* request) {
     OVMS_PROFILE_FUNCTION();
-    static const std::set<std::string> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
         getInputsInfo(),
         getName(),
         getVersion(),
-        optionalInputNames,
+        this->getOptionalInputNames(),
         getModelConfig().getBatchingMode(),
         getModelConfig().getShapes());
 }
 
+template const Status ModelInstance::validate(const InferenceRequest* request);
 template const Status ModelInstance::validate(const ::KFSRequest* request);
 template const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request);
 
@@ -1144,19 +1142,28 @@ Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     return StatusCode::OK;
 }
 
-Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
-    tensorflow::serving::PredictResponse* responseProto,
+template <typename RequestType, typename ResponseType>
+Status ModelInstance::infer(const RequestType* requestProto,
+    ResponseType* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
 
-    auto status = validate(requestProto);
+    auto requestProcessor = createRequestProcessor(requestProto, responseProto);  // request, response passed only to deduce type
+    auto status = requestProcessor->extractRequestParameters(requestProto);
+    if (!status.ok())
+        return status;
+    status = validate(requestProto);
     auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
     auto requestShapes = getRequestShapes(requestProto);
     status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
+    status = requestProcessor->prepare();
+    if (!status.ok())
+        return status;
+
     timer.start(GET_INFER_REQUEST);
     OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
@@ -1167,7 +1174,15 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     double getInferRequestTime = timer.elapsed<microseconds>(GET_INFER_REQUEST);
     OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, getInferRequestTime / 1000);
+        getName(), getVersion(), executingInferId, getInferRequestTime / 1000);
+
+    timer.start(PREPROCESS);
+    status = requestProcessor->preInferenceProcessing(inferRequest);
+    timer.stop(PREPROCESS);
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREPROCESS) / 1000);
 
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
@@ -1177,7 +1192,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
 
     timer.start(PREDICTION);
     status = performInference(inferRequest);
@@ -1185,78 +1200,37 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName);
+    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName);
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;
-
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
 
-    return StatusCode::OK;
+    timer.start(POSTPROCESS);
+    status = requestProcessor->postInferenceProcessing(responseProto, inferRequest);
+    timer.stop(POSTPROCESS);
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
+    if (targetDevice == "AUTO")
+        for (std::string device : compiledModel->get_property(ov::execution_devices))
+            SPDLOG_DEBUG("Used device: {}", device);
+
+    status = requestProcessor->release();
+    return status;
 }
-
-Status ModelInstance::infer(const ::KFSRequest* requestProto,
+template Status ModelInstance::infer<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(const tensorflow::serving::PredictRequest* requestProto,
+    tensorflow::serving::PredictResponse* responseProto,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+template Status ModelInstance::infer(const ::KFSRequest* requestProto,
     ::KFSResponse* responseProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
-    OVMS_PROFILE_FUNCTION();
-    Timer<TIMER_END> timer;
-    using std::chrono::microseconds;
-
-    auto status = validate(requestProto);
-    auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
-    auto requestShapes = getRequestShapes(requestProto);
-    status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
-    if (!status.ok())
-        return status;
-    timer.start(GET_INFER_REQUEST);
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
-    int executingInferId = executingStreamIdGuard.getId();
-    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
-    timer.stop(GET_INFER_REQUEST);
-    double getInferRequestTime = timer.elapsed<microseconds>(GET_INFER_REQUEST);
-    OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
-    SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_name(), getVersion(), executingInferId, getInferRequestTime / 1000);
-
-    timer.start(DESERIALIZE);
-    InputSink<ov::InferRequest&> inputSink(inferRequest);
-    bool isPipeline = false;
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
-    timer.stop(DESERIALIZE);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
-
-    timer.start(PREDICTION);
-    status = performInference(inferRequest);
-    timer.stop(PREDICTION);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
-
-    timer.start(SERIALIZE);
-    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContent(requestProto));
-    timer.stop(SERIALIZE);
-    if (!status.ok())
-        return status;
-
-    responseProto->set_model_name(getName());
-    responseProto->set_model_version(std::to_string(getVersion()));
-
-    SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
-
-    return StatusCode::OK;
-}
-
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 const size_t ModelInstance::getBatchSizeIndex() const {
     const auto& inputItr = this->inputsInfo.cbegin();
     if (inputItr == this->inputsInfo.cend()) {
@@ -1270,8 +1244,55 @@ const size_t ModelInstance::getBatchSizeIndex() const {
     return batchIndex.value();
 }
 
-uint32_t ModelInstance::getNumOfStreams() const {
-    return compiledModel->get_property(ov::num_streams);
+uint32_t ModelInstance::getOptimalNumberOfInferRequests() const {
+    try {
+        uint32_t numOptimalInferRequests = compiledModel->get_property(ov::optimal_number_of_infer_requests);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numOptimalInferRequests);
+        return numOptimalInferRequests;
+    } catch (...) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of optimal infer requests; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+    }
+    return 0;
 }
 
+uint32_t ModelInstance::getNumOfStreams() const {
+    try {
+        uint32_t numStreams = compiledModel->get_property(ov::num_streams);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numStreams);
+        return numStreams;
+    } catch (...) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get property ov::num_streams device: {}. Number of streams will be set to number of optimal infer requests.", config.getTargetDevice());
+    }
+    return getOptimalNumberOfInferRequests();
+}
+
+std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
+    return std::make_unique<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>>();
+}
+std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> ModelInstance::createRequestProcessor(const KFSRequest*, KFSResponse*) {
+    return std::make_unique<RequestProcessor<KFSRequest, KFSResponse>>();
+}
+std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> ModelInstance::createRequestProcessor(const InferenceRequest*, InferenceResponse*) {
+    return std::make_unique<RequestProcessor<InferenceRequest, InferenceResponse>>();
+}
+
+template Status ModelInstance::infer<InferenceRequest, InferenceResponse>(InferenceRequest const*, InferenceResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
+
+template <typename RequestType, typename ResponseType>
+RequestProcessor<RequestType, ResponseType>::RequestProcessor() = default;
+template <typename RequestType, typename ResponseType>
+RequestProcessor<RequestType, ResponseType>::~RequestProcessor() = default;
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::extractRequestParameters(const RequestType* request) { return StatusCode::OK; }
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::prepare() { return StatusCode::OK; }
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::preInferenceProcessing(ov::InferRequest& inferRequest) { return StatusCode::OK; }
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
+template <typename RequestType, typename ResponseType>
+Status RequestProcessor<RequestType, ResponseType>::release() { return StatusCode::OK; }
+
+template class RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>;
+template class RequestProcessor<KFSRequest, KFSResponse>;
 }  // namespace ovms

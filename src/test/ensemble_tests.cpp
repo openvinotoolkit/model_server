@@ -22,9 +22,13 @@
 #include <stdlib.h>
 
 #include "../binaryutils.hpp"
-#include "../dl_node.hpp"
-#include "../entry_node.hpp"
-#include "../exit_node.hpp"
+#include "../dags/dl_node.hpp"
+#include "../dags/entry_node.hpp"
+#include "../dags/exit_node.hpp"
+#include "../dags/nodestreamidguard.hpp"
+#include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
+#include "../dags/pipelinedefinition.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
@@ -32,10 +36,6 @@
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#include "../nodestreamidguard.hpp"
-#include "../pipeline.hpp"
-#include "../pipeline_factory.hpp"
-#include "../pipelinedefinition.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
@@ -88,8 +88,8 @@ public:
         prepareKFSInferInputTensor(request, customPipelineInputName, std::make_tuple(shape, ovmsPrecisionToKFSPrecision(ovms::Precision::FP32)), requestData);
     }
 
-    void checkDummyResponse(int seriesLength, int batchSize = 1) {
-        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize);
+    void checkDummyResponse(int seriesLength, int batchSize = 1, const std::string& servableName = "") {
+        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize, servableName);
     }
 
     ModelConfig config;
@@ -248,7 +248,9 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
     auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", this->dummyModelName, this->requestedModelVersion, managerWithDummyModel);
     const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
-    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
+    std::set<std::string> gatherFromNode = {};
+    std::string pipelineName = "test_pipeline";
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, gatherFromNode, true, pipelineName);
     Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
@@ -259,7 +261,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
 
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
-    this->checkDummyResponse(dummySeriallyConnectedCount);
+    this->checkDummyResponse(dummySeriallyConnectedCount, 1, pipelineName);
 }
 
 TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {
@@ -1751,7 +1753,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
 
 class DLNodeFailInFetch : public DLNode {
 public:
-    DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager = ModelManager::getInstance()) :
+    DLNodeFailInFetch(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager) :
         DLNode(nodeName, modelName, modelVersion, modelManager, {}) {}
     ovms::Status fetchResults(NodeSession& nodeSession, SessionResults& sessionResults) override {
         // no release is called as in dl_node.cpp when on error path
@@ -2621,12 +2623,13 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_DefinitionMissing) {
+    ConstructorEnabledModelManager manager;
     PipelineFactory factory;
 
     PredictRequest request;
     PredictResponse response;
     std::unique_ptr<Pipeline> pipeline;
-    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, ovms::ModelManager::getInstance()), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
+    EXPECT_EQ(factory.create(pipeline, "pipeline", &request, &response, manager), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {

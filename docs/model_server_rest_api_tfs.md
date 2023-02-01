@@ -49,6 +49,9 @@ If successful, returns a JSON of following format :
 **Usage Example**
 ```
 $ curl http://localhost:8001/v1/models/person-detection/versions/1
+```
+
+```JSON
 {
   'model_version_status':[
     {
@@ -81,7 +84,7 @@ GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VER
 If successful, returns a JSON representation of [GetModelMetadataResponse](https://github.com/tensorflow/serving/blob/5369880e9143aa00d586ee536c12b04e945a977c/tensorflow_serving/apis/get_model_metadata.proto#L23) protobuf.
 
 **Usage example**
-```
+```JSON
 $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 {
   "modelSpec": {
@@ -158,7 +161,7 @@ POST http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VE
 ```
 
 **Request Header**
-```
+```JSON
 {
   // (Optional) Serving signature to use.
   // If unspecifed default serving signature is used.
@@ -177,22 +180,22 @@ Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx
 
 A request in [row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) has response formatted as follows :
 
-```
+```JSON
 {
   "predictions": <value>|<(nested)list>|<list-of-objects>
 }
 ```
 A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) has response formatted as follows :
 
-```
+```JSON
 {
   "outputs": <value>|<(nested)list>|<object>
 }
 ```
 
-Besides numerical values, it is possible to pass binary inputs. They must be Base64 encoded in passed in `b64` key like below:
+Besides numerical values, it is possible to pass JPEG / PNG encoded images as binary inputs. They must be Base64 encoded in passed in `b64` key like below:
 
-```
+```JSON
 {
   "instances": [
     {
@@ -205,7 +208,9 @@ Besides numerical values, it is possible to pass binary inputs. They must be Bas
 }
 ```
 
-Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
+On the server side, the binary encoded data is loaded using OpenCV which then converts it to OpenVINO-friendly data format for inference.
+
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more informations.
 
 Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
 

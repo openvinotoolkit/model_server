@@ -178,7 +178,7 @@ Because of this additional dimension, demultiplexing implementation is generic a
 
 Examplary usage of this feature is available in [dynamic batch size guide](./dynamic_bs_demultiplexer.md).
 
-*Note:* You can use additional parameters in model config ('nireq' and 'CPU_THROUGHPUT_STREAMS') to fine-tune your performance for dynamic batch. 'CPU_THROUGHPUT_STREAMS' allows for multiple parallel
+*Note:* You can use additional parameters in model config ('nireq' and 'NUM_STREAMS') to fine-tune your performance for dynamic batch. 'NUM_STREAMS' allows for multiple parallel
 inferences processing in OpenVINO&trade; which may increase throughput at the cost of latency of predict requests. 'nireq' specifies how many inference requests can be prepared.
 
 *Note:* In case you are using a different device for inference than CPU you have check that device plugin configuration parameters.

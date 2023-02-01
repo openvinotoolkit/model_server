@@ -37,13 +37,17 @@
 #include "azurefilesystem.hpp"
 #include "cleaner_utils.hpp"
 #include "config.hpp"
-#include "custom_node_library_internal_manager_wrapper.hpp"
-#include "custom_node_library_manager.hpp"
 #include "customloaderconfig.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
-#include "entry_node.hpp"  // need for ENTRY_NODE_NAME
-#include "exit_node.hpp"   // need for EXIT_NODE_NAME
+#include "dags/custom_node_library_internal_manager_wrapper.hpp"
+#include "dags/custom_node_library_manager.hpp"
+#include "dags/entry_node.hpp"  // need for ENTRY_NODE_NAME
+#include "dags/exit_node.hpp"   // need for EXIT_NODE_NAME
+#include "dags/node_library.hpp"
+#include "dags/pipeline.hpp"
+#include "dags/pipeline_factory.hpp"
+#include "dags/pipelinedefinition.hpp"
 #include "filesystem.hpp"
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
@@ -51,12 +55,8 @@
 #include "metric_config.hpp"
 #include "metric_registry.hpp"
 #include "modelinstance.hpp"  // for logging
-#include "node_library.hpp"
 #include "openssl/md5.h"
 #include "ov_utils.hpp"
-#include "pipeline.hpp"
-#include "pipeline_factory.hpp"
-#include "pipelinedefinition.hpp"
 #include "s3filesystem.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
@@ -152,7 +152,7 @@ Status ModelManager::start(const Config& config) {
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
     if (resourcesCleanupIntervalSec < 1) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: custom_node_resources_cleaner_interval has to be greater than 0. Applying default value(1 second)");
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: custom_node_resources_cleaner_interval_seconds has to be greater than 0. Applying default value(1 second)");
         resourcesCleanupIntervalSec = 1;
     }
     Status status;

@@ -403,5 +403,4 @@ StatusCode GCSFileSystem::deleteFileFolder(const std::string& path) {
         return StatusCode::FILE_INVALID;
     }
 }
-
 }  // namespace ovms

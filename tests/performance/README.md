@@ -15,8 +15,9 @@ $ pip3 install -r ../requirements.txt
 ```
 
 ```bash
-$ docker run -p 9178:9178 openvino/model_server:latest --model_name resnet \
---model_path gs://ovms-public-eu/resnet50 --port 9178 --batch_size 2
+$ wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+$ docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet \
+--model_path /models/resnet50 --port 9178 --batch_size 2
 ```
 
 ## Latency
@@ -69,7 +70,7 @@ optional arguments:
 
 ### Example usage:
 ```bash
-$ python3 grpc_latency.py --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 1000 --batchsize 2 --report_every 100 --input_name "data"
+$ python3 grpc_latency.py --grpc_address localhost --grpc_port 9000 --images_numpy_path imgs.npy --iteration 1000 --batchsize 2 --report_every 100 --input_name "0"
 ```
 ```bash
 [--] Starting iterations
@@ -90,7 +91,7 @@ Script `grpc_throughput.sh 28` spawns 28 gRPC clients.
 
 ### Example usage:
 ```bash
-$ ./grpc_throughput.sh 28 --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 4000 --batchsize 2 --input_name "data"
+$ ./grpc_throughput.sh 28 --grpc_address localhost --grpc_port 9000 --images_numpy_path imgs.npy --iteration 4000 --batchsize 2 --input_name "0"
 ```
 
 This will create `28 * 4000` requests, `2` frames each, = `224000` frames total.  

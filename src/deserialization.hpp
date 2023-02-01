@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,14 +25,16 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-
-#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
 #include "binaryutils.hpp"
+#include "inferencerequest.hpp"
+#include "inferencetensor.hpp"
+#include "kfs_frontend/kfs_utils.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 
@@ -43,6 +45,9 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo,
     const std::string& buffer);
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo);
+
+ov::Tensor makeTensor(const InferenceTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo);
 
 class ConcreteTensorProtoDeserializator {
@@ -211,6 +216,36 @@ public:
     }
 
     static ov::Tensor deserializeTensorProto(
+        const InferenceTensor& requestInput,
+        const std::shared_ptr<TensorInfo>& tensorInfo) {
+        OVMS_PROFILE_FUNCTION();
+        switch (tensorInfo->getPrecision()) {
+        case ovms::Precision::FP64:
+        case ovms::Precision::FP32:
+        case ovms::Precision::FP16:
+        case ovms::Precision::I64:
+        case ovms::Precision::I32:
+        case ovms::Precision::I16:
+        case ovms::Precision::I8:
+        case ovms::Precision::U64:
+        case ovms::Precision::U32:
+        case ovms::Precision::U16:
+        case ovms::Precision::BOOL:
+        case ovms::Precision::U1:
+        case ovms::Precision::U8: {
+            return makeTensor(requestInput, tensorInfo);
+        }
+        case ovms::Precision::CUSTOM:
+        case ovms::Precision::UNDEFINED:
+        case ovms::Precision::DYNAMIC:
+        case ovms::Precision::MIXED:
+        case ovms::Precision::Q78:
+        case ovms::Precision::BIN:
+        default:
+            return ov::Tensor();
+        }
+    }
+    static ov::Tensor deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo) {
         OVMS_PROFILE_FUNCTION();
@@ -277,6 +312,13 @@ ov::Tensor deserializeTensorProto(
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, buffer);
 }
 
+template <class TensorProtoDeserializator>
+ov::Tensor deserializeTensorProto(
+    const InferenceTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
+}
+
 template <class Requester>
 class InputSink {
     Requester requester;
@@ -306,11 +348,11 @@ Status deserializePredictRequest(
             auto& requestInput = requestInputItr->second;
             ov::Tensor tensor;
 
-            if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
-                SPDLOG_DEBUG("Request contains binary input: {}", name);
-                status = convertBinaryRequestTensorToOVTensor(requestInput, tensor, tensorInfo);
+            if (isNativeFileFormatUsed(requestInput)) {
+                SPDLOG_DEBUG("Request contains input in native file format: {}", name);
+                status = convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr);
                 if (!status.ok()) {
-                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    SPDLOG_DEBUG("Input native file format conversion failed.");
                     return status;
                 }
             } else {
@@ -364,23 +406,72 @@ Status deserializePredictRequest(
             }
             ov::Tensor tensor;
 
-            if (requestInputItr->datatype() == "BYTES") {
-                SPDLOG_DEBUG("Request contains binary input: {}", name);
-                status = convertBinaryRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo);
+            auto inputIndex = requestInputItr - request.inputs().begin();
+            auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
+
+            if (isNativeFileFormatUsed(*requestInputItr)) {
+                SPDLOG_DEBUG("Request contains input in native file format: {}", name);
+                status = convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation);
                 if (!status.ok()) {
-                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    SPDLOG_DEBUG("Input native file format conversion failed.");
                     return status;
                 }
             } else {
-                auto inputIndex = requestInputItr - request.inputs().begin();
-                auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
-
                 tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);
                 if (!tensor) {
                     status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                     SPDLOG_DEBUG(status.string());
                     return status;
                 }
+            }
+
+            const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
+            status = inputSink.give(ovTensorName, tensor);
+            if (!status.ok()) {
+                SPDLOG_DEBUG("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
+                return status;
+            }
+            // OV implementation the ov::Exception is not
+            // a base class for all other exceptions thrown from OV.
+            // OV can throw exceptions derived from std::logic_error.
+        } catch (const ov::Exception& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
+        } catch (std::logic_error& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
+        }
+    }
+    return status;
+}
+template <class TensorProtoDeserializator, class Sink>
+Status deserializePredictRequest(
+    const InferenceRequest& request,
+    const tensor_map_t& inputMap,
+    Sink& inputSink, bool isPipeline) {
+    OVMS_PROFILE_FUNCTION();
+    Status status;
+    for (const auto& [name, tensorInfo] : inputMap) {
+        try {
+            const InferenceTensor* requestInputPtr{nullptr};
+            auto status = request.getInput(name.c_str(), &requestInputPtr);
+            if (!status.ok() || requestInputPtr == nullptr) {
+                SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+                return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
+            }
+            ov::Tensor tensor;
+            // binary input handling
+            /* if (requestInputPtr->getDataType() == "BYTES") {
+                SPDLOG_DEBUG("Request contains binary input: {}", name);
+                return StatusCode::NOT_IMPLEMENTED;
+            } else { */
+            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo);
+            if (!tensor) {
+                status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+                SPDLOG_DEBUG(status.string());
+                return status;
             }
 
             const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();

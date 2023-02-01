@@ -12,8 +12,6 @@ Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage.
 
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
-Review the [Architecture concept](https://docs.openvino.ai/2022.2/ovms_docs_architecture.html) document for more details.
-
 Key features: 
 - support for multiple frameworks, such as Caffe, TensorFlow, MXNet, PaddlePaddle and ONNX
 - online deployment of new [model versions](https://docs.openvino.ai/2022.2/ovms_docs_model_version_policy.html)
@@ -22,7 +20,7 @@ Key features:
 [Intel Movidius Myriad VPUs](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_MYRIAD.html), 
 [GPU](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html), and 
 [HDDL](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_HDDL.html) 
-- works with [Bare Metal Hosts](docs/host.md) as well as [Docker containers](https://docs.openvino.ai/2022.2/ovms_docs_docker_container.html) 
+- works with Bare Metal Hosts as well as [Docker containers](https://docs.openvino.ai/2022.3/ovms_docs_deploying_server.html) 
 - [model reshaping](https://docs.openvino.ai/2022.2/ovms_docs_shape_batch_layout.html) in runtime
 - [directed Acyclic Graph Scheduler](https://docs.openvino.ai/2022.2/ovms_docs_dag.html) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
 - [custom nodes in DAG pipelines](https://docs.openvino.ai/2022.2/ovms_docs_custom_node_development.html) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
@@ -45,9 +43,7 @@ For more information on using Model Server in various scenarios you can check th
 
 * [Model repository configuration](https://docs.openvino.ai/2022.2/ovms_docs_models_repository.html)
 
-* [Using a docker container](https://docs.openvino.ai/2022.2/ovms_docs_docker_container.html)
-
-* [Landing on bare metal or virtual machine](https://docs.openvino.ai/2022.2/ovms_docs_baremetal.html)
+* [Deployment options](https://docs.openvino.ai/2022.3/ovms_docs_deploying_server.html)
 
 * [Performance tuning](https://docs.openvino.ai/2022.2/ovms_docs_performance_tuning.html)
 

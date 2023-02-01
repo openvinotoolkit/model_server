@@ -29,11 +29,15 @@
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
+#include "dags/pipeline.hpp"
+#include "dags/pipelinedefinition.hpp"
+#include "dags/pipelinedefinitionunloadguard.hpp"
 #include "execution_context.hpp"
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "kfs_frontend/kfs_utils.hpp"
 #include "metric_module.hpp"
 #include "metric_registry.hpp"
 #include "model_metric_reporter.hpp"
@@ -41,9 +45,6 @@
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
-#include "pipeline.hpp"
-#include "pipelinedefinition.hpp"
-#include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
@@ -239,48 +240,6 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
     }
 }
 
-std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body) {
-    static const std::unordered_map<std::string, std::string> types = {
-        {"BOOL", "bool_contents"},
-        {"INT8", "int_contents"},
-        {"INT16", "int_contents"},
-        {"INT32", "int_contents"},
-        {"INT64", "int64_contents"},
-        {"UINT8", "uint_contents"},
-        {"UINT16", "uint_contents"},
-        {"UINT32", "uint_contents"},
-        {"UINT64", "uint64_contents"},
-        {"FP32", "fp32_contents"},
-        {"FP64", "fp64_contents"},
-        {"BYTES", "bytes_contents"}};
-
-    Document doc;
-    doc.Parse(request_body.c_str());
-    Value& inputs = doc["inputs"];
-    for (SizeType i = 0; i < inputs.Size(); i++) {
-        Value data = inputs[i].GetObject()["data"].GetArray();
-        Value contents(rapidjson::kObjectType);
-        auto it = types.find(inputs[i].GetObject()["datatype"].GetString());
-        if (it == types.end())
-            return "";
-        // TODO confirm its not an issue
-        Value datatype(it->second.c_str(), doc.GetAllocator());
-        contents.AddMember(datatype, data, doc.GetAllocator());
-        inputs[i].AddMember("contents", contents, doc.GetAllocator());
-        parseParams(inputs[i], doc);
-    }
-    Value& outputs = doc["outputs"];
-    for (SizeType i = 0; i < outputs.Size(); i++) {
-        parseParams(outputs[i], doc);
-    }
-    parseParams(doc, doc);
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-
-    return buffer.GetString();
-}
-
 static Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
     std::stringstream streamData(comma_separated_numbers);
     std::vector<int> sizes_;
@@ -299,59 +258,59 @@ static Status convertStringToVectorOfSizes(const std::string& comma_separated_nu
     return StatusCode::OK;
 }
 
-static Status parseBinaryInput(KFSTensorInputProto* input, size_t binary_input_size, const char* buffer) {
-    if (input->datatype() == "FP32") {
+static Status parseBinaryInput(KFSTensorInputProto& input, size_t binary_input_size, const char* buffer) {
+    if (input.datatype() == "FP32") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(float)) {
-            auto value = input->mutable_contents()->mutable_fp32_contents()->Add();
+            auto value = input.mutable_contents()->mutable_fp32_contents()->Add();
             *value = (*(reinterpret_cast<const float*>(buffer + i)));
         }
-    } else if (input->datatype() == "INT64") {
+    } else if (input.datatype() == "INT64") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(int64_t)) {
-            auto value = input->mutable_contents()->mutable_int64_contents()->Add();
+            auto value = input.mutable_contents()->mutable_int64_contents()->Add();
             *value = (*(reinterpret_cast<const int64_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "INT32") {
+    } else if (input.datatype() == "INT32") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(int32_t)) {
-            auto value = input->mutable_contents()->mutable_int_contents()->Add();
+            auto value = input.mutable_contents()->mutable_int_contents()->Add();
             *value = (*(reinterpret_cast<const int32_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "INT16") {
+    } else if (input.datatype() == "INT16") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(int16_t)) {
-            auto value = input->mutable_contents()->mutable_int_contents()->Add();
+            auto value = input.mutable_contents()->mutable_int_contents()->Add();
             *value = (*(reinterpret_cast<const int16_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "INT8") {
+    } else if (input.datatype() == "INT8") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(int8_t)) {
-            auto value = input->mutable_contents()->mutable_int_contents()->Add();
+            auto value = input.mutable_contents()->mutable_int_contents()->Add();
             *value = (*(reinterpret_cast<const int8_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "UINT64") {
+    } else if (input.datatype() == "UINT64") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(uint64_t)) {
-            auto value = input->mutable_contents()->mutable_uint64_contents()->Add();
+            auto value = input.mutable_contents()->mutable_uint64_contents()->Add();
             *value = (*(reinterpret_cast<const uint64_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "UINT32") {
+    } else if (input.datatype() == "UINT32") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(uint32_t)) {
-            auto value = input->mutable_contents()->mutable_uint_contents()->Add();
+            auto value = input.mutable_contents()->mutable_uint_contents()->Add();
             *value = (*(reinterpret_cast<const uint32_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "UINT16") {
+    } else if (input.datatype() == "UINT16") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(uint16_t)) {
-            auto value = input->mutable_contents()->mutable_uint_contents()->Add();
+            auto value = input.mutable_contents()->mutable_uint_contents()->Add();
             *value = (*(reinterpret_cast<const uint16_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "UINT8") {
+    } else if (input.datatype() == "UINT8") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(uint8_t)) {
-            auto value = input->mutable_contents()->mutable_uint_contents()->Add();
+            auto value = input.mutable_contents()->mutable_uint_contents()->Add();
             *value = (*(reinterpret_cast<const uint8_t*>(buffer + i)));
         }
-    } else if (input->datatype() == "FP64") {
+    } else if (input.datatype() == "FP64") {
         for (size_t i = 0; i < binary_input_size; i += sizeof(double)) {
-            auto value = input->mutable_contents()->mutable_fp64_contents()->Add();
+            auto value = input.mutable_contents()->mutable_fp64_contents()->Add();
             *value = (*(reinterpret_cast<const double*>(buffer + i)));
         }
-    } else if (input->datatype() == "BYTES") {
-        input->mutable_contents()->add_bytes_contents(buffer, binary_input_size);
+    } else if (input.datatype() == "BYTES") {
+        input.mutable_contents()->add_bytes_contents(buffer, binary_input_size);
     } else {
         return StatusCode::REST_UNSUPPORTED_PRECISION;
     }
@@ -361,59 +320,59 @@ static Status parseBinaryInput(KFSTensorInputProto* input, size_t binary_input_s
 
 #define CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE " contents is not empty. Content field should be empty when using binary inputs extension."
 
-static Status validateContentFieldsEmptiness(KFSTensorInputProto* input) {
-    if (input->datatype() == "FP32") {
-        if (input->contents().fp32_contents_size() > 0) {
+static Status validateContentFieldsEmptiness(KFSTensorInputProto& input) {
+    if (input.datatype() == "FP32") {
+        if (input.contents().fp32_contents_size() > 0) {
             SPDLOG_DEBUG("FP32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "INT64") {
-        if (input->contents().int64_contents_size() > 0) {
+    } else if (input.datatype() == "INT64") {
+        if (input.contents().int64_contents_size() > 0) {
             SPDLOG_DEBUG("INT64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "INT32") {
-        if (input->contents().int_contents_size() > 0) {
+    } else if (input.datatype() == "INT32") {
+        if (input.contents().int_contents_size() > 0) {
             SPDLOG_DEBUG("INT32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "INT16") {
-        if (input->contents().int_contents_size() > 0) {
+    } else if (input.datatype() == "INT16") {
+        if (input.contents().int_contents_size() > 0) {
             SPDLOG_DEBUG("INT16" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "INT8") {
-        if (input->contents().int_contents_size() > 0) {
+    } else if (input.datatype() == "INT8") {
+        if (input.contents().int_contents_size() > 0) {
             SPDLOG_DEBUG("INT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "UINT64") {
-        if (input->contents().uint64_contents_size() > 0) {
+    } else if (input.datatype() == "UINT64") {
+        if (input.contents().uint64_contents_size() > 0) {
             SPDLOG_DEBUG("UINT64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "UINT32") {
-        if (input->contents().uint_contents_size() > 0) {
+    } else if (input.datatype() == "UINT32") {
+        if (input.contents().uint_contents_size() > 0) {
             SPDLOG_DEBUG("UINT32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "UINT16") {
-        if (input->contents().uint_contents_size() > 0) {
+    } else if (input.datatype() == "UINT16") {
+        if (input.contents().uint_contents_size() > 0) {
             SPDLOG_DEBUG("UINT16" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "UINT8") {
-        if (input->contents().uint_contents_size() > 0) {
+    } else if (input.datatype() == "UINT8") {
+        if (input.contents().uint_contents_size() > 0) {
             SPDLOG_DEBUG("UINT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "FP64") {
-        if (input->contents().fp64_contents_size() > 0) {
+    } else if (input.datatype() == "FP64") {
+        if (input.contents().fp64_contents_size() > 0) {
             SPDLOG_DEBUG("FP64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
-    } else if (input->datatype() == "BYTES") {
-        if (input->contents().bytes_contents_size() > 0) {
+    } else if (input.datatype() == "BYTES") {
+        if (input.contents().bytes_contents_size() > 0) {
             SPDLOG_DEBUG("BYTES" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
             return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
         }
@@ -424,32 +383,72 @@ static Status validateContentFieldsEmptiness(KFSTensorInputProto* input) {
     return StatusCode::OK;
 }
 
+static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
+    if (input.datatype() == "FP32")
+        return input.contents().fp32_contents_size() == 0;
+    if (input.datatype() == "INT64")
+        return input.contents().int64_contents_size() == 0;
+    if (input.datatype() == "INT32")
+        return input.contents().int_contents_size() == 0;
+    if (input.datatype() == "INT16")
+        return input.contents().int_contents_size() == 0;
+    if (input.datatype() == "INT8")
+        return input.contents().int_contents_size() == 0;
+    if (input.datatype() == "UINT64")
+        return input.contents().uint64_contents_size() == 0;
+    if (input.datatype() == "UINT32")
+        return input.contents().uint_contents_size() == 0;
+    if (input.datatype() == "UINT16")
+        return input.contents().uint_contents_size() == 0;
+    if (input.datatype() == "UINT8")
+        return input.contents().uint_contents_size() == 0;
+    if (input.datatype() == "FP64")
+        return input.contents().fp64_contents_size() == 0;
+    if (input.datatype() == "BYTES")
+        return input.contents().bytes_contents_size() == 0;
+    return true;
+}
+
+static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input) {
+    if (binary_input_offset + binary_input_size > binary_buffer_size) {
+        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
+        return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
+    }
+    auto status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Parsing binary inputs failed");
+        return status;
+    }
+    binary_input_offset += binary_input_size;
+    return StatusCode::OK;
+}
+
+static size_t calculateBinaryDataSize(::KFSRequest::InferInputTensor& input, size_t& binary_data_size) {
+    auto element_size = KFSDataTypeSize(input.datatype());
+    size_t elements_number = std::accumulate(std::begin(input.shape()), std::end(input.shape()), 1, std::multiplies<size_t>());
+    binary_data_size = elements_number * element_size;
+    return binary_data_size;
+}
+
 static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
     const char* binary_inputs = &(request_body[endOfJson]);
-    size_t binary_inputs_size = request_body.length() - endOfJson;
+    size_t binary_buffer_size = request_body.length() - endOfJson;
 
     size_t binary_input_offset = 0;
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
         auto input = grpc_request.mutable_inputs()->Mutable(i);
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
         if (binary_data_size_parameter != input->parameters().end()) {
-            auto status = validateContentFieldsEmptiness(input);
+            auto status = validateContentFieldsEmptiness(*input);
             if (!status.ok()) {
                 SPDLOG_DEBUG("Request contains both data in json and binary inputs");
                 return status;
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 auto binary_input_size = binary_data_size_parameter->second.int64_param();
-                if (binary_input_offset + binary_input_size > binary_inputs_size) {
-                    SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_inputs_size);
-                    return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
-                }
-                status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("Parsing binary inputs failed");
+                auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+                if (!status.ok())
                     return status;
-                }
-                binary_input_offset += binary_input_size;
             } else if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
                 std::vector<int> binary_inputs_sizes;
                 status = convertStringToVectorOfSizes(binary_data_size_parameter->second.string_param(), binary_inputs_sizes);
@@ -457,11 +456,11 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
                     return status;
                 }
                 for (auto size : binary_inputs_sizes) {
-                    if (binary_input_offset + size > binary_inputs_size) {
-                        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_inputs_size);
+                    if (binary_input_offset + size > binary_buffer_size) {
+                        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
                         return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
                     }
-                    status = parseBinaryInput(input, size, binary_inputs + binary_input_offset);
+                    status = parseBinaryInput(*input, size, binary_inputs + binary_input_offset);
                     if (!status.ok()) {
                         SPDLOG_DEBUG("Parsing binary inputs failed");
                         return status;
@@ -472,6 +471,19 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
                 SPDLOG_DEBUG("binary_data_size parameter type should be int64 or string");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
             }
+        } else {
+            if (!isInputEmpty(*input))
+                continue;
+            if (grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
+                auto status = handleBinaryInput(binary_buffer_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+                if (!status.ok())
+                    return status;
+                continue;
+            }
+            size_t binary_data_size = calculateBinaryDataSize(*input, binary_data_size);
+            auto status = handleBinaryInput(binary_data_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+            if (!status.ok())
+                return status;
         }
     }
     return StatusCode::OK;
@@ -669,7 +681,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 
 static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
     const std::vector<std::pair<std::string, std::string>>& headers) {
-    for (auto header : headers) {
+    for (auto& header : headers) {
         if (header.first == "Inference-Header-Content-Length") {
             requestComponents.inferenceHeaderContentLength = stoi32(header.second);
             if (!requestComponents.inferenceHeaderContentLength.has_value() || requestComponents.inferenceHeaderContentLength.value() < 0) {

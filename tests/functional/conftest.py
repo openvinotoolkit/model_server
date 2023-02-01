@@ -119,6 +119,14 @@ def pytest_collection_modifyitems(session, config, items):
     items = reorder_items_by_fixtures_used(session)
 
 
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    if call.when == "setup":
+        report = outcome.get_result()
+        report.test_metadata = {"start": call.start}
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call():
     __tracebackhide__ = True

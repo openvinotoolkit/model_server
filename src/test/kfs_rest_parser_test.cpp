@@ -319,6 +319,112 @@ TEST_F(KFSRestParserTest, parseValidRequestBYTES) {
     ASSERT_EQ(binary_data_size_parameter->second.int64_param(), 4);
 }
 
+TEST_F(KFSRestParserTest, parseValidRequestBYTES_noBinaryDataSizeParameter) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [1],
+        "datatype" : "BYTES"
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(1));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
+    ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 0);
+}
+
+TEST_F(KFSRestParserTest, parseInvalidRequestBYTES_noBinaryDataSizeParameter) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [2],
+        "datatype" : "BYTES"
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(KFSRestParserTest, parseInvalidRequestBYTES_noBinaryDataSizeParameter_twoInputs) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 2, 2 ],
+        "datatype" : "BYTES"
+        },
+        {
+        "name" : "input1",
+        "shape" : [ 1, 2 ],
+        "datatype" : "INT32"
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(KFSRestParserTest, parseValidRequestFP32_noData_noBinaryDataSizeParameter) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 2, 2 ],
+        "datatype" : "FP32"
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "FP32");
+    ASSERT_EQ(proto.inputs()[0].contents().fp32_contents_size(), 0);
+}
+
+TEST_F(KFSRestParserTest, parseValidRequestFP32_noData_noBinaryDataSizeParameter_twoInputs) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 2, 2 ],
+        "datatype" : "FP32"
+        },
+        {
+        "name" : "input1",
+        "shape" : [ 1, 1 ],
+        "datatype" : "INT32"
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 2);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "FP32");
+    ASSERT_EQ(proto.inputs()[0].contents().fp32_contents_size(), 0);
+
+    ASSERT_EQ(proto.inputs()[1].name(), "input1");
+    ASSERT_THAT(proto.inputs()[1].shape(), ElementsAre(1, 1));
+    ASSERT_EQ(proto.inputs()[1].datatype(), "INT32");
+    ASSERT_EQ(proto.inputs()[1].contents().int_contents_size(), 0);
+}
+
 TEST_F(KFSRestParserTest, parseValidRequestWithStringRequestParameter) {
     std::string request = R"({
     "parameters" : {"param" : "value"},
@@ -655,20 +761,6 @@ TEST_F(KFSRestParserTest, parseInvalidRequestBoolWithIntData) {
         "shape" : [ 2, 2 ],
         "datatype" : "BOOL",
         "data" : [ 0, 1, 0, 1]
-        }
-    ]
-    })";
-    auto status = parser.parse(request.c_str());
-    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
-}
-
-TEST_F(KFSRestParserTest, parseInvalidRequestWithNoDataAndNoBinaryInputsParameter) {
-    std::string request = R"({
-    "inputs" : [
-        {
-        "name" : "input0",
-        "shape" : [ 2, 2 ],
-        "datatype" : "UINT32"
         }
     ]
     })";

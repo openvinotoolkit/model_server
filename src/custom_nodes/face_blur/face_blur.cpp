@@ -158,6 +158,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
     if ((*outputs) == nullptr) {
         std::cout << "malloc has failed" << std::endl;
+        free(buffer);
         return 1;
     }
 
