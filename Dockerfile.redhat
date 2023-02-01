@@ -31,35 +31,21 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             boost169-thread \
             boost169-system \
             boost169-date-time \
+            libuuid-devel \
             bc \
             cmake \
             curl \
             gcc-c++ \
-            gdb \
             git \
-            java-11-openjdk-devel \
-            libgusb.x86_64 \
-            libusbx \
             libcurl-devel \
             libtool \
-            libuuid-devel \
             libxml2-devel \
             make \
             openssl-devel \
             patch \
             pkg-config \
-            python3 \
-            python3-pip \
-            python3-devel \
-            python3-setuptools \
-            python3-virtualenv \
-            python3-numpy \
             wget \
-            which \
             yum-utils \
-            unzip \
-            vim \
-            xz \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
 
@@ -113,7 +99,7 @@ RUN ./install_opencv.sh
 ####### End of OpenCV
 
 ################### BASE BUILD ##########################
-FROM $BASE_IMAGE as final_build
+FROM base_build as final_build
 
 LABEL version="1.0.0"
 
@@ -124,37 +110,18 @@ ARG ov_source_branch=releases/2021/2
 ARG JOBS
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
-            boost169-atomic \
-            boost169-chrono \
-            boost169-filesystem \
-            boost169-program-options \
-            boost169-thread \
-            boost169-system \
-            boost169-date-time \
-            bc \
-            cmake \
-            curl \
-            gcc-c++ \
             gdb \
-            git \
             java-11-openjdk-devel \
             libgusb.x86_64 \
             libusbx \
-            libcurl-devel \
             libtool \
-            libuuid-devel \
-            libxml2-devel \
-            make \
             openssl-devel \
-            patch \
-            pkg-config \
             python3 \
             python3-pip \
             python3-devel \
             python3-setuptools \
             python3-virtualenv \
             python3-numpy \
-            wget \
             which \
             yum-utils \
             unzip \
@@ -162,10 +129,6 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             xz \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
-
-# FROM BASE BUILD
-COPY --from=base_build /usr/lib64/libpugixml.so* /usr/lib64/
-COPY --from=base_build /opt/opencv /opt/opencv/
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
@@ -196,7 +159,6 @@ COPY .bazelrc WORKSPACE /ovms/
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
-COPY MakefileCapi /ovms/
 
 RUN alternatives --set python /usr/bin/python3
 
@@ -208,6 +170,8 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     chmod +x bazel-*.sh && \
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
+RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && yum clean all
 
 WORKDIR /ovms
 # hadolint ignore=DL3059
@@ -246,23 +210,6 @@ RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-RUN wget -nv https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
-    yum install -y lcov-1.16-1.noarch.rpm && yum clean all
-
-# Copy build dependencies
-COPY --from=base_build /awssdk/build/.deps /awssdk/build/.deps
-COPY --from=base_build /awssdk/build/aws-cpp-sdk-core/libaws-cpp-sdk-core.a /awssdk/build/aws-cpp-sdk-core/libaws-cpp-sdk-core.a
-COPY --from=base_build /awssdk/build/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.a /awssdk/build/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.a
-COPY --from=base_build /awssdk/aws-cpp-sdk-core/include /awssdk/aws-cpp-sdk-core/include
-COPY --from=base_build /awssdk/aws-cpp-sdk-s3/include/ /awssdk/aws-cpp-sdk-s3/include/
-
-COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release/Binaries
-COPY --from=base_build /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/includes
-COPY --from=base_build /azure/cpprestsdk/Release/build.release/Binaries /azure/cpprestsdk/Release/build.release/Binaries
-
-COPY --from=base_build /usr/local/include /usr/local/include
-COPY --from=base_build /usr/local/lib/libboost* /usr/local/lib/
-
 # Test Coverage
 COPY check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
@@ -287,6 +234,7 @@ RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs=$JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 
 # C-api C/C++ app with gcc
+COPY MakefileCapi .
 RUN make -f MakefileCapi cpp && make -f MakefileCapi c
 
 ARG ovms_metadata_file
