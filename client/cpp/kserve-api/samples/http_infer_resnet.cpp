@@ -60,15 +60,21 @@ namespace tc = triton::client;
     }
 
 std::vector<uint8_t> load(const std::string& fileName) {
-    std::ifstream fileImg(fileName, std::ios::binary);
-    fileImg.seekg(0, std::ios::end);
-    int bufferLength = fileImg.tellg();
-    fileImg.seekg(0, std::ios::beg);
+    std::ifstream file(fileName, std::ios::binary);
+    file.unsetf(std::ios::skipws);
+    std::streampos fileSize;
 
-    char* buffer = new char[bufferLength];
-    fileImg.read(buffer, bufferLength);
+    file.seekg(0, std::ios::end);
+    fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
 
-    return std::vector<uint8_t>(buffer, buffer + bufferLength);
+    std::vector<uint8_t> vec;
+    vec.reserve(fileSize);
+
+    vec.insert(vec.begin(),
+               std::istream_iterator<uint8_t>(file),
+               std::istream_iterator<uint8_t>());
+    return vec;
 }
 
 int main(int argc, char** argv) {
@@ -104,11 +110,11 @@ int main(int argc, char** argv) {
     }
 
     if (!args.count("images_list")) {
-        std::cout << "error: option \"images_list\" has no value\n";
+        std::cerr << "error: option \"images_list\" has no value\n";
         return 1;
     }
     if (!args.count("labels_list")) {
-        std::cout << "error: option \"labels_list\" has no value\n";
+        std::cerr << "error: option \"labels_list\" has no value\n";
         return 1;
     }
     std::string input_name(args["input_name"].as<std::string>());
@@ -180,7 +186,7 @@ int main(int argc, char** argv) {
             input_data = load(imgs[i]);
         }
         catch(const std::bad_alloc&) {
-            std::cerr<< "error: Loading image:" + imgs[i] + " failed. \n";
+            std::cerr << "error: Loading image:" + imgs[i] + " failed. \n";
             return 1;
         }
         FAIL_IF_ERR(

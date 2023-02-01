@@ -412,6 +412,8 @@ When creating a Python-based client application, you can use Triton client libra
             tc::InferResult* result;
             client->Infer(&result, options, inputs);
             input->Reset();
+
+            delete buffer;
         }
 
 .. tab:: cpp [REST]
@@ -446,6 +448,8 @@ When creating a Python-based client application, you can use Triton client libra
             tc::InferResult* result;
             client->Infer(&result, options, inputs);
             input->Reset();
+
+            delete buffer;
         }
 
 .. tab:: java
