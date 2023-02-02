@@ -95,6 +95,7 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
     const char* secret_key = std::getenv("AWS_SECRET_ACCESS_KEY");
     const char* key_id = std::getenv("AWS_ACCESS_KEY_ID");
     const char* region = std::getenv("AWS_REGION");
+    const char* session_token = std::getenv("AWS_SESSION_TOKEN");
     const char* s3_endpoint = std::getenv("S3_ENDPOINT");
     const char* http_proxy = std::getenv("http_proxy") != nullptr ? std::getenv("http_proxy") : std::getenv("HTTP_PROXY");
     const char* https_proxy = std::getenv("https_proxy") != nullptr ? std::getenv("https_proxy") : std::getenv("HTTPS_PROXY");
@@ -106,6 +107,9 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         config = Aws::Client::ClientConfiguration();
         if (region != NULL) {
             config.region = region;
+        }
+        if (session_token != NULL) {
+            credentials.SetSessionToken(session_token);
         }
     } else if (profile_name) {
         config = Aws::Client::ClientConfiguration(profile_name);
