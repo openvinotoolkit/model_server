@@ -1,11 +1,17 @@
 # TensorFlow Serving API Clients {#ovms_docs_clients_tfs}
 
-## Python Client
-
 @sphinxdirective
+
+-  `Python Client <#-python-client>`__
+-  `C++ and Go Clients <#-cpp-go-clients>`__
+
 .. raw:: html
 
-    <div id="switcher-python" class="switcher-anchor">Python</div>
+   <a name='-python-client' id='-python-client'/>
+
+`Python Client`_
+================
+
 @endsphinxdirective
 
 When creating a Python-based client application, there are two packages on PyPi that can be used with OpenVINO Model Server:
