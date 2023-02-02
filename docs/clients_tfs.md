@@ -1,7 +1,5 @@
 # TensorFlow Serving API Clients {#ovms_docs_clients_tfs}
 
-**Contents:**
-
 @sphinxdirective
 
 -  `Python Client <#-python-client>`__
@@ -12,7 +10,7 @@
    <a name='-python-client' id='-python-client'/>
 
 `Python Client`_
-==================
+=================
 
 @endsphinxdirective
 
@@ -223,7 +221,7 @@ For complete usage examples see [ovmsclient samples](https://github.com/openvino
    <a name='-cpp-go-clients' id='-cpp-go-clients'/>
 
 `C++ and Go Clients`_
-==================
+======================
 
 @endsphinxdirective
 
