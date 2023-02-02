@@ -20,6 +20,7 @@
 #include <regex>
 #include <thread>
 
+#include <spdlog/spdlog.h>
 #include <sysexits.h>
 
 #include "cli_parser.hpp"
@@ -122,12 +123,6 @@ bool Config::validate() {
     // metrics on rest port
     if (metricsEnabled() && restPort() == 0) {
         std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
-        return false;
-    }
-
-    // metrics on rest port
-    if ((metricsEnabled() || !metricsList().empty()) && !configPath().empty()) {
-        std::cerr << "metrics_enable or metrics_list and config_path cant be used together. Use json config file to enable metrics when using config_path." << std::endl;
         return false;
     }
 

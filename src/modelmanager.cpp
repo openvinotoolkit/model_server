@@ -585,10 +585,18 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
 
 Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     const auto itr2 = configJson.FindMember("monitoring");
+    auto& config = ovms::Config::instance();
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
+        if (config.metricsEnabled()) {
+            return this->metricConfig.loadFromCLIString(true, config.metricsList());
+        }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
         return StatusCode::OK;
     } else {
+        if (config.metricsEnabled()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metrics configuration duplicated in configuration file and CLI parameters");
+            return StatusCode::CONFIG_FILE_INVALID;
+        }
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
         bool forceFailureIfMetricsAreEnabled = ovms::Config::instance().restPort() == 0;

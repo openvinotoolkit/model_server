@@ -90,6 +90,14 @@ void CLIParser::parse(int argc, char** argv) {
                 "Overrides model cache directory. By default cache files are saved into /opt/cache if the directory is present. When enabled, first model load will produce cache files.",
                 cxxopts::value<std::string>(),
                 "CACHE_DIR")
+            ("metrics_enable",
+                "Flag enabling metrics endpoint on rest_port.",
+                cxxopts::value<bool>()->default_value("false"),
+                "METRICS")
+            ("metrics_list",
+                "Comma separated list of metrics. If unset, only default metrics will be enabled. Default metrics: ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us. When set, only the listed metrics will be enabled. Optional metrics: ovms_infer_req_queue_size, ovms_infer_req_active.",
+                cxxopts::value<std::string>()->default_value(""),
+                "METRICS_LIST")
             ("cpu_extension",
                 "A path to shared library containing custom CPU layer implementation. Default: empty.",
                 cxxopts::value<std::string>()->default_value(""),
@@ -141,14 +149,6 @@ void CLIParser::parse(int argc, char** argv) {
                 "Flag indicating model is stateful",
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
-            ("metrics_enable",
-                "Flag enabling metrics endpoint on rest_port.",
-                cxxopts::value<bool>()->default_value("false"),
-                "METRICS")
-            ("metrics_list",
-                "Comma separated list of metrics. If unset, only default metrics will be enabled. Default metrics: ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us. When set, only the listed metrics will be enabled. Optional metrics: ovms_infer_req_queue_size, ovms_infer_req_active.",
-                cxxopts::value<std::string>()->default_value(""),
-                "METRICS_LIST")
             ("idle_sequence_cleanup",
                 "Flag indicating if model is subject to sequence cleaner scans",
                 cxxopts::value<bool>()->default_value("true"),
