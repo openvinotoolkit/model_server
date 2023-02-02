@@ -95,9 +95,11 @@ docker run --rm -d -p 9001:9001 \
 -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
 -e AWS_REGION="${AWS_REGION}" \
 -e S3_ENDPOINT="${S3_ENDPOINT}" \
+-e AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN}" \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
+In the above command, `S3_ENDPOINT` parameter is required only for [Minio](https://min.io/) storage. `AWS_SESSION_TOKEN` variable is needed only when AWS temporary credentials are used.
 
 You can also use anonymous access to public S3 paths.
 
