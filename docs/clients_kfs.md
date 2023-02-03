@@ -2,12 +2,6 @@
 
 ## Python Client
 
-@sphinxdirective
-.. raw:: html
-
-    <div id="switcher-python" class="switcher-anchor">Python</div>
-@endsphinxdirective
-
 When creating a Python-based client application, you can use Triton client library - [tritonclient](https://pypi.org/project/tritonclient/).
 
 ### Install the Package
