@@ -70,6 +70,101 @@ git_repository(
     #        allow all http methods
 )
 
+########################################################### Mediapipe
+http_archive(
+    name = "com_github_jupp0r_prometheus_cpp",
+    strip_prefix = "prometheus-cpp-master",
+    urls = ["https://github.com/jupp0r/prometheus-cpp/archive/master.zip"],
+)
+
+load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
+prometheus_cpp_repositories()
+
+git_repository(
+    name = "google_mediapipe",
+    remote = "https://github.com/google/mediapipe",
+    tag = "v0.9.1",
+)
+
+# Protobuf for Node dependencies
+http_archive(
+    name = "rules_proto_grpc",
+    sha256 = "bbe4db93499f5c9414926e46f9e35016999a4e9f6e3522482d3760dc61011070",
+    strip_prefix = "rules_proto_grpc-4.2.0",
+    urls = ["https://github.com/rules-proto-grpc/rules_proto_grpc/archive/4.2.0.tar.gz"],
+)
+
+# Node dependencies
+http_archive(
+    name = "build_bazel_rules_nodejs",
+    sha256 = "5aae76dced38f784b58d9776e4ab12278bc156a9ed2b1d9fcd3e39921dc88fda",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.7.1/rules_nodejs-5.7.1.tar.gz"],
+)
+
+load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
+build_bazel_rules_nodejs_dependencies()
+
+# fetches nodejs, npm, and yarn
+load("@build_bazel_rules_nodejs//:index.bzl", "node_repositories", "yarn_install")
+node_repositories()
+yarn_install(
+    name = "npm",
+    package_json = "//:package.json",
+    yarn_lock = "//:yarn.lock",
+)
+
+http_archive(
+    name = "com_google_protobuf_javascript",
+    sha256 = "35bca1729532b0a77280bf28ab5937438e3dcccd6b31a282d9ae84c896b6f6e3",
+    strip_prefix = "protobuf-javascript-3.21.2",
+    urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.2.tar.gz"],
+)
+
+http_archive(
+   name = "rules_foreign_cc",
+   strip_prefix = "rules_foreign_cc-0.1.0",
+   url = "https://github.com/bazelbuild/rules_foreign_cc/archive/0.1.0.zip",
+)
+
+load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
+
+rules_foreign_cc_dependencies()
+
+# gflags needed by glog
+http_archive(
+    name = "com_github_gflags_gflags",
+    strip_prefix = "gflags-2.2.2",
+    sha256 = "19713a36c9f32b33df59d1c79b4958434cb005b5b47dc5400a7a4b078111d9b5",
+    url = "https://github.com/gflags/gflags/archive/v2.2.2.zip",
+)
+
+http_archive(
+    name = "com_github_glog_glog",
+    strip_prefix = "glog-0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6",
+    sha256 = "58c9b3b6aaa4dd8b836c0fd8f65d0f941441fb95e27212c5eeb9979cfd3592ab",
+    urls = [
+        "https://github.com/google/glog/archive/0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6.zip",
+    ],
+)
+
+# ABSL cpp library lts_2021_03_24, patch 2.
+http_archive(
+    name = "com_google_absl",
+    urls = [
+        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.1.tar.gz",
+    ],
+    # Remove after https://github.com/abseil/abseil-cpp/issues/326 is solved.
+    #patches = [
+    #    "@//third_party:com_google_absl_f863b622fe13612433fdf43f76547d5edda0c93001.diff"
+    #],
+    #patch_args = [
+    #    "-p1",
+    #],
+    strip_prefix = "abseil-cpp-20220623.1",
+    sha256 = "91ac87d30cc6d79f9ab974c51874a704de9c2647c40f6932597329a282217ba8"
+)
+########################################################### Mediapipe end
+
 # minitrace
 new_git_repository(
     name = "minitrace",
