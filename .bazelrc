@@ -75,3 +75,5 @@ build --experimental_repo_remote_exec
 build --force_pic
 build --experimental_cc_shared_library
 
+build --check_visibility=true
+
