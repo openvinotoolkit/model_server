@@ -90,23 +90,30 @@ stat -c "group_name=%G group_id=%g" /dev/dri/render*
 The default account in the docker image is preconfigured. If you change the security context, use the following command to start the model server container:
 
 @sphinxdirective
+
 .. code-block:: sh
+
 ```bash
 docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 ```
+
 @endsphinxdirective
 
 GPU device can be used also on Windows hosts with Windows Subsystem for Linux 2 (WSL2). In such scenario, there are needed extra docker parameters. See the command below.
 Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
+
 @sphinxdirective
+
 .. code-block:: sh
+
 ```bash
 docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 ```
+
 @endsphinxdirective
 
 > **NOTE**:
@@ -186,15 +193,20 @@ Make sure you have passed the devices and access to the devices you want to use 
 `--device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g)`
 
 Below is an example of the command with AUTO Plugin as target device. It includes extra docker parameters to enable GPU (/dev/dri) , beside CPU.
+
 @sphinxdirective
+
 .. code-block:: sh
+
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
             -u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
             --target_device AUTO
 ```
+
 @endsphinxdirective
+
 The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
 
 > **NOTE**: NUM_STREAMS and PERFORMANCE_HINT should not be used together.
@@ -202,8 +214,11 @@ The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.
 To enable Performance Hints for your application, use the following command:
 
 LATENCY
+
 @sphinxdirective
+
 .. code-block:: sh
+
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
             -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
@@ -211,11 +226,15 @@ LATENCY
             --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
             --target_device AUTO
 ```
+
 @endsphinxdirective
 
 THROUGHPUT
+
 @sphinxdirective
+
 .. code-block:: sh
+
 ```
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
             -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
@@ -223,6 +242,7 @@ THROUGHPUT
             --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
             --target_device AUTO
 ```
+
 @sphinxdirective
 
 > **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.

@@ -27,8 +27,7 @@ Write your own custom model loader based on a predefined interface and load it s
 
 [Learn more](custom_model_loader.md)
 
-
 ## Securing Model Server with NGINX
 Protect network endpoints with traffic encription and client authorization using a reverse proxy
 
-[Learn model](../extras/nginx-mtls-auth/README.md)
+[Learn more](../extras/nginx-mtls-auth/README.md)
