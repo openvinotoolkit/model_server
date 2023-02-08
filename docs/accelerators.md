@@ -81,10 +81,13 @@ docker run --rm -it --device=/dev/dri -v ${PWD}/models/public/resnet-50-tf:/opt/
 Running inference on GPU requires the model server process security context account to have correct permissions. It must belong to the render group identified by the command:
 
 @sphinxdirective
+
 .. code-block:: sh
+
 ```bash
 stat -c "group_name=%G group_id=%g" /dev/dri/render*
 ```
+
 @endsphinxdirective
 
 The default account in the docker image is preconfigured. If you change the security context, use the following command to start the model server container:
