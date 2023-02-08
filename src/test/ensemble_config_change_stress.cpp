@@ -1164,17 +1164,17 @@ public:
     }
     void testCurrentRequestsMetric() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        bool current_request_pass = false, infer_req_active_pass = false;
+        bool current_requests_pass = false, infer_req_active_pass = false;
         int retries = 3;
         for (int i = 0; i < retries; i++) {
             std::string metricOutput = manager.getMetricRegistry()->collect();
-            checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0, metricOutput, current_request_pass);
+            checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0, metricOutput, current_requests_pass);
             checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0, metricOutput, infer_req_active_pass);
-            if (current_request_pass && infer_req_active_pass)
+            if (current_requests_pass && infer_req_active_pass)
                 break;
         }
-        if (!current_reqests_pass || !infer_req_active_pass)
-            FAIL() << "Terminated after " << retires << " retries";
+        if (!current_requests_pass || !infer_req_active_pass)
+            FAIL() << "Terminated after " << retries << " retries";
         checkActiveNireqSmallerThanTotal();
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
