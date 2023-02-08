@@ -84,9 +84,9 @@ Running inference on GPU requires the model server process security context acco
 
 .. code-block:: sh
 
-```bash
-stat -c "group_name=%G group_id=%g" /dev/dri/render*
-```
+   ```bash
+   stat -c "group_name=%G group_id=%g" /dev/dri/render*
+   ```
 
 @endsphinxdirective
 
@@ -96,11 +96,11 @@ The default account in the docker image is preconfigured. If you change the secu
 
 .. code-block:: sh
 
-```bash
-docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
---model_path /opt/model --model_name resnet --port 9001 --target_device GPU
-```
+   ```bash
+   docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+   -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+   --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
+   ```
 
 @endsphinxdirective
 
@@ -111,11 +111,11 @@ Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 
 .. code-block:: sh
 
-```bash
-docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
---model_path /opt/model --model_name resnet --port 9001 --target_device GPU
-```
+   ```bash
+   docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+   -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+   --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
+   ```
 
 @endsphinxdirective
 
@@ -201,12 +201,12 @@ Below is an example of the command with AUTO Plugin as target device. It include
 
 .. code-block:: sh
 
-```bash
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-            -u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --target_device AUTO
-```
+   ```bash
+   docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+   -u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+   --model_path /opt/model --model_name resnet --port 9001 \
+   --target_device AUTO
+   ```
 
 @endsphinxdirective
 
@@ -222,13 +222,13 @@ LATENCY
 
 .. code-block:: sh
 
-```bash
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-            --target_device AUTO
-```
+   ```bash
+   docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+   -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+   --model_path /opt/model --model_name resnet --port 9001 \
+   --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+   --target_device AUTO
+   ```
 
 @endsphinxdirective
 
@@ -238,13 +238,13 @@ THROUGHPUT
 
 .. code-block:: sh
 
-```
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
-            --target_device AUTO
-```
+   ```
+   docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+   -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+   --model_path /opt/model --model_name resnet --port 9001 \
+   --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+   --target_device AUTO
+   ```
 
 @sphinxdirective
 
