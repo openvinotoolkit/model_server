@@ -464,6 +464,26 @@ TEST_F(TestLoadModelWithMapping, SuccessfulLoad) {
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getBytesType(), ovms::raw);
+    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
+    EXPECT_EQ(modelInstance.getOutputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
+}
+
+TEST_F(TestLoadModelWithMapping, SuccessfulLoadBytesEncoded) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+
+    ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
+    shapeMap["input"] = inputShape;
+    config.setShapes(shapeMap);
+
+    layouts["input"] = ovms::LayoutConfiguration{"NC"};
+    layouts["output"] = ovms::LayoutConfiguration{"NC"};
+    config.setLayouts(layouts);
+    config.parseShapeParameter("(1,10,10)");
+
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getBytesType(), ovms::raw);
     EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
     EXPECT_EQ(modelInstance.getOutputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
 }
@@ -861,3 +881,28 @@ TEST(CpuThroughputNotSpecified, AffinityWithNumStreams) {
     EXPECT_EQ(pluginConfig.count("AFFINITY"), 1);
     EXPECT_EQ(pluginConfig.count("NUM_STREAMS"), 1);
 }
+
+TEST(TensorMap, TestBytesTypeFromShape_1) {
+    auto servableInputs = ovms::tensor_map_t({
+        {"Input_FP32_1_224_224_3_NHWC",
+            std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3})},
+        {"Input_U8_1_3_NCHW",
+            std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62_62_NCHW", ovms::Precision::U8, ovms::shape_t{1, 3})},
+    });
+
+    EXPECT_EQ(servableInputs["Input_FP32_1_224_224_3_NHWC"]->getBytesType(), ovms::encoded);
+    EXPECT_EQ(servableInputs["Input_U8_1_3_NCHW"]->getBytesType(), ovms::raw);
+}
+
+TEST(TensorMap, TestBytesTypeFromShape_2) {
+    auto servableInputs = ovms::tensor_map_t({
+        {"Input_FP32_1_224_224_3_NHWC",
+            std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::Shape{1, 224, 224, 3})},
+        {"Input_U8_1_3_NCHW",
+            std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62_62_NCHW", ovms::Precision::U8, ovms::Shape{1, 3})},
+    });
+
+    EXPECT_EQ(servableInputs["Input_FP32_1_224_224_3_NHWC"]->getBytesType(), ovms::encoded);
+    EXPECT_EQ(servableInputs["Input_U8_1_3_NCHW"]->getBytesType(), ovms::raw);
+}
+

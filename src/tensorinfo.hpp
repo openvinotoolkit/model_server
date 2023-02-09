@@ -38,6 +38,8 @@ class TensorInfo;
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
+enum BytesType {encoded, raw};
+
 /**
      * @brief Class containing information about the tensor
      */
@@ -59,6 +61,11 @@ protected:
          * @brief Model input shape
          */
     Shape shape;
+
+     /**
+         * @brief Bytes type
+         */
+    BytesType bytesType;
 
     /**
          * @brief Tensor layout
@@ -206,6 +213,8 @@ public:
          */
     const Shape& getShape() const;
     void setShape(const Shape& shape);
+
+    const BytesType& getBytesType() const;
 
     bool isInfluencedByDemultiplexer() const;
 

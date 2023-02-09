@@ -30,42 +30,40 @@ namespace ovms {
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const Shape& shape) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(Layout::getDefaultLayout()) {}
+    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const shape_t& shape) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(Layout::getDefaultLayout()) {
-}
+    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const shape_t& shape,
     const Layout& layout) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(layout) {
-}
+    TensorInfo(name, "", precision, shape, layout) {}
+
+TensorInfo::TensorInfo(const std::string& name,
+    const std::string& mapping,
+    const Precision& precision,
+    const shape_t& shape) :
+    TensorInfo(name, mapping, precision, shape, Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const Shape& shape,
     const Layout& layout) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(layout) {
+    TensorInfo(name, "", precision, shape, layout) {}
+
+template<class T>
+static BytesType getBytesTypeFromShape(std::vector<T> shape) {
+    if(shape.size() == 3 || shape.size() == 4) {
+        return encoded;
+    }
+    else
+    {
+        return raw;
+    }
 }
 
 TensorInfo::TensorInfo(const std::string& name,
@@ -78,7 +76,9 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-}
+        bytesType = getBytesTypeFromShape(shape);
+    }
+
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const ovms::Precision& precision,
@@ -89,17 +89,8 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-}
-TensorInfo::TensorInfo(const std::string& name,
-    const std::string& mapping,
-    const Precision& precision,
-    const shape_t& shape) :
-    name(name),
-    mapping(mapping),
-    precision(precision),
-    shape(shape),
-    layout(Layout::getDefaultLayout()) {
-}
+        bytesType = getBytesTypeFromShape(shape);
+    }
 
 const std::string& TensorInfo::getName() const {
     return name;
@@ -151,6 +142,10 @@ void TensorInfo::setShape(const Shape& shape) {
 
 const Shape& TensorInfo::getShape() const {
     return this->shape;
+}
+
+const BytesType& TensorInfo::getBytesType() const {
+    return this->bytesType;
 }
 
 void TensorInfo::setLayout(const Layout& layout) {
