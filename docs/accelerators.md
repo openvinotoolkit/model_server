@@ -234,7 +234,7 @@ THROUGHPUT
     --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
     --target_device AUTO
 
-@sphinxdirective
+@endsphinxdirective
 
 > **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
 
