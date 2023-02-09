@@ -54,7 +54,7 @@ using ovms::StatusCode;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
-void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
+static void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
     std::vector<float> output(outputSize);
     tensorflow::serving::PredictResponse response;
     ovms::OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
@@ -90,7 +90,7 @@ static ovms::Status getOutput(const TFSResponseType& response, const std::string
 }
 
 using inputs_info_elem_t = std::pair<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
-size_t calculateByteSize(const inputs_info_elem_t& e) {
+static size_t calculateByteSize(const inputs_info_elem_t& e) {
     auto& [inputName, shapeDatatypeTuple] = e;
     auto& [shape, precision] = shapeDatatypeTuple;
     size_t shapeProduct = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
@@ -391,7 +391,7 @@ public:
 };
 const size_t DUMMY_DIM_POS = 1;
 template <typename RequestType>
-size_t extractDummyOutputSize(const RequestType& request);
+static size_t extractDummyOutputSize(const RequestType& request);
 
 template <>
 size_t extractDummyOutputSize(const TFSPredictRequest& request) {
@@ -413,7 +413,7 @@ size_t extractDummyOutputSize(const ovms::InferenceRequest& request) {
 }
 
 template <typename RequestType>
-void performPrediction(const std::string modelName,
+static void performPrediction(const std::string modelName,
     const ovms::model_version_t modelVersion,
     const RequestType& request,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
