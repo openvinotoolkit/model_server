@@ -23,10 +23,13 @@ To start the server with Neural Compute Stick use either of the two options:
 
 1. More securely, without the docker privileged mode and mounting only the usb devices.
 
-   ```bash
-   docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
-   --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
-   ```
+@sphinxdirective
+.. code-block:: sh
+
+    docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
+    --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
+
+@endsphinxdirective
 
 2. less securely, in the docker privileged mode and mounting all devices.
    ```bash
