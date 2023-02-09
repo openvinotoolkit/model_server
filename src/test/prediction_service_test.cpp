@@ -601,9 +601,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMappingSpecificShap
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto status = config.parseShapeParameter("auto");
     ConstructorEnabledModelManager manager;
-    SPDLOG_ERROR("ER: dynPEnab:{}  anyShapeAuto:{} cinfigShapeAuto:{}", config.isDynamicParameterEnabled(), config.anyShapeSetToAuto(), config.isShapeAuto("input_tensor"));
     status = manager.loadConfig(this->configFilePath);
-    SPDLOG_ERROR("ER");
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     performPrediction(config.getName(), config.getVersion(), request, nullptr, nullptr, manager, this->dummyModelInputMapping, this->dummyModelOutputMapping);
 }
@@ -617,9 +615,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMappingAnonymousSha
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto status = config.parseShapeParameter("auto");
     ConstructorEnabledModelManager manager;
-    SPDLOG_ERROR("ER: dynPEnab:{}  anyShapeAuto:{} cinfigShapeAuto:{}", config.isDynamicParameterEnabled(), config.anyShapeSetToAuto(), config.isShapeAuto("input_tensor"));
     status = manager.loadConfig(this->configFilePath);
-    SPDLOG_ERROR("ER");
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     performPrediction(config.getName(), config.getVersion(), request, nullptr, nullptr, manager, this->dummyModelInputMapping, this->dummyModelOutputMapping);
 }
