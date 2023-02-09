@@ -25,6 +25,7 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
+#include "../tensorinfo.hpp"
 
 namespace ovms {
 
@@ -146,5 +147,9 @@ Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::strin
 bool isNativeFileFormatUsed(const TFSInputTensorType& proto) {
     return proto.dtype() == TFSDataType::DT_STRING;
     // return request.string_val_size() > 0;
+}
+
+bool isStringFormatUsed(const TFSInputTensorType& proto, const TensorInfo& tensorInfo) {
+    return proto.dtype() == tensorflow::DataType::DT_STRING && tensorInfo.getPrecision() == ovms::Precision::U8;
 }
 }  // namespace ovms

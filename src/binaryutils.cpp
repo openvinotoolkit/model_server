@@ -21,6 +21,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
@@ -461,6 +462,33 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
     return StatusCode::OK;
 }
 
+Status convertStringProtoToOVTensor(
+    const KFSTensorInputProto& src,
+    ov::Tensor& tensor,
+    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::string* buffer) {
+    if (nullptr != buffer) {
+        SPDLOG_DEBUG("STRING input should be located in bytes_contents field.");
+        return StatusCode::NOT_IMPLEMENTED;
+    }
+    size_t maxStringLength = 0;
+    for (const auto& str : src.contents().bytes_contents()) {
+        maxStringLength = std::max(maxStringLength, str.size());
+    }
+    size_t width = maxStringLength + 1;
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(src.contents().bytes_contents_size()), width});
+
+    size_t i = 0;
+    for (const auto& str : src.contents().bytes_contents()) {
+        std::memcpy(tensor.data<unsigned char>() + i * width, reinterpret_cast<const unsigned char*>(str.c_str()), str.size());
+        tensor.data<unsigned char>()[i * width + str.size()] = 0;
+        i++;
+    }
+
+    return StatusCode::OK;
+}
+
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
+
 }  // namespace ovms

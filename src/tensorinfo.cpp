@@ -30,42 +30,40 @@ namespace ovms {
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const Shape& shape) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(Layout::getDefaultLayout()) {}
+    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const shape_t& shape) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(Layout::getDefaultLayout()) {
-}
+    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const shape_t& shape,
     const Layout& layout) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(layout) {
-}
+    TensorInfo(name, "", precision, shape, layout) {}
+
+TensorInfo::TensorInfo(const std::string& name,
+    const std::string& mapping,
+    const Precision& precision,
+    const shape_t& shape) :
+    TensorInfo(name, mapping, precision, shape, Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const Shape& shape,
     const Layout& layout) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(layout) {
+    TensorInfo(name, "", precision, shape, layout) {}
+
+template <class T>
+static TensorInfo::ProcessingHint getProcessingHintFromInputInfo(const std::vector<T> shape, const ovms::Precision& precision) {
+    if (shape.size() == 3 || shape.size() == 4) {
+        return TensorInfo::ProcessingHint::IMAGE;
+    } else if (shape.size() == 2 && precision == ovms::Precision::U8) {
+        return TensorInfo::ProcessingHint::STRING;
+    } else {
+        return TensorInfo::ProcessingHint::NO_PROCESSING;
+    }
 }
 
 TensorInfo::TensorInfo(const std::string& name,
@@ -78,7 +76,9 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
+    processingHint = getProcessingHintFromInputInfo(shape, precision);
 }
+
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const ovms::Precision& precision,
@@ -89,16 +89,7 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-}
-TensorInfo::TensorInfo(const std::string& name,
-    const std::string& mapping,
-    const Precision& precision,
-    const shape_t& shape) :
-    name(name),
-    mapping(mapping),
-    precision(precision),
-    shape(shape),
-    layout(Layout::getDefaultLayout()) {
+    processingHint = getProcessingHintFromInputInfo(shape, precision);
 }
 
 const std::string& TensorInfo::getName() const {
@@ -151,6 +142,10 @@ void TensorInfo::setShape(const Shape& shape) {
 
 const Shape& TensorInfo::getShape() const {
     return this->shape;
+}
+
+const TensorInfo::ProcessingHint& TensorInfo::getProcessingHint() const {
+    return this->processingHint;
 }
 
 void TensorInfo::setLayout(const Layout& layout) {
