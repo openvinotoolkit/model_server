@@ -81,17 +81,15 @@ docker run --rm -it --device=/dev/dri -v ${PWD}/models/public/resnet-50-tf:/opt/
 Running inference on GPU requires the model server process security context account to have correct permissions. It must belong to the render group identified by the command:
 
 @sphinxdirective
-
 .. code-block:: sh
-    ```bash
+
     stat -c "group_name=%G group_id=%g" /dev/dri/render*
-    ```
+
 @endsphinxdirective
 
 The default account in the docker image is preconfigured. If you change the security context, use the following command to start the model server container:
 
 @sphinxdirective
-
 .. code-block:: sh
 
     docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
@@ -104,7 +102,6 @@ GPU device can be used also on Windows hosts with Windows Subsystem for Linux 2 
 Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 
 @sphinxdirective
-
 .. code-block:: sh
 
     docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
@@ -192,7 +189,6 @@ Make sure you have passed the devices and access to the devices you want to use 
 Below is an example of the command with AUTO Plugin as target device. It includes extra docker parameters to enable GPU (/dev/dri) , beside CPU.
 
 @sphinxdirective
-
 .. code-block:: sh
 
     docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
@@ -211,7 +207,6 @@ To enable Performance Hints for your application, use the following command:
 LATENCY
 
 @sphinxdirective
-
 .. code-block:: sh
 
     docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
@@ -225,7 +220,6 @@ LATENCY
 THROUGHPUT
 
 @sphinxdirective
-
 .. code-block:: sh
 
     docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \

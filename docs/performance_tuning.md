@@ -34,13 +34,16 @@ CPU
 
 GPU
 
-   ```bash
+@sphinxdirective
+.. code-block:: sh
+
          docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
                -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
                --model_path /opt/model --model_name resnet --port 9001 \
                --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
                --target_device GPU
-   ```
+
+@endsphinxdirective
 
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
