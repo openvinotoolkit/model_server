@@ -55,13 +55,11 @@ TensorInfo::TensorInfo(const std::string& name,
     const Layout& layout) :
     TensorInfo(name, "", precision, shape, layout) {}
 
-template<class T>
+template <class T>
 static BytesType getBytesTypeFromShape(std::vector<T> shape) {
-    if(shape.size() == 3 || shape.size() == 4) {
+    if (shape.size() == 3 || shape.size() == 4) {
         return encoded;
-    }
-    else
-    {
+    } else {
         return raw;
     }
 }
@@ -76,8 +74,8 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-        bytesType = getBytesTypeFromShape(shape);
-    }
+    bytesType = getBytesTypeFromShape(shape);
+}
 
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
@@ -89,8 +87,8 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-        bytesType = getBytesTypeFromShape(shape);
-    }
+    bytesType = getBytesTypeFromShape(shape);
+}
 
 const std::string& TensorInfo::getName() const {
     return name;

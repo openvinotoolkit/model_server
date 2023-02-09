@@ -38,7 +38,8 @@ class TensorInfo;
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
-enum BytesType {encoded, raw};
+enum BytesType { encoded,
+    raw };
 
 /**
      * @brief Class containing information about the tensor
@@ -62,7 +63,7 @@ protected:
          */
     Shape shape;
 
-     /**
+    /**
          * @brief Bytes type
          */
     BytesType bytesType;

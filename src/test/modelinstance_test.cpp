@@ -905,4 +905,3 @@ TEST(TensorMap, TestBytesTypeFromShape_2) {
     EXPECT_EQ(servableInputs["Input_FP32_1_224_224_3_NHWC"]->getBytesType(), ovms::encoded);
     EXPECT_EQ(servableInputs["Input_U8_1_3_NCHW"]->getBytesType(), ovms::raw);
 }
-
