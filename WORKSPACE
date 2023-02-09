@@ -71,6 +71,23 @@ git_repository(
 )
 
 ########################################################### Mediapipe
+# gflags needed by glog
+http_archive(
+    name = "com_github_gflags_gflags",
+    strip_prefix = "gflags-2.2.2",
+    sha256 = "19713a36c9f32b33df59d1c79b4958434cb005b5b47dc5400a7a4b078111d9b5",
+    url = "https://github.com/gflags/gflags/archive/v2.2.2.zip",
+)
+
+http_archive(
+    name = "com_github_glog_glog",
+    strip_prefix = "glog-0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6",
+    sha256 = "58c9b3b6aaa4dd8b836c0fd8f65d0f941441fb95e27212c5eeb9979cfd3592ab",
+    urls = [
+        "https://github.com/google/glog/archive/0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6.zip",
+    ],
+)
+
 http_archive(
     name = "com_github_jupp0r_prometheus_cpp",
     strip_prefix = "prometheus-cpp-master",
@@ -129,23 +146,6 @@ http_archive(
 load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
 
 rules_foreign_cc_dependencies()
-
-# gflags needed by glog
-http_archive(
-    name = "com_github_gflags_gflags",
-    strip_prefix = "gflags-2.2.2",
-    sha256 = "19713a36c9f32b33df59d1c79b4958434cb005b5b47dc5400a7a4b078111d9b5",
-    url = "https://github.com/gflags/gflags/archive/v2.2.2.zip",
-)
-
-http_archive(
-    name = "com_github_glog_glog",
-    strip_prefix = "glog-0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6",
-    sha256 = "58c9b3b6aaa4dd8b836c0fd8f65d0f941441fb95e27212c5eeb9979cfd3592ab",
-    urls = [
-        "https://github.com/google/glog/archive/0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6.zip",
-    ],
-)
 
 # ABSL cpp library lts_2021_03_24, patch 2.
 http_archive(
