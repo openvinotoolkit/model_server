@@ -83,9 +83,9 @@ Running inference on GPU requires the model server process security context acco
 @sphinxdirective
 
 .. code-block:: sh
-
+    ```bash
     stat -c "group_name=%G group_id=%g" /dev/dri/render*
-
+    ```
 @endsphinxdirective
 
 The default account in the docker image is preconfigured. If you change the security context, use the following command to start the model server container:
