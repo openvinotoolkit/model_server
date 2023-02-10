@@ -94,17 +94,16 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
 static Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
     Shape shape;
     auto mappedName = config.getMappingInputByKey(name);
+    auto inputNameToUse = (mappedName != "" ? mappedName : name);
     if (config.getBatchSize().has_value() || parameter.isBatchSizeRequested()) {
         // leave shape untouched
-    } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
-        auto status = Shape::fromFlatShape(parameter.getShape(name), shape);
+    } else if (config.isShapeAuto(inputNameToUse) && parameter.isShapeRequested(inputNameToUse)) {
+        auto status = Shape::fromFlatShape(parameter.getShape(inputNameToUse), shape);
         if (!status.ok()) {
             return status;
         }
-    } else if (mappedName == "" && config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
-        shape = config.getShapes().at(name).shape;
-    } else if (config.getShapes().count(mappedName) && config.getShapes().at(mappedName).shape.size()) {
-        shape = config.getShapes().at(mappedName).shape;
+    } else if (config.getShapes().count(inputNameToUse) && config.getShapes().at(inputNameToUse).shape.size()) {
+        shape = config.getShapes().at(inputNameToUse).shape;
     } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
         shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
     }
