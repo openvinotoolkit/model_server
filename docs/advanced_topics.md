@@ -9,6 +9,7 @@
    ovms_sample_cpu_extension
    ovms_docs_model_cache
    ovms_docs_custom_loader
+   ovms_extras_nginx-mtls-auth-readme
 
 @endsphinxdirective
 
