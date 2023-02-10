@@ -139,7 +139,11 @@ const char* MODELS_CONFIG_SCHEMA = R"({
                             "type": "boolean"
                         },
 						"plugin_config": {
-							"type": "object"
+							"type": "object",
+              "additionalProperties": {"anyOf": [
+                              {"type": "string"},
+                              {"type": "number"}
+                          ]}
 						},
 						"stateful": {
 							"type": "boolean"
@@ -366,37 +370,21 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 	"additionalProperties": false
 })";
 
-const char* MODELS_MAPPING_INPUTS_SCHEMA = R"({
+const char* MODELS_MAPPING_SCHEMA = R"(
+{
     "type": "object",
-    "required": [
-        "inputs"
-    ],
-    "properties": {
-		"outputs":{
-            "type": "object"
-        },
-        "inputs":{
-            "type": "object"
-        }
-    },
-	"additionalProperties": false
-    })";
-
-const char* MODELS_MAPPING_OUTPUTS_SCHEMA = R"({
-    "type": "object",
-    "required": [
-        "outputs"
-    ],
     "properties": {
         "outputs":{
-            "type": "object"
+                "type": "object",
+                "additionalProperties": {"type": "string"}
         },
         "inputs":{
-            "type": "object"
+            "type": "object",
+            "additionalProperties": {"type": "string"}
         }
     },
-	"additionalProperties": false
-    })";
+    "additionalProperties": false
+})";
 
 StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema) {
     rapidjson::Document schemaJson;

@@ -472,19 +472,24 @@ Status ModelConfig::parseModelMapping() {
         return StatusCode::JSON_INVALID;
     }
 
-    if (validateJsonAgainstSchema(doc, MODELS_MAPPING_INPUTS_SCHEMA) != StatusCode::OK) {
+    if (validateJsonAgainstSchema(doc, MODELS_MAPPING_SCHEMA) != StatusCode::OK) {
+        SPDLOG_ERROR("Configuration file is not a valid JSON file.");
+        return StatusCode::JSON_INVALID;
+    }
+    auto itr = doc.FindMember("inputs");
+    if (itr == doc.MemberEnd()) {
         SPDLOG_WARN("Couldn't load inputs object from file {}", path.c_str());
     } else {
         // Process inputs
-        const auto itr = doc.FindMember("inputs");
         for (const auto& key : itr->value.GetObject()) {
             SPDLOG_DEBUG("Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
             mappingInputs[key.name.GetString()] = key.value.GetString();
             reversedMappingInputs[key.value.GetString()] = key.name.GetString();
         }
-    }
 
-    if (validateJsonAgainstSchema(doc, MODELS_MAPPING_OUTPUTS_SCHEMA) != StatusCode::OK) {
+    }
+    itr = doc.FindMember("outputs");
+    if (itr == doc.MemberEnd()) {
         SPDLOG_WARN("Couldn't load outputs object from file {}", path.c_str());
     } else {
         // Process outputs
@@ -495,7 +500,6 @@ Status ModelConfig::parseModelMapping() {
             reversedMappingOutputs[key.value.GetString()] = key.name.GetString();
         }
     }
-
     return StatusCode::OK;
 }
 
