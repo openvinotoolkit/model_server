@@ -50,6 +50,57 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"additionalProperties": false
 			}
 		},
+        "all_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {}
+        },
+        "specific_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "versions" : {
+                  "type": "array",
+                  "items": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 90000
+                  }
+                }
+            },
+            "required": ["versions"]
+        },
+        "latest_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "num_versions" : {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                }
+            },
+            "required": ["num_versions"]
+        },
+        "model_version_policy": {
+            "oneOf": [
+                {
+                  "properties" : {"all" : {"$ref": "#/definitions/all_version_policy"}},
+                  "required": ["all"],
+                  "additionalProperties": false
+                },
+                {
+                  "properties" : {"specific" : {"$ref": "#/definitions/specific_version_policy"}},
+                  "required": ["specific"],
+                  "additionalProperties": false
+                },
+                {
+                  "properties" : {"latest" : {"$ref": "#/definitions/latest_version_policy"}},
+                  "required": ["latest"],
+                  "additionalProperties": false
+                }
+            ]
+        },
 		"model_config": {
 			"type": "object",
 			"required": ["config"],
