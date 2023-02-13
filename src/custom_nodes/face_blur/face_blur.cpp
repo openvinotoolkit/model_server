@@ -170,7 +170,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     output.dims = (uint64_t*)malloc(output.dimsCount * sizeof(uint64_t));
     NODE_ASSERT(output.dims != nullptr, "malloc has failed");
     output.dims[0] = 1;
-    output.dims[0] = 1;
     if (targetImageLayout == "NCHW") {
         output.dims[1] = targetImageColorChannels;
         output.dims[2] = targetImageHeight;
