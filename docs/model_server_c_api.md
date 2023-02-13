@@ -41,7 +41,7 @@ To process response, first you must check for inference error. If no error occur
 * Launching server in single model mode is not supported. You must use configuration file.
 * There is no direct support for jpeg/png encoded input format through C API.
 * There are no server live, server ready, model ready, model metadata, metrics endpoints exposed through C API.
-* Inference scheduled through C API does not have inference success/failure and latency related metrics counted.
+* Inference scheduled through C API does not have metrics `ovms_requests_success`,`ovms_requests_fail` and `ovms_request_time_us` counted.
 * You cannot turn gRPC endpoint off, REST API endpoint is optional.
 * There is no API for asynchronous inference.
 * There is no support for stateful models.

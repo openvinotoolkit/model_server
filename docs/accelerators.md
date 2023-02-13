@@ -21,7 +21,7 @@ NCS devices should be reported by the `lsusb` command, printing out `ID 03e7:248
 
 To start the server with Neural Compute Stick use either of the two options:
 
-1. More securely, without the docker privileged mode and mounting only the usb devices.
+1. Recommended, without the docker privileged mode and mounting only the usb devices.
 
 @sphinxdirective
 .. code-block:: sh
@@ -31,7 +31,7 @@ To start the server with Neural Compute Stick use either of the two options:
 
 @endsphinxdirective
 
-2. less securely, in the docker privileged mode and mounting all devices.
+2. Less securely, in the docker privileged mode and mounting all devices.
    ```bash
    docker run --rm -it --net=host -u root --privileged -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
    --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
