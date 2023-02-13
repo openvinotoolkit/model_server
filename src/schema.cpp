@@ -53,7 +53,9 @@ const char* MODELS_CONFIG_SCHEMA = R"({
         "all_version_policy":{
             "type": "object",
             "additionalProperties": false,
-            "properties": {}
+            "properties": {},
+            "minProperties": 0,
+            "maxProperties": 0
         },
         "specific_version_policy":{
             "type": "object",
@@ -120,7 +122,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 							"minimum": 0
 						},
 						"model_version_policy": {
-							"type": "object"
+            "$ref": "#/definitions/model_version_policy"
 						},
 						"shape": {
 							"type": ["object", "string"]

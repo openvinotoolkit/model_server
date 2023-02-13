@@ -486,7 +486,6 @@ Status ModelConfig::parseModelMapping() {
             mappingInputs[key.name.GetString()] = key.value.GetString();
             reversedMappingInputs[key.value.GetString()] = key.name.GetString();
         }
-
     }
     itr = doc.FindMember("outputs");
     if (itr == doc.MemberEnd()) {
