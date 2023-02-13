@@ -114,6 +114,10 @@ workspace()
 
 ########################################################### Mediapipe
 
+# Initialize bazel package rules' external dependencies.
+load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
+rules_pkg_dependencies()
+
 http_archive(
     name = "com_github_jupp0r_prometheus_cpp",
     strip_prefix = "prometheus-cpp-master",
@@ -183,6 +187,8 @@ http_archive(
         "-p1",
     ],
 )
+
+
 
 http_archive(
    name = "rules_foreign_cc",
@@ -259,10 +265,6 @@ http_archive(
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
-
-# Initialize bazel package rules' external dependencies.
-load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
-rules_pkg_dependencies()
 
 # AWS S3 SDK
 new_local_repository(
