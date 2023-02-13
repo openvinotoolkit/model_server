@@ -27,7 +27,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/util/net_http/server/public/httpserver.h"
-#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 #include "tensorflow_serving/util/threadpool_executor.h"
 #pragma GCC diagnostic pop
@@ -225,7 +225,7 @@ private:
 std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
     auto options = std::make_unique<net_http::ServerOptions>();
     options->AddPort(static_cast<uint32_t>(port));
-    options->SetAddress(address);
+    //options->SetAddress(address);
     options->SetExecutor(std::make_unique<RequestExecutor>(num_threads));
 
     auto server = net_http::CreateEvHTTPServer(std::move(options));

@@ -20,6 +20,23 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# gflags needed by glog
+http_archive(
+    name = "com_github_gflags_gflags",
+    strip_prefix = "gflags-2.2.2",
+    sha256 = "19713a36c9f32b33df59d1c79b4958434cb005b5b47dc5400a7a4b078111d9b5",
+    url = "https://github.com/gflags/gflags/archive/v2.2.2.zip",
+)
+
+http_archive(
+    name = "com_github_glog_glog",
+    strip_prefix = "glog-0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6",
+    sha256 = "58c9b3b6aaa4dd8b836c0fd8f65d0f941441fb95e27212c5eeb9979cfd3592ab",
+    urls = [
+        "https://github.com/google/glog/archive/0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6.zip",
+    ],
+)
+
 # overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead
@@ -57,36 +74,45 @@ cc_library(
 )
 """,
 )
-# Tensorflow serving
+
+# Tensorflow serving branch master / Fri Feb 10 09:56:11 2023
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.6.5",
-    patch_args = ["-p1"],
-    patches = ["net_http.patch", "listen.patch"]
+    branch = "master",
+    #patch_args = ["-p1"],
+    #patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
     #                       make bind address configurable
     #          ^^^^^^^^^^^^
     #        allow all http methods
 )
 
-########################################################### Mediapipe
-# gflags needed by glog
-http_archive(
-    name = "com_github_gflags_gflags",
-    strip_prefix = "gflags-2.2.2",
-    sha256 = "19713a36c9f32b33df59d1c79b4958434cb005b5b47dc5400a7a4b078111d9b5",
-    url = "https://github.com/gflags/gflags/archive/v2.2.2.zip",
+load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
+git_repository(
+    name = "org_tensorflow",
+    remote = "https://github.com/tensorflow/tensorflow.git",
+    commit = "84f40925e929d05e72ab9234e53c729224e3af38",
+    #patch_args = ["-p1"],
+    #patches = ["tf.patch"],
+    repo_mapping = {"@curl" : "@curl"}
 )
 
-http_archive(
-    name = "com_github_glog_glog",
-    strip_prefix = "glog-0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6",
-    sha256 = "58c9b3b6aaa4dd8b836c0fd8f65d0f941441fb95e27212c5eeb9979cfd3592ab",
-    urls = [
-        "https://github.com/google/glog/archive/0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6.zip",
-    ],
-)
+
+load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
+tf_serving_workspace()
+
+# Initialize TensorFlow's external dependencies.
+load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
+workspace()
+load("@org_tensorflow//tensorflow:workspace2.bzl", "workspace")
+workspace()
+load("@org_tensorflow//tensorflow:workspace1.bzl", "workspace")
+workspace()
+load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
+workspace()
+
+########################################################### Mediapipe
 
 http_archive(
     name = "com_github_jupp0r_prometheus_cpp",
@@ -110,6 +136,14 @@ http_archive(
     strip_prefix = "rules_proto_grpc-4.2.0",
     urls = ["https://github.com/rules-proto-grpc/rules_proto_grpc/archive/4.2.0.tar.gz"],
 )
+
+load("@rules_proto_grpc//:repositories.bzl", "rules_proto_grpc_toolchains", "rules_proto_grpc_repos")
+rules_proto_grpc_toolchains()
+rules_proto_grpc_repos()
+
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+rules_proto_dependencies()
+rules_proto_toolchains()
 
 # Node dependencies
 http_archive(
@@ -135,6 +169,19 @@ http_archive(
     sha256 = "35bca1729532b0a77280bf28ab5937438e3dcccd6b31a282d9ae84c896b6f6e3",
     strip_prefix = "protobuf-javascript-3.21.2",
     urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.2.tar.gz"],
+)
+
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422",
+    strip_prefix = "protobuf-3.21.9",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.21.9.tar.gz"],
+    patches = [
+        "@//third_party:com_google_protobuf_fixes.diff"
+    ],
+    patch_args = [
+        "-p1",
+    ],
 )
 
 http_archive(
@@ -182,34 +229,36 @@ cc_library(
 """,
 )
 
-load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
-tensorflow_http_archive(
-    name = "org_tensorflow",
-    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
-    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
-    patch = "tf.patch",
-    repo_mapping = {"@curl" : "@curl"}
+http_archive(
+	name = "bazel_toolchains",
+	urls = ["https://github.com/bazelbuild/bazel-toolchains/archive/dac71231098d891e5c4b74a2078fe9343feef510.tar.gz"],
+	strip_prefix = "bazel-toolchains-dac71231098d891e5c4b74a2078fe9343feef510",
+	sha256 = "56d5370eb99559b4c74f334f81bc8a298f728bd16d5a4333c865c2ad10fae3bc",
 )
 
-load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
-tf_serving_workspace()
+load("@bazel_toolchains//repositories:repositories.bzl", bazel_toolchains_repositories = "repositories")
+bazel_toolchains_repositories()
 
-# Check bazel version requirement, which is stricter than TensorFlow's.
-load(
-    "@org_tensorflow//tensorflow:version_check.bzl",
-    "check_bazel_version_at_least"
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "56d8c5a5c91e1af73eca71a6fab2ced959b67c86d12ba37feedb0a2dfea441a6",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.37.0/rules_go-v0.37.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.37.0/rules_go-v0.37.0.zip",
+    ],
 )
-check_bazel_version_at_least("5.3.1")
 
-# Initialize TensorFlow's external dependencies.
-load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
-workspace()
-load("@org_tensorflow//tensorflow:workspace2.bzl", "workspace")
-workspace()
-load("@org_tensorflow//tensorflow:workspace1.bzl", "workspace")
-workspace()
-load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
-workspace()
+http_archive(
+    name = "bazel_gazelle",
+    sha256 = "ecba0f04f96b4960a5b250c8e8eeec42281035970aa8852dda73098274d14a1d",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.29.0/bazel-gazelle-v0.29.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.29.0/bazel-gazelle-v0.29.0.tar.gz",
+    ],
+)
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
 # Initialize bazel package rules' external dependencies.
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
@@ -269,8 +318,8 @@ google_cloud_cpp_common_deps()
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
 
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-grpc_extra_deps()
+#load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+#grpc_extra_deps()
 
 # cxxopts
 http_archive(
@@ -316,15 +365,6 @@ http_archive(
     strip_prefix = "libevent-release-2.1.8-stable",
     build_file = "@//third_party/libevent:BUILD",
 )
-
-# prometheus-cpp
-http_archive(
-    name = "com_github_jupp0r_prometheus_cpp",
-    strip_prefix = "prometheus-cpp-1.0.1",
-    urls = ["https://github.com/jupp0r/prometheus-cpp/archive/refs/tags/v1.0.1.zip"],
-)
-load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
-prometheus_cpp_repositories()
 
 ##################### OPEN VINO ######################
 # OPENVINO DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
