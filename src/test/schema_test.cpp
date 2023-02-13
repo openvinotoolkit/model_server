@@ -983,6 +983,62 @@ TEST(SchemaTest, ModelConfigPluginConfigPositive) {
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
+TEST(SchemaTest, ModelConfigPluginConfigLayoutShapeNegative) {
+    const char* config1 = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "shape": {"A":"B", "C":"NCHW", "D":{}},
+                "layout": {"A":"B", "C":"NCHW", "D":"NHWC"}
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document doc1;
+    doc1.Parse(config1);
+    auto result = ovms::validateJsonAgainstSchema(doc1, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID) << config1;
+    const char* config2 = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "shape": ["NHWC", "NCHW"],
+                "layout": {"A":"B", "C":"NCHW", "D":"NHWC"}
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document doc2;
+    doc2.Parse(config2);
+    result = ovms::validateJsonAgainstSchema(doc2, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID) << config2;
+    const char* config3 = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "shape": {"A":"B", "C":"NCHW", "D":"NHWC:NHWC"},
+                "layout": {"A":"B", "C":"NCHW", "D":[1,2,3]}
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document doc3;
+    doc3.Parse(config3);
+    result = ovms::validateJsonAgainstSchema(doc3, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID) << config3;
+}
 TEST(SchemaTest, ModelConfigPluginConfigNegative) {
     const char* modelConfigNegative = R"(
     {

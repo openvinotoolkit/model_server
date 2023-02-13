@@ -50,6 +50,17 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"additionalProperties": false
 			}
 		},
+    "layout_shape_def": {
+        "oneOf": [
+        {
+            "type": "object",
+            "additionalProperties": {"type": "string"}
+        },
+        {
+            "type": "string"
+        }
+        ]
+    },
         "all_version_policy":{
             "type": "object",
             "additionalProperties": false,
@@ -125,10 +136,10 @@ const char* MODELS_CONFIG_SCHEMA = R"({
             "$ref": "#/definitions/model_version_policy"
 						},
 						"shape": {
-							"type": ["object", "string"]
+                "$ref": "#/definitions/layout_shape_def"
 						},
 						"layout": {
-							"type": ["object", "string"]
+                "$ref": "#/definitions/layout_shape_def"
 						},
 						"nireq": {
 							"type": "integer",
