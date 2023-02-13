@@ -20,7 +20,7 @@ OPENCV_INSTALL_SCRIPT ?= ../../third_party/opencv/install_opencv.sh
 
 BASE_OS ?= ubuntu
 
-NODES ?= add_one east_ocr face_blur horizontal_ocr image_transformation model_zoo_intel_object_detection
+NODES ?= add_one east_ocr face_blur horizontal_ocr image_transformation model_zoo_intel_object_detection stringDummy
 NODE_TYPE ?= cpp
 
 .PHONY: all
