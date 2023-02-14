@@ -409,7 +409,7 @@ Status deserializePredictRequest(
             auto inputIndex = requestInputItr - request.inputs().begin();
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
-            if (isNativeFileFormatUsed(*requestInputItr)) {
+            if (isNativeFileFormatUsed(*requestInputItr) && tensorInfo->getBytesType() == encoded) {
                 SPDLOG_DEBUG("Request contains input in native file format: {}", name);
                 status = convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation);
                 if (!status.ok()) {
