@@ -114,6 +114,9 @@ def check_dir(start_dir):
         'bazel_rules_apple.patch',
         "pom.xml",
         "go.sum",
+        "yarn.lock",
+        "BUILD.bazel",
+        "package.json",
         ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
@@ -189,6 +192,9 @@ def check_func(start_dir):
         'tftext.patch',
         'zlib.LICENSE.txt',
         'bazel_rules_apple.patch',
+        'yarn.lock',
+        'BUILD.bazel',
+        'package.json',
     ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator']
