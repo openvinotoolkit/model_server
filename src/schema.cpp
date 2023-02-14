@@ -77,7 +77,6 @@ const char* MODELS_CONFIG_SCHEMA = R"({
                   "items": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 90000
                   }
                 }
             },
@@ -90,7 +89,6 @@ const char* MODELS_CONFIG_SCHEMA = R"({
                 "num_versions" : {
                     "type": "integer",
                     "minimum": 1,
-                    "maximum": 10000
                 }
             },
             "required": ["num_versions"]
