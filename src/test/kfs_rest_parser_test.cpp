@@ -860,3 +860,18 @@ TEST_F(KFSRestParserTest, parseInvalidRequestWithInputsMissing) {
     auto status = parser.parse(request.c_str());
     ASSERT_EQ(status, StatusCode::REST_NO_INPUTS_FOUND);
 }
+
+TEST_F(KFSRestParserTest, parseInvalidDataNotHeterogenous) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "b",
+        "shape" : [ 2, 3 ],
+        "datatype" : "FP32",
+        "data" : [ 30.9, [ 1.5, 2.9, 3.0 ], [ 1.5, 2.9, 3.0 ], [ 1.5, 2.9, 3.0 ] ]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+}
