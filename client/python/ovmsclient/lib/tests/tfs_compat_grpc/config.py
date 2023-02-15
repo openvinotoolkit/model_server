@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-import numpy as np
-
 from grpc import StatusCode
 from numpy import array, float64, int32, int8, float128, float32
 from ovmsclient.tfs_compat.base.errors import ModelNotFoundError, InvalidInputError
@@ -234,7 +232,8 @@ PREDICT_REQUEST_VALID = [
         },
         "input4": {
             "field": "string_val",
-            "shape": TensorShapeProto(dim=[TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=2)]),
+            "shape": TensorShapeProto(dim=[TensorShapeProto.Dim(size=2),
+                                           TensorShapeProto.Dim(size=2)]),
             "dtype": DataType.DT_STRING,
             'value': [bytes([1, 2, 3]), bytes([1, 2, 3]), bytes([1, 2, 3]), bytes([1, 2, 3])]
         },
@@ -284,11 +283,14 @@ PREDICT_RESPONSE_VALID = [
                          tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
                          string_val=[bytes([1, 2, 3])]),
         "3": TensorProto(dtype=DataType.DT_STRING,
-                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1),TensorShapeProto.Dim(size=3)]),
+                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1),
+                                                            TensorShapeProto.Dim(size=3)]),
                          string_val=[b'list', b'of', b'strings']),
         "4": TensorProto(dtype=DataType.DT_STRING,
-                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=2),TensorShapeProto.Dim(size=2)]),
-                         string_val=[bytes([1, 2, 3]), bytes([1, 2, 3]), bytes([1, 2, 3]), bytes([1, 2, 3])]),
+                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=2),
+                                                            TensorShapeProto.Dim(size=2)]),
+                         string_val=[bytes([1, 2, 3]), bytes([1, 2, 3]),
+                                     bytes([1, 2, 3]), bytes([1, 2, 3])]),
     }, "model_name", 0, {
         "1463": [bytes([1, 2, 3]), bytes([4, 5])],
         "2": [bytes([1, 2, 3])],

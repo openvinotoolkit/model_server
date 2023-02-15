@@ -348,8 +348,10 @@ def test_make_tensor_proto_valid_scalar(params, expected_shape, expected_dtype, 
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]), DataType.DT_STRING,
      "string_val"
      ),
-    ({"values": [[bytes([0x13, 0x00, 0x00, 0x00, 0x08]), bytes([0x13, 0x00, 0x00, 0x00, 0x08])]], "dtype": DataType.DT_STRING},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=1), TensorShapeProto.Dim(size=2)]), DataType.DT_STRING,
+    ({"values": [[bytes([0x13, 0x00, 0x00, 0x00, 0x08]), bytes([0x13, 0x00, 0x00, 0x00, 0x08])]],
+      "dtype": DataType.DT_STRING},
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=1), TensorShapeProto.Dim(size=2)]),
+     DataType.DT_STRING,
      "string_val"
      ),
 ])
@@ -360,7 +362,8 @@ def test_make_tensor_proto_valid_binary(params, expected_shape, expected_dtype, 
         if type(params["values"]) is not list:
             assert tensor_proto.__getattribute__(expected_field) == [params["values"]]
         else:
-            assert tensor_proto.__getattribute__(expected_field) == np.ravel(params["values"]).tolist()
+            assert (tensor_proto.__getattribute__(expected_field)
+                    == np.ravel(params["values"]).tolist())
     else:
         assert (tensor_proto.__getattribute__(expected_field)
                 == np.frombuffer(params["values"],
@@ -379,11 +382,11 @@ def test_make_tensor_proto_valid_binary(params, expected_shape, expected_dtype, 
     ({"values": [["nested", "list", "of", "strings"]]},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=1), TensorShapeProto.Dim(size=4)])
      ),
-     # Upon numpy array creation it will be casted to numpy.str_ data type
+    # Upon numpy array creation it will be casted to numpy.str_ data type
     ({"values": [1, 2, "three"]},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)])
      ),
-    ({"values": [[1, 2],[3, "four"]]},
+    ({"values": [[1, 2], [3, "four"]]},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=2)])
      ),
 ])
@@ -392,6 +395,7 @@ def test_make_tensor_proto_valid_string(params, expected_shape):
     assert tensor_proto.string_val == np.ravel(params["values"]).astype(np.bytes_).tolist()
     assert tensor_proto.dtype == DataType.DT_STRING
     assert tensor_proto.tensor_shape == expected_shape
+
 
 def test_make_tensor_proto_valid_string_to_float_dtype():
     values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])

@@ -22,9 +22,6 @@ import numpy as np
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 
-class InputType:
-    def __init__(self):
-        pass
 
 class TensorType(NamedTuple):
     NumpyPrimaryType: np.dtype.type
@@ -33,24 +30,41 @@ class TensorType(NamedTuple):
 
 
 NP_TO_TENSOR_MAP = {
-    np.float16: TensorType(NumpyPrimaryType=np.float16, TensorDtype=DataType.DT_HALF, TensorProtoField="half_val"),
-    np.float32: TensorType(NumpyPrimaryType=np.float32, TensorDtype=DataType.DT_FLOAT, TensorProtoField="float_val"),
-    np.float64: TensorType(NumpyPrimaryType=np.float64, TensorDtype=DataType.DT_DOUBLE, TensorProtoField="double_val"),
-    np.int8: TensorType(NumpyPrimaryType=np.int8, TensorDtype=DataType.DT_INT8, TensorProtoField="int_val"),
-    np.int16: TensorType(NumpyPrimaryType=np.int16, TensorDtype=DataType.DT_INT16, TensorProtoField="int_val"),
-    np.int32: TensorType(NumpyPrimaryType=np.int32, TensorDtype=DataType.DT_INT32, TensorProtoField="int_val"),
-    np.int64: TensorType(NumpyPrimaryType=np.int64, TensorDtype=DataType.DT_INT64, TensorProtoField="int64_val"),
-    np.uint8: TensorType(NumpyPrimaryType=np.uint8, TensorDtype=DataType.DT_UINT8, TensorProtoField="int_val"),
-    np.uint16: TensorType(NumpyPrimaryType=np.uint16, TensorDtype=DataType.DT_UINT16, TensorProtoField="int_val"),
-    np.uint32: TensorType(NumpyPrimaryType=np.uint32, TensorDtype=DataType.DT_UINT32, TensorProtoField="uint32_val"),
-    np.uint64: TensorType(NumpyPrimaryType=np.uint64, TensorDtype=DataType.DT_UINT64, TensorProtoField="uint64_val"),
-    np.complex64: TensorType(NumpyPrimaryType=np.complex64, TensorDtype=DataType.DT_COMPLEX64, TensorProtoField="scomplex_val"),
-    np.complex128: TensorType(NumpyPrimaryType=np.complex128, TensorDtype=DataType.DT_COMPLEX128, TensorProtoField="dcomplex_val"),
+    np.float16: TensorType(NumpyPrimaryType=np.float16, TensorDtype=DataType.DT_HALF,
+                           TensorProtoField="half_val"),
+    np.float32: TensorType(NumpyPrimaryType=np.float32, TensorDtype=DataType.DT_FLOAT,
+                           TensorProtoField="float_val"),
+    np.float64: TensorType(NumpyPrimaryType=np.float64, TensorDtype=DataType.DT_DOUBLE,
+                           TensorProtoField="double_val"),
+    np.int8: TensorType(NumpyPrimaryType=np.int8, TensorDtype=DataType.DT_INT8,
+                        TensorProtoField="int_val"),
+    np.int16: TensorType(NumpyPrimaryType=np.int16, TensorDtype=DataType.DT_INT16,
+                         TensorProtoField="int_val"),
+    np.int32: TensorType(NumpyPrimaryType=np.int32, TensorDtype=DataType.DT_INT32,
+                         TensorProtoField="int_val"),
+    np.int64: TensorType(NumpyPrimaryType=np.int64, TensorDtype=DataType.DT_INT64,
+                         TensorProtoField="int64_val"),
+    np.uint8: TensorType(NumpyPrimaryType=np.uint8, TensorDtype=DataType.DT_UINT8,
+                         TensorProtoField="int_val"),
+    np.uint16: TensorType(NumpyPrimaryType=np.uint16, TensorDtype=DataType.DT_UINT16,
+                          TensorProtoField="int_val"),
+    np.uint32: TensorType(NumpyPrimaryType=np.uint32, TensorDtype=DataType.DT_UINT32,
+                          TensorProtoField="uint32_val"),
+    np.uint64: TensorType(NumpyPrimaryType=np.uint64, TensorDtype=DataType.DT_UINT64,
+                          TensorProtoField="uint64_val"),
+    np.complex64: TensorType(NumpyPrimaryType=np.complex64, TensorDtype=DataType.DT_COMPLEX64,
+                             TensorProtoField="scomplex_val"),
+    np.complex128: TensorType(NumpyPrimaryType=np.complex128, TensorDtype=DataType.DT_COMPLEX128,
+                              TensorProtoField="dcomplex_val"),
     # Standard Python bool and np.bool_ replace deprecated np.bool type
-    bool: TensorType(NumpyPrimaryType=np.bool_, TensorDtype=DataType.DT_BOOL, TensorProtoField="bool_val"),
-    np.bool_: TensorType(NumpyPrimaryType=np.bool_, TensorDtype=DataType.DT_BOOL, TensorProtoField="bool_val"),
-    np.str_: TensorType(NumpyPrimaryType=np.bytes_, TensorDtype=DataType.DT_STRING, TensorProtoField="string_val"),
-    np.bytes_: TensorType(NumpyPrimaryType=np.bytes_, TensorDtype=DataType.DT_STRING, TensorProtoField="string_val"),
+    bool: TensorType(NumpyPrimaryType=np.bool_, TensorDtype=DataType.DT_BOOL,
+                     TensorProtoField="bool_val"),
+    np.bool_: TensorType(NumpyPrimaryType=np.bool_, TensorDtype=DataType.DT_BOOL,
+                         TensorProtoField="bool_val"),
+    np.str_: TensorType(NumpyPrimaryType=np.bytes_, TensorDtype=DataType.DT_STRING,
+                        TensorProtoField="string_val"),
+    np.bytes_: TensorType(NumpyPrimaryType=np.bytes_, TensorDtype=DataType.DT_STRING,
+                          TensorProtoField="string_val"),
 }
 
 
@@ -83,9 +97,11 @@ def _cast_bytes_to_dtype(values, dtype):
         # not enough bytes to fill dtype
         raise ValueError(f'could not cast bytes to {dtype}. {e_info}')
 
+
 # Functioned used with numpy.vectorize()
 def _encode_string_to_bytes(tensor_value, encoding="UTF-8"):
     return tensor_value.encode(encoding)
+
 
 _encode_strings_to_bytes = np.vectorize(_encode_string_to_bytes)
 

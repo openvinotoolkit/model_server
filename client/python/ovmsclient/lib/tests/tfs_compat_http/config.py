@@ -116,8 +116,8 @@ PARSE_INPUT_DATA_VALID = [
     ([bytes([1, 2, 3]), bytes([4, 5, 6]), bytes([7, 8, 9])],
      [{"b64": "AQID"}, {"b64": "BAUG"}, {"b64": "BwgJ"}]),
 
-    ([[bytes([111,118]), bytes([109,115])], [bytes([111,118]), bytes([109,115])]],
-    [["ov", "ms"], ["ov", "ms"]])
+    ([[bytes([111, 118]), bytes([109, 115])], [bytes([111, 118]), bytes([109, 115])]],
+     [["ov", "ms"], ["ov", "ms"]])
 ]
 
 # (inputs_dict,

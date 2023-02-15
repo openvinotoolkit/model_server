@@ -165,11 +165,14 @@ def make_status_request(model_name, model_version=0):
     _check_model_spec(model_name, model_version)
     return HttpModelStatusRequest(model_name, model_version)
 
+
 # Functioned used with numpy.vectorize()
 def _decode_bytes_to_string(tensor_value, encoding="UTF-8"):
     return tensor_value.decode(encoding)
 
+
 _decode_bytes_to_strings = np.vectorize(_decode_bytes_to_string)
+
 
 def _parse_input_data(values):
 

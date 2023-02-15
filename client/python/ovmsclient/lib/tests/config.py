@@ -17,6 +17,7 @@
 from enum import IntEnum
 import numpy as np
 
+
 class CallCount(IntEnum):
     ZERO = 0
     ONE = 1
