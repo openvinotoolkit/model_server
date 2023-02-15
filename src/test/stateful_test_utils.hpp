@@ -32,8 +32,6 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include <gmock/gmock-generated-function-mockers.h>
-
 const std::string SEQUENCE_ID_INPUT = "sequence_id";
 const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
 
