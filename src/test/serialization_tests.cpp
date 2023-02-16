@@ -36,8 +36,6 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 
-#include <gmock/gmock-generated-function-mockers.h>
-
 using TFTensorProto = tensorflow::TensorProto;
 
 using TFPredictRequest = tensorflow::serving::PredictRequest;
