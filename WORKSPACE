@@ -151,22 +151,6 @@ http_archive(
     ],
 )
 
-# ABSL cpp library lts_2021_03_24, patch 2.
-http_archive(
-    name = "com_google_absl",
-    urls = [
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.1.tar.gz",
-    ],
-    # Remove after https://github.com/abseil/abseil-cpp/issues/326 is solved.
-    #patches = [
-    #    "@//third_party:com_google_absl_f863b622fe13612433fdf43f76547d5edda0c93001.diff"
-    #],
-    #patch_args = [
-    #    "-p1",
-    #],
-    strip_prefix = "abseil-cpp-20220623.1",
-    sha256 = "91ac87d30cc6d79f9ab974c51874a704de9c2647c40f6932597329a282217ba8"
-)
 ########################################################### Mediapipe end
 
 # minitrace
