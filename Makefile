@@ -26,7 +26,7 @@ STYLE_CHECK_DIRS := src demos/common/cpp/src demos/image_classification/cpp demo
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
-JOBS ?= $(shell python3 -c 'import multiprocessing as mp; print(mp.cpu_count())')
+JOBS ?= $(shell python3 -c 'import multiprocessing as mp; print(int(mp.cpu_count()/2))')
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu redhat
