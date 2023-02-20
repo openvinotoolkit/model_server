@@ -50,13 +50,64 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo);
 
+static ov::Tensor deserializeStringTensorProto(
+    const ::KFSRequest::InferInputTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::string* buffer) {
+    SPDLOG_ERROR("STRING");
+    if(tensorInfo->getPrecision() != ovms::Precision::U8) {
+        return ov::Tensor();
+    }
+    if (nullptr != buffer) {
+        SPDLOG_ERROR("STRING input should be located in bytes_contents field.");
+        return ov::Tensor();
+    }
+    ov::Shape shape;
+    shape.push_back(requestInput.contents().bytes_contents_size());
+    size_t maxStringlen = 0;
+    for(auto input : requestInput.contents().bytes_contents()) {
+        if(input.size() > maxStringlen)
+            maxStringlen = input.size();
+    }
+    shape.push_back(maxStringlen);
+    ov::element::Type precision = tensorInfo->getOvPrecision();
+    ov::Tensor tensor(precision, shape);
+
+    uint8_t* ptr = reinterpret_cast<uint8_t*>(tensor.data());
+    size_t i = 0;
+    size_t len = 0;
+    for(auto input : requestInput.contents().bytes_contents()) {
+        if(input.size() > len)
+            len = input.size();
+    }
+    for (auto& number : requestInput.contents().bytes_contents()) {
+        size_t j = 0;
+        while(j < len) {
+            if(j < number.size()) {
+                ptr[i++] = *(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(&number.data()[j])));
+            }
+            else
+            {
+                ptr[i++] = (uint8_t)0;
+            }
+            j++;
+        }
+    }
+    return tensor;
+}
+
 class ConcreteTensorProtoDeserializator {
 public:
     static ov::Tensor deserializeTensorProto(
         const ::KFSRequest::InferInputTensor& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo,
         const std::string* buffer) {
+        
         OVMS_PROFILE_FUNCTION();
+        if(requestInput.datatype() == "BYTES"){
+            return deserializeStringTensorProto(requestInput, tensorInfo, buffer);
+        }
+
         if (nullptr != buffer) {
             switch (tensorInfo->getPrecision()) {
             case ovms::Precision::FP64:
@@ -70,6 +121,7 @@ public:
             case ovms::Precision::U32:
             case ovms::Precision::U16:
             case ovms::Precision::BOOL:
+            case ovms::Precision::BIN:
             case ovms::Precision::U8: {
                 return makeTensor(requestInput, tensorInfo, *buffer);
             }
@@ -201,14 +253,13 @@ public:
                 return tensor;
                 break;
             }
+            case ovms::Precision::UNDEFINED:
             case ovms::Precision::FP16:
             case ovms::Precision::U1:
             case ovms::Precision::CUSTOM:
-            case ovms::Precision::UNDEFINED:
             case ovms::Precision::DYNAMIC:
             case ovms::Precision::MIXED:
             case ovms::Precision::Q78:
-            case ovms::Precision::BIN:
             default:
                 return ov::Tensor();
             }

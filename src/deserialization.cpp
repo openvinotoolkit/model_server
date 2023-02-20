@@ -81,6 +81,7 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     for (int i = 0; i < requestInput.shape_size(); i++) {
         shape.push_back(requestInput.shape().at(i));
     }
+
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::Tensor tensor(precision, shape);
     return tensor;
