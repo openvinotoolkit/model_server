@@ -21,7 +21,7 @@ LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG ov_source_branch=releases/2021/2
+ARG ov_source_branch=releases/2022/3
 
 ARG JOBS
 
@@ -31,6 +31,12 @@ ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 ARG minitrace_flags
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
+
+RUN echo 'sslverify=false' >> /etc/dnf/dnf.conf
+
+# Needed because the UBI codeready-builder doesn't have opencl-headers and python36 is our default, which is below the required support level
+RUN yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms && \
+    yum -y module disable python36
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             boost169-atomic \
@@ -47,22 +53,26 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             gdb \
             git \
             java-11-openjdk-devel \
+            ocl-icd-devel \
+            opencl-headers \
             libgusb.x86_64 \
             libusbx \
             libcurl-devel \
             libtool \
+            libusb-devel \
             libuuid-devel \
             libxml2-devel \
             make \
             openssl-devel \
             patch \
             pkg-config \
-            python3 \
-            python3-pip \
-            python3-devel \
-            python3-setuptools \
-            python3-virtualenv \
-            python3-numpy \
+            python38 \
+            python38-pip \
+            python38-devel \
+            python38-setuptools \
+            # We don't have a python38-virtualenv package :(
+            # python38-virtualenv \
+            python38-numpy \
             wget \
             which \
             yum-utils \
@@ -71,6 +81,31 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             xz \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
+
+
+ARG NVIDIA=0
+
+# Add Nvidia dev tool if needed
+# hadolint ignore=DL3003
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
+    yum install -y  \
+        tensorrt \
+        libzstd-devel \
+        cuda-11-8 \
+        libcudnn8 \
+        libcudnn8-devel \
+        libcutensor1 \
+        libcutensor-devel \
+        cuda-cudart-devel-11-8 && \
+    yum install -y python38-Cython && \
+    curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin && \
+    curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
+    chmod a+x /usr/local/bin/sccache && \
+    curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 && \
+    curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv && \
+    mkdir -p ccache-4.3/build && cd ccache-4.3/build && \
+    cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. && \
+    ninja -v install
 
 # Build and install pugixml
 # hadolint ignore=DL3003
@@ -134,6 +169,22 @@ ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
 
+################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
+# Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino --recurse-submodules --branch $ov_source_branch --depth 1 /openvino
+WORKDIR /openvino/build
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
+    mkdir -p /opt/intel/openvino/extras && \
+    mkdir -p /opt/intel/openvino && \
+    ln -s /openvino/inference-engine/temp/opencv_*/opencv /opt/intel/openvino/extras && \
+    ln -s /usr/local/runtime /opt/intel/openvino && \
+    ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
+    ln -s /opt/intel/openvino /opt/intel/openvino_2022
+################## END OF OPENVINO SOURCE BUILD ######################
+
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR $TEMP_DIR
 # OV toolkit package
@@ -143,6 +194,27 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2022
+
+# NVIDIA
+ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
+ENV OPENVINO_HOME=/openvino
+ENV OPENVINO_CONTRIB=/openvino_contrib
+
+# hadolint ignore=DL3003
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
+    git clone https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive && \
+    mkdir ${OPENVINO_BUILD_PATH} && \
+    cd "${OPENVINO_BUILD_PATH}" && \
+    cmake "${OPENVINO_HOME}" \
+    -DENABLE_NVIDIA=ON \
+    -DENABLE_TESTS=ON \
+    -DBUILD_arm_plugin=OFF \
+    -DBUILD_java_api=OFF \
+    -DOPENVINO_EXTRA_MODULES="${OPENVINO_CONTRIB}/modules" \
+    -DWHEEL_VERSION=2022.1.0 \
+    -DVERBOSE_BUILD=ON \
+    -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && \
+    cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
@@ -154,7 +226,8 @@ COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 COPY MakefileCapi /ovms/
 
-RUN alternatives --set python /usr/bin/python3
+RUN alternatives --set python3 /usr/bin/python3.8
+RUN alternatives --set python /usr/bin/python3.8
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
@@ -181,7 +254,7 @@ RUN make
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2022.2"
+ARG PROJECT_VERSION="2022.3"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 

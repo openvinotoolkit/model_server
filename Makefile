@@ -85,7 +85,21 @@ ifeq ($(BASE_OS),ubuntu)
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
+  RH_ENTITLEMENT ?=0
+
+  ifeq ($(RH_ENTITLEMENT), 1)
+    RH_ENTITLEMENT_DIR ?= /etc/pki/entitlement
+    RH_ENTITLEMENT_ID ?= entitlement
+    ENTITLEMENT_ARGS=-v $(RH_ENTITLEMENT_DIR)/$(RH_ENTITLEMENT_ID).pem:/etc/pki/entitlement/entitlement.pem:Z -v $(RH_ENTITLEMENT_DIR)/$(RH_ENTITLEMENT_ID)-key.pem:/etc/pki/entitlement/entitlement-key.pem:Z
+  else
+    ENTITLEMENT_ARGS=""
+  endif
+
+  ifeq ($(NVIDIA),1)
+    BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi8
+  else
+    BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
+  endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "22.28.23726"
   DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.3/linux/l_openvino_toolkit_rhel8_2022.3.0.9052.9752fafe8eb_x86_64.tgz
@@ -215,7 +229,7 @@ endif
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		--build-arg NVIDIA=$(NVIDIA) --build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		--build-arg JOBS=$(JOBS)
+		--build-arg JOBS=$(JOBS) $(ENTITLEMENT_ARGS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) --build-arg BASE_OS=$(BASE_OS) \
