@@ -1,0 +1,664 @@
+[1mdiff --git a/mediapipe/calculators/audio/BUILD b/mediapipe/calculators/audio/BUILD[m
+[1mindex 4a8f0f59..05d2ee65 100644[m
+[1m--- a/mediapipe/calculators/audio/BUILD[m
+[1m+++ b/mediapipe/calculators/audio/BUILD[m
+[36m@@ -16,7 +16,7 @@[m [mload("//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library"[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ proto_library([m
+     name = "mfcc_mel_calculators_proto",[m
+[1mdiff --git a/mediapipe/calculators/internal/BUILD b/mediapipe/calculators/internal/BUILD[m
+[1mindex 8647e3f3..dfefd549 100644[m
+[1m--- a/mediapipe/calculators/internal/BUILD[m
+[1m+++ b/mediapipe/calculators/internal/BUILD[m
+[36m@@ -16,7 +16,7 @@[m [mload("//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library"[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ proto_library([m
+     name = "callback_packet_calculator_proto",[m
+[1mdiff --git a/mediapipe/calculators/tensor/BUILD b/mediapipe/calculators/tensor/BUILD[m
+[1mindex 69d66609..88a9f3a1 100644[m
+[1m--- a/mediapipe/calculators/tensor/BUILD[m
+[1m+++ b/mediapipe/calculators/tensor/BUILD[m
+[36m@@ -621,7 +621,7 @@[m [mcc_library([m
+ [m
+ cc_library([m
+     name = "tensor_converter_calculator_gpu_deps",[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = select({[m
+         "//mediapipe:android": [[m
+             "//mediapipe/gpu:gl_calculator_helper",[m
+[36m@@ -712,7 +712,7 @@[m [mcc_library([m
+ [m
+ cc_library([m
+     name = "tensors_to_detections_calculator_gpu_deps",[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = select({[m
+         "//mediapipe:ios": [[m
+             "//mediapipe/gpu:MPPMetalUtil",[m
+[36m@@ -955,7 +955,7 @@[m [mcc_library([m
+ [m
+ cc_library([m
+     name = "image_to_tensor_calculator_gpu_deps",[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = selects.with_or({[m
+         "//mediapipe:android": [[m
+             ":image_to_tensor_converter_gl_buffer",[m
+[36m@@ -1079,7 +1079,7 @@[m [mcc_library([m
+     name = "image_to_tensor_converter_gl_buffer",[m
+     srcs = ["image_to_tensor_converter_gl_buffer.cc"],[m
+     hdrs = ["image_to_tensor_converter_gl_buffer.h"],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = ["//mediapipe/framework:port"] + selects.with_or({[m
+         "//mediapipe:apple": [],[m
+         "//conditions:default": [[m
+[36m@@ -1113,7 +1113,7 @@[m [mcc_library([m
+     name = "image_to_tensor_converter_gl_texture",[m
+     srcs = ["image_to_tensor_converter_gl_texture.cc"],[m
+     hdrs = ["image_to_tensor_converter_gl_texture.h"],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = ["//mediapipe/framework:port"] + select({[m
+         "//mediapipe/gpu:disable_gpu": [],[m
+         "//conditions:default": [[m
+[36m@@ -1138,7 +1138,7 @@[m [mcc_library([m
+     name = "image_to_tensor_converter_gl_utils",[m
+     srcs = ["image_to_tensor_converter_gl_utils.cc"],[m
+     hdrs = ["image_to_tensor_converter_gl_utils.h"],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = ["//mediapipe/framework:port"] + select({[m
+         "//mediapipe/gpu:disable_gpu": [],[m
+         "//conditions:default": [[m
+[36m@@ -1168,7 +1168,7 @@[m [mcc_library([m
+         ],[m
+         "//conditions:default": [],[m
+     }),[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = ["//mediapipe/framework:port"] + select({[m
+         "//mediapipe:apple": [[m
+             ":image_to_tensor_converter",[m
+[1mdiff --git a/mediapipe/examples/android/solutions/facedetection/src/main/BUILD b/mediapipe/examples/android/solutions/facedetection/src/main/BUILD[m
+[1mindex 5044b55e..c30d4a24 100644[m
+[1m--- a/mediapipe/examples/android/solutions/facedetection/src/main/BUILD[m
+[1m+++ b/mediapipe/examples/android/solutions/facedetection/src/main/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ android_binary([m
+     name = "facedetection",[m
+[1mdiff --git a/mediapipe/examples/android/solutions/facemesh/src/main/BUILD b/mediapipe/examples/android/solutions/facemesh/src/main/BUILD[m
+[1mindex 515f03b6..92b13ed3 100644[m
+[1m--- a/mediapipe/examples/android/solutions/facemesh/src/main/BUILD[m
+[1m+++ b/mediapipe/examples/android/solutions/facemesh/src/main/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ android_binary([m
+     name = "facemesh",[m
+[1mdiff --git a/mediapipe/examples/android/solutions/hands/src/main/BUILD b/mediapipe/examples/android/solutions/hands/src/main/BUILD[m
+[1mindex d3c304b5..661e374d 100644[m
+[1m--- a/mediapipe/examples/android/solutions/hands/src/main/BUILD[m
+[1m+++ b/mediapipe/examples/android/solutions/hands/src/main/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ android_binary([m
+     name = "hands",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectioncpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectioncpu/BUILD[m
+[1mindex cf71048b..0ba5a485 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectioncpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectioncpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectionfullrangegpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectionfullrangegpu/BUILD[m
+[1mindex 03891439..52637680 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectionfullrangegpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectionfullrangegpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectiongpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectiongpu/BUILD[m
+[1mindex 9c60d5a5..8692a616 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectiongpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facedetectiongpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/faceeffect/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/faceeffect/BUILD[m
+[1mindex becef524..5b964347 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/faceeffect/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/faceeffect/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facemeshgpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facemeshgpu/BUILD[m
+[1mindex edef0b86..891dfdec 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facemeshgpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/facemeshgpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/hairsegmentationgpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/hairsegmentationgpu/BUILD[m
+[1mindex df58f271..cba328c5 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/hairsegmentationgpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/hairsegmentationgpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/handdetectiongpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/handdetectiongpu/BUILD[m
+[1mindex 550d61ec..610c8474 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/handdetectiongpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/handdetectiongpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/handtrackinggpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/handtrackinggpu/BUILD[m
+[1mindex b79fc5ba..730a9484 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/handtrackinggpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/handtrackinggpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/holistictrackinggpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/holistictrackinggpu/BUILD[m
+[1mindex e7e6cfb9..36c427cf 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/holistictrackinggpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/holistictrackinggpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/instantmotiontracking/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/instantmotiontracking/BUILD[m
+[1mindex 3dea6405..a7ed509a 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/instantmotiontracking/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/instantmotiontracking/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ java_lite_proto_library([m
+     name = "sticker_buffer_java_proto_lite",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/iristrackinggpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/iristrackinggpu/BUILD[m
+[1mindex 482932b1..a65486bc 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/iristrackinggpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/iristrackinggpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetection3d/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetection3d/BUILD[m
+[1mindex 783ae200..ead6bc43 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetection3d/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetection3d/BUILD[m
+[36m@@ -17,7 +17,7 @@[m [mload(":build_defs.bzl", "generate_manifest_values")[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ config_setting([m
+     name = "use_chair",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetectioncpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetectioncpu/BUILD[m
+[1mindex 9bb05493..3e9cb1a8 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetectioncpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetectioncpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetectiongpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetectiongpu/BUILD[m
+[1mindex 81f2ed3e..de8913fb 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetectiongpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objectdetectiongpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objecttrackinggpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objecttrackinggpu/BUILD[m
+[1mindex 50ea70f8..8ae6801d 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objecttrackinggpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/objecttrackinggpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/posetrackinggpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/posetrackinggpu/BUILD[m
+[1mindex d1c45345..06f9486b 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/posetrackinggpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/posetrackinggpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/selfiesegmentationgpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/selfiesegmentationgpu/BUILD[m
+[1mindex 6bfcf34c..2e5fe2be 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/selfiesegmentationgpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/selfiesegmentationgpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/templatematchingcpu/BUILD b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/templatematchingcpu/BUILD[m
+[1mindex ed3a63a7..fb52007e 100644[m
+[1m--- a/mediapipe/examples/android/src/java/com/google/mediapipe/apps/templatematchingcpu/BUILD[m
+[1m+++ b/mediapipe/examples/android/src/java/com/google/mediapipe/apps/templatematchingcpu/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_binary([m
+     name = "libmediapipe_jni.so",[m
+[1mdiff --git a/mediapipe/framework/BUILD b/mediapipe/framework/BUILD[m
+[1mindex da8ef3b3..9c5d41b1 100644[m
+[1m--- a/mediapipe/framework/BUILD[m
+[1m+++ b/mediapipe/framework/BUILD[m
+[36m@@ -18,7 +18,7 @@[m [mload("@bazel_skylib//:bzl_library.bzl", "bzl_library")[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ # The MediaPipe internal package group. No mediapipe users should be added to this group.[m
+ package_group([m
+[1mdiff --git a/mediapipe/framework/formats/tensor/BUILD b/mediapipe/framework/formats/tensor/BUILD[m
+[1mindex 3895fc82..c634b0dd 100644[m
+[1m--- a/mediapipe/framework/formats/tensor/BUILD[m
+[1m+++ b/mediapipe/framework/formats/tensor/BUILD[m
+[36m@@ -13,7 +13,7 @@[m
+ # limitations under the License.[m
+ [m
+ package([m
+[31m-    default_visibility = ["//visibility:private"],[m
+[32m+[m[32m    default_visibility = ["//visibility:public"],[m
+     features = ["-layering_check"],[m
+ )[m
+ [m
+[1mdiff --git a/mediapipe/framework/profiler/BUILD b/mediapipe/framework/profiler/BUILD[m
+[1mindex 6184ed45..b78dce00 100644[m
+[1m--- a/mediapipe/framework/profiler/BUILD[m
+[1m+++ b/mediapipe/framework/profiler/BUILD[m
+[36m@@ -64,7 +64,7 @@[m [malias([m
+         ":graph_profiler_enabled": ":graph_profiler_real",[m
+         "//conditions:default": ":graph_profiler_stub",[m
+     }),[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+ )[m
+ [m
+ alias([m
+[36m@@ -73,13 +73,13 @@[m [malias([m
+         ":graph_profiler_disabled": ":graph_profiler_stub",[m
+         "//conditions:default": ":graph_profiler_real",[m
+     }),[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+ )[m
+ [m
+ cc_library([m
+     name = "graph_profiler_stub",[m
+     hdrs = ["graph_profiler_stub.h"],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         "//mediapipe/framework:timestamp",[m
+         "//mediapipe/framework/port:status",[m
+[36m@@ -100,7 +100,7 @@[m [mcc_library([m
+     defines = [[m
+         "MEDIAPIPE_PROFILER_AVAILABLE",[m
+     ],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         ":profiler_resource_util",[m
+         ":graph_tracer",[m
+[36m@@ -204,7 +204,7 @@[m [mcc_library([m
+ cc_library([m
+     name = "sharded_map",[m
+     hdrs = ["sharded_map.h"],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         "@com_google_absl//absl/synchronization",[m
+     ],[m
+[36m@@ -281,7 +281,7 @@[m [mconfig_setting([m
+     values = {[m
+         "define": "MEDIAPIPE_WEB_PROFILING=1",[m
+     },[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+ )[m
+ [m
+ cc_library([m
+[36m@@ -312,7 +312,7 @@[m [mcc_library([m
+             "-ObjC++",[m
+         ],[m
+     }),[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         "@com_google_absl//absl/flags:flag",[m
+         "//mediapipe/framework/port:logging",[m
+[36m@@ -364,7 +364,7 @@[m [mcc_test([m
+     data = [[m
+         "//mediapipe/framework/profiler/testdata:mediapipe_profile_graphs",[m
+     ],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         "//mediapipe/framework:calculator_cc_proto",[m
+         "//mediapipe/framework:calculator_profile_cc_proto",[m
+[1mdiff --git a/mediapipe/framework/testdata/BUILD b/mediapipe/framework/testdata/BUILD[m
+[1mindex 8720e39e..4f7f351c 100644[m
+[1m--- a/mediapipe/framework/testdata/BUILD[m
+[1m+++ b/mediapipe/framework/testdata/BUILD[m
+[36m@@ -17,7 +17,7 @@[m [mload("//mediapipe/framework/port:build_config.bzl", "mediapipe_proto_library")[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ mediapipe_proto_library([m
+     name = "sky_light_calculator_proto",[m
+[1mdiff --git a/mediapipe/framework/tool/BUILD b/mediapipe/framework/tool/BUILD[m
+[1mindex 193343a9..d31af045 100644[m
+[1m--- a/mediapipe/framework/tool/BUILD[m
+[1m+++ b/mediapipe/framework/tool/BUILD[m
+[36m@@ -24,7 +24,7 @@[m [mload("@bazel_skylib//:bzl_library.bzl", "bzl_library")[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ exports_files([[m
+     "simple_subgraph_template.cc",[m
+[36m@@ -192,7 +192,7 @@[m [mcc_library([m
+     name = "options_field_util",[m
+     srcs = ["options_field_util.cc"],[m
+     hdrs = ["options_field_util.h"],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         ":field_data_cc_proto",[m
+         ":name_util",[m
+[36m@@ -215,7 +215,7 @@[m [mcc_library([m
+     name = "options_syntax_util",[m
+     srcs = ["options_syntax_util.cc"],[m
+     hdrs = ["options_syntax_util.h"],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         ":name_util",[m
+         ":options_field_util",[m
+[36m@@ -696,7 +696,7 @@[m [mmediapipe_binary_graph([m
+     name = "test_binarypb",[m
+     graph = "//mediapipe/framework/tool/testdata:test_graph",[m
+     output_name = "test.binarypb",[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+ )[m
+ [m
+ data_as_c_string([m
+[1mdiff --git a/mediapipe/framework/tool/mediapipe_graph.bzl b/mediapipe/framework/tool/mediapipe_graph.bzl[m
+[1mindex ef5182a5..a0c4c069 100644[m
+[1m--- a/mediapipe/framework/tool/mediapipe_graph.bzl[m
+[1m+++ b/mediapipe/framework/tool/mediapipe_graph.bzl[m
+[36m@@ -40,7 +40,7 @@[m [mdef mediapipe_binary_graph(name, graph = None, output_name = None, deps = [], te[m
+     # Compile a simple proto parser binary using the deps.[m
+     native.cc_binary([m
+         name = name + "_text_to_binary_graph",[m
+[31m-        visibility = ["//visibility:private"],[m
+[32m+[m[32m        visibility = ["//visibility:public"],[m
+         deps = [[m
+             clean_dep("//mediapipe/framework/tool:text_to_binary_graph"),[m
+             name + "_gather_cc_protos",[m
+[1mdiff --git a/mediapipe/framework/tool/switch/BUILD b/mediapipe/framework/tool/switch/BUILD[m
+[1mindex e7a3ba74..dadc047d 100644[m
+[1m--- a/mediapipe/framework/tool/switch/BUILD[m
+[1m+++ b/mediapipe/framework/tool/switch/BUILD[m
+[36m@@ -15,7 +15,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_library([m
+     name = "packet_processor",[m
+[1mdiff --git a/mediapipe/gpu/BUILD b/mediapipe/gpu/BUILD[m
+[1mindex 55e9c98c..29bcf52c 100644[m
+[1m--- a/mediapipe/gpu/BUILD[m
+[1m+++ b/mediapipe/gpu/BUILD[m
+[36m@@ -544,7 +544,7 @@[m [mcc_library([m
+     textual_hdrs = [[m
+         "gpu_shared_data_internal.h",[m
+     ],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         ":gl_base",[m
+         ":gl_context",[m
+[36m@@ -562,7 +562,7 @@[m [malias([m
+ [m
+ cc_library([m
+     name = "gpu_shared_data_internal_stub",[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         ":gl_context_options_cc_proto",[m
+         ":graph_support",[m
+[36m@@ -590,7 +590,7 @@[m [mcc_library([m
+             "-fobjc-arc",  # enable reference-counting[m
+         ],[m
+     }),[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         ":gl_context_options_cc_proto",[m
+         ":graph_support",[m
+[1mdiff --git a/mediapipe/objc/BUILD b/mediapipe/objc/BUILD[m
+[1mindex c71c02b6..af558cee 100644[m
+[1m--- a/mediapipe/objc/BUILD[m
+[1m+++ b/mediapipe/objc/BUILD[m
+[36m@@ -1,6 +1,6 @@[m
+ load("//mediapipe/framework/tool:mediapipe_graph.bzl", "mediapipe_binary_graph")[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ licenses(["notice"])[m
+ [m
+[1mdiff --git a/mediapipe/tasks/cc/metadata/tests/BUILD b/mediapipe/tasks/cc/metadata/tests/BUILD[m
+[1mindex 2b0e0bc2..568e1a7d 100644[m
+[1m--- a/mediapipe/tasks/cc/metadata/tests/BUILD[m
+[1m+++ b/mediapipe/tasks/cc/metadata/tests/BUILD[m
+[36m@@ -1,5 +1,5 @@[m
+ package([m
+[31m-    default_visibility = ["//visibility:private"],[m
+[32m+[m[32m    default_visibility = ["//visibility:public"],[m
+     licenses = ["notice"],  # Apache 2.0[m
+ )[m
+ [m
+[1mdiff --git a/mediapipe/tasks/cc/text/text_classifier/BUILD b/mediapipe/tasks/cc/text/text_classifier/BUILD[m
+[1mindex 3c9c3fc0..85bbbbf4 100644[m
+[1m--- a/mediapipe/tasks/cc/text/text_classifier/BUILD[m
+[1m+++ b/mediapipe/tasks/cc/text/text_classifier/BUILD[m
+[36m@@ -97,7 +97,7 @@[m [mcc_library([m
+     name = "text_classifier_test_utils",[m
+     srcs = ["text_classifier_test_utils.cc"],[m
+     hdrs = ["text_classifier_test_utils.h"],[m
+[31m-    visibility = ["//visibility:private"],[m
+[32m+[m[32m    visibility = ["//visibility:public"],[m
+     deps = [[m
+         "//mediapipe/framework/port:status",[m
+         "//mediapipe/tasks/cc:common",[m
+[1mdiff --git a/mediapipe/tasks/examples/android/objectdetector/src/main/BUILD b/mediapipe/tasks/examples/android/objectdetector/src/main/BUILD[m
+[1mindex 89c1edcb..b1cdb473 100644[m
+[1m--- a/mediapipe/tasks/examples/android/objectdetector/src/main/BUILD[m
+[1m+++ b/mediapipe/tasks/examples/android/objectdetector/src/main/BUILD[m
+[36m@@ -14,7 +14,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ android_binary([m
+     name = "objectdetector",[m
+[1mdiff --git a/mediapipe/util/BUILD b/mediapipe/util/BUILD[m
+[1mindex 55556955..07afd03e 100644[m
+[1m--- a/mediapipe/util/BUILD[m
+[1m+++ b/mediapipe/util/BUILD[m
+[36m@@ -17,7 +17,7 @@[m [mload("//mediapipe/framework:mediapipe_cc_test.bzl", "mediapipe_cc_test")[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ mediapipe_proto_library([m
+     name = "audio_decoder_proto",[m
+[1mdiff --git a/mediapipe/util/sequence/BUILD b/mediapipe/util/sequence/BUILD[m
+[1mindex ac7c2ba5..f8f3eb72 100644[m
+[1m--- a/mediapipe/util/sequence/BUILD[m
+[1m+++ b/mediapipe/util/sequence/BUILD[m
+[36m@@ -15,7 +15,7 @@[m
+ [m
+ licenses(["notice"])[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ cc_library([m
+     name = "media_sequence_util",[m
+[1mdiff --git a/third_party/google_toolbox_for_mac.BUILD b/third_party/google_toolbox_for_mac.BUILD[m
+[1mindex 06497d29..c69f4ca7 100644[m
+[1m--- a/third_party/google_toolbox_for_mac.BUILD[m
+[1m+++ b/third_party/google_toolbox_for_mac.BUILD[m
+[36m@@ -7,7 +7,7 @@[m
+ #       --build_tests_only \[m
+ #       @google_toolbox_for_mac///...[m
+ [m
+[31m-package(default_visibility = ["//visibility:private"])[m
+[32m+[m[32mpackage(default_visibility = ["//visibility:public"])[m
+ [m
+ licenses(["notice"])  # Apache 2.0[m
+ [m
