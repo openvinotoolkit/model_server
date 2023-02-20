@@ -100,6 +100,9 @@ Status InferenceRequest::getBatchSize(size_t& batchSize, size_t batchSizeIndex) 
         return StatusCode::INTERNAL_ERROR;
     }
     batchSize = shape[batchSizeIndex];
+    if (batchSize <= 0) {
+        return StatusCode::INVALID_BATCH_SIZE;
+    }
     return StatusCode::OK;
 }
 std::map<std::string, shape_t> InferenceRequest::getRequestShapes() const {

@@ -48,7 +48,12 @@ std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const 
         SPDLOG_DEBUG("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
         return std::nullopt;
     }
-    return Dimension(requestInput->shape()[batchSizeIndex]);
+    auto value = requestInput->shape()[batchSizeIndex];
+    if (value <= 0) {
+        SPDLOG_DEBUG("Failed to get batch size of a request. Batch size cannot be a negative number or 0. Validation of request failed");
+        return std::nullopt;
+    }
+    return Dimension(value);
 }
 
 std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request) {
@@ -82,7 +87,12 @@ std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictR
         SPDLOG_DEBUG("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
         return std::nullopt;
     }
-    return Dimension(requestInput.tensor_shape().dim(batchSizeIndex).size());
+    auto value = requestInput.tensor_shape().dim(batchSizeIndex).size();
+    if (value <= 0) {
+        SPDLOG_DEBUG("Failed to get batch size of a request. Batch size cannot be a negative number or 0. Validation of request failed");
+        return std::nullopt;
+    }
+    return Dimension(value);
 }
 
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request) {

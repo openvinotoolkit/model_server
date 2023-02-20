@@ -1154,9 +1154,11 @@ Status ModelInstance::infer(const RequestType* requestProto,
     if (!status.ok())
         return status;
     status = validate(requestProto);
-    auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
-    auto requestShapes = getRequestShapes(requestProto);
-    status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
+    if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
+        auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
+        auto requestShapes = getRequestShapes(requestProto);
+        status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
+    }
     if (!status.ok())
         return status;
     status = requestProcessor->prepare();

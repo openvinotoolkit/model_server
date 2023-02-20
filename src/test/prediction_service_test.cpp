@@ -987,7 +987,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayout) {
     typename TypeParam::second_type response;
 
     // Perform inference with NCHW layout, ensure status OK and results in NHWC order
-    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 4, 5, 3}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
     // Reload model with layout setting removed
@@ -995,14 +995,14 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayout) {
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Perform inference with NCHW layout, ensure status OK and results still in NHWC order
-    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
     // Change output layout back to original nchw.
     ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nchw\"}")), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
-    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
 
@@ -1532,6 +1532,25 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionRange) {
     ASSERT_EQ(this->performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "increment_1x3x4x5"), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 3, 1, 1}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     this->checkOutputValues(response, {37.0, 28.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, InferenceWithNegativeShape) {
+    typename TypeParam::first_type request;
+    std::vector<float> data{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int64_t negativeBatch = -5;
+    preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}},
+        data, negativeBatch);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchSize(1);
+
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 }
 
 #pragma GCC diagnostic pop

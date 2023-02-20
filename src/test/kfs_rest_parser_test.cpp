@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <regex>
+#include <vector>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -874,4 +877,31 @@ TEST_F(KFSRestParserTest, parseInvalidDataNotHeterogenous) {
     })";
     auto status = parser.parse(request.c_str());
     ASSERT_EQ(status, StatusCode::OK);
+}
+
+TEST_F(KFSRestParserTest, parseNegativeBatch) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "b",
+        "shape" : [ $replace, 3 ],
+        "datatype" : "FP32",
+        "data" : [ [ 1.5, 2.9, 3.0 ], [ 1.5, 2.9, 3.0 ], [ 1.5, 2.9, 3.0 ] ]
+        }
+    ]
+    })";
+
+    for (double i : std::vector<double>{-5, -2.56, -7, -1, -0.5, -124, -0.0000000}) {
+        std::string replace = std::to_string(i);
+        std::string requestCopy = std::regex_replace(request, std::regex("\\$replace"), replace);
+        auto status = parser.parse(requestCopy.c_str());
+        ASSERT_NE(status, StatusCode::OK) << "for value: " << replace;
+    }
+
+    for (int i : std::vector<int>{-5, -8, -1, -0, -124}) {
+        std::string replace = std::to_string(i);
+        std::string requestCopy = std::regex_replace(request, std::regex("\\$replace"), replace);
+        auto status = parser.parse(requestCopy.c_str());
+        ASSERT_NE(status, StatusCode::OK) << "for value: " << replace;
+    }
 }

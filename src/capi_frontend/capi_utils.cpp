@@ -25,11 +25,12 @@
 #include "../logging.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"
+#include "../tensorinfo.hpp"
 
 namespace ovms {
 
-std::string tensorShapeToString(const Shape& shape) {
-    return shape.toString();
+std::string tensorShapeToString(const shape_t& shape) {
+    return TensorInfo::shapeToString(shape);
 }
 
 OVMS_DataType getPrecisionAsOVMSDataType(Precision precision) {

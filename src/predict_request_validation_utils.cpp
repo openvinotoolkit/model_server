@@ -32,6 +32,7 @@
 #include "modelconfig.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
+#include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
@@ -61,6 +62,7 @@ dimension_value_t RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getDim(siz
 }
 template <>
 dimension_value_t RequestShapeInfo<InferenceTensor, shape_t>::getDim(size_t i) {
+    // TODO: Handle max int64 situation?
     return tensor.getShape()[i];
 }
 template <>

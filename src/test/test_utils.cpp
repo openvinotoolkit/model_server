@@ -33,22 +33,22 @@ void prepareBinaryPredictRequest(ovms::InferenceRequest& request, const std::str
 void prepareBinaryPredictRequestNoShape(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }  // CAPI binary not supported
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }      // CAPI binary not supported
 
-void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool putBufferInInputTensorContent) {
+void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, std::optional<int64_t> overrideBatch, bool putBufferInInputTensorContent) {
     request.mutable_inputs()->Clear();
     request.mutable_raw_input_contents()->Clear();
     for (auto const& it : requestInputs) {
-        prepareKFSInferInputTensor(request, it.first, it.second, data, putBufferInInputTensorContent);
+        prepareKFSInferInputTensor(request, it.first, it.second, data, overrideBatch, putBufferInInputTensorContent);
     }
 }
 
-void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
+void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, std::optional<int64_t> overrideBatch, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     request.removeAllInputs();
     for (auto const& it : requestInputs) {
-        prepareCAPIInferInputTensor(request, it.first, it.second, data, decrementBufferSize, bufferType, deviceId);
+        prepareCAPIInferInputTensor(request, it.first, it.second, data, overrideBatch, decrementBufferSize, bufferType, deviceId);
     }
 }
 
-void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data) {
+void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, std::optional<int64_t> overrideBatch) {
     request.mutable_inputs()->clear();
     for (auto const& it : requestInputs) {
         auto& name = it.first;
@@ -61,6 +61,10 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
         for (auto const& dim : shape) {
             input.mutable_tensor_shape()->add_dim()->set_size(dim);
             numberOfElements *= dim;
+        }
+        // Force negative values for negative tests
+        if (overrideBatch.has_value()) {
+            input.mutable_tensor_shape()->mutable_dim(0)->set_size(overrideBatch.value());
         }
         switch (datatype) {
         case tensorflow::DataType::DT_HALF: {
@@ -91,8 +95,9 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
             if (data.size() == 0) {
                 *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(datatype), '1');
             } else {
+                SPDLOG_INFO("MMMM Preparing {} bytes.", data.size() * tensorflow::DataTypeSize(datatype));
                 std::string content;
-                content.resize(numberOfElements * tensorflow::DataTypeSize(datatype));
+                content.resize(data.size() * tensorflow::DataTypeSize(datatype));
                 std::memcpy(content.data(), data.data(), content.size());
                 *input.mutable_tensor_content() = content;
             }
@@ -381,23 +386,23 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
     return content;
 }
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<float>& data, bool putBufferInInputTensorContent) {
+    const std::vector<float>& data, std::optional<int64_t> overrideBatch, bool putBufferInInputTensorContent) {
     auto [shape, type] = inputInfo;
     prepareKFSInferInputTensor(request, name,
         {shape, ovmsPrecisionToKFSPrecision(type)},
-        data, putBufferInInputTensorContent);
+        data, overrideBatch, putBufferInInputTensorContent);
 }
 
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
+    const std::vector<float>& data, std::optional<int64_t> overrideBatch, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto [shape, type] = inputInfo;
     prepareCAPIInferInputTensor(request, name,
         {shape, getPrecisionAsOVMSDataType(type)},
-        data, decrementBufferSize, bufferType, deviceId);
+        data, overrideBatch, decrementBufferSize, bufferType, deviceId);
 }
 
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, OVMS_DataType>& inputInfo,
-    const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
+    const std::vector<float>& data, std::optional<int64_t> overrideBatch, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto [shape, datatype] = inputInfo;
     size_t elementsCount = 1;
     for (auto const& dim : shape) {
@@ -405,6 +410,10 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
         elementsCount *= dim;
     }
 
+    // Force negative values for negative tests (for lower than 0 it will overflow due to unsigned)
+    if (overrideBatch.has_value()) {
+        shape[0] = overrideBatch.value();
+    }
     request.addInput(name.c_str(), datatype, shape.data(), shape.size());
 
     size_t dataSize = elementsCount * ovms::DataTypeToByteSize(datatype);
@@ -415,7 +424,7 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
 }
 
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
-    const std::vector<float>& data, bool putBufferInInputTensorContent) {
+    const std::vector<float>& data, std::optional<int64_t> overrideBatch, bool putBufferInInputTensorContent) {
     auto it = request.mutable_inputs()->begin();
     size_t bufferId = 0;
     while (it != request.mutable_inputs()->end()) {
@@ -446,6 +455,10 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
         ASSERT_GE(dim, 0);
         tensor->add_shape(dim);
         elementsCount *= dim;
+    }
+    // Force negative value in proto
+    if (overrideBatch.has_value()) {
+        tensor->set_shape(0, overrideBatch.value());
     }
     if (!putBufferInInputTensorContent) {
         if (data.size() == 0) {
