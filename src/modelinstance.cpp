@@ -1155,6 +1155,8 @@ Status ModelInstance::infer(const RequestType* requestProto,
         return status;
     status = validate(requestProto);
     if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
+        // We are ensured that request shape is valid and convertible to model shape (non negative, non zero)
+        // We can use it to perform reshape via shape=auto
         auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
         auto requestShapes = getRequestShapes(requestProto);
         status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);

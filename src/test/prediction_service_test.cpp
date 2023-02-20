@@ -1553,4 +1553,23 @@ TYPED_TEST(TestPredict, InferenceWithNegativeShape) {
     ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 }
 
+TYPED_TEST(TestPredict, InferenceWithNegativeShapeDynamicParameter) {
+    typename TypeParam::first_type request;
+    std::vector<float> data{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int64_t negativeBatch = -5;
+    preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}},
+        data, negativeBatch);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+}
+
 #pragma GCC diagnostic pop

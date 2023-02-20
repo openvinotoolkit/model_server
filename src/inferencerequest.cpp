@@ -89,6 +89,8 @@ const InferenceParameter* InferenceRequest::getParameter(const char* name) const
         return &it->second;
     return nullptr;
 }
+
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 Status InferenceRequest::getBatchSize(size_t& batchSize, size_t batchSizeIndex) const {
     if (inputs.size() == 0) {
         return StatusCode::INTERNAL_ERROR;
@@ -100,9 +102,6 @@ Status InferenceRequest::getBatchSize(size_t& batchSize, size_t batchSizeIndex) 
         return StatusCode::INTERNAL_ERROR;
     }
     batchSize = shape[batchSizeIndex];
-    if (batchSize <= 0) {
-        return StatusCode::INVALID_BATCH_SIZE;
-    }
     return StatusCode::OK;
 }
 std::map<std::string, shape_t> InferenceRequest::getRequestShapes() const {

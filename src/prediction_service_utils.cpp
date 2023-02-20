@@ -33,6 +33,7 @@ using tensorflow::serving::PredictResponse;
 
 namespace ovms {
 
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const size_t batchSizeIndex) {
     auto requestInputItr = request->inputs().begin();
     if (requestInputItr == request->inputs().end()) {
@@ -48,14 +49,10 @@ std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const 
         SPDLOG_DEBUG("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
         return std::nullopt;
     }
-    auto value = requestInput->shape()[batchSizeIndex];
-    if (value <= 0) {
-        SPDLOG_DEBUG("Failed to get batch size of a request. Batch size cannot be a negative number or 0. Validation of request failed");
-        return std::nullopt;
-    }
-    return Dimension(value);
+    return Dimension(requestInput->shape()[batchSizeIndex]);
 }
 
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request) {
     std::map<std::string, shape_t> requestShapes;
     for (auto& it : request->inputs()) {
@@ -70,6 +67,7 @@ std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request) {
     return requestShapes;
 }
 
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request, const size_t batchSizeIndex) {
     auto requestInputItr = request->inputs().begin();
     if (requestInputItr == request->inputs().end()) {
@@ -87,14 +85,10 @@ std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictR
         SPDLOG_DEBUG("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
         return std::nullopt;
     }
-    auto value = requestInput.tensor_shape().dim(batchSizeIndex).size();
-    if (value <= 0) {
-        SPDLOG_DEBUG("Failed to get batch size of a request. Batch size cannot be a negative number or 0. Validation of request failed");
-        return std::nullopt;
-    }
-    return Dimension(value);
+    return Dimension(requestInput.tensor_shape().dim(batchSizeIndex).size());
 }
 
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request) {
     std::map<std::string, shape_t> requestShapes;
     for (auto& it : request->inputs()) {

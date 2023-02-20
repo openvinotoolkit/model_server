@@ -95,7 +95,6 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
             if (data.size() == 0) {
                 *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(datatype), '1');
             } else {
-                SPDLOG_INFO("MMMM Preparing {} bytes.", data.size() * tensorflow::DataTypeSize(datatype));
                 std::string content;
                 content.resize(data.size() * tensorflow::DataTypeSize(datatype));
                 std::memcpy(content.data(), data.data(), content.size());
