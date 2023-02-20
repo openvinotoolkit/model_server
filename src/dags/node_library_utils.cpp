@@ -58,8 +58,7 @@ Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
         {CustomNodeTensorPrecision::U8, Precision::U8},
         {CustomNodeTensorPrecision::FP16, Precision::FP16},
         {CustomNodeTensorPrecision::I16, Precision::I16},
-        {CustomNodeTensorPrecision::U16, Precision::U16},
-        {CustomNodeTensorPrecision::BIN, Precision::BIN}};
+        {CustomNodeTensorPrecision::U16, Precision::U16}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
         return Precision::UNDEFINED;

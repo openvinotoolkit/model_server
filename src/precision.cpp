@@ -107,6 +107,7 @@ ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
         {Precision::DYNAMIC, ov::element::Type_t::dynamic}
         //    {Precision::MIXED, ov::element::Type_t::MIXED},
         //    {Precision::Q78, ov::element::Type_t::Q78},
+        //    {Precision::BIN, ov::element::Type_t::BIN},
         //    {Precision::CUSTOM, ov::element::Type_t::CUSTOM
     };
     auto it = precisionMap.find(precision);

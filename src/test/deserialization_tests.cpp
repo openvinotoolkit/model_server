@@ -427,20 +427,20 @@ TEST_P(DeserializeKFSTensorProtoNegative, ShouldReturnNullptrForPrecision) {
                                << " should return nullptr";
 }
 
-// TEST_P(DeserializeKFSTensorProto, ShouldReturnValidTensor) {
-//     auto [testedPrecision, getInputFromRawInputContents] = GetParam();
-//     std::string* bufferPtr = (getInputFromRawInputContents ? &buffer : nullptr);
-//     if ((!getInputFromRawInputContents && (ovms::Precision::FP16 == testedPrecision))) {
-//         GTEST_SKIP() << "Not supported";
-//     }
-//     SetUpTensorProto(TensorInfo::getPrecisionAsString(testedPrecision), getInputFromRawInputContents);
-//     tensorMap[tensorName]->setPrecision(testedPrecision);
-//     ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], bufferPtr);
-//     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
-//                               << toString(testedPrecision)
-//                               << " should return valid tensor ptr";
-//     EXPECT_EQ(ovElementTypeToOvmsPrecision(tensor.get_element_type()), testedPrecision);
-// }
+TEST_P(DeserializeKFSTensorProto, ShouldReturnValidTensor) {
+    auto [testedPrecision, getInputFromRawInputContents] = GetParam();
+    std::string* bufferPtr = (getInputFromRawInputContents ? &buffer : nullptr);
+    if ((!getInputFromRawInputContents && (ovms::Precision::FP16 == testedPrecision))) {
+        GTEST_SKIP() << "Not supported";
+    }
+    SetUpTensorProto(TensorInfo::getPrecisionAsString(testedPrecision), getInputFromRawInputContents);
+    tensorMap[tensorName]->setPrecision(testedPrecision);
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], bufferPtr);
+    EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
+                              << toString(testedPrecision)
+                              << " should return valid tensor ptr";
+    EXPECT_EQ(ovElementTypeToOvmsPrecision(tensor.get_element_type()), testedPrecision);
+}
 
 TEST_F(KserveGRPCPredict, ShouldReturnValidTensor) {
     ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], &buffer);

@@ -121,7 +121,6 @@ public:
             case ovms::Precision::U32:
             case ovms::Precision::U16:
             case ovms::Precision::BOOL:
-            case ovms::Precision::BIN:
             case ovms::Precision::U8: {
                 return makeTensor(requestInput, tensorInfo, *buffer);
             }
@@ -253,13 +252,14 @@ public:
                 return tensor;
                 break;
             }
-            case ovms::Precision::UNDEFINED:
             case ovms::Precision::FP16:
             case ovms::Precision::U1:
             case ovms::Precision::CUSTOM:
+            case ovms::Precision::UNDEFINED:
             case ovms::Precision::DYNAMIC:
             case ovms::Precision::MIXED:
             case ovms::Precision::Q78:
+            case ovms::Precision::BIN:
             default:
                 return ov::Tensor();
             }
