@@ -14,8 +14,6 @@ These are the most generic function calls and should address most of the usage s
 
 ## Model Status API <a name="model-status"></a>
 
-- Description
-
 Gets information about the status of served models including Model Version
 
  [Get Model Status proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_status.proto) defines three message definitions used while calling Status endpoint: *GetModelStatusRequest*, *ModelVersionStatus*, *GetModelStatusResponse* that are used to report all exposed versions including their state in their lifecycle.

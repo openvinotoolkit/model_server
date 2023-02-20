@@ -546,13 +546,11 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
 #define HANDLE_VALUE(CONTENTS, TYPE_GETTER, TYPE_CHECK)                 \
     for (auto& value : node.GetArray()) {                               \
         if (value.IsArray()) {                                          \
-            for (auto& v : node.GetArray()) {                           \
-                auto status = parseData(v, input);                      \
-                if (!status.ok()) {                                     \
-                    return status;                                      \
-                }                                                       \
+            auto status = parseData(value, input);                      \
+            if (!status.ok()) {                                         \
+                return status;                                          \
             }                                                           \
-            return StatusCode::OK;                                      \
+            continue;                                                   \
         }                                                               \
         if (!value.TYPE_CHECK()) {                                      \
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;              \

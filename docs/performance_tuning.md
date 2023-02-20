@@ -34,13 +34,16 @@ CPU
 
 GPU
 
-   ```bash
+@sphinxdirective
+.. code-block:: sh
+
          docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
                -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
                --model_path /opt/model --model_name resnet --port 9001 \
                --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
                --target_device GPU
-   ```
+
+@endsphinxdirective
 
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
@@ -128,6 +131,8 @@ docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/o
 --plugin_config '{"NUM_STREAMS": "1"}'
 
 ```
+
+> **NOTE:** Deployment of the OpenVINO Model Server including the autoscaling capability can be automated in Kubernetes and OpenShift using the operator. [Read more about](https://github.com/openvinotoolkit/operator/blob/main/docs/autoscaling.md)
 
 ## CPU Power Management Settings
 To save power, the OS can decrease the CPU frequency and increase a volatility of the latency values. Similarly the Intel® Turbo Boost Technology may also affect the stability of results. For best reproducibility, consider locking the frequency to the processor base frequency (refer to the https://ark.intel.com/ for your specific CPU). For example, in Linux setting the relevant values for the /sys/devices/system/cpu/cpu* entries does the trick. [Read more](https://docs.openvino.ai/2022.2/openvino_docs_optimization_guide_dldt_optimization_guide.html). High-level commands like cpupower also exists:

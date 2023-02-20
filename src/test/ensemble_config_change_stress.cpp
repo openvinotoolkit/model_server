@@ -1125,8 +1125,7 @@ public:
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
-    void checkMetricGreaterThan(const std::string& metricName, double value) {
-        std::string metricOutput = manager.getMetricRegistry()->collect();
+    void checkMetricGreaterThan(const std::string& metricName, double value, std::string& metricOutput, bool& result) {
         ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric\n"
                                                                                                                      << metricOutput;
         std::regex findActualMetricRgx(std::string{".*"} + metricName + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
@@ -1143,9 +1142,10 @@ public:
         SPDLOG_DEBUG("{} value: {}", METRIC_NAME_REQUESTS_SUCCESS, requestsSuccessCounter.value());
         ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number\n"
                                            << metricOutput;
-        // In case of sporadic error here consider checking ovms_requests_success value (if 0, it could mean the load did not start yet (could happen on slower machines))
-        ASSERT_GT(actualVal.value(), value) << metricName << " metric needs to be greater than " << value << std::endl
-                                            << metricOutput;
+        result = actualVal.value() > value;
+        if (!result)
+            std::cerr << metricName << " metric needs to be greater than " << value << std::endl
+                      << metricOutput;
     }
     void checkActiveNireqSmallerThanTotal() {
         std::string metricOutput = manager.getMetricRegistry()->collect();
@@ -1164,8 +1164,17 @@ public:
     }
     void testCurrentRequestsMetric() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0);
-        checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0);
+        bool current_requests_pass = false, infer_req_active_pass = false;
+        int retries = 3;
+        for (int i = 0; i < retries; i++) {
+            std::string metricOutput = manager.getMetricRegistry()->collect();
+            checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0, metricOutput, current_requests_pass);
+            checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0, metricOutput, infer_req_active_pass);
+            if (current_requests_pass && infer_req_active_pass)
+                break;
+        }
+        if (!current_requests_pass || !infer_req_active_pass)
+            FAIL() << "Terminated after " << retries << " retries";
         checkActiveNireqSmallerThanTotal();
         SPDLOG_INFO("{} end", __FUNCTION__);
     }

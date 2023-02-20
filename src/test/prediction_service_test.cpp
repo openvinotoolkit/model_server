@@ -54,14 +54,14 @@ using ovms::StatusCode;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
-void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
-    std::vector<float> output(10);
+static void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
+    std::vector<float> output(outputSize);
     tensorflow::serving::PredictResponse response;
     ovms::OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
     auto status = serializePredictResponse(outputGetter, UNUSED_SERVABLE_NAME, UNUSED_MODEL_VERSION, outputsInfo, &response, ovms::getTensorInfoName);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
-    std::memcpy(output.data(), (float*)response.outputs().at(outputName).tensor_content().data(), DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+    std::memcpy(output.data(), (float*)response.outputs().at(outputName).tensor_content().data(), outputSize * sizeof(float));
     EXPECT_THAT(output, Each(Eq(1.)));
 }
 
@@ -90,7 +90,7 @@ static ovms::Status getOutput(const TFSResponseType& response, const std::string
 }
 
 using inputs_info_elem_t = std::pair<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
-size_t calculateByteSize(const inputs_info_elem_t& e) {
+static size_t calculateByteSize(const inputs_info_elem_t& e) {
     auto& [inputName, shapeDatatypeTuple] = e;
     auto& [shape, precision] = shapeDatatypeTuple;
     size_t shapeProduct = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
@@ -389,9 +389,31 @@ public:
         return validate(request);
     }
 };
+const size_t DUMMY_DIM_POS = 1;
+template <typename RequestType>
+static size_t extractDummyOutputSize(const RequestType& request);
+
+template <>
+size_t extractDummyOutputSize(const TFSPredictRequest& request) {
+    auto it = request.inputs().begin();
+    EXPECT_NE(it, request.inputs().end());
+    auto shape = it->second.tensor_shape();
+    return shape.dim(DUMMY_DIM_POS).size();
+}
+template <>
+size_t extractDummyOutputSize(const KFSRequest& request) {
+    auto it = request.inputs().begin();
+    EXPECT_NE(it, request.inputs().end());
+    auto shape = it->shape();
+    return shape[DUMMY_DIM_POS];
+}
+template <>
+size_t extractDummyOutputSize(const ovms::InferenceRequest& request) {
+    return request.getRequestShapes().begin()->second[DUMMY_DIM_POS];
+}
 
 template <typename RequestType>
-void performPrediction(const std::string modelName,
+static void performPrediction(const std::string modelName,
     const ovms::model_version_t modelVersion,
     const RequestType& request,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
@@ -434,7 +456,7 @@ void performPrediction(const std::string modelName,
     auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(request, modelInstance->getInputsInfo(), inputSink, isPipeline);
     status = modelInstance->performInference(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    size_t outputSize = requestBatchSize * DUMMY_MODEL_OUTPUT_SIZE;
+    size_t outputSize = requestBatchSize * extractDummyOutputSize(request);
     serializeAndCheck(outputSize, inferRequest, outputName, modelInstance->getOutputsInfo());
 }
 template <typename Pair,
@@ -480,13 +502,43 @@ static const char* oneDummyWithMappedInputConfig = R"(
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
+                "nireq": 10,
                 "shape": {"input_tensor": "(1,10) "}
             }
         }
     ]
 })";
 
+static const char* oneDummyWithMappedInputSpecificAutoShapeConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 10,
+                "shape": {"input_tensor": "auto"}
+            }
+        }
+    ]
+})";
+static const char* oneDummyWithMappedInputAnonymousAutoShapeConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 10,
+                "shape": "auto"
+            }
+        }
+    ]
+})";
 template <typename RequestType>
 class TestPredictWithMapping : public TestWithTempDir {
 public:
@@ -508,9 +560,11 @@ public:
     }
     void SetUp() {
         TestWithTempDir::SetUp();
+    }
+    void SetUp(const std::string& configContent) {
         modelPath = directoryPath + "/dummy/";
         mappingConfigPath = modelPath + "1/mapping_config.json";
-        SetUpConfig(oneDummyWithMappedInputConfig);
+        SetUpConfig(configContent);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         createConfigFileWithContent(R"({
@@ -529,9 +583,39 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMapping) {
     preparer.preparePredictRequest(request,
         {{this->dummyModelInputMapping,
             std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+    this->SetUp(oneDummyWithMappedInputConfig);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager manager;
     auto status = manager.loadConfig(this->configFilePath);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    performPrediction(config.getName(), config.getVersion(), request, nullptr, nullptr, manager, this->dummyModelInputMapping, this->dummyModelOutputMapping);
+}
+
+TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMappingSpecificShapeAuto) {
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{this->dummyModelInputMapping,
+            std::tuple<ovms::shape_t, ovms::Precision>{{1, 5}, ovms::Precision::FP32}}});
+    this->SetUp(oneDummyWithMappedInputSpecificAutoShapeConfig);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    auto status = config.parseShapeParameter("auto");
+    ConstructorEnabledModelManager manager;
+    status = manager.loadConfig(this->configFilePath);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    performPrediction(config.getName(), config.getVersion(), request, nullptr, nullptr, manager, this->dummyModelInputMapping, this->dummyModelOutputMapping);
+}
+TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMappingAnonymousShapeAuto) {
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{this->dummyModelInputMapping,
+            std::tuple<ovms::shape_t, ovms::Precision>{{1, 5}, ovms::Precision::FP32}}});
+    this->SetUp(oneDummyWithMappedInputAnonymousAutoShapeConfig);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    auto status = config.parseShapeParameter("auto");
+    ConstructorEnabledModelManager manager;
+    status = manager.loadConfig(this->configFilePath);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     performPrediction(config.getName(), config.getVersion(), request, nullptr, nullptr, manager, this->dummyModelInputMapping, this->dummyModelOutputMapping);
 }

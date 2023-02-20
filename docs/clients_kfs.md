@@ -352,6 +352,8 @@ When creating a Python-based client application, you can use Triton client libra
         request = service_pb2.ModelInferRequest()
         request.model_name = "model_name'"
         request.inputs.extend(inputs)
+        request.outputs.extend(outputs)
+        response = grpc_stub.ModelInfer(request)
 
 .. tab:: python [REST]
 
