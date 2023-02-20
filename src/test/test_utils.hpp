@@ -478,7 +478,7 @@ static const std::vector<ovms::Precision> SUPPORTED_KFS_INPUT_PRECISIONS{
 };
 
 static const std::vector<ovms::Precision> UNSUPPORTED_KFS_INPUT_PRECISIONS{
-    // ovms::Precision::UNDEFINED,
+    ovms::Precision::UNDEFINED,
     ovms::Precision::MIXED,
     // ovms::Precision::FP64,
     // ovms::Precision::FP32,
@@ -492,7 +492,7 @@ static const std::vector<ovms::Precision> UNSUPPORTED_KFS_INPUT_PRECISIONS{
     // ovms::Precision::I64,
     // ovms::Precision::U32,
     // ovms::Precision::U64,
-    // ovms::Precision::BIN,
+    ovms::Precision::BIN,
     // ovms::Precision::BOOL
     ovms::Precision::CUSTOM};
 
