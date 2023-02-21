@@ -1540,8 +1540,8 @@ TYPED_TEST(TestPredict, InferenceWithNegativeShape) {
     int64_t negativeBatch = -5;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}},
-        data, negativeBatch);
+            std::tuple<signed_shape_t, ovms::Precision>{{negativeBatch, 10}, ovms::Precision::FP32}}},
+        data);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
 
@@ -1559,8 +1559,8 @@ TYPED_TEST(TestPredict, InferenceWithNegativeShapeDynamicParameter) {
     int64_t negativeBatch = -5;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}},
-        data, negativeBatch);
+            std::tuple<signed_shape_t, ovms::Precision>{{negativeBatch, 10}, ovms::Precision::FP32}}},
+        data);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("auto");
 

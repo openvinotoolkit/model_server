@@ -1128,8 +1128,7 @@ protected:
                     std::tuple<signed_shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
                 {"Input_U16_1_2_8_4_NCHW",
                     std::tuple<signed_shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-            {},  // data,
-            std::nullopt,
+            {},     // data,
             true);  // put buffer in InputTensorContent
     }
 };
