@@ -88,6 +88,12 @@ git_repository(
     name = "google_mediapipe",
     remote = "https://github.com/google/mediapipe",
     tag = "v0.9.1",
+    patches = [
+        "make_mediapipe_modules_public.patch"
+    ],
+    patch_args = [
+        "-p1",
+    ],
 )
 
 # Protobuf for Node dependencies
