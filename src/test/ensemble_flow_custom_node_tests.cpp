@@ -71,11 +71,11 @@ protected:
             StatusCode::OK);
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
 
@@ -288,11 +288,11 @@ protected:
             StatusCode::OK);
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
 };

@@ -18,14 +18,14 @@
 
 #include "../ovms.h"  // NOLINT
 #include "../precision.hpp"
+#include "../shape.hpp"
 
 namespace ovms {
 class InferenceRequest;
 class InferenceResponse;
-class Shape;
 class Status;
-std::string tensorShapeToString(const Shape& tensorShape);
 
+std::string tensorShapeToString(const shape_t& tensorShape);
 OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
 Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype);
 Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string& name, bool& nativeFileFormatUsed);

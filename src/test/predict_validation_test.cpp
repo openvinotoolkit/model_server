@@ -62,11 +62,11 @@ protected:
         preparePredictRequest(request,
             {
                 {"Input_FP32_1_224_224_3_NHWC",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
                 {"Input_U8_1_3_62_62_NCHW",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 3, 62, 62}, ovms::Precision::U8}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, 3, 62, 62}, ovms::Precision::U8}},
                 {"Input_I64_1_6_128_128_16_NCDHW",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
             });
 
         // U16 uses int_val instead of tensor_content so it needs separate test
@@ -489,9 +489,9 @@ protected:
         preparePredictRequest(request,
             {
                 {"Input_FP32_224_224_3_1_HWCN",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{224, 224, 3, 1}, ovms::Precision::FP32}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{224, 224, 3, 1}, ovms::Precision::FP32}},
                 {"Input_U8_3_1_128_CNH",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{3, 1, 128}, ovms::Precision::U8}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{3, 1, 128}, ovms::Precision::U8}},
             });
     }
 };
@@ -565,9 +565,9 @@ protected:
         preparePredictRequest(request,
             {
                 {"Input_FP32_any_224:512_224:512_3_NHWC",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{requestBatchSize, 300, 320, 3}, ovms::Precision::FP32}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{requestBatchSize, 300, 320, 3}, ovms::Precision::FP32}},
                 {"Input_U8_100:200_any_CN",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{101, requestBatchSize}, ovms::Precision::U8}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{101, requestBatchSize}, ovms::Precision::U8}},
             });
     }
 };
@@ -644,7 +644,7 @@ TEST_P(TfsPredictValidationPrecision, ValidPrecisions) {
     preparePredictRequest(request,
         {
             {tensorName,
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, testedPrecision}},
+                std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, testedPrecision}},
         });
     auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::OK) << "Precision validation failed:"
@@ -689,13 +689,13 @@ protected:
 
         preparePredictRequest(request,
             {{"Input_FP32_1_224_224_3_NHWC",
-                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
+                 std::tuple<signed_shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
                 {"Input_U8_1_3_62_62_NCHW",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 3, 62, 62}, ovms::Precision::U8}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, 3, 62, 62}, ovms::Precision::U8}},
                 {"Input_I64_1_6_128_128_16_NCDHW",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
                 {"Input_U16_1_2_8_4_NCHW",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}});
     }
 };
 
@@ -1062,7 +1062,7 @@ TEST_F(KFSPredictValidationInputTensorContent, RequestInputTensorContentAndRawIn
     ON_CALL(*instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
     preparePredictRequest(request,
         {{inputName,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 2}, testedPrecision}}},
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 2}, testedPrecision}}},
         {},      // data,
         false);  // put buffer in InputTensorContent
     auto buf = findKFSInferInputTensor(request, inputName)->mutable_contents()->mutable_fp32_contents();
@@ -1085,7 +1085,7 @@ TEST_P(KFSPredictValidationInputTensorContent, RequestCorrectContentSizeInputTen
     ON_CALL(*instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
     preparePredictRequest(request,
         {{inputName,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, testedPrecision}}},
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 224, 224, 3}, testedPrecision}}},
         {},     // data,
         true);  // put buffer in InputTensorContent
     auto status = instance->mockValidate(&request);
@@ -1121,13 +1121,13 @@ protected:
 
         preparePredictRequest(request,
             {{"Input_FP32_1_224_224_3_NHWC",
-                 std::tuple<ovms::shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
+                 std::tuple<signed_shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
                 {"Input_U8_1_3_62_62_NCHW",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 3, 62, 62}, ovms::Precision::U8}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, 3, 62, 62}, ovms::Precision::U8}},
                 {"Input_I64_1_6_128_128_16_NCDHW",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
                 {"Input_U16_1_2_8_4_NCHW",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
             {},     // data,
             true);  // put buffer in InputTensorContent
     }
@@ -1185,9 +1185,9 @@ protected:
         preparePredictRequest(request,
             {
                 {"Input_FP32_224_224_3_1_HWCN",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{224, 224, 3, 1}, ovms::Precision::FP32}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{224, 224, 3, 1}, ovms::Precision::FP32}},
                 {"Input_U8_3_1_128_CNH",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{3, 1, 128}, ovms::Precision::U8}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{3, 1, 128}, ovms::Precision::U8}},
             });
     }
 };
@@ -1244,9 +1244,9 @@ protected:
         preparePredictRequest(request,
             {
                 {"Input_FP32_any_224:512_224:512_3_NHWC",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{requestBatchSize, 300, 320, 3}, ovms::Precision::FP32}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{requestBatchSize, 300, 320, 3}, ovms::Precision::FP32}},
                 {"Input_U8_100:200_any_CN",
-                    std::tuple<ovms::shape_t, ovms::Precision>{{101, requestBatchSize}, ovms::Precision::U8}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{101, requestBatchSize}, ovms::Precision::U8}},
             });
     }
 };
@@ -1306,7 +1306,7 @@ TEST_P(KFSPredictValidationPrecision, ValidPrecisions) {
     preparePredictRequest(request,
         {
             {tensorName,
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, testedPrecision}},
+                std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, testedPrecision}},
         });
     auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::OK) << "Precision validation failed:"

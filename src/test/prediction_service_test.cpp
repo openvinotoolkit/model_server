@@ -89,7 +89,7 @@ static ovms::Status getOutput(const TFSResponseType& response, const std::string
     return StatusCode::INVALID_MISSING_INPUT;
 }
 
-using inputs_info_elem_t = std::pair<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
+using inputs_info_elem_t = std::pair<std::string, std::tuple<signed_shape_t, ovms::Precision>>;
 static size_t calculateByteSize(const inputs_info_elem_t& e) {
     auto& [inputName, shapeDatatypeTuple] = e;
     auto& [shape, precision] = shapeDatatypeTuple;
@@ -154,7 +154,7 @@ public:
                         Preparer<RequestType> preparer;
                         preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
-                                std::tuple<ovms::shape_t, ovms::Precision>{{(initialBatchSize + (i % 3)), 10}, ovms::Precision::FP32}}});
+                                std::tuple<signed_shape_t, ovms::Precision>{{(initialBatchSize + (i % 3)), 10}, ovms::Precision::FP32}}});
 
                         performPredict(config.getName(), config.getVersion(), request,
                             std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
@@ -168,7 +168,7 @@ public:
                         Preparer<RequestType> preparer;
                         preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
-                                std::tuple<ovms::shape_t, ovms::Precision>{{initialBatchSize, 10}, ovms::Precision::FP32}}});
+                                std::tuple<signed_shape_t, ovms::Precision>{{initialBatchSize, 10}, ovms::Precision::FP32}}});
 
                         performPredict(config.getName(), config.getVersion(), request, nullptr,
                             std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInference[i].get_future())));
@@ -205,7 +205,7 @@ public:
                         Preparer<RequestType> preparer;
                         preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
-                                std::tuple<ovms::shape_t, ovms::Precision>{{(initialBatchSize + i), 10}, ovms::Precision::FP32}}});
+                                std::tuple<signed_shape_t, ovms::Precision>{{(initialBatchSize + i), 10}, ovms::Precision::FP32}}});
                         performPredict(config.getName(), config.getVersion(), request,
                             std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
                     }));
@@ -221,7 +221,7 @@ public:
         }
     }
 
-    void checkOutputShape(const ResponseType& response, const ovms::shape_t& shape, const std::string& outputName = "a");
+    void checkOutputShape(const ResponseType& response, const signed_shape_t& shape, const std::string& outputName = "a");
 
     static void checkOutputValues(const TFSResponseType& response, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
         ASSERT_EQ(response.outputs().count(outputName), 1);
@@ -288,33 +288,33 @@ public:
         return model->infer(&request, &response, unload_guard);
     }
 
-    ovms::Status performInferenceWithShape(ResponseType& response, const ovms::shape_t& shape = {1, 10}, const ovms::Precision precision = ovms::Precision::FP32) {
+    ovms::Status performInferenceWithShape(ResponseType& response, const signed_shape_t& shape = {1, 10}, const ovms::Precision precision = ovms::Precision::FP32) {
         RequestType request;
         Preparer<RequestType> preparer;
         preparer.preparePredictRequest(request,
-            {{DUMMY_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, ovms::Precision>{shape, precision}}});
+            {{DUMMY_MODEL_INPUT_NAME, std::tuple<signed_shape_t, ovms::Precision>{shape, precision}}});
         return performInferenceWithRequest(request, response);
     }
 
     ovms::Status performInferenceWithBatchSize(ResponseType& response, int batchSize = 1, const ovms::Precision precision = ovms::Precision::FP32, const size_t batchSizePosition = 0) {
-        ovms::shape_t shape = {1, 10};
+        signed_shape_t shape = {1, 10};
         shape[batchSizePosition] = batchSize;
         RequestType request;
         Preparer<RequestType> preparer;
         preparer.preparePredictRequest(request,
-            {{DUMMY_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, ovms::Precision>{shape, precision}}});
+            {{DUMMY_MODEL_INPUT_NAME, std::tuple<signed_shape_t, ovms::Precision>{shape, precision}}});
         return performInferenceWithRequest(request, response);
     }
 
-    ovms::Status performInferenceWithImageInput(ResponseType& response, const std::vector<size_t>& shape, const std::vector<float>& data = {}, const std::string& servableName = "increment_1x3x4x5", int batchSize = 1, const ovms::Precision precision = ovms::Precision::FP32) {
+    ovms::Status performInferenceWithImageInput(ResponseType& response, const signed_shape_t& shape, const std::vector<float>& data = {}, const std::string& servableName = "increment_1x3x4x5", int batchSize = 1, const ovms::Precision precision = ovms::Precision::FP32) {
         RequestType request;
         Preparer<RequestType> preparer;
         if (data.size()) {
             preparePredictRequest(request,
-                {{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, ovms::Precision>{shape, precision}}}, data);
+                {{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, std::tuple<signed_shape_t, ovms::Precision>{shape, precision}}}, data);
         } else {
             preparer.preparePredictRequest(request,
-                {{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, ovms::Precision>{shape, precision}}});
+                {{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, std::tuple<signed_shape_t, ovms::Precision>{shape, precision}}});
         }
         return performInferenceWithRequest(request, response, servableName);
     }
@@ -334,7 +334,7 @@ public:
 };
 
 template <>
-void TestPredict<TFSInterface>::checkOutputShape(const TFSResponseType& response, const ovms::shape_t& shape, const std::string& outputName) {
+void TestPredict<TFSInterface>::checkOutputShape(const TFSResponseType& response, const signed_shape_t& shape, const std::string& outputName) {
     ASSERT_EQ(response.outputs().count(outputName), 1);
     const auto& output_tensor = response.outputs().at(outputName);
     ASSERT_EQ(output_tensor.tensor_shape().dim_size(), shape.size());
@@ -344,7 +344,7 @@ void TestPredict<TFSInterface>::checkOutputShape(const TFSResponseType& response
 }
 
 template <>
-void TestPredict<CAPIInterface>::checkOutputShape(const ovms::InferenceResponse& cresponse, const ovms::shape_t& shape, const std::string& outputName) {
+void TestPredict<CAPIInterface>::checkOutputShape(const ovms::InferenceResponse& cresponse, const signed_shape_t& shape, const std::string& outputName) {
     size_t outputCount = cresponse.getOutputCount();
     EXPECT_GE(1, outputCount);
     size_t outputId = 0;
@@ -369,7 +369,7 @@ void TestPredict<CAPIInterface>::checkOutputShape(const ovms::InferenceResponse&
 }
 
 template <>
-void TestPredict<KFSInterface>::checkOutputShape(const KFSResponse& response, const ovms::shape_t& shape, const std::string& outputName) {
+void TestPredict<KFSInterface>::checkOutputShape(const KFSResponse& response, const signed_shape_t& shape, const std::string& outputName) {
     auto it = response.outputs().begin();
     size_t bufferId;
     auto status = getOutput(response, outputName, it, bufferId);
@@ -485,7 +485,7 @@ TYPED_TEST(TestPredict, SuccesfullOnDummyModel) {
     Preparer<typename TypeParam::first_type> preparer;
     preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
 
@@ -582,7 +582,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMapping) {
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{this->dummyModelInputMapping,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     this->SetUp(oneDummyWithMappedInputConfig);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     ConstructorEnabledModelManager manager;
@@ -596,7 +596,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMappingSpecificShap
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{this->dummyModelInputMapping,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 5}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 5}, ovms::Precision::FP32}}});
     this->SetUp(oneDummyWithMappedInputSpecificAutoShapeConfig);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto status = config.parseShapeParameter("auto");
@@ -610,7 +610,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMappingAnonymousSha
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{this->dummyModelInputMapping,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 5}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 5}, ovms::Precision::FP32}}});
     this->SetUp(oneDummyWithMappedInputAnonymousAutoShapeConfig);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto status = config.parseShapeParameter("auto");
@@ -625,7 +625,7 @@ TYPED_TEST(TestPredict, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     const auto initialBatchSize = config.getBatchSize();
     config.setBatchSize(initialBatchSize);
@@ -639,11 +639,11 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceInProgress) {
     typename TypeParam::first_type requestBs1;
     preparer.preparePredictRequest(requestBs1,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     typename TypeParam::first_type requestBs2;
     preparer.preparePredictRequest(requestBs2,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{2, 10}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{2, 10}, ovms::Precision::FP32}}});
 
     this->config.setBatchingParams("auto");
     this->config.setNireq(2);
@@ -674,11 +674,11 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceAboutToStart) {
     typename TypeParam::first_type requestBs2;
     preparer.preparePredictRequest(requestBs2,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{2, 10}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{2, 10}, ovms::Precision::FP32}}});
     typename TypeParam::first_type requestBs1;
     preparer.preparePredictRequest(requestBs1,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
 
     this->config.setBatchingParams("auto");
     this->config.setNireq(2);
@@ -749,7 +749,7 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 5}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 5}, ovms::Precision::FP32}}});
 
     typename TypeParam::second_type response;
 
@@ -987,7 +987,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayout) {
     typename TypeParam::second_type response;
 
     // Perform inference with NCHW layout, ensure status OK and results in NHWC order
-    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 4, 5, 3}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
     // Reload model with layout setting removed
@@ -995,14 +995,14 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayout) {
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Perform inference with NCHW layout, ensure status OK and results still in NHWC order
-    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
     // Change output layout back to original nchw.
     ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nchw\"}")), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
-    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
 
@@ -1381,7 +1381,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyFp64) {
     typename TypeParam::second_type response;
 
     Preparer<typename TypeParam::first_type> preparer;
-    preparer.preparePredictRequest(request, {{"input:0", std::tuple<ovms::shape_t, ovms::Precision>{{3, 10}, ovms::Precision::FP64}}});
+    preparer.preparePredictRequest(request, {{"input:0", std::tuple<signed_shape_t, ovms::Precision>{{3, 10}, ovms::Precision::FP64}}});
     ASSERT_EQ(this->performInferenceWithRequest(request, response, "dummy_fp64"), ovms::StatusCode::OK);
     this->checkOutputShape(response, {3, 10}, "output:0");
     ASSERT_EQ(getPrecisionFromResponse(response, "output:0"), ovms::Precision::FP64);
@@ -1532,6 +1532,44 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionRange) {
     ASSERT_EQ(this->performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "increment_1x3x4x5"), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 3, 1, 1}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     this->checkOutputValues(response, {37.0, 28.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, InferenceWithNegativeShape) {
+    typename TypeParam::first_type request;
+    std::vector<float> data{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int64_t negativeBatch = -5;
+    preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<signed_shape_t, ovms::Precision>{{negativeBatch, 10}, ovms::Precision::FP32}}},
+        data);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchSize(1);
+
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+}
+
+TYPED_TEST(TestPredict, InferenceWithNegativeShapeDynamicParameter) {
+    typename TypeParam::first_type request;
+    std::vector<float> data{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int64_t negativeBatch = -5;
+    preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<signed_shape_t, ovms::Precision>{{negativeBatch, 10}, ovms::Precision::FP32}}},
+        data);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 }
 
 #pragma GCC diagnostic pop

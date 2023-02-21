@@ -618,6 +618,10 @@ Status KFSRestParser::parseInput(rapidjson::Value& node, bool onlyOneInput) {
         if (!dim.IsInt()) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
+        if (dim.GetInt() <= 0) {
+            SPDLOG_DEBUG("Shape dimension is invalid: {}", dim.GetInt());
+            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        }
         input->mutable_shape()->Add(dim.GetInt());
     }
 

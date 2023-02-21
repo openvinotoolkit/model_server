@@ -1402,7 +1402,7 @@ public:
     }
     virtual inputs_info_t getExpectedInputsInfo() {
         return {{pipelineInputName,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
+            std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
     }
 
     virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest() {
@@ -1829,7 +1829,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQu
 }
 
 class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChanges {
-    const size_t differentOpsFactorsInputSize = 4;
+    const int64_t differentOpsFactorsInputSize = 4;
     const std::vector<float> factorsData{1., 3, 2, 2};
     const std::string pipelineFactorsInputName{"pipeline_factors"};
 
@@ -1845,9 +1845,9 @@ public:
     }
     inputs_info_t getExpectedInputsInfo() override {
         return {{pipelineInputName,
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
             {pipelineFactorsInputName,
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
+                std::tuple<signed_shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
     }
     void checkPipelineResponse(const std::string& pipelineOutputName,
         tensorflow::serving::PredictRequest& request,

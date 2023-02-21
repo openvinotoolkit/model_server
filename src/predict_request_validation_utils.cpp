@@ -59,6 +59,7 @@ template <>
 dimension_value_t RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getDim(size_t i) {
     return tensor.tensor_shape().dim(i).size();
 }
+
 template <>
 dimension_value_t RequestShapeInfo<InferenceTensor, shape_t>::getDim(size_t i) {
     return tensor.getShape()[i];
