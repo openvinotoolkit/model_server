@@ -168,7 +168,12 @@ public:
 
     net_http::RequestHandler dispatch(net_http::ServerRequestInterface* req) {
         return [this](net_http::ServerRequestInterface* req) {
-            this->processRequest(req);
+            try {
+                this->processRequest(req);
+            } catch (...) {
+                SPDLOG_DEBUG("Exception caught in REST request handler");
+                req->ReplyWithStatus(net_http::HTTPStatusCode::ERROR);
+            }
         };
     }
 
