@@ -99,6 +99,7 @@ enum class StatusCode {
     INVALID_MESSAGE_STRUCTURE,      /*!< Buffers can't be both in raw_input_content & input tensor content */
     INVALID_BUFFER_TYPE,            /*!< Invalid buffer type */
     INVALID_DEVICE_ID,              /*!< Invalid buffer device id */
+    INVALID_STRING_INPUT,           /*!< Invalid string input */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */

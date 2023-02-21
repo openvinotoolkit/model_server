@@ -131,6 +131,8 @@ public:
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     Status validatePrecision(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     bool checkIfNativeFileFormatUsed(const InputTensorType& proto, const std::string inputName, std::shared_ptr<TensorInfo> inputInfo) const;
+    bool checkIfStringFormatUsed(const InputTensorType& proto, const std::string inputName, std::shared_ptr<TensorInfo> inputInfo) const;
+    Status validateIfModelInputAcceptsString(const ovms::TensorInfo& inputInfo) const;
     Status validateRequestCoherency() const;
     Status validate();
 };
@@ -800,6 +802,50 @@ bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTe
     return false;
 }
 
+template <>
+bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::checkIfStringFormatUsed(const TFSInputTensorType& proto, const std::string inputName, std::shared_ptr<TensorInfo> inputInfo) const {
+    // if (proto.dtype() == tensorflow::DataType::DT_STRING) {
+    //     SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.string_val_size());
+    //     return true;
+    // }
+    //
+    return false;
+}
+template <>
+bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::checkIfStringFormatUsed(const KFSTensorInputProto& proto, const std::string inputName, std::shared_ptr<TensorInfo> inputInfo) const {
+    if (proto.datatype() == "BYTES") {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing string input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.contents().bytes_contents_size());
+        return true;
+    }
+    return false;
+}
+template <>
+bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkIfStringFormatUsed(const InferenceTensor& tensor, const std::string inputName, std::shared_ptr<TensorInfo> inputInfo) const {
+    return false;
+}
+
+template <>
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateIfModelInputAcceptsString(const ovms::TensorInfo& inputInfo) const {
+    return StatusCode::NOT_IMPLEMENTED;
+}
+template <>
+Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateIfModelInputAcceptsString(const ovms::TensorInfo& inputInfo) const {
+    if (inputInfo.getPrecision() != Precision::U8) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing string input but requested model does not accept string inputs (Model input precision should be U8)", servableName, servableVersion);
+        return Status(StatusCode::INVALID_STRING_INPUT);
+    }
+    const auto& shape = inputInfo.getShape();
+    if (inputInfo.getBytesType() != raw || shape[0] != -1 || shape[1] != -1) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing string input but requested model does not accept string inputs (Model input shape should be [-1,-1])", servableName, servableVersion);
+        return Status(StatusCode::INVALID_STRING_INPUT);
+    }
+    return StatusCode::OK;
+}
+template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateIfModelInputAcceptsString(const ovms::TensorInfo& inputInfo) const {
+    return StatusCode::NOT_IMPLEMENTED;
+}
+
 static bool shouldValidateBinaryBatchSizeMismatch(const ovms::InferenceRequest& request) {
     return true;
 }
@@ -848,7 +894,23 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         const Dimension& batchSize = inputInfo->getShape()[batchIndex.value()];
         Mode shapeMode = getShapeMode(shapeInfo, name);
         if (checkIfNativeFileFormatUsed(proto, name, inputInfo)) {
+            status = validateNumberOfBinaryInputShapeDimensions(proto);
+            if (!status.ok())
+                return status;
+
+            if (shouldValidateBinaryBatchSizeMismatch(request)) {
+                status = checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
+                if (!status.ok())
+                    return status;
+            } else if (batchSize != 1) {
+                SPDLOG_DEBUG("When the image is placed in raw_inputs_contents batch size cannot be bigger than 1.");
+                return StatusCode::INVALID_BATCH_SIZE;
+            }
+
             continue;
+        }
+
+        if (checkIfStringFormatUsed(proto, name, inputInfo)) {
             status = validateNumberOfBinaryInputShapeDimensions(proto);
             if (!status.ok())
                 return status;
