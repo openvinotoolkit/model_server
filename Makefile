@@ -43,6 +43,7 @@ INSTALL_RPMS_FROM_URL ?=
 CHECK_COVERAGE ?=0
 RUN_TESTS ?= 1
 NVIDIA ?=0
+BUILD_NGINX ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -265,9 +266,11 @@ ovms_release_image: targz_package
 		--build-arg NVIDIA=$(NVIDIA) \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
+ifeq ($(BUILD_NGINX), 1)
 	cd extras/nginx-mtls-auth && \
-	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
-	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
+	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
+	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
+endif
 
 # Ci build expects index.html in genhtml directory
 get_coverage:
