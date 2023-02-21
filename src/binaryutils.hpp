@@ -20,8 +20,14 @@
 
 #include "tensorinfo.hpp"
 
+namespace tensorflow {
+    class TensorProto;
+}
+
 namespace ovms {
 class Status;
 template <typename TensorType>
 Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
+
+Status convertStringTensorToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const TensorInfo& tensorInfo);
 }  // namespace ovms

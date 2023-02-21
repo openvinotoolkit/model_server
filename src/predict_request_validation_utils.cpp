@@ -132,6 +132,7 @@ public:
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     Status validatePrecision(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     bool checkIfNativeFileFormatUsed(const InputTensorType& proto, const std::string inputName) const;
+    bool checkIfStringProcessingUsed(const InputTensorType& proto, ovms::TensorInfo& inputInfo, const std::string inputName) const;
     Status validateRequestCoherency() const;
     Status validate();
 };
@@ -801,6 +802,19 @@ bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTe
     return false;
 }
 
+template <>
+bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::checkIfStringProcessingUsed(const TFSInputTensorType& proto, ovms::TensorInfo& inputInfo, const std::string inputName) const {
+    return proto.dtype() == tensorflow::DataType::DT_STRING && inputInfo.getPrecision() == ovms::Precision::U8 && inputInfo.getShape().size() == 2;
+}
+template <>
+bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::checkIfStringProcessingUsed(const KFSTensorInputProto& proto, ovms::TensorInfo& inputInfo, const std::string inputName) const {
+    return false;
+}
+template <>
+bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkIfStringProcessingUsed(const InferenceTensor& tensor, ovms::TensorInfo& inputInfo, const std::string inputName) const {
+    return false;
+}
+
 static bool shouldValidateBinaryBatchSizeMismatch(const ovms::InferenceRequest& request) {
     return true;
 }
@@ -848,6 +862,12 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         }
         const Dimension& batchSize = inputInfo->getShape()[batchIndex.value()];
         Mode shapeMode = getShapeMode(shapeInfo, name);
+        if (checkIfStringProcessingUsed(proto, *inputInfo, name)) {
+            SPDLOG_DEBUG("Handling string validation");
+            // TODO: Validate.
+            continue;
+        }
+
         if (checkIfNativeFileFormatUsed(proto, name)) {
             status = validateNumberOfBinaryInputShapeDimensions(proto);
             if (!status.ok())

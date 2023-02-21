@@ -348,7 +348,13 @@ Status deserializePredictRequest(
             auto& requestInput = requestInputItr->second;
             ov::Tensor tensor;
 
-            if (isNativeFileFormatUsed(requestInput)) {
+            if (isStringFormatUsed(requestInput, *tensorInfo)) {
+                status = convertStringTensorToOVTensor(requestInput, tensor, *tensorInfo);
+                if (!status.ok()) {
+                    SPDLOG_DEBUG("String input format conversion failed.");
+                    return status;
+                }
+            } else if (isNativeFileFormatUsed(requestInput)) {
                 SPDLOG_DEBUG("Request contains input in native file format: {}", name);
                 status = convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr);
                 if (!status.ok()) {
@@ -409,7 +415,10 @@ Status deserializePredictRequest(
             auto inputIndex = requestInputItr - request.inputs().begin();
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
-            if (isNativeFileFormatUsed(*requestInputItr)) {
+            if (isStringFormatUsed(*requestInputItr, *tensorInfo)) {
+                SPDLOG_ERROR("Hi");
+                return StatusCode::INTERNAL_ERROR;
+            } else if (isNativeFileFormatUsed(*requestInputItr)) {
                 SPDLOG_DEBUG("Request contains input in native file format: {}", name);
                 status = convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation);
                 if (!status.ok()) {

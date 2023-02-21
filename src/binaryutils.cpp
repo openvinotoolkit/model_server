@@ -461,6 +461,29 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
     return StatusCode::OK;
 }
 
+Status convertStringTensorToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const TensorInfo& tensorInfo) {
+    OVMS_PROFILE_FUNCTION();
+    size_t maxStringLength = 0;
+    for (const auto& str : src.string_val()) {
+        maxStringLength = std::max(maxStringLength, str.size());
+    }
+    SPDLOG_DEBUG("Max string length: {}", maxStringLength);
+    size_t width = maxStringLength + 1;
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<long unsigned int>(src.string_val_size()), width});
+    size_t i = 0;
+    for (const auto& str : src.string_val()) {
+        std::memcpy(((unsigned char*)(tensor.data())) + i * width, (unsigned char*)str.c_str(), str.size());
+        ((unsigned char*)tensor.data())[i * width + str.size()] = '\0';
+        SPDLOG_INFO("Converting: {}", str);
+        i++;
+    }
+    return StatusCode::OK;
+}
+
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
+
+// template Status convertStringTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const TensorInfo& tensorInfo);
+// template Status convertStringTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const TensorInfo& tensorInfo);
+
 }  // namespace ovms
