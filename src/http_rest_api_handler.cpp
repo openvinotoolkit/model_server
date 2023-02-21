@@ -123,6 +123,8 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
     if (!model_version_str.empty()) {
         try {
             model_version = std::stoll(model_version_str.c_str());
+        } catch (std::out_of_range const& ex) {
+            return StatusCode::MODEL_VERSION_MISSING;
         } catch (std::exception& e) {
             SPDLOG_DEBUG("Couldn't parse model version {}", model_version_str);
             return StatusCode::REST_COULD_NOT_PARSE_VERSION;
