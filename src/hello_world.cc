@@ -19,49 +19,64 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 
+#include <iostream>
+using std::cout;
+using std::endl;
+
 namespace mediapipe {
-
 absl::Status PrintHelloWorld() {
-    // Configures a simple graph, which concatenates 2 PassThroughCalculators.
-    CalculatorGraphConfig config =
-        ParseTextProtoOrDie<CalculatorGraphConfig>(R"pb(
-                input_stream: "in"
-                output_stream: "out"
-                node {
-                  calculator: "PassThroughCalculator"
-                  input_stream: "in"
-                  output_stream: "out1"
-                }
-                node {
-                  calculator: "PassThroughCalculator"
-                  input_stream: "out1"
-                  output_stream: "out"
-                }
-            )pb");
+  // Configures a simple graph, which concatenates 2 PassThroughCalculators.
+  CalculatorGraphConfig config =
+      ParseTextProtoOrDie<CalculatorGraphConfig>(R"pb(
+        input_stream: "in"
+        output_stream: "out"
+        node {
+          calculator: "OVMSCalculator"
+          input_stream: "in"
+          output_stream: "out1"
+        }
+        node {
+          calculator: "OVMSCalculator"
+          input_stream: "out1"
+          output_stream: "out"
+        }
+      )pb");
 
-    CalculatorGraph graph;
-    MP_RETURN_IF_ERROR(graph.Initialize(config));
-    ASSIGN_OR_RETURN(OutputStreamPoller poller,
-        graph.AddOutputStreamPoller("out"));
-    MP_RETURN_IF_ERROR(graph.StartRun({}));
-    // Give 10 input packets that contains the same string "Hello World!".
-    for (int i = 0; i < 10; ++i) {
-        MP_RETURN_IF_ERROR(graph.AddPacketToInputStream(
-            "in", MakePacket<std::string>("Hello World!").At(Timestamp(i))));
-    }
-    // Close the input stream "in".
-    MP_RETURN_IF_ERROR(graph.CloseInputStream("in"));
-    mediapipe::Packet packet;
-    // Get the output packets string.
-    while (poller.Next(&packet)) {
-        LOG(INFO) << packet.Get<std::string>();
-    }
-    return graph.WaitUntilDone();
+  CalculatorGraph graph;
+  cout << __FILE__ << ":" << __LINE__ << endl;
+  //MP_RETURN_IF_ERROR(graph.Initialize(config));
+  auto ret = graph.Initialize(config);
+  LOG(INFO) << ret;
+  cout << __FILE__ << ":" << __LINE__ << endl;
+  ASSIGN_OR_RETURN(OutputStreamPoller poller,
+                   graph.AddOutputStreamPoller("out"));
+  cout << __FILE__ << ":" << __LINE__ << endl;
+  MP_RETURN_IF_ERROR(graph.StartRun({}));
+  cout << __FILE__ << ":" << __LINE__ << endl;
+  // Give 10 input packets that contains the same string "Hello World!".
+  for (int i = 0; i < 10; ++i) {
+    MP_RETURN_IF_ERROR(graph.AddPacketToInputStream(
+                            // TODO covnert float to proper tensor?
+        "in", MakePacket<float>(0.0f).At(Timestamp(i))));
+  }
+  // Close the input stream "in".
+  MP_RETURN_IF_ERROR(graph.CloseInputStream("in"));
+  mediapipe::Packet packet;
+  // Get the output packets string.
+  while (poller.Next(&packet)) {
+    LOG(INFO) << packet.Get<float>();
+  }
+  return graph.WaitUntilDone();
 }
 }  // namespace mediapipe
 
 int main(int argc, char** argv) {
-    google::InitGoogleLogging(argv[0]);
-    CHECK(mediapipe::PrintHelloWorld().ok());
-    return 0;
+  google::InitGoogleLogging(argv[0]);
+  cout << __FILE__ << ":" << __LINE__ << endl;
+  auto grph = mediapipe::PrintHelloWorld();
+  cout << __FILE__ << ":" << __LINE__ << endl;
+  //CHECK(mediapipe::PrintHelloWorld().ok());
+  CHECK(grph.ok());
+  cout << __FILE__ << ":" << __LINE__ << endl;
+  return 0;
 }
