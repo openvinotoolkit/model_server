@@ -40,5 +40,9 @@ Configuration options for the server are defined only via command-line options a
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
 | `log_path` | `string` | Optional path to the log file. |
 | `cache_dir` | `string` | Path to the model cache storage. Caching will be enabled if this parameter is defined or the default path /opt/cache exists |
+| `config_path` | `string` |  Absolute path to json configuration file |
+| `grpc_channel_arguments` | `string` |   A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000) |
+| `help` | `NA` |  Shows help message and exit |
+| `version` | `NA` |  Shows binary version |
 
 
