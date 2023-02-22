@@ -370,11 +370,23 @@ cc_binary(
 
 licenses(["notice"])
 
+cc_library(
+    name = "ovms_calculator",
+    srcs = ["ovms_calculator.cc"],
+    deps = [
+        "//src:ovms_lib",
+        "@org_tensorflow//tensorflow/core:framework",
+        "@google_mediapipe//mediapipe/framework:calculator_framework",
+        "@google_mediapipe//mediapipe/framework/port:status",
+    ],
+    alwayslink = 1,
+)
+
 cc_binary(
     name = "hello_world",
     srcs = ["hello_world.cc"],
     deps = [
-        "@google_mediapipe//mediapipe/calculators/core:pass_through_calculator",
+        "//src:ovms_calculator",
         "@google_mediapipe//mediapipe/framework:calculator_graph",
         "@google_mediapipe//mediapipe/framework/port:logging",
         "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
