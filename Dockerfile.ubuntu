@@ -207,8 +207,8 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
     apt-get update && apt-get install --no-install-recommends -y \
       libzstd-dev \
-      libcudnn8 \
-      libcudnn8-dev \
+      libcudnn8=8.8.0.121-1+cuda11.8 \
+      libcudnn8-dev=8.8.0.121-1+cuda11.8 \
       libcutensor1=1.6.1.5-1 \
       libcutensor-dev=1.6.1.5-1 && \
     apt-get install --no-install-recommends -y cuda-11-8 && \
