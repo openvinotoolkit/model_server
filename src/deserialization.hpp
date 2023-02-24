@@ -410,7 +410,7 @@ Status deserializePredictRequest(
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
             if (isStringFormatUsed(*requestInputItr, *tensorInfo)) {
-                status = convertStringProtoToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation);
+                status = convertStringProtoToOVTensor(*requestInputItr, tensor, bufferLocation);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("String input format conversion failed.");
                     return status;

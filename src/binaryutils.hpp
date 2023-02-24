@@ -20,6 +20,10 @@
 
 #include "tensorinfo.hpp"
 
+namespace tensorflow {
+    class TensorProto;
+}
+
 namespace inference {
 class ModelInferRequest_InferInputTensor;
 }
@@ -29,5 +33,7 @@ class Status;
 template <typename TensorType>
 Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 
-Status convertStringProtoToOVTensor(const inference::ModelInferRequest_InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
+Status convertStringProtoToOVTensor(const inference::ModelInferRequest_InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+Status convertStringProtoToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor);
+
 }  // namespace ovms

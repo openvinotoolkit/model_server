@@ -465,8 +465,8 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
 Status convertStringProtoToOVTensor(
     const KFSTensorInputProto& src,
     ov::Tensor& tensor,
-    const std::shared_ptr<TensorInfo>& tensorInfo,
     const std::string* buffer) {
+    OVMS_PROFILE_FUNCTION();
     if (nullptr != buffer) {
         SPDLOG_DEBUG("STRING input should be located in bytes_contents field.");
         return StatusCode::NOT_IMPLEMENTED;
@@ -485,6 +485,23 @@ Status convertStringProtoToOVTensor(
         i++;
     }
 
+    return StatusCode::OK;
+}
+
+Status convertStringProtoToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
+    size_t maxStringLength = 0;
+    for (const auto& str : src.string_val()) {
+        maxStringLength = std::max(maxStringLength, str.size());
+    }
+    size_t width = maxStringLength + 1;
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<long unsigned int>(src.string_val_size()), width});
+    size_t i = 0;
+    for (const auto& str : src.string_val()) {
+        std::memcpy(tensor.data<unsigned char>() + i * width, reinterpret_cast<const unsigned char*>(str.c_str()), str.size());
+        tensor.data<unsigned char>()[i * width + str.size()] = 0;
+        i++;
+    }
     return StatusCode::OK;
 }
 
