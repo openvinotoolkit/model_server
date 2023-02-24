@@ -348,7 +348,13 @@ Status deserializePredictRequest(
             auto& requestInput = requestInputItr->second;
             ov::Tensor tensor;
 
-            if (isNativeFileFormatUsed(requestInput)) {
+            if (isStringFormatUsed(requestInput, *tensorInfo)) {
+                status = convertStringProtoToOVTensor(requestInput, tensor);
+                if (!status.ok()) {
+                    SPDLOG_DEBUG("String input format conversion failed.");
+                    return status;
+                }
+            } else  if (isNativeFileFormatUsed(requestInput)) {
                 SPDLOG_DEBUG("Request contains input in native file format: {}", name);
                 status = convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr);
                 if (!status.ok()) {
