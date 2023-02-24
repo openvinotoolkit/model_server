@@ -495,7 +495,7 @@ Status convertStringProtoToOVTensor(const tensorflow::TensorProto& src, ov::Tens
         maxStringLength = std::max(maxStringLength, str.size());
     }
     size_t width = maxStringLength + 1;
-    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<long unsigned int>(src.string_val_size()), width});
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(src.string_val_size()), width});
     size_t i = 0;
     for (const auto& str : src.string_val()) {
         std::memcpy(tensor.data<unsigned char>() + i * width, reinterpret_cast<const unsigned char*>(str.c_str()), str.size());
