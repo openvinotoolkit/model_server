@@ -42,35 +42,13 @@ using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
      * @brief Class containing information about the tensor
      */
 class TensorInfo {
-protected:
-    /**
-         * @brief Input name
-         */
-    std::string name;
-
-    /**
-         * @brief Mapping name
-         */
-    std::string mapping;
-
-    Precision precision;
-
-    /**
-         * @brief Model input shape
-         */
-    Shape shape;
-
-    /**
-         * @brief Tensor layout
-         */
-    Layout layout;
-
-    /**
-         * @brief Information if influenced by demultiplexer
-         */
-    bool influencedByDemultiplexer = false;
-
 public:
+    enum class ProcessingHint {
+        IMAGE,
+        STRING,
+        NO_PROCESSING
+    };
+
     /**
          * @brief Construct a new Tensor Info object
          * 
@@ -207,6 +185,8 @@ public:
     const Shape& getShape() const;
     void setShape(const Shape& shape);
 
+    const ProcessingHint& getProcessingHint() const;
+
     bool isInfluencedByDemultiplexer() const;
 
     std::shared_ptr<TensorInfo> createCopyWithNewShape(const Shape& shape) const;
@@ -223,6 +203,39 @@ public:
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
     const std::optional<Dimension> getBatchSize() const;
+
+protected:
+    /**
+         * @brief Input name
+         */
+    std::string name;
+
+    /**
+         * @brief Mapping name
+         */
+    std::string mapping;
+
+    Precision precision;
+
+    /**
+         * @brief Model input shape
+         */
+    Shape shape;
+
+    /**
+         * @brief Processing hint
+         */
+    ProcessingHint processingHint;
+
+    /**
+         * @brief Tensor layout
+         */
+    Layout layout;
+
+    /**
+         * @brief Information if influenced by demultiplexer
+         */
+    bool influencedByDemultiplexer = false;
 };
 
 }  // namespace ovms

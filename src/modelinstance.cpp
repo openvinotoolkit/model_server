@@ -432,7 +432,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 layout);
 
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Input {}", info->asString());
-
             this->inputsInfo[info->getMappedName()] = std::move(info);
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
