@@ -330,7 +330,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     RequestShapeInfo<KFSTensorInputProto, KFSShapeType> rsi(proto);
     if (rsi.getShapeSize() != 1) {
         std::stringstream ss;
-        ss << "Expected number of binary input shape dimensions: 1; Actual: " << rsi.getShapeSize() << "; input name: " << getCurrentlyValidatedInputName();
+        ss << "Expected number of string input shape dimensions: 1; Actual: " << rsi.getShapeSize() << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of shape dimensions - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
@@ -342,7 +342,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
     RequestShapeInfo<InferenceTensor, shape_t> rsi(tensor);
     if (rsi.getShapeSize() != 1) {
         std::stringstream ss;
-        ss << "Expected number of binary input shape dimensions: 1; Actual: " << rsi.getShapeSize() << "; input name: " << getCurrentlyValidatedInputName();
+        ss << "Expected number of string input shape dimensions: 1; Actual: " << rsi.getShapeSize() << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of shape dimensions - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
@@ -875,11 +875,10 @@ bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTe
 
 template <>
 bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::checkIfStringFormatUsed(const TFSInputTensorType& proto, const std::string inputName, const TensorInfo& inputInfo) const {
-    // if (proto.dtype() == tensorflow::DataType::DT_STRING) {
-    //     SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.string_val_size());
-    //     return true;
-    // }
-    //
+    if (proto.dtype() == tensorflow::DataType::DT_STRING && inputInfo.getProcessingHint() == TensorInfo::ProcessingHint::STRING) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.string_val_size());
+        return true;
+    }
     return false;
 }
 template <>
