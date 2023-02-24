@@ -354,7 +354,7 @@ Status deserializePredictRequest(
                     SPDLOG_DEBUG("String input format conversion failed.");
                     return status;
                 }
-            } else  if (isNativeFileFormatUsed(requestInput)) {
+            } else if (isNativeFileFormatUsed(requestInput)) {
                 SPDLOG_DEBUG("Request contains input in native file format: {}", name);
                 status = convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr);
                 if (!status.ok()) {

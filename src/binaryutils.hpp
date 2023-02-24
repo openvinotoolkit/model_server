@@ -21,7 +21,7 @@
 #include "tensorinfo.hpp"
 
 namespace tensorflow {
-    class TensorProto;
+class TensorProto;
 }
 
 namespace inference {
