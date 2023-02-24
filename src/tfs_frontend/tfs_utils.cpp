@@ -150,6 +150,6 @@ bool isNativeFileFormatUsed(const TFSInputTensorType& proto) {
 }
 
 bool isStringFormatUsed(const TFSInputTensorType& proto, const TensorInfo& tensorInfo) {
-    return proto.dtype() == tensorflow::DataType::DT_STRING && tensorInfo.getPrecision() == ovms::Precision::U8;
+    return proto.dtype() == tensorflow::DataType::DT_STRING && tensorInfo.getProcessingHint() == TensorInfo::ProcessingHint::STRING;
 }
 }  // namespace ovms
