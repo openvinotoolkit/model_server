@@ -1,0 +1,34 @@
+{
+    "model_config_list": [],
+    "custom_node_library_config_list": [
+        {"name": "string_dummy",
+            "base_path": "/repo/src/custom_nodes/lib/ubuntu/libcustom_node_stringDummy.so"}
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "string_dummy_test",
+            "inputs": [
+                "input_string"
+            ],
+            "nodes": [
+                {
+                    "name": "string_dummy_test",
+                    "library_name": "string_dummy",
+                    "type": "custom",
+                    "inputs": [
+                        {"input_string": {
+                                "node_name": "request",
+                                "data_item": "input_string"}}],
+                    "outputs": [
+                        {"data_item": "output_string",
+                            "alias": "output"}]
+                }
+            ],
+            "outputs": [
+                {"string": {
+                        "node_name": "string_dummy_test",
+                        "data_item": "output"}}
+            ]
+        }
+    ]
+}
