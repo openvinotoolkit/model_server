@@ -74,7 +74,7 @@ TEST(SystemInfoImpl, getCoreCountImplNegative) {
 
     EXPECT_EQ(getCoreCountImpl("1234567890123456789012345678901234567890", coreCount), StatusCode::FILESYSTEM_ERROR);
     EXPECT_EQ(coreCount, 42);
-    // TODO test against maximum values
+
     std::ifstream ifs;
     EXPECT_EQ(getCPUSetFile(ifs, "/sys/fs/illegal_file"), StatusCode::FILESYSTEM_ERROR);
 }
