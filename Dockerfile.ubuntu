@@ -134,7 +134,7 @@ ARG CMAKE_BUILD_TYPE=Release
 
 # build_type=[ opt, dbg ]
 ARG build_type=opt
-ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
+ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg\ --define MEDIAPIPE_DISABLE_GPU=1
 ARG minitrace_flags
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV TF_SYSTEM_LIBS="curl"
@@ -287,6 +287,11 @@ RUN if [ "$build_type" == "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_V
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+
+# Mediapipe
+COPY BUILD.bazel /ovms/
+COPY yarn.lock /ovms/
+COPY package.json /ovms/
 
 # Test Coverage
 COPY check_coverage.bat /ovms/
