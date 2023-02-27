@@ -43,6 +43,7 @@ cc_library(
 )
 
 load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
+load("@tensorflow_serving//tensorflow_serving:serving.bzl", "serving_tensorflow_proto_dep")
 
 cc_shared_library(
     name = "ovms_shared",
@@ -246,6 +247,8 @@ cc_library(
         "ovms_calculator.cc",
         "precision.cpp",
         "precision.hpp",
+        #"stream_prediction_service.cpp",
+        #"stream_prediction_service.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
@@ -306,6 +309,7 @@ cc_library(
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
+ #       "//src/tfservingstream_api:stream_prediction_service_cc_proto",
         "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
         "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
@@ -333,6 +337,7 @@ cc_library(
         "@com_github_jupp0r_prometheus_cpp//core",
         "//src/kfserving_api:kfserving_api_cpp",
         "@google_mediapipe//mediapipe/framework:calculator_framework",
+        #"//src/tfservingstream_api:stream_prediction_service_cpp",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
@@ -354,6 +359,25 @@ cc_library(
     ],
     alwayslink = 1,
 )
+
+#cc_proto_library(
+#    name = "stream_prediction_service_cpp",
+#    srcs = ["stream_prediction_service.proto",],
+#    deps = [
+#        "@tensorflow_serving//tensorflow_serving/apis:predict_proto",
+#        serving_tensorflow_proto_dep(
+#            "@org_tensorflow//tensorflow/core:protos_all",
+#        ),
+#                    ],
+#    cc_libs = ["@com_google_protobuf//:protobuf"],
+#    protoc = "@com_google_protobuf//:protoc",
+#    default_runtime = "@com_google_protobuf//:protobuf",
+#    use_grpc_plugin = True, # ??
+#    testonly = False, # ??
+#    visibility = [
+#        "//visibility:public",
+#    ],
+#)
 
 cc_binary(
     name = "libsampleloader.so",
@@ -399,7 +423,7 @@ cc_binary(
     name = "hello_world",
     srcs = ["hello_world.cc"],
     deps = [
-        "//src:ovms_calculator",
+        "//src:ovms_lib",
         "@google_mediapipe//mediapipe/framework:calculator_graph",
         "@google_mediapipe//mediapipe/framework/port:logging",
         "@google_mediapipe//mediapipe/framework/port:parse_text_proto",

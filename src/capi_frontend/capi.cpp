@@ -29,6 +29,7 @@
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../ovms.h"  // NOLINT
+#include "../prediction_service.hpp"
 #include "../profiler.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -670,6 +671,26 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
     *response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
     return nullptr;
+}
+
+OVMS_Status* OVMS_GRPCInference2(void* server, const void* request, void* response) {
+    SPDLOG_ERROR("ER");
+    ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
+    ovms::PredictionServiceImpl impl(*srv);
+    if (impl.Predict(nullptr,
+                (tensorflow::serving::PredictRequest*)request,
+                (tensorflow::serving::PredictResponse*)response)
+            .error_code() == grpc::StatusCode::OK) {
+        return nullptr;
+    } else {
+        return (OVMS_Status*)(new int(2));
+    }
+}
+
+OVMS_Status* OVMS_GRPCInference(const void* request, void* response) {
+    SPDLOG_ERROR("ER");
+    auto& server = ovms::Server::instance();
+    return OVMS_GRPCInference2((void*)&server, request, response);
 }
 
 #ifdef __cplusplus
