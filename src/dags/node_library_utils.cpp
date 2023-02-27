@@ -56,6 +56,7 @@ Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
         {CustomNodeTensorPrecision::I64, Precision::I64},
         {CustomNodeTensorPrecision::I8, Precision::I8},
         {CustomNodeTensorPrecision::U8, Precision::U8},
+        {CustomNodeTensorPrecision::C_STRING_ARRAY, Precision::C_STRING_ARRAY},
         {CustomNodeTensorPrecision::FP16, Precision::FP16},
         {CustomNodeTensorPrecision::I16, Precision::I16},
         {CustomNodeTensorPrecision::U16, Precision::U16}};

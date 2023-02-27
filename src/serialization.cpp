@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "serialization.hpp"
 
+#include "binaryutils.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "ov_utils.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
@@ -192,11 +193,25 @@ static void serializeContent(::inference::ModelInferResponse::InferOutputTensor&
     }
 }
 
+Status serializeStringTensorToTensorProto(
+    tensorflow::TensorProto& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
+    responseOutput.set_dtype(tensorflow::DataType::DT_STRING);
+    // assert for 2d?
+    responseOutput.mutable_tensor_shape()->add_dim()->set_size(tensor.get_shape()[0]);
+    return convertOVTensorToStringProto(tensor, responseOutput);  // partial gathering?
+}
+
 Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (servableOutput->getPrecision() == Precision::C_STRING_ARRAY) {
+        return serializeStringTensorToTensorProto(responseOutput, servableOutput, tensor);
+    }
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
     if (!status.ok()) {
         return status;

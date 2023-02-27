@@ -44,6 +44,7 @@ enum class Precision {
     MIXED,
     Q78,
     BIN,
+    C_STRING_ARRAY,  // U8 2D with forced serialization to string protos
     PRECISION_END
 };
 

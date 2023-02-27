@@ -26,7 +26,8 @@ typedef enum {
     U16,
     I32,
     FP64,
-    I64
+    I64,
+    C_STRING_ARRAY  // TODO: Describe how to use this type in documentation
 } CustomNodeTensorPrecision;
 
 struct CustomNodeTensor {
