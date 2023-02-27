@@ -505,6 +505,23 @@ Status convertStringProtoToOVTensor(const tensorflow::TensorProto& src, ov::Tens
     return StatusCode::OK;
 }
 
+Status convertOVTensorToStringProto(const ov::Tensor& tensor, tensorflow::TensorProto& dst) {
+    OVMS_PROFILE_FUNCTION();
+    if (tensor.get_element_type() != ov::element::Type_t::u8) {
+        SPDLOG_DEBUG("Tensor element type is not u8");
+        return StatusCode::INVALID_PRECISION;
+    }
+    if (tensor.get_shape().size() != 2) {
+        SPDLOG_DEBUG("Tensor shape is not 2D");
+        return StatusCode::INVALID_SHAPE;
+    }
+    for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
+        const char* str = reinterpret_cast<const char*>(tensor.data<unsigned char>() + i * tensor.get_shape()[1]);
+        dst.add_string_val(str);
+    }
+    return StatusCode::OK;
+}
+
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 

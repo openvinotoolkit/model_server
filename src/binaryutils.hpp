@@ -36,4 +36,6 @@ Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& src, ov:
 Status convertStringProtoToOVTensor(const inference::ModelInferRequest_InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
 Status convertStringProtoToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor);
 
+Status convertOVTensorToStringProto(const ov::Tensor& tensor, tensorflow::TensorProto& dst);
+
 }  // namespace ovms
