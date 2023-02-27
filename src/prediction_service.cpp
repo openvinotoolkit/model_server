@@ -31,6 +31,7 @@
 #include "execution_context.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpc_utils.hpp"
+#include "mediapipe/calculator_graph.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
@@ -106,6 +107,13 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_spec().name());
         status = getPipeline(request, response, pipelinePtr);
     }
+
+    #ifdef RUN_OVMS_CALCULATOR_TEST
+    auto graph = std::make_unique<OVMSCalculatorGraph>();
+    auto graph_status = graph->execute();
+    CHECK(graph_status.ok());
+    #endif
+
     if (!status.ok()) {
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);
