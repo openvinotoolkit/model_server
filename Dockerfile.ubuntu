@@ -134,7 +134,7 @@ ARG CMAKE_BUILD_TYPE=Release
 
 # build_type=[ opt, dbg ]
 ARG build_type=opt
-ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg\ --define MEDIAPIPE_DISABLE_GPU=1
+ARG debug_bazel_flags=--strip=never\ --copt="-g --define=MEDIAPIPE_DISABLE_GPU=1"\ -c\ dbg 
 ARG minitrace_flags
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV TF_SYSTEM_LIBS="curl"
@@ -308,7 +308,7 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example
 
 # C-API benchmark app
-RUN bazel build //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
 
 # OVMS
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs=$JOBS //src:ovms
