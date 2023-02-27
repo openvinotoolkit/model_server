@@ -86,23 +86,16 @@ http_archive(
 
 ################################### Official mediapipe repository #########
 #### Will be used on feature release
-
-#git_repository(
-#    name = "google_mediapipe",
-#    remote = "https://github.com/google/mediapipe",
-#    tag = "v0.9.1",
-#    patches = [
-#        "make_mediapipe_modules_public.patch"
-#    ],
-#    patch_args = [
-#        "-p1",
-#    ],
-#)
-
-# DEV mediapipe 1 source - adjust local repository path for build
-local_repository(
+git_repository(
     name = "google_mediapipe",
-    path = "/mediapipe/",
+    remote = "https://github.com/google/mediapipe",
+    tag = "v0.9.1",
+    patches = [
+        "make_mediapipe_modules_public.patch"
+    ],
+    patch_args = [
+        "-p1",
+    ],
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
