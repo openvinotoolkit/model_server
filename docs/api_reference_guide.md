@@ -16,7 +16,7 @@
 
 ## Introduction
 
-OpenVINO&trade; Model Server exposes two sets of network APIs: one compatible with TensorFlow Serving and another one, with KServe API, for inference. Both APIs work on both gRPC and REST interfaces. Supporting two sets of APIs makes OpenVINO Model Server easier to plug into existing systems the already leverage one of those APIs for inference. Learn more about supported APIs:
+OpenVINO&trade; Model Server exposes two sets of network APIs for inference: one compatible with TensorFlow Serving and another one, with KServe API. Both APIs work on gRPC and REST interfaces. Supporting two sets of APIs makes OpenVINO Model Server easier to plug into existing systems the already leverage one of those APIs for inference. Learn more about supported APIs:
 
 - [TensorFlow Serving gRPC API](./model_server_grpc_api_tfs.md)
 - [KServe gRPC API](./model_server_grpc_api_kfs.md)

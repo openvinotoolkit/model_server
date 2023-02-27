@@ -14,8 +14,10 @@
 # limitations under the License.
 #
 
-from tensorflow.core.framework.tensor_pb2 import TensorProto
-from tensorflow_serving.apis import get_model_status_pb2, get_model_metadata_pb2, predict_pb2
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_pb2 import TensorProto
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis import (get_model_status_pb2,
+                                                                  get_model_metadata_pb2,
+                                                                  predict_pb2)
 
 from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRequest,
                                                  ModelStatusRequest, _check_model_spec)

@@ -1,0 +1,7 @@
+accelerate
+numpy==1.23
+transformers
+transformers[onnx]
+onnxruntime
+torch
+ovmsclient

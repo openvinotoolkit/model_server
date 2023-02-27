@@ -24,11 +24,13 @@ The `docker_build` target also prepares binary package to run OVMS as standalone
 ```bash
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
+```
+```bash
 make docker_build
 tree dist/ubuntu
 ````
 
-```
+```bash
 dist/ubuntu
 ├── Dockerfile.redhat
 ├── Dockerfile.ubuntu
@@ -68,7 +70,8 @@ Parameter used to control which GPU driver version will be installed. Supported 
 | Ubuntu | 22.35.24055 (default), <br />22.10.22597, <br />21.48.21782, <br />20.35.17767 |
 | RedHat | 22.28.23726 (default), <br />22.10.22597, <br />21.38.21026, <br />20.35.17767 |
 
-Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.
+Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.  
+Warning: _Maintained only for Ubuntu base OS._
 
 Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
 
@@ -87,7 +90,7 @@ drivers
 and run make docker_build with parameter: INSTALL_DRIVER_VERSION=dg2.
 
 Example:
-```
+```bash
 make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
 ```
 
@@ -119,11 +122,12 @@ docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt
 ### `OV_USE_BINARY`
 
 By default set to `1`. When set to `0`, OpenVINO will be built from sources and `DLDT_PACKAGE_URL` will be omitted.  
-Use `OV_SOURCE_BRANCH` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch. By default `master` will be used.
+Use `OV_SOURCE_BRANCH` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch. By default `master` will be used.  
+Warning: _Maintained only for Ubuntu base OS._
 
 Example:
 ```bash
 make docker_build OV_USE_BINARY=0 OV_SOURCE_BRANCH=<commit or branch>
 ```
   
-Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/v2022.3/docs/developer_guide.md).
+Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/develop/docs/developer_guide.md).

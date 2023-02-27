@@ -21,14 +21,17 @@ NCS devices should be reported by the `lsusb` command, printing out `ID 03e7:248
 
 To start the server with Neural Compute Stick use either of the two options:
 
-1. More securely, without the docker privileged mode and mounting only the usb devices.
+1. Recommended, without the docker privileged mode and mounting only the usb devices.
 
-   ```bash
-   docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
-   --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
-   ```
+@sphinxdirective
+.. code-block:: sh
 
-2. less securely, in the docker privileged mode and mounting all devices.
+    docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
+    --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
+
+@endsphinxdirective
+
+2. Less securely, in the docker privileged mode and mounting all devices.
    ```bash
    docker run --rm -it --net=host -u root --privileged -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
    --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
@@ -80,39 +83,40 @@ docker run --rm -it --device=/dev/dri -v ${PWD}/models/public/resnet-50-tf:/opt/
 
 Running inference on GPU requires the model server process security context account to have correct permissions. It must belong to the render group identified by the command:
 
-```bash
-stat -c "group_name=%G group_id=%g" /dev/dri/render*
-```
+@sphinxdirective
+.. code-block:: sh
+
+    stat -c "group_name=%G group_id=%g" /dev/dri/render*
+
+@endsphinxdirective
 
 The default account in the docker image is preconfigured. If you change the security context, use the following command to start the model server container:
 
-```bash
+@sphinxdirective
+.. code-block:: sh
 
-docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+    --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
--v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
-
---model_path /opt/model --model_name resnet --port 9001 --target_device GPU
-
-```
+@endsphinxdirective
 
 GPU device can be used also on Windows hosts with Windows Subsystem for Linux 2 (WSL2). In such scenario, there are needed extra docker parameters. See the command below.
 Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
-```bash
 
-docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+@sphinxdirective
+.. code-block:: sh
 
--v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+    docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+    --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
---model_path /opt/model --model_name resnet --port 9001 --target_device GPU
-
-```
-
+@endsphinxdirective
 
 > **NOTE**:
 > The public docker image includes the OpenCL drivers for GPU in version 22.28 (RedHat) and 22.35 (Ubuntu).
 
-If you need to build the OpenVINO Model Server with different driver version, refer to the [building from sources](https://github.com/openvinotoolkit/model_server/blob/v2022.3/docs/build_from_source.md)
+If you need to build the OpenVINO Model Server with different driver version, refer to the [building from sources](https://github.com/openvinotoolkit/model_server/blob/develop/docs/build_from_source.md)
 
 ## Using Multi-Device Plugin
 
@@ -187,12 +191,15 @@ Make sure you have passed the devices and access to the devices you want to use 
 
 Below is an example of the command with AUTO Plugin as target device. It includes extra docker parameters to enable GPU (/dev/dri) , beside CPU.
 
-```bash
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-            -u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --target_device AUTO
-```
+@sphinxdirective
+.. code-block:: sh
+
+    docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+    -u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+    --model_path /opt/model --model_name resnet --port 9001 \
+    --target_device AUTO
+
+@endsphinxdirective
 
 The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
 
@@ -202,23 +209,29 @@ To enable Performance Hints for your application, use the following command:
 
 LATENCY
 
-```bash
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-            --target_device AUTO
-```
+@sphinxdirective
+.. code-block:: sh
+
+    docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+    --model_path /opt/model --model_name resnet --port 9001 \
+    --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+    --target_device AUTO
+
+@endsphinxdirective
 
 THROUGHPUT
 
-```bash
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
-            --target_device AUTO
-```
+@sphinxdirective
+.. code-block:: sh
+
+    docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+    --model_path /opt/model --model_name resnet --port 9001 \
+    --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+    --target_device AUTO
+
+@endsphinxdirective
 
 > **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
 
@@ -232,7 +245,7 @@ The docker image of OpenVINO Model Server including support for NVIDIA can be bu
    cd model_server
    make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=releases/2022/3 OV_CONTRIB_BRANCH=releases/2022/3
 ```
-Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/v2022.3/docs/build_from_source.md).
+Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/develop/docs/build_from_source.md).
 
 Example command to run container with NVIDIA support:
 

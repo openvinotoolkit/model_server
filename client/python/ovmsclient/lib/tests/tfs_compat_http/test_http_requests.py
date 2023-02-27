@@ -59,7 +59,7 @@ def test_make_predict_request_invalid_model_spec(mocker, name, version,
     mock_method.assert_called_once()
 
 
-@pytest.mark.causes_deprecation_warning
+@pytest.mark.causes_deprecation_warning(triggered_by="numpy<1.24")
 @pytest.mark.parametrize("""inputs, name, version,
                             expected_exception, expected_message""", PREDICT_REQUEST_INVALID_INPUTS)
 def test_make_predict_request_invalid_inputs(mocker, inputs, name, version,
@@ -78,12 +78,12 @@ def test_parse_input_data_valid(input, expected_parsed_input):
     assert parsed_input == expected_parsed_input
 
 
-@pytest.mark.causes_deprecation_warning
+@pytest.mark.causes_deprecation_warning(triggered_by="numpy<1.24")
 @pytest.mark.parametrize("""input, expected_exception, expected_message""",
                          PARSE_INPUT_DATA_INVALID)
 def test_parse_input_data_invalid(input, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
-        _parse_input_data(input)(input)
+        _parse_input_data(input)
     assert str(e_info.value) == expected_message
 
 

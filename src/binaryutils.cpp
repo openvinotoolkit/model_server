@@ -443,7 +443,7 @@ static ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::s
 }
 
 template <typename TensorType>
-static Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer) {
+static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
     auto status = validateTensor(tensorInfo, src, buffer);
     if (status != StatusCode::OK) {
@@ -461,6 +461,6 @@ static Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Te
     return StatusCode::OK;
 }
 
-template Status convertBinaryRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
-template Status convertBinaryRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
+template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
+template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 }  // namespace ovms

@@ -70,8 +70,6 @@ const char* NIREQ = "NIREQ";
 
 const uint MAX_NIREQ_COUNT = 100000;
 
-const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
-
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
 ModelInstance::~ModelInstance() = default;
@@ -96,17 +94,16 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
 static Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
     Shape shape;
     auto mappedName = config.getMappingInputByKey(name);
+    auto inputNameToUse = (mappedName != "" ? mappedName : name);
     if (config.getBatchSize().has_value() || parameter.isBatchSizeRequested()) {
         // leave shape untouched
-    } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
-        auto status = Shape::fromFlatShape(parameter.getShape(name), shape);
+    } else if (config.isShapeAuto(inputNameToUse) && parameter.isShapeRequested(inputNameToUse)) {
+        auto status = Shape::fromFlatShape(parameter.getShape(inputNameToUse), shape);
         if (!status.ok()) {
             return status;
         }
-    } else if (mappedName == "" && config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
-        shape = config.getShapes().at(name).shape;
-    } else if (config.getShapes().count(mappedName) && config.getShapes().at(mappedName).shape.size()) {
-        shape = config.getShapes().at(mappedName).shape;
+    } else if (config.getShapes().count(inputNameToUse) && config.getShapes().at(inputNameToUse).shape.size()) {
+        shape = config.getShapes().at(inputNameToUse).shape;
     } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
         shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
     }
@@ -694,21 +691,13 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         return status;
     }
 
-    uint32_t numberOfStreams = 0;
-    try {
-        numberOfStreams = getNumOfStreams();
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numberOfStreams);
-    } catch (ov::Exception& e) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
-    } catch (...) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
-    }
+    uint32_t numberOfStreams = getNumOfStreams();
     SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
-    for (const auto pair : pluginConfig) {
-        const auto key = pair.first;
-        const auto value = pair.second;
+    for (const auto& pair : pluginConfig) {
+        const auto& key = pair.first;
+        const auto& value = pair.second;
         SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
 
@@ -1165,9 +1154,13 @@ Status ModelInstance::infer(const RequestType* requestProto,
     if (!status.ok())
         return status;
     status = validate(requestProto);
-    auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
-    auto requestShapes = getRequestShapes(requestProto);
-    status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
+    if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
+        // We are ensured that request shape is valid and convertible to model shape (non negative, non zero)
+        // We can use it to perform reshape via shape=auto
+        auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
+        auto requestShapes = getRequestShapes(requestProto);
+        status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
+    }
     if (!status.ok())
         return status;
     status = requestProcessor->prepare();
@@ -1228,6 +1221,9 @@ Status ModelInstance::infer(const RequestType* requestProto,
         return status;
     SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
+    if (targetDevice == "AUTO")
+        for (std::string device : compiledModel->get_property(ov::execution_devices))
+            SPDLOG_DEBUG("Used device: {}", device);
 
     status = requestProcessor->release();
     return status;
@@ -1251,8 +1247,26 @@ const size_t ModelInstance::getBatchSizeIndex() const {
     return batchIndex.value();
 }
 
+uint32_t ModelInstance::getOptimalNumberOfInferRequests() const {
+    try {
+        uint32_t numOptimalInferRequests = compiledModel->get_property(ov::optimal_number_of_infer_requests);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numOptimalInferRequests);
+        return numOptimalInferRequests;
+    } catch (...) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of optimal infer requests; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+    }
+    return 0;
+}
+
 uint32_t ModelInstance::getNumOfStreams() const {
-    return compiledModel->get_property(ov::num_streams);
+    try {
+        uint32_t numStreams = compiledModel->get_property(ov::num_streams);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numStreams);
+        return numStreams;
+    } catch (...) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get property ov::num_streams device: {}. Number of streams will be set to number of optimal infer requests.", config.getTargetDevice());
+    }
+    return getOptimalNumberOfInferRequests();
 }
 
 std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {

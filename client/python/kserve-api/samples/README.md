@@ -11,6 +11,7 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
   - <a href="#grpc-model-metadata">grpc_model_metadata.py</a>
   - <a href="#grpc-model-infer">grpc_infer_resnet.py</a>
   - <a href="#grpc-model-infer-binary">grpc_infer_binary_resnet.py</a>
+  - <a href="#grpc-model-async-infer">grpc_async_infer_resnet.py</a>
 - <a href="#http-api">HTTP API Example</a>
   - <a href="#http-server-live">http_server_live.py</a>
   - <a href="#http-server-ready">http_server_ready.py</a>
@@ -19,6 +20,7 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
   - <a href="#http-model-metadata">http_model_metadata.py</a>
   - <a href="#http-model-infer">http_infer_resnet.py</a>
   - <a href="#http-model-infer-binary">http_infer_binary_resnet.py</a>
+  - <a href="#http-model-async-infer">http_async_infer_resnet.py</a>
 
 > **Note:** Some of the samples will use [ResNet50](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md).
 
@@ -358,7 +360,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 grpc_infer_binary_resnet.py --grpc_port 9000 --images_list resnet_input_images.txt  --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+python3 grpc_infer_binary_resnet.py --grpc_port 9000 --images_list ../../resnet_input_images.txt  --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 27.09 ms; speed 36.92 fps
@@ -401,6 +403,91 @@ time percentile 90: 27.50 ms; speed percentile 90: 36.36 fps
 time percentile 50: 24.50 ms; speed percentile 50: 40.82 fps
 time standard deviation: 2.88
 time variance: 8.29
+Classification accuracy: 100.00
+```
+
+
+### Run the Client to perform asynchronous inference <a name="grpc-model-async-infer"></a>
+
+- Command
+
+```Bash
+python3 grpc_async_infer_resnet.py --help
+usage: grpc_async_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT] [--input_name INPUT_NAME]
+                                  [--output_name OUTPUT_NAME] [--transpose_input {False,True}] [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
+                                  [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto] [--tls] [--server_cert SERVER_CERT] [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY] [--timeout TIMEOUT]
+
+Sends requests via KServe gRPC API using images in numpy format. It displays performance statistics and optionally the model accuracy
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --images_numpy_path IMAGES_NUMPY_PATH
+                        numpy in shape [n,w,h,c] or [n,c,h,w]
+  --labels_numpy_path LABELS_NUMPY_PATH
+                        numpy in shape [n,1] - can be used to check model accuracy
+  --grpc_address GRPC_ADDRESS
+                        Specify url to grpc service. default:localhost
+  --grpc_port GRPC_PORT
+                        Specify port to grpc service. default: 9000
+  --input_name INPUT_NAME
+                        Specify input tensor name. default: input
+  --output_name OUTPUT_NAME
+                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+  --transpose_input {False,True}
+                        Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True
+  --transpose_method {nchw2nhwc,nhwc2nchw}
+                        How the input transposition should be executed: nhwc2nchw or nchw2nhwc
+  --iterations ITERATIONS
+                        Number of requests iterations, as default use number of images in numpy memmap. default: 0 (consume all frames)
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service. default: resnet
+  --pipeline_name PIPELINE_NAME
+                        Define pipeline name, must be same as is in service
+  --dag-batch-size-auto
+                        Add demultiplexer dimension at front
+  --tls                 use TLS communication with gRPC endpoint
+  --server_cert SERVER_CERT
+                        Path to server certificate
+  --client_cert CLIENT_CERT
+                        Path to client certificate
+  --client_key CLIENT_KEY
+                        Path to client key
+  --timeout TIMEOUT     Request timeout
+```
+
+- Usage Example
+
+```Bash
+python3 grpc_async_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
+Image data range: 0.0 : 255.0
+Start processing:
+        Model name: resnet
+        Iterations: 10
+        Images numpy path: ../../imgs_nhwc.npy
+        Numpy file shape: (10, 3, 224, 224)
+
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
 Classification accuracy: 100.00
 ```
 
@@ -738,7 +825,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list ../../resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 38.61 ms; speed 25.90 fps
@@ -781,5 +868,89 @@ time percentile 90: 44.20 ms; speed percentile 90: 22.62 fps
 time percentile 50: 32.50 ms; speed percentile 50: 30.77 fps
 time standard deviation: 5.47
 time variance: 29.96
+Classification accuracy: 100.00
+```
+
+### Run the Client to perform asynchronous inference <a name="http-model-async-infer"></a>
+
+- Command
+
+```Bash
+ python3 http_async_infer_resnet.py --help
+usage: http_async_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--http_address HTTP_ADDRESS] [--http_port HTTP_PORT] [--input_name INPUT_NAME]
+                                  [--output_name OUTPUT_NAME] [--transpose_input {False,True}] [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
+                                  [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto] [--binary_data] [--tls] [--server_cert SERVER_CERT] [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
+
+Sends requests via KServe REST API using images in numpy format. It displays performance statistics and optionally the model accuracy
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --images_numpy_path IMAGES_NUMPY_PATH
+                        numpy in shape [n,w,h,c] or [n,c,h,w]
+  --labels_numpy_path LABELS_NUMPY_PATH
+                        numpy in shape [n,1] - can be used to check model accuracy
+  --http_address HTTP_ADDRESS
+                        Specify url to http service. default:localhost
+  --http_port HTTP_PORT
+                        Specify port to http service. default: 8000
+  --input_name INPUT_NAME
+                        Specify input tensor name. default: input
+  --output_name OUTPUT_NAME
+                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+  --transpose_input {False,True}
+                        Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True
+  --transpose_method {nchw2nhwc,nhwc2nchw}
+                        How the input transposition should be executed: nhwc2nchw or nchw2nhwc
+  --iterations ITERATIONS
+                        Number of requests iterations, as default use number of images in numpy memmap. default: 0 (consume all frames)
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service. default: resnet
+  --pipeline_name PIPELINE_NAME
+                        Define pipeline name, must be same as is in service
+  --dag-batch-size-auto
+                        Add demultiplexer dimension at front
+  --binary_data         Send input data in binary format
+  --tls                 use TLS communication with gRPC endpoint
+  --server_cert SERVER_CERT
+                        Path to server certificate
+  --client_cert CLIENT_CERT
+                        Path to client certificate
+  --client_key CLIENT_KEY
+                        Path to client key
+```
+
+- Usage Example
+
+```Bash
+python3 http_async_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
+Image data range: 0.0 : 255.0
+Start processing:
+        Model name: resnet
+        Iterations: 10
+        Images numpy path: ../../imgs_nhwc.npy
+        Numpy file shape: (10, 3, 224, 224)
+
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
 Classification accuracy: 100.00
 ```

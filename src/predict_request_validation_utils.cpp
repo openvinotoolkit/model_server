@@ -59,6 +59,7 @@ template <>
 dimension_value_t RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getDim(size_t i) {
     return tensor.tensor_shape().dim(i).size();
 }
+
 template <>
 dimension_value_t RequestShapeInfo<InferenceTensor, shape_t>::getDim(size_t i) {
     return tensor.getShape()[i];
@@ -213,7 +214,7 @@ const InferenceTensor& RequestValidator<ovms::InferenceRequest, InferenceTensor,
 template <>
 Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateNumberOfInputs() const {
     size_t expectedNumberOfInputs = inputsInfo.size();
-    for (auto optionalAllowedInputName : optionalAllowedInputNames) {
+    for (auto& optionalAllowedInputName : optionalAllowedInputNames) {
         if (request.inputs().count(optionalAllowedInputName))
             expectedNumberOfInputs++;
     }
@@ -797,7 +798,6 @@ bool RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorTyp
 }
 template <>
 bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkIfNativeFileFormatUsed(const InferenceTensor& tensor, const std::string inputName) const {
-    // TODO no strig no bytes currently, will implement one of those types with binary input.
     return false;
 }
 
