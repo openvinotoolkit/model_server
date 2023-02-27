@@ -17,7 +17,7 @@
 
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "ovms.h"
+#include "src/ovms.h"
 namespace mediapipe {
 namespace tf = ::tensorflow;
 
@@ -51,7 +51,7 @@ public:
 
     absl::Status Close(CalculatorContext* cc) final {
         // Close is called on input node and output node in initial pipeline
-        //OVMS_ServerDelete(cserver);
+        // OVMS_ServerDelete(cserver);
         OVMS_ModelsSettingsDelete(_modelsSettings);
         OVMS_ServerSettingsDelete(_serverSettings);
         return absl::OkStatus();
@@ -103,9 +103,9 @@ public:
         std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         const uint32_t notUsedNum = 0;
         OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum);
-        //////////////////
+        // ////////////////
         //  INFERENCE
-        //////////////////
+        // ////////////////
         OVMS_InferenceResponse* response = nullptr;
         OVMS_Inference(cserver, request, &response);
         uint32_t outputCount = 42;

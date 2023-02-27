@@ -25,7 +25,7 @@ OVMSCalculatorGraph::OVMSCalculatorGraph() {
 }
 
 absl::Status OVMSCalculatorGraph::execute() {
-    //google::InitGoogleLogging("--logtostderr=1");
+    // google::InitGoogleLogging("--logtostderr=1");
     mediapipe::CalculatorGraphConfig config =
         mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(R"pb(
                 input_stream: "in"
