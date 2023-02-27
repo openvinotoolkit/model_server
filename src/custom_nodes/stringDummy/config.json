@@ -2,7 +2,7 @@
     "model_config_list": [],
     "custom_node_library_config_list": [
         {"name": "string_dummy",
-            "base_path": "/repo/src/custom_nodes/lib/ubuntu/libcustom_node_stringDummy.so"}
+            "base_path": "/src/custom_nodes/lib/ubuntu/libcustom_node_stringDummy.so"}
     ],
     "pipeline_config_list": [
         {
