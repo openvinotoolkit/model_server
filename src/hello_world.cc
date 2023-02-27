@@ -44,7 +44,7 @@ absl::Status PrintHelloWorld() {
 
     CalculatorGraph graph;
     cout << __FILE__ << ":" << __LINE__ << endl;
-    //MP_RETURN_IF_ERROR(graph.Initialize(config));
+    // MP_RETURN_IF_ERROR(graph.Initialize(config));
     auto ret = graph.Initialize(config);
     LOG(INFO) << ret;
     cout << __FILE__ << ":" << __LINE__ << endl;
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
     cout << __FILE__ << ":" << __LINE__ << endl;
     auto grph = mediapipe::PrintHelloWorld();
     cout << __FILE__ << ":" << __LINE__ << endl;
-    //CHECK(mediapipe::PrintHelloWorld().ok());
+    // CHECK(mediapipe::PrintHelloWorld().ok());
     CHECK(grph.ok());
     cout << __FILE__ << ":" << __LINE__ << endl;
     return 0;
