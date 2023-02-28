@@ -35,6 +35,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "../config.hpp"
+#include "../dags/node_library.hpp"
 #include "../execution_context.hpp"
 #include "../inferencerequest.hpp"
 #include "../inferenceresponse.hpp"
@@ -42,10 +43,10 @@
 #include "../metric_registry.hpp"
 #include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
-#include "../node_library.hpp"
 #include "../tensorinfo.hpp"
 
-using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
+using signed_shape_t = std::vector<int64_t>;
+using inputs_info_t = std::map<std::string, std::tuple<signed_shape_t, ovms::Precision>>;
 
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
 const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
@@ -61,7 +62,7 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     false,                 // is stateful
     true,                  // idle sequence cleanup enabled
     false,                 // low latency transformation enabled
-    500,                   // steteful sequence max number
+    500,                   // stateful sequence max number
     "",                    // cache directory
     1,                     // model_version unused since version are read from path
     dummy_model_location,  // local path
@@ -76,7 +77,7 @@ const ovms::ModelConfig DUMMY_FP64_MODEL_CONFIG{
     false,                      // is stateful
     true,                       // idle sequence cleanup enabled
     false,                      // low latency transformation enabled
-    500,                        // steteful sequence max number
+    500,                        // stateful sequence max number
     "",                         // cache directory
     1,                          // model_version unused since version are read from path
     dummy_fp64_model_location,  // local path
@@ -91,7 +92,7 @@ const ovms::ModelConfig SUM_MODEL_CONFIG{
     false,               // is stateful
     true,                // idle sequence cleanup enabled
     false,               // low latency transformation enabled
-    500,                 // steteful sequence max number
+    500,                 // stateful sequence max number
     "",                  // cache directory
     1,                   // model_version unused since version are read from path
     sum_model_location,  // local path
@@ -106,7 +107,7 @@ const ovms::ModelConfig INCREMENT_1x3x4x5_MODEL_CONFIG{
     false,                             // is stateful
     true,                              // idle sequence cleanup enabled
     false,                             // low latency transformation enabled
-    500,                               // steteful sequence max number
+    500,                               // stateful sequence max number
     "",                                // cache directory
     1,                                 // model_version unused since version are read from path
     increment_1x3x4x5_model_location,  // local path
@@ -117,7 +118,8 @@ constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 constexpr const float DUMMY_ADDITION_VALUE = 1.0;
-const std::vector<size_t> DUMMY_MODEL_SHAPE{1, 10};
+const signed_shape_t DUMMY_MODEL_SHAPE{1, 10};
+const ovms::Shape DUMMY_MODEL_SHAPE_META{1, 10};
 
 constexpr const char* DUMMY_FP64_MODEL_INPUT_NAME = "input:0";
 constexpr const char* DUMMY_FP64_MODEL_OUTPUT_NAME = "output:0";
@@ -159,14 +161,14 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
 KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
 
-void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
+void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<signed_shape_t, const std::string>& inputInfo,
     const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
-void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
-void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, OVMS_DataType>& inputInfo,
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<signed_shape_t, OVMS_DataType>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
-void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 
 void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
@@ -190,11 +192,11 @@ void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
+    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "");
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1);
+    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "");
 
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {

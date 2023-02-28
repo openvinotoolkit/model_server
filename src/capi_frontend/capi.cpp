@@ -18,6 +18,8 @@
 #include <string>
 
 #include "../buffer.hpp"
+#include "../dags/pipeline.hpp"
+#include "../execution_context.hpp"
 #include "../inferenceparameter.hpp"
 #include "../inferencerequest.hpp"
 #include "../inferenceresponse.hpp"
@@ -35,6 +37,7 @@
 #include "../timer.hpp"
 
 using ovms::Buffer;
+using ovms::ExecutionContext;
 using ovms::InferenceParameter;
 using ovms::InferenceRequest;
 using ovms::InferenceResponse;
@@ -582,6 +585,24 @@ static Status getModelInstance(ovms::Server& server, const InferenceRequest* req
     auto& modelManager = dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
     return modelManager.getModelInstance(request->getServableName(), request->getServableVersion(), modelInstance, modelInstanceUnloadGuardPtr);
 }
+
+Status getPipeline(ovms::Server& server, const InferenceRequest* request,
+    InferenceResponse* response,
+    std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
+    OVMS_PROFILE_FUNCTION();
+    if (!server.isLive()) {
+        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "not live");
+    }
+    if (!server.isReady()) {
+        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "not ready");
+    }
+    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+    if (!servableModule) {
+        return ovms::Status(ovms::StatusCode::INTERNAL_ERROR, "missing servable manager");
+    }
+    auto& modelManager = dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+    return modelManager.createPipeline(pipelinePtr, request->getServableName(), request, response);
+}
 }  // namespace
 OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response) {
     OVMS_PROFILE_FUNCTION();
@@ -606,15 +627,14 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
         req->getServableVersion());
 
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    //   std::unique_ptr<ovms::Pipeline> pipelinePtr;
+    std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = getModelInstance(server, req, modelInstance, modelInstanceUnloadGuard);
 
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
-        // status = getPipeline(req, response, pipelinePtr);
-        status = Status(StatusCode::NOT_IMPLEMENTED, "Inference with DAG not supported with C-API in preview");
+        status = getPipeline(server, req, res.get(), pipelinePtr);
     }
     if (!status.ok()) {
         if (modelInstance) {
@@ -623,18 +643,18 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
+    // fix execution context and metrics
+    ExecutionContext executionContext{
+        ExecutionContext::Interface::GRPC,
+        ExecutionContext::Method::ModelInfer};
 
-    // ExecutionContext executionContext{
-    //   ExecutionContext::Interface::CAPI,
-    //  ExecutionContext::Method::Inference};
-
-    // if (pipelinePtr) {
-    //       status = pipelinePtr->execute(executionContext);
-    // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
-    //   } else {
-    status = modelInstance->infer(req, res.get(), modelInstanceUnloadGuard);
-    //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
-    //}
+    if (pipelinePtr) {
+        status = pipelinePtr->execute(executionContext);
+        // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
+    } else {
+        status = modelInstance->infer(req, res.get(), modelInstanceUnloadGuard);
+        //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
+    }
 
     if (!status.ok()) {
         return reinterpret_cast<OVMS_Status*>(new Status(status));
@@ -642,15 +662,14 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
 
     timer.stop(TOTAL);
     double reqTotal = timer.elapsed<microseconds>(TOTAL);
-    // if (pipelinePtr) {
-    //  OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().reqTimeGrpc, reqTotal);
-    //  } else {
-    //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
-    // }
+    if (pipelinePtr) {
+        //  OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().reqTimeGrpc, reqTotal);
+    } else {
+        //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
+    }
     SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
     *response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
     return nullptr;
-    // return grpc::Status::OK;
 }
 
 #ifdef __cplusplus

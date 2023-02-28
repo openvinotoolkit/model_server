@@ -30,11 +30,20 @@ InferenceTensor::InferenceTensor(InferenceTensor&& rhs) :
 InferenceTensor::InferenceTensor(OVMS_DataType datatype, const size_t* shape, size_t dimCount) :
     datatype(datatype),
     shape(shape, shape + dimCount) {}
+
 Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId, bool createCopy) {
-    if (nullptr != buffer) {
+    if (nullptr != this->buffer) {
         return StatusCode::DOUBLE_BUFFER_SET;
     }
-    buffer = std::make_unique<Buffer>(addr, byteSize, bufferType, deviceId, createCopy);
+    this->buffer = std::make_unique<Buffer>(addr, byteSize, bufferType, deviceId, createCopy);
+    return StatusCode::OK;
+}
+
+Status InferenceTensor::setBuffer(std::unique_ptr<Buffer>&& buffer) {
+    if (nullptr != this->buffer) {
+        return StatusCode::DOUBLE_BUFFER_SET;
+    }
+    this->buffer = std::move(buffer);
     return StatusCode::OK;
 }
 

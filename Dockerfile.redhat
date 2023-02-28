@@ -21,16 +21,7 @@ LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG ov_source_branch=releases/2021/2
-
 ARG JOBS
-
-# build_type=[ opt, dbg ]
-ARG build_type=dbg
-ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
-ARG minitrace_flags
-ENV TF_SYSTEM_LIBS="curl"
-ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             boost169-atomic \
@@ -40,35 +31,21 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             boost169-thread \
             boost169-system \
             boost169-date-time \
+            libuuid-devel \
             bc \
             cmake \
             curl \
             gcc-c++ \
-            gdb \
             git \
-            java-11-openjdk-devel \
-            libgusb.x86_64 \
-            libusbx \
             libcurl-devel \
             libtool \
-            libuuid-devel \
             libxml2-devel \
             make \
             openssl-devel \
             patch \
             pkg-config \
-            python3 \
-            python3-pip \
-            python3-devel \
-            python3-setuptools \
-            python3-virtualenv \
-            python3-numpy \
             wget \
-            which \
             yum-utils \
-            unzip \
-            vim \
-            xz \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
 
@@ -80,21 +57,12 @@ RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
     make all && \
     cp libpugixml.so* /usr/lib64/
 
-# Set up Bazel
-ENV BAZEL_VERSION 5.3.1
-WORKDIR /bazel
-RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
-
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
 RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
 	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
-	./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+	./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
 		--with-random --with-thread --with-atomic --with-regex \
 		--with-log --with-locale \
@@ -130,6 +98,45 @@ WORKDIR /ovms/third_party/opencv
 RUN ./install_opencv.sh
 ####### End of OpenCV
 
+################### BASE BUILD ##########################
+FROM base_build as final_build
+
+LABEL version="1.0.0"
+
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+ARG ov_source_branch=releases/2021/2
+
+ARG JOBS
+
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+            gdb \
+            java-11-openjdk-devel \
+            libgusb.x86_64 \
+            libusbx \
+            libtool \
+            openssl-devel \
+            python3 \
+            python3-pip \
+            python3-devel \
+            python3-setuptools \
+            python3-virtualenv \
+            python3-numpy \
+            which \
+            yum-utils \
+            unzip \
+            vim \
+            xz \
+            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+            yum clean all
+
+# build_type=[ opt, dbg ]
+ARG build_type=dbg
+ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
+ARG minitrace_flags
+ENV TF_SYSTEM_LIBS="curl"
+ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
+
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
@@ -152,10 +159,21 @@ COPY .bazelrc WORKSPACE /ovms/
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
-COPY MakefileCapi /ovms/
 
 RUN alternatives --set python /usr/bin/python3
 
+# Set up Bazel
+ENV BAZEL_VERSION 5.3.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
+RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && yum clean all
+
+WORKDIR /ovms
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
@@ -181,7 +199,7 @@ RUN make
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2022.2"
+ARG PROJECT_VERSION="2022.3"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 
@@ -192,15 +210,12 @@ RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-RUN wget -nv https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm &&\
-    yum install -y lcov-1.16-1.noarch.rpm && yum clean all
-
-COPY check_coverage.bat /ovms/
-
-ARG CHECK_COVERAGE=0
 # Test Coverage
-RUN if [ "$CHECK_COVERAGE" = "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
-    bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG}
+COPY check_coverage.bat /ovms/
+ARG CHECK_COVERAGE=0
+ARG RUN_TESTS=1
+RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" = "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
+    bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
 
 # C api shared library
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
@@ -219,11 +234,13 @@ RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs=$JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 
 # C-api C/C++ app with gcc
+COPY MakefileCapi .
 RUN make -f MakefileCapi cpp && make -f MakefileCapi c
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
 
+RUN if [ "$build_type" == "dbg" ] ; then bash -c "cp /ovms/bazel-out/k8-dbg/bin/src/ovms /ovms/bazel-bin/src/ovms" ; else exit 0; fi ;
 RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
 
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/

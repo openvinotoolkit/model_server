@@ -118,7 +118,7 @@ Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype) {
     return it->second;
 }
 
-Status prepareConsolidatedTensorImpl(tensorflow::serving::PredictResponse* response, char*& bufferOut, const std::string& name, size_t size) {
+Status prepareConsolidatedTensorImpl(TFSPredictResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size) {
     OVMS_PROFILE_FUNCTION();
     tensorflow::TensorProto tensorProto;
     auto [it, isInserted] = response->mutable_outputs()->insert(google::protobuf::MapPair<std::string, tensorflow::TensorProto>(name, std::move(tensorProto)));
@@ -129,5 +129,22 @@ Status prepareConsolidatedTensorImpl(tensorflow::serving::PredictResponse* respo
     it->second.mutable_tensor_content()->resize(size);
     bufferOut = it->second.mutable_tensor_content()->data();
     return StatusCode::OK;
+}
+const std::string& getRequestServableName(const TFSPredictRequest& request) {
+    return request.model_spec().name();
+}
+Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::string& name, bool& nativeFileFormatUsed) {
+    auto it = request.inputs().find(name);
+    if (it == request.inputs().end()) {
+        SPDLOG_DEBUG("Error during checking binary input; input: {} does not exist in request for: {}", name, getRequestServableName(request));
+        return StatusCode::INTERNAL_ERROR;
+    }
+    nativeFileFormatUsed = isNativeFileFormatUsed(it->second);
+    return StatusCode::OK;
+}
+
+bool isNativeFileFormatUsed(const TFSInputTensorType& proto) {
+    return proto.dtype() == TFSDataType::DT_STRING;
+    // return request.string_val_size() > 0;
 }
 }  // namespace ovms

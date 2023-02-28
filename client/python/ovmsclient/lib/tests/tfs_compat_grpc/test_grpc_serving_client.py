@@ -19,13 +19,14 @@ import pytest
 import numpy as np
 from ovmsclient.tfs_compat.grpc.requests import GrpcPredictRequest
 
-from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
-from tensorflow_serving.apis.model_service_pb2_grpc import ModelServiceStub
-from tensorflow_serving.apis.predict_pb2 import PredictRequest, PredictResponse
-from tensorflow_serving.apis.prediction_service_pb2_grpc import PredictionServiceStub
-from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest, ModelVersionStatus
-from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
-from tensorflow.core.framework.types_pb2 import DataType
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.model_service_pb2_grpc import ModelServiceStub # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.predict_pb2 import (PredictRequest,
+                                                                              PredictResponse)
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.prediction_service_pb2_grpc import PredictionServiceStub # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest, ModelVersionStatus # noqa
+from ovmsclient.tfs_compat.protos.tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.types_pb2 import DataType
 
 from ovmsclient.tfs_compat.grpc.serving_client import make_grpc_client
 from ovmsclient.tfs_compat.grpc.requests import GrpcModelStatusRequest, GrpcModelMetadataRequest

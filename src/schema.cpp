@@ -50,6 +50,68 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"additionalProperties": false
 			}
 		},
+    "layout_shape_def": {
+        "oneOf": [
+        {
+            "type": "object",
+            "additionalProperties": {"type": "string"}
+        },
+        {
+            "type": "string"
+        }
+        ]
+    },
+        "all_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {},
+            "minProperties": 0,
+            "maxProperties": 0
+        },
+        "specific_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "versions" : {
+                  "type": "array",
+                  "items": {
+                        "type": "integer",
+                        "minimum": 1
+                  }
+                }
+            },
+            "required": ["versions"]
+        },
+        "latest_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "num_versions" : {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            },
+            "required": ["num_versions"]
+        },
+        "model_version_policy": {
+            "oneOf": [
+                {
+                  "properties" : {"all" : {"$ref": "#/definitions/all_version_policy"}},
+                  "required": ["all"],
+                  "additionalProperties": false
+                },
+                {
+                  "properties" : {"specific" : {"$ref": "#/definitions/specific_version_policy"}},
+                  "required": ["specific"],
+                  "additionalProperties": false
+                },
+                {
+                  "properties" : {"latest" : {"$ref": "#/definitions/latest_version_policy"}},
+                  "required": ["latest"],
+                  "additionalProperties": false
+                }
+            ]
+        },
 		"model_config": {
 			"type": "object",
 			"required": ["config"],
@@ -69,13 +131,13 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 							"minimum": 0
 						},
 						"model_version_policy": {
-							"type": "object"
+            "$ref": "#/definitions/model_version_policy"
 						},
 						"shape": {
-							"type": ["object", "string"]
+                "$ref": "#/definitions/layout_shape_def"
 						},
 						"layout": {
-							"type": ["object", "string"]
+                "$ref": "#/definitions/layout_shape_def"
 						},
 						"nireq": {
 							"type": "integer",
@@ -88,7 +150,11 @@ const char* MODELS_CONFIG_SCHEMA = R"({
                             "type": "boolean"
                         },
 						"plugin_config": {
-							"type": "object"
+							"type": "object",
+              "additionalProperties": {"anyOf": [
+                              {"type": "string"},
+                              {"type": "number"}
+                          ]}
 						},
 						"stateful": {
 							"type": "boolean"
@@ -315,37 +381,21 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 	"additionalProperties": false
 })";
 
-const char* MODELS_MAPPING_INPUTS_SCHEMA = R"({
+const char* MODELS_MAPPING_SCHEMA = R"(
+{
     "type": "object",
-    "required": [
-        "inputs"
-    ],
-    "properties": {
-		"outputs":{
-            "type": "object"
-        },
-        "inputs":{
-            "type": "object"
-        }
-    },
-	"additionalProperties": false
-    })";
-
-const char* MODELS_MAPPING_OUTPUTS_SCHEMA = R"({
-    "type": "object",
-    "required": [
-        "outputs"
-    ],
     "properties": {
         "outputs":{
-            "type": "object"
+                "type": "object",
+                "additionalProperties": {"type": "string"}
         },
         "inputs":{
-            "type": "object"
+            "type": "object",
+            "additionalProperties": {"type": "string"}
         }
     },
-	"additionalProperties": false
-    })";
+    "additionalProperties": false
+})";
 
 StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema) {
     rapidjson::Document schemaJson;

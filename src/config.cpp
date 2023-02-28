@@ -20,15 +20,17 @@
 #include <regex>
 #include <thread>
 
+#include <spdlog/spdlog.h>
 #include <sysexits.h>
 
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
 #include "server_settings.hpp"
+#include "systeminfo.hpp"
 
 namespace ovms {
 
-const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
+const uint AVAILABLE_CORES = getCoreCount();
 const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
 
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
@@ -108,12 +110,12 @@ bool Config::validate() {
         return false;
     }
 
-    if (port() && ((port() > MAX_PORT_NUMBER) || (port() < 0))) {
+    if (port() && (port() > MAX_PORT_NUMBER)) {
         std::cerr << "port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
         return false;
     }
 
-    if (restPort() != 0 && ((restPort() > MAX_PORT_NUMBER) || (restPort() < 0))) {
+    if (restPort() && (restPort() > MAX_PORT_NUMBER)) {
         std::cerr << "rest_port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
         return false;
     }
@@ -121,12 +123,6 @@ bool Config::validate() {
     // metrics on rest port
     if (metricsEnabled() && restPort() == 0) {
         std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
-        return false;
-    }
-
-    // metrics on rest port
-    if ((metricsEnabled() || !metricsList().empty()) && !configPath().empty()) {
-        std::cerr << "metrics_enable or metrics_list and config_path cant be used together. Use json config file to enable metrics when using config_path." << std::endl;
         return false;
     }
 

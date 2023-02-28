@@ -17,7 +17,7 @@ $ pip3 install -r ../requirements.txt
 ```bash
 $ wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
 $ docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet \
---model_path /models/resnet50 --port 9000 --batch_size 2
+--model_path /models/resnet50 --port 9178 --batch_size 2
 ```
 
 ## Latency

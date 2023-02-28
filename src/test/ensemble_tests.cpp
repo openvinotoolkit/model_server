@@ -22,9 +22,13 @@
 #include <stdlib.h>
 
 #include "../binaryutils.hpp"
-#include "../dl_node.hpp"
-#include "../entry_node.hpp"
-#include "../exit_node.hpp"
+#include "../dags/dl_node.hpp"
+#include "../dags/entry_node.hpp"
+#include "../dags/exit_node.hpp"
+#include "../dags/nodestreamidguard.hpp"
+#include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
+#include "../dags/pipelinedefinition.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
@@ -32,10 +36,6 @@
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#include "../nodestreamidguard.hpp"
-#include "../pipeline.hpp"
-#include "../pipeline_factory.hpp"
-#include "../pipelinedefinition.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
@@ -70,26 +70,26 @@ public:
         requestData = bs1requestData;
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
 
-    void prepareRequest(const std::vector<float>& requestData, TFSRequestType& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+    void prepareRequest(const std::vector<float>& requestData, TFSRequestType& request, const std::string& customPipelineInputName, const signed_shape_t& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
         request.Clear();
         preparePredictRequest(request, inputs_info_t{{customPipelineInputName, {shape, ovms::Precision::FP32}}}, requestData);
     }
 
-    void prepareRequest(const std::vector<float>& requestData, KFSRequest& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+    void prepareRequest(const std::vector<float>& requestData, KFSRequest& request, const std::string& customPipelineInputName, const signed_shape_t& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
         request.Clear();
         prepareKFSInferInputTensor(request, customPipelineInputName, std::make_tuple(shape, ovmsPrecisionToKFSPrecision(ovms::Precision::FP32)), requestData);
     }
 
-    void checkDummyResponse(int seriesLength, int batchSize = 1) {
-        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize);
+    void checkDummyResponse(int seriesLength, int batchSize = 1, const std::string& servableName = "") {
+        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize, servableName);
     }
 
     ModelConfig config;
@@ -105,11 +105,11 @@ public:
     const std::string customPipelineOutputName = "custom_dummy_output";
     std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
     std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
 
     std::vector<float> requestData;
@@ -137,11 +137,11 @@ protected:
         requestData = bs1requestData;
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
 
@@ -225,11 +225,11 @@ protected:
     const std::string customPipelineOutputName = "custom_dummy_output";
     std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
     std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
 
     std::vector<float> requestData;
@@ -248,7 +248,9 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
     auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", this->dummyModelName, this->requestedModelVersion, managerWithDummyModel);
     const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
-    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
+    std::set<std::string> gatherFromNode = {};
+    std::string pipelineName = "test_pipeline";
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, gatherFromNode, true, pipelineName);
     Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
@@ -259,7 +261,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
 
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
-    this->checkDummyResponse(dummySeriallyConnectedCount);
+    this->checkDummyResponse(dummySeriallyConnectedCount, 1, pipelineName);
 }
 
 TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {
@@ -675,7 +677,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     tensorflow::serving::PredictRequest simpleModelRequest;
     preparePredictRequest(simpleModelRequest,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     std::vector<float> requestData{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
     auto& input = (*simpleModelRequest.mutable_inputs())[DUMMY_MODEL_INPUT_NAME];
     input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
@@ -1516,7 +1518,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
         const std::string inputName = customPipelineInputName + std::to_string(i);
         inputsInfoTmp[inputName] = std::make_shared<ovms::TensorInfo>(inputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
     const tensor_map_t inputsInfo = inputsInfoTmp;
@@ -1527,7 +1529,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
         outputsInfo.emplace(outputName,
             std::make_shared<ovms::TensorInfo>(outputName,
                 ovms::Precision::FP32,
-                DUMMY_MODEL_SHAPE,
+                DUMMY_MODEL_SHAPE_META,
                 Layout{"NC"}));
     }
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
@@ -1634,18 +1636,18 @@ TEST_F(EnsembleFlowTest, OrderOfScheduling) {
     tensor_map_t inputsInfoTmp;
     inputsInfoTmp[customPipelineInputName] = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
     auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfoTmp);
 
     tensor_map_t outputsInfoTmp;
     outputsInfoTmp[customPipelineOutputName + "_1"] = std::make_shared<ovms::TensorInfo>(customPipelineOutputName + "_1",
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
     outputsInfoTmp[customPipelineOutputName + "_2"] = std::make_shared<ovms::TensorInfo>(customPipelineOutputName + "_2",
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfoTmp);
 
@@ -3117,7 +3119,7 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
     const tensor_map_t inputsInfo{{"proto_input_1x10",
                                       std::make_shared<ovms::TensorInfo>("proto_input_1x10",
                                           ovms::Precision::FP32,
-                                          DUMMY_MODEL_SHAPE,
+                                          DUMMY_MODEL_SHAPE_META,
                                           Layout{"NC"})},
         {"proto_input_1x5",
             std::make_shared<ovms::TensorInfo>("proto_input_1x5",

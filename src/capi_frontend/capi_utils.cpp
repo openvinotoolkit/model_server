@@ -15,14 +15,22 @@
 //*****************************************************************************
 #include "capi_utils.hpp"
 
+#include <memory>
 #include <string>
+#include <utility>
 
+#include "../buffer.hpp"
+#include "../inferencerequest.hpp"
+#include "../inferenceresponse.hpp"
+#include "../logging.hpp"
 #include "../shape.hpp"
+#include "../status.hpp"
+#include "../tensorinfo.hpp"
 
 namespace ovms {
 
-std::string tensorShapeToString(const Shape& shape) {
-    return shape.toString();
+std::string tensorShapeToString(const shape_t& shape) {
+    return TensorInfo::shapeToString(shape);
 }
 
 OVMS_DataType getPrecisionAsOVMSDataType(Precision precision) {
@@ -124,5 +132,42 @@ Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype) {
     default:
         return Precision::UNDEFINED;
     }
+}
+Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string& name, bool& nativeFileFormatUsed) {
+    nativeFileFormatUsed = false;
+    return StatusCode::OK;
+}
+const std::string& getRequestServableName(const ovms::InferenceRequest& request) {
+    return request.getServableName();
+}
+Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size) {
+    InferenceTensor* outputTensor{nullptr};
+    Status status = response->addOutput(
+        name,
+        getPrecisionAsOVMSDataType(ovElementTypeToOvmsPrecision(precision)),
+        shape.data(),
+        shape.size());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to prepare consolidated tensor, servable: {}; tensor with name: {}", response->getServableName(), name);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    const std::string* outputNameFromCapiTensor = nullptr;
+    size_t outputId = 0;
+    auto outputCount = response->getOutputCount();
+    while (outputId < outputCount) {
+        status = response->getOutput(outputId, &outputNameFromCapiTensor, &outputTensor);
+        if (status.ok() &&
+            (nullptr != outputNameFromCapiTensor) &&
+            (name == *outputNameFromCapiTensor)) {
+            auto consolidatedBuffer = std::make_unique<Buffer>(size, OVMS_BUFFERTYPE_CPU, std::nullopt);
+            bufferOut = reinterpret_cast<char*>(consolidatedBuffer->data());
+            outputTensor->setBuffer(std::move(consolidatedBuffer));
+            return StatusCode::OK;
+        }
+        ++outputId;
+    }
+    SPDLOG_LOGGER_ERROR(dag_executor_logger, "Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find output",
+        name, response->getServableName(), response->getServableVersion());
+    return StatusCode::INTERNAL_ERROR;
 }
 }  // namespace ovms

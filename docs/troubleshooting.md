@@ -6,9 +6,8 @@ This document gives information about troubleshooting the following issues while
 * <a href="#client-request">Client Request Issues</a>
 * <a href="#resource-allocation">Resource Allocation</a>
 * <a href="#usage-monitoring">Usage Monitoring</a>
-* <a href="#configure-aws">Configuring AWS For Use With a Proxy</a>
-* <a href="#gcs">Using GCS model behind a proxy </a>
-* <a href="#load-network-issue">Unable to load network into device with: `can't protect` in server logs </a>
+* <a href="#configure-aws">Configuring S3 storage For Use With a Proxy</a>
+* <a href="#gcs">Using GCS storage behind a proxy </a>
 * <a href="#model-cache">Model Cache Issues </a>
 
 
@@ -77,8 +76,8 @@ It will be also included in the host system logs like `Memory cgroup out of memo
 - With this setting model server logs will store information about all the incoming requests.
 - You can parse the logs to analyze: the volume of requests, processing statistics, and most used models.
 
-## Configuring AWS For Use With a Proxy<a name="configure-aws"></a>
-- To use AWS behind a proxy, an environment variable should be configured. The AWS storage module is using the following format
+## Configuring S3 Storage For Use With a Proxy<a name="configure-aws"></a>
+- To use S3 storage behind a proxy, an environment variable should be configured. The S3 loader module is using the following format
 ```
 http://user:password@hostname:port
 or
@@ -94,13 +93,10 @@ HTTP_proxy
 
 > **Note**: that neither `no_proxy` or `NO_PROXY` is used.
 
-## Using GCS model behind a proxy <a name="gcs"></a>
+## Using GCS Model Behind a Proxy <a name="gcs"></a>
 
 - If your environment is required to use proxy but `http_proxy`/`https_proxy` is not passed to the server container there will be 15 minutes timeout when accessing GCS models.
 - During that time no logs will be captured by OVMS. Currently, there is no option to change the timeout duration for GCS.
-
-## Cannot compile model into target device: `can't protect` in server logs <a name="load-network-issue"></a>
-- Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html).
 
 ## Model Cache Issues <a name="model-cache"></a>
 

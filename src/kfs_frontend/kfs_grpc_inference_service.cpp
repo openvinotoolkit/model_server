@@ -19,6 +19,10 @@
 #include <memory>
 #include <string>
 
+#include "../dags/pipeline.hpp"
+#include "../dags/pipelinedefinition.hpp"
+#include "../dags/pipelinedefinitionstatus.hpp"
+#include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../deserialization.hpp"
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
@@ -28,10 +32,6 @@
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../ovinferrequestsqueue.hpp"
-#include "../pipeline.hpp"
-#include "../pipelinedefinition.hpp"
-#include "../pipelinedefinitionstatus.hpp"
-#include "../pipelinedefinitionunloadguard.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../serialization.hpp"
 #include "../servablemanagermodule.hpp"
@@ -364,7 +364,7 @@ void KFSInferenceServiceImpl::convert(
     KFSModelMetadataResponse::TensorMetadata* to) {
     to->set_name(from.first);
     to->set_datatype(ovmsPrecisionToKFSPrecision(from.second->getPrecision()));
-    for (auto dim : from.second->getShape()) {
+    for (auto& dim : from.second->getShape()) {
         if (dim.isStatic()) {
             to->add_shape(dim.getStaticValue());
         } else {
