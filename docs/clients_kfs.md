@@ -684,4 +684,4 @@ When creating a Python-based client application, you can use Triton client libra
 
 @endsphinxdirective
 
-For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/python/kserve-api/samples).
+For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/releases/2022/3/client/python/kserve-api/samples).

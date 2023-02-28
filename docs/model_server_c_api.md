@@ -6,7 +6,7 @@ This document describes OpenVINO Model Server (OVMS) C API that allows OVMS to b
 
 ## API Description
 
-Server functionalities are encapsulated in shared library built from OVMS source. To include OVMS you need to link this library with your application and use C API defined in [header file](https://github.com/openvinotoolkit/model_server/blob/develop/src/ovms.h). 
+Server functionalities are encapsulated in shared library built from OVMS source. To include OVMS you need to link this library with your application and use C API defined in [header file](https://github.com/openvinotoolkit/model_server/blob/releases/2022/3/src/ovms.h). 
 
 
 Calling a method to start the model serving in your application initiates the OVMS as a separate thread. Then you can schedule inference both directly from app using C API and gRPC/HTTP endpoints.

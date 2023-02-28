@@ -42,8 +42,8 @@ For the Raw Data binary inputs `binary_data_size` parameter can be omitted since
 
 ## Usage examples
 
-Sample clients that use binary inputs via KServe API can be found here ([REST sample](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_binary_resnet.py))/([GRPC sample](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_binary_resnet.py))
-Also, see the ([README](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/README.md))
+Sample clients that use binary inputs via KServe API can be found here ([REST sample](https://github.com/openvinotoolkit/model_server/blob/releases/2022/3/client/python/kserve-api/samples/http_infer_binary_resnet.py))/([GRPC sample](https://github.com/openvinotoolkit/model_server/blob/releases/2022/3/client/python/kserve-api/samples/http_infer_binary_resnet.py))
+Also, see the ([README](https://github.com/openvinotoolkit/model_server/blob/releases/2022/3/client/python/kserve-api/samples/README.md))
 
 ## Recommendations:
 
