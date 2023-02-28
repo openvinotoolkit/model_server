@@ -90,9 +90,9 @@ ifeq ($(BASE_OS),redhat)
   ifeq ($(RH_ENTITLEMENT), 1)
     RH_ENTITLEMENT_DIR ?= /etc/pki/entitlement
     RH_ENTITLEMENT_ID ?= entitlement
-    ENTITLEMENT_ARGS=-v $(RH_ENTITLEMENT_DIR)/$(RH_ENTITLEMENT_ID).pem:/etc/pki/entitlement/entitlement.pem:Z -v $(RH_ENTITLEMENT_DIR)/$(RH_ENTITLEMENT_ID)-key.pem:/etc/pki/entitlement/entitlement-key.pem:Z
+    ENTITLEMENT_ARGS=-v $(RH_ENTITLEMENT_DIR)/$(RH_ENTITLEMENT_ID).pem:/etc/pki/entitlement/entitlement.pem:Z -v $(RH_ENTITLEMENT_DIR)/$(RH_ENTITLEMENT_ID)-key.pem:/etc/pki/entitlement/entitlement-key.pem:Z --build-arg RH_ENTITLEMENT=1
   else
-    ENTITLEMENT_ARGS=""
+    ENTITLEMENT_ARGS=
   endif
 
   ifeq ($(NVIDIA),1)
@@ -261,9 +261,9 @@ endif
 		--build-arg NVIDIA=$(NVIDIA) \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
-	cd extras/nginx-mtls-auth && \
-	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
-	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
+#	cd extras/nginx-mtls-auth && \
+#	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
+#	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
 
 # Ci build expects index.html in genhtml directory
 get_coverage:

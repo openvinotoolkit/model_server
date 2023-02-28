@@ -23,6 +23,8 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG ov_source_branch=releases/2022/3
 
+ARG RH_ENTITLEMENT=0
+
 ARG JOBS
 
 # build_type=[ opt, dbg ]
@@ -32,10 +34,16 @@ ARG minitrace_flags
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 
-RUN echo 'sslverify=false' >> /etc/dnf/dnf.conf
-
 # Needed because the UBI codeready-builder doesn't have opencl-headers and python36 is our default, which is below the required support level
-RUN yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms && \
+RUN if [ "$RH_ENTITLEMENT" == "1" ] ; then \
+        yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
+    else \
+        dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
+        yum -y install http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/centos-gpg-keys-8-6.el8.noarch.rpm http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/centos-stream-repos-8-6.el8.noarch.rpm && \
+        # Set priorities on ubi/cuda repos, since we only want to go to the CentOS ones for packages not available
+        yum config-manager --save --set-enabled powertools && \
+        yum config-manager --save --setopt 'ubi-8-baseos-rpms.priority=1' --setopt 'ubi-8-appstream-rpms.priority=1' --setopt 'ubi-8-codeready-builder-rpms.priority=1' --setopt 'cuda.priority=1' ; \
+    fi ; \
     yum -y module disable python36
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
@@ -70,8 +78,6 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             python38-pip \
             python38-devel \
             python38-setuptools \
-            # We don't have a python38-virtualenv package :(
-            # python38-virtualenv \
             python38-numpy \
             wget \
             which \
@@ -79,7 +85,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             unzip \
             vim \
             xz \
-            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+            tbb && \
             yum clean all
 
 
@@ -89,14 +95,13 @@ ARG NVIDIA=0
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     yum install -y  \
-        tensorrt \
-        libzstd-devel \
-        cuda-11-8 \
-        libcudnn8 \
-        libcudnn8-devel \
-        libcutensor1 \
-        libcutensor-devel \
-        cuda-cudart-devel-11-8 && \
+    libzstd-devel \
+    cuda-11-8 \
+    libcudnn8-8.6.0.163-1.cuda11.8 \
+    libcudnn8-devel-8.6.0.163-1.cuda11.8 \
+    libcutensor1-1.6.1.5-1 \
+    libcutensor-devel-1.6.1.5-1 \
+    cuda-cudart-devel-11-8 && \
     yum install -y python38-Cython && \
     curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin && \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
@@ -128,12 +133,12 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 WORKDIR /boost
 # hadolint ignore=DL3003
 RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
-	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
-	./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
-		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
-		--with-random --with-thread --with-atomic --with-regex \
-		--with-log --with-locale \
-		install
+    tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
+    ./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+    --with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
+    --with-random --with-thread --with-atomic --with-regex \
+    --with-log --with-locale \
+    install
 
 COPY third_party /ovms/third_party/
 
@@ -199,6 +204,7 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
 ENV OPENVINO_HOME=/openvino
 ENV OPENVINO_CONTRIB=/openvino_contrib
+ARG ov_contrib_branch=releases/2022/3
 
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
@@ -261,7 +267,7 @@ LABEL description=${PROJECT_NAME}
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$build_type" = "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}-debug|g' /ovms/src/version.hpp" ; else bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" ; fi ;
-RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
+RUN sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
