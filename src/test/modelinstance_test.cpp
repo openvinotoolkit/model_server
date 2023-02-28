@@ -315,7 +315,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
         false,      // is stateful
         false,      // idle sequence cleanup enabled
         false,      // low latency transformation enabled
-        500,        // steteful sequence max number,
+        500,        // stateful sequence max number,
         "",         // cache dir
         version,    // version
         modelPath,  // local path
@@ -351,7 +351,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
         false,      // is stateful
         false,      // idle sequence cleanup enabled
         false,      // low latency transformation enabled
-        500,        // steteful sequence max number,
+        500,        // stateful sequence max number,
         "",         // cache dir
         version,    // version
         modelPath,  // local path

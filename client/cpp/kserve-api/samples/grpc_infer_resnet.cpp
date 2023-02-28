@@ -13,6 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+// Copyright 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//  * Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//  * Neither the name of NVIDIA CORPORATION nor the names of its
+//    contributors may be used to endorse or promote products derived
+//    from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -34,16 +59,22 @@ namespace tc = triton::client;
         }                                                                \
     }
 
-std::vector<uint8_t> Load(const std::string& fileName) {
-    std::ifstream fileImg(fileName, std::ios::binary);
-    fileImg.seekg(0, std::ios::end);
-    int bufferLength = fileImg.tellg();
-    fileImg.seekg(0, std::ios::beg);
+std::vector<uint8_t> load(const std::string& fileName) {
+    std::ifstream file(fileName, std::ios::binary);
+    file.unsetf(std::ios::skipws);
+    std::streampos fileSize;
 
-    char* buffer = new char[bufferLength];
-    fileImg.read(buffer, bufferLength);
+    file.seekg(0, std::ios::end);
+    fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
 
-    return std::vector<uint8_t>(buffer, buffer + bufferLength);
+    std::vector<uint8_t> vec;
+    vec.reserve(fileSize);
+
+    vec.insert(vec.begin(),
+               std::istream_iterator<uint8_t>(file),
+               std::istream_iterator<uint8_t>());
+    return vec;
 }
 
 int main(int argc, char** argv) {
@@ -64,17 +95,25 @@ int main(int argc, char** argv) {
     ;
     // clang-format on
 
-    auto args = opt.parse(argc, argv);
+    cxxopts::ParseResult args;
+    try {
+        args = opt.parse(argc, argv);
+    }
+    catch(cxxopts::option_not_exists_exception e) {
+        std::cerr << "error: cli options parsing failed - " << e.what();
+        return 1;
+    }
+    
     if (args.count("help")) {
         std::cout << opt.help() << std::endl;
         return 0;
     }
     if (!args.count("images_list")) {
-        std::cout << "error: option \"images_list\" has no value\n";
+        std::cerr << "error: option \"images_list\" has no value\n";
         return 1;
     }
     if (!args.count("labels_list")) {
-        std::cout << "error: option \"labels_list\" has no value\n";
+        std::cerr << "error: option \"labels_list\" has no value\n";
         return 1;
     }
     
@@ -102,6 +141,11 @@ int main(int argc, char** argv) {
         labels.push_back(label);
     }
 
+    if(imgs.size() == 0) {
+        std::cerr << "error: Path to image_list file is invalid or the file does not contain valid image paths. \n";
+        return 1;
+    }
+
     std::vector<int64_t> shape{1};
 
     // Initialize the inputs with the data.
@@ -119,7 +163,7 @@ int main(int argc, char** argv) {
     try {
         options.client_timeout_ = args["timeout"].as<int>();
     } catch (cxxopts::argument_incorrect_type e) {
-        std::cout << "The provided argument is of a wrong type" << std::endl;
+        std::cerr << "The provided argument is of a wrong type" << std::endl;
         return 1;
     }
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
@@ -127,7 +171,14 @@ int main(int argc, char** argv) {
     std::vector<tc::InferResult*> results;
     results.resize(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
-        std::vector<uint8_t> input_data = Load(imgs[i]);
+        std::vector<uint8_t> input_data;
+        try {
+            input_data = load(imgs[i]);
+        }
+        catch(const std::bad_alloc&) {
+            std::cerr << "error: Loading image:" + imgs[i] + " failed. \n";
+            return 1;
+        }
         FAIL_IF_ERR(
             input_ptr->AppendRaw(input_data),
             "unable to set data for input");

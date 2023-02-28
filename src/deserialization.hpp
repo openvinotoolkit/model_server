@@ -25,16 +25,16 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-
-#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
 #include "binaryutils.hpp"
 #include "inferencerequest.hpp"
 #include "inferencetensor.hpp"
+#include "kfs_frontend/kfs_utils.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 
@@ -348,11 +348,11 @@ Status deserializePredictRequest(
             auto& requestInput = requestInputItr->second;
             ov::Tensor tensor;
 
-            if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
-                SPDLOG_DEBUG("Request contains binary input: {}", name);
-                status = convertBinaryRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr);
+            if (isNativeFileFormatUsed(requestInput)) {
+                SPDLOG_DEBUG("Request contains input in native file format: {}", name);
+                status = convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr);
                 if (!status.ok()) {
-                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    SPDLOG_DEBUG("Input native file format conversion failed.");
                     return status;
                 }
             } else {
@@ -409,11 +409,11 @@ Status deserializePredictRequest(
             auto inputIndex = requestInputItr - request.inputs().begin();
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
-            if (requestInputItr->datatype() == "BYTES") {
-                SPDLOG_DEBUG("Request contains binary input: {}", name);
-                status = convertBinaryRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation);
+            if (isNativeFileFormatUsed(*requestInputItr)) {
+                SPDLOG_DEBUG("Request contains input in native file format: {}", name);
+                status = convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation);
                 if (!status.ok()) {
-                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    SPDLOG_DEBUG("Input native file format conversion failed.");
                     return status;
                 }
             } else {

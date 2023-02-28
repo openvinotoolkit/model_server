@@ -24,11 +24,13 @@ The `docker_build` target also prepares binary package to run OVMS as standalone
 ```bash
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
+```
+```bash
 make docker_build
 tree dist/ubuntu
 ````
 
-```
+```bash
 dist/ubuntu
 ├── Dockerfile.redhat
 ├── Dockerfile.ubuntu
@@ -88,7 +90,7 @@ drivers
 and run make docker_build with parameter: INSTALL_DRIVER_VERSION=dg2.
 
 Example:
-```
+```bash
 make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
 ```
 

@@ -44,9 +44,6 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
 
     float* buffer = (float*)malloc(byteSize);
     NODE_ASSERT(buffer != nullptr, "malloc has failed");
-    if (buffer == nullptr) {
-        return false;
-    }
 
     for (uint64_t i = 0; i < outputBatch; i++) {
         cv::Size targetShape(targetImageWidth, targetImageHeight);

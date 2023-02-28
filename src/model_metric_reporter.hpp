@@ -36,6 +36,7 @@ protected:
 
 public:
     ServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
+    virtual ~ServableMetricReporter();
 
     // TFS
     std::unique_ptr<MetricCounter> requestSuccessGrpcPredict;

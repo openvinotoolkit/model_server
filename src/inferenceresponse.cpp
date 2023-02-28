@@ -22,6 +22,7 @@
 
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
+#include "logging.hpp"
 #include "modelversion.hpp"
 #include "status.hpp"
 
@@ -55,12 +56,14 @@ Status InferenceResponse::addOutput(const std::string& name, OVMS_DataType datat
 
     auto pair = std::pair<std::string, InferenceTensor>(name, InferenceTensor{datatype, shape, dimCount});
     outputs.push_back(std::move(pair));
+    SPDLOG_LOGGER_DEBUG(capi_logger, "Successfully added tensor: {}; to servable:{} version: {} response", name, getServableName(), getServableVersion());
     return StatusCode::OK;
 }
 
 Status InferenceResponse::getOutput(uint32_t id, const std::string** name, const InferenceTensor** tensor) const {
     if (outputs.size() <= id) {
         *tensor = nullptr;
+        SPDLOG_LOGGER_DEBUG(capi_logger, "Could not find tensor: {}; in servable:{} version: {} response", id, getServableName(), getServableVersion());
         return StatusCode::NONEXISTENT_TENSOR;
     }
     *name = &(outputs[id].first);

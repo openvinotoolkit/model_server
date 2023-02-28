@@ -20,6 +20,7 @@
 
 #include <gtest/gtest.h>
 
+#include "../buffer.hpp"
 #include "../inferenceresponse.hpp"
 #include "../ovms.h"
 #include "test_utils.hpp"
@@ -47,11 +48,14 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
     {                                         \
         auto* err = C_API_CALL;               \
         if (err != nullptr) {                 \
+            uint32_t code = 0;                \
             const char* msg = nullptr;        \
+            OVMS_StatusGetCode(err, &code);   \
             OVMS_StatusGetDetails(err, &msg); \
             std::string smsg(msg);            \
             OVMS_StatusDelete(err);           \
-            ASSERT_TRUE(false) << smsg;       \
+            EXPECT_EQ(0, code) << smsg;       \
+            ASSERT_EQ(err, nullptr) << smsg;  \
         }                                     \
     }
 
@@ -85,8 +89,8 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
 const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
 
 TEST(CApiConfigTest, MultiModelConfiguration) {
-    OVMS_ServerSettings* _serverSettings = 0;
-    OVMS_ModelsSettings* _modelsSettings = 0;
+    OVMS_ServerSettings* _serverSettings = nullptr;
+    OVMS_ModelsSettings* _modelsSettings = nullptr;
 
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsNew(nullptr), StatusCode::NONEXISTENT_SETTINGS);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&_serverSettings));
@@ -246,9 +250,9 @@ TEST(CApiStartTest, InitializingMultipleServers) {
 }
 
 TEST(CApiStartTest, StartFlow) {
-    OVMS_Server* srv = 0;
-    OVMS_ServerSettings* serverSettings = 0;
-    OVMS_ModelsSettings* modelsSettings = 0;
+    OVMS_Server* srv = nullptr;
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
 
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerNew(nullptr), StatusCode::NONEXISTENT_SERVER);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsNew(nullptr), StatusCode::NONEXISTENT_SETTINGS);
@@ -304,6 +308,18 @@ TEST(CApiStatusTest, GetCodeAndDetails) {
 
 class CapiInference : public ::testing::Test {};
 
+TEST_F(CapiInference, TensorSetMovedBuffer) {
+    constexpr size_t elementsCount = 2;
+    std::array<size_t, elementsCount> shape{1, elementsCount};
+    InferenceTensor tensor(OVMS_DATATYPE_FP32, shape.data(), shape.size());
+    std::unique_ptr<Buffer> bufferNull;
+    ASSERT_EQ(tensor.setBuffer(std::move(bufferNull)), ovms::StatusCode::OK);
+    auto buffer = std::make_unique<Buffer>(sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, std::nullopt);
+    ASSERT_EQ(tensor.setBuffer(std::move(buffer)), ovms::StatusCode::OK);
+    auto buffer2 = std::make_unique<Buffer>(sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, std::nullopt);
+    ASSERT_EQ(tensor.setBuffer(std::move(buffer)), ovms::StatusCode::DOUBLE_BUFFER_SET);
+}
+
 TEST_F(CapiInference, Basic) {
     //////////////////////
     // start server
@@ -312,8 +328,8 @@ TEST_F(CapiInference, Basic) {
     std::string port = "9000";
     randomizePort(port);
     // prepare options
-    OVMS_ServerSettings* serverSettings = 0;
-    OVMS_ModelsSettings* modelsSettings = 0;
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
     ASSERT_NE(serverSettings, nullptr);
@@ -333,7 +349,7 @@ TEST_F(CapiInference, Basic) {
     ASSERT_NE(nullptr, request);
 
     // adding input
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
     // setting buffer
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
@@ -414,9 +430,9 @@ TEST_F(CapiInference, Basic) {
     // one will be removed together with request but without buffer attached
     // one will be removed with buffer directly
     // one will be removed without buffer directly
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITHOUT_BUFFER_REMOVED_WITH_REQUEST", OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITH_BUFFER_REMOVED_DIRECTLY", OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITHOUT_BUFFER_REMOVED_DIRECTLY", OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITHOUT_BUFFER_REMOVED_WITH_REQUEST", OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITH_BUFFER_REMOVED_DIRECTLY", OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITHOUT_BUFFER_REMOVED_DIRECTLY", OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, "INPUT_WITH_BUFFER_REMOVED_DIRECTLY", reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
     // we will add buffer and remove it to check separate buffer removal
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, "INPUT_WITHOUT_BUFFER_REMOVED_DIRECTLY", reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
@@ -474,12 +490,12 @@ TEST_F(CapiInference, NegativeInference) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_NO_OF_INPUTS);
 
     // negative no input buffer
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_REQUEST);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, nullptr, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_REQUEST);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, nullptr, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_STRING);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, nullptr, DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_TABLE);
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
     // fail with adding input second time
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), StatusCode::DOUBLE_TENSOR_INSERT);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()), StatusCode::DOUBLE_TENSOR_INSERT);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_CONTENT_SIZE);
 
     // setting buffer
@@ -511,9 +527,9 @@ TEST_F(CapiInference, NegativeInference) {
     OVMS_InferenceResponse* reponseNoModel{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "NONEXISTENT_MODEL", 13));
     // negative no model
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::NOT_IMPLEMENTED);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
 
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_REQUEST);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_REQUEST);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, requestNoModel, &reponseNoModel), StatusCode::NONEXISTENT_REQUEST);
     OVMS_InferenceRequestDelete(requestNoModel);
 
@@ -626,7 +642,7 @@ TEST_F(CapiInference, CallInferenceServerNotStarted) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_NE(nullptr, cserver);
     ASSERT_NE(nullptr, request);
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
@@ -634,4 +650,164 @@ TEST_F(CapiInference, CallInferenceServerNotStarted) {
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceRequestDelete(request);
     OVMS_ServerDelete(cserver);
+}
+
+class CapiDagInference : public ::testing::Test {
+protected:
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    OVMS_Server* cserver = nullptr;
+
+    const uint32_t notUsedNum = 0;
+
+    uint32_t outputCount = 42;
+    uint32_t parameterCount = 42;
+
+    const void* voutputData;
+    size_t bytesize = 42;
+    uint32_t outputId = 0;
+    OVMS_DataType datatype = (OVMS_DataType)199;
+    const uint64_t* shape{nullptr};
+    uint32_t dimCount = 42;
+    OVMS_BufferType bufferType = (OVMS_BufferType)199;
+    uint32_t deviceId = 42;
+    const char* outputName{nullptr};
+    void SetUp() override {
+        std::string port = "9000";
+        randomizePort(port);
+        // prepare options
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+        ASSERT_NE(serverSettings, nullptr);
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+        ASSERT_NE(modelsSettings, nullptr);
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+        ASSERT_NE(cserver, nullptr);
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+
+        outputCount = 42;
+        parameterCount = 42;
+
+        bytesize = 42;
+        outputId = 0;
+        datatype = (OVMS_DataType)199;
+        shape = nullptr;
+        dimCount = 42;
+        bufferType = (OVMS_BufferType)199;
+        deviceId = 42;
+        outputName = nullptr;
+    }
+    void TearDown() override {
+        OVMS_ServerDelete(cserver);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
+        serverSettings = nullptr;
+        modelsSettings = nullptr;
+        cserver = nullptr;
+    }
+};
+
+TEST_F(CapiDagInference, BasicDummyDag) {
+    //////////////////////
+    // start server
+    //////////////////////
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_dummy_dag.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ///////////////////////
+    // request creation
+    ///////////////////////
+    OVMS_InferenceRequest* request{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "pipeline1Dummy", 1));
+    ASSERT_NE(nullptr, request);
+
+    // adding input
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
+    // setting buffer
+    std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
+    //////////////////
+    //  INFERENCE
+    //////////////////
+    OVMS_InferenceResponse* response = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
+    // verify GetOutputCount
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutputCount(response, &outputCount));
+    ASSERT_EQ(outputCount, 1);
+    // verify GetParameterCount
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetParameterCount(response, &parameterCount));
+    ASSERT_EQ(0, parameterCount);
+    // verify GetOutput
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+    ASSERT_EQ(std::string(DUMMY_MODEL_OUTPUT_NAME), outputName);
+    EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
+    EXPECT_EQ(dimCount, 2);
+    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
+    EXPECT_EQ(deviceId, 0);
+
+    for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
+        EXPECT_EQ(DUMMY_MODEL_SHAPE[i], shape[i]) << "Different at:" << i << " place.";
+    }
+    const float* outputData = reinterpret_cast<const float*>(voutputData);
+    ASSERT_EQ(bytesize, sizeof(float) * DUMMY_MODEL_INPUT_SIZE);
+    for (size_t i = 0; i < data.size(); ++i) {
+        EXPECT_EQ(data[i] + 1, outputData[i]) << "Different at:" << i << " place.";
+    }
+    OVMS_InferenceResponseDelete(response);
+    OVMS_InferenceRequestDelete(request);
+}
+
+TEST_F(CapiDagInference, DynamicEntryDummyDag) {
+    //////////////////////
+    // start server
+    //////////////////////
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_dummy_dynamic_entry_dag.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ///////////////////////
+    // request creation
+    ///////////////////////
+    OVMS_InferenceRequest* request{nullptr};
+    const std::string servableName{"pipeline1DummyDynamicDemultiplex"};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, servableName.c_str(), 1));
+    ASSERT_NE(nullptr, request);
+
+    // adding input
+    const size_t demultiplyCount = 3;
+    std::array<size_t, demultiplyCount> inputShape{demultiplyCount, 1, 10};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, inputShape.data(), inputShape.size()));
+    // setting buffer
+    std::array<float, DUMMY_MODEL_INPUT_SIZE * demultiplyCount> data;
+    std::iota(data.begin(), data.end(), 0);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
+    //////////////////
+    //  INFERENCE
+    //////////////////
+    OVMS_InferenceResponse* response = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
+    // verify GetOutputCount
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutputCount(response, &outputCount));
+    ASSERT_EQ(outputCount, 1);
+    // verify GetParameterCount
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetParameterCount(response, &parameterCount));
+    ASSERT_EQ(0, parameterCount);
+    // verify GetOutput
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+    ASSERT_EQ(std::string(DUMMY_MODEL_OUTPUT_NAME), outputName);
+    EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
+    EXPECT_EQ(dimCount, 3);
+    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
+    EXPECT_EQ(deviceId, 0);
+
+    for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
+        if (i == 0) {
+            EXPECT_EQ(demultiplyCount, shape[i]) << "Different at:" << i << " place.";
+        } else {
+            EXPECT_EQ(DUMMY_MODEL_SHAPE[i - 1], shape[i]) << "Different at:" << i << " place.";
+        }
+    }
+    const float* outputData = reinterpret_cast<const float*>(voutputData);
+    ASSERT_EQ(bytesize, sizeof(float) * DUMMY_MODEL_INPUT_SIZE * demultiplyCount);
+    for (size_t i = 0; i < data.size(); ++i) {
+        EXPECT_FLOAT_EQ(data[i] + 1, outputData[i]) << "Different at:" << i << " place.";
+    }
+    OVMS_InferenceResponseDelete(response);
+    OVMS_InferenceRequestDelete(request);
 }

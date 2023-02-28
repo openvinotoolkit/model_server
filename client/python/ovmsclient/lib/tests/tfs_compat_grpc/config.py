@@ -20,14 +20,14 @@ from ovmsclient.tfs_compat.base.errors import ModelNotFoundError, InvalidInputEr
 
 from config import CallCount, PATH_VALID # noqa
 
-from tensorflow.core.framework.tensor_pb2 import TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
-from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
-from tensorflow.core.framework.types_pb2 import DataType
-from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
-from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
-from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
-from tensorflow_serving.apis.predict_pb2 import PredictRequest
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_pb2 import TensorProto
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus # noqa
+from ovmsclient.tfs_compat.protos.tensorflow.core.framework.types_pb2 import DataType
+from ovmsclient.tfs_compat.protos.tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest # noqa
+from ovmsclient.tfs_compat.protos.tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcModelStatusRequest,
                                                  GrpcPredictRequest)
@@ -160,11 +160,15 @@ PREDICT_REQUEST_INVALID_INPUTS = [
     ({
         "input1": [[1.0, 2.0], [1.0, 2.0, 3.0]]
     }, 'model_name', 0, ValueError,
-     ("argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]] - "
-      "got shape [2], but wanted [2, 2]")),
+     ("setting an array element with a sequence. "
+      "The requested array has an inhomogeneous shape after 1 dimensions. "
+      "The detected shape was (2,) + inhomogeneous part.")),
     ({
         "input1": [[(1, 2, 3)], [(1, 2)], [(1, 2, 3)]]
-    }, 'model_name', 0, TypeError, "provided values type is not valid"),
+    }, 'model_name', 0, ValueError,
+     ("setting an array element with a sequence. "
+      "The requested array has an inhomogeneous shape after 2 dimensions. "
+      "The detected shape was (3, 1) + inhomogeneous part.")),
     ({
         "input1": float128(2.5)
     }, 'model_name', 0, TypeError, "provided values type is not valid"),

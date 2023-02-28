@@ -620,9 +620,7 @@ TEST(SchemaTest, parseModelMappingWhenJsonMatchSchema) {
 
     rapidjson::Document mappingConfigMatchSchemaParsed;
     mappingConfigMatchSchemaParsed.Parse(mappingConfigMatchSchema);
-    auto result = ovms::validateJsonAgainstSchema(mappingConfigMatchSchemaParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
-    EXPECT_EQ(result, ovms::StatusCode::OK);
-    result = ovms::validateJsonAgainstSchema(mappingConfigMatchSchemaParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigMatchSchemaParsed, ovms::MODELS_MAPPING_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
@@ -635,7 +633,7 @@ TEST(SchemaTest, parseModelMappingWhenOutputsMissingInConfig) {
 
     rapidjson::Document mappingConfigMissingOutputsParsed;
     mappingConfigMissingOutputsParsed.Parse(mappingConfigMissingOutputs);
-    auto result = ovms::validateJsonAgainstSchema(mappingConfigMissingOutputsParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigMissingOutputsParsed, ovms::MODELS_MAPPING_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
@@ -648,7 +646,7 @@ TEST(SchemaTest, parseModelMappingWhenInputsMissingInConfig) {
 
     rapidjson::Document mappingConfigMissingInputsParsed;
     mappingConfigMissingInputsParsed.Parse(mappingConfigMissingInputs);
-    auto result = ovms::validateJsonAgainstSchema(mappingConfigMissingInputsParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigMissingInputsParsed, ovms::MODELS_MAPPING_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
@@ -667,9 +665,53 @@ TEST(SchemaTest, parseModelMappingWhenAdditionalObjectInConfig) {
 
     rapidjson::Document mappingConfigWithAdditionalObjectParsed;
     mappingConfigWithAdditionalObjectParsed.Parse(mappingConfigWithAdditionalObject);
-    auto result = ovms::validateJsonAgainstSchema(mappingConfigWithAdditionalObjectParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigWithAdditionalObjectParsed, ovms::MODELS_MAPPING_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
-    result = ovms::validateJsonAgainstSchema(mappingConfigWithAdditionalObjectParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+}
+
+TEST(SchemaTest, parseModelMappingWhenNonStringInConfig) {
+    const char* mappingConfigWithNonString1 = R"({
+       "inputs":{
+            "key":"value1"
+        },
+       "outputs":{
+            "key":"value2",
+            "object":{
+               "key":"value3"
+            }
+        },
+    })";
+    rapidjson::Document doc1;
+    doc1.Parse(mappingConfigWithNonString1);
+    auto result = ovms::validateJsonAgainstSchema(doc1, ovms::MODELS_MAPPING_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    const char* mappingConfigWithNonString2 = R"({
+       "inputs":{
+            "key":"value1",
+            "object":{
+               "key":"value3"
+            }
+        },
+       "outputs":{
+            "key":"value2"
+        },
+    })";
+    rapidjson::Document doc2;
+    doc2.Parse(mappingConfigWithNonString2);
+    result = ovms::validateJsonAgainstSchema(doc2, ovms::MODELS_MAPPING_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    const char* mappingConfigWithNonString3 = R"({
+       "inputs":{
+            "key":"value1",
+            "object": 1231231
+        },
+       "outputs":{
+            "key":"value2"
+        },
+    })";
+    rapidjson::Document doc3;
+    doc3.Parse(mappingConfigWithNonString3);
+    result = ovms::validateJsonAgainstSchema(doc3, ovms::MODELS_MAPPING_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -683,9 +725,7 @@ TEST(SchemaTest, parseModelMappingWhenInputsIsNotAnObject) {
 
     rapidjson::Document mappingConfigWhenInputsIsNotAnObjectParsed;
     mappingConfigWhenInputsIsNotAnObjectParsed.Parse(mappingConfigWhenInputsIsNotAnObject);
-    auto result = ovms::validateJsonAgainstSchema(mappingConfigWhenInputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
-    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
-    result = ovms::validateJsonAgainstSchema(mappingConfigWhenInputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigWhenInputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -699,9 +739,7 @@ TEST(SchemaTest, parseModelMappingWhenOutputsIsNotAnObject) {
 
     rapidjson::Document mappingConfigWhenOutputsIsNotAnObjectParsed;
     mappingConfigWhenOutputsIsNotAnObjectParsed.Parse(mappingConfigWhenOutputsIsNotAnObject);
-    auto result = ovms::validateJsonAgainstSchema(mappingConfigWhenOutputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
-    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
-    result = ovms::validateJsonAgainstSchema(mappingConfigWhenOutputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigWhenOutputsIsNotAnObjectParsed, ovms::MODELS_MAPPING_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -710,9 +748,7 @@ TEST(SchemaTest, parseModelMappingWhenConfigIsNotJson) {
 
     rapidjson::Document mappingConfigIsNotAJsonParsed;
     mappingConfigIsNotAJsonParsed.Parse(mappingConfigIsNotAJson);
-    auto result = ovms::validateJsonAgainstSchema(mappingConfigIsNotAJsonParsed, ovms::MODELS_MAPPING_INPUTS_SCHEMA);
-    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
-    result = ovms::validateJsonAgainstSchema(mappingConfigIsNotAJsonParsed, ovms::MODELS_MAPPING_OUTPUTS_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(mappingConfigIsNotAJsonParsed, ovms::MODELS_MAPPING_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -773,6 +809,270 @@ TEST(SchemaTest, ModelConfigTimeoutNegative) {
     rapidjson::Document modelConfigSeqNegativeDoc;
     modelConfigSeqNegativeDoc.Parse(modelConfigTimeoutNegative);
     auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, ModelConfigVersionPolicyAll) {
+    const char* modelConfigVersionPolicyAll1 = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "model_version_policy": {"all": {}}
+                }
+            }
+        ]
+    })";
+    rapidjson::Document doc;
+    doc.Parse(modelConfigVersionPolicyAll1);
+    auto result = ovms::validateJsonAgainstSchema(doc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK) << modelConfigVersionPolicyAll1;
+    const char* modelConfigVersionPolicyAll2 = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "model_version_policy": {"all": 3}
+                }
+            }
+        ]
+    })";
+    rapidjson::Document doc2;
+    doc2.Parse(modelConfigVersionPolicyAll2);
+    result = ovms::validateJsonAgainstSchema(doc2, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID) << modelConfigVersionPolicyAll2;
+    const char* modelConfigVersionPolicyAll3 = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "model_version_policy": {"all": {"a":3}}
+                }
+            }
+        ]
+    })";
+    rapidjson::Document doc3;
+    doc2.Parse(modelConfigVersionPolicyAll3);
+    result = ovms::validateJsonAgainstSchema(doc3, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID) << modelConfigVersionPolicyAll3;
+}
+TEST(SchemaTest, ModelConfigVersionPolicyLatest) {
+    const char* modelConfigVersionPolicyLatest1 = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "model_version_policy": {"latest": {"num_versions": 2}}
+                }
+            }
+        ]
+    })";
+    rapidjson::Document doc;
+    doc.Parse(modelConfigVersionPolicyLatest1);
+    auto result = ovms::validateJsonAgainstSchema(doc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+    const char* modelConfigVersionPolicyLatest2 = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "model_version_policy": {"latest": {"num_versions": [2,3]}}
+                }
+            }
+        ]
+    })";
+    rapidjson::Document doc2;
+    doc2.Parse(modelConfigVersionPolicyLatest2);
+    result = ovms::validateJsonAgainstSchema(doc2, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    const char* modelConfigVersionPolicyLatest3 = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "model_version_policy": {"latest": {"num_versions": {2}}}
+                }
+            }
+        ]
+    })";
+    rapidjson::Document doc3;
+    doc3.Parse(modelConfigVersionPolicyLatest3);
+    result = ovms::validateJsonAgainstSchema(doc3, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+TEST(SchemaTest, ModelConfigVersionPolicySpecific) {
+    const char* modelConfigVersionPolicySpecific1 = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "model_version_policy": {"specific": {"versions": [1, 2]}}
+                }
+            }
+        ]
+    })";
+    rapidjson::Document doc1;
+    doc1.Parse(modelConfigVersionPolicySpecific1);
+    auto result = ovms::validateJsonAgainstSchema(doc1, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+    const char* modelConfigVersionPolicySpecific2 = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "model_version_policy": {"specific": {"versions": 3}}
+                }
+            }
+        ]
+    })";
+    rapidjson::Document doc2;
+    doc2.Parse(modelConfigVersionPolicySpecific2);
+    result = ovms::validateJsonAgainstSchema(doc2, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    const char* modelConfigVersionPolicySpecific3 = R"(
+    {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "dummy",
+                    "base_path": "dummy_path",
+                    "model_version_policy": {"specific": {"versions": [1, "2"]}}
+                }
+            }
+        ]
+    })";
+    rapidjson::Document doc3;
+    doc3.Parse(modelConfigVersionPolicySpecific3);
+    result = ovms::validateJsonAgainstSchema(doc3, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, ModelConfigPluginConfigPositive) {
+    const char* modelConfigTimeoutNegative = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "plugin_config": {"A":"B", "C":2, "D":2.5}
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document modelConfigSeqNegativeDoc;
+    modelConfigSeqNegativeDoc.Parse(modelConfigTimeoutNegative);
+    auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, ModelConfigPluginConfigLayoutShapeNegative) {
+    const char* config1 = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "shape": {"A":"B", "C":"NCHW", "D":{}},
+                "layout": {"A":"B", "C":"NCHW", "D":"NHWC"}
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document doc1;
+    doc1.Parse(config1);
+    auto result = ovms::validateJsonAgainstSchema(doc1, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID) << config1;
+    const char* config2 = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "shape": ["NHWC", "NCHW"],
+                "layout": {"A":"B", "C":"NCHW", "D":"NHWC"}
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document doc2;
+    doc2.Parse(config2);
+    result = ovms::validateJsonAgainstSchema(doc2, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID) << config2;
+    const char* config3 = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "shape": {"A":"B", "C":"NCHW", "D":"NHWC:NHWC"},
+                "layout": {"A":"B", "C":"NCHW", "D":[1,2,3]}
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document doc3;
+    doc3.Parse(config3);
+    result = ovms::validateJsonAgainstSchema(doc3, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID) << config3;
+}
+TEST(SchemaTest, ModelConfigPluginConfigNegative) {
+    const char* modelConfigNegative = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "plugin_config": {"A":[12,2]}
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document doc;
+    doc.Parse(modelConfigNegative);
+    auto result = ovms::validateJsonAgainstSchema(doc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+    const char* modelConfigNegative2 = R"(
+    {
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "plugin_config": {"A":{"s":"f"}}
+            }
+        }
+    ]
+    })";
+
+    rapidjson::Document doc2;
+    doc2.Parse(modelConfigNegative2);
+    result = ovms::validateJsonAgainstSchema(doc2, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 

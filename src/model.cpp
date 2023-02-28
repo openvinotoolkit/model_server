@@ -23,11 +23,11 @@
 
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
+#include "dags/pipelinedefinition.hpp"
 #include "filesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
 #include "modelinstance.hpp"
-#include "pipelinedefinition.hpp"
 #include "statefulmodelinstance.hpp"
 
 namespace ovms {
@@ -217,7 +217,7 @@ void Model::retireAllVersions() {
         }
     }
 
-    for (const auto versionModelInstancePair : modelVersions) {
+    for (const auto& versionModelInstancePair : modelVersions) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
         versionModelInstancePair.second->retireModel();
@@ -237,7 +237,7 @@ void Model::cleanupAllVersions() {
         }
     }
 
-    for (const auto versionModelInstancePair : modelVersions) {
+    for (const auto& versionModelInstancePair : modelVersions) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
         versionModelInstancePair.second->cleanupFailedLoad();
@@ -251,13 +251,8 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
     for (const auto version : *versionsToReload) {
         SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
-        auto status = config.parseModelMapping();
-        if ((!status.ok()) && (status != StatusCode::FILE_INVALID)) {
-            SPDLOG_ERROR("Error while parsing model mapping for model {}; error: {}", getName(), status.string());
-        }
 
         auto modelVersion = getModelInstanceByVersion(version);
-
         if (!modelVersion) {
             SPDLOG_ERROR("Error occurred while reloading model: {}; version: {}; Model version was not found",
                 getName(),
@@ -271,6 +266,10 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
             downloadModels(fs, config, versionsToReload);
         } else {
             config.setLocalPath(modelVersion->getModelConfig().getLocalPath());
+        }
+        auto status = config.parseModelMapping();
+        if ((!status.ok()) && (status != StatusCode::FILE_INVALID)) {
+            SPDLOG_ERROR("Error while parsing model mapping for model {}; error: {}", getName(), status.string());
         }
         status = modelVersion->reloadModel(config);
         if (!status.ok()) {

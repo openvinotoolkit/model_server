@@ -20,15 +20,15 @@
 #include <gtest/gtest.h>
 
 #include "../config.hpp"
+#include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
+#include "../dags/pipelinedefinition.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model_service.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#include "../pipeline.hpp"
-#include "../pipeline_factory.hpp"
-#include "../pipelinedefinition.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -1125,8 +1125,7 @@ public:
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
-    void checkMetricGreaterThan(const std::string& metricName, double value) {
-        std::string metricOutput = manager.getMetricRegistry()->collect();
+    void checkMetricGreaterThan(const std::string& metricName, double value, std::string& metricOutput, bool& result) {
         ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric\n"
                                                                                                                      << metricOutput;
         std::regex findActualMetricRgx(std::string{".*"} + metricName + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
@@ -1143,9 +1142,10 @@ public:
         SPDLOG_DEBUG("{} value: {}", METRIC_NAME_REQUESTS_SUCCESS, requestsSuccessCounter.value());
         ASSERT_TRUE(actualVal.has_value()) << "cannot parse " << metricName << " metric to number\n"
                                            << metricOutput;
-        // In case of sporadic error here consider checking ovms_requests_success value (if 0, it could mean the load did not start yet (could happen on slower machines))
-        ASSERT_GT(actualVal.value(), value) << metricName << " metric needs to be greater than " << value << std::endl
-                                            << metricOutput;
+        result = actualVal.value() > value;
+        if (!result)
+            std::cerr << metricName << " metric needs to be greater than " << value << std::endl
+                      << metricOutput;
     }
     void checkActiveNireqSmallerThanTotal() {
         std::string metricOutput = manager.getMetricRegistry()->collect();
@@ -1164,8 +1164,17 @@ public:
     }
     void testCurrentRequestsMetric() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0);
-        checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0);
+        bool current_requests_pass = false, infer_req_active_pass = false;
+        int retries = 3;
+        for (int i = 0; i < retries; i++) {
+            std::string metricOutput = manager.getMetricRegistry()->collect();
+            checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0, metricOutput, current_requests_pass);
+            checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0, metricOutput, infer_req_active_pass);
+            if (current_requests_pass && infer_req_active_pass)
+                break;
+        }
+        if (!current_requests_pass || !infer_req_active_pass)
+            FAIL() << "Terminated after " << retries << " retries";
         checkActiveNireqSmallerThanTotal();
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -1393,7 +1402,7 @@ public:
     }
     virtual inputs_info_t getExpectedInputsInfo() {
         return {{pipelineInputName,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
+            std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
     }
 
     virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest() {
@@ -1820,7 +1829,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQu
 }
 
 class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChanges {
-    const size_t differentOpsFactorsInputSize = 4;
+    const int64_t differentOpsFactorsInputSize = 4;
     const std::vector<float> factorsData{1., 3, 2, 2};
     const std::string pipelineFactorsInputName{"pipeline_factors"};
 
@@ -1836,9 +1845,9 @@ public:
     }
     inputs_info_t getExpectedInputsInfo() override {
         return {{pipelineInputName,
-                    std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
+                    std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
             {pipelineFactorsInputName,
-                std::tuple<ovms::shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
+                std::tuple<signed_shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
     }
     void checkPipelineResponse(const std::string& pipelineOutputName,
         tensorflow::serving::PredictRequest& request,
@@ -1864,7 +1873,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictL
         allowedLoadResults);
 }
 TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPredictLoad) {
-    // we change used PARAM durign load. This change does not effect results, but is should be enough to verify
+    // we change used PARAM during load. This change does not effect results, but should be enough to verify
     // correctness of this operation - no segfaults etc.
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;

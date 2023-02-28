@@ -27,5 +27,8 @@ Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s);
 const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision);
 
 size_t KFSDataTypeSize(const KFSDataType& datatype);
-Status prepareConsolidatedTensorImpl(KFSResponse* response, char*& tensorOut, const std::string& name, size_t size);
+Status prepareConsolidatedTensorImpl(KFSResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& tensorOut, size_t size);
+const std::string& getRequestServableName(const KFSRequest& request);
+Status isNativeFileFormatUsed(const KFSRequest& request, const std::string& name, bool& nativeFileFormatUsed);
+bool isNativeFileFormatUsed(const KFSTensorInputProto& proto);
 }  // namespace ovms

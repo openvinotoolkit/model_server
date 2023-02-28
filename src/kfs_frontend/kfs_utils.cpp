@@ -117,7 +117,7 @@ std::string tensorShapeToString(const KFSShapeType& shape) {
     return oss.str();
 }
 
-Status prepareConsolidatedTensorImpl(KFSResponse* response, char*& bufferOut, const std::string& name, size_t size) {
+Status prepareConsolidatedTensorImpl(KFSResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size) {
     OVMS_PROFILE_FUNCTION();
     for (int i = 0; i < response->outputs_size(); i++) {
         if (response->mutable_outputs(i)->name() == name) {
@@ -131,5 +131,27 @@ Status prepareConsolidatedTensorImpl(KFSResponse* response, char*& bufferOut, co
     content->resize(size);
     bufferOut = content->data();
     return StatusCode::OK;
+}
+const std::string& getRequestServableName(const KFSRequest& request) {
+    return request.model_name();
+}
+Status isNativeFileFormatUsed(const KFSRequest& request, const std::string& name, bool& nativeFileFormatUsed) {
+    auto it = request.inputs().begin();
+    while (it != request.inputs().end()) {
+        if (it->name() == name) {
+            break;
+        }
+        ++it;
+    }
+    if (it == request.inputs().end()) {
+        SPDLOG_ERROR("Error during checking binary input; input: {} does not exist for request: {}", name, getRequestServableName(request));
+        return StatusCode::INTERNAL_ERROR;
+    }
+    nativeFileFormatUsed = isNativeFileFormatUsed(*it);
+    return StatusCode::OK;
+}
+
+bool isNativeFileFormatUsed(const KFSTensorInputProto& proto) {
+    return proto.datatype() == "BYTES";
 }
 }  // namespace ovms

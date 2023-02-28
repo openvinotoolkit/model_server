@@ -105,12 +105,15 @@ def check_dir(start_dir):
         'ovms-c/dist',
         'requirements.txt',
         'resnet_images.txt',
+        "resnet_labels.txt",
         'rest_sdk_v2.10.16.patch',
         'summator.xml',
         'tf.patch',
         'tftext.patch',
         'vehicle_images.txt',
         'bazel_rules_apple.patch',
+        "pom.xml",
+        "go.sum",
         ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
