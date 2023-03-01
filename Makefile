@@ -197,14 +197,18 @@ ifeq ($(CHECK_COVERAGE),1)
 	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
   endif
 endif
+ifeq ($(BASE_OS),redhat)
+	@mkdir -p entitlement
+	@mkdir -p rhsm-ca
+endif
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
   endif
   ifeq ($(BASE_OS),redhat)
-	@echo "copying entitlements"
-	@mkdir -p entitlement && cp -ru /etc/pki/entitlement .
-	@mkdir -p rhsm-ca && cp -u /etc/rhsm/ca/* rhsm-ca/
+	@echo "copying RH entitlements"
+	@cp -ru /etc/pki/entitlement .
+	@cp -u /etc/rhsm/ca/* rhsm-ca/
   endif
 endif
 ifeq ($(BUILD_CUSTOM_NODES),true)
