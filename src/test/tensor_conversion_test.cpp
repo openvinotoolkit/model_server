@@ -15,11 +15,12 @@
 //*****************************************************************************
 
 #include <fstream>
+#include <iostream>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../binaryutils.hpp"
+#include "../tensor_conversion.hpp"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
@@ -27,7 +28,7 @@ using namespace ovms;
 
 namespace {
 template <typename TensorType>
-class BinaryUtilsTest : public ::testing::Test {
+class NativeFileInputConversionTest : public ::testing::Test {
 public:
     TensorType requestTensor;
     void SetUp() override {
@@ -74,9 +75,9 @@ public:
 };
 
 using MyTypes = ::testing::Types<tensorflow::TensorProto, ::KFSRequest::InferInputTensor>;
-TYPED_TEST_SUITE(BinaryUtilsTest, MyTypes);
+TYPED_TEST_SUITE(NativeFileInputConversionTest, MyTypes);
 
-TYPED_TEST(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
+TYPED_TEST(NativeFileInputConversionTest, tensorWithNonMatchingBatchsize) {
     ov::Tensor tensor;
     auto tensorInfo = std::make_shared<TensorInfo>();
     tensorInfo->setShape({5, 1, 1, 1});
@@ -84,7 +85,7 @@ TYPED_TEST(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
     EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, nullptr), ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
-TYPED_TEST(BinaryUtilsTest, tensorWithInvalidImage) {
+TYPED_TEST(NativeFileInputConversionTest, tensorWithInvalidImage) {
     TypeParam requestTensorInvalidImage;
     std::string invalidImage = "INVALID IMAGE";
     this->prepareBinaryTensor(requestTensorInvalidImage, invalidImage);
@@ -96,7 +97,7 @@ TYPED_TEST(BinaryUtilsTest, tensorWithInvalidImage) {
     EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(requestTensorInvalidImage, tensor, tensorInfo, nullptr), ovms::StatusCode::IMAGE_PARSING_FAILED);
 }
 
-TYPED_TEST(BinaryUtilsTest, tensorWithEmptyTensor) {
+TYPED_TEST(NativeFileInputConversionTest, tensorWithEmptyTensor) {
     TypeParam requestTensorEmptyInput;
     std::string emptyInput = "";
     this->prepareBinaryTensor(requestTensorEmptyInput, emptyInput);
@@ -110,7 +111,7 @@ TYPED_TEST(BinaryUtilsTest, tensorWithEmptyTensor) {
         EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(requestTensorEmptyInput, tensor, tensorInfo, nullptr), StatusCode::BYTES_CONTENTS_EMPTY);
 }
 
-TYPED_TEST(BinaryUtilsTest, tensorWithNonSupportedLayout) {
+TYPED_TEST(NativeFileInputConversionTest, tensorWithNonSupportedLayout) {
     ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NCHW"});
@@ -118,7 +119,7 @@ TYPED_TEST(BinaryUtilsTest, tensorWithNonSupportedLayout) {
     EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, nullptr), ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
 
-TYPED_TEST(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
+TYPED_TEST(NativeFileInputConversionTest, tensorWithNonSupportedPrecision) {
     ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::MIXED, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
@@ -126,7 +127,7 @@ TYPED_TEST(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
     EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, nullptr), ovms::StatusCode::INVALID_PRECISION);
 }
 
-TYPED_TEST(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
+TYPED_TEST(NativeFileInputConversionTest, tensorWithNonMatchingShapeSize) {
     ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1}, Layout{"NC"});
@@ -134,7 +135,7 @@ TYPED_TEST(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
     EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, nullptr), ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
 
-TYPED_TEST(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {
+TYPED_TEST(NativeFileInputConversionTest, tensorWithNonMatchingNumberOfChannelsNHWC) {
     ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 1}, Layout{"NHWC"});
@@ -142,7 +143,7 @@ TYPED_TEST(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {
     EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, nullptr), ovms::StatusCode::INVALID_NO_OF_CHANNELS);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_rgb) {
+TYPED_TEST(NativeFileInputConversionTest, positive_rgb) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::Tensor tensor;
@@ -155,7 +156,7 @@ TYPED_TEST(BinaryUtilsTest, positive_rgb) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_grayscale) {
+TYPED_TEST(NativeFileInputConversionTest, positive_grayscale) {
     uint8_t grayscale_expected_tensor[] = {0x00};
 
     std::ifstream DataFile;
@@ -178,7 +179,7 @@ TYPED_TEST(BinaryUtilsTest, positive_grayscale) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), grayscale_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_batch_size_2) {
+TYPED_TEST(NativeFileInputConversionTest, positive_batch_size_2) {
     uint8_t rgb_batchsize_2_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
     ov::Tensor tensor;
 
@@ -199,7 +200,7 @@ TYPED_TEST(BinaryUtilsTest, positive_batch_size_2) {
     }
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_precision_changed) {
+TYPED_TEST(NativeFileInputConversionTest, positive_precision_changed) {
     uint8_t rgb_precision_changed_expected_tensor[] = {0x24, 0x00, 0x00, 0x00, 0x1b, 0x00, 0x00, 0x00, 0xed, 0x00, 0x00, 0x00};
 
     ov::Tensor tensor;
@@ -213,7 +214,7 @@ TYPED_TEST(BinaryUtilsTest, positive_precision_changed) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size() * I32_size, rgb_precision_changed_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_nhwc_layout) {
+TYPED_TEST(NativeFileInputConversionTest, positive_nhwc_layout) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::Tensor tensor;
@@ -227,13 +228,13 @@ TYPED_TEST(BinaryUtilsTest, positive_nhwc_layout) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, layout_default_resolution_mismatch) {
+TYPED_TEST(NativeFileInputConversionTest, layout_default_resolution_mismatch) {
     ov::Tensor tensor;
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 3, 1, 3}, Layout::getDefaultLayout());
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, nullptr), ovms::StatusCode::INVALID_SHAPE);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
     ov::Tensor tensor;
@@ -246,7 +247,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_smaller) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_cols_smaller) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
     ov::Tensor tensor;
@@ -262,7 +263,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_smaller) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_bigger) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_cols_bigger) {
     uint8_t rgb_expected_tensor[] = {0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9d, 0xa9, 0x12};
 
     size_t filesize;
@@ -285,7 +286,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_bigger) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_in_range) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_cols_in_range) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::Tensor tensor;
@@ -301,7 +302,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_in_range) 
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_smaller) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_rows_smaller) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
     ov::Tensor tensor;
@@ -317,7 +318,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_smaller) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_bigger) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_rows_bigger) {
     uint8_t rgb_expected_tensor[] = {0x3f, 0x65, 0x88, 0x98, 0x9a, 0x81, 0xf5, 0xd2, 0x7c};
 
     size_t filesize;
@@ -340,7 +341,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_bigger) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_in_range) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_rows_in_range) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::Tensor tensor;
@@ -356,7 +357,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_in_range) 
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing_with_any_shape) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_any_shape) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::Tensor tensor;
@@ -374,7 +375,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing_with_any_shape) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TYPED_TEST(BinaryUtilsTest, negative_resizing_with_one_any_one_static_shape) {
+TYPED_TEST(NativeFileInputConversionTest, negative_resizing_with_one_any_one_static_shape) {
     ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), 4, 3}, Layout{"NHWC"});
@@ -382,7 +383,7 @@ TYPED_TEST(BinaryUtilsTest, negative_resizing_with_one_any_one_static_shape) {
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, nullptr), ovms::StatusCode::INVALID_SHAPE);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing_with_one_any_one_static_shape) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_one_any_one_static_shape) {
     ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), 1, 3}, Layout{"NHWC"});
@@ -396,7 +397,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing_with_one_any_one_static_shape) {
     ASSERT_EQ(tensor.get_size(), 3);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_resizing_with_demultiplexer_and_range_resolution) {
+TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_demultiplexer_and_range_resolution) {
     ov::Tensor tensor;
 
     const int batchSize = 5;
@@ -420,7 +421,7 @@ TYPED_TEST(BinaryUtilsTest, positive_resizing_with_demultiplexer_and_range_resol
     ASSERT_EQ(tensor.get_size(), batchSize * 1 * 3 * 3 * 3);
 }
 
-TYPED_TEST(BinaryUtilsTest, positive_range_resolution_matching_in_between) {
+TYPED_TEST(NativeFileInputConversionTest, positive_range_resolution_matching_in_between) {
     ov::Tensor tensor;
 
     const int batchSize = 5;
@@ -444,7 +445,7 @@ TYPED_TEST(BinaryUtilsTest, positive_range_resolution_matching_in_between) {
     }
 }
 
-class BinaryUtilsTFSPrecisionTest : public ::testing::TestWithParam<ovms::Precision> {
+class NativeFileInputConversionTFSPrecisionTest : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
         readRgbJpg(filesize, image_bytes);
@@ -457,10 +458,10 @@ protected:
     tensorflow::TensorProto stringVal;
 };
 
-class BinaryUtilsTFSValidPrecisionTest : public BinaryUtilsTFSPrecisionTest {};
-class BinaryUtilsTFSInvalidPrecisionTest : public BinaryUtilsTFSPrecisionTest {};
+class NativeFileInputConversionTFSValidPrecisionTest : public NativeFileInputConversionTFSPrecisionTest {};
+class NativeFileInputConversionTFSInvalidPrecisionTest : public NativeFileInputConversionTFSPrecisionTest {};
 
-TEST_P(BinaryUtilsTFSValidPrecisionTest, Valid) {
+TEST_P(NativeFileInputConversionTFSValidPrecisionTest, Valid) {
     ovms::Precision testedPrecision = GetParam();
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("",
@@ -475,7 +476,7 @@ TEST_P(BinaryUtilsTFSValidPrecisionTest, Valid) {
     ASSERT_EQ(tensor.get_element_type(), ovmsPrecisionToIE2Precision(testedPrecision));
 }
 
-TEST_P(BinaryUtilsTFSInvalidPrecisionTest, Invalid) {
+TEST_P(NativeFileInputConversionTFSInvalidPrecisionTest, Invalid) {
     ovms::Precision testedPrecision = GetParam();
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("",
@@ -507,9 +508,9 @@ const std::vector<ovms::Precision> BINARY_SUPPORTED_INPUT_PRECISIONS{
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    BinaryUtilsTFSValidPrecisionTest,
+    NativeFileInputConversionTFSValidPrecisionTest,
     ::testing::ValuesIn(BINARY_SUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<BinaryUtilsTFSValidPrecisionTest::ParamType>& info) {
+    [](const ::testing::TestParamInfo<NativeFileInputConversionTFSValidPrecisionTest::ParamType>& info) {
         return toString(info.param);
     });
 
@@ -533,13 +534,13 @@ static const std::vector<ovms::Precision> BINARY_UNSUPPORTED_INPUT_PRECISIONS{
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    BinaryUtilsTFSInvalidPrecisionTest,
+    NativeFileInputConversionTFSInvalidPrecisionTest,
     ::testing::ValuesIn(BINARY_UNSUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<BinaryUtilsTFSInvalidPrecisionTest::ParamType>& info) {
+    [](const ::testing::TestParamInfo<NativeFileInputConversionTFSInvalidPrecisionTest::ParamType>& info) {
         return toString(info.param);
     });
 
-class BinaryUtilsKFSPrecisionTest : public ::testing::TestWithParam<ovms::Precision> {
+class NativeFileInputConversionKFSPrecisionTest : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
         readRgbJpg(filesize, image_bytes);
@@ -551,10 +552,10 @@ protected:
     ::KFSRequest::InferInputTensor inferTensorContent;
 };
 
-class BinaryUtilsKFSValidPrecisionTest : public BinaryUtilsKFSPrecisionTest {};
-class BinaryUtilsKFSInvalidPrecisionTest : public BinaryUtilsKFSPrecisionTest {};
+class NativeFileInputConversionKFSValidPrecisionTest : public NativeFileInputConversionKFSPrecisionTest {};
+class NativeFileInputConversionKFSInvalidPrecisionTest : public NativeFileInputConversionKFSPrecisionTest {};
 
-TEST_P(BinaryUtilsKFSValidPrecisionTest, Valid) {
+TEST_P(NativeFileInputConversionKFSValidPrecisionTest, Valid) {
     ovms::Precision testedPrecision = GetParam();
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("",
@@ -569,7 +570,7 @@ TEST_P(BinaryUtilsKFSValidPrecisionTest, Valid) {
     ASSERT_EQ(tensor.get_element_type(), ovmsPrecisionToIE2Precision(testedPrecision));
 }
 
-TEST_P(BinaryUtilsKFSInvalidPrecisionTest, Invalid) {
+TEST_P(NativeFileInputConversionKFSInvalidPrecisionTest, Invalid) {
     ovms::Precision testedPrecision = GetParam();
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("",
@@ -583,21 +584,21 @@ TEST_P(BinaryUtilsKFSInvalidPrecisionTest, Invalid) {
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    BinaryUtilsKFSValidPrecisionTest,
+    NativeFileInputConversionKFSValidPrecisionTest,
     ::testing::ValuesIn(BINARY_SUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<BinaryUtilsTFSValidPrecisionTest::ParamType>& info) {
+    [](const ::testing::TestParamInfo<NativeFileInputConversionTFSValidPrecisionTest::ParamType>& info) {
         return toString(info.param);
     });
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    BinaryUtilsKFSInvalidPrecisionTest,
+    NativeFileInputConversionKFSInvalidPrecisionTest,
     ::testing::ValuesIn(BINARY_UNSUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<BinaryUtilsTFSInvalidPrecisionTest::ParamType>& info) {
+    [](const ::testing::TestParamInfo<NativeFileInputConversionTFSInvalidPrecisionTest::ParamType>& info) {
         return toString(info.param);
     });
 
-class BinaryUtilsTestKFSRawInputsContents : public ::testing::Test {
+class NativeFileInputConversionTestKFSRawInputsContents : public ::testing::Test {
 public:
     ::KFSRequest::InferInputTensor requestTensor;
     std::string buffer;
@@ -613,7 +614,7 @@ public:
     }
 };
 
-TEST_F(BinaryUtilsTestKFSRawInputsContents, Positive) {
+TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Positive) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::Tensor tensor;
@@ -626,7 +627,7 @@ TEST_F(BinaryUtilsTestKFSRawInputsContents, Positive) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TEST_F(BinaryUtilsTestKFSRawInputsContents, Negative_batchSizeBiggerThan1) {
+TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_batchSizeBiggerThan1) {
     ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, Layout{"NHWC"});
@@ -634,7 +635,7 @@ TEST_F(BinaryUtilsTestKFSRawInputsContents, Negative_batchSizeBiggerThan1) {
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
-TEST_F(BinaryUtilsTestKFSRawInputsContents, Negative_emptyString) {
+TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_emptyString) {
     ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
@@ -642,4 +643,89 @@ TEST_F(BinaryUtilsTestKFSRawInputsContents, Negative_emptyString) {
     std::string empty;
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &empty), ovms::StatusCode::BYTES_CONTENTS_EMPTY);
 }
+
+template <typename TensorType>
+class StringInputsConversionTest : public ::testing::Test {
+public:
+    TensorType requestTensor;
+    void SetUp() override {}
+
+    void prepareStringTensor(tensorflow::TensorProto& tensor, std::vector<std::string> inputStrings) {
+        for (auto string : inputStrings) {
+            tensor.add_string_val(string.data(), string.size());
+        }
+        tensor.mutable_tensor_shape()->add_dim()->set_size(inputStrings.size());
+        tensor.set_dtype(tensorflow::DataType::DT_STRING);
+    }
+    void prepareStringTensor(::KFSRequest::InferInputTensor& tensor, std::vector<std::string> inputStrings) {
+        for (auto string : inputStrings) {
+            tensor.mutable_contents()->add_bytes_contents(string.data(), string.size());
+        }
+        tensor.mutable_shape()->Add(inputStrings.size());
+        tensor.set_datatype("BYTES");
+    }
+};
+
+using MyTypes = ::testing::Types<tensorflow::TensorProto, ::KFSRequest::InferInputTensor>;
+TYPED_TEST_SUITE(StringInputsConversionTest, MyTypes);
+
+static void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<std::string> inputStrings) {
+    size_t maxStringLength = 0;
+    for (const auto& input : inputStrings) {
+        maxStringLength = std::max(maxStringLength, input.length());
+    }
+    size_t width = maxStringLength + 1;
+    size_t i = 0;
+    ASSERT_EQ(width * inputStrings.size(), tensor.get_size());
+    for (const auto& input : inputStrings) {
+        for (size_t j = 0; j < input.size(); j++) {
+            ASSERT_EQ(tensor.data<uint8_t>()[i * width + j], reinterpret_cast<const uint8_t*>(input.data())[j]);
+        }
+        ASSERT_EQ(tensor.data<uint8_t>()[i * width + input.size()], 0);
+        i++;
+    }
+}
+
+TYPED_TEST(StringInputsConversionTest, positive) {
+    std::vector<std::string> inputStrings = {"String_123"};
+    this->prepareStringTensor(this->requestTensor, inputStrings);
+    ov::Tensor tensor;
+    ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    assertOutputTensorMatchExpectations(tensor, inputStrings);
+}
+
+TYPED_TEST(StringInputsConversionTest, positive_batch_size_2) {
+    std::vector<std::string> inputStrings = {"String_123", "zebra"};
+    this->prepareStringTensor(this->requestTensor, inputStrings);
+    ov::Tensor tensor;
+    ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    assertOutputTensorMatchExpectations(tensor, inputStrings);
+}
+
+TYPED_TEST(StringInputsConversionTest, positive_batch_size_3_one_string_empty) {
+    std::vector<std::string> inputStrings = {"String_123", "zebra", ""};
+    this->prepareStringTensor(this->requestTensor, inputStrings);
+    ov::Tensor tensor;
+    ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    assertOutputTensorMatchExpectations(tensor, inputStrings);
+}
+
+TYPED_TEST(StringInputsConversionTest, positive_empty_inputs) {
+    std::vector<std::string> inputStrings = {};
+    this->prepareStringTensor(this->requestTensor, inputStrings);
+    ov::Tensor tensor;
+    ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    assertOutputTensorMatchExpectations(tensor, inputStrings);
+}
+
+TYPED_TEST(StringInputsConversionTest, raw_inputs_contents_not_implemented) {
+    std::vector<std::string> inputStrings = {};
+    this->prepareStringTensor(this->requestTensor, inputStrings);
+    ov::Tensor tensor;
+    std::string buffer;
+    if (std::is_same<TypeParam, ::KFSRequest::InferInputTensor>::value) {
+        ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, &buffer), ovms::StatusCode::NOT_IMPLEMENTED);
+    }
+}
+
 }  // namespace

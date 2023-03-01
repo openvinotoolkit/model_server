@@ -896,27 +896,6 @@ bool RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTe
     return false;
 }
 
-template <>
-Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateIfModelInputAcceptsString(const ovms::TensorInfo& inputInfo) const {
-    return StatusCode::NOT_IMPLEMENTED;
-}
-template <>
-Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateIfModelInputAcceptsString(const ovms::TensorInfo& inputInfo) const {
-    if (inputInfo.getPrecision() != Precision::U8) {
-        SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing string input but requested model does not accept string inputs (Model input precision should be U8)", servableName, servableVersion);
-        return Status(StatusCode::INVALID_STRING_INPUT);
-    }
-    if (inputInfo.getProcessingHint() != TensorInfo::ProcessingHint::STRING) {
-        SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing string input but requested model does not accept string inputs (Model input shape should be [-1,-1])", servableName, servableVersion);
-        return Status(StatusCode::INVALID_STRING_INPUT);
-    }
-    return StatusCode::OK;
-}
-template <>
-Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateIfModelInputAcceptsString(const ovms::TensorInfo& inputInfo) const {
-    return StatusCode::NOT_IMPLEMENTED;
-}
-
 static bool shouldValidateBinaryBatchSizeMismatch(const ovms::InferenceRequest& request) {
     return true;
 }

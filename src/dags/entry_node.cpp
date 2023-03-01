@@ -21,7 +21,6 @@
 #include <string>
 #include <utility>
 
-#include "../binaryutils.hpp"
 #include "../capi_frontend/capi_utils.hpp"
 #include "../deserialization.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
@@ -29,6 +28,7 @@
 #include "../ov_utils.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "../profiler.hpp"
+#include "../tensor_conversion.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "nodesession.hpp"
 

@@ -27,12 +27,12 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "binaryutils.hpp"
 #include "inferencerequest.hpp"
 #include "inferencetensor.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
+#include "tensor_conversion.hpp"
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
@@ -349,7 +349,7 @@ Status deserializePredictRequest(
             ov::Tensor tensor;
 
             if (isStringFormatUsed(requestInput, *tensorInfo)) {
-                status = convertStringProtoToOVTensor(requestInput, tensor);
+                status = convertStringRequestTensorToOVTensor(requestInput, tensor, nullptr);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("String input format conversion failed.");
                     return status;
@@ -416,7 +416,7 @@ Status deserializePredictRequest(
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
             if (isStringFormatUsed(*requestInputItr, *tensorInfo)) {
-                status = convertStringProtoToOVTensor(*requestInputItr, tensor, bufferLocation);
+                status = convertStringRequestTensorToOVTensor(*requestInputItr, tensor, bufferLocation);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("String input format conversion failed.");
                     return status;
