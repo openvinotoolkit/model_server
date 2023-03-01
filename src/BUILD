@@ -341,7 +341,7 @@ cc_library(
         "-Wall",
         "-Wno-unknown-pragmas",
         "-DRUN_OVMS_CALCULATOR_TEST2",
-#        "-Werror",
+#TODO:  "-Werror",
     ],
     visibility = [
         "//visibility:public",
