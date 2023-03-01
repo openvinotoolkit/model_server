@@ -64,7 +64,8 @@ template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
     OutputGetter<const TensorMap&> outputGetter(inputTensors);
     static const model_version_t version{1};
-    return serializePredictResponse(outputGetter, pipelineName, version, this->outputsInfo, this->response, getOutputMapKeyName);
+    // TODO: Add unit test for useSharedOutputContent(requestProto)
+    return serializePredictResponse(outputGetter, pipelineName, version, this->outputsInfo, this->response, getOutputMapKeyName, useSharedOutputContent);
 }
 
 template <typename ResponseType>

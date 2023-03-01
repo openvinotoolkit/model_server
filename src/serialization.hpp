@@ -151,7 +151,8 @@ Status serializePredictResponse(
     model_version_t servableVersion,
     const tensor_map_t& outputMap,
     InferenceResponse* response,
-    outputNameChooser_t outputNameChooser) {
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent = true) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     uint32_t outputId = 0;

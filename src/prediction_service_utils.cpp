@@ -115,9 +115,19 @@ std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request)
     return request->getRequestShapes();
 }
 
-template <>
-bool useSharedOutputContent(const ::inference::ModelInferRequest* request) {
+template<>
+bool useSharedOutputContentFn(const PredictRequest* request) {
+    return false;
+}
+
+template<>
+bool useSharedOutputContentFn(const ::inference::ModelInferRequest* request) {
     return request->raw_input_contents().size() > 0;
+}
+
+template<>
+bool useSharedOutputContentFn(const InferenceRequest* request) {
+    return false;
 }
 
 }  // namespace ovms

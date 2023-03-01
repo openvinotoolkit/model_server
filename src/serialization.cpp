@@ -242,11 +242,22 @@ Status serializeTensorToTensorProtoRaw(
     return StatusCode::OK;
 }
 
+Status serializeStringTensorToTensorProto(
+    ::KFSResponse::InferOutputTensor& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
+    return StatusCode::UNKNOWN_ERROR;
+}
+
 Status serializeTensorToTensorProto(
     ::KFSResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (servableOutput->getPrecision() == Precision::C_STRING_ARRAY) {
+        return serializeStringTensorToTensorProto(responseOutput, servableOutput, tensor);
+    }
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
     if (!status.ok()) {
         return status;

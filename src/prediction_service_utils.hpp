@@ -44,7 +44,5 @@ std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request)
  * any other frontend.
  */
 template <typename RequestType>
-bool useSharedOutputContent(const RequestType* request) {
-    return true;
-}
+bool useSharedOutputContentFn(const RequestType* request);
 }  // namespace ovms
