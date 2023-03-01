@@ -247,7 +247,12 @@ Status serializeStringTensorToTensorProto(
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
-    return StatusCode::UNKNOWN_ERROR;
+    responseOutput.add_shape(tensor.get_shape()[0]);  // TODO: Only if 2D, move to conversion utility?
+    responseOutput.set_datatype("BYTES");
+    // responseOutput.set_dtype(tensorflow::DataType::DT_STRING);
+    // assert for 2d?
+    // responseOutput.mutable_tensor_shape()->add_dim()->set_size(tensor.get_shape()[0]);
+    return convertOVTensorToStringProto(tensor, responseOutput);  // partial gathering?
 }
 
 Status serializeTensorToTensorProto(

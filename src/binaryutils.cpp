@@ -525,6 +525,17 @@ Status convertOVTensorToStringProto(const ov::Tensor& tensor, tensorflow::Tensor
     return StatusCode::OK;
 }
 
+Status convertOVTensorToStringProto(const ov::Tensor& tensor, KFSTensorOutputProto& dst) {
+    OVMS_PROFILE_FUNCTION();
+    // TODO: Validate for 2d?
+    for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
+        const char* strStart = reinterpret_cast<const char*>(tensor.data<unsigned char>() + i * tensor.get_shape()[1]);
+        size_t strLen = strnlen(strStart, tensor.get_shape()[1]);
+        dst.mutable_contents()->add_bytes_contents(std::string(strStart, strLen));
+    }
+    return StatusCode::OK;
+}
+
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 
