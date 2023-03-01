@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi-minimal:8.7
+
 FROM registry.access.redhat.com/ubi8/ubi:8.7 as base_build
 RUN yum install -y xz && yum clean all
 WORKDIR /
@@ -27,8 +29,8 @@ RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-l
 RUN if [ -f /ovms/lib/libovms_shared.so ] ; then rm -rf  /ovms/lib/libovms_shared.so ; else exit 0 ; fi ;
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi-minimal:8.7
 FROM $BASE_IMAGE as release
+
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
 LABEL "version"="2022.3"
@@ -130,3 +132,4 @@ COPY --from=base_build /ovms /ovms
 COPY --from=base_build /licenses /licenses
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
+
