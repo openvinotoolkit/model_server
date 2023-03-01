@@ -122,7 +122,7 @@ RUN     microdnf upgrade -y ; \
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda yum package"; \
     dnf install -y  \
         libcudnn8-8.6.0.163-1.cuda11.8 \
-        libcutensor1-1.6.1.5-1 &&
+        libcutensor1-1.6.1.5-1 && \
         dnf clean all
 
 COPY --from=base_build /ovms /ovms
