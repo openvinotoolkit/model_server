@@ -27,6 +27,8 @@
 #include <utility>
 #include <vector>
 
+#include <string.h>
+
 #include <openvino/openvino.hpp>
 
 #include "logging.hpp"
@@ -516,8 +518,9 @@ Status convertOVTensorToStringProto(const ov::Tensor& tensor, tensorflow::Tensor
         return StatusCode::INVALID_SHAPE;
     }
     for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
-        const char* str = reinterpret_cast<const char*>(tensor.data<unsigned char>() + i * tensor.get_shape()[1]);
-        dst.add_string_val(str);
+        const char* strStart = reinterpret_cast<const char*>(tensor.data<unsigned char>() + i * tensor.get_shape()[1]);
+        size_t strLen = strnlen(strStart, tensor.get_shape()[1]);
+        dst.add_string_val(std::string(strStart, strLen));
     }
     return StatusCode::OK;
 }
