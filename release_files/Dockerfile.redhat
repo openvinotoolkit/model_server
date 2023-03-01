@@ -14,8 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.7
-FROM $BASE_IMAGE as base_build
+FROM registry.access.redhat.com/ubi8/ubi:8.7 as base_build
 RUN yum install -y xz && yum clean all
 WORKDIR /
 COPY ovms.tar.xz /
