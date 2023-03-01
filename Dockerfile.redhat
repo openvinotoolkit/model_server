@@ -158,7 +158,8 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv && \
     mkdir -p ccache-4.3/build && cd ccache-4.3/build && \
     cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. && \
-    ninja -v install
+    ninja -v install && \
+    yum clean all
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
@@ -173,9 +174,10 @@ ARG TEMP_DIR=/tmp/openvino_installer
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
+# hadolint ignore=DL3003
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino /openvino && cd /openvino && git checkout "$ov_source_branch" && git submodule update --init --recursive
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && dnf clean all
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
@@ -205,7 +207,7 @@ ENV OPENVINO_CONTRIB=/openvino_contrib
 
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    git clone https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive && \
+    git clone https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout "$ov_contrib_branch" && git submodule update --init --recursive && \
     mkdir ${OPENVINO_BUILD_PATH} && \
     cd "${OPENVINO_BUILD_PATH}" && \
     cmake "${OPENVINO_HOME}" \
