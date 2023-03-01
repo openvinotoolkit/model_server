@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,24 +15,22 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
-#include <string>
-
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/spdlog.h>
+#include "../status.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wbuiltin-macro-redefined"
+#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/port/parse_text_proto.h"
+#include "mediapipe/framework/port/status.h"
+#pragma GCC diagnostic pop
 
 namespace ovms {
 
-extern std::shared_ptr<spdlog::logger> gcs_logger;
-extern std::shared_ptr<spdlog::logger> azurestorage_logger;
-extern std::shared_ptr<spdlog::logger> s3_logger;
-extern std::shared_ptr<spdlog::logger> modelmanager_logger;
-extern std::shared_ptr<spdlog::logger> dag_executor_logger;
-extern std::shared_ptr<spdlog::logger> sequence_manager_logger;
-extern std::shared_ptr<spdlog::logger> capi_logger;
-extern std::shared_ptr<spdlog::logger> mediapipe_logger;
-
-void configure_logger(const std::string log_level, const std::string log_path);
+class OVMSCalculatorGraph {
+public:
+    mediapipe::CalculatorGraphConfig config;
+    mediapipe::CalculatorGraph graph;
+    OVMSCalculatorGraph();
+    absl::Status execute();
+};
 
 }  // namespace ovms
