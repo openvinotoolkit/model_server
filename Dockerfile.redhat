@@ -178,7 +178,7 @@ ARG TEMP_DIR=/tmp/openvino_installer
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino /openvino && cd /openvino && git checkout "$ov_source_branch" && git submodule update --init --recursive
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && dnf clean all
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
@@ -208,18 +208,18 @@ ENV OPENVINO_CONTRIB=/openvino_contrib
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     git clone https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout "$ov_contrib_branch" && git submodule update --init --recursive && \
-    mkdir ${OPENVINO_BUILD_PATH} && \
+    mkdir "${OPENVINO_BUILD_PATH}" && \
     cd "${OPENVINO_BUILD_PATH}" && \
     cmake "${OPENVINO_HOME}" \
     -DENABLE_NVIDIA=ON \
     -DENABLE_TESTS=ON \
     -DBUILD_arm_plugin=OFF \
     -DBUILD_java_api=OFF \
-    -DOPENVINO_EXTRA_MODULES="${OPENVINO_CONTRIB}/modules" \
+    -DOPENVINO_EXTRA_MODULES="${OPENVINO_CONTRIB}"/modules \
     -DWHEEL_VERSION=2022.1.0 \
     -DVERBOSE_BUILD=ON \
-    -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && \
-    cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS
+    -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" && \
+    cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j "$JOBS"
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
