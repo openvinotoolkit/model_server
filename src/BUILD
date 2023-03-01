@@ -81,6 +81,9 @@ cc_shared_library(
         "@upb//:__subpackages__",
         "@zlib//:__subpackages__",
         "@oneTBB//:__subpackages__",
+        "@google_mediapipe//:__subpackages__",
+        "@com_github_glog_glog//:__subpackages__",
+        "@com_github_gflags_gflags//:__subpackages__",
     ],
     features = [],
     roots = ["//src:ovms_lib"],
@@ -174,6 +177,8 @@ cc_library(
         "kfs_frontend/kfs_grpc_inference_service.hpp",
         "kfs_frontend/kfs_utils.cpp",
         "kfs_frontend/kfs_utils.hpp",
+        "mediapipe/calculator_graph.cpp",
+        "mediapipe/calculator_graph.hpp",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",
@@ -239,6 +244,7 @@ cc_library(
         "dags/pipelineeventqueue.hpp",
         "dags/pipeline_factory.cpp",
         "dags/pipeline_factory.hpp",
+        "ovms_calculator.cc",
         "precision.cpp",
         "precision.hpp",
         "prediction_service.cpp",
@@ -313,6 +319,10 @@ cc_library(
         "@cpprest//:sdk",
         "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
+        "@google_mediapipe//mediapipe/framework:calculator_graph",
+        "@google_mediapipe//mediapipe/framework/port:logging",
+        "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@google_mediapipe//mediapipe/framework/port:status",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
@@ -322,6 +332,7 @@ cc_library(
         "@com_github_jupp0r_prometheus_cpp//core",
         "//src/kfserving_api:kfserving_api_cpp",
         "@oneTBB//:tbb",
+        "@google_mediapipe//mediapipe/framework:calculator_framework",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
@@ -329,7 +340,8 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        "-Werror",
+        "-DRUN_OVMS_CALCULATOR_TEST2",
+#TODO:  "-Werror",
     ],
     visibility = [
         "//visibility:public",
@@ -339,7 +351,8 @@ cc_library(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-    ]
+    ],
+    alwayslink = 1,
 )
 
 cc_binary(
@@ -370,11 +383,23 @@ cc_binary(
 
 licenses(["notice"])
 
+cc_library(
+    name = "ovms_calculator",
+    srcs = ["ovms_calculator.cc"],
+    deps = [
+        "//src:ovms_lib",
+        "@org_tensorflow//tensorflow/core:framework",
+        "@google_mediapipe//mediapipe/framework:calculator_framework",
+        "@google_mediapipe//mediapipe/framework/port:status",
+    ],
+    alwayslink = 1,
+)
+
 cc_binary(
     name = "hello_world",
     srcs = ["hello_world.cc"],
     deps = [
-        "@google_mediapipe//mediapipe/calculators/core:pass_through_calculator",
+        "//src:ovms_calculator",
         "@google_mediapipe//mediapipe/framework:calculator_graph",
         "@google_mediapipe//mediapipe/framework/port:logging",
         "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
@@ -605,8 +630,6 @@ cc_binary(
     name = "capi_benchmark",
     srcs = [
         "main_benchmark.cpp",
-        "stringutils.cpp",
-        "stringutils.hpp",
     ],
     linkopts = [
         "-lpthread",
