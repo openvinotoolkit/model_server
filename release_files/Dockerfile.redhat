@@ -28,7 +28,7 @@ RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-l
 RUN if [ -f /ovms/lib/libovms_shared.so ] ; then rm -rf  /ovms/lib/libovms_shared.so ; else exit 0 ; fi ;
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7 as release
+FROM $BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
 LABEL "version"="2022.3"
@@ -43,8 +43,10 @@ ARG INSTALL_DRIVER_VERSION="22.28.23726"
 ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
 ENV GPU=$GPU
+ARG NVIDIA=0
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN if [ -f /usr/bin/dnf ] ; then ln -s /usr/bin/dnf /usr/bin/microdnf ; fi
 # hadolint ignore=DL3003,DL3041,SC2164
 RUN     microdnf upgrade -y ; \
         microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
@@ -116,6 +118,12 @@ RUN     microdnf upgrade -y ; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+# for NVIDIA
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda yum package"; \
+    dnf install -y  \
+        libcudnn8-8.6.0.163-1.cuda11.8 \
+        libcutensor1-1.6.1.5-1 &&
+        dnf clean all
 
 COPY --from=base_build /ovms /ovms
 
