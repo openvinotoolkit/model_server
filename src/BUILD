@@ -395,6 +395,19 @@ cc_library(
 #)
 
 cc_binary(
+    name = "object_detection_openvino",
+    data = [
+        "@google_mediapipe//mediapipe/models:ssdlite_object_detection.xml",
+        "@google_mediapipe//mediapipe/models:ssdlite_object_detection.bin",
+        "@google_mediapipe//mediapipe/models:ssdlite_object_detection_labelmap.txt",
+    ],
+    deps = [
+        "@google_mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
+        "@google_mediapipe//mediapipe/graphs/object_detection:desktop_openvino_calculators",
+    ],
+)
+
+cc_binary(
     name = "libsampleloader.so",
     srcs = [
 	    "example/SampleCustomLoader/sampleCustLoader.cpp",
