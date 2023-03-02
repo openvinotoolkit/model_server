@@ -144,12 +144,13 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     yum -y module disable python36 && \
     yum install -y  \
         libzstd-devel \
-        cuda-11-8 \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcudnn8-devel-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 \
         libcutensor-devel-1.6.1.5-1 \
         cuda-cudart-devel-11-8 && \
+    # ignore errors on hosts with older nvidia drivers
+    yum install -y cuda-11-8 || true && \
     yum install -y python38-Cython && \
     curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin && \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
@@ -159,7 +160,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     mkdir -p ccache-4.3/build && cd ccache-4.3/build && \
     cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. && \
     ninja -v install && \
-    yum clean all
+    rm -rf /var/cache/yum
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
