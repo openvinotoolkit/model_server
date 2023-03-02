@@ -92,7 +92,7 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response,
     outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent = true) {
+    bool useSharedOutputContent = true) {  // does not apply for TFS frontend
     OVMS_PROFILE_FUNCTION();
     Status status;
     ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&> protoGetter(response);
@@ -151,7 +151,8 @@ Status serializePredictResponse(
     model_version_t servableVersion,
     const tensor_map_t& outputMap,
     InferenceResponse* response,
-    outputNameChooser_t outputNameChooser) {
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent = true) {  // does not apply for C-API frontend
     OVMS_PROFILE_FUNCTION();
     Status status;
     uint32_t outputId = 0;
