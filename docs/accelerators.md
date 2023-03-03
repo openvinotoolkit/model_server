@@ -107,7 +107,7 @@ Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 @sphinxdirective
 .. code-block:: sh
 
-    docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    docker run --rm -it  --device=/dev/dxg -v /usr/lib/wsl:/usr/lib/wsl -u $(id -u):$(id -g) \
     -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
     --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
