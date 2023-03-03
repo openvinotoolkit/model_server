@@ -79,7 +79,7 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   ifeq ($(NVIDIA),1)
 	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04
-	BASE_IMAGE_RELEASE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04
+	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   else
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
 	BASE_IMAGE_RELEASE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
