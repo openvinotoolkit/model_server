@@ -68,6 +68,7 @@ const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
         {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
+        {StatusCode::REST_BINARY_BUFFER_EXCEEDED, net_http::HTTPStatusCode::BAD_REQUEST},
 
         {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::ERROR},
         {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
