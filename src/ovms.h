@@ -32,8 +32,8 @@ typedef struct OVMS_ModelsSettings_ OVMS_ModelsSettings;
 
 // Function to retrieve OVMS API version.
 //
-// \param major Returns the major version of OVMS API
-// \param minor Returns the minor version of OVMS API
+// \param major Returns major version of OVMS API. Represents breaking, non-backward compatible API changes.
+// \param minor Returns minor version of OVMS API. Represents non-breaking, backward compatible API changes.
 OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor);
 
 // OVMS_DataType
