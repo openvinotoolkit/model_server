@@ -51,9 +51,26 @@ using ovms::StatusCode;
 using ovms::Timer;
 using std::chrono::microseconds;
 
+#define OVMS_API_VERSION_MAJOR 0
+#define OVMS_API_VERSION_MINOR 1
+#define OVMS_API_VERSION_PATCH 0
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor, uint32_t* patch) {
+//     if (major == nullptr)
+//         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+//     if (minor == nullptr)
+//         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+//     if (patch == nullptr)
+//         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+//     *major = OVMS_API_VERSION_MAJOR;
+//     *minor = OVMS_API_VERSION_MINOR;
+//     *patch = OVMS_API_VERSION_PATCH;
+//     return nullptr;
+// }
 
 void OVMS_StatusDelete(OVMS_Status* status) {
     if (status == nullptr)

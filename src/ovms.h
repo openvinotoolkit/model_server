@@ -27,6 +27,13 @@ typedef struct OVMS_Status_ OVMS_Status;
 typedef struct OVMS_ServerSettings_ OVMS_ServerSettings;
 typedef struct OVMS_ModelsSettings_ OVMS_ModelsSettings;
 
+// Function to retrieve OVMS API version.
+//
+// \param major Returns the major version of OVMS API
+// \param minor Returns the minor version of OVMS API
+// \param patch Returns the patch version of OVMS API
+// OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor, uint32_t* patch);
+
 // OVMS_DataType
 //
 // Tensor and parameter data types recognized by OVMS.
