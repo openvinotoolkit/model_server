@@ -43,8 +43,7 @@ std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request)
  * which informs how response should be formated. Therefore return value should not have an impact for
  * any other frontend.
  */
-template <typename RequestType>
-bool useSharedOutputContent(const RequestType* request) {
-    return true;
-}
+bool useSharedOutputContentFn(const tensorflow::serving::PredictRequest* request);
+bool useSharedOutputContentFn(const ::KFSRequest* request);
+bool useSharedOutputContentFn(const InferenceRequest* request);
 }  // namespace ovms

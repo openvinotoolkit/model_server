@@ -1572,4 +1572,51 @@ TYPED_TEST(TestPredict, InferenceWithNegativeShapeDynamicParameter) {
     ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 }
 
+class TestPredictKFS : public TestPredict<KFSInterface> {};
+
+TEST_F(TestPredictKFS, RequestDataInFp32ContentResponseInFp32) {
+    KFSRequest request;
+    std::vector<float> data{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    bool putBufferInInputTensorContent = true;  // put in fp32_content
+    preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}},
+        data,
+        putBufferInInputTensorContent);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    KFSResponse response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_TRUE(response.outputs(0).has_contents());
+    ASSERT_GT(response.outputs(0).contents().fp32_contents_size(), 0);
+    ASSERT_EQ(response.raw_output_contents_size(), 0);
+}
+
+TEST_F(TestPredictKFS, RequestDataInRawResponseInRaw) {
+    KFSRequest request;
+    std::vector<float> data{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    bool putBufferInInputTensorContent = false;  // put in raw
+    preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}},
+        data,
+        putBufferInInputTensorContent);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    KFSResponse response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_FALSE(response.outputs(0).has_contents());
+    ASSERT_GT(response.raw_output_contents_size(), 0);
+}
+
 #pragma GCC diagnostic pop
