@@ -23,7 +23,7 @@
 
 
 
-> **Note** : Specifying config_path is mutually exclusive with putting model parameters in the CLI ([serving multiple models](./starting_server.md#serving-multiple-models)).
+> **Note** : Specifying config_path is mutually exclusive with putting model parameters in the CLI ([serving multiple models](./starting_server.md)).
 
 | Option  | Value format  | Description  |
 |---|---|---|
