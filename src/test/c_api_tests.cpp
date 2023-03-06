@@ -811,3 +811,15 @@ TEST_F(CAPIDagInference, DynamicEntryDummyDag) {
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceRequestDelete(request);
 }
+
+TEST(CAPI, ApiVersion) {
+    uint32_t major = 9999, minor = 9999, patch = 9999;
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ApiVersion(nullptr, &minor, &patch), StatusCode::NONEXISTENT_NUMBER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ApiVersion(&major, nullptr, &patch), StatusCode::NONEXISTENT_NUMBER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ApiVersion(&major, &minor, nullptr), StatusCode::NONEXISTENT_NUMBER);
+
+    ASSERT_CAPI_STATUS_NULL(OVMS_ApiVersion(&major, &minor, &patch));
+    ASSERT_EQ(major, OVMS_API_VERSION_MAJOR);
+    ASSERT_EQ(minor, OVMS_API_VERSION_MINOR);
+    ASSERT_EQ(patch, OVMS_API_VERSION_PATCH);
+}
