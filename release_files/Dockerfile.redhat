@@ -48,10 +48,10 @@ ENV GPU=$GPU
 ARG NVIDIA=0
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN if [ -f /usr/bin/dnf ] ; then ln -s /usr/bin/dnf /usr/bin/microdnf ; fi
 # hadolint ignore=DL3003,DL3041,SC2164
-RUN     microdnf upgrade -y ; \
-        microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+RUN     if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
+        $DNF_TOOL upgrade -y ; \
+        $DNF_TOOL install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
         if [ "$GPU" == "1" ] ; then \
                 case $INSTALL_DRIVER_VERSION in \
                 "20.35.17767") \
@@ -77,7 +77,7 @@ RUN     microdnf upgrade -y ; \
                         cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "22.10.22597") \
-                        microdnf install -y libedit ; \
+                        $DNF_TOOL install -y libedit ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.0.3-i699.3.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.10409-i699.3.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/level-zero-1.7.9-i699.3.el8.x86_64.rpm ; \
@@ -86,7 +86,7 @@ RUN     microdnf upgrade -y ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.10.22597-i699.3.el8.x86_64.rpm ; \
                 ;; \
                 "22.28.23726") \
-                        microdnf install -y libedit ; \
+                        $DNF_TOOL install -y libedit ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.1.7-i419.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.11485-i419.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.11485-i419.el8.x86_64.rpm ; \
@@ -106,7 +106,7 @@ RUN     microdnf upgrade -y ; \
                 rpm -ivh http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/numactl-2.0.12-11.el8.x86_64.rpm; \
                 rpm -ivh http://mirror.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
         else  \
-                microdnf install -y tar gzip; \
+                $DNF_TOOL install -y tar gzip; \
                 mkdir /tmp_ovms ; \
                 cd /tmp_ovms ; \
                 curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
@@ -116,7 +116,7 @@ RUN     microdnf upgrade -y ; \
                 cd / ; \
                 rm -rf /tmp_ovms ; \
         fi ; \
-        microdnf install -y shadow-utils; \
+        $DNF_TOOL install -y shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
