@@ -124,6 +124,12 @@ int main(int argc, char** argv) {
         OVMS_StatusGetDetails(res, &details);
         std::cout << "Error occured during inference. Code:" << code
                   << ", details:" << details << std::endl;
+        OVMS_StatusDelete(res);
+        OVMS_InferenceRequestDelete(request);
+        OVMS_ServerDelete(srv);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
+        return 1;
     }
     // read output
     uint32_t outputCount = 0;
