@@ -88,7 +88,7 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
 
 const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
 
-TEST(CApiConfigTest, MultiModelConfiguration) {
+TEST(CAPIConfigTest, MultiModelConfiguration) {
     OVMS_ServerSettings* _serverSettings = nullptr;
     OVMS_ModelsSettings* _modelsSettings = nullptr;
 
@@ -235,11 +235,11 @@ TEST(CApiConfigTest, MultiModelConfiguration) {
     OVMS_ServerSettingsDelete(_serverSettings);
 }
 
-TEST(CApiConfigTest, SingleModelConfiguration) {
+TEST(CAPIConfigTest, SingleModelConfiguration) {
     GTEST_SKIP() << "Use C-API to initialize in next stages, currently not supported";
 }
 
-TEST(CApiStartTest, InitializingMultipleServers) {
+TEST(CAPIStartTest, InitializingMultipleServers) {
     OVMS_Server* srv1 = nullptr;
     OVMS_Server* srv2 = nullptr;
 
@@ -249,7 +249,7 @@ TEST(CApiStartTest, InitializingMultipleServers) {
     OVMS_ServerDelete(srv1);
 }
 
-TEST(CApiStartTest, StartFlow) {
+TEST(CAPIStartTest, StartFlow) {
     OVMS_Server* srv = nullptr;
     OVMS_ServerSettings* serverSettings = nullptr;
     OVMS_ModelsSettings* modelsSettings = nullptr;
@@ -287,7 +287,7 @@ TEST(CApiStartTest, StartFlow) {
     OVMS_ServerDelete(srv);
 }
 
-TEST(CApiStatusTest, GetCodeAndDetails) {
+TEST(CAPIStatusTest, GetCodeAndDetails) {
     std::unique_ptr<Status> s = std::make_unique<Status>(
         StatusCode::INTERNAL_ERROR, "custom message");
     OVMS_Status* sts = reinterpret_cast<OVMS_Status*>(s.get());
@@ -306,9 +306,9 @@ TEST(CApiStatusTest, GetCodeAndDetails) {
     OVMS_StatusDelete(reinterpret_cast<OVMS_Status*>(s.release()));
 }
 
-class CapiInference : public ::testing::Test {};
+class CAPIInference : public ::testing::Test {};
 
-TEST_F(CapiInference, TensorSetMovedBuffer) {
+TEST_F(CAPIInference, TensorSetMovedBuffer) {
     constexpr size_t elementsCount = 2;
     std::array<size_t, elementsCount> shape{1, elementsCount};
     InferenceTensor tensor(OVMS_DATATYPE_FP32, shape.data(), shape.size());
@@ -320,7 +320,7 @@ TEST_F(CapiInference, TensorSetMovedBuffer) {
     ASSERT_EQ(tensor.setBuffer(std::move(buffer)), ovms::StatusCode::DOUBLE_BUFFER_SET);
 }
 
-TEST_F(CapiInference, Basic) {
+TEST_F(CAPIInference, Basic) {
     //////////////////////
     // start server
     //////////////////////
@@ -458,7 +458,7 @@ TEST_F(CapiInference, Basic) {
     OVMS_ServerDelete(cserver);
 }
 
-TEST_F(CapiInference, NegativeInference) {
+TEST_F(CAPIInference, NegativeInference) {
     // first start OVMS
     std::string port = "9000";
     randomizePort(port);
@@ -555,7 +555,7 @@ constexpr size_t INPUT_DATA_BYTESIZE{INPUT_DATA.size() * sizeof(float)};
 const OVMS_DataType DATATYPE{OVMS_DATATYPE_FP32};
 }  // namespace
 
-TEST_F(CapiInference, ResponseRetrieval) {
+TEST_F(CAPIInference, ResponseRetrieval) {
     auto cppResponse = std::make_unique<InferenceResponse>(MODEL_NAME, MODEL_VERSION);
     // add output
     std::array<size_t, 2> cppOutputShape{1, DUMMY_MODEL_INPUT_SIZE};
@@ -634,7 +634,7 @@ TEST_F(CapiInference, ResponseRetrieval) {
     OVMS_InferenceResponseDelete(response);
 }
 
-TEST_F(CapiInference, CallInferenceServerNotStarted) {
+TEST_F(CAPIInference, CallInferenceServerNotStarted) {
     OVMS_Server* cserver = nullptr;
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
@@ -652,7 +652,7 @@ TEST_F(CapiInference, CallInferenceServerNotStarted) {
     OVMS_ServerDelete(cserver);
 }
 
-class CapiDagInference : public ::testing::Test {
+class CAPIDagInference : public ::testing::Test {
 protected:
     OVMS_ServerSettings* serverSettings = nullptr;
     OVMS_ModelsSettings* modelsSettings = nullptr;
@@ -706,7 +706,7 @@ protected:
     }
 };
 
-TEST_F(CapiDagInference, BasicDummyDag) {
+TEST_F(CAPIDagInference, BasicDummyDag) {
     //////////////////////
     // start server
     //////////////////////
@@ -755,7 +755,7 @@ TEST_F(CapiDagInference, BasicDummyDag) {
     OVMS_InferenceRequestDelete(request);
 }
 
-TEST_F(CapiDagInference, DynamicEntryDummyDag) {
+TEST_F(CAPIDagInference, DynamicEntryDummyDag) {
     //////////////////////
     // start server
     //////////////////////
