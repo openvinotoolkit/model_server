@@ -55,16 +55,13 @@ using std::chrono::microseconds;
 extern "C" {
 #endif
 
-OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor, uint32_t* patch) {
+OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor) {
     if (major == nullptr)
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
     if (minor == nullptr)
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
-    if (patch == nullptr)
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
     *major = OVMS_API_VERSION_MAJOR;
     *minor = OVMS_API_VERSION_MINOR;
-    *patch = OVMS_API_VERSION_PATCH;
     return nullptr;
 }
 

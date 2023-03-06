@@ -29,14 +29,12 @@ typedef struct OVMS_ModelsSettings_ OVMS_ModelsSettings;
 
 #define OVMS_API_VERSION_MAJOR 0
 #define OVMS_API_VERSION_MINOR 1
-#define OVMS_API_VERSION_PATCH 0
 
 // Function to retrieve OVMS API version.
 //
 // \param major Returns the major version of OVMS API
 // \param minor Returns the minor version of OVMS API
-// \param patch Returns the patch version of OVMS API
-OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor, uint32_t* patch);
+OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor);
 
 // OVMS_DataType
 //
