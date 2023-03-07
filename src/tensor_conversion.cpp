@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "binaryutils.hpp"
+#include "tensor_conversion.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -462,7 +462,7 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
     return StatusCode::OK;
 }
 
-Status convertStringProtoToOVTensor(
+Status convertStringRequestTensorToOVTensor(
     const KFSTensorInputProto& src,
     ov::Tensor& tensor,
     const std::string* buffer) {
@@ -484,11 +484,10 @@ Status convertStringProtoToOVTensor(
         tensor.data<unsigned char>()[i * width + str.size()] = 0;
         i++;
     }
-
     return StatusCode::OK;
 }
 
-Status convertStringProtoToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor) {
+Status convertStringRequestTensorToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
     size_t maxStringLength = 0;
     for (const auto& str : src.string_val()) {
