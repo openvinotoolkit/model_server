@@ -21,7 +21,6 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
-#include "../binaryutils.hpp"
 #include "../dags/dl_node.hpp"
 #include "../dags/entry_node.hpp"
 #include "../dags/exit_node.hpp"
@@ -38,6 +37,7 @@
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
+#include "../tensor_conversion.hpp"
 #include "../timer.hpp"
 #include "test_utils.hpp"
 

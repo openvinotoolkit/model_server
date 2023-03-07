@@ -52,6 +52,7 @@ const std::string dummy_model_location = std::filesystem::current_path().u8strin
 const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
 const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
 const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
+const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -113,6 +114,21 @@ const ovms::ModelConfig INCREMENT_1x3x4x5_MODEL_CONFIG{
     increment_1x3x4x5_model_location,  // local path
 };
 
+const ovms::ModelConfig PASSTHROUGH_MODEL_CONFIG{
+    "passthrough",
+    passthrough_model_location,  // base path
+    "CPU",                       // target device
+    "1",                         // batchsize
+    1,                           // NIREQ
+    false,                       // is stateful
+    true,                        // idle sequence cleanup enabled
+    false,                       // low latency transformation enabled
+    500,                         // stateful sequence max number
+    "",                          // cache directory
+    1,                           // model_version unused since version are read from path
+    passthrough_model_location,  // local path
+};
+
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
@@ -133,6 +149,9 @@ constexpr const int SUM_MODEL_OUTPUT_SIZE = 10;
 constexpr const char* INCREMENT_1x3x4x5_MODEL_INPUT_NAME = "input";
 constexpr const char* INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME = "output";
 constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
+
+constexpr const char* PASSTHROUGH_MODEL_INPUT_NAME = "input";
+constexpr const char* PASSTHROUGH_MODEL_OUTPUT_NAME = "copy:0";
 
 const std::string UNUSED_SERVABLE_NAME = "UNUSED_SERVABLE_NAME";
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
@@ -175,6 +194,12 @@ void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, c
 
 void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data,
     uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
+
+void prepareInferStringRequest(::KFSRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true);
+void prepareInferStringRequest(tensorflow::serving::PredictRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true);
+void prepareInferStringRequest(ovms::InferenceRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true);  // CAPI binary not supported
+
+void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<std::string> expectedStrings);
 
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize);
