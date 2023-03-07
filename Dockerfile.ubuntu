@@ -86,6 +86,8 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUIL
 ####### Build OpenCV
 WORKDIR /ovms/third_party/opencv
 RUN ./install_opencv.sh
+####### Mediapipe v2opencv
+RUN ./setup_opencv.sh
 ####### End of OpenCV
 
 ################### BASE BUILD ##########################
