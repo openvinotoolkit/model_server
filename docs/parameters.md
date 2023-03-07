@@ -21,6 +21,14 @@
 | `"metrics_enable"` | `bool` | Flag enabling [metrics](https://docs.openvino.ai/2022.3/ovms_docs_metrics.html) endpoint on rest_port. |    
 | `"metrics_list"` | `string` | Comma separated list of [metrics](https://docs.openvino.ai/2022.3/ovms_docs_metrics.html). If unset, only default metrics will be enabled.|
 
+
+
+> **Note** : Specifying config_path is mutually exclusive with putting model parameters in the CLI ([serving multiple models](./starting_server.md)).
+
+| Option  | Value format  | Description  |
+|---|---|---|
+| `config_path` | `string` |  Absolute path to json configuration file |
+
 ## Server configuration options
 
 Configuration options for the server are defined only via command-line options and determine configuration common for all served models. 
@@ -40,5 +48,8 @@ Configuration options for the server are defined only via command-line options a
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
 | `log_path` | `string` | Optional path to the log file. |
 | `cache_dir` | `string` | Path to the model cache storage. Caching will be enabled if this parameter is defined or the default path /opt/cache exists |
+| `grpc_channel_arguments` | `string` |   A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000) |
+| `help` | `NA` |  Shows help message and exit |
+| `version` | `NA` |  Shows binary version |
 
 
