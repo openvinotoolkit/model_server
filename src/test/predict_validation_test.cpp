@@ -1329,8 +1329,6 @@ INSTANTIATE_TEST_SUITE_P(
         return toString(info.param);
     });
 
-
-
 void prepareInferStringInputWithTwoDimensionShapeTensor(::KFSRequest& request, const std::string& name) {
     KFSTensorInputProto* tensor = request.add_inputs();
     tensor->set_name(name);

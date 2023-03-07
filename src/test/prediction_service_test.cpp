@@ -1586,7 +1586,8 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive) {
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
     ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-    this->checkOutputShape(response, {2,11}, PASSTHROUGH_MODEL_OUTPUT_NAME);
+    this->checkOutputShape(response, {2, 11}, PASSTHROUGH_MODEL_OUTPUT_NAME);
+    // TODO: verify if response data match expectations
 }
 
 #pragma GCC diagnostic pop

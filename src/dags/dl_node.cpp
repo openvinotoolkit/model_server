@@ -66,6 +66,7 @@ Status DLNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQu
 }
 
 Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+    SPDLOG_ERROR("2");
     auto& dlNodeSession = static_cast<DLNodeSession&>(nodeSession);
     const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
     SessionResult sessionResults{sessionMetadata, {}};

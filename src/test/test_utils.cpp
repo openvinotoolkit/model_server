@@ -33,7 +33,7 @@ void prepareBinaryPredictRequest(ovms::InferenceRequest& request, const std::str
 void prepareBinaryPredictRequestNoShape(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }  // CAPI binary not supported
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }      // CAPI binary not supported
 
-void prepareInferStringRequest(ovms::InferenceRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent) { throw 42; } // CAPI binary not supported
+void prepareInferStringRequest(ovms::InferenceRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent) { throw 42; }  // CAPI binary not supported
 
 void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool putBufferInInputTensorContent) {
     request.mutable_inputs()->Clear();
@@ -342,7 +342,6 @@ void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<s
         i++;
     }
 }
-
 
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize) {
     auto& tensor = (*request.mutable_inputs())[inputName];

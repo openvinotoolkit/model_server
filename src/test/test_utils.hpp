@@ -129,7 +129,6 @@ const ovms::ModelConfig PASSTHROUGH_MODEL_CONFIG{
     passthrough_model_location,  // local path
 };
 
-
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;

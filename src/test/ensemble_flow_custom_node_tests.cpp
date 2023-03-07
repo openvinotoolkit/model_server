@@ -5260,11 +5260,10 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
 }
 
-
 static constexpr const char* INPUT_TENSOR_NAME = "input_string";
 static constexpr const char* OUTPUT_TENSOR_NAME = "output_string";
 
-struct Passthrough {
+struct Passthrough_2D_U8 {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
@@ -5347,7 +5346,7 @@ template <typename Pair,
 class EnsembleFlowStringInput : public ::testing::Test {
 public:
     void SetUp() override {}
-    
+
     RequestType request;
     ResponseType response;
     std::unique_ptr<ModelMetricReporter> reporter;
@@ -5355,13 +5354,15 @@ public:
     const std::string customNodeName = "passthrough";
     static constexpr const char* pipelineInputName = "pipeline_input";
     const std::string pipelineOutputName = "pipeline_output";
+    const std::string pipelineName = "my_pipeline";
+    std::set<std::string> gatherFromNode = {};
 };
 
 using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
 TYPED_TEST_SUITE(EnsembleFlowStringInput, MyTypes);
 
 TYPED_TEST(EnsembleFlowStringInput, positive) {
-    // Most basic configuration, just process single add-sub custom node pipeline request
+    // Most basic configuration, just process single passthrough custom node pipeline request
     // input  passthrough  output
     //  O------->O------->O
     std::vector<std::string> expectedStrings = {"String_123", "zebra", ""};
@@ -5378,8 +5379,8 @@ TYPED_TEST(EnsembleFlowStringInput, positive) {
         ovms::Shape{-1, -1},
         Layout{"NC"});
     const tensor_map_t outputsInfo{{this->pipelineOutputName, tensorInfo}};
-    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
-    auto mockedLibrary = createLibraryMock<Passthrough>();
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, this->gatherFromNode, true, this->pipelineName);
+    auto mockedLibrary = createLibraryMock<Passthrough_2D_U8>();
     auto custom_node = std::make_unique<CustomNode>(this->customNodeName, mockedLibrary, parameters_t{});
 
     Pipeline pipeline(*input_node, *output_node, *this->reporter);
@@ -5392,4 +5393,5 @@ TYPED_TEST(EnsembleFlowStringInput, positive) {
 
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     ASSERT_EQ(this->response.outputs().size(), 1);
+    // TODO: verify if response data match expectations
 }
