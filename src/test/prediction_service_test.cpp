@@ -1572,4 +1572,21 @@ TYPED_TEST(TestPredict, InferenceWithNegativeShapeDynamicParameter) {
     ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 }
 
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {"String_123", "String"};
+    prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings);
+    ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    this->checkOutputShape(response, {2,11}, PASSTHROUGH_MODEL_OUTPUT_NAME);
+}
+
 #pragma GCC diagnostic pop

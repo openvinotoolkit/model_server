@@ -705,6 +705,8 @@ cc_test(
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
         "test/summator/1/summator.xml",
         "test/summator/1/summator.bin",
+        "test/passthrough/1/passthrough.xml",
+        "test/passthrough/1/passthrough.bin",
     ],
     linkopts = [
         "-lxml2",

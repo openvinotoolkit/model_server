@@ -1329,53 +1329,7 @@ INSTANTIATE_TEST_SUITE_P(
         return toString(info.param);
     });
 
-void prepareInferStringInputTensor(::KFSRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true) {
-    auto it = request.mutable_inputs()->begin();
-    size_t bufferId = 0;
-    while (it != request.mutable_inputs()->end()) {
-        if (it->name() == name)
-            break;
-        ++it;
-        ++bufferId;
-    }
-    KFSTensorInputProto* tensor;
-    std::string* content = nullptr;
-    if (it != request.mutable_inputs()->end()) {
-        tensor = &*it;
-        if (!putBufferInInputTensorContent) {
-            content = request.mutable_raw_input_contents()->Mutable(bufferId);
-        }
-    } else {
-        tensor = request.add_inputs();
-        if (!putBufferInInputTensorContent) {
-            content = request.add_raw_input_contents();
-        }
-    }
-    tensor->set_name(name);
-    tensor->set_datatype("BYTES");
-    tensor->mutable_shape()->Clear();
-    tensor->add_shape(data.size());
-    size_t dataSize = 1;
-    if (!putBufferInInputTensorContent) {
-        content->resize(dataSize);
-        std::memcpy(content->data(), data.data(), content->size());
-    } else {
-        for (auto inputData : data) {
-            auto bytes_val = tensor->mutable_contents()->mutable_bytes_contents()->Add();
-            bytes_val->append(inputData.data(), inputData.size());
-        }
-    }
-}
 
-void prepareInferStringInputTensor(tensorflow::serving::PredictRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true) {
-    request.mutable_inputs()->clear();
-    auto& input = (*request.mutable_inputs())[name];
-    input.set_dtype(tensorflow::DataType::DT_STRING);
-    input.mutable_tensor_shape()->add_dim()->set_size(data.size());
-    for (auto inputData : data) {
-        input.add_string_val(inputData);
-    }
-}
 
 void prepareInferStringInputWithTwoDimensionShapeTensor(::KFSRequest& request, const std::string& name) {
     KFSTensorInputProto* tensor = request.add_inputs();
@@ -1410,14 +1364,14 @@ TYPED_TEST_SUITE(PredictValidationStringTest, MyTypes);
 
 TYPED_TEST(PredictValidationStringTest, positive) {
     std::vector<std::string> inputStrings = {"String_123"};
-    prepareInferStringInputTensor(this->request, this->tensorName, inputStrings);
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
 TYPED_TEST(PredictValidationStringTest, negative_no_string) {
     std::vector<std::string> inputStrings = {};
-    prepareInferStringInputTensor(this->request, this->tensorName, inputStrings);
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
@@ -1431,7 +1385,7 @@ TYPED_TEST(PredictValidationStringTest, negative_shape_has_more_dimensions_than_
 TYPED_TEST(PredictValidationStringTest, batchsize_change_required) {
     this->mockedInputsInfo[this->tensorName] = std::make_shared<ovms::TensorInfo>(this->tensorName, ovms::Precision::U8, ovms::Shape{3, -1}, ovms::Layout{"NC"});
     std::vector<std::string> inputStrings = {"String_123"};
-    prepareInferStringInputTensor(this->request, this->tensorName, inputStrings);
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1}, {}, ovms::Mode::AUTO);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
 }
@@ -1439,7 +1393,7 @@ TYPED_TEST(PredictValidationStringTest, batchsize_change_required) {
 TYPED_TEST(PredictValidationStringTest, shape_change_required) {
     this->mockedInputsInfo[this->tensorName] = std::make_shared<ovms::TensorInfo>(this->tensorName, ovms::Precision::U8, ovms::Shape{-1, 4}, ovms::Layout{"NC"});
     std::vector<std::string> inputStrings = {"String_123"};
-    prepareInferStringInputTensor(this->request, this->tensorName, inputStrings);
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
     ovms::ShapeInfo inputShape{ovms::AUTO, {-1, 4}};
     ovms::shapes_info_map_t shapeMap;
     shapeMap[this->tensorName] = inputShape;

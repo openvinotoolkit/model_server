@@ -15,7 +15,6 @@
 //*****************************************************************************
 
 #include <fstream>
-#include <iostream>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -669,58 +668,42 @@ public:
 using MyTypes = ::testing::Types<tensorflow::TensorProto, ::KFSRequest::InferInputTensor>;
 TYPED_TEST_SUITE(StringInputsConversionTest, MyTypes);
 
-static void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<std::string> inputStrings) {
-    size_t maxStringLength = 0;
-    for (const auto& input : inputStrings) {
-        maxStringLength = std::max(maxStringLength, input.length());
-    }
-    size_t width = maxStringLength + 1;
-    size_t i = 0;
-    ASSERT_EQ(width * inputStrings.size(), tensor.get_size());
-    for (const auto& input : inputStrings) {
-        for (size_t j = 0; j < input.size(); j++) {
-            ASSERT_EQ(tensor.data<uint8_t>()[i * width + j], reinterpret_cast<const uint8_t*>(input.data())[j]);
-        }
-        ASSERT_EQ(tensor.data<uint8_t>()[i * width + input.size()], 0);
-        i++;
-    }
-}
-
 TYPED_TEST(StringInputsConversionTest, positive) {
-    std::vector<std::string> inputStrings = {"String_123"};
-    this->prepareStringTensor(this->requestTensor, inputStrings);
+    std::vector<std::string> expectedStrings = {"String_123"};
+    this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
     ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
-    assertOutputTensorMatchExpectations(tensor, inputStrings);
+    assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
 TYPED_TEST(StringInputsConversionTest, positive_batch_size_2) {
-    std::vector<std::string> inputStrings = {"String_123", "zebra"};
-    this->prepareStringTensor(this->requestTensor, inputStrings);
+    std::vector<std::string> expectedStrings = {"String_123", "zebra"};
+    this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
     ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
-    assertOutputTensorMatchExpectations(tensor, inputStrings);
+    assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
 TYPED_TEST(StringInputsConversionTest, positive_batch_size_3_one_string_empty) {
-    std::vector<std::string> inputStrings = {"String_123", "zebra", ""};
-    this->prepareStringTensor(this->requestTensor, inputStrings);
+    std::vector<std::string> expectedStrings = {"String_123", "zebra", ""};
+    this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
     ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
-    assertOutputTensorMatchExpectations(tensor, inputStrings);
+    assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
 TYPED_TEST(StringInputsConversionTest, positive_empty_inputs) {
-    std::vector<std::string> inputStrings = {};
-    this->prepareStringTensor(this->requestTensor, inputStrings);
+    // This case can't happen because request validation dont allow empty strings
+    std::vector<std::string> expectedStrings = {};
+    this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
     ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
-    assertOutputTensorMatchExpectations(tensor, inputStrings);
+    assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
 TYPED_TEST(StringInputsConversionTest, raw_inputs_contents_not_implemented) {
-    std::vector<std::string> inputStrings = {};
-    this->prepareStringTensor(this->requestTensor, inputStrings);
+    std::vector<std::string> expectedStrings = {};
+    this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
     std::string buffer;
     if (std::is_same<TypeParam, ::KFSRequest::InferInputTensor>::value) {
