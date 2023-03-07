@@ -16,6 +16,7 @@
 #include "test_utils.hpp"
 
 #include <functional>
+#include <algorithm>
 
 #include "../capi_frontend/capi_utils.hpp"
 #include "../inferenceparameter.hpp"
