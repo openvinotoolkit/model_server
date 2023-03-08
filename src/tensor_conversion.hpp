@@ -33,7 +33,11 @@ class Status;
 template <typename TensorType>
 Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 
+// TODO: remove types like in convertNativeFileFormatRequestTensorToOVTensor / convertStringTo1DOVTensor
 Status convertStringRequestTensorToOVTensor(const inference::ModelInferRequest_InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
 Status convertStringRequestTensorToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
+
+template <typename TensorType>
+Status convertStringTo1DOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer);
 
 }  // namespace ovms

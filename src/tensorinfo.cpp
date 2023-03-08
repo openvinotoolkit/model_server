@@ -56,11 +56,13 @@ TensorInfo::TensorInfo(const std::string& name,
     TensorInfo(name, "", precision, shape, layout) {}
 
 template <class T>
-static TensorInfo::ProcessingHint getProcessingHintFromInputInfo(const std::vector<T> shape, const ovms::Precision& precision) {
+static TensorInfo::ProcessingHint getProcessingHintFromInputInfo(const std::vector<T>& shape, const ovms::Precision& precision) {
     if (shape.size() == 3 || shape.size() == 4) {
         return TensorInfo::ProcessingHint::IMAGE;
     } else if (shape.size() == 2 && precision == ovms::Precision::U8) {
         return TensorInfo::ProcessingHint::STRING;
+    } else if (shape.size() == 1 && precision == ovms::Precision::U8) {
+        return TensorInfo::ProcessingHint::OV_1D_STRING_TENSOR;
     } else {
         return TensorInfo::ProcessingHint::NO_PROCESSING;
     }

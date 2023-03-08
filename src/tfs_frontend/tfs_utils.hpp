@@ -44,4 +44,5 @@ const std::string& getRequestServableName(const TFSPredictRequest& request);
 Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::string& name, bool& isNativeFileFormatUsed);
 bool isNativeFileFormatUsed(const TFSInputTensorType& request);
 bool isStringFormatUsed(const TFSInputTensorType& request, const TensorInfo& tensorInfo);
+bool hasString(const TFSInputTensorType& proto);
 }  // namespace ovms

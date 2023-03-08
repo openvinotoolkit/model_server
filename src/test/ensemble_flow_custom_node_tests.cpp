@@ -5263,14 +5263,20 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
 static constexpr const char* INPUT_TENSOR_NAME = "input_string";
 static constexpr const char* OUTPUT_TENSOR_NAME = "output_string";
 
-struct Passthrough_2D_U8 {
+struct Passthrough_AnyDim_U8 {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
     static int deinitialize(void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        int numberOfDimensions = 2;  // default
+        for (int i = 0; i < paramsCount; i++) {
+            if (std::strcmp(params[i].key, "num_of_dims") == 0) {
+                numberOfDimensions = std::stoi(params[i].value);
+            }
+        }
         // // Inputs reading
         const CustomNodeTensor* input = nullptr;
 
@@ -5299,36 +5305,53 @@ struct Passthrough_2D_U8 {
         output.name = OUTPUT_TENSOR_NAME;
         output.data = reinterpret_cast<uint8_t*>(buffer);
         output.dataBytes = inputs[0].dataBytes;
-        output.dimsCount = 2;
+        output.dimsCount = numberOfDimensions;
         output.dims = (uint64_t*)malloc(output.dimsCount * sizeof(uint64_t));
-        output.dims[0] = input->dims[0];
-        output.dims[1] = input->dims[1];
+        for (int i = 0; i < numberOfDimensions; i++) {
+            output.dims[i] = input->dims[i];
+        }
         output.precision = U8;
 
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        int numberOfDimensions = 2;  // default
+        for (int i = 0; i < paramsCount; i++) {
+            if (std::strcmp(params[i].key, "num_of_dims") == 0) {
+                numberOfDimensions = std::stoi(params[i].value);
+            }
+        }
+
         *infoCount = 1;
         *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = INPUT_TENSOR_NAME;
-        (*info)[0].dimsCount = 2;
+        (*info)[0].dimsCount = numberOfDimensions;
         (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
-        (*info)[0].dims[0] = -1;
-        (*info)[0].dims[1] = -1;
+        for (int i = 0; i < numberOfDimensions; i++) {
+            (*info)[0].dims[i] = -1;
+        }
         (*info)[0].precision = U8;
 
         return 0;
     }
     static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        int numberOfDimensions = 2;  // default
+        for (int i = 0; i < paramsCount; i++) {
+            if (std::strcmp(params[i].key, "num_of_dims") == 0) {
+                numberOfDimensions = std::stoi(params[i].value);
+            }
+        }
+
         *infoCount = 1;
         *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
         (*info)[0].name = OUTPUT_TENSOR_NAME;
-        (*info)[0].dimsCount = 2;
+        (*info)[0].dimsCount = numberOfDimensions;
         (*info)[0].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-        (*info)[0].dims[0] = -1;
-        (*info)[0].dims[1] = -1;
+        for (int i = 0; i < numberOfDimensions; i++) {
+            (*info)[0].dims[i] = -1;
+        }
 
         (*info)[0].precision = U8;
 
@@ -5361,7 +5384,7 @@ public:
 using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
 TYPED_TEST_SUITE(EnsembleFlowStringInput, MyTypes);
 
-TYPED_TEST(EnsembleFlowStringInput, positive) {
+TYPED_TEST(EnsembleFlowStringInput, positive_2d) {
     // Most basic configuration, just process single passthrough custom node pipeline request
     // input  passthrough  output
     //  O------->O------->O
@@ -5379,8 +5402,8 @@ TYPED_TEST(EnsembleFlowStringInput, positive) {
         ovms::Shape{-1, -1},
         Layout{"NC"});
     const tensor_map_t outputsInfo{{this->pipelineOutputName, tensorInfo}};
-    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, this->gatherFromNode, true, this->pipelineName);
-    auto mockedLibrary = createLibraryMock<Passthrough_2D_U8>();
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, this->gatherFromNode, false, this->pipelineName);
+    auto mockedLibrary = createLibraryMock<Passthrough_AnyDim_U8>();
     auto custom_node = std::make_unique<CustomNode>(this->customNodeName, mockedLibrary, parameters_t{});
 
     Pipeline pipeline(*input_node, *output_node, *this->reporter);
@@ -5392,6 +5415,55 @@ TYPED_TEST(EnsembleFlowStringInput, positive) {
     pipeline.push(std::move(output_node));
 
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    ASSERT_EQ(this->response.outputs().size(), 1);
-    // TODO: verify if response data match expectations
+    std::vector<uint8_t> expectedData = {
+        'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
+        'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    std::vector<size_t> expectedShape = {3, 11};
+    checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->request, this->response, expectedShape);
+}
+
+TYPED_TEST(EnsembleFlowStringInput, positive_1d) {
+    // Most basic configuration, just process single passthrough custom node pipeline request
+    // input  passthrough  output
+    //  O------->O------->O
+    std::vector<std::string> expectedStrings = {"ala", "", "ma", "kota"};
+    prepareInferStringRequest(this->request, this->pipelineInputName, expectedStrings);
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(this->pipelineInputName,
+        ovms::Precision::U8,
+        ovms::Shape{-1},
+        Layout{"NC"});
+    const tensor_map_t inputsInfo{{this->pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(this->pipelineOutputName,
+        ovms::Precision::U8,
+        ovms::Shape{-1},
+        Layout{"NC"});
+    const tensor_map_t outputsInfo{{this->pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, this->gatherFromNode, false, this->pipelineName);
+    auto mockedLibrary = createLibraryMock<Passthrough_AnyDim_U8>();
+    auto custom_node = std::make_unique<CustomNode>(this->customNodeName, mockedLibrary, parameters_t{{"num_of_dims", "1"}});
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *custom_node, {{this->pipelineInputName, INPUT_TENSOR_NAME}});
+    pipeline.connect(*custom_node, *output_node, {{OUTPUT_TENSOR_NAME, this->pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(custom_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    std::vector<uint8_t> expectedData = {
+        4, 0, 0, 0,  // batch size
+        0, 0, 0, 0,  // first string start offset
+        3, 0, 0, 0,  // end of "ala" in condensed content
+        3, 0, 0, 0,  // end of "" in condensed content
+        5, 0, 0, 0,  // end of "ma" in condensed content
+        9, 0, 0, 0,  // end of "kota" in condensed content
+        'a', 'l', 'a',
+        'm', 'a',
+        'k', 'o', 't', 'a'};
+    std::vector<size_t> expectedShape = {33};
+    checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->request, this->response, expectedShape);
 }

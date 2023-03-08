@@ -290,11 +290,13 @@ void prepareInferStringRequest(::KFSRequest& request, const std::string& name, c
     if (it != request.mutable_inputs()->end()) {
         tensor = &*it;
         if (!putBufferInInputTensorContent) {
+            SPDLOG_INFO("Putting into raw");
             content = request.mutable_raw_input_contents()->Mutable(bufferId);
         }
     } else {
         tensor = request.add_inputs();
         if (!putBufferInInputTensorContent) {
+            SPDLOG_INFO("Putting into raw");
             content = request.add_raw_input_contents();
         }
     }
@@ -304,9 +306,11 @@ void prepareInferStringRequest(::KFSRequest& request, const std::string& name, c
     tensor->add_shape(data.size());
     size_t dataSize = 1;
     if (!putBufferInInputTensorContent) {
+        SPDLOG_INFO("Putting into raw");
         content->resize(dataSize);
         std::memcpy(content->data(), data.data(), content->size());
     } else {
+        SPDLOG_INFO("Putting into non raw");
         for (auto inputData : data) {
             auto bytes_val = tensor->mutable_contents()->mutable_bytes_contents()->Add();
             bytes_val->append(inputData.data(), inputData.size());

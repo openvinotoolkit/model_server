@@ -46,6 +46,7 @@ public:
     enum class ProcessingHint {
         IMAGE,
         STRING,
+        OV_1D_STRING_TENSOR,
         NO_PROCESSING
     };
 

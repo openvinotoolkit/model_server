@@ -223,13 +223,25 @@ public:
 
     void checkOutputShape(const ResponseType& response, const signed_shape_t& shape, const std::string& outputName = "a");
 
+    static void checkOutputValuesU8(const TFSResponseType& response, const std::vector<uint8_t>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+        ASSERT_EQ(response.outputs().count(outputName), 1);
+        const auto& output_tensor = response.outputs().at(outputName);
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(const_cast<char*>(output_tensor.tensor_content().data()));
+        std::vector<uint8_t> actualValues(buffer, buffer + output_tensor.tensor_content().size() / sizeof(uint8_t));
+        ASSERT_EQ(actualValues.size(), expectedValues.size());
+        ASSERT_EQ(std::memcmp(actualValues.data(), expectedValues.data(), expectedValues.size() * sizeof(uint8_t)), 0)
+            << readableError(expectedValues.data(), actualValues.data(), expectedValues.size() * sizeof(uint8_t));
+    }
     static void checkOutputValues(const TFSResponseType& response, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
         ASSERT_EQ(response.outputs().count(outputName), 1);
         const auto& output_tensor = response.outputs().at(outputName);
         float* buffer = reinterpret_cast<float*>(const_cast<char*>(output_tensor.tensor_content().data()));
         std::vector<float> actualValues(buffer, buffer + output_tensor.tensor_content().size() / sizeof(float));
-        ASSERT_EQ(0, std::memcmp(actualValues.data(), expectedValues.data(), expectedValues.size() * sizeof(float)))
+        ASSERT_EQ(std::memcmp(actualValues.data(), expectedValues.data(), expectedValues.size() * sizeof(float)), 0)
             << readableError(expectedValues.data(), actualValues.data(), expectedValues.size() * sizeof(float));
+    }
+    static void checkOutputValuesU8(const ovms::InferenceResponse& res, const std::vector<uint8_t>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+        FAIL() << "not supported";
     }
     static void checkOutputValues(const ovms::InferenceResponse& res, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
         InferenceResponse& response = const_cast<InferenceResponse&>(res);
@@ -273,6 +285,26 @@ public:
                 }
             } else if (responseOutput.datatype() == "BYTES") {
                 ASSERT_EQ(0, std::memcmp(&responseOutput.contents().bytes_contents(), expectedValues.data(), expectedValues.size() * sizeof(float)));
+            }
+        }
+    }
+    static void checkOutputValuesU8(const KFSResponse& response, const std::vector<uint8_t>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+        KFSOutputTensorIteratorType it;
+        size_t bufferId;
+        auto status = getOutput(response, outputName, it, bufferId);
+        ASSERT_TRUE(status.ok()) << "Couln't find output:" << outputName;
+        if (response.raw_output_contents().size() > 0) {
+            uint8_t* buffer = reinterpret_cast<uint8_t*>(const_cast<char*>(response.raw_output_contents(bufferId).data()));
+            ASSERT_EQ(response.raw_output_contents(bufferId).size(), expectedValues.size());
+            ASSERT_EQ(std::memcmp(buffer, expectedValues.data(), expectedValues.size() * sizeof(uint8_t)), 0)
+                << readableError(expectedValues.data(), buffer, expectedValues.size() * sizeof(uint8_t));
+        } else {
+            auto& responseOutput = *it;
+            if (responseOutput.datatype() == "BYTES") {
+                ASSERT_EQ(expectedValues.size(), responseOutput.contents().bytes_contents().size());
+                ASSERT_EQ(std::memcmp(&responseOutput.contents().bytes_contents(), expectedValues.data(), expectedValues.size() * sizeof(float)), 0);
+            } else {
+                FAIL() << "data is not bytes";
             }
         }
     }
@@ -1572,7 +1604,7 @@ TYPED_TEST(TestPredict, InferenceWithNegativeShapeDynamicParameter) {
     ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 }
 
-TYPED_TEST(TestPredict, InferenceWithStringInputs_positive) {
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
         GTEST_SKIP() << "String inputs not supported for C-API";
     typename TypeParam::first_type request;
@@ -1587,7 +1619,39 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive) {
     typename TypeParam::second_type response;
     ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     this->checkOutputShape(response, {2, 11}, PASSTHROUGH_MODEL_OUTPUT_NAME);
-    // TODO: verify if response data match expectations
+    std::vector<uint8_t> expectedData = {
+        'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
+        'S', 't', 'r', 'i', 'n', 'g', 0, 0, 0, 0, 0};
+    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
+    prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings);
+    ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    config.parseShapeParameter("(-1)");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    this->checkOutputShape(response, {1, 33}, PASSTHROUGH_MODEL_OUTPUT_NAME);
+    std::vector<uint8_t> expectedData = {
+        4, 0, 0, 0,  // batch size
+        0, 0, 0, 0,  // first string start offset
+        3, 0, 0, 0,  // end of "ala" in condensed content
+        3, 0, 0, 0,  // end of "" in condensed content
+        5, 0, 0, 0,  // end of "ma" in condensed content
+        9, 0, 0, 0,  // end of "kota" in condensed content
+        'a', 'l', 'a',
+        'm', 'a',
+        'k', 'o', 't', 'a'};
+    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME);
 }
 
 #pragma GCC diagnostic pop
