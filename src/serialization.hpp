@@ -133,8 +133,10 @@ Status serializePredictResponse(
         }
         auto& inferOutputTensor = protoGetter.createOutput(outputInfo->getMappedName());
         if (useSharedOutputContent) {
+            SPDLOG_ERROR("SERIALIZING TO RAW");
             status = serializeTensorToTensorProtoRaw(inferOutputTensor, protoGetter.createContent(outputInfo->getMappedName()), outputInfo, tensor);
         } else {
+            SPDLOG_ERROR("SERIALIZING TO NON-RAW");
             status = serializeTensorToTensorProto(inferOutputTensor, outputInfo, tensor);
         }
 

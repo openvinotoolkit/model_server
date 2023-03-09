@@ -195,6 +195,7 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     if (!status.ok()) {
         return status;
     }
+    SPDLOG_INFO("AAAAAAAAAAAAAAAAAA: {} {}", tensorInfo->isInfluencedByDemultiplexer(), tensorInfo->getShape().size() == 5);
     // 4 for default pipelines, 5 for pipelines with demultiplication at entry
     bool isShapeLengthValid = tensorInfo->getShape().size() == 4 ||
                               (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
@@ -215,6 +216,7 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
             return StatusCode::STRING_VAL_EMPTY;
         }
     }
+    SPDLOG_INFO("AAAAAAAAAAAAAAAAAA: {} {}", tensorInfo->isInfluencedByDemultiplexer(), tensorInfo->getShape().size() == 5);
     return StatusCode::OK;
 }
 
@@ -227,6 +229,7 @@ static Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     if (!status.ok()) {
         return status;
     }
+    SPDLOG_INFO("AAAAAAAAAAAAAAAAAA: {} {}", tensorInfo->isInfluencedByDemultiplexer(), tensorInfo->getShape().size() == 5);
     // 4 for default pipelines, 5 for pipelines with demultiplication at entry
     bool isShapeLengthValid = tensorInfo->getShape().size() == 4 ||
                               (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
@@ -376,6 +379,7 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
         }
         if (resizeNeeded(image, targetHeight.getStaticValue(), targetWidth.getStaticValue())) {
             if (!resizeSupported) {
+                SPDLOG_DEBUG("Reszie not supported");
                 return StatusCode::INVALID_SHAPE;
             }
             cv::Mat imageResized;

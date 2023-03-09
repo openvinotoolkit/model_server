@@ -129,6 +129,7 @@ if __name__ == '__main__':
         inputs[0].datatype = "BYTES"
         inputs[0].shape.extend([1])
         inputs[0].contents.bytes_contents.append(image_data[0])
+        print(inputs[0])
 
         outputs = []
         outputs.append(service_pb2.ModelInferRequest().InferRequestedOutputTensor())
@@ -141,6 +142,7 @@ if __name__ == '__main__':
         start_time = datetime.datetime.now()
         request.outputs.extend(outputs)
         response = grpc_stub.ModelInfer(request)
+        print(response)
         end_time = datetime.datetime.now()
 
         duration = (end_time - start_time).total_seconds() * 1000
