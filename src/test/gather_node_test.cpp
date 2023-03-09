@@ -310,15 +310,13 @@ protected:
     ::KFSResponse response;
 
     KFSTensorOutputProto* getPreparedTensor() {
-        KFSTensorOutputProto* ptr = nullptr;
         for (int i = 0; i < response.outputs_size(); i++) {
             auto* output = response.mutable_outputs(i);
             if (output->name() == tensorName) {
-                ptr = output;
-                break;
+                return output;
             }
         }
-        return ptr;
+        return nullptr;
     }
 };
 
@@ -369,5 +367,7 @@ TEST_F(KFSGatherExitNodeInputHandlerTest, UseContentsField) {
     bool useRaw = false;
     ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize, useRaw), StatusCode::OK);
     ASSERT_EQ(response.outputs_size(), 1);
-    ASSERT_EQ(response.raw_output_contents_size(), 0);
+    auto* ptr = getPreparedTensor();
+    ASSERT_NE(ptr, nullptr);
+    ASSERT_EQ(ptr->contents().int_contents_size(), 1);
 }

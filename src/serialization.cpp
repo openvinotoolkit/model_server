@@ -161,8 +161,9 @@ static void serializeContent(std::string* content, ov::Tensor& tensor) {
 
 #define SERIALIZE_BY_DATATYPE(contents, datatype)                                  \
     for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(datatype)) {        \
-        auto value = responseOutput.mutable_contents()->contents()->Add();         \
-        *value = (*(reinterpret_cast<const datatype*>((char*)tensor.data() + i))); \
+        if (static_cast<size_t>(responseOutput.mutable_contents()->contents()->size()) < (i / sizeof(datatype) + 1)) { \
+            *(responseOutput.mutable_contents()->contents()->Add()) = (*(reinterpret_cast<const datatype*>((char*)tensor.data() + i))); \
+        } \
     }
 
 static void serializeContent(::inference::ModelInferResponse::InferOutputTensor& responseOutput, ov::Tensor& tensor) {
@@ -188,6 +189,7 @@ static void serializeContent(::inference::ModelInferResponse::InferOutputTensor&
     } else if (responseOutput.datatype() == "FP64") {
         SERIALIZE_BY_DATATYPE(mutable_fp64_contents, double)
     } else if (responseOutput.datatype() == "BYTES") {
+        // TODO: Only add if not already added (gather optimisation)
         responseOutput.mutable_contents()->add_bytes_contents((char*)tensor.data(), tensor.get_byte_size());
     }
 }
