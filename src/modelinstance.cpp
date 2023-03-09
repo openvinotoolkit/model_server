@@ -856,7 +856,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     }
     try {
         bool isModelLoadedFromCache = compiledModel->get_property(ov::loaded_from_cache);
-        SPDLOG_DEBUG("Is model loaded from cache: {}", isModelLoadedFromCache);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Is model loaded from cache: {}", isModelLoadedFromCache);
     } catch (...) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
     }
