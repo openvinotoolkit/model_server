@@ -117,7 +117,7 @@ std::string tensorShapeToString(const KFSShapeType& shape) {
     return oss.str();
 }
 
-Status prepareConsolidatedTensorImpl(KFSResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size) {
+Status prepareConsolidatedTensorImpl(KFSResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size, bool useRaw) {
     OVMS_PROFILE_FUNCTION();
     for (int i = 0; i < response->outputs_size(); i++) {
         if (response->mutable_outputs(i)->name() == name) {
@@ -125,6 +125,7 @@ Status prepareConsolidatedTensorImpl(KFSResponse* response, const std::string& n
             return StatusCode::INTERNAL_ERROR;
         }
     }
+    // TODO: useRaw
     auto* proto = response->add_outputs();
     proto->set_name(name);
     auto* content = response->add_raw_output_contents();

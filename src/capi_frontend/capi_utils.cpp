@@ -140,7 +140,7 @@ Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string
 const std::string& getRequestServableName(const ovms::InferenceRequest& request) {
     return request.getServableName();
 }
-Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size) {
+Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size, bool useRaw) {
     InferenceTensor* outputTensor{nullptr};
     Status status = response->addOutput(
         name,

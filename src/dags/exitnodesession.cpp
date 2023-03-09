@@ -24,10 +24,10 @@
 namespace ovms {
 
 template <typename ResponseType>
-ExitNodeSession<ResponseType>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ResponseType* response) :
+ExitNodeSession<ResponseType>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ResponseType* response, bool useRaw) :
     NodeSession(metadata, nodeName, inputsCount, collapsingDetails) {
     if (collapsingDetails.collapsedSessionNames.size() != 0) {
-        this->inputHandler = std::make_unique<GatherExitNodeInputHandler<ResponseType>>(inputsCount, collapsingDetails, response);
+        this->inputHandler = std::make_unique<GatherExitNodeInputHandler<ResponseType>>(inputsCount, collapsingDetails, response, useRaw);
     }
 }
 
@@ -40,8 +40,8 @@ template <typename ResponseType>
 ExitNodeSession<ResponseType>::~ExitNodeSession() = default;
 
 template class ExitNodeSession<InferenceResponse>;
-template ExitNodeSession<tensorflow::serving::PredictResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, tensorflow::serving::PredictResponse* response);
-template ExitNodeSession<::KFSResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ::KFSResponse* response);
+template ExitNodeSession<tensorflow::serving::PredictResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, tensorflow::serving::PredictResponse* response, bool useRaw);
+template ExitNodeSession<::KFSResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ::KFSResponse* response, bool useRaw);
 
 template const TensorMap& ExitNodeSession<tensorflow::serving::PredictResponse>::getInputTensors() const;
 template const TensorMap& ExitNodeSession<::KFSResponse>::getInputTensors() const;

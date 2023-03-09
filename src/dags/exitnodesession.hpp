@@ -29,8 +29,9 @@ class NodeSessionMetadata;
 
 template <typename ResponseType>
 class ExitNodeSession : public NodeSession {
+    bool useRaw;
 public:
-    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ResponseType* response);
+    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ResponseType* response, bool useRaw = true);
     virtual ~ExitNodeSession();
     const TensorMap& getInputTensors() const;
 };

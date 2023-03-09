@@ -118,7 +118,7 @@ Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype) {
     return it->second;
 }
 
-Status prepareConsolidatedTensorImpl(TFSPredictResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size) {
+Status prepareConsolidatedTensorImpl(TFSPredictResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size, bool useRaw) {
     OVMS_PROFILE_FUNCTION();
     tensorflow::TensorProto tensorProto;
     auto [it, isInserted] = response->mutable_outputs()->insert(google::protobuf::MapPair<std::string, tensorflow::TensorProto>(name, std::move(tensorProto)));

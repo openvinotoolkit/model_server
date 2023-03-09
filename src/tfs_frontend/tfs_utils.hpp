@@ -38,7 +38,7 @@ TFSDataType getPrecisionAsDataType(Precision precision);
 std::string getDataTypeAsString(TFSDataType dataType);
 
 std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
-Status prepareConsolidatedTensorImpl(TFSPredictResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size);
+Status prepareConsolidatedTensorImpl(TFSPredictResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size, bool useRaw = false);
 const std::string& getRequestServableName(const TFSPredictRequest& request);
 Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::string& name, bool& isNativeFileFormatUsed);
 bool isNativeFileFormatUsed(const TFSInputTensorType& request);

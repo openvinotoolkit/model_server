@@ -33,13 +33,14 @@ namespace ovms {
 template <class ResponseType>
 class GatherExitNodeInputHandler : public GatherNodeInputHandler {
     ResponseType* response;
+    bool useRaw;
 
     Status prepareConsolidatedTensor(ov::Tensor& tensorOut, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape) const override {
         OVMS_PROFILE_FUNCTION();
         auto numOfElements = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<ov::Shape::value_type>());
         size_t numOfBytes = numOfElements * ov::element::Type(precision).size();
         char* buffer = nullptr;
-        auto status = prepareConsolidatedTensorImpl(response, name, precision, shape, buffer, numOfBytes);
+        auto status = prepareConsolidatedTensorImpl(response, name, precision, shape, buffer, numOfBytes, useRaw);
         if (!status.ok()) {
             return status;
         }
@@ -52,9 +53,10 @@ class GatherExitNodeInputHandler : public GatherNodeInputHandler {
     }
 
 public:
-    GatherExitNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails, ResponseType* response) :
+    GatherExitNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails, ResponseType* response, bool useRaw = true) :
         GatherNodeInputHandler(inputsMissingCount, collapsingDetails),
-        response(response) {}
+        response(response),
+        useRaw(useRaw) {}
 };
 
 }  // namespace ovms
