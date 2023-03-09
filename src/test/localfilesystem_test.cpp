@@ -158,3 +158,11 @@ TEST(FileSystem, CreateTempFolder) {
     EXPECT_TRUE((p & fs::perms::others_read) == fs::perms::none);
     EXPECT_TRUE((p & fs::perms::owner_read) != fs::perms::none);
 }
+
+TEST(FileSystem, CheckIfPathIsEscaped) {
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("/../"));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("/.."));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("../"));
+    ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/..resnet/"));
+    ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/resnet../"));
+}
