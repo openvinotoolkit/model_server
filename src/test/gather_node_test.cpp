@@ -364,3 +364,10 @@ TEST_F(KFSGatherExitNodeInputHandlerTest, TensorAlreadyExistsInProto) {
     response.add_raw_output_contents();
     ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize), StatusCode::INTERNAL_ERROR);
 }
+
+TEST_F(KFSGatherExitNodeInputHandlerTest, UseContentsField) {
+    bool useRaw = false;
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, tensorName, ov::element::Type_t::i32, {1, 10}, buffer, requestedBufferSize, useRaw), StatusCode::OK);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 0);
+}
