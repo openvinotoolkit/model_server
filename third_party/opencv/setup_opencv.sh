@@ -56,9 +56,9 @@ if [ -z "$1" ]
     git clone https://github.com/opencv/opencv.git
     mkdir opencv/release
     cd opencv_contrib
-    git checkout 3.4
+    git checkout 4.7.0
     cd ../opencv
-    git checkout 3.4
+    git checkout 4.7.0
     cd release
     cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local \
           -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_ts=OFF \

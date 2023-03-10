@@ -90,12 +90,6 @@ http_archive(
 #    name = "google_mediapipe",
 #    remote = "https://github.com/google/mediapipe",
 #    tag = "v0.9.1",
-#    patches = [
-#        "make_mediapipe_modules_public.patch"
-#    ],
-#    patch_args = [
-#        "-p1",
-#    ],
 #)
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -225,9 +219,13 @@ cc_library(
         "-l:libopencv_videoio.so",
     ],
     visibility = ["//visibility:public"],
+    hdrs = glob([
+        "include/**/*.*"
+    ]),
+    strip_include_prefix = "include/opencv4",
 )
 """,
-    path = "/usr/local",
+    path = "/opt/opencv/",
 )
 ########################################################### Mediapipe end
 
@@ -409,3 +407,9 @@ new_local_repository(
     path = "/opt/opencv",
 )
 ################## END OF OPENCV DEPENDENCY ##########
+
+new_local_repository(
+    name = "mediapipe_calculators",
+    build_file = "@//third_party/mediapipe_calculators:BUILD",
+    path = "/mediapipe",
+)
