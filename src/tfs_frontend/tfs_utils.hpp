@@ -32,7 +32,6 @@ using TFSInputTensorType = tensorflow::TensorProto;
 
 namespace ovms {
 class Status;
-class TensorInfo;
 
 Precision TFSPrecisionToOvmsPrecision(const TFSDataType& s);
 TFSDataType getPrecisionAsDataType(Precision precision);
@@ -43,6 +42,5 @@ Status prepareConsolidatedTensorImpl(TFSPredictResponse* response, const std::st
 const std::string& getRequestServableName(const TFSPredictRequest& request);
 Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::string& name, bool& isNativeFileFormatUsed);
 bool isNativeFileFormatUsed(const TFSInputTensorType& request);
-bool isStringFormatUsed(const TFSInputTensorType& request, const TensorInfo& tensorInfo);
 bool hasString(const TFSInputTensorType& proto);
 }  // namespace ovms

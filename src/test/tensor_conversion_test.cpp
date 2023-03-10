@@ -716,7 +716,7 @@ TYPED_TEST(StringInputsConversionTest, u8_1d) {
     this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
     std::string buffer;
-    ASSERT_EQ(convertStringTo1DOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringRequesto1DOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_element_type(), ov::element::u8);
     ASSERT_EQ(tensor.get_size(), 33);
     std::vector<uint8_t> expectedData = {
@@ -729,8 +729,8 @@ TYPED_TEST(StringInputsConversionTest, u8_1d) {
         'a', 'l', 'a',
         'm', 'a',
         'k', 'o', 't', 'a'};
-    ASSERT_EQ(std::memcmp(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size()), 0);
-    // TODO: print the actual data
+    ASSERT_EQ(std::memcmp(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size()), 0)
+        << readableError(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size());
 }
 
 }  // namespace

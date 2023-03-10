@@ -156,10 +156,6 @@ bool isNativeFileFormatUsed(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
 }
 
-bool isStringFormatUsed(const KFSTensorInputProto& proto, const TensorInfo& tensorInfo) {
-    return proto.datatype() == "BYTES" && tensorInfo.getProcessingHint() == TensorInfo::ProcessingHint::STRING;
-}
-
 bool hasString(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
 }

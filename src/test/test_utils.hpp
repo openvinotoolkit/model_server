@@ -227,10 +227,10 @@ template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
     std::stringstream ss;
     for (size_t i = 0; i < size; ++i) {
-        //if (actual_output[i] != expected_output[i]) {
-        ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
-        //break;
-        //}
+        if (actual_output[i] != expected_output[i]) {
+            ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
+            break;
+        }
     }
     return ss.str();
 }

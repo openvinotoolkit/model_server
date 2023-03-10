@@ -38,7 +38,6 @@
 
 namespace ovms {
 
-// TODO: move to utils
 #define RETURN_IF_ERR(X)   \
     {                      \
         auto status = (X); \
@@ -357,13 +356,13 @@ Status deserializePredictRequest(
             ov::Tensor tensor;
 
             if (hasString(requestInput)) {
-                // TODO: 2023.1 => TensorInfo::ProcessingHint::REAL_OV_STRING
                 switch (tensorInfo->getProcessingHint()) {
-                case TensorInfo::ProcessingHint::OV_1D_STRING_TENSOR:
-                    // MUSE enablement deserialization
-                    RETURN_IF_ERR(convertStringTo1DOVTensor(requestInput, tensor, nullptr));
+                case TensorInfo::ProcessingHint::STRING_1D_U8:
+                    SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequesto1DOVTensor(requestInput, tensor, nullptr));
                     break;
-                case TensorInfo::ProcessingHint::STRING:
+                case TensorInfo::ProcessingHint::STRING_2D_U8:
+                    SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
                     RETURN_IF_ERR(convertStringRequestTensorToOVTensor(requestInput, tensor, nullptr));
                     break;
                 case TensorInfo::ProcessingHint::IMAGE:
@@ -431,12 +430,13 @@ Status deserializePredictRequest(
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
             if (hasString(*requestInputItr)) {
-                // TODO: 2023.1 => TensorInfo::ProcessingHint::REAL_OV_STRING
                 switch (tensorInfo->getProcessingHint()) {
-                case TensorInfo::ProcessingHint::OV_1D_STRING_TENSOR:
-                    RETURN_IF_ERR(convertStringTo1DOVTensor(*requestInputItr, tensor, bufferLocation));
+                case TensorInfo::ProcessingHint::STRING_1D_U8:
+                    SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequesto1DOVTensor(*requestInputItr, tensor, bufferLocation));
                     break;
-                case TensorInfo::ProcessingHint::STRING:
+                case TensorInfo::ProcessingHint::STRING_2D_U8:
+                    SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
                     RETURN_IF_ERR(convertStringRequestTensorToOVTensor(*requestInputItr, tensor, bufferLocation));
                     break;
                 case TensorInfo::ProcessingHint::IMAGE:

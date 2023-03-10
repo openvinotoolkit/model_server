@@ -1428,6 +1428,14 @@ TYPED_TEST(PredictValidationString2DTest, shape_change_required) {
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
 }
 
+TYPED_TEST(PredictValidationString2DTest, string_not_allowed_with_demultiplexer) {
+    this->mockedInputsInfo[this->tensorName] = this->mockedInputsInfo[this->tensorName]->createCopyWithDemultiplexerDimensionPrefix(ovms::Dimension::any());
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
+}
+
 template <typename TensorType>
 class PredictValidationString1DTest : public ::testing::Test {
 protected:
@@ -1466,6 +1474,14 @@ TYPED_TEST(PredictValidationString1DTest, negative_negative_shape) {
     prepareInferStringInputWithNegativeShape(this->request, this->tensorName);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TYPED_TEST(PredictValidationString1DTest, string_not_allowed_with_demultiplexer) {
+    this->mockedInputsInfo[this->tensorName] = this->mockedInputsInfo[this->tensorName]->createCopyWithDemultiplexerDimensionPrefix(ovms::Dimension::any());
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
 #pragma GCC diagnostic pop

@@ -478,9 +478,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorShapeValueNegat
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::INVALID_SHAPE);
 }
 
-// TODO: Disabled, due to validation changes it hits INVALID_PRECISION instead
-// This is due to the fact that test endpoint is 2D FP32 so processing hint is neither string nor image
-TEST_F(EnsembleFlowValidationTest, DISABLED_DummyModelProtoValidationErrorBinaryInputWrongNumberOfShapeDimensions) {
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputWrongNumberOfShapeDimensions) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -490,13 +488,16 @@ TEST_F(EnsembleFlowValidationTest, DISABLED_DummyModelProtoValidationErrorBinary
     proto1.mutable_tensor_shape()->add_dim()->set_size(1);
     proto1.mutable_tensor_shape()->add_dim()->set_size(1);
 
+    // enforce the endpoint to be 4d to not fall into string handling
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 224, 224, 3},
+        ovms::Layout{"NHWC"});
     auto pipeline = createDummyPipeline(managerWithDummyModel);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
-// TODO: Disabled, due to validation changes it hits INVALID_PRECISION instead
-// This is due to the fact that test endpoint is 2D FP32 so processing hint is neither string nor image
-TEST_F(EnsembleFlowValidationTest, DISABLED_DummyModelProtoValidationErrorBinaryInputBatchSizeMismatch) {
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputBatchSizeMismatch) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -505,6 +506,11 @@ TEST_F(EnsembleFlowValidationTest, DISABLED_DummyModelProtoValidationErrorBinary
     proto1.set_dtype(tensorflow::DataType::DT_STRING);
     proto1.mutable_tensor_shape()->add_dim()->set_size(2);
 
+    // enforce the endpoint to be 4d to not fall into string handling
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 224, 224, 3},
+        ovms::Layout{"NHWC"});
     auto pipeline = createDummyPipeline(managerWithDummyModel);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::INVALID_BATCH_SIZE);
 }

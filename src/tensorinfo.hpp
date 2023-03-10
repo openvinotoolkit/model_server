@@ -45,8 +45,8 @@ class TensorInfo {
 public:
     enum class ProcessingHint {
         IMAGE,
-        STRING,
-        OV_1D_STRING_TENSOR,
+        STRING_1D_U8,
+        STRING_2D_U8,
         NO_PROCESSING
     };
 
@@ -186,7 +186,7 @@ public:
     const Shape& getShape() const;
     void setShape(const Shape& shape);
 
-    const ProcessingHint& getProcessingHint() const;
+    ProcessingHint getProcessingHint() const;
 
     bool isInfluencedByDemultiplexer() const;
 
@@ -222,11 +222,6 @@ protected:
          * @brief Model input shape
          */
     Shape shape;
-
-    /**
-         * @brief Processing hint
-         */
-    ProcessingHint processingHint;
 
     /**
          * @brief Tensor layout

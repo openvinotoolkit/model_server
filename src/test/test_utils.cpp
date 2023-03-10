@@ -290,13 +290,11 @@ void prepareInferStringRequest(::KFSRequest& request, const std::string& name, c
     if (it != request.mutable_inputs()->end()) {
         tensor = &*it;
         if (!putBufferInInputTensorContent) {
-            SPDLOG_INFO("Putting into raw");
             content = request.mutable_raw_input_contents()->Mutable(bufferId);
         }
     } else {
         tensor = request.add_inputs();
         if (!putBufferInInputTensorContent) {
-            SPDLOG_INFO("Putting into raw");
             content = request.add_raw_input_contents();
         }
     }
@@ -306,11 +304,9 @@ void prepareInferStringRequest(::KFSRequest& request, const std::string& name, c
     tensor->add_shape(data.size());
     size_t dataSize = 1;
     if (!putBufferInInputTensorContent) {
-        SPDLOG_INFO("Putting into raw");
         content->resize(dataSize);
         std::memcpy(content->data(), data.data(), content->size());
     } else {
-        SPDLOG_INFO("Putting into non raw");
         for (auto inputData : data) {
             auto bytes_val = tensor->mutable_contents()->mutable_bytes_contents()->Add();
             bytes_val->append(inputData.data(), inputData.size());
@@ -331,7 +327,7 @@ void prepareInferStringRequest(tensorflow::serving::PredictRequest& request, con
 void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<std::string> expectedStrings) {
     size_t maxStringLength = 0;
     for (const auto& input : expectedStrings) {
-        maxStringLength = std::max(maxStringLength, input.length());
+        maxStringLength = std::max(maxStringLength, input.size());
     }
     size_t width = maxStringLength + 1;
     size_t i = 0;
@@ -341,9 +337,14 @@ void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<s
     ASSERT_EQ(tensor.get_size(), (width * expectedStrings.size()));
     for (const auto& input : expectedStrings) {
         for (size_t j = 0; j < input.size(); j++) {
-            ASSERT_EQ(tensor.data<uint8_t>()[i * width + j], reinterpret_cast<const uint8_t*>(input.data())[j]) << "Tensor data does not match expectations.";
+            ASSERT_EQ(
+                tensor.data<uint8_t>()[i * width + j],
+                reinterpret_cast<const uint8_t*>(input.data())[j])
+                << "Tensor data does not match expectations for input: " << input << " at index: " << i << " and position: " << j;
         }
-        ASSERT_EQ(tensor.data<uint8_t>()[i * width + input.size()], 0);
+        for (size_t j = input.size(); j < width; j++) {
+            ASSERT_EQ(tensor.data<uint8_t>()[i * width + j], 0);
+        }
         i++;
     }
 }

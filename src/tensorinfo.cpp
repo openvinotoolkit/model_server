@@ -55,14 +55,14 @@ TensorInfo::TensorInfo(const std::string& name,
     const Layout& layout) :
     TensorInfo(name, "", precision, shape, layout) {}
 
-template <class T>
-static TensorInfo::ProcessingHint getProcessingHintFromInputInfo(const std::vector<T>& shape, const ovms::Precision& precision) {
-    if (shape.size() == 3 || shape.size() == 4) {
+TensorInfo::ProcessingHint TensorInfo::getProcessingHint() const {
+    size_t expectedDimsForImage = this->influencedByDemultiplexer ? 5 : 4;
+    if (this->shape.size() == 2 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
+        return TensorInfo::ProcessingHint::STRING_2D_U8;
+    } else if (this->shape.size() == 1 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
+        return TensorInfo::ProcessingHint::STRING_1D_U8;
+    } else if (this->shape.size() == expectedDimsForImage) {
         return TensorInfo::ProcessingHint::IMAGE;
-    } else if (shape.size() == 2 && precision == ovms::Precision::U8) {
-        return TensorInfo::ProcessingHint::STRING;
-    } else if (shape.size() == 1 && precision == ovms::Precision::U8) {
-        return TensorInfo::ProcessingHint::OV_1D_STRING_TENSOR;
     } else {
         return TensorInfo::ProcessingHint::NO_PROCESSING;
     }
@@ -78,7 +78,6 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-    processingHint = getProcessingHintFromInputInfo(shape, precision);
 }
 
 TensorInfo::TensorInfo(const std::string& name,
@@ -91,7 +90,6 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-    processingHint = getProcessingHintFromInputInfo(shape, precision);
 }
 
 const std::string& TensorInfo::getName() const {
@@ -144,10 +142,6 @@ void TensorInfo::setShape(const Shape& shape) {
 
 const Shape& TensorInfo::getShape() const {
     return this->shape;
-}
-
-const TensorInfo::ProcessingHint& TensorInfo::getProcessingHint() const {
-    return this->processingHint;
 }
 
 void TensorInfo::setLayout(const Layout& layout) {
