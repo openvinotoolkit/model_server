@@ -320,10 +320,11 @@ cc_library(
         "@cpprest//:sdk",
         "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
-        "@google_mediapipe//mediapipe/framework:calculator_graph",
+        "@google_mediapipe//mediapipe/framework:calculator_framework",
         "@google_mediapipe//mediapipe/framework/port:logging",
         "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
         "@google_mediapipe//mediapipe/framework/port:status",
+        "@mediapipe_calculators//:mediapipe_calculators",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
@@ -332,7 +333,6 @@ cc_library(
         "@opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
         "//src/kfserving_api:kfserving_api_cpp",
-        "@google_mediapipe//mediapipe/framework:calculator_framework",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
@@ -355,6 +355,7 @@ cc_library(
     alwayslink = 1,
 )
 
+#OPENVINO CALCULATORS
 cc_binary(
     name = "object_detection_openvino",
     data = [
@@ -364,7 +365,17 @@ cc_binary(
     ],
     deps = [
         "@google_mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
-        "@google_mediapipe//mediapipe/graphs/object_detection:desktop_openvino_calculators",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+)
+
+#OPENCV CALCULATORS
+cc_binary(
+    name = "face_mesh_tflite",
+    data = ["@google_mediapipe//mediapipe/modules/face_landmark:face_landmark_with_attention.tflite"],
+    deps = [
+        "@google_mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
+        "@google_mediapipe//mediapipe/graphs/face_mesh:desktop_calculators",
     ],
 )
 
@@ -413,7 +424,7 @@ cc_binary(
     srcs = ["hello_world.cc"],
     deps = [
         "//src:ovms_calculator",
-        "@google_mediapipe//mediapipe/framework:calculator_graph",
+        "@google_mediapipe//mediapipe/framework:calculator_framework",
         "@google_mediapipe//mediapipe/framework/port:logging",
         "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
         "@google_mediapipe//mediapipe/framework/port:status",
