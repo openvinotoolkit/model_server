@@ -208,7 +208,7 @@ new_local_repository(
 cc_library(
     name = "opencv",
     linkopts = [
-        "-L/usr/local/lib",
+        "-L/opt/opencv/lib",
         "-l:libopencv_core.so",
         "-l:libopencv_calib3d.so",
         "-l:libopencv_features2d.so",
