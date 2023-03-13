@@ -23,7 +23,73 @@
 using std::cout;
 using std::endl;
 
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/core/framework/types.h"
+using std::cout;
+using std::endl;
+
 namespace mediapipe {
+namespace tf = ::tensorflow;
+
+absl::Status ExecuteDummy() {
+    // Configures a simple graph, which concatenates 2 PassThroughCalculators.
+    CalculatorGraphConfig config =
+        ParseTextProtoOrDie<CalculatorGraphConfig>(R"pb(
+                input_stream: "in"
+                output_stream: "out"
+                node {
+                  calculator: "OVMSCalculator"
+                  input_stream: "TFTENSOR:in"
+                  output_stream: "TFTENSOR:out"
+                }
+            )pb");
+
+    CalculatorGraph graph;
+    cout << __FILE__ << ":" << __LINE__ << endl;
+    auto ret = graph.Initialize(config);
+    LOG(ERROR) << ret;
+    cout << __FILE__ << ":" << __LINE__ << endl;
+    ASSIGN_OR_RETURN(OutputStreamPoller poller,
+        graph.AddOutputStreamPoller("out"));
+    cout << __FILE__ << ":" << __LINE__ << endl;
+    MP_RETURN_IF_ERROR(graph.StartRun({}));
+    cout << __FILE__ << ":" << __LINE__ << endl;
+    // Give 10 input packets that contains the same string "Hello World!".
+    for (int i = 0; i < 10; ++i) {
+        cout << __FILE__ << ":" << __LINE__ << endl;
+
+        tf::Tensor input_tensor(tensorflow::DT_FLOAT, tensorflow::TensorShape({1, 10}));
+        auto input_tensor_access = input_tensor.tensor<float, 2>();  // 2 since dummy is 2d
+        for (int x = 0; x < 10; ++x) {
+            input_tensor_access(0, x) = (float)(3 * x);
+        }
+        auto abstatus = graph.AddPacketToInputStream(
+            // TODO covnert float to proper tensor?
+            "in", MakePacket<tf::Tensor>(input_tensor).At(Timestamp(i)));
+        if (!abstatus.ok()) {
+            LOG(ERROR) << "XYZ:   " << abstatus;
+        }
+        MP_RETURN_IF_ERROR(abstatus);
+    }
+    cout << __FILE__ << ":" << __LINE__ << endl;
+    // Close the input stream "in".
+    MP_RETURN_IF_ERROR(graph.CloseInputStream("in"));
+    cout << __FILE__ << ":" << __LINE__ << endl;
+    mediapipe::Packet packet;
+    // Get the output packets string.
+    cout << __FILE__ << ":" << __LINE__ << endl;
+    while (poller.Next(&packet)) {
+        auto received = packet.Get<tf::Tensor>();
+        auto received_tensor_access = received.tensor<float, 2>();  // 2 since dummy is 2d
+        cout << "Received tensor: [";
+        for (int x = 0; x < 10; ++x) {
+            cout << received_tensor_access(0, x) << " ";
+        }
+        cout << " ]" << endl;
+    }
+    cout << __FILE__ << ":" << __LINE__ << endl;
+    return graph.WaitUntilDone();
+}
 absl::Status PrintHelloWorld() {
     // Configures a simple graph, which concatenates 2 PassThroughCalculators.
     CalculatorGraphConfig config =
@@ -44,9 +110,8 @@ absl::Status PrintHelloWorld() {
 
     CalculatorGraph graph;
     cout << __FILE__ << ":" << __LINE__ << endl;
-    // MP_RETURN_IF_ERROR(graph.Initialize(config));
     auto ret = graph.Initialize(config);
-    LOG(INFO) << ret;
+    LOG(ERROR) << ret;
     cout << __FILE__ << ":" << __LINE__ << endl;
     ASSIGN_OR_RETURN(OutputStreamPoller poller,
         graph.AddOutputStreamPoller("out"));
@@ -64,7 +129,7 @@ absl::Status PrintHelloWorld() {
     mediapipe::Packet packet;
     // Get the output packets string.
     while (poller.Next(&packet)) {
-        LOG(INFO) << packet.Get<float>();
+        LOG(ERROR) << packet.Get<float>();
     }
     return graph.WaitUntilDone();
 }
@@ -73,9 +138,8 @@ absl::Status PrintHelloWorld() {
 int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
     cout << __FILE__ << ":" << __LINE__ << endl;
-    auto grph = mediapipe::PrintHelloWorld();
+    auto grph = mediapipe::ExecuteDummy();
     cout << __FILE__ << ":" << __LINE__ << endl;
-    // CHECK(mediapipe::PrintHelloWorld().ok());
     CHECK(grph.ok());
     cout << __FILE__ << ":" << __LINE__ << endl;
     return 0;
