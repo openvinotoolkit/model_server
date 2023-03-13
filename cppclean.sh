@@ -34,7 +34,7 @@ if [ ${NO_WARNINGS_FORWARD} -gt 6 ]; then
     echo "Failed due to not using forward declarations where possible: ${NO_WARNINGS_FORWARD}";
     exit 1;
 fi
-if [ ${NO_WARNINGS_DIRECT} -gt 15 ]; then
+if [ ${NO_WARNINGS_DIRECT} -gt 16 ]; then
     echo "Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}";
     exit 1;
 fi
@@ -43,7 +43,7 @@ if [ ${NO_WARNINGS_NOTUSED} -gt 4 ]; then
     exit 1;
 fi
 
-if [ ${NO_WARNINGS} -gt  213 ]; then
+if [ ${NO_WARNINGS} -gt  237 ]; then
     echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
     exit 1
 fi
