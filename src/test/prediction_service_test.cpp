@@ -223,6 +223,15 @@ public:
 
     void checkOutputShape(const ResponseType& response, const signed_shape_t& shape, const std::string& outputName = "a");
 
+    static void checkOutputValuesU8(const TFSResponseType& response, const std::vector<uint8_t>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+        ASSERT_EQ(response.outputs().count(outputName), 1);
+        const auto& output_tensor = response.outputs().at(outputName);
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(const_cast<char*>(output_tensor.tensor_content().data()));
+        std::vector<uint8_t> actualValues(buffer, buffer + output_tensor.tensor_content().size() / sizeof(uint8_t));
+        ASSERT_EQ(actualValues.size(), expectedValues.size());
+        ASSERT_EQ(0, std::memcmp(actualValues.data(), expectedValues.data(), expectedValues.size() * sizeof(uint8_t)))
+            << readableError(expectedValues.data(), actualValues.data(), expectedValues.size() * sizeof(uint8_t));
+    }
     static void checkOutputValues(const TFSResponseType& response, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
         ASSERT_EQ(response.outputs().count(outputName), 1);
         const auto& output_tensor = response.outputs().at(outputName);
@@ -230,6 +239,9 @@ public:
         std::vector<float> actualValues(buffer, buffer + output_tensor.tensor_content().size() / sizeof(float));
         ASSERT_EQ(0, std::memcmp(actualValues.data(), expectedValues.data(), expectedValues.size() * sizeof(float)))
             << readableError(expectedValues.data(), actualValues.data(), expectedValues.size() * sizeof(float));
+    }
+    static void checkOutputValuesU8(const ovms::InferenceResponse& res, const std::vector<uint8_t>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+        FAIL() << "not supported";
     }
     static void checkOutputValues(const ovms::InferenceResponse& res, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
         InferenceResponse& response = const_cast<InferenceResponse&>(res);
@@ -273,6 +285,26 @@ public:
                 }
             } else if (responseOutput.datatype() == "BYTES") {
                 ASSERT_EQ(0, std::memcmp(&responseOutput.contents().bytes_contents(), expectedValues.data(), expectedValues.size() * sizeof(float)));
+            }
+        }
+    }
+    static void checkOutputValuesU8(const KFSResponse& response, const std::vector<uint8_t>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+        KFSOutputTensorIteratorType it;
+        size_t bufferId;
+        auto status = getOutput(response, outputName, it, bufferId);
+        ASSERT_TRUE(status.ok()) << "Couln't find output:" << outputName;
+        if (response.raw_output_contents().size() > 0) {
+            uint8_t* buffer = reinterpret_cast<uint8_t*>(const_cast<char*>(response.raw_output_contents(bufferId).data()));
+            ASSERT_EQ(response.raw_output_contents(bufferId).size(), expectedValues.size());
+            ASSERT_EQ(0, std::memcmp(buffer, expectedValues.data(), expectedValues.size() * sizeof(uint8_t)))
+                << readableError(expectedValues.data(), buffer, expectedValues.size() * sizeof(uint8_t));
+        } else {
+            auto& responseOutput = *it;
+            if (responseOutput.datatype() == "BYTES") {
+                ASSERT_EQ(expectedValues.size(), responseOutput.contents().bytes_contents().size());
+                ASSERT_EQ(std::memcmp(&responseOutput.contents().bytes_contents(), expectedValues.data(), expectedValues.size() * sizeof(float)), 0);
+            } else {
+                FAIL() << "data is not bytes";
             }
         }
     }

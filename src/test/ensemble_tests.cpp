@@ -488,6 +488,11 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputWron
     proto1.mutable_tensor_shape()->add_dim()->set_size(1);
     proto1.mutable_tensor_shape()->add_dim()->set_size(1);
 
+    // enforce the endpoint to be 4d to not fall into string handling
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 224, 224, 3},
+        ovms::Layout{"NHWC"});
     auto pipeline = createDummyPipeline(managerWithDummyModel);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
@@ -501,6 +506,11 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputBatc
     proto1.set_dtype(tensorflow::DataType::DT_STRING);
     proto1.mutable_tensor_shape()->add_dim()->set_size(2);
 
+    // enforce the endpoint to be 4d to not fall into string handling
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 224, 224, 3},
+        ovms::Layout{"NHWC"});
     auto pipeline = createDummyPipeline(managerWithDummyModel);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::INVALID_BATCH_SIZE);
 }

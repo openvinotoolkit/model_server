@@ -21,7 +21,6 @@
 
 namespace ovms {
 class Status;
-class TensorInfo;
 std::string tensorShapeToString(const KFSShapeType& tensorShape);
 
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s);
@@ -32,5 +31,5 @@ Status prepareConsolidatedTensorImpl(KFSResponse* response, const std::string& n
 const std::string& getRequestServableName(const KFSRequest& request);
 Status isNativeFileFormatUsed(const KFSRequest& request, const std::string& name, bool& nativeFileFormatUsed);
 bool isNativeFileFormatUsed(const KFSTensorInputProto& proto);
-bool isStringFormatUsed(const KFSTensorInputProto& proto, const TensorInfo& tensorInfo);
+bool requiresProcessing(const KFSTensorInputProto& proto);
 }  // namespace ovms

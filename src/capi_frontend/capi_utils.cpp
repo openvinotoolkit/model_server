@@ -170,4 +170,7 @@ Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::str
         name, response->getServableName(), response->getServableVersion());
     return StatusCode::INTERNAL_ERROR;
 }
+bool requiresProcessing(const InferenceTensor& tensor) {
+    return false;
+}
 }  // namespace ovms

@@ -462,8 +462,9 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
     return StatusCode::OK;
 }
 
+template <typename TensorType>
 Status convertStringRequestTensorToOVTensor(
-    const KFSTensorInputProto& src,
+    const TensorType& src,
     ov::Tensor& tensor,
     const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
@@ -471,40 +472,64 @@ Status convertStringRequestTensorToOVTensor(
         SPDLOG_DEBUG("STRING input should be located in bytes_contents field.");
         return StatusCode::NOT_IMPLEMENTED;
     }
+    int batchSize = getBinaryInputsSize(src);
     size_t maxStringLength = 0;
-    for (const auto& str : src.contents().bytes_contents()) {
-        maxStringLength = std::max(maxStringLength, str.size());
+    for (int i = 0; i < batchSize; i++) {
+        maxStringLength = std::max(maxStringLength, getBinaryInput(src, i).size());
     }
     size_t width = maxStringLength + 1;
-    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(src.contents().bytes_contents_size()), width});
-
-    size_t i = 0;
-    for (const auto& str : src.contents().bytes_contents()) {
-        std::memcpy(tensor.data<unsigned char>() + i * width, reinterpret_cast<const unsigned char*>(str.c_str()), str.size());
-        tensor.data<unsigned char>()[i * width + str.size()] = 0;
-        i++;
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(batchSize), width});
+    for (int i = 0; i < batchSize; i++) {
+        std::memcpy(
+            tensor.data<unsigned char>() + i * width,
+            reinterpret_cast<const unsigned char*>(getBinaryInput(src, i).c_str()),
+            getBinaryInput(src, i).size());
+        for (size_t j = getBinaryInput(src, i).size(); j < width; j++) {
+            tensor.data<unsigned char>()[i * width + j] = 0;
+        }
     }
     return StatusCode::OK;
 }
 
-Status convertStringRequestTensorToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
-    OVMS_PROFILE_FUNCTION();
-    size_t maxStringLength = 0;
-    for (const auto& str : src.string_val()) {
-        maxStringLength = std::max(maxStringLength, str.size());
+template <typename TensorType>
+Status convertStringRequesto1DOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
+    int batchSize = getBinaryInputsSize(src);
+    int64_t totalStringsLength = 0;
+    for (int i = 0; i < batchSize; i++) {
+        totalStringsLength += getBinaryInput(src, i).size();
     }
-    size_t width = maxStringLength + 1;
-    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(src.string_val_size()), width});
-    size_t i = 0;
-    for (const auto& str : src.string_val()) {
-        std::memcpy(tensor.data<unsigned char>() + i * width, reinterpret_cast<const unsigned char*>(str.c_str()), str.size());
-        tensor.data<unsigned char>()[i * width + str.size()] = 0;
-        i++;
+    // space for metadata:
+    // - batch size (uint32_t) x 1
+    // - first string start offset (uint32_t) x 1
+    // - end offsets for each batch of string (uint32_t) x batchSize
+    int64_t metadataLength = sizeof(uint32_t) * (batchSize + 2);
+    int64_t width = totalStringsLength + metadataLength;
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<size_t>(width)});
+    uint32_t* data = reinterpret_cast<uint32_t*>(tensor.data<uint8_t>());
+    data[0] = static_cast<uint32_t>(batchSize);
+    data[1] = 0;  // first string start offset
+    unsigned char* condensedStringsStart = tensor.data<unsigned char>() + metadataLength;
+    for (int64_t i = 0; i < batchSize; i++) {
+        // write end offset
+        data[i + 2] = data[i + 1] + getBinaryInput(src, i).size();
+        // write the bytes
+        if (getBinaryInput(src, i).size()) {
+            std::memcpy(
+                condensedStringsStart + data[i + 1],
+                reinterpret_cast<const unsigned char*>(getBinaryInput(src, i).c_str()),
+                getBinaryInput(src, i).size());
+        }
     }
     return StatusCode::OK;
 }
 
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
+
+template Status convertStringRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
+template Status convertStringRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+
+template Status convertStringRequesto1DOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
+template Status convertStringRequesto1DOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
 
 }  // namespace ovms

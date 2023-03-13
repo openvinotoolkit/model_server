@@ -38,6 +38,13 @@
 
 namespace ovms {
 
+#define RETURN_IF_ERR(X)   \
+    {                      \
+        auto status = (X); \
+        if (!status.ok())  \
+            return status; \
+    }
+
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo);
 
@@ -348,20 +355,27 @@ Status deserializePredictRequest(
             auto& requestInput = requestInputItr->second;
             ov::Tensor tensor;
 
-            if (isStringFormatUsed(requestInput, *tensorInfo)) {
-                status = convertStringRequestTensorToOVTensor(requestInput, tensor, nullptr);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("String input format conversion failed.");
-                    return status;
-                }
-            } else if (isNativeFileFormatUsed(requestInput)) {
-                SPDLOG_DEBUG("Request contains input in native file format: {}", name);
-                status = convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("Input native file format conversion failed.");
-                    return status;
+            if (requiresProcessing(requestInput)) {
+                switch (tensorInfo->getProcessingHint()) {
+                case TensorInfo::ProcessingHint::STRING_1D_U8:
+                    SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequesto1DOVTensor(requestInput, tensor, nullptr));
+                    break;
+                case TensorInfo::ProcessingHint::STRING_2D_U8:
+                    SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestTensorToOVTensor(requestInput, tensor, nullptr));
+                    break;
+                case TensorInfo::ProcessingHint::IMAGE:
+                    SPDLOG_DEBUG("Request contains input in native file format: {}", name);
+                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr));
+                    break;
+                default:
+                    SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
+                        name, tensorInfo->getShape().size(), toString(tensorInfo->getPrecision()), tensorInfo->isInfluencedByDemultiplexer());
+                    return StatusCode::NOT_IMPLEMENTED;
                 }
             } else {
+                // Data Array Format
                 tensor = deserializeTensorProto<TensorProtoDeserializator>(
                     requestInput, tensorInfo);
             }
@@ -415,18 +429,24 @@ Status deserializePredictRequest(
             auto inputIndex = requestInputItr - request.inputs().begin();
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
-            if (isStringFormatUsed(*requestInputItr, *tensorInfo)) {
-                status = convertStringRequestTensorToOVTensor(*requestInputItr, tensor, bufferLocation);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("String input format conversion failed.");
-                    return status;
-                }
-            } else if (isNativeFileFormatUsed(*requestInputItr)) {
-                SPDLOG_DEBUG("Request contains input in native file format: {}", name);
-                status = convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("Input native file format conversion failed.");
-                    return status;
+            if (requiresProcessing(*requestInputItr)) {
+                switch (tensorInfo->getProcessingHint()) {
+                case TensorInfo::ProcessingHint::STRING_1D_U8:
+                    SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequesto1DOVTensor(*requestInputItr, tensor, bufferLocation));
+                    break;
+                case TensorInfo::ProcessingHint::STRING_2D_U8:
+                    SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestTensorToOVTensor(*requestInputItr, tensor, bufferLocation));
+                    break;
+                case TensorInfo::ProcessingHint::IMAGE:
+                    SPDLOG_DEBUG("Request contains input in native file format: {}", name);
+                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation));
+                    break;
+                default:
+                    SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
+                        name, tensorInfo->getShape().size(), toString(tensorInfo->getPrecision()), tensorInfo->isInfluencedByDemultiplexer());
+                    return StatusCode::NOT_IMPLEMENTED;
                 }
             } else {
                 tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);

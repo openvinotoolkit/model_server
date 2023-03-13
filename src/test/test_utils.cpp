@@ -327,7 +327,7 @@ void prepareInferStringRequest(tensorflow::serving::PredictRequest& request, con
 void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<std::string> expectedStrings) {
     size_t maxStringLength = 0;
     for (const auto& input : expectedStrings) {
-        maxStringLength = std::max(maxStringLength, input.length());
+        maxStringLength = std::max(maxStringLength, input.size());
     }
     size_t width = maxStringLength + 1;
     size_t i = 0;
@@ -337,9 +337,14 @@ void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<s
     ASSERT_EQ(tensor.get_size(), (width * expectedStrings.size()));
     for (const auto& input : expectedStrings) {
         for (size_t j = 0; j < input.size(); j++) {
-            ASSERT_EQ(tensor.data<uint8_t>()[i * width + j], reinterpret_cast<const uint8_t*>(input.data())[j]) << "Tensor data does not match expectations.";
+            ASSERT_EQ(
+                tensor.data<uint8_t>()[i * width + j],
+                reinterpret_cast<const uint8_t*>(input.data())[j])
+                << "Tensor data does not match expectations for input: " << input << " at index: " << i << " and position: " << j;
         }
-        ASSERT_EQ(tensor.data<uint8_t>()[i * width + input.size()], 0);
+        for (size_t j = input.size(); j < width; j++) {
+            ASSERT_EQ(tensor.data<uint8_t>()[i * width + j], 0);
+        }
         i++;
     }
 }

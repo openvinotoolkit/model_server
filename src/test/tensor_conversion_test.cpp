@@ -711,4 +711,26 @@ TYPED_TEST(StringInputsConversionTest, raw_inputs_contents_not_implemented) {
     }
 }
 
+TYPED_TEST(StringInputsConversionTest, u8_1d) {
+    std::vector<std::string> expectedStrings = {"ala", "", "ma", "kota"};
+    this->prepareStringTensor(this->requestTensor, expectedStrings);
+    ov::Tensor tensor;
+    std::string buffer;
+    ASSERT_EQ(convertStringRequesto1DOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    ASSERT_EQ(tensor.get_element_type(), ov::element::u8);
+    ASSERT_EQ(tensor.get_size(), 33);
+    std::vector<uint8_t> expectedData = {
+        4, 0, 0, 0,  // batch size
+        0, 0, 0, 0,  // first string start offset
+        3, 0, 0, 0,  // end of "ala" in condensed content
+        3, 0, 0, 0,  // end of "" in condensed content
+        5, 0, 0, 0,  // end of "ma" in condensed content
+        9, 0, 0, 0,  // end of "kota" in condensed content
+        'a', 'l', 'a',
+        'm', 'a',
+        'k', 'o', 't', 'a'};
+    ASSERT_EQ(std::memcmp(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size()), 0)
+        << readableError(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size());
+}
+
 }  // namespace

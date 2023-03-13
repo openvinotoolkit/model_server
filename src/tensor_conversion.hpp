@@ -20,20 +20,15 @@
 
 #include "tensorinfo.hpp"
 
-namespace tensorflow {
-class TensorProto;
-}
-
-namespace inference {
-class ModelInferRequest_InferInputTensor;
-}
-
 namespace ovms {
 class Status;
 template <typename TensorType>
 Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 
-Status convertStringRequestTensorToOVTensor(const inference::ModelInferRequest_InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
-Status convertStringRequestTensorToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
+template <typename TensorType>
+Status convertStringRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer);
+
+template <typename TensorType>
+Status convertStringRequesto1DOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer);
 
 }  // namespace ovms
