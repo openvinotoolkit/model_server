@@ -429,6 +429,8 @@ void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 // \param response The respons object. In case of success, caller takes the ownership of the response
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
+OVMS_Status* OVMS_GRPCInference(const void* request, void* response);
+OVMS_Status* OVMS_GRPCInference2(void* server, const void* request, void* response);
 
 #ifdef __cplusplus
 }
