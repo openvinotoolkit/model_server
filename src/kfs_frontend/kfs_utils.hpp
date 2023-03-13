@@ -31,5 +31,5 @@ Status prepareConsolidatedTensorImpl(KFSResponse* response, const std::string& n
 const std::string& getRequestServableName(const KFSRequest& request);
 Status isNativeFileFormatUsed(const KFSRequest& request, const std::string& name, bool& nativeFileFormatUsed);
 bool isNativeFileFormatUsed(const KFSTensorInputProto& proto);
-bool hasString(const KFSTensorInputProto& proto);
+bool requiresProcessing(const KFSTensorInputProto& proto);
 }  // namespace ovms

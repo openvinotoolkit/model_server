@@ -355,7 +355,7 @@ Status deserializePredictRequest(
             auto& requestInput = requestInputItr->second;
             ov::Tensor tensor;
 
-            if (hasString(requestInput)) {
+            if (requiresProcessing(requestInput)) {
                 switch (tensorInfo->getProcessingHint()) {
                 case TensorInfo::ProcessingHint::STRING_1D_U8:
                     SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
@@ -370,8 +370,8 @@ Status deserializePredictRequest(
                     RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr));
                     break;
                 default:
-                    SPDLOG_DEBUG("String input: {} has no conversion hint to dim_size: {}; precision: {}",
-                        name, tensorInfo->getShape().size(), toString(tensorInfo->getPrecision()));
+                    SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
+                        name, tensorInfo->getShape().size(), toString(tensorInfo->getPrecision()), tensorInfo->isInfluencedByDemultiplexer());
                     return StatusCode::NOT_IMPLEMENTED;
                 }
             } else {
@@ -429,7 +429,7 @@ Status deserializePredictRequest(
             auto inputIndex = requestInputItr - request.inputs().begin();
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
-            if (hasString(*requestInputItr)) {
+            if (requiresProcessing(*requestInputItr)) {
                 switch (tensorInfo->getProcessingHint()) {
                 case TensorInfo::ProcessingHint::STRING_1D_U8:
                     SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
@@ -444,8 +444,8 @@ Status deserializePredictRequest(
                     RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation));
                     break;
                 default:
-                    SPDLOG_DEBUG("String input: {} has no conversion hint to dim_size: {}; precision: {}",
-                        name, tensorInfo->getShape().size(), toString(tensorInfo->getPrecision()));
+                    SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
+                        name, tensorInfo->getShape().size(), toString(tensorInfo->getPrecision()), tensorInfo->isInfluencedByDemultiplexer());
                     return StatusCode::NOT_IMPLEMENTED;
                 }
             } else {

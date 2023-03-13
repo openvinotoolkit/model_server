@@ -156,7 +156,7 @@ bool isNativeFileFormatUsed(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
 }
 
-bool hasString(const KFSTensorInputProto& proto) {
+bool requiresProcessing(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
 }
 }  // namespace ovms

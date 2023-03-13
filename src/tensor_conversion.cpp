@@ -498,19 +498,24 @@ Status convertStringRequesto1DOVTensor(const TensorType& src, ov::Tensor& tensor
     for (int i = 0; i < batchSize; i++) {
         totalStringsLength += getBinaryInput(src, i).size();
     }
-    int64_t width = totalStringsLength + sizeof(uint32_t) * (batchSize + 2);
+    // space for metadata:
+    // - batch size (uint32_t) x 1
+    // - first string start offset (uint32_t) x 1
+    // - end offsets for each batch of string (uint32_t) x batchSize
+    int64_t metadataLength = sizeof(uint32_t) * (batchSize + 2);
+    int64_t width = totalStringsLength + metadataLength;
     tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<size_t>(width)});
     uint32_t* data = reinterpret_cast<uint32_t*>(tensor.data<uint8_t>());
     data[0] = static_cast<uint32_t>(batchSize);
     data[1] = 0;  // first string start offset
-    unsigned char* condensedContentStart = tensor.data<unsigned char>() + sizeof(uint32_t) * (batchSize + 2);
+    unsigned char* condensedStringsStart = tensor.data<unsigned char>() + metadataLength;
     for (int64_t i = 0; i < batchSize; i++) {
         // write end offset
         data[i + 2] = data[i + 1] + getBinaryInput(src, i).size();
         // write the bytes
         if (getBinaryInput(src, i).size()) {
             std::memcpy(
-                condensedContentStart + data[i + 1],
+                condensedStringsStart + data[i + 1],
                 reinterpret_cast<const unsigned char*>(getBinaryInput(src, i).c_str()),
                 getBinaryInput(src, i).size());
         }

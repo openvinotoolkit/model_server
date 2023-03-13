@@ -901,7 +901,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         const Dimension& batchSize = inputInfo->getShape()[batchIndex.value()];
         Mode shapeMode = getShapeMode(shapeInfo, name);
 
-        if (hasString(proto)) {
+        if (requiresProcessing(proto)) {
             const auto processingHint = inputInfo->getProcessingHint();
             if (processingHint == TensorInfo::ProcessingHint::STRING_1D_U8) {
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 1D string input: name: {}; batch size: {}",
@@ -927,7 +927,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 }
                 continue;
             } else {
-                SPDLOG_DEBUG("String input: {} has no conversion hint to dim_size: {}; precision: {}; demultiplexer: {}",
+                SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
                     name, inputInfo->getShape().size(), toString(inputInfo->getPrecision()), inputInfo->isInfluencedByDemultiplexer());
                 return StatusCode::NOT_IMPLEMENTED;
             }
