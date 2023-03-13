@@ -434,29 +434,6 @@ cc_library(
 )
 
 cc_binary(
-    name = "hello_world",
-    srcs = ["hello_world.cc"],
-    deps = [
-        "//src:ovms_lib",
-        "@google_mediapipe//mediapipe/framework:calculator_graph",
-        "@google_mediapipe//mediapipe/framework/port:logging",
-        "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
-        "@google_mediapipe//mediapipe/framework/port:status",
-    ],
-)
-cc_binary(
-    name = "hello_ovms",
-    srcs = ["hello_ovms.cc"],
-    deps = [
-        "//src:ovms_lib",
-        "@google_mediapipe//mediapipe/framework:calculator_graph",
-        "@google_mediapipe//mediapipe/framework/port:logging",
-        "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
-        "@google_mediapipe//mediapipe/framework/port:status",
-    ],
-)
-
-cc_binary(
     name = "lib_node_mock.so",
     srcs = [
 	    "test/custom_nodes/node_mock.c",
