@@ -18,11 +18,20 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
+config_setting(
+    name = "disable_gpu",
+    define_values = {
+        "MEDIAPIPE_DISABLE_GPU": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "mediapipe_calculators",
     srcs = [],
     hdrs = [],
     visibility = ["//visibility:public"],
+    defines = ["MEDIAPIPE_DISABLE_GPU=1"],
     deps = [
         "@google_mediapipe//mediapipe/calculators/openvino:openvino_converter_calculator",
         "@google_mediapipe//mediapipe/calculators/openvino:openvino_inference_calculator",
@@ -77,6 +86,35 @@ cc_library(
         "@google_mediapipe//mediapipe/calculators/util:non_max_suppression_calculator",
         "@google_mediapipe//mediapipe/calculators/video:opencv_video_decoder_calculator",
         "@google_mediapipe//mediapipe/calculators/video:opencv_video_encoder_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:color_convert_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:opencv_encoded_image_to_image_frame_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:opencv_image_encoder_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:opencv_put_text_calculator",
+        #GPU"@google_mediapipe//mediapipe/calculators/image:set_alpha_calculator",
+        #GPU"@google_mediapipe//mediapipe/calculators/image:bilateral_filter_calculator",
+        #GPU"@google_mediapipe//mediapipe/calculators/image:image_transformation_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:image_cropping_calculator",
+        #GPU"@google_mediapipe//mediapipe/calculators/image:luminance_calculator",
+        #GPU"@google_mediapipe//mediapipe/calculators/image:sobel_edges_calculator",
+        #GPU"@google_mediapipe//mediapipe/calculators/image:recolor_calculator",
+        #ERROR"@google_mediapipe//mediapipe/calculators/image:scale_image_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:image_clone_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:image_properties_calculator",
+        #GPU"@google_mediapipe//mediapipe/calculators/image:mask_overlay_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:feature_detector_calculator",
+        #easyexif"@google_mediapipe//mediapipe/calculators/image:image_file_properties_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:segmentation_smoothing_calculator",
+        "@google_mediapipe//mediapipe/calculators/image:warp_affine_calculator",
+        #libyuv"@google_mediapipe//mediapipe/calculators/image:yuv_to_image_calculator",
+        "@google_mediapipe//mediapipe/calculators/internal:callback_packet_calculator",
+        "@google_mediapipe//mediapipe/calculators/video:flow_to_image_calculator",
+        "@google_mediapipe//mediapipe/calculators/video:tvl1_optical_flow_calculator",
+        "@google_mediapipe//mediapipe/calculators/video:motion_analysis_calculator",
+        "@google_mediapipe//mediapipe/calculators/video:flow_packager_calculator",
+        "@google_mediapipe//mediapipe/calculators/video:box_tracker_calculator",
+        "@google_mediapipe//mediapipe/calculators/video:box_detector_calculator",
+        "@google_mediapipe//mediapipe/calculators/video:tracked_detection_manager_calculator",
+        "@google_mediapipe//mediapipe/calculators/video:video_pre_stream_calculator",
     ],
     alwayslink = 1,
 )
