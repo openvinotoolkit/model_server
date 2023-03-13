@@ -191,6 +191,8 @@ cc_library(
         "kfs_frontend/kfs_utils.hpp",
         "mediapipe/calculator_graph.cpp",
         "mediapipe/calculator_graph.hpp",
+        "mediapipe/mediapipedemo.cpp",
+        "mediapipe/mediapipedemo.hpp",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",

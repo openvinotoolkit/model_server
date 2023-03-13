@@ -1,3 +1,4 @@
+#pragma once
 //*****************************************************************************
 // Copyright 2023 Intel Corporation
 //
@@ -13,21 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <gtest/gtest.h>
+#include "absl/status/status.h"  // TODO include as system lib
 
-#include "../mediapipe/mediapipedemo.hpp"
-#include "mediapipe/framework/port/status.h"
-
-TEST(Mediapipe, PureDummyGraph) {
-    size_t requestCount = 3;
-    size_t inputStreamDelayMs = 0;
-    auto grphExecution = ExecuteDummy(requestCount, inputStreamDelayMs);
-    CHECK(grphExecution.ok());
-}
-
-TEST(Mediapipe, PureAddGraph) {
-    size_t requestCount = 3;
-    size_t inputStreamDelayMs = 0;
-    auto grphExecution = ExecuteAdd(requestCount, inputStreamDelayMs);
-    CHECK(grphExecution.ok());
-}
+absl::Status ExecuteDummy(size_t requestCount, size_t inputStreamDelayMs);
+absl::Status ExecuteAdd(size_t requestCount, size_t inputStreamDelayMs);
