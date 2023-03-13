@@ -407,5 +407,5 @@ new_local_repository(
 new_local_repository(
     name = "mediapipe_calculators",
     build_file = "@//third_party/mediapipe_calculators:BUILD",
-    path = "/mediapipe",
+    path = "/ovms/third_party/mediapipe_calculators",
 )
