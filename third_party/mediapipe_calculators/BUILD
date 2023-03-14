@@ -117,4 +117,5 @@ cc_library(
         "@google_mediapipe//mediapipe/calculators/video:tracked_detection_manager_calculator",
         "@google_mediapipe//mediapipe/calculators/video:video_pre_stream_calculator",
     ],
+    linkstatic=1,
 )
