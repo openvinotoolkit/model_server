@@ -12,61 +12,151 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <iostream>
+#include <sstream>
+#include <unordered_map>
 
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/framework/types.h"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#include <openvino/openvino.hpp>
 
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "ovms.h"  // NOLINT
+#include "src/ovmscalculator.pb.h"
+#include "stringutils.hpp"  // TODO dispose
+// here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
+// for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-namespace tf = ::tensorflow;
 
-constexpr char* OVMSTFTensorTag = "TFTENSOR";
 using std::cout;
 using std::endl;
-// A Calculator that simply passes its input Packets and header through,
-// unchanged.  The inputs may be specified by tag or index.  The outputs
-// must match the inputs exactly.  Any number of input side packets may
-// also be specified.  If output side packets are specified, they must
-// match the input side packets exactly and the Calculator passes its
-// input side packets through, unchanged.  Otherwise, the input side
-// packets will be ignored (allowing PassThroughCalculator to be used to
-// test internal behavior).  Any options may be specified and will be
-// ignored.
 
-const char* MODEL_NAME = "dummy";
-const int MODEL_VERSION = 1;
+namespace {
+#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                  \
+    {                                                                                        \
+        auto* err = C_API_CALL;                                                              \
+        if (err != nullptr) {                                                                \
+            uint32_t code = 0;                                                               \
+            const char* msg = nullptr;                                                       \
+            OVMS_StatusGetCode(err, &code);                                                  \
+            OVMS_StatusGetDetails(err, &msg);                                                \
+            LOG(ERROR) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
+            OVMS_StatusDelete(err);                                                          \
+            RET_CHECK(err == nullptr);                                                       \
+        }                                                                                    \
+    }
+#define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
+    std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
 
-class OVMSCalculator : public CalculatorBase {
+ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
+    static std::unordered_map<OVMS_DataType, ov::element::Type_t> precisionMap{
+        {OVMS_DATATYPE_FP64, ov::element::Type_t::f64},
+        {OVMS_DATATYPE_FP32, ov::element::Type_t::f32},
+        {OVMS_DATATYPE_FP16, ov::element::Type_t::f16},
+        {OVMS_DATATYPE_I64, ov::element::Type_t::i64},
+        {OVMS_DATATYPE_I32, ov::element::Type_t::i32},
+        {OVMS_DATATYPE_I16, ov::element::Type_t::i16},
+        {OVMS_DATATYPE_I8, ov::element::Type_t::i8},
+        {OVMS_DATATYPE_I4, ov::element::Type_t::i4},
+        {OVMS_DATATYPE_U64, ov::element::Type_t::u64},
+        {OVMS_DATATYPE_U32, ov::element::Type_t::u32},
+        {OVMS_DATATYPE_U16, ov::element::Type_t::u16},
+        {OVMS_DATATYPE_U8, ov::element::Type_t::u8},
+        {OVMS_DATATYPE_U4, ov::element::Type_t::u4},
+        {OVMS_DATATYPE_U1, ov::element::Type_t::u1},
+        {OVMS_DATATYPE_BOOL, ov::element::Type_t::boolean},
+        {OVMS_DATATYPE_BF16, ov::element::Type_t::bf16},
+        {OVMS_DATATYPE_UNDEFINED, ov::element::Type_t::undefined},
+        {OVMS_DATATYPE_DYNAMIC, ov::element::Type_t::dynamic}
+        //    {OVMS_DATATYPE_MIXED, ov::element::Type_t::MIXED},
+        //    {OVMS_DATATYPE_Q78, ov::element::Type_t::Q78},
+        //    {OVMS_DATATYPE_BIN, ov::element::Type_t::BIN},
+        //    {OVMS_DATATYPE_CUSTOM, ov::element::Type_t::CUSTOM
+    };
+    auto it = precisionMap.find(datatype);
+    if (it == precisionMap.end()) {
+        return ov::element::Type_t::undefined;
+    }
+    return it->second;
+}
+OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype) {
+    static std::unordered_map<ov::element::Type_t, OVMS_DataType> precisionMap{
+        {ov::element::Type_t::f64, OVMS_DATATYPE_FP64},
+        {ov::element::Type_t::f32, OVMS_DATATYPE_FP32},
+        {ov::element::Type_t::f16, OVMS_DATATYPE_FP16},
+        {ov::element::Type_t::i64, OVMS_DATATYPE_I64},
+        {ov::element::Type_t::i32, OVMS_DATATYPE_I32},
+        {ov::element::Type_t::i16, OVMS_DATATYPE_I16},
+        {ov::element::Type_t::i8, OVMS_DATATYPE_I8},
+        {ov::element::Type_t::i4, OVMS_DATATYPE_I4},
+        {ov::element::Type_t::u64, OVMS_DATATYPE_U64},
+        {ov::element::Type_t::u32, OVMS_DATATYPE_U32},
+        {ov::element::Type_t::u16, OVMS_DATATYPE_U16},
+        {ov::element::Type_t::u8, OVMS_DATATYPE_U8},
+        {ov::element::Type_t::u4, OVMS_DATATYPE_U4},
+        {ov::element::Type_t::u1, OVMS_DATATYPE_U1},
+        {ov::element::Type_t::boolean, OVMS_DATATYPE_BOOL},
+        {ov::element::Type_t::bf16, OVMS_DATATYPE_BF16},
+        {ov::element::Type_t::undefined, OVMS_DATATYPE_UNDEFINED},
+        {ov::element::Type_t::dynamic, OVMS_DATATYPE_DYNAMIC}
+        //    {ov::element::Type_t::, OVMS_DATATYPE_MIXEDMIXED},
+        //    {ov::element::Type_t::, OVMS_DATATYPE_Q78Q78},
+        //    {ov::element::Type_t::, OVMS_DATATYPE_BINBIN},
+        //    {ov::element::Type_t::, OVMS_DATATYPE_CUSTOMCUSTOM
+    };
+    auto it = precisionMap.find(datatype);
+    if (it == precisionMap.end()) {
+        return OVMS_DATATYPE_UNDEFINED;
+    }
+    return it->second;
+}
+
+ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+    ov::Shape ovShape;
+    for (size_t i = 0; i < dimCount; ++i) {
+        ovShape.push_back(shape[i]);
+    }
+    // here we make copy of underlying OVMS repsonse tensor
+    ov::Tensor* output = new ov::Tensor(CAPI2OVPrecision(datatype), ovShape);
+    std::memcpy(output->data(), voutputData, bytesize);
+    return output;
+}
+}  // namespace
+
+class OVMSOVCalculator : public CalculatorBase {
     OVMS_Server* cserver{nullptr};
-    OVMS_ServerSettings* _serverSettings = nullptr;
-    OVMS_ModelsSettings* _modelsSettings = nullptr;
+    OVMS_ServerSettings* _serverSettings{nullptr};
+    OVMS_ModelsSettings* _modelsSettings{nullptr};
+    std::unordered_map<std::string, std::string> outputNameToTag;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        std::cout << __FILE__ << " " << __LINE__ << std::endl;
-        // inputs contract
         RET_CHECK(!cc->Inputs().GetTags().empty());
-        cc->Inputs().Tag(OVMSTFTensorTag).Set<tf::Tensor>();
-        // outputs contract
         RET_CHECK(!cc->Outputs().GetTags().empty());
-        cc->Outputs().Tag(OVMSTFTensorTag).Set<tf::Tensor>();
-        // TODO add handling side packet/options for servable name, version
-        // TODO check for other tags and return error
-        cout << __FILE__ << ":" << __LINE__ << endl;
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            cc->Inputs().Tag(tag).Set<ov::Tensor>();
+        }
+        for (const std::string& tag : cc->Outputs().GetTags()) {
+            cc->Outputs().Tag(tag).Set<ov::Tensor>();
+        }
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        RET_CHECK(!options.servable_name().empty());
+        // TODO validate version from string
+        // TODO validate service url format
+        RET_CHECK(options.config_path().empty() ||
+                  options.service_url().empty());
+        // TODO validate tag_to_tensor maps so that key fulfill regex
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        cout << __FILE__ << ":" << __LINE__ << endl;
-        // Close is called on input node and output node in initial pipeline
-        // Commented out since for now this happens twice in 2 nodes graph. Server will close
-        // anyway with application closuer TODO fix before release
-        // OVMS_ServerDelete(cserver);
-        OVMS_ModelsSettingsDelete(_modelsSettings);
-        OVMS_ServerSettingsDelete(_serverSettings);
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        if (!options.config_path().empty()) {
+            OVMS_ModelsSettingsDelete(_modelsSettings);
+            OVMS_ServerSettingsDelete(_serverSettings);
+            // Close is called on input node and output node in initial pipeline
+            // Commented out since for now this happens twice in 2 nodes graph. Server will close
+            // OVMS_ServerDelete(cserver); TODO this should happen onlif graph is used once
+            // moreover we may need several ovms calculators use in graph each providing its own model? how to handle then different model inputs, as wel as config?
+        }
         return absl::OkStatus();
     }
     absl::Status Open(CalculatorContext* cc) final {
@@ -83,114 +173,82 @@ public:
             }
         }
         cc->SetOffset(TimestampDiff(0));
+
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
         OVMS_ServerNew(&cserver);
-        OVMS_ServerSettingsNew(&_serverSettings);
-        OVMS_ModelsSettingsNew(&_modelsSettings);
-        OVMS_ModelsSettingsSetConfigPath(_modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json");
-        OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_DEBUG);
-        OVMS_ServerStartFromConfigurationFile(cserver, _serverSettings, _modelsSettings);
-        cout << __FILE__ << ":" << __LINE__ << endl;
+        if (!options.config_path().empty()) {
+            OVMS_ServerSettingsNew(&_serverSettings);
+            OVMS_ModelsSettingsNew(&_modelsSettings);
+            OVMS_ModelsSettingsSetConfigPath(_modelsSettings, options.config_path().c_str());
+            OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_DEBUG);
+            OVMS_ServerStartFromConfigurationFile(cserver, _serverSettings, _modelsSettings);
+        }
+        for (const auto& [key, value] : options.tag_to_output_tensor_names()) {
+            outputNameToTag[value] = key;
+        }
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        cout << __FILE__ << ":" << __LINE__ << endl;
         cc->GetCounter("PassThrough")->Increment();
         if (cc->Inputs().NumEntries() == 0) {
             return tool::StatusStop();
         }
-        std::cout << __FILE__ << " " << __LINE__ << std::endl;
-        // PASSING packets
-        /*    for (CollectionItemId id = cc->Inputs().BeginId();
-         id < cc->Inputs().EndId(); ++id) {
-      if (!cc->Inputs().Get(id).IsEmpty()) {
-        VLOG(3) << "Passing " << cc->Inputs().Get(id).Name() << " to "
-                << cc->Outputs().Get(id).Name() << " at "
-                << cc->InputTimestamp().DebugString();
-        cc->Outputs().Get(id).AddPacket(cc->Inputs().Get(id).Value());
-      }
-    }
-    */
-        // extract packet
-        cout << __FILE__ << ":" << __LINE__ << endl;
-        // extract single tensor
-        auto& packets = cc->Inputs().Tag(OVMSTFTensorTag).Get<tf::Tensor>();
-        // extract single tensor
-        tf::Tensor input_tensor(packets);
-        auto input_tensor_access = input_tensor.tensor<float, 2>();  // 2 since dummy is 2d
-        cout << endl
-             << "Calculator received tensor: [ ";
-        for (int x = 0; x < 10; ++x) {
-            cout << input_tensor_access(0, x) << " ";
-        }
-        cout << " ]" << endl;
-        tensorflow::serving::PredictRequest tfsrequest;
-        tensorflow::serving::PredictResponse tfsresponse;
-        tfsrequest.mutable_model_spec()->mutable_name()->assign(MODEL_NAME);
-        tfsrequest.mutable_model_spec()->mutable_version()->set_value(MODEL_VERSION);
-        const char* DUMMY_MODEL_INPUT_NAME = "b";
-        const std::vector<size_t> DUMMY_MODEL_SHAPE{1, 10};
-        const size_t DUMMY_MODEL_INPUT_SIZE = 10;
-
-        cout << __FILE__ << ":" << __LINE__ << endl;
-        // TODO check retcode
-        input_tensor.AsProtoTensorContent(&(*tfsrequest.mutable_inputs())[DUMMY_MODEL_INPUT_NAME]);
-        auto sth = OVMS_GRPCInference((void*)&tfsrequest, (void*)&tfsresponse);
-        if (sth != nullptr) {
-            cout << "Sth nonnulptr " << endl;
-        }
-        // here we may need to add additional include from within OVMS to expose prediction service
-        // tf::TensorProto* input_tensor_proto = new  tf::TensorProto;
-        cout << __FILE__ << ":" << __LINE__ << endl;
-        // input_tensor.AsProtoTensorContent(input_tensor_proto);
-        cout << __FILE__ << ":" << __LINE__ << endl;
-        // TODO construct request
-        // TODO receive tf::TensorProto from response
-        // TODO ownership of data - what is
-        // now we simulate the other way arround
-        tf::Tensor output_tensor;
-        cout << __FILE__ << ":" << __LINE__ << endl;
-        const char* DUMMY_MODEL_OUTPUT_NAME = "a";
-        // here we have TF tensor proto
-        auto output = tfsresponse.outputs().at(DUMMY_MODEL_OUTPUT_NAME);
-        // here we have TF tensor
-        output_tensor.FromProto(output);
-        // TODO why 0, handling timestamps
-        CollectionItemId id = cc->Inputs().BeginId();
-        auto outputPacketContent = std::make_unique<tf::Tensor>(output_tensor);
-        cc->Outputs().Tag(OVMSTFTensorTag).Add(outputPacketContent.release(), cc->InputTimestamp());
-        /*
-      cc->Outputs().Tag(kTensorOut).Add(output.release(), cc->InputTimestamp());$
-      std::vector<int> input;$
-      if (cc->Inputs().HasTag(kSingleInt)) {$
-        input.push_back(cc->Inputs().Tag(kSingleInt).Get<int>());$
-      } else {$
-        input = cc->Inputs().Tag(kVectorInt).Value().Get<std::vector<int>>();$
-      }$
-      CHECK_GE(input.size(), 1);$
-      const int32 length = input.size();$
-      tensor_shape = tf::TensorShape({length});$
-      auto output = ::absl::make_unique<tf::Tensor>(options_.tensor_data_type(),$
-                                                    tensor_shape);$
-*/
-
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        /////////////////////
+        // PREPARE REQUEST
+        /////////////////////
         OVMS_InferenceRequest* request{nullptr};
-        OVMS_InferenceRequestNew(&request, cserver, MODEL_NAME, MODEL_VERSION);
-        // adding input
-        cout << __FILE__ << ":" << __LINE__ << endl;
-        OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size());
-        // setting buffer
-        std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        const uint32_t notUsedNum = 0;
-        OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum);
+        auto servableVersionOpt = ovms::stou32(options.servable_version().c_str());
+        uint64_t servableVersion = servableVersionOpt.value_or(0);
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, options.servable_name().c_str(), servableVersion));
+        CREATE_GUARD(requestGuard, OVMS_InferenceRequest, request);
+
+        // PREPARE EACH INPUT
+        // extract single tensor
+        const auto inputTagInputMap = options.tag_to_input_tensor_names();
+        const auto inputTagOutputMap = options.tag_to_output_tensor_names();
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            // TODO validate existence of tag key in map
+            const char* realInputName = inputTagInputMap.at(tag).c_str();
+
+            auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
+            ov::Tensor input_tensor(packet);
+            const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
+            std::stringstream ss;
+            ss << endl
+               << "Calculator received tensor: [ ";
+            for (int x = 0; x < 10; ++x) {
+                ss << input_tensor_access[x] << " ";
+            }
+            ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
+            cout << ss.str() << endl;
+            const auto& inputShape = input_tensor.get_shape();
+            OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size()));
+            const uint32_t notUsedNum = 0;
+            // TODO handle hardcoded buffertype, notUsedNum additional options? side packets?
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request,
+                realInputName,
+                reinterpret_cast<void*>(input_tensor.data()),
+                input_tensor.get_byte_size(),
+                OVMS_BUFFERTYPE_CPU,
+                notUsedNum));
+        }
         //////////////////
         //  INFERENCE
         //////////////////
         OVMS_InferenceResponse* response = nullptr;
-        OVMS_Inference(cserver, request, &response);
+        ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
+        CREATE_GUARD(responseGuard, OVMS_InferenceResponse, response);
+        // verify GetOutputCount
         uint32_t outputCount = 42;
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutputCount(response, &outputCount));
+        RET_CHECK(outputCount == cc->Outputs().GetTags().size());
         uint32_t parameterCount = 42;
-
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetParameterCount(response, &parameterCount));
+        // TODO handle output filtering. Graph definition could suggest
+        // that we are not interested in all outputs from OVMS Inference
         const void* voutputData;
         size_t bytesize = 42;
         uint32_t outputId = 0;
@@ -200,31 +258,14 @@ public:
         OVMS_BufferType bufferType = (OVMS_BufferType)199;
         uint32_t deviceId = 42;
         const char* outputName{nullptr};
-        // verify GetOutputCount
-        OVMS_InferenceResponseGetOutputCount(response, &outputCount);
-        // verify GetParameterCount
-        OVMS_InferenceResponseGetParameterCount(response, &parameterCount);
-        // verify GetOutput
-        if (OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId) != 0) {
-            std::cout << "Check config file, ResponseGetOutput error." << std::endl;
+        for (size_t i = 0; i < outputCount; ++i) {
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+            ov::Tensor* outOvTensor = makeOvTensor(datatype, shape, dimCount, voutputData, bytesize);
+            cc->Outputs().Tag(outputNameToTag.at(outputName)).Add(outOvTensor, cc->InputTimestamp());
         }
-
-        std::cout << std::endl
-                  << __FILE__ << ":" << __LINE__ << " shape: ";
-        for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
-            std::cout << shape[i] << " ";
-        }
-        std::cout << std::endl
-                  << __FILE__ << ":" << __LINE__ << " data: ";
-        const float* outputData = reinterpret_cast<const float*>(voutputData);
-        for (size_t i = 0; i < data.size(); ++i) {
-            std::cout << outputData[i] << " ";
-        }
-        std::cout << std::endl;
-
         return absl::OkStatus();
     }
 };
-REGISTER_CALCULATOR(OVMSCalculator);
 
+REGISTER_CALCULATOR(OVMSOVCalculator);
 }  // namespace mediapipe
