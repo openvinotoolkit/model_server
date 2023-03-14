@@ -211,7 +211,7 @@ RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 # Test Coverage
-COPY check_coverage.bat /ovms/
+COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 ARG RUN_TESTS=1
 RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" = "1" ] ; then bazel coverage --combined_report=lcov --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
