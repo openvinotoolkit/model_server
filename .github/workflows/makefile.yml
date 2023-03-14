@@ -14,9 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install dependencies
-      run: make
-
     - name: Run clang-format-check
       run: make clang-format-check
 
@@ -25,3 +22,6 @@ jobs:
 
     - name: Run cppstyle
       run: make cppstyle
+      
+    - name: Run sdl-check
+      run: make sdl-check
