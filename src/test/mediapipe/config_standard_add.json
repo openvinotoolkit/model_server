@@ -1,0 +1,10 @@
+{
+    "model_config_list": [
+        {"config": {
+                "name": "add",
+                "base_path": "/ovms/src/test/add_two_inputs_model",
+                "shape": {"input1":"(1, 10)"}
+        }
+        }
+    ]
+}
