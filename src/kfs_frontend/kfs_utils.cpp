@@ -159,4 +159,11 @@ bool isNativeFileFormatUsed(const KFSTensorInputProto& proto) {
 bool requiresProcessing(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
 }
+
+std::string& createOrGetString(KFSTensorOutputProto& proto, int index) {
+    while (proto.contents().bytes_contents_size() <= index) {
+        proto.mutable_contents()->add_bytes_contents();
+    }
+    return *proto.mutable_contents()->mutable_bytes_contents(index);
+}
 }  // namespace ovms

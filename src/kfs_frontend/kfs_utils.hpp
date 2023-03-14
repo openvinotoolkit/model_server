@@ -32,4 +32,5 @@ const std::string& getRequestServableName(const KFSRequest& request);
 Status isNativeFileFormatUsed(const KFSRequest& request, const std::string& name, bool& nativeFileFormatUsed);
 bool isNativeFileFormatUsed(const KFSTensorInputProto& proto);
 bool requiresProcessing(const KFSTensorInputProto& proto);
+std::string& createOrGetString(KFSTensorOutputProto& proto, int index);
 }  // namespace ovms

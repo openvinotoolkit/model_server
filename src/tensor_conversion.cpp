@@ -34,6 +34,9 @@
 #include "profiler.hpp"
 #include "status.hpp"
 
+#include "tfs_frontend/tfs_utils.hpp"
+#include "kfs_frontend/kfs_utils.hpp"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -523,6 +526,18 @@ Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tenso
     return StatusCode::OK;
 }
 
+// TODO: What about partial gathering?
+template <typename TensorType>
+Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst) {
+    // TODO: assert for ov::Tensor being 2d 
+    for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
+        const char* strStart = reinterpret_cast<const char*>(tensor.data<unsigned char>() + i * tensor.get_shape()[1]);
+        size_t strLen = strnlen(strStart, tensor.get_shape()[1]);
+        createOrGetString(dst, i).assign(strStart, strLen);
+    }
+    return StatusCode::OK;
+}
+
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer);
 
@@ -531,5 +546,8 @@ template Status convertStringRequestToOVTensor2D<::KFSRequest::InferInputTensor>
 
 template Status convertStringRequestToOVTensor1D<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
 template Status convertStringRequestToOVTensor1D<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+
+template Status convertOVTensor2DToStringResponse<tensorflow::TensorProto>(const ov::Tensor& tensor, tensorflow::TensorProto& dst);
+template Status convertOVTensor2DToStringResponse<::KFSResponse::InferOutputTensor>(const ov::Tensor& tensor, ::KFSResponse::InferOutputTensor& dst);
 
 }  // namespace ovms

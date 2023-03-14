@@ -18,6 +18,8 @@
 #include "kfs_frontend/kfs_utils.hpp"
 #include "ov_utils.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
+#include "stringutils.hpp"
+#include "tensor_conversion.hpp"
 
 namespace ovms {
 
@@ -197,6 +199,12 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (endsWith(servableOutput->getMappedName(), "_string_2d_u8")) {
+        // TODO: assert for 2d
+        responseOutput.mutable_tensor_shape()->add_dim()->set_size(tensor.get_shape()[0]);
+        responseOutput.set_dtype(tensorflow::DataType::DT_STRING);
+        return convertOVTensor2DToStringResponse(tensor, responseOutput);
+    }
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
     if (!status.ok()) {
         return status;
@@ -232,6 +240,12 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (endsWith(servableOutput->getMappedName(), "_string_2d_u8")) {
+        // TODO: assert for 2d
+        responseOutput.add_shape(tensor.get_shape()[0]);
+        responseOutput.set_datatype("BYTES");
+        return convertOVTensor2DToStringResponse(tensor, responseOutput);
+    }
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
     if (!status.ok()) {
         return status;

@@ -33,4 +33,5 @@ Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string
 const std::string& getRequestServableName(const ovms::InferenceRequest& request);
 Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size);
 bool requiresProcessing(const InferenceTensor& tensor);
+std::string& createOrGetString(InferenceTensor& proto, int index);
 }  // namespace ovms
