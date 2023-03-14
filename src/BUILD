@@ -369,16 +369,6 @@ cc_binary(
     ],
 )
 
-#OPENCV CALCULATORS
-cc_binary(
-    name = "face_mesh_tflite",
-    data = ["@google_mediapipe//mediapipe/modules/face_landmark:face_landmark_with_attention.tflite"],
-    deps = [
-        "@google_mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
-        "@google_mediapipe//mediapipe/graphs/face_mesh:desktop_calculators",
-    ],
-)
-
 cc_binary(
     name = "libsampleloader.so",
     srcs = [
