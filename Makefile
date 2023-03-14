@@ -131,28 +131,22 @@ $(ACTIVATE):
 
 cppclean: venv
 	@echo "Checking cppclean..."
-	@. $(ACTIVATE); bash -c "./cppclean.sh"
+	@. $(ACTIVATE); bash -c "./ci/cppclean.sh"
 
 style: venv clang-format-check cpplint cppclean
 
-sdl-check: venv
+hadolint:
 	@echo "Checking SDL requirements..."
 	@echo "Checking docker files..."
 	@./tests/hadolint.sh
 
+bandit:
 	@echo "Checking python files..."
-	@. $(ACTIVATE); bash -c "bandit -x demos/benchmark/python -r demos/*/python > bandit.txt"
-	@if ! grep -FRq "No issues identified." bandit.txt; then\
-		error Run bandit on demos/*/python/*.py to fix issues.;\
-	fi
-	@rm bandit.txt
-	@. $(ACTIVATE); bash -c "bandit -r client/python/ > bandit2.txt"
-	@if ! grep -FRq "No issues identified." bandit2.txt; then\
-		error Run bandit on  client/python/ to fix issues.;\
-	fi
-	@rm bandit2.txt
+	@. $(ACTIVATE); bash -c "./ci/bandit.sh"
+
+license-headers:
 	@echo "Checking license headers in files..."
-	@. $(ACTIVATE); bash -c "python3 lib_search.py . > missing_headers.txt"
+	@. $(ACTIVATE); bash -c "python3 ./ci/lib_search.py . > missing_headers.txt"
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
         echo "Files with missing headers";\
         cat missing_headers.txt;\
@@ -160,10 +154,12 @@ sdl-check: venv
 	fi
 	@rm missing_headers.txt
 
+sdl-check: venv hadolint bandit license-headers
+
 	@echo "Checking forbidden functions in files..."
-	@. $(ACTIVATE); bash -c "python3 lib_search.py . functions > forbidden_functions.txt"
+	@. $(ACTIVATE); bash -c "python3 ./ci/lib_search.py . functions > forbidden_functions.txt"
 	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
-		error Run python3 lib_search.py . functions - to see forbidden functions file list.;\
+		error Run python3 ./ci/lib_search.py . functions - to see forbidden functions file list.;\
 	fi
 	@rm forbidden_functions.txt
 

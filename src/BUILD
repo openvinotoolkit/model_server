@@ -89,6 +89,18 @@ cc_shared_library(
     roots = ["//src:ovms_lib"],
 )
 
+load("@google_mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+
+mediapipe_proto_library(
+    name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["ovmscalculator.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@google_mediapipe//mediapipe/framework:calculator_options_proto",
+        "@google_mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
+
 cc_library(
     name = "ovms_lib",
     hdrs = ["ovms.h"],
@@ -179,6 +191,8 @@ cc_library(
         "kfs_frontend/kfs_utils.hpp",
         "mediapipe/calculator_graph.cpp",
         "mediapipe/calculator_graph.hpp",
+        "mediapipe/mediapipedemo.cpp",
+        "mediapipe/mediapipedemo.hpp",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",
@@ -336,6 +350,7 @@ cc_library(
         "@opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
         "//src/kfserving_api:kfserving_api_cpp",
+        "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
         "@google_mediapipe//mediapipe/framework:calculator_framework",
         #"//src/tfservingstream_api:stream_prediction_service_cpp",
     ],
@@ -346,7 +361,7 @@ cc_library(
         "-Wall",
         "-Wno-unknown-pragmas",
         "-DRUN_OVMS_CALCULATOR_TEST2",
-#TODO:  "-Werror",
+#TODO:  "-Werror", mediapipe
     ],
     visibility = [
         "//visibility:public",
@@ -409,9 +424,10 @@ licenses(["notice"])
 
 cc_library(
     name = "ovms_calculator",
-    srcs = ["ovms_calculator.cc"],
+    srcs = ["ovms_tf_calculator.cc"],
     deps = [
         "//src:ovms_lib",
+        "//src:ovmscalculatoroptions_cc_proto",
         "@org_tensorflow//tensorflow/core:framework",
         "@google_mediapipe//mediapipe/framework:calculator_framework",
         "@google_mediapipe//mediapipe/framework/port:status",
@@ -422,6 +438,17 @@ cc_library(
 cc_binary(
     name = "hello_world",
     srcs = ["hello_world.cc"],
+    deps = [
+        "//src:ovms_lib",
+        "@google_mediapipe//mediapipe/framework:calculator_graph",
+        "@google_mediapipe//mediapipe/framework/port:logging",
+        "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@google_mediapipe//mediapipe/framework/port:status",
+    ],
+)
+cc_binary(
+    name = "hello_ovms",
+    srcs = ["hello_ovms.cc"],
     deps = [
         "//src:ovms_lib",
         "@google_mediapipe//mediapipe/framework:calculator_graph",
@@ -697,6 +724,7 @@ cc_test(
     name = "ovms_test",
     linkstatic = 1,
     srcs = [
+        "test/ovmscalculator_test.cpp",
         "test/azurefilesystem_test.cpp",
         "test/binaryutils_test.cpp",
         "test/c_api_tests.cpp",
@@ -810,7 +838,7 @@ cc_test(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        "-Werror",
+        #"-Werror", TODO mediapipe temporary enablement
     ],
 )
 
