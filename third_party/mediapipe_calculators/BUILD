@@ -48,7 +48,7 @@ cc_library(
         "@google_mediapipe//mediapipe/calculators/core:concatenate_detection_vector_calculator",
         "@google_mediapipe//mediapipe/calculators/core:concatenate_proto_list_calculator",
         "@google_mediapipe//mediapipe/calculators/core:clip_vector_size_calculator",
-        "@google_mediapipe//mediapipe/calculators/core:clip_detection_vector_size_calculator",
+        #SEGFAULT"@google_mediapipe//mediapipe/calculators/core:clip_detection_vector_size_calculator",
         "@google_mediapipe//mediapipe/calculators/core:counting_source_calculator",
         "@google_mediapipe//mediapipe/calculators/core:make_pair_calculator",
         "@google_mediapipe//mediapipe/calculators/core:matrix_multiply_calculator",
@@ -117,5 +117,4 @@ cc_library(
         "@google_mediapipe//mediapipe/calculators/video:tracked_detection_manager_calculator",
         "@google_mediapipe//mediapipe/calculators/video:video_pre_stream_calculator",
     ],
-    alwayslink = 1,
 )
