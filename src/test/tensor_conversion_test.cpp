@@ -672,7 +672,7 @@ TYPED_TEST(StringInputsConversionTest, positive) {
     std::vector<std::string> expectedStrings = {"String_123"};
     this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
-    ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringRequestToOVTensor2D(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
     assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
@@ -680,7 +680,7 @@ TYPED_TEST(StringInputsConversionTest, positive_batch_size_2) {
     std::vector<std::string> expectedStrings = {"String_123", "zebra"};
     this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
-    ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringRequestToOVTensor2D(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
     assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
@@ -688,7 +688,7 @@ TYPED_TEST(StringInputsConversionTest, positive_batch_size_3_one_string_empty) {
     std::vector<std::string> expectedStrings = {"String_123", "zebra", ""};
     this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
-    ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringRequestToOVTensor2D(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
     assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
@@ -697,7 +697,7 @@ TYPED_TEST(StringInputsConversionTest, positive_empty_inputs) {
     std::vector<std::string> expectedStrings = {};
     this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
-    ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringRequestToOVTensor2D(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
     assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
@@ -707,7 +707,7 @@ TYPED_TEST(StringInputsConversionTest, raw_inputs_contents_not_implemented) {
     ov::Tensor tensor;
     std::string buffer;
     if (std::is_same<TypeParam, ::KFSRequest::InferInputTensor>::value) {
-        ASSERT_EQ(convertStringRequestTensorToOVTensor(this->requestTensor, tensor, &buffer), ovms::StatusCode::NOT_IMPLEMENTED);
+        ASSERT_EQ(convertStringRequestToOVTensor2D(this->requestTensor, tensor, &buffer), ovms::StatusCode::NOT_IMPLEMENTED);
     }
 }
 
@@ -716,7 +716,7 @@ TYPED_TEST(StringInputsConversionTest, u8_1d) {
     this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
     std::string buffer;
-    ASSERT_EQ(convertStringRequesto1DOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringRequestToOVTensor1D(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_element_type(), ov::element::u8);
     ASSERT_EQ(tensor.get_size(), 33);
     std::vector<uint8_t> expectedData = {

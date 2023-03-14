@@ -359,11 +359,11 @@ Status deserializePredictRequest(
                 switch (tensorInfo->getProcessingHint()) {
                 case TensorInfo::ProcessingHint::STRING_1D_U8:
                     SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequesto1DOVTensor(requestInput, tensor, nullptr));
+                    RETURN_IF_ERR(convertStringRequestToOVTensor1D(requestInput, tensor, nullptr));
                     break;
                 case TensorInfo::ProcessingHint::STRING_2D_U8:
                     SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequestTensorToOVTensor(requestInput, tensor, nullptr));
+                    RETURN_IF_ERR(convertStringRequestToOVTensor2D(requestInput, tensor, nullptr));
                     break;
                 case TensorInfo::ProcessingHint::IMAGE:
                     SPDLOG_DEBUG("Request contains input in native file format: {}", name);
@@ -433,11 +433,11 @@ Status deserializePredictRequest(
                 switch (tensorInfo->getProcessingHint()) {
                 case TensorInfo::ProcessingHint::STRING_1D_U8:
                     SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequesto1DOVTensor(*requestInputItr, tensor, bufferLocation));
+                    RETURN_IF_ERR(convertStringRequestToOVTensor1D(*requestInputItr, tensor, bufferLocation));
                     break;
                 case TensorInfo::ProcessingHint::STRING_2D_U8:
                     SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequestTensorToOVTensor(*requestInputItr, tensor, bufferLocation));
+                    RETURN_IF_ERR(convertStringRequestToOVTensor2D(*requestInputItr, tensor, bufferLocation));
                     break;
                 case TensorInfo::ProcessingHint::IMAGE:
                     SPDLOG_DEBUG("Request contains input in native file format: {}", name);

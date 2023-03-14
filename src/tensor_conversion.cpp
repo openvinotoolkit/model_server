@@ -463,7 +463,7 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
 }
 
 template <typename TensorType>
-Status convertStringRequestTensorToOVTensor(
+Status convertStringRequestToOVTensor2D(
     const TensorType& src,
     ov::Tensor& tensor,
     const std::string* buffer) {
@@ -492,7 +492,7 @@ Status convertStringRequestTensorToOVTensor(
 }
 
 template <typename TensorType>
-Status convertStringRequesto1DOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
+Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
     int batchSize = getBinaryInputsSize(src);
     int64_t totalStringsLength = 0;
     for (int i = 0; i < batchSize; i++) {
@@ -526,10 +526,10 @@ Status convertStringRequesto1DOVTensor(const TensorType& src, ov::Tensor& tensor
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, const std::string* buffer);
 
-template Status convertStringRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
-template Status convertStringRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+template Status convertStringRequestToOVTensor2D<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
+template Status convertStringRequestToOVTensor2D<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
 
-template Status convertStringRequesto1DOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
-template Status convertStringRequesto1DOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+template Status convertStringRequestToOVTensor1D<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
+template Status convertStringRequestToOVTensor1D<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
 
 }  // namespace ovms

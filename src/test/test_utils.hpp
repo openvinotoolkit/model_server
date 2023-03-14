@@ -240,7 +240,8 @@ void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
     tensorflow::serving::PredictRequest& request,
     tensorflow::serving::PredictResponse& response,
-    const std::vector<size_t>& expectedShape) {
+    const std::vector<size_t>& expectedShape,
+    bool checkRaw = true) {
     ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
     const auto& output_proto = response.outputs().at(outputName);
 
@@ -264,24 +265,32 @@ void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
     ::KFSRequest& request,
     ::KFSResponse& response,
-    const std::vector<size_t>& expectedShape) {
+    const std::vector<size_t>& expectedShape,
+    bool checkRaw = true) {
     ASSERT_EQ(response.outputs_size(), 1);
-    ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.mutable_outputs(0)->name(), outputName);
-
-    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
-
-    ASSERT_EQ(response.raw_output_contents(0).size(), elementsCount * sizeof(T));
     ASSERT_EQ(response.outputs(0).shape_size(), expectedShape.size());
     for (size_t i = 0; i < expectedShape.size(); i++) {
         ASSERT_EQ(response.outputs(0).shape(i), expectedShape[i]);
     }
 
-    T* actual_output = (T*)response.raw_output_contents(0).data();
-    T* expected_output = (T*)expectedData.data();
-    const int dataLengthToCheck = elementsCount * sizeof(T);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+    if (checkRaw) {
+        ASSERT_EQ(response.raw_output_contents_size(), 1);
+        auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
+        ASSERT_EQ(response.raw_output_contents(0).size(), elementsCount * sizeof(T));
+        T* actual_output = (T*)response.raw_output_contents(0).data();
+        T* expected_output = (T*)expectedData.data();
+        const int dataLengthToCheck = elementsCount * sizeof(T);
+        EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+            << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+    } else {
+        ASSERT_EQ(response.outputs(0).datatype(), "UINT8") << "other precision testing currently not supported";
+        ASSERT_EQ(sizeof(T), 1) << "other precision testing currently not supported";
+        ASSERT_EQ(response.outputs(0).contents().uint_contents_size(), expectedData.size());
+        for (size_t i = 0; i < expectedData.size(); i++) {
+            ASSERT_EQ(response.outputs(0).contents().uint_contents(i), expectedData[i]);
+        }
+    }
 }
 
 void checkIncrement4DimShape(const std::string outputName,
