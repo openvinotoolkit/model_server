@@ -18,6 +18,7 @@
 #include <functional>
 #include <string>
 
+#include "precision.hpp"
 #include "rest_utils.hpp"
 #include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
@@ -118,6 +119,12 @@ static bool isBinary(const rapidjson::Value& value) {
 
 bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto, const std::string& tensorName) {
     if (isBinary(doc)) {
+        if (!addValue(proto, doc)) {
+            return false;
+        }
+        return true;
+    }
+    if (doc.IsString() && tensorPrecisionMap[tensorName] == ovms::Precision::U8 && (proto.dtype() == tensorflow::DataType::DT_UINT8 || proto.dtype() == tensorflow::DataType::DT_STRING)) {
         if (!addValue(proto, doc)) {
             return false;
         }
@@ -414,6 +421,11 @@ bool TFSRestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Va
         } else {
             return false;
         }
+    }
+    if (value.IsString() && (proto.dtype() == tensorflow::DataType::DT_UINT8 || proto.dtype() == tensorflow::DataType::DT_STRING)) {
+        proto.add_string_val(value.GetString(), strlen(value.GetString()));
+        proto.set_dtype(tensorflow::DataType::DT_STRING);
+        return true;
     }
 
     if (!value.IsNumber()) {
