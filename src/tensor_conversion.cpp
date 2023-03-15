@@ -29,13 +29,12 @@
 
 #include <openvino/openvino.hpp>
 
+#include "kfs_frontend/kfs_utils.hpp"
 #include "logging.hpp"
 #include "opencv2/opencv.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
-
 #include "tfs_frontend/tfs_utils.hpp"
-#include "kfs_frontend/kfs_utils.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -529,7 +528,7 @@ Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tenso
 // TODO: What about partial gathering?
 template <typename TensorType>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst) {
-    // TODO: assert for ov::Tensor being 2d 
+    // TODO: assert for ov::Tensor being 2d
     for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
         const char* strStart = reinterpret_cast<const char*>(tensor.data<unsigned char>() + i * tensor.get_shape()[1]);
         size_t strLen = strnlen(strStart, tensor.get_shape()[1]);

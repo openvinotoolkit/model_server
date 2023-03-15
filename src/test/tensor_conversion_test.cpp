@@ -732,4 +732,25 @@ TYPED_TEST(StringInputsConversionTest, u8_1d) {
         << readableError(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size());
 }
 
+template <typename TensorType>
+class StringOutputsConversionTest : public ::testing::Test {
+public:
+    TensorType responseTensor;
+    void SetUp() override {}
+};
+
+using OutputTensorProtos = ::testing::Types<tensorflow::TensorProto, KFSTensorOutputProto>;
+TYPED_TEST_SUITE(StringOutputsConversionTest, OutputTensorProtos);
+
+TYPED_TEST(StringOutputsConversionTest, positive) {
+    std::vector<std::uint8_t> _2dTensorData = {
+        'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,  // String_123
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                      // ""
+        'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0};           // "zebra"
+    ov::Shape _2dTensorShape = {3, 11};
+    ov::Tensor tensor(ov::element::u8, _2dTensorShape, _2dTensorData.data());
+    ASSERT_EQ(convertOVTensor2DToStringResponse(tensor, this->responseTensor), ovms::StatusCode::OK);
+    assertStringOutputProto(this->responseTensor, {"String_123", "", "zebra"});
+}
+
 }  // namespace

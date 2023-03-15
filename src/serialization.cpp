@@ -17,9 +17,9 @@
 
 #include "kfs_frontend/kfs_utils.hpp"
 #include "ov_utils.hpp"
-#include "tfs_frontend/tfs_utils.hpp"
 #include "stringutils.hpp"
 #include "tensor_conversion.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 
