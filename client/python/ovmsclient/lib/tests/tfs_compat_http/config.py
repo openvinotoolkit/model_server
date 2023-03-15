@@ -20,6 +20,7 @@ from json.decoder import JSONDecodeError
 import requests
 from http import HTTPStatus
 from numpy import array, int32, float32, float128
+import numpy as np
 from ovmsclient.tfs_compat.protos.tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 
 from ovmsclient.tfs_compat.base.errors import InvalidInputError, ModelNotFoundError
@@ -57,14 +58,6 @@ PREDICT_REQUEST_INVALID_INPUTS = [
         "input1": (1, 2, 3)
     }, 'model_name', 0, TypeError,
      "values type should be (list, np.ndarray, scalar), but is tuple"),
-    ({
-        "input1": [
-            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
-             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])],
-            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
-             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])]
-        ]
-    }, 'model_name', 0, ValueError, "bytes values with dtype DT_STRING must be in shape [N]"),
 ]
 
 # (inputs_dict,
@@ -85,11 +78,13 @@ PREDICT_REQUEST_VALID = [
 
     ({
         "input1": 5.0,
-        "input2": bytes([1, 2, 3])
+        "input2": bytes([1, 2, 3]),
+        "input3": ["list", "of", "strings"]
     }, json.dumps({
         "inputs": {
             "input1": [5.0],
-            "input2": [{"b64": "AQID"}]
+            "input2": [{"b64": "AQID"}],
+            "input3": ["list", "of", "strings"]
         }
     }), 'model_name', 0),
 
@@ -119,7 +114,10 @@ PARSE_INPUT_DATA_VALID = [
     ([1, 2, 3.0], [1.0, 2.0, 3.0]),
 
     ([bytes([1, 2, 3]), bytes([4, 5, 6]), bytes([7, 8, 9])],
-     [{"b64": "AQID"}, {"b64": "BAUG"}, {"b64": "BwgJ"}])
+     [{"b64": "AQID"}, {"b64": "BAUG"}, {"b64": "BwgJ"}]),
+
+    ([[bytes([111, 118]), bytes([109, 115])], [bytes([111, 118]), bytes([109, 115])]],
+     [["ov", "ms"], ["ov", "ms"]])
 ]
 
 # (inputs_dict,
@@ -136,23 +134,13 @@ PARSE_INPUT_DATA_INVALID = [
       "The requested array has an inhomogeneous shape after 2 dimensions. "
       "The detected shape was (3, 1) + inhomogeneous part.")),
 
-    ([1, 2, 3, "str"],
-     TypeError, "provided values type is not valid"),
-
-    ([[1, 2], [3, 4], ["five", 6]],
+    (np.array(b'1', dtype=np.dtype(np.void, 10)),
      TypeError, "provided values type is not valid"),
 
     (float128(2.5), TypeError, "provided values type is not valid"),
 
     ((1, 2, 3), TypeError,
      "values type should be (list, np.ndarray, scalar), but is tuple"),
-
-    ([
-            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
-             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])],
-            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
-             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])]
-     ], ValueError, "bytes values with dtype DT_STRING must be in shape [N]"),
 ]
 
 # (config_dict,
