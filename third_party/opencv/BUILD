@@ -23,8 +23,9 @@ cc_library(
     srcs = glob([
         "lib/libopencv_core.so",
         "lib/libopencv_imgproc.so",
-        "lib/libopencv_highgui.so",
         "lib/libopencv_imgcodecs.so",
+    #MEDIAPIPE CALCULATORS REQUIREMENTS BELOW
+        "lib/libopencv_highgui.so",
         "lib/libopencv_calib3d.so",
         "lib/libopencv_features2d.so",
         "lib/libopencv_optflow.so",
