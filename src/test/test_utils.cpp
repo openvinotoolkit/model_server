@@ -302,10 +302,20 @@ void prepareInferStringRequest(::KFSRequest& request, const std::string& name, c
     tensor->set_datatype("BYTES");
     tensor->mutable_shape()->Clear();
     tensor->add_shape(data.size());
-    size_t dataSize = 1;
     if (!putBufferInInputTensorContent) {
+        size_t dataSize = 0;
+        for (auto input : data) {
+            dataSize += input.size() + 4;
+        }
         content->resize(dataSize);
-        std::memcpy(content->data(), data.data(), content->size());
+        size_t offset = 0;
+        for (auto input : data) {
+            uint32_t inputSize = input.size();
+            std::memcpy(content->data() + offset, reinterpret_cast<const unsigned char*>(&inputSize), sizeof(uint32_t));
+            offset += sizeof(uint32_t);
+            std::memcpy(content->data() + offset, input.data(), input.length());
+            offset += input.length();
+        }
     } else {
         for (auto inputData : data) {
             auto bytes_val = tensor->mutable_contents()->mutable_bytes_contents()->Add();

@@ -700,16 +700,6 @@ TYPED_TEST(StringInputsConversionTest, positive_empty_inputs) {
     assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
-TYPED_TEST(StringInputsConversionTest, raw_inputs_contents_not_implemented) {
-    std::vector<std::string> expectedStrings = {};
-    this->prepareStringTensor(this->requestTensor, expectedStrings);
-    ov::Tensor tensor;
-    std::string buffer;
-    if (std::is_same<TypeParam, ::KFSRequest::InferInputTensor>::value) {
-        ASSERT_EQ(convertStringRequestToOVTensor2D(this->requestTensor, tensor, &buffer), ovms::StatusCode::NOT_IMPLEMENTED);
-    }
-}
-
 TYPED_TEST(StringInputsConversionTest, u8_1d) {
     std::vector<std::string> expectedStrings = {"ala", "", "ma", "kota"};
     this->prepareStringTensor(this->requestTensor, expectedStrings);

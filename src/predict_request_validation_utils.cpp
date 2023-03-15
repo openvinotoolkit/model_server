@@ -911,7 +911,9 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 2D string input: name: {}; batch size: {}",
                     servableName, servableVersion, name, batchSize.toString());
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
-                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
+                if (shouldValidateBinaryBatchSizeMismatch(request)) {
+                    RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
+                }
                 RETURN_IF_ERR(checkStringShapeMismatch(proto, *inputInfo, finalStatus, batchingMode, shapeMode));
                 continue;
             } else if (processingHint == TensorInfo::ProcessingHint::IMAGE) {
