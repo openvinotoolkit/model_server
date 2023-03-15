@@ -126,6 +126,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 ARG JOBS
 ARG ov_use_binary=1
+ARG sentencepiece=0
+ARG ov_source_org=openvinotoolkit
 ARG DLDT_PACKAGE_URL
 ARG ov_source_branch=master
 ARG ov_contrib_branch=master
@@ -140,13 +142,14 @@ ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/exter
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 
+RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_contrib.git --recurse-submodules --branch $ov_contrib_branch --depth 1 /openvino_contrib
+
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-
-# hadolint ignore=DL3003
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git --recurse-submodules --branch muse_leftovers --depth 1 /openvino
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DOPENVINO_EXTRA_MODULES=/openvino_contrib/modules -DBUILD_nvidia_plugin=OFF -DBUILD_arm_plugin=OFF -DBUILD_java_api=OFF -DBUILD_mo_pytorch=OFF -DBUILD_optimum=OFF -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+RUN if [[ "$ov_use_binary" == "0" || "$sentencepiece" == "0" ]] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
@@ -223,7 +226,6 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
 
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    git clone https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive && \
     mkdir ${OPENVINO_BUILD_PATH} && \
     cd "${OPENVINO_BUILD_PATH}" && \
     cmake "${OPENVINO_HOME}" \

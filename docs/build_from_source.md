@@ -115,6 +115,22 @@ make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=releases/2022/3 OV_C
 ```
 ```bash
 docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --target_device NVIDIA
+
+<hr />
+
+### `SENTENCEPIECE`
+
+By default set to `0`. When set to `1`, there will be build Custom Operation extension with sentencepiece operation support. Extension .so file will be located in /ovms/lib/libuser_ov_extensions.so in release container.
+
+Hint: use together with `OV_USE_BINARY=0` to force building OpenVINO from source. Use `OV_SOURCE_BRANCH` parameter to specify which branch from [OpenVINO repository](https://github.com/openvinotoolkit/openvino) should be used.
+Use together with `OV_CONTRIB_BRANCH` to specify which branch from [OpenVINO contrib](https://github.com/openvinotoolkit/openvino_contrib) repository should be used for Custom Operation extension.
+
+Example:
+```bash
+make docker_build SENTENCEPIECE=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=muse_leftovers OV_CONTRIB_BRANCH=master OV_SOURCE_ORG=slyalin
+```
+```bash
+docker run -it -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest --model_path /opt/model --model_name resnet  --cpu_extension /ovms/lib/libuser_ov_extensions.so
 ```
 
 <hr />
