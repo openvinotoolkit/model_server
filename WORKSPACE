@@ -177,9 +177,7 @@ cc_library(
     ),
     hdrs = glob(
         [
-            paths.join(PREFIX, "include/ie/**/*.h"),
-            paths.join(PREFIX, "include/**/*.hpp"),
-            paths.join(PREFIX, "include/**/**/*.hpp"),
+            paths.join(PREFIX, "include/**/**/openvino.hpp"),
         ]
     ),
     includes =
@@ -212,6 +210,7 @@ cc_library(
         "-l:libopencv_imgproc.so",
         "-l:libopencv_video.so",
         "-l:libopencv_videoio.so",
+        "-l:libopencv_optflow.so",
     ],
     visibility = ["//visibility:public"],
     hdrs = glob([

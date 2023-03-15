@@ -18,25 +18,17 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-config_setting(
-    name = "disable_gpu",
-    define_values = {
-        "MEDIAPIPE_DISABLE_GPU": "1",
-    },
-    visibility = ["//visibility:public"],
-)
-
 cc_library(
     name = "mediapipe_calculators",
     srcs = [],
     hdrs = [],
     visibility = ["//visibility:public"],
-    defines = ["MEDIAPIPE_DISABLE_GPU=1"],
+    #TODO:ENABLE_GPU_WIP:defines = ["MEDIAPIPE_DISABLE_GPU=1"],
     deps = [
-        #OV"@google_mediapipe//mediapipe/calculators/openvino:openvino_converter_calculator",
-        #OV"@google_mediapipe//mediapipe/calculators/openvino:openvino_inference_calculator",
-        #OV"@google_mediapipe//mediapipe/calculators/openvino:openvino_tensors_to_classification_calculator",
-        #OV"@google_mediapipe//mediapipe/calculators/openvino:openvino_tensors_to_detections_calculator",
+        #ENABLE_WTIH_OV_CALCULATORS"@google_mediapipe//mediapipe/calculators/openvino:openvino_converter_calculator",
+        #ENABLE_WTIH_OV_CALCULATORS"@google_mediapipe//mediapipe/calculators/openvino:openvino_inference_calculator",
+        #ENABLE_WTIH_OV_CALCULATORS"@google_mediapipe//mediapipe/calculators/openvino:openvino_tensors_to_classification_calculator",
+        #ENABLE_WTIH_OV_CALCULATORS"@google_mediapipe//mediapipe/calculators/openvino:openvino_tensors_to_detections_calculator",
         "@google_mediapipe//mediapipe/calculators/core:concatenate_vector_calculator",
         "@google_mediapipe//mediapipe/calculators/core:flow_limiter_calculator",
         "@google_mediapipe//mediapipe/calculators/core:previous_loopback_calculator",
@@ -48,7 +40,7 @@ cc_library(
         "@google_mediapipe//mediapipe/calculators/core:concatenate_detection_vector_calculator",
         "@google_mediapipe//mediapipe/calculators/core:concatenate_proto_list_calculator",
         "@google_mediapipe//mediapipe/calculators/core:clip_vector_size_calculator",
-        #SEGFAULT"@google_mediapipe//mediapipe/calculators/core:clip_detection_vector_size_calculator",
+        #SEGFAULT_ON_GLOG_INIT"@google_mediapipe//mediapipe/calculators/core:clip_detection_vector_size_calculator",
         "@google_mediapipe//mediapipe/calculators/core:counting_source_calculator",
         "@google_mediapipe//mediapipe/calculators/core:make_pair_calculator",
         "@google_mediapipe//mediapipe/calculators/core:matrix_multiply_calculator",
@@ -79,6 +71,7 @@ cc_library(
         "@google_mediapipe//mediapipe/calculators/core:vector_size_calculator",
         "@google_mediapipe//mediapipe/calculators/core:packet_sequencer_calculator",
         "@google_mediapipe//mediapipe/calculators/core:merge_to_vector_calculator",
+        #TENSORFLOW LITE BELOW
         "@google_mediapipe//mediapipe/calculators/tflite:ssd_anchors_calculator",
         "@google_mediapipe//mediapipe/calculators/util:annotation_overlay_calculator",
         "@google_mediapipe//mediapipe/calculators/util:detection_label_id_to_text_calculator",
@@ -97,16 +90,16 @@ cc_library(
         #GPU"@google_mediapipe//mediapipe/calculators/image:luminance_calculator",
         #GPU"@google_mediapipe//mediapipe/calculators/image:sobel_edges_calculator",
         #GPU"@google_mediapipe//mediapipe/calculators/image:recolor_calculator",
-        #ERROR"@google_mediapipe//mediapipe/calculators/image:scale_image_calculator",
+        #REQUIRED_libyuv_DEPENDENCY"@google_mediapipe//mediapipe/calculators/image:scale_image_calculator",
         "@google_mediapipe//mediapipe/calculators/image:image_clone_calculator",
         "@google_mediapipe//mediapipe/calculators/image:image_properties_calculator",
         #GPU"@google_mediapipe//mediapipe/calculators/image:mask_overlay_calculator",
         "@google_mediapipe//mediapipe/calculators/image:feature_detector_calculator",
-        #easyexif"@google_mediapipe//mediapipe/calculators/image:image_file_properties_calculator",
+        #REQUIRED_easyexif_DEPENDENCY"@google_mediapipe//mediapipe/calculators/image:image_file_properties_calculator",
         "@google_mediapipe//mediapipe/calculators/image:segmentation_smoothing_calculator",
         "@google_mediapipe//mediapipe/calculators/image:warp_affine_calculator",
-        #libyuv"@google_mediapipe//mediapipe/calculators/image:yuv_to_image_calculator",
-        #internal"@google_mediapipe//mediapipe/calculators/internal:callback_packet_calculator",
+        #REQUIRED_libyuv_DEPENDENCY"@google_mediapipe//mediapipe/calculators/image:yuv_to_image_calculator",
+        #VISIBILITY_PRIVATE_THUS_SINK_BELOW"@google_mediapipe//mediapipe/calculators/internal:callback_packet_calculator",
         "@google_mediapipe//mediapipe/framework/tool:sink",
         "@google_mediapipe//mediapipe/calculators/video:flow_to_image_calculator",
         "@google_mediapipe//mediapipe/calculators/video:tvl1_optical_flow_calculator",
