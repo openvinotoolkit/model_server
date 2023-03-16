@@ -242,20 +242,28 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
     }
 }
 
-static Status convertStringToVectorOfSizes(const std::string& comma_separated_numbers, std::vector<int>& sizes) {
-    std::stringstream streamData(comma_separated_numbers);
-    std::vector<int> sizes_;
-
-    std::string numberString;
-    while (std::getline(streamData, numberString, ',')) {
-        std::optional<int> binarySize = stoi32(numberString);
-        if (!binarySize.has_value()) {
-            SPDLOG_DEBUG("Invalid argument in binary size string: {}", numberString);
-            return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
+static Status parseBinaryInputTypeBytes(KFSTensorInputProto& input, size_t binary_input_size, const char* buffer) {
+    if (input.datatype() == "BYTES") {
+        uint32_t offset = 0;
+        if (binary_input_size < sizeof(uint32_t)) {
+            return StatusCode::INVALID_STRING_INPUT;
         }
-        sizes_.push_back(binarySize.value());
+        while (offset + sizeof(uint32_t) < binary_input_size) {
+            uint32_t inputSize = *((uint32_t*)(buffer + offset));
+            offset += sizeof(uint32_t);
+            if (!(offset + inputSize <= binary_input_size))
+                break;
+            std::string inputContent(buffer + offset, inputSize);
+            input.mutable_contents()->add_bytes_contents(inputContent);
+            offset += inputSize;
+        }
+        if (offset != binary_input_size) {
+            SPDLOG_DEBUG("String input buffer does not match required format.");
+            return StatusCode::INVALID_STRING_INPUT;
+        }
+    } else {
+        return StatusCode::REST_UNSUPPORTED_PRECISION;
     }
-    sizes = std::move(sizes_);
 
     return StatusCode::OK;
 }
@@ -411,6 +419,20 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
     return true;
 }
 
+static Status handleBinaryInputTypeBytes(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input) {
+    if (binary_input_offset + binary_input_size > binary_buffer_size) {
+        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
+        return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
+    }
+    auto status = parseBinaryInputTypeBytes(input, binary_input_size, binary_inputs + binary_input_offset);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Parsing binary inputs failed");
+        return status;
+    }
+    binary_input_offset += binary_input_size;
+    return StatusCode::OK;
+}
+
 static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input) {
     if (binary_input_offset + binary_input_size > binary_buffer_size) {
         SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
@@ -448,27 +470,15 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 auto binary_input_size = binary_data_size_parameter->second.int64_param();
+                if (input->datatype() == "BYTES") {
+                    auto status = handleBinaryInputTypeBytes(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+                    if (!status.ok())
+                        return status;
+                    continue;
+                }
                 auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
                 if (!status.ok())
                     return status;
-            } else if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
-                std::vector<int> binary_inputs_sizes;
-                status = convertStringToVectorOfSizes(binary_data_size_parameter->second.string_param(), binary_inputs_sizes);
-                if (!status.ok()) {
-                    return status;
-                }
-                for (auto size : binary_inputs_sizes) {
-                    if (binary_input_offset + size > binary_buffer_size) {
-                        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
-                        return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
-                    }
-                    status = parseBinaryInput(*input, size, binary_inputs + binary_input_offset);
-                    if (!status.ok()) {
-                        SPDLOG_DEBUG("Parsing binary inputs failed");
-                        return status;
-                    }
-                    binary_input_offset += size;
-                }
             } else {
                 SPDLOG_DEBUG("binary_data_size parameter type should be int64 or string");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
@@ -476,8 +486,8 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
         } else {
             if (!isInputEmpty(*input))
                 continue;
-            if (grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
-                auto status = handleBinaryInput(binary_buffer_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+            if (input->datatype() == "BYTES") {
+                auto status = handleBinaryInputTypeBytes(binary_buffer_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
                 if (!status.ok())
                     return status;
                 continue;
