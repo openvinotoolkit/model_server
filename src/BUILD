@@ -85,6 +85,14 @@ cc_shared_library(
         "@google_mediapipe//:__subpackages__",
         "@com_github_glog_glog//:__subpackages__",
         "@com_github_gflags_gflags//:__subpackages__",
+        "@mediapipe_calculators//:__subpackages__",
+        "@arm_neon_2_x86_sse//:__subpackages__",
+        "@ruy//:__subpackages__",
+        "@cpuinfo//:__subpackages__",
+        "@clog//:__subpackages__",
+        "@gemmlowp//:__subpackages__",
+        "@flatbuffers//:__subpackages__",
+        "@linux_opencv//:__subpackages__",
     ],
     features = [],
     roots = ["//src:ovms_lib"],
@@ -337,10 +345,11 @@ cc_library(
         "@cpprest//:sdk",
         "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
-        "@google_mediapipe//mediapipe/framework:calculator_graph",
+        "@google_mediapipe//mediapipe/framework:calculator_framework",
         "@google_mediapipe//mediapipe/framework/port:logging",
         "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
         "@google_mediapipe//mediapipe/framework/port:status",
+        "@mediapipe_calculators//:mediapipe_calculators",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
@@ -351,7 +360,6 @@ cc_library(
         "//src/kfserving_api:kfserving_api_cpp",
         "@oneTBB//:tbb",
         "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-        "@google_mediapipe//mediapipe/framework:calculator_framework",
         #"//src/tfservingstream_api:stream_prediction_service_cpp",
     ],
     local_defines = [
@@ -393,6 +401,20 @@ cc_library(
 #        "//visibility:public",
 #    ],
 #)
+
+#OPENVINO CALCULATORS
+cc_binary(
+    name = "object_detection_openvino",
+    data = [
+        "@google_mediapipe//mediapipe/models:ssdlite_object_detection.xml",
+        "@google_mediapipe//mediapipe/models:ssdlite_object_detection.bin",
+        "@google_mediapipe//mediapipe/models:ssdlite_object_detection_labelmap.txt",
+    ],
+    deps = [
+        "@google_mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+)
 
 cc_binary(
     name = "libsampleloader.so",
@@ -440,7 +462,7 @@ cc_binary(
     srcs = ["hello_world.cc"],
     deps = [
         "//src:ovms_lib",
-        "@google_mediapipe//mediapipe/framework:calculator_graph",
+        "@google_mediapipe//mediapipe/framework:calculator_framework",
         "@google_mediapipe//mediapipe/framework/port:logging",
         "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
         "@google_mediapipe//mediapipe/framework/port:status",
@@ -451,7 +473,8 @@ cc_binary(
     srcs = ["hello_ovms.cc"],
     deps = [
         "//src:ovms_lib",
-        "@google_mediapipe//mediapipe/framework:calculator_graph",
+        "//src:ovms_calculator",
+        "@google_mediapipe//mediapipe/framework:calculator_framework",
         "@google_mediapipe//mediapipe/framework/port:logging",
         "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
         "@google_mediapipe//mediapipe/framework/port:status",

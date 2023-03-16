@@ -90,12 +90,6 @@ git_repository(
     name = "google_mediapipe",
     remote = "https://github.com/google/mediapipe",
     tag = "v0.9.1",
-    patches = [
-        "make_mediapipe_modules_public.patch"
-    ],
-    patch_args = [
-        "-p1",
-    ],
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -163,6 +157,69 @@ http_archive(
     urls = [
         "https://github.com/google/glog/archive/0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6.zip",
     ],
+)
+
+load("@google_mediapipe//third_party:external_files.bzl", "external_files")
+external_files()
+
+new_local_repository(
+    name = "linux_openvino",
+    build_file_content = """
+load("@bazel_skylib//lib:paths.bzl", "paths")
+PREFIX = "runtime"
+cc_library(
+    name = "openvino",
+    srcs = glob(
+        [
+            paths.join(PREFIX, "lib/intel64/libopenvino_c.so"),
+            paths.join(PREFIX, "lib/intel64/libopenvino.so"),
+        ],
+    ),
+    hdrs = glob(
+        [
+            paths.join(PREFIX, "include/**/**/openvino.hpp"),
+        ]
+    ),
+    includes =
+        [
+            paths.join(PREFIX, "include/"),
+            paths.join(PREFIX, "include/ie"),
+        ],
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+)
+""",
+    # For local MacOS builds, the path should point to an opencv@3 installation.
+    # If you edit the path here, you will also need to update the corresponding
+    # prefix in "linux_openvino.BUILD".
+    path = "/opt/intel/openvino_2022",
+)
+
+new_local_repository(
+    name = "linux_opencv",
+    build_file_content = """
+cc_library(
+    name = "opencv",
+    linkopts = [
+        "-L/opt/opencv/lib",
+        "-l:libopencv_core.so",
+        "-l:libopencv_calib3d.so",
+        "-l:libopencv_features2d.so",
+        "-l:libopencv_highgui.so",
+        "-l:libopencv_imgcodecs.so",
+        "-l:libopencv_imgproc.so",
+        "-l:libopencv_video.so",
+        "-l:libopencv_videoio.so",
+        "-l:libopencv_optflow.so",
+    ],
+    visibility = ["//visibility:public"],
+    hdrs = glob([
+        "include/**/*.*"
+    ]),
+    strip_include_prefix = "include/opencv4",
+)
+""",
+    path = "/opt/opencv/",
 )
 
 ########################################################### Mediapipe end
@@ -352,4 +409,10 @@ git_repository(
     remote = "https://github.com/oneapi-src/oneTBB/",
     patch_args = ["-p1"],
     patches = ["mwaitpkg.patch",]
+)
+
+new_local_repository(
+    name = "mediapipe_calculators",
+    build_file = "@//third_party/mediapipe_calculators:BUILD",
+    path = "/ovms/third_party/mediapipe_calculators",
 )
