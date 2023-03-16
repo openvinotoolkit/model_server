@@ -1390,9 +1390,34 @@ TYPED_TEST(PredictValidationString2DTest, positive) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
+TYPED_TEST(PredictValidationString2DTest, positive_data_in_buffer) {
+    if (typeid(TypeParam) == typeid(TFSRequestType))
+        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
+    // bs=1
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings, false);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    this->request.Clear();
+    // bs=2
+    inputStrings = {"String_123", "other"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings, false);
+    status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
 TYPED_TEST(PredictValidationString2DTest, negative_no_string) {
     std::vector<std::string> inputStrings = {};
     prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TYPED_TEST(PredictValidationString2DTest, negative_no_string_in_buffer) {
+    if (typeid(TypeParam) == typeid(TFSRequestType))
+        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
+    std::vector<std::string> inputStrings = {};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings, false);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }

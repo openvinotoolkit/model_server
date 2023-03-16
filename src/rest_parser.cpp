@@ -594,8 +594,21 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
     } else if (input.datatype() == "BOOL") {
         HANDLE_VALUE(mutable_bool_contents, GetBool, IsBool)
     } else if (input.datatype() == "BYTES") {
-        SPDLOG_DEBUG("For REST datatype BYTES is supported only with binary data extension");
-        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        for (auto& value : node.GetArray()) {
+            if (value.IsArray()) {
+                auto status = parseData(value, input);
+                if (!status.ok()) {
+                    return status;
+                }
+                continue;
+            }
+            if (value.IsString()) {
+                input.mutable_contents()->add_bytes_contents(value.GetString());
+            } else {
+                SPDLOG_DEBUG("For REST datatype BYTES is supported only for strings or with binary data extension");
+                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+            }
+        }
     } else {
         return StatusCode::REST_UNSUPPORTED_PRECISION;
     }

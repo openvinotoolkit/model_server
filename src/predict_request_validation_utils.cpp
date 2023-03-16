@@ -851,16 +851,16 @@ static Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& 
     return it->second.shapeMode;
 }
 
-static bool shouldValidateBinaryBatchSizeMismatch(const ovms::InferenceRequest& request) {
-    return true;
+static bool dataInRawInputContents(const ovms::InferenceRequest& request) {
+    return false;
 }
 
-static bool shouldValidateBinaryBatchSizeMismatch(const TFSRequestType& request) {
-    return true;
+static bool dataInRawInputContents(const TFSRequestType& request) {
+    return false;
 }
 
-static bool shouldValidateBinaryBatchSizeMismatch(const KFSRequest& request) {
-    return request.raw_input_contents().size() <= 0;
+static bool dataInRawInputContents(const KFSRequest& request) {
+    return request.raw_input_contents().size() > 0;
 }
 
 #define RETURN_IF_ERR(X)   \
@@ -911,6 +911,9 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 2D string input: name: {}; batch size: {}",
                     servableName, servableVersion, name, batchSize.toString());
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
+                if (dataInRawInputContents(request)) {
+                    RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
+                }
                 RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
                 RETURN_IF_ERR(checkStringShapeMismatch(proto, *inputInfo, finalStatus, batchingMode, shapeMode));
                 continue;
@@ -918,9 +921,9 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing binary image input: name: {}; batch size: {}",
                     servableName, servableVersion, name, batchSize.toString());
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
-                if (shouldValidateBinaryBatchSizeMismatch(request)) {
+                if (!dataInRawInputContents(request)) {
                     RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
-                } else if (batchSize != 1) {
+                } else {
                     SPDLOG_DEBUG("When the image is placed in raw_inputs_contents batch size cannot be bigger than 1.");
                     return StatusCode::INVALID_BATCH_SIZE;
                 }
