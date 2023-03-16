@@ -1,9 +1,13 @@
--D BUILD_LIST=core,improc,imgcodecs \
+-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow \
+-D OPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib_repo/modules
 -D CMAKE_BUILD_TYPE=Release \
 -D CMAKE_INSTALL_PREFIX=/opt/opencv \
--D OPENCV_LIB_INSTALL_PATH=lib
--D WITH_OPENJPEG=OFF
--D WITH_JASPER=OFF
--D WITH_OPENEXR=OFF
--D WITH_TIFF=OFF
+-D OPENCV_LIB_INSTALL_PATH=lib \ 
+-D CV_ENABLE_INTRINSICS=ON \
+-D WITH_EIGEN=ON \
+-D WITH_PTHREADS=ON \
+-D WITH_PTHREADS_PF=ON \
+-D WITH_JPEG=ON \
+-D WITH_PNG=ON \
+-D WITH_TIFF=ON
 
