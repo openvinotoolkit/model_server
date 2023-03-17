@@ -189,10 +189,10 @@ cc_library(
         "kfs_frontend/kfs_grpc_inference_service.hpp",
         "kfs_frontend/kfs_utils.cpp",
         "kfs_frontend/kfs_utils.hpp",
-        "mediapipe/calculator_graph.cpp",
-        "mediapipe/calculator_graph.hpp",
-        "mediapipe/mediapipedemo.cpp",
-        "mediapipe/mediapipedemo.hpp",
+        "mediapipe_internal/calculator_graph.cpp",
+        "mediapipe_internal/calculator_graph.hpp",
+        "mediapipe_internal/mediapipedemo.cpp",
+        "mediapipe_internal/mediapipedemo.hpp",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",
@@ -358,7 +358,7 @@ cc_library(
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
     copts = [
-        "-Wall",
+        #"-Wall",
         "-Wno-unknown-pragmas",
         "-DRUN_OVMS_CALCULATOR_TEST2",
 #TODO:  "-Werror", mediapipe

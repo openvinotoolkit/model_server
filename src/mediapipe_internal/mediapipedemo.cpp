@@ -44,34 +44,67 @@ using mediapipe::Packet;
 using mediapipe::ParseTextProtoOrDie;
 using mediapipe::Timestamp;
 
+const std::string DUMMY_MEDIAPIPE_GRAPH = R"pb(
+    input_stream: "in"
+    output_stream: "out"
+    node {
+      calculator: "OVMSOVCalculator"
+      input_stream: "B:in"
+      output_stream: "A:out"
+      node_options: {
+            [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+              servable_name: "dummy"
+              servable_version: "1"
+              tag_to_input_tensor_names {
+                key: "B"
+                value: "b"
+              }
+              tag_to_output_tensor_names {
+                key: "A"
+                value: "a"
+              }
+              config_path: "/ovms/src/test/mediapipe/config_standard_dummy.json"
+            }
+      }
+    }
+)pb";
+
+const std::string ADD_MEDIAPIPE_GRAPH = R"pb(
+input_stream: "in1"
+input_stream: "in2"
+output_stream: "out"
+node {
+  calculator: "OVMSOVCalculator"
+  input_stream: "INPUT1:in1"
+  input_stream: "INPUT2:in2"
+  output_stream: "SUM:out"
+  node_options: {
+        [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+          servable_name: "add"
+          servable_version: "1"
+          tag_to_input_tensor_names {
+            key: "INPUT1"
+            value: "input1"
+          }
+          tag_to_input_tensor_names {
+            key: "INPUT2"
+            value: "input2"
+          }
+          tag_to_output_tensor_names {
+            key: "SUM"
+            value: "sum"
+          }
+          config_path: "/ovms/src/test/mediapipe/config_standard_add.json"
+        }
+  }
+}
+)pb";
+
 absl::Status ExecuteDummy(size_t requestCount, size_t inputStreamDelayMs) {
     // You have to have 2 different prefixes fo two different input/output streams even if they don't mean anything
     // if model input name does not follow mediapipe convention [A-Z_][A-Z0-9_]* we have to either (1) use model mapping with models or change DAG config. (2) Another option is to use protobuf side packet/option that would map mediapipe input stream TAG with actual model input. (2) seems better as it wouldn't require ingerence in OVMS config just to follow mediapipe convention
     CalculatorGraphConfig config =
-        ParseTextProtoOrDie<CalculatorGraphConfig>(R"pb(
-                input_stream: "in"
-                output_stream: "out"
-                node {
-                  calculator: "OVMSOVCalculator"
-                  input_stream: "B:in"
-                  output_stream: "A:out"
-                  node_options: {
-                        [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
-                          servable_name: "dummy"
-                          servable_version: "1"
-                          tag_to_input_tensor_names {
-                            key: "B"
-                            value: "b"
-                          }
-                          tag_to_output_tensor_names {
-                            key: "A"
-                            value: "a"
-                          }
-                          config_path: "/ovms/src/test/mediapipe/config_standard_dummy.json"
-                        }
-                  }
-                }
-            )pb");
+        ParseTextProtoOrDie<CalculatorGraphConfig>(DUMMY_MEDIAPIPE_GRAPH);
 
     CalculatorGraph graph;
     auto ret = graph.Initialize(config);
@@ -121,36 +154,7 @@ absl::Status ExecuteDummy(size_t requestCount, size_t inputStreamDelayMs) {
 
 absl::Status ExecuteAdd(size_t requestCount, size_t inputStreamDelayMs) {
     CalculatorGraphConfig config =
-        ParseTextProtoOrDie<CalculatorGraphConfig>(R"pb(
-                input_stream: "in1"
-                input_stream: "in2"
-                output_stream: "out"
-                node {
-                  calculator: "OVMSOVCalculator"
-                  input_stream: "INPUT1:in1"
-                  input_stream: "INPUT2:in2"
-                  output_stream: "SUM:out"
-                  node_options: {
-                        [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
-                          servable_name: "add"
-                          servable_version: "1"
-                          tag_to_input_tensor_names {
-                            key: "INPUT1"
-                            value: "input1"
-                          }
-                          tag_to_input_tensor_names {
-                            key: "INPUT2"
-                            value: "input2"
-                          }
-                          tag_to_output_tensor_names {
-                            key: "SUM"
-                            value: "sum"
-                          }
-                          config_path: "/ovms/src/test/mediapipe/config_standard_add.json"
-                        }
-                  }
-                }
-            )pb");
+        ParseTextProtoOrDie<CalculatorGraphConfig>(ADD_MEDIAPIPE_GRAPH);
 
     CalculatorGraph graph;
     auto ret = graph.Initialize(config);
