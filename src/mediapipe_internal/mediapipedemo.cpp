@@ -70,34 +70,34 @@ const std::string DUMMY_MEDIAPIPE_GRAPH = R"pb(
 )pb";
 
 const std::string ADD_MEDIAPIPE_GRAPH = R"pb(
-input_stream: "in1"
-input_stream: "in2"
-output_stream: "out"
-node {
-  calculator: "OVMSOVCalculator"
-  input_stream: "INPUT1:in1"
-  input_stream: "INPUT2:in2"
-  output_stream: "SUM:out"
-  node_options: {
-        [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
-          servable_name: "add"
-          servable_version: "1"
-          tag_to_input_tensor_names {
-            key: "INPUT1"
-            value: "input1"
-          }
-          tag_to_input_tensor_names {
-            key: "INPUT2"
-            value: "input2"
-          }
-          tag_to_output_tensor_names {
-            key: "SUM"
-            value: "sum"
-          }
-          config_path: "/ovms/src/test/mediapipe/config_standard_add.json"
-        }
-  }
-}
+    input_stream: "in1"
+    input_stream: "in2"
+    output_stream: "out"
+    node {
+      calculator: "OVMSOVCalculator"
+      input_stream: "INPUT1:in1"
+      input_stream: "INPUT2:in2"
+      output_stream: "SUM:out"
+      node_options: {
+            [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+              servable_name: "add"
+              servable_version: "1"
+              tag_to_input_tensor_names {
+                key: "INPUT1"
+                value: "input1"
+              }
+              tag_to_input_tensor_names {
+                key: "INPUT2"
+                value: "input2"
+              }
+              tag_to_output_tensor_names {
+                key: "SUM"
+                value: "sum"
+              }
+              config_path: "/ovms/src/test/mediapipe/config_standard_add.json"
+            }
+      }
+    }
 )pb";
 
 absl::Status ExecuteDummy(size_t requestCount, size_t inputStreamDelayMs) {
