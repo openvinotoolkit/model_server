@@ -56,15 +56,19 @@ TensorInfo::TensorInfo(const std::string& name,
     TensorInfo(name, "", precision, shape, layout) {}
 
 TensorInfo::ProcessingHint TensorInfo::getProcessingHint() const {
+    return this->processingHint;
+}
+
+void TensorInfo::createProcessingHint() {
     size_t expectedDimsForImage = this->influencedByDemultiplexer ? 5 : 4;
     if (this->shape.size() == 2 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
-        return TensorInfo::ProcessingHint::STRING_2D_U8;
+        this->processingHint = TensorInfo::ProcessingHint::STRING_2D_U8;
     } else if (this->shape.size() == 1 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
-        return TensorInfo::ProcessingHint::STRING_1D_U8;
+        this->processingHint = TensorInfo::ProcessingHint::STRING_1D_U8;
     } else if (this->shape.size() == expectedDimsForImage) {
-        return TensorInfo::ProcessingHint::IMAGE;
+        this->processingHint = TensorInfo::ProcessingHint::IMAGE;
     } else {
-        return TensorInfo::ProcessingHint::NO_PROCESSING;
+        this->processingHint = TensorInfo::ProcessingHint::NO_PROCESSING;
     }
 }
 
@@ -73,12 +77,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const shape_t& shape,
     const Layout& layout) :
-    name(name),
-    mapping(mapping),
-    precision(precision),
-    shape(shape),
-    layout(layout) {
-}
+    TensorInfo(name, mapping, precision, Shape(shape), layout) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
@@ -90,6 +89,7 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
+    createProcessingHint();
 }
 
 const std::string& TensorInfo::getName() const {
@@ -136,12 +136,14 @@ std::shared_ptr<const TensorInfo> TensorInfo::createCopyWithNewShape(const Shape
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape = shape;
     copy->layout = Layout::getUnspecifiedLayout();
+    copy->createProcessingHint();
     return copy;
 }
 
 std::shared_ptr<const TensorInfo> TensorInfo::createCopyWithNewMappedName(const std::string& mappedName) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->mapping = mappedName;
+    copy->createProcessingHint();
     return copy;
 }
 
@@ -155,6 +157,7 @@ std::shared_ptr<const TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensi
         copy->layout.replace(batchPosition, 1, std::string(1, Layout::UNDEFINED_DIMENSION_CHAR));
     }
     copy->layout = std::string(1, Layout::BATCH_DIMENSION_LETTER[0]) + copy->layout;
+    copy->createProcessingHint();
     return copy;
 }
 

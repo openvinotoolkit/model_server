@@ -178,8 +178,6 @@ public:
 
     std::shared_ptr<const TensorInfo> createCopyWithNewShape(const Shape& shape) const;
     std::shared_ptr<const TensorInfo> createCopyWithNewMappedName(const std::string& mappedName) const;
-    // std::shared_ptr<const TensorInfo> createCopyWithNewLayout(const Layout& layout) const;
-    // std::shared_ptr<const TensorInfo> createCopyWithNewPrecision(const Precision& precision) const;
 
     std::shared_ptr<const TensorInfo> createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const;
     std::shared_ptr<const TensorInfo> createIntersection(const TensorInfo& other) const;
@@ -221,6 +219,9 @@ protected:
          * @brief Information if influenced by demultiplexer
          */
     bool influencedByDemultiplexer = false;
+
+    void createProcessingHint();
+    TensorInfo::ProcessingHint processingHint = TensorInfo::ProcessingHint::NO_PROCESSING;
 };
 
 }  // namespace ovms

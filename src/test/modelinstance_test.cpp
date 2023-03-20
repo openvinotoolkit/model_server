@@ -911,33 +911,3 @@ TEST(TensorMap, TestProcessingHintFromShape_1_Demultiplexer) {
     EXPECT_EQ(servableInputs["Input_U8_1_1_3_NCHW"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);  // due to demultiplexer
     EXPECT_EQ(servableInputs["Input_U8_1_3_N"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);       // due to demultiplexer
 }
-
-TEST(TensorMap, TestProcessingHintFromShape_2) {
-    auto servableInputs = ovms::tensor_map_t({
-        {"Input_FP32_1_224_224_3_NHWC",
-            std::make_shared<ovms::TensorInfo>("Input_FP32_1_224_224_3_NHWC", ovms::Precision::FP32, ovms::Shape{1, 224, 224, 3})},
-        {"Input_U8_1_3_NCHW",
-            std::make_shared<ovms::TensorInfo>("Input_U8_1_3_NCHW", ovms::Precision::U8, ovms::Shape{1, 3})},
-        {"Input_U8_3_N",
-            std::make_shared<ovms::TensorInfo>("Input_U8_3_N", ovms::Precision::U8, ovms::Shape{3})},
-    });
-
-    EXPECT_EQ(servableInputs["Input_FP32_1_224_224_3_NHWC"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::IMAGE);
-    EXPECT_EQ(servableInputs["Input_U8_1_3_NCHW"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_2D_U8);
-    EXPECT_EQ(servableInputs["Input_U8_3_N"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_1D_U8);
-}
-
-TEST(TensorMap, TestProcessingHintFromShape_2_Demultiplexer) {
-    auto servableInputs = ovms::tensor_map_t({
-        {"Input_FP32_1_1_224_224_3_NHWC",
-            std::make_shared<ovms::TensorInfo>("Input_FP32_1_1_224_224_3_NHWC", ovms::Precision::FP32, ovms::Shape{1, 224, 224, 3})->createCopyWithDemultiplexerDimensionPrefix(1)},
-        {"Input_U8_1_1_3_NCHW",
-            std::make_shared<ovms::TensorInfo>("Input_U8_1_1_3_NCHW", ovms::Precision::U8, ovms::Shape{1, 3})->createCopyWithDemultiplexerDimensionPrefix(1)},
-        {"Input_U8_1_3_N",
-            std::make_shared<ovms::TensorInfo>("Input_U8_1_3_N", ovms::Precision::U8, ovms::Shape{3})->createCopyWithDemultiplexerDimensionPrefix(1)},
-    });
-
-    EXPECT_EQ(servableInputs["Input_FP32_1_1_224_224_3_NHWC"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::IMAGE);
-    EXPECT_EQ(servableInputs["Input_U8_1_1_3_NCHW"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);  // due to demultiplexer
-    EXPECT_EQ(servableInputs["Input_U8_1_3_N"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);       // due to demultiplexer
-}
