@@ -882,7 +882,7 @@ TEST(CpuThroughputNotSpecified, AffinityWithNumStreams) {
     EXPECT_EQ(pluginConfig.count("NUM_STREAMS"), 1);
 }
 
-TEST(TensorMap, TestPerformanceHintFromShape_1) {
+TEST(TensorMap, TestProcessingHintFromShape_1) {
     auto servableInputs = ovms::tensor_map_t({
         {"Input_FP32_1_224_224_3_NHWC",
             std::make_shared<ovms::TensorInfo>("Input_FP32_1_224_224_3_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3})},
@@ -897,7 +897,7 @@ TEST(TensorMap, TestPerformanceHintFromShape_1) {
     EXPECT_EQ(servableInputs["Input_U8_3_N"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_1D_U8);
 }
 
-TEST(TensorMap, TestPerformanceHintFromShape_1_Demultiplexer) {
+TEST(TensorMap, TestProcessingHintFromShape_1_Demultiplexer) {
     auto servableInputs = ovms::tensor_map_t({
         {"Input_FP32_1_1_224_224_3_NHWC",
             std::make_shared<ovms::TensorInfo>("Input_FP32_1_1_224_224_3_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3})->createCopyWithDemultiplexerDimensionPrefix(1)},
@@ -912,7 +912,7 @@ TEST(TensorMap, TestPerformanceHintFromShape_1_Demultiplexer) {
     EXPECT_EQ(servableInputs["Input_U8_1_3_N"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);       // due to demultiplexer
 }
 
-TEST(TensorMap, TestPerformanceHintFromShape_2) {
+TEST(TensorMap, TestProcessingHintFromShape_2) {
     auto servableInputs = ovms::tensor_map_t({
         {"Input_FP32_1_224_224_3_NHWC",
             std::make_shared<ovms::TensorInfo>("Input_FP32_1_224_224_3_NHWC", ovms::Precision::FP32, ovms::Shape{1, 224, 224, 3})},
@@ -927,7 +927,7 @@ TEST(TensorMap, TestPerformanceHintFromShape_2) {
     EXPECT_EQ(servableInputs["Input_U8_3_N"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_1D_U8);
 }
 
-TEST(TensorMap, TestPerformanceHintFromShape_2_Demultiplexer) {
+TEST(TensorMap, TestProcessingHintFromShape_2_Demultiplexer) {
     auto servableInputs = ovms::tensor_map_t({
         {"Input_FP32_1_1_224_224_3_NHWC",
             std::make_shared<ovms::TensorInfo>("Input_FP32_1_1_224_224_3_NHWC", ovms::Precision::FP32, ovms::Shape{1, 224, 224, 3})->createCopyWithDemultiplexerDimensionPrefix(1)},
