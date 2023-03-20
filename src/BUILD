@@ -91,7 +91,6 @@ cc_shared_library(
         "@clog//:__subpackages__",
         "@gemmlowp//:__subpackages__",
         "@flatbuffers//:__subpackages__",
-        "@linux_opencv//:__subpackages__",
     ],
     features = [],
     roots = ["//src:ovms_lib"],
@@ -355,8 +354,8 @@ cc_library(
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
-        "@openvino//:openvino",
-        "@opencv//:opencv",
+        "@linux_openvino//:openvino",
+        "@linux_opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
@@ -412,7 +411,8 @@ cc_binary(
     ],
     deps = [
         "@google_mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
-        "@mediapipe_calculators//:mediapipe_calculators",
+        #"@mediapipe_calculators//:mediapipe_calculators",
+        "@google_mediapipe//mediapipe/graphs/object_detection:desktop_openvino_calculators",
     ],
 )
 
