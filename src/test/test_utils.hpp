@@ -618,3 +618,5 @@ class ConstructorEnabledConfig : public ovms::Config {
 public:
     ConstructorEnabledConfig() {}
 };
+
+std::shared_ptr<const ovms::TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const ovms::TensorInfo> src, ovms::Precision precision);

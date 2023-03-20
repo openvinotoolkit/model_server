@@ -809,7 +809,7 @@ protected:
 
 TEST_P(CAPIPredictValidationPrecision, ValidPrecisions) {
     ovms::Precision testedPrecision = GetParam();
-    mockedInputsInfo[tensorName]->setPrecision(testedPrecision);
+    mockedInputsInfo[tensorName] = createTensorInfoCopyWithPrecision(mockedInputsInfo[tensorName], testedPrecision);
     preparePredictRequest(request,
         {
             {tensorName,

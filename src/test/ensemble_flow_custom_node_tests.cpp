@@ -189,8 +189,8 @@ protected:
     const std::string customNodeOutputName = "output_numbers";
     static constexpr const char* pipelineInputName = "pipeline_input";
     const std::string pipelineOutputName = "pipeline_output";
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo;
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo;
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelOutputTensorInfo;
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelInputTensorInfo;
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {

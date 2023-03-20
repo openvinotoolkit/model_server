@@ -23,7 +23,7 @@ namespace ovms {
 
 static Status serializePrecision(
     tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
@@ -62,7 +62,7 @@ static Status serializePrecision(
 
 static Status serializePrecision(
     ::KFSResponse::InferOutputTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
@@ -102,7 +102,7 @@ static Status serializePrecision(
 
 static Status serializeShape(
     tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     responseOutput.mutable_tensor_shape()->Clear();
@@ -127,7 +127,7 @@ static Status serializeShape(
 
 static Status serializeShape(
     ::KFSResponse::InferOutputTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     responseOutput.clear_shape();
@@ -194,7 +194,7 @@ static void serializeContent(::inference::ModelInferResponse::InferOutputTensor&
 
 Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
@@ -212,7 +212,7 @@ Status serializeTensorToTensorProto(
 Status serializeTensorToTensorProtoRaw(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
@@ -229,7 +229,7 @@ Status serializeTensorToTensorProtoRaw(
 
 Status serializeTensorToTensorProto(
     ::KFSResponse::InferOutputTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     auto status = serializePrecision(responseOutput, servableOutput, tensor);

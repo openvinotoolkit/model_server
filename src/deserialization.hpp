@@ -46,22 +46,22 @@ namespace ovms {
     }
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::shared_ptr<const TensorInfo>& tensorInfo,
     const std::string& buffer);
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 class ConcreteTensorProtoDeserializator {
 public:
     static ov::Tensor deserializeTensorProto(
         const ::KFSRequest::InferInputTensor& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo,
+        const std::shared_ptr<const TensorInfo>& tensorInfo,
         const std::string* buffer) {
         OVMS_PROFILE_FUNCTION();
         if (nullptr != buffer) {
@@ -224,7 +224,7 @@ public:
 
     static ov::Tensor deserializeTensorProto(
         const InferenceTensor& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo) {
+        const std::shared_ptr<const TensorInfo>& tensorInfo) {
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP64:
@@ -254,7 +254,7 @@ public:
     }
     static ov::Tensor deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo) {
+        const std::shared_ptr<const TensorInfo>& tensorInfo) {
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP32:
@@ -307,14 +307,14 @@ public:
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
 }
 
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::shared_ptr<const TensorInfo>& tensorInfo,
     const std::string* buffer) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, buffer);
 }
@@ -322,7 +322,7 @@ ov::Tensor deserializeTensorProto(
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const InferenceTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
 }
 

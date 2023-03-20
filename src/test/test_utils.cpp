@@ -627,3 +627,12 @@ void randomizePort(std::string& port) {
         *digitToRandomize += dist(eng);
     }
 }
+
+std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const TensorInfo> src, ovms::Precision newPrecision) {
+    return std::make_shared<TensorInfo>(
+        src->getName(),
+        src->getMappedName(),
+        newPrecision,
+        src->getShape(),
+        src->getLayout());
+}

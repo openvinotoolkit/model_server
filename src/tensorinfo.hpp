@@ -36,7 +36,7 @@ namespace ovms {
 
 class TensorInfo;
 
-using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
+using tensor_map_t = std::map<std::string, std::shared_ptr<const TensorInfo>>;
 
 /**
      * @brief Class containing information about the tensor
@@ -124,7 +124,6 @@ public:
          * @return const std::string& 
          */
     const std::string& getMappedName() const;
-    void setMappedName(const std::string& mappedName);
 
     /**
          * @brief Get the Precision object
@@ -132,18 +131,6 @@ public:
          * @return const InferenceEngine::Precision
          */
     const Precision getPrecision() const;
-
-    /**
-         * @brief Set the Precision object
-         * 
-         * @return const InferenceEngine::Precision
-         */
-    void setPrecision(const ovms::Precision& requestedPrecision);
-
-    /**
-         * @brief Set the Layout object
-         */
-    void setLayout(const Layout& layout);
 
     ov::element::Type getOvPrecision() const;
 
@@ -184,16 +171,18 @@ public:
          * @return shape
          */
     const Shape& getShape() const;
-    void setShape(const Shape& shape);
 
     ProcessingHint getProcessingHint() const;
 
     bool isInfluencedByDemultiplexer() const;
 
-    std::shared_ptr<TensorInfo> createCopyWithNewShape(const Shape& shape) const;
+    std::shared_ptr<const TensorInfo> createCopyWithNewShape(const Shape& shape) const;
+    std::shared_ptr<const TensorInfo> createCopyWithNewMappedName(const std::string& mappedName) const;
+    // std::shared_ptr<const TensorInfo> createCopyWithNewLayout(const Layout& layout) const;
+    // std::shared_ptr<const TensorInfo> createCopyWithNewPrecision(const Precision& precision) const;
 
-    std::shared_ptr<TensorInfo> createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const;
-    std::shared_ptr<TensorInfo> createIntersection(const TensorInfo& other);
+    std::shared_ptr<const TensorInfo> createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const;
+    std::shared_ptr<const TensorInfo> createIntersection(const TensorInfo& other) const;
 
     bool isTensorUnspecified() const;
 
@@ -201,7 +190,7 @@ public:
 
     static std::string shapeToString(const shape_t& shape);
 
-    static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
+    static std::shared_ptr<const TensorInfo> getUnspecifiedTensorInfo();
 
     const std::optional<Dimension> getBatchSize() const;
 

@@ -360,7 +360,7 @@ Status KFSInferenceServiceImpl::buildResponse(
 }
 
 void KFSInferenceServiceImpl::convert(
-    const std::pair<std::string, std::shared_ptr<TensorInfo>>& from,
+    const std::pair<std::string, std::shared_ptr<const TensorInfo>>& from,
     KFSModelMetadataResponse::TensorMetadata* to) {
     to->set_name(from.first);
     to->set_datatype(ovmsPrecisionToKFSPrecision(from.second->getPrecision()));

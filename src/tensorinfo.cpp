@@ -100,16 +100,8 @@ const std::string& TensorInfo::getMappedName() const {
     return mapping.size() == 0 ? name : mapping;
 }
 
-void TensorInfo::setMappedName(const std::string& mappedName) {
-    mapping = mappedName;
-}
-
 const Precision TensorInfo::getPrecision() const {
     return precision;
-}
-
-void TensorInfo::setPrecision(const ovms::Precision& requestedPrecision) {
-    precision = requestedPrecision;
 }
 
 const std::string& TensorInfo::getPrecisionAsString(Precision precision) {
@@ -136,26 +128,24 @@ bool TensorInfo::isInfluencedByDemultiplexer() const {
     return influencedByDemultiplexer;
 }
 
-void TensorInfo::setShape(const Shape& shape) {
-    this->shape = shape;
-}
-
 const Shape& TensorInfo::getShape() const {
     return this->shape;
 }
 
-void TensorInfo::setLayout(const Layout& layout) {
-    this->layout = layout;
-}
-
-std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
+std::shared_ptr<const TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape = shape;
     copy->layout = Layout::getUnspecifiedLayout();
     return copy;
 }
 
-std::shared_ptr<TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const {
+std::shared_ptr<const TensorInfo> TensorInfo::createCopyWithNewMappedName(const std::string& mappedName) const {
+    auto copy = std::make_shared<TensorInfo>(*this);
+    copy->mapping = mappedName;
+    return copy;
+}
+
+std::shared_ptr<const TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
     copy->shape.emplace(copy->shape.begin(), dim);
@@ -168,7 +158,7 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPref
     return copy;
 }
 
-std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& other) {
+std::shared_ptr<const TensorInfo> TensorInfo::createIntersection(const TensorInfo& other) const {
     if (this->isTensorUnspecified())
         return std::make_shared<TensorInfo>(other);
     if (other.isTensorUnspecified())
@@ -229,7 +219,7 @@ std::string TensorInfo::shapeToString(const shape_t& shape) {
     return oss.str();
 }
 
-std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
+std::shared_ptr<const TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
     return std::make_shared<TensorInfo>("", Precision::UNDEFINED, Shape{});
 }
 

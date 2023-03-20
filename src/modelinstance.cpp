@@ -424,7 +424,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
             }
 
-            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+            std::shared_ptr<const TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
                 mappingName,
                 precision,
@@ -472,7 +472,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
                 return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
             }
 
-            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+            std::shared_ptr<const TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
                 mappingName,
                 precision,

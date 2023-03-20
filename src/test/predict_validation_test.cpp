@@ -640,7 +640,7 @@ protected:
 
 TEST_P(TfsPredictValidationPrecision, ValidPrecisions) {
     ovms::Precision testedPrecision = GetParam();
-    mockedInputsInfo[tensorName]->setPrecision(testedPrecision);
+    mockedInputsInfo[tensorName] = createTensorInfoCopyWithPrecision(mockedInputsInfo[tensorName], testedPrecision);
     preparePredictRequest(request,
         {
             {tensorName,
@@ -1302,7 +1302,7 @@ protected:
 
 TEST_P(KFSPredictValidationPrecision, ValidPrecisions) {
     ovms::Precision testedPrecision = GetParam();
-    mockedInputsInfo[tensorName]->setPrecision(testedPrecision);
+    mockedInputsInfo[tensorName] = createTensorInfoCopyWithPrecision(mockedInputsInfo[tensorName], testedPrecision);
     preparePredictRequest(request,
         {
             {tensorName,
