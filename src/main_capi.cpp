@@ -73,6 +73,10 @@ static void installSignalHandlers() {
 int main(int argc, char** argv) {
     installSignalHandlers();
 
+    uint32_t major = 0, minor = 0;
+    OVMS_ApiVersion(&major, &minor);
+    std::cout << "C-API Version: " << major << "." << minor << std::endl;
+
     OVMS_ServerSettings* serverSettings = 0;
     OVMS_ModelsSettings* modelsSettings = 0;
     OVMS_Server* srv;
