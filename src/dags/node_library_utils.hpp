@@ -35,6 +35,6 @@ CustomNodeTensorPrecision toCustomNodeTensorPrecision(ov::element::Type_t precis
 Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision);
 std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::unordered_map<std::string, std::string>& paramMap);
 std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const TensorMap& tensorMap, const std::unordered_map<std::string, shape_t>& tensorDims);
-Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback, void* customNodeLibraryInternalManager);
+Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<const TensorInfo>>& out, release_fn freeCallback, void* customNodeLibraryInternalManager);
 
 }  // namespace ovms

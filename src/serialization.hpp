@@ -61,23 +61,23 @@ public:
 
 Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
 Status serializeTensorToTensorProto(
     ::KFSResponse::InferOutputTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
 Status serializeTensorToTensorProtoRaw(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
 Status serializeTensorToTensorProto(
     InferenceTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
 typedef const std::string& (*outputNameChooser_t)(const std::string&, const TensorInfo&);

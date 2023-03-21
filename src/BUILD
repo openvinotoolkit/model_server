@@ -295,8 +295,8 @@ cc_library(
         "version.hpp",
         "logging.hpp",
         "logging.cpp",
-        "binaryutils.hpp",
-        "binaryutils.cpp",
+        "tensor_conversion.hpp",
+        "tensor_conversion.cpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
@@ -623,7 +623,7 @@ cc_test(
     linkstatic = 1,
     srcs = [
         "test/azurefilesystem_test.cpp",
-        "test/binaryutils_test.cpp",
+        "test/tensor_conversion_test.cpp",
         "test/c_api_tests.cpp",
         "test/custom_loader_test.cpp",
         "test/custom_node_output_allocator_test.cpp",
@@ -705,6 +705,8 @@ cc_test(
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
         "test/summator/1/summator.xml",
         "test/summator/1/summator.bin",
+        "test/passthrough/1/passthrough.xml",
+        "test/passthrough/1/passthrough.bin",
     ],
     linkopts = [
         "-lxml2",

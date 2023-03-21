@@ -96,6 +96,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_SHAPE, "Invalid input shape"},
     {StatusCode::INVALID_BUFFER_TYPE, "Invalid input buffer type"},
     {StatusCode::INVALID_DEVICE_ID, "Invalid input buffer device id"},
+    {StatusCode::INVALID_STRING_INPUT, "Invalid string input"},
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
     {StatusCode::INVALID_CONTENT_SIZE, "Invalid content size of tensor proto"},

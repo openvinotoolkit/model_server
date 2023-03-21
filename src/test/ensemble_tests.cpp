@@ -21,7 +21,6 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
-#include "../binaryutils.hpp"
 #include "../dags/dl_node.hpp"
 #include "../dags/entry_node.hpp"
 #include "../dags/exit_node.hpp"
@@ -38,6 +37,7 @@
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
+#include "../tensor_conversion.hpp"
 #include "../timer.hpp"
 #include "test_utils.hpp"
 
@@ -103,11 +103,11 @@ public:
     std::optional<model_version_t> requestedModelVersion{std::nullopt};
     const std::string customPipelineInputName = "custom_dummy_input";
     const std::string customPipelineOutputName = "custom_dummy_output";
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
         DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
         DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
@@ -223,11 +223,11 @@ protected:
     std::optional<model_version_t> requestedModelVersion{std::nullopt};
     const std::string customPipelineInputName = "custom_dummy_input";
     const std::string customPipelineOutputName = "custom_dummy_output";
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
         DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
         DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
@@ -488,6 +488,11 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputWron
     proto1.mutable_tensor_shape()->add_dim()->set_size(1);
     proto1.mutable_tensor_shape()->add_dim()->set_size(1);
 
+    // enforce the endpoint to be 4d to not fall into string handling
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 224, 224, 3},
+        ovms::Layout{"NHWC"});
     auto pipeline = createDummyPipeline(managerWithDummyModel);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
@@ -501,6 +506,11 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputBatc
     proto1.set_dtype(tensorflow::DataType::DT_STRING);
     proto1.mutable_tensor_shape()->add_dim()->set_size(2);
 
+    // enforce the endpoint to be 4d to not fall into string handling
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 224, 224, 3},
+        ovms::Layout{"NHWC"});
     auto pipeline = createDummyPipeline(managerWithDummyModel);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::INVALID_BATCH_SIZE);
 }

@@ -24,6 +24,7 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
+#include "../tensorinfo.hpp"
 
 namespace ovms {
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
@@ -152,6 +153,10 @@ Status isNativeFileFormatUsed(const KFSRequest& request, const std::string& name
 }
 
 bool isNativeFileFormatUsed(const KFSTensorInputProto& proto) {
+    return proto.datatype() == "BYTES";
+}
+
+bool requiresProcessing(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
 }
 }  // namespace ovms

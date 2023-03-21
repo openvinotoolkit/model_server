@@ -38,11 +38,11 @@ if [ ${NO_WARNINGS_DIRECT} -gt 14 ]; then
     echo "Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}";
     exit 1;
 fi
-if [ ${NO_WARNINGS_NOTUSED} -gt 3 ]; then
+if [ ${NO_WARNINGS_NOTUSED} -gt 2 ]; then
     echo "Failed probably due to unnecessary forward includes: ${NO_WARNINGS_NOTUSED}";
     exit 1;
 fi
-if [ ${NO_WARNINGS} -gt  196 ]; then
+if [ ${NO_WARNINGS} -gt  197 ]; then
     echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
     exit 1
 fi

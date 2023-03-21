@@ -51,6 +51,10 @@ BUILD_NGINX ?= 0
 OV_SOURCE_BRANCH ?= master
 OV_CONTRIB_BRANCH ?= master
 
+OV_SOURCE_ORG ?= openvinotoolkit
+
+SENTENCEPIECE ?= 0
+
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
@@ -189,6 +193,11 @@ ifeq ($(NVIDIA),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
   endif
 endif
+ifeq ($(SENTENCEPIECE),1)
+  ifeq ($(OV_USE_BINARY),1)
+	@echo "Building sentencepiece custom extension requires OV built from source. To build sentencepiece custom extension and OV from source make command should look like this 'SENTENCEPIECE=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
+  endif
+endif
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
 	@cd src/custom_nodes && make BASE_OS=$(BASE_OS)
@@ -215,8 +224,8 @@ endif
 	@cat .workspace/metadata.json
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
-		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" --build-arg ov_source_org="$(OV_SOURCE_ORG)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) --build-arg RUN_TESTS=$(RUN_TESTS)\
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
@@ -231,7 +240,7 @@ endif
 targz_package: ovms_builder_image
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg BASE_OS=$(BASE_OS) \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg BASE_OS=$(BASE_OS) \
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)

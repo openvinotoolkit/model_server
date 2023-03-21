@@ -640,7 +640,7 @@ protected:
 
 TEST_P(TfsPredictValidationPrecision, ValidPrecisions) {
     ovms::Precision testedPrecision = GetParam();
-    mockedInputsInfo[tensorName]->setPrecision(testedPrecision);
+    mockedInputsInfo[tensorName] = createTensorInfoCopyWithPrecision(mockedInputsInfo[tensorName], testedPrecision);
     preparePredictRequest(request,
         {
             {tensorName,
@@ -1302,7 +1302,7 @@ protected:
 
 TEST_P(KFSPredictValidationPrecision, ValidPrecisions) {
     ovms::Precision testedPrecision = GetParam();
-    mockedInputsInfo[tensorName]->setPrecision(testedPrecision);
+    mockedInputsInfo[tensorName] = createTensorInfoCopyWithPrecision(mockedInputsInfo[tensorName], testedPrecision);
     preparePredictRequest(request,
         {
             {tensorName,
@@ -1328,4 +1328,160 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<KFSPredictValidationPrecision::ParamType>& info) {
         return toString(info.param);
     });
+
+void prepareInferStringInputWithTwoDimensionShapeTensor(::KFSRequest& request, const std::string& name) {
+    KFSTensorInputProto* tensor = request.add_inputs();
+    tensor->set_name(name);
+    tensor->set_datatype("BYTES");
+    tensor->mutable_shape()->Clear();
+    tensor->add_shape(1);
+    tensor->add_shape(1);
+}
+
+void prepareInferStringInputWithTwoDimensionShapeTensor(tensorflow::serving::PredictRequest& request, const std::string& name) {
+    request.mutable_inputs()->clear();
+    auto& input = (*request.mutable_inputs())[name];
+    input.set_dtype(tensorflow::DataType::DT_STRING);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
+    input.mutable_tensor_shape()->add_dim()->set_size(1);
+}
+
+void prepareInferStringInputWithNegativeShape(::KFSRequest& request, const std::string& name) {
+    KFSTensorInputProto* tensor = request.add_inputs();
+    tensor->set_name(name);
+    tensor->set_datatype("BYTES");
+    tensor->mutable_shape()->Clear();
+    tensor->add_shape(-5);
+}
+
+void prepareInferStringInputWithNegativeShape(tensorflow::serving::PredictRequest& request, const std::string& name) {
+    request.mutable_inputs()->clear();
+    auto& input = (*request.mutable_inputs())[name];
+    input.set_dtype(tensorflow::DataType::DT_STRING);
+    input.mutable_tensor_shape()->add_dim()->set_size(-5);
+}
+
+template <typename TensorType>
+class PredictValidationString2DTest : public ::testing::Test {
+protected:
+    TensorType request;
+    const char* tensorName = DUMMY_MODEL_INPUT_NAME;
+    ovms::tensor_map_t mockedInputsInfo;
+    void SetUp() override {
+        auto shape2d = ovms::Shape{-1, -1};
+        mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(tensorName, ovms::Precision::U8, shape2d, ovms::Layout{"NC"});
+    }
+};
+
+using MyTypes = ::testing::Types<tensorflow::serving::PredictRequest, ::KFSRequest>;
+TYPED_TEST_SUITE(PredictValidationString2DTest, MyTypes);
+
+TYPED_TEST(PredictValidationString2DTest, positive) {
+    // bs=1
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    this->request.Clear();
+    // bs=2
+    inputStrings = {"String_123", "other"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
+TYPED_TEST(PredictValidationString2DTest, negative_no_string) {
+    std::vector<std::string> inputStrings = {};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TYPED_TEST(PredictValidationString2DTest, negative_shape_has_more_dimensions_than_1) {
+    prepareInferStringInputWithTwoDimensionShapeTensor(this->request, this->tensorName);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+}
+
+TYPED_TEST(PredictValidationString2DTest, negative_shape_has_negative_shape_value) {
+    prepareInferStringInputWithNegativeShape(this->request, this->tensorName);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TYPED_TEST(PredictValidationString2DTest, batchsize_change_required) {
+    this->mockedInputsInfo[this->tensorName] = std::make_shared<ovms::TensorInfo>(this->tensorName, ovms::Precision::U8, ovms::Shape{3, -1}, ovms::Layout{"NC"});
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1}, {}, ovms::Mode::AUTO);
+    EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
+}
+
+TYPED_TEST(PredictValidationString2DTest, shape_change_required) {
+    this->mockedInputsInfo[this->tensorName] = std::make_shared<ovms::TensorInfo>(this->tensorName, ovms::Precision::U8, ovms::Shape{-1, 4}, ovms::Layout{"NC"});
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    ovms::ShapeInfo inputShape{ovms::AUTO, {-1, 4}};
+    ovms::shapes_info_map_t shapeMap;
+    shapeMap[this->tensorName] = inputShape;
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1}, {}, ovms::Mode::FIXED, shapeMap);
+    EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
+}
+
+TYPED_TEST(PredictValidationString2DTest, string_not_allowed_with_demultiplexer) {
+    this->mockedInputsInfo[this->tensorName] = this->mockedInputsInfo[this->tensorName]->createCopyWithDemultiplexerDimensionPrefix(ovms::Dimension::any());
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
+}
+
+template <typename TensorType>
+class PredictValidationString1DTest : public ::testing::Test {
+protected:
+    TensorType request;
+    const char* tensorName = DUMMY_MODEL_INPUT_NAME;
+    ovms::tensor_map_t mockedInputsInfo;
+    void SetUp() override {
+        auto shape1d = ovms::Shape{-1};
+        mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(tensorName, ovms::Precision::U8, shape1d, ovms::Layout{"NC"});
+    }
+};
+
+using MyTypes = ::testing::Types<tensorflow::serving::PredictRequest, ::KFSRequest>;
+TYPED_TEST_SUITE(PredictValidationString1DTest, MyTypes);
+
+TYPED_TEST(PredictValidationString1DTest, positive) {
+    // bs=1
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    // bs=2
+    inputStrings = {"String_123", "other"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
+TYPED_TEST(PredictValidationString1DTest, negative_wrong_request_shape) {
+    prepareInferStringInputWithTwoDimensionShapeTensor(this->request, this->tensorName);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+}
+
+TYPED_TEST(PredictValidationString1DTest, negative_negative_shape) {
+    prepareInferStringInputWithNegativeShape(this->request, this->tensorName);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TYPED_TEST(PredictValidationString1DTest, string_not_allowed_with_demultiplexer) {
+    this->mockedInputsInfo[this->tensorName] = this->mockedInputsInfo[this->tensorName]->createCopyWithDemultiplexerDimensionPrefix(ovms::Dimension::any());
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
+}
+
 #pragma GCC diagnostic pop

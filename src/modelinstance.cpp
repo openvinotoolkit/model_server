@@ -424,7 +424,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
             }
 
-            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+            std::shared_ptr<const TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
                 mappingName,
                 precision,
@@ -432,7 +432,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 layout);
 
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Input {}", info->asString());
-
             this->inputsInfo[info->getMappedName()] = std::move(info);
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
@@ -473,7 +472,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
                 return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
             }
 
-            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+            std::shared_ptr<const TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
                 mappingName,
                 precision,

@@ -147,4 +147,8 @@ bool isNativeFileFormatUsed(const TFSInputTensorType& proto) {
     return proto.dtype() == TFSDataType::DT_STRING;
     // return request.string_val_size() > 0;
 }
+
+bool requiresProcessing(const TFSInputTensorType& proto) {
+    return proto.dtype() == tensorflow::DataType::DT_STRING;
+}
 }  // namespace ovms

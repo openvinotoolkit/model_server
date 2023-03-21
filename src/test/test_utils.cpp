@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "test_utils.hpp"
 
+#include <algorithm>
 #include <functional>
 
 #include "../capi_frontend/capi_utils.hpp"
@@ -32,6 +33,8 @@ using ovms::TensorInfo;
 void prepareBinaryPredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }         // CAPI binary not supported
 void prepareBinaryPredictRequestNoShape(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }  // CAPI binary not supported
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }      // CAPI binary not supported
+
+void prepareInferStringRequest(ovms::InferenceRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent) { throw 42; }  // CAPI binary not supported
 
 void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool putBufferInInputTensorContent) {
     request.mutable_inputs()->Clear();
@@ -271,6 +274,79 @@ void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
 
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
     return readImage("/ovms/src/test/binaryutils/rgb4x4.jpg", filesize, image_bytes);
+}
+
+void prepareInferStringRequest(::KFSRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent) {
+    auto it = request.mutable_inputs()->begin();
+    size_t bufferId = 0;
+    while (it != request.mutable_inputs()->end()) {
+        if (it->name() == name)
+            break;
+        ++it;
+        ++bufferId;
+    }
+    KFSTensorInputProto* tensor;
+    std::string* content = nullptr;
+    if (it != request.mutable_inputs()->end()) {
+        tensor = &*it;
+        if (!putBufferInInputTensorContent) {
+            content = request.mutable_raw_input_contents()->Mutable(bufferId);
+        }
+    } else {
+        tensor = request.add_inputs();
+        if (!putBufferInInputTensorContent) {
+            content = request.add_raw_input_contents();
+        }
+    }
+    tensor->set_name(name);
+    tensor->set_datatype("BYTES");
+    tensor->mutable_shape()->Clear();
+    tensor->add_shape(data.size());
+    size_t dataSize = 1;
+    if (!putBufferInInputTensorContent) {
+        content->resize(dataSize);
+        std::memcpy(content->data(), data.data(), content->size());
+    } else {
+        for (auto inputData : data) {
+            auto bytes_val = tensor->mutable_contents()->mutable_bytes_contents()->Add();
+            bytes_val->append(inputData.data(), inputData.size());
+        }
+    }
+}
+
+void prepareInferStringRequest(tensorflow::serving::PredictRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent) {
+    request.mutable_inputs()->clear();
+    auto& input = (*request.mutable_inputs())[name];
+    input.set_dtype(tensorflow::DataType::DT_STRING);
+    input.mutable_tensor_shape()->add_dim()->set_size(data.size());
+    for (auto inputData : data) {
+        input.add_string_val(inputData);
+    }
+}
+
+void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<std::string> expectedStrings) {
+    size_t maxStringLength = 0;
+    for (const auto& input : expectedStrings) {
+        maxStringLength = std::max(maxStringLength, input.size());
+    }
+    size_t width = maxStringLength + 1;
+    size_t i = 0;
+    ASSERT_EQ(tensor.get_shape().size(), 2);
+    ASSERT_EQ(tensor.get_shape()[0], expectedStrings.size());
+    ASSERT_EQ(tensor.get_shape()[1], width);
+    ASSERT_EQ(tensor.get_size(), (width * expectedStrings.size()));
+    for (const auto& input : expectedStrings) {
+        for (size_t j = 0; j < input.size(); j++) {
+            ASSERT_EQ(
+                tensor.data<uint8_t>()[i * width + j],
+                reinterpret_cast<const uint8_t*>(input.data())[j])
+                << "Tensor data does not match expectations for input: " << input << " at index: " << i << " and position: " << j;
+        }
+        for (size_t j = input.size(); j < width; j++) {
+            ASSERT_EQ(tensor.data<uint8_t>()[i * width + j], 0);
+        }
+        i++;
+    }
 }
 
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize) {
@@ -550,4 +626,13 @@ void randomizePort(std::string& port) {
         char* digitToRandomize = (char*)port.c_str() + j;
         *digitToRandomize += dist(eng);
     }
+}
+
+std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const TensorInfo> src, ovms::Precision newPrecision) {
+    return std::make_shared<TensorInfo>(
+        src->getName(),
+        src->getMappedName(),
+        newPrecision,
+        src->getShape(),
+        src->getLayout());
 }
