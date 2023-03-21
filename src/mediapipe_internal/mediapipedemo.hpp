@@ -14,7 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <string>
+
 #include "absl/status/status.h"  // TODO include as system lib
+
+extern const std::string DUMMY_MEDIAPIPE_GRAPH;
+extern const std::string ADD_MEDIAPIPE_GRAPH;
 
 absl::Status ExecuteDummy(size_t requestCount, size_t inputStreamDelayMs);
 absl::Status ExecuteAdd(size_t requestCount, size_t inputStreamDelayMs);
