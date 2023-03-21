@@ -52,6 +52,7 @@ OV_SOURCE_BRANCH ?= master
 OV_CONTRIB_BRANCH ?= master
 
 OV_SOURCE_ORG ?= openvinotoolkit
+OV_CONTRIB_ORG ?= openvinotoolkit
 
 SENTENCEPIECE ?= 0
 
@@ -225,6 +226,7 @@ endif
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" --build-arg ov_source_org="$(OV_SOURCE_ORG)" \
+		--build-arg ov_contrib_org="$(OV_CONTRIB_ORG)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) --build-arg RUN_TESTS=$(RUN_TESTS)\
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
