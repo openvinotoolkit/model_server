@@ -553,7 +553,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -572,7 +572,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -617,7 +617,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -636,7 +636,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -655,7 +655,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
