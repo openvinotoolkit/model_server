@@ -411,7 +411,7 @@ cc_binary(
     ],
     deps = [
         "@google_mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
-        #"@mediapipe_calculators//:mediapipe_calculators",
+        #TODO:enable_image_transformation_calculator++"@mediapipe_calculators//:mediapipe_calculators",
         "@google_mediapipe//mediapipe/graphs/object_detection:desktop_openvino_calculators",
     ],
 )
