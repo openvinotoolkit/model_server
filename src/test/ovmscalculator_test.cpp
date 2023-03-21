@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include <gtest/gtest.h>
 
-#include "../mediapipe/mediapipedemo.hpp"
+#include "../mediapipe_internal/mediapipedemo.hpp"
 #include "mediapipe/framework/port/status.h"
 
 TEST(Mediapipe, PureDummyGraph) {
