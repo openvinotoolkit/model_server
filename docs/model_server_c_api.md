@@ -15,7 +15,7 @@ API is versioned according to [SemVer 2.0](https://semver.org/). Calling `OVMS_A
 - major - incremented when new, backward incompatible changes are introduced to the API itself (API call removal, name change, parameter change)
 - minor - incremented when API is modified but backward compatible (new API call added)
 
-There is no patch version number. Underlying functionality changes not related to API itself are tracked via OVMS version. OVMS and OpenVINO versions can be tracked via logs or `ServerMetadata` request (via KServe or C-API).
+There is no patch version number. Underlying functionality changes not related to API itself are tracked via OVMS version. OVMS and OpenVINO versions can be tracked via logs or `ServerMetadata` request (via KServe API).
 
 ### Server configuration and start
 
