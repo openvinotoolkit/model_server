@@ -40,7 +40,7 @@ TEST(StatusCodeTest, AllStatusCodesMapped) {
     }
 }
 
-TEST(StatusCodeTest, CApi) {
+TEST(StatusCodeTest, CAPI) {
     for (auto statusCode = StatusCode::OK; statusCode != StatusCode::STATUS_CODE_END; ++statusCode) {
         Status status = Status(statusCode);
         OVMS_Status* sts = reinterpret_cast<OVMS_Status*>(&status);

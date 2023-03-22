@@ -11,6 +11,12 @@ Server functionalities are encapsulated in shared library built from OVMS source
 
 Calling a method to start the model serving in your application initiates the OVMS as a separate thread. Then you can schedule inference both directly from app using C API and gRPC/HTTP endpoints.
 
+API is versioned according to [SemVer 2.0](https://semver.org/). Calling `OVMS_ApiVersion` it is possible to get `major` and `minor` version number.
+- major - incremented when new, backward incompatible changes are introduced to the API itself (API call removal, name change, parameter change)
+- minor - incremented when API is modified but backward compatible (new API call added)
+
+There is no patch version number. Underlying functionality changes not related to API itself are tracked via OVMS version. OVMS and OpenVINO versions can be tracked via logs or `ServerMetadata` request (via KServe API).
+
 ### Server configuration and start
 
 To start OVMS you need to create `OVMS_Server` object using `OVMS_ServerNew`, with set of `OVMS_ServerSettings` and `OVMS_ModelsSettings` that describe how the server should be configured. Once the server is started using `OVMS_ServerStartFromConfigurationFile` you can schedule the inferences using `OVMS_Inference`. To stop server, you must call `OVMS_ServerDelete`. While the server is alive you can schedule both in process inferences as well as use gRPC API to schedule inferences from remote machine. Optionally you can also enable HTTP service. Example how to use OVMS with C/C++ application is [here](../demos/c_api_minimal_app/README.md).

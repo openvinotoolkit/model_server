@@ -594,7 +594,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 // C-API
 
-class CApiSerialization : public ::testing::TestWithParam<ovms::Precision> {
+class CAPISerialization : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     tensor_map_t prepareInputs(ovms::Precision precision, ovms::Shape shape = ovms::Shape{1, 10}) {
         tensor_map_t ret;
@@ -606,7 +606,7 @@ protected:
     InferenceResponse response{"dummy", 1};
 };
 
-TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
+TEST(SerializeCAPITensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
     InferenceResponse response{"dummy", 1};
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
@@ -628,7 +628,7 @@ TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecis
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorShape) {
+TEST(SerializeCAPITensorSingle, NegativeMismatchBetweenTensorInfoAndTensorShape) {
     InferenceResponse response{"dummy", 1};
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
@@ -650,7 +650,7 @@ TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorShape)
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-class SerializeCApiTensorPositive : public CApiSerialization {};
+class SerializeCAPITensorPositive : public CAPISerialization {};
 
 struct MockedTensorProvider {
     ov::Tensor& tensor;
@@ -663,7 +663,7 @@ Status OutputGetter<MockedTensorProvider&>::get(const std::string& name, ov::Ten
     return StatusCode::OK;
 }
 
-TEST_P(SerializeCApiTensorPositive, SerializeTensorShouldSucceedForPrecision) {
+TEST_P(SerializeCAPITensorPositive, SerializeTensorShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     ov::Tensor tensor(ovmsPrecisionToIE2Precision(testedPrecision), ov::Shape{1, 10});
     MockedTensorProvider provider(tensor);
@@ -684,15 +684,15 @@ TEST_P(SerializeCApiTensorPositive, SerializeTensorShouldSucceedForPrecision) {
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    SerializeCApiTensorPositive,
+    SerializeCAPITensorPositive,
     ::testing::ValuesIn(SUPPORTED_CAPI_OUTPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<SerializeCApiTensorPositive::ParamType>& info) {
+    [](const ::testing::TestParamInfo<SerializeCAPITensorPositive::ParamType>& info) {
         return toString(info.param);
     });
 
-class SerializeCApiTensorNegative : public CApiSerialization {};
+class SerializeCAPITensorNegative : public CAPISerialization {};
 
-TEST_P(SerializeCApiTensorNegative, SerializeTensorShouldFailForPrecision) {
+TEST_P(SerializeCAPITensorNegative, SerializeTensorShouldFailForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     ov::Tensor tensor(ovmsPrecisionToIE2Precision(testedPrecision), ov::Shape{1, 10});
     MockedTensorProvider provider(tensor);
@@ -713,13 +713,13 @@ TEST_P(SerializeCApiTensorNegative, SerializeTensorShouldFailForPrecision) {
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    SerializeCApiTensorNegative,
+    SerializeCAPITensorNegative,
     ::testing::ValuesIn(UNSUPPORTED_CAPI_OUTPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<SerializeCApiTensorNegative::ParamType>& info) {
+    [](const ::testing::TestParamInfo<SerializeCAPITensorNegative::ParamType>& info) {
         return toString(info.param);
     });
 
-TEST_F(CApiSerialization, ValidSerialization) {
+TEST_F(CAPISerialization, ValidSerialization) {
     constexpr size_t NUMBER_OF_ELEMENTS = 3;
     std::array<float, NUMBER_OF_ELEMENTS> data = {3.0, 2.0, 1.0};
     shape_t shape{1, NUMBER_OF_ELEMENTS, 1, 1};
