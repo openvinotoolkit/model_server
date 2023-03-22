@@ -1,4 +1,4 @@
-# Using intup data in string format with universal-sentence-encoder model
+# Using inputs data in string format with universal-sentence-encoder model
 
 
 ## Download the model
