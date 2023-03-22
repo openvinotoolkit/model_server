@@ -48,7 +48,7 @@ Note: frozen graph is created using [freeze_graph.py](https://github.com/tensorf
 Model universal-sentence-encoder-multilingual includes a layer SentencepieceTokenizer which is not supported by OpenVINO at the moment. It can be however implemented using a [cpu extention](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations/user_ie_extensions/sentence_piece), which is a dynamic library performing the execution of the model layer.
 The layer SentencepieceTokenizer expects on the input a list of strings. The cpu extension replaces the input format to an array with UINT precision with a shape [-1]. It is serialized representation of the list of strings in a form or bytes. When this extension is deployed in OpenVINO Model Server, you don't need to worry about the serialization as it is handled internally. The model server accepts the input in a string format and performs the conversion to OpenVINO requirement transprently.
 
-Until it is published, the docker image with OpenVINO Model Server including the cpu extention has to be built using the command:
+Until it is published, the docker image with OpenVINO Model Server including the cpu extention has to be built using the commands:
 
 ```
 git clone -b develop https://github.com/openvinotoolkit/model_server
@@ -58,10 +58,16 @@ make docker_build SENTENCEPIECE=1 OV_SOURCE_ORG=rkazants OV_CONTRIB_ORG=rkazants
 ```
 
 ## Start the model server in a container
-Which the new docker image is built, you can start the service with a command:
+When the new docker image is built, you can start the service with a command:
 ```bash
-docker run -d -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libuser_ov_extensions.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
+docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libuser_ov_extensions.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
 ```
+
+Check the container logs to confirm successfull start:
+```bash
+docker logs ovms
+```
+
 
 ## Send string data as inference request
 
