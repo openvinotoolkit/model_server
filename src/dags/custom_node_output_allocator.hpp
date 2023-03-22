@@ -22,6 +22,8 @@
 
 namespace ovms {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2);
 
 class CustomNodeOutputAllocator : public ov::AllocatorImpl {
@@ -36,4 +38,6 @@ public:
     bool is_equal(const CustomNodeOutputAllocator& other) const;
     bool is_equal(const AllocatorImpl& other) const override;
 };
+#pragma GCC diagnostic pop
+
 }  // namespace ovms
