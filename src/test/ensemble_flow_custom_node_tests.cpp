@@ -4875,7 +4875,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
 
     // Execute
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), ovms::StatusCode::OK);
-    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, response, {3, 1, 3, 1, 2});
 }
 
 struct LibraryProduceImages5DimensionsInFP32OutFP64 {
@@ -4981,7 +4981,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
 
     // Execute
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), ovms::StatusCode::OK);
-    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, response, {3, 1, 3, 1, 2});
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedFP64TensorsFromCustomNode) {
@@ -5043,7 +5043,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
 
     // Execute
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), ovms::StatusCode::OK);
-    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {3, 1, 1, 2, 3});
+    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, response, {3, 1, 1, 2, 3});
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedFP64TensorsFromEntryNode) {
@@ -5102,7 +5102,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
 
     // Execute
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), ovms::StatusCode::OK);
-    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {2, 1, 2, 1, 2});
+    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, response, {2, 1, 2, 1, 2});
 }
 
 struct LibraryCountDeinitialize {
@@ -5421,7 +5421,7 @@ TYPED_TEST(EnsembleFlowStringInput, positive_2d) {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     std::vector<size_t> expectedShape = {3, 11};
     bool checkRaw = false;
-    checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->request, this->response, expectedShape, checkRaw);
+    checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->response, expectedShape, checkRaw);
 }
 
 TYPED_TEST(EnsembleFlowStringInput, positive_1d) {
@@ -5467,5 +5467,5 @@ TYPED_TEST(EnsembleFlowStringInput, positive_1d) {
         'k', 'o', 't', 'a'};
     std::vector<size_t> expectedShape = {33};
     bool checkRaw = false;
-    checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->request, this->response, expectedShape, checkRaw);
+    checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->response, expectedShape, checkRaw);
 }

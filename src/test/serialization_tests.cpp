@@ -766,11 +766,11 @@ TYPED_TEST_SUITE(SerializeString, MyTypes);
 
 // Serialization to string due to suffix _string_2d_u8 in mapping
 TYPED_TEST(SerializeString, Valid_2D_U8_String) {
-    std::vector<uint8_t> expectedData = {
+    std::vector<uint8_t> data = {
         'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
         'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    ov::Tensor tensor(ov::element::u8, ov::Shape{3, 11}, expectedData.data());
+    ov::Tensor tensor(ov::element::u8, ov::Shape{3, 11}, data.data());
     MockedTensorProvider provider(tensor);
     OutputGetter<MockedTensorProvider&> outputGetter(provider);
 
@@ -779,35 +779,38 @@ TYPED_TEST(SerializeString, Valid_2D_U8_String) {
 
     bool useSharedOutputContent = false;  // TODO: support raw field
     ASSERT_EQ(serializePredictResponse(outputGetter,
-        UNUSED_NAME,
-        UNUSED_VERSION,
-        infos,
-        &this->response,
-        getTensorInfoName,
-        useSharedOutputContent), ovms::StatusCode::OK);
+                  UNUSED_NAME,
+                  UNUSED_VERSION,
+                  infos,
+                  &this->response,
+                  getTensorInfoName,
+                  useSharedOutputContent),
+        ovms::StatusCode::OK);
     assertStringResponse(this->response, {"String_123", "zebra", ""}, "out_string_2d_u8");
 }
 
-// // Serialization to U8 due to missing suffix _string_2d_u8 in mapping
-// TYPED_TEST(SerializeString, Valid_2D_U8_String) {
-//     std::vector<uint8_t> expectedData = {
-//         'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
-//         'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0,
-//         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//     ov::Tensor tensor(ov::element::u8, ov::Shape{3, 11}, expectedData.data());
-//     MockedTensorProvider provider(tensor);
-//     OutputGetter<MockedTensorProvider&> outputGetter(provider);
+// Serialization to U8 due to missing suffix _string_2d_u8 in mapping
+TYPED_TEST(SerializeString, Valid_2D_U8_NonString) {
+    std::vector<uint8_t> data = {
+        'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
+        'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    ov::Tensor tensor(ov::element::u8, ov::Shape{3, 11}, data.data());
+    MockedTensorProvider provider(tensor);
+    OutputGetter<MockedTensorProvider&> outputGetter(provider);
 
-//     ovms::tensor_map_t infos;
-//     infos["out_string_2d_u8"] = std::make_shared<ovms::TensorInfo>("out", "out", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
+    ovms::tensor_map_t infos;
+    infos["out_string_2d_u8"] = std::make_shared<ovms::TensorInfo>("out", "out", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
 
-//     bool useSharedOutputContent = false;  // TODO: support raw field
-//     ASSERT_EQ(serializePredictResponse(outputGetter,
-//         UNUSED_NAME,
-//         UNUSED_VERSION,
-//         infos,
-//         &this->response,
-//         getTensorInfoName,
-//         useSharedOutputContent), ovms::StatusCode::OK);
-//     assertStringResponse(this->response, {"String_123", "zebra", ""}, "out_string_2d_u8");
-// }
+    bool useSharedOutputContent = false;  // TODO: support raw field
+    ASSERT_EQ(serializePredictResponse(outputGetter,
+                  UNUSED_NAME,
+                  UNUSED_VERSION,
+                  infos,
+                  &this->response,
+                  getTensorInfoName,
+                  useSharedOutputContent),
+        ovms::StatusCode::OK);
+    bool checkRaw = false;  // raw not supported
+    checkIncrement4DimResponse("out", data, this->response, std::vector<size_t>{3, 11}, checkRaw);
+}

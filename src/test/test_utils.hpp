@@ -245,7 +245,6 @@ void assertStringResponse(const ovms::InferenceResponse& proto, const std::vecto
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
-    tensorflow::serving::PredictRequest& request,
     tensorflow::serving::PredictResponse& response,
     const std::vector<size_t>& expectedShape,
     bool checkRaw = true) {
@@ -270,7 +269,6 @@ void checkIncrement4DimResponse(const std::string outputName,
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
-    ::KFSRequest& request,
     ::KFSResponse& response,
     const std::vector<size_t>& expectedShape,
     bool checkRaw = true) {

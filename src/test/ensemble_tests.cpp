@@ -311,7 +311,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMat
         pipeline.push(std::move(output_node));
 
         ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-        checkIncrement4DimResponse<float>(this->customPipelineOutputName, std::vector<float>{7.0, 8.0, 17.0, 18.0}, this->request, this->response, {2, 2});
+        checkIncrement4DimResponse<float>(this->customPipelineOutputName, std::vector<float>{7.0, 8.0, 17.0, 18.0}, this->response, {2, 2});
     }
 
     // 2x4 not passing due to not matched dummy_A (but matching dummy_B)
@@ -4572,7 +4572,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWC) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, request, response, {1, 3, 1, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, response, {1, 3, 1, 2});
 }
 
 static const char* pipelineSingleIncrement4DimInputNHWCDynamicBatch = R"(
@@ -4632,7 +4632,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimInputNHWCDynamicBa
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &this->request, &this->response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>(std::string{"pipeline_output"}, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, this->request, this->response, {2, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(std::string{"pipeline_output"}, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, this->response, {2, 1, 3, 1, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC = R"(
@@ -4690,7 +4690,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimOutputNHWC) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, request, response, {1, 1, 2, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, response, {1, 1, 2, 3});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWCDynamicBatch = R"(
@@ -4751,7 +4751,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimOutputNHWCDynamicB
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &this->request, &this->response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, this->request, this->response, {2, 1, 1, 2, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, this->response, {2, 1, 1, 2, 3});
 }
 
 static const char* pipelineAmbiguousInputMeta = R"(
@@ -4909,7 +4909,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithInnerNhwcConnection) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, request, response, {1, 3, 1, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, response, {1, 3, 1, 2});
 }
 
 class EnsembleFlowTestBinaryInput : public EnsembleFlowTest {
@@ -4975,7 +4975,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BatchSize1) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0}, response, {1, 3, 1, 1});
 }
 
 static const char* pipelineWith4DimDummyFP64 = R"(
@@ -5032,7 +5032,7 @@ TEST_F(EnsembleFlowTestBinaryInput, DoublePrecision) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<double>("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 1, 1, 3});
+    checkIncrement4DimResponse<double>("pipeline_output", {37.0, 28.0, 238.0}, response, {1, 1, 1, 3});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1x1BatchAny = R"(
@@ -5205,7 +5205,7 @@ TEST_F(EnsembleFlowTestBinaryInput, GrayscaleImage) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {1.0}, request, response, {1, 1, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {1.0}, response, {1, 1, 1, 1});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1x1BS5 = R"(
@@ -5264,7 +5264,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BatchSize5) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, response, {5, 3, 1, 1});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC2x2 = R"(
@@ -5322,7 +5322,7 @@ TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch1) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, request, response, {1, 3, 2, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, response, {1, 3, 2, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC2x2BS5 = R"(
@@ -5381,8 +5381,7 @@ TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch5) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0},
-        request, response, {5, 3, 2, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, response, {5, 3, 2, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1Channel = R"(
@@ -5517,7 +5516,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexer) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, response, {5, 1, 3, 1, 1});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryStaticDemultiplexer = R"(
@@ -5577,7 +5576,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionMatches) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, response, {5, 1, 3, 1, 1});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionAutoAlign) {
@@ -5653,7 +5652,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionMatches) 
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, response, {5, 1, 3, 1, 1});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionResolutionMismatch) {
@@ -5724,7 +5723,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, response, {1, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestBS2) {
@@ -5738,7 +5737,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, response, {2, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestMisaligned) {
@@ -5816,7 +5815,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, response, {1, 1, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestBS2) {
@@ -5830,7 +5829,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, response, {2, 1, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestMisaligned) {
@@ -5933,7 +5932,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomN
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, request, response, {1, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, response, {1, 1, 3, 1, 1});
 }
 
 static const char* pipelineWithDynamicCustomNodeDemultiplexerAndRangeOfResolutionModel = R"(
@@ -6022,5 +6021,5 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomN
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, request, response, {1, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, response, {1, 1, 3, 1, 1});
 }
