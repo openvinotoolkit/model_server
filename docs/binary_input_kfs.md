@@ -15,10 +15,13 @@ When sending data in the array format, the shape and datatype gives information 
 
 ### JPEG / PNG encoded images
 
-KServe API also allows sending binary encoded data via HTTP interface. The tensor binary data is provided in the request body, after JSON object. While the JSON part contains information required to route the data to the target model and run inference properly, the data itself, in the binary format is placed right after the JSON. 
+KServe API also allows sending binary encoded data via HTTP interface. The tensor binary data is provided in the request body, after JSON object. While the JSON part contains information required to route the data to the target model and run inference properly, the data itself, in the binary format is placed right after the JSON. Therefore, you need to precede data of every image by 4 bytes conatining size of this image and specify their combined size in `binary_data_size` parameter.
 
-For binary inputs, the `parameters` map in the JSON part contains `binary_data_size` field for each binary input that indicates the size of the data on the input. Since there's no strict limitations on image resolution and format (as long as it can be loaded by OpenCV), images might be of different sizes. Therefore, to send a batch of different images, specify their sizes in `binary_data_size` field as a list with sizes of all images in the batch.
-The list must be formed as a string, so for example, for 3 images in the batch, you may pass - `"9821,12302,7889"`.
+For binary inputs, the `parameters` map in the JSON part contains `binary_data_size` field for each binary input that indicates the size of the data on the input. Since there's no strict limitations on image resolution and format (as long as it can be loaded by OpenCV), images might be of different sizes. To send a batch of images you need to precede data of every batch by 4 bytes conatining size of this batch and specify their combined size in `binary_data_size`. For example, if batch would contain three images of sizes 370, 480, 500 bytes the content of input buffer inside binary extension would look like this: 
+<0x72010000 (=370)><370 bytes of first image><0xE0010000 (=480)><480 bytes of second image> <0xF4010000 (=500)><500 bytes of third image>
+And in that case binary_data_size would be 1350(370 + 480 + 500)
+Fortunately funtion set_data_from_numpy in triton client lib that we use in our http_infer_binary_resnet.py sample automatically converts given images to this format.
+
 If the request contains only one input `binary_data_size` parameter can be omitted - in this case whole buffer is treated as a input image.
 
 For HTTP request headers, `Inference-Header-Content-Length` header must be provided to give the length of the JSON object, and `Content-Length` continues to give the full body length (as HTTP requires). See an extended example with the request headers, and multiple images in the batch:

@@ -21,7 +21,6 @@ import numpy as np
 import classes
 import datetime
 import argparse
-from PIL import Image
 from client_utils import print_statistics
 
 import tritonclient.http as httpclient
@@ -92,6 +91,7 @@ if __name__ == '__main__':
     except Exception as e:
         print("context creation failed: " + str(e))
         sys.exit()
+
     processing_times = np.zeros((0),int)
 
     total_executed = 0
