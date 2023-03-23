@@ -244,23 +244,24 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
 
 static Status parseBinaryInputTypeBytes(KFSTensorInputProto& input, size_t binary_input_size, const char* buffer) {
     if (input.datatype() == "BYTES") {
-        uint32_t offset = 0;
-        if (binary_input_size < sizeof(uint32_t)) {
-            return StatusCode::INVALID_STRING_INPUT;
-        }
-        while (offset + sizeof(uint32_t) < binary_input_size) {
-            uint32_t inputSize = *((uint32_t*)(buffer + offset));
-            offset += sizeof(uint32_t);
-            if (!(offset + inputSize <= binary_input_size))
-                break;
-            std::string inputContent(buffer + offset, inputSize);
-            input.mutable_contents()->add_bytes_contents(inputContent);
-            offset += inputSize;
-        }
-        if (offset != binary_input_size) {
-            SPDLOG_DEBUG("String input buffer does not match required format.");
-            return StatusCode::INVALID_STRING_INPUT;
-        }
+        //uint32_t offset = 0;
+        input.mutable_contents()->add_raw_input_contents(buffer, binary_input_size);
+        // if (binary_input_size < sizeof(uint32_t)) {
+        //     return StatusCode::INVALID_STRING_INPUT;
+        // }
+        // while (offset + sizeof(uint32_t) < binary_input_size) {
+        //     uint32_t inputSize = *((uint32_t*)(buffer + offset));
+        //     offset += sizeof(uint32_t);
+        //     if (!(offset + inputSize <= binary_input_size))
+        //         break;
+        //     std::string inputContent(buffer + offset, inputSize);
+        //     input.mutable_contents()->add_bytes_contents(inputContent);
+        //     offset += inputSize;
+        // }
+        // if (offset != binary_input_size) {
+        //     SPDLOG_DEBUG("String input buffer does not match required format.");
+        //     return StatusCode::INVALID_STRING_INPUT;
+        // }
     } else {
         return StatusCode::REST_UNSUPPORTED_PRECISION;
     }

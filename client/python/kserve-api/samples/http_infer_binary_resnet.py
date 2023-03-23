@@ -42,7 +42,7 @@ if __name__ == '__main__':
                         dest='model_name')
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
-    parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with gRPC endpoint')
+    parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with HTTP endpoint')
     parser.add_argument('--server_cert', required=False, help='Path to server certificate', default=None)
     parser.add_argument('--client_cert', required=False, help='Path to client certificate', default=None)
     parser.add_argument('--client_key', required=False, help='Path to client key', default=None)
