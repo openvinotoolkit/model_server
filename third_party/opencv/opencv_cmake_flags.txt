@@ -1,17 +1,41 @@
--DBUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow \
--DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib_repo/modules
--DCMAKE_BUILD_TYPE=Release \
--DCMAKE_INSTALL_PREFIX=/opt/opencv \
--DOPENCV_LIB_INSTALL_PATH=lib \ 
--DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_ts=OFF \
--DBUILD_opencv_aruco=OFF -DBUILD_opencv_bgsegm=OFF -DBUILD_opencv_bioinspired=OFF \
--DBUILD_opencv_ccalib=OFF -DBUILD_opencv_datasets=OFF -DBUILD_opencv_dnn=OFF \
--DBUILD_opencv_dnn_objdetect=OFF -DBUILD_opencv_dpm=OFF -DBUILD_opencv_face=OFF \
--DBUILD_opencv_fuzzy=OFF -DBUILD_opencv_hfs=OFF -DBUILD_opencv_img_hash=OFF \
--DBUILD_opencv_js=OFF -DBUILD_opencv_line_descriptor=OFF -DBUILD_opencv_phase_unwrapping=OFF \
--DBUILD_opencv_plot=OFF -DBUILD_opencv_quality=OFF -DBUILD_opencv_reg=OFF \
--DBUILD_opencv_rgbd=OFF -DBUILD_opencv_saliency=OFF -DBUILD_opencv_shape=OFF \
--DBUILD_opencv_structured_light=OFF -DBUILD_opencv_surface_matching=OFF \
--DBUILD_opencv_world=OFF -DBUILD_opencv_xobjdetect=OFF -DBUILD_opencv_xphoto=OFF \
--DCV_ENABLE_INTRINSICS=ON -DWITH_EIGEN=ON -DWITH_PTHREADS=ON -DWITH_PTHREADS_PF=ON \
--DWITH_JPEG=ON -DWITH_PNG=ON -DWITH_TIFF=ON
+-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow \
+-D OPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib_repo/modules \
+-D CMAKE_BUILD_TYPE=Release \
+-D CMAKE_INSTALL_PREFIX=/opt/opencv \
+-D OPENCV_LIB_INSTALL_PATH=lib \
+-D BUILD_TESTS=OFF \
+-D BUILD_PERF_TESTS=OFF \
+-D BUILD_opencv_ts=OFF \
+-D BUILD_opencv_aruco=OFF \
+-D BUILD_opencv_bgsegm=OFF \
+-D BUILD_opencv_bioinspired=OFF \
+-D BUILD_opencv_ccalib=OFF \
+-D BUILD_opencv_datasets=OFF \
+-D BUILD_opencv_dnn=OFF \
+-D BUILD_opencv_dnn_objdetect=OFF \
+-D BUILD_opencv_dpm=OFF \
+-D BUILD_opencv_face=OFF \
+-D BUILD_opencv_fuzzy=OFF \
+-D BUILD_opencv_hfs=OFF \
+-D BUILD_opencv_img_hash=OFF \
+-D BUILD_opencv_js=OFF \
+-D BUILD_opencv_line_descriptor=OFF \
+-D BUILD_opencv_phase_unwrapping=OFF \
+-D BUILD_opencv_plot=OFF \
+-D BUILD_opencv_quality=OFF \
+-D BUILD_opencv_reg=OFF \
+-D BUILD_opencv_rgbd=OFF \
+-D BUILD_opencv_saliency=OFF \
+-D BUILD_opencv_shape=OFF \
+-D BUILD_opencv_structured_light=OFF \
+-D BUILD_opencv_surface_matching=OFF \
+-D BUILD_opencv_world=OFF \
+-D BUILD_opencv_xobjdetect=OFF \
+-D BUILD_opencv_xphoto=OFF \
+-D CV_ENABLE_INTRINSICS=ON \
+-D WITH_EIGEN=ON \
+-D WITH_PTHREADS=ON \
+-D WITH_PTHREADS_PF=ON \
+-D WITH_JPEG=ON \
+-D WITH_PNG=ON \
+-D WITH_TIFF=ON
