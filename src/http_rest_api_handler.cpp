@@ -242,158 +242,6 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
     }
 }
 
-static Status parseBinaryInputTypeBytes(KFSTensorInputProto& input, size_t binary_input_size, const char* buffer) {
-    if (input.datatype() == "BYTES") {
-        //uint32_t offset = 0;
-        input.mutable_contents()->add_raw_input_contents(buffer, binary_input_size);
-        // if (binary_input_size < sizeof(uint32_t)) {
-        //     return StatusCode::INVALID_STRING_INPUT;
-        // }
-        // while (offset + sizeof(uint32_t) < binary_input_size) {
-        //     uint32_t inputSize = *((uint32_t*)(buffer + offset));
-        //     offset += sizeof(uint32_t);
-        //     if (!(offset + inputSize <= binary_input_size))
-        //         break;
-        //     std::string inputContent(buffer + offset, inputSize);
-        //     input.mutable_contents()->add_bytes_contents(inputContent);
-        //     offset += inputSize;
-        // }
-        // if (offset != binary_input_size) {
-        //     SPDLOG_DEBUG("String input buffer does not match required format.");
-        //     return StatusCode::INVALID_STRING_INPUT;
-        // }
-    } else {
-        return StatusCode::REST_UNSUPPORTED_PRECISION;
-    }
-
-    return StatusCode::OK;
-}
-
-static Status parseBinaryInput(KFSTensorInputProto& input, size_t binary_input_size, const char* buffer) {
-    if (input.datatype() == "FP32") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(float)) {
-            auto value = input.mutable_contents()->mutable_fp32_contents()->Add();
-            *value = (*(reinterpret_cast<const float*>(buffer + i)));
-        }
-    } else if (input.datatype() == "INT64") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(int64_t)) {
-            auto value = input.mutable_contents()->mutable_int64_contents()->Add();
-            *value = (*(reinterpret_cast<const int64_t*>(buffer + i)));
-        }
-    } else if (input.datatype() == "INT32") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(int32_t)) {
-            auto value = input.mutable_contents()->mutable_int_contents()->Add();
-            *value = (*(reinterpret_cast<const int32_t*>(buffer + i)));
-        }
-    } else if (input.datatype() == "INT16") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(int16_t)) {
-            auto value = input.mutable_contents()->mutable_int_contents()->Add();
-            *value = (*(reinterpret_cast<const int16_t*>(buffer + i)));
-        }
-    } else if (input.datatype() == "INT8") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(int8_t)) {
-            auto value = input.mutable_contents()->mutable_int_contents()->Add();
-            *value = (*(reinterpret_cast<const int8_t*>(buffer + i)));
-        }
-    } else if (input.datatype() == "UINT64") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(uint64_t)) {
-            auto value = input.mutable_contents()->mutable_uint64_contents()->Add();
-            *value = (*(reinterpret_cast<const uint64_t*>(buffer + i)));
-        }
-    } else if (input.datatype() == "UINT32") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(uint32_t)) {
-            auto value = input.mutable_contents()->mutable_uint_contents()->Add();
-            *value = (*(reinterpret_cast<const uint32_t*>(buffer + i)));
-        }
-    } else if (input.datatype() == "UINT16") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(uint16_t)) {
-            auto value = input.mutable_contents()->mutable_uint_contents()->Add();
-            *value = (*(reinterpret_cast<const uint16_t*>(buffer + i)));
-        }
-    } else if (input.datatype() == "UINT8") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(uint8_t)) {
-            auto value = input.mutable_contents()->mutable_uint_contents()->Add();
-            *value = (*(reinterpret_cast<const uint8_t*>(buffer + i)));
-        }
-    } else if (input.datatype() == "FP64") {
-        for (size_t i = 0; i < binary_input_size; i += sizeof(double)) {
-            auto value = input.mutable_contents()->mutable_fp64_contents()->Add();
-            *value = (*(reinterpret_cast<const double*>(buffer + i)));
-        }
-    } else if (input.datatype() == "BYTES") {
-        input.mutable_contents()->add_bytes_contents(buffer, binary_input_size);
-    } else {
-        return StatusCode::REST_UNSUPPORTED_PRECISION;
-    }
-
-    return StatusCode::OK;
-}
-
-#define CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE " contents is not empty. Content field should be empty when using binary inputs extension."
-
-static Status validateContentFieldsEmptiness(KFSTensorInputProto& input) {
-    if (input.datatype() == "FP32") {
-        if (input.contents().fp32_contents_size() > 0) {
-            SPDLOG_DEBUG("FP32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "INT64") {
-        if (input.contents().int64_contents_size() > 0) {
-            SPDLOG_DEBUG("INT64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "INT32") {
-        if (input.contents().int_contents_size() > 0) {
-            SPDLOG_DEBUG("INT32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "INT16") {
-        if (input.contents().int_contents_size() > 0) {
-            SPDLOG_DEBUG("INT16" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "INT8") {
-        if (input.contents().int_contents_size() > 0) {
-            SPDLOG_DEBUG("INT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "UINT64") {
-        if (input.contents().uint64_contents_size() > 0) {
-            SPDLOG_DEBUG("UINT64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "UINT32") {
-        if (input.contents().uint_contents_size() > 0) {
-            SPDLOG_DEBUG("UINT32" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "UINT16") {
-        if (input.contents().uint_contents_size() > 0) {
-            SPDLOG_DEBUG("UINT16" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "UINT8") {
-        if (input.contents().uint_contents_size() > 0) {
-            SPDLOG_DEBUG("UINT8" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "FP64") {
-        if (input.contents().fp64_contents_size() > 0) {
-            SPDLOG_DEBUG("FP64" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else if (input.datatype() == "BYTES") {
-        if (input.contents().bytes_contents_size() > 0) {
-            SPDLOG_DEBUG("BYTES" CONTENT_FIELD_NOT_EMPTY_ERROR_MESSAGE);
-            return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-        }
-    } else {
-        return StatusCode::REST_UNSUPPORTED_PRECISION;
-    }
-
-    return StatusCode::OK;
-}
-
 static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
     if (input.datatype() == "FP32")
         return input.contents().fp32_contents_size() == 0;
@@ -420,30 +268,20 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
     return true;
 }
 
-static Status handleBinaryInputTypeBytes(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input) {
-    if (binary_input_offset + binary_input_size > binary_buffer_size) {
-        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
-        return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
+static Status validateContentFieldsEmptiness(KFSTensorInputProto& input) {
+    if(!isInputEmpty(input)) {
+        SPDLOG_DEBUG("{} contents is not empty. Content field should be empty when using binary inputs extension.",input.datatype());
+        return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
     }
-    auto status = parseBinaryInputTypeBytes(input, binary_input_size, binary_inputs + binary_input_offset);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Parsing binary inputs failed");
-        return status;
-    }
-    binary_input_offset += binary_input_size;
     return StatusCode::OK;
 }
 
-static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input) {
+static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input, std::string *rawInputContentsBuffer) {
     if (binary_input_offset + binary_input_size > binary_buffer_size) {
         SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
         return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
     }
-    auto status = parseBinaryInput(input, binary_input_size, binary_inputs + binary_input_offset);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Parsing binary inputs failed");
-        return status;
-    }
+    rawInputContentsBuffer->assign(binary_inputs + binary_input_offset, binary_buffer_size);
     binary_input_offset += binary_input_size;
     return StatusCode::OK;
 }
@@ -471,13 +309,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 auto binary_input_size = binary_data_size_parameter->second.int64_param();
-                if (input->datatype() == "BYTES") {
-                    auto status = handleBinaryInputTypeBytes(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
-                    if (!status.ok())
-                        return status;
-                    continue;
-                }
-                auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+                auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input, grpc_request.add_raw_input_contents());
                 if (!status.ok())
                     return status;
             } else {
@@ -487,14 +319,15 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
         } else {
             if (!isInputEmpty(*input))
                 continue;
-            if (input->datatype() == "BYTES") {
-                auto status = handleBinaryInputTypeBytes(binary_buffer_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
-                if (!status.ok())
-                    return status;
-                continue;
+            size_t binary_data_size;
+            if (grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
+                binary_data_size = binary_buffer_size;
             }
-            size_t binary_data_size = calculateBinaryDataSize(*input, binary_data_size);
-            auto status = handleBinaryInput(binary_data_size, binary_input_offset, binary_buffer_size, binary_inputs, *input);
+            else
+            {
+                binary_data_size = calculateBinaryDataSize(*input, binary_data_size);
+            }
+            auto status = handleBinaryInput(binary_data_size, binary_input_offset, binary_buffer_size, binary_inputs, *input, grpc_request.add_raw_input_contents());
             if (!status.ok())
                 return status;
         }
