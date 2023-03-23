@@ -269,14 +269,14 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
 }
 
 static Status validateContentFieldsEmptiness(KFSTensorInputProto& input) {
-    if(!isInputEmpty(input)) {
-        SPDLOG_DEBUG("{} contents is not empty. Content field should be empty when using binary inputs extension.",input.datatype());
+    if (!isInputEmpty(input)) {
+        SPDLOG_DEBUG("{} contents is not empty. Content field should be empty when using binary inputs extension.", input.datatype());
         return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
     }
     return StatusCode::OK;
 }
 
-static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input, std::string *rawInputContentsBuffer) {
+static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
     if (binary_input_offset + binary_input_size > binary_buffer_size) {
         SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
         return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
@@ -322,9 +322,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             size_t binary_data_size;
             if (grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
                 binary_data_size = binary_buffer_size;
-            }
-            else
-            {
+            } else {
                 binary_data_size = calculateBinaryDataSize(*input, binary_data_size);
             }
             auto status = handleBinaryInput(binary_data_size, binary_input_offset, binary_buffer_size, binary_inputs, *input, grpc_request.add_raw_input_contents());

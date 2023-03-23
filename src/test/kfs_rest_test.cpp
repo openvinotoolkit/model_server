@@ -470,7 +470,7 @@ static void assertBinaryInputsINT16(const std::string& modelName, const std::opt
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
     size_t i;
-    for(i = 0; i< (grpc_request.raw_input_contents()[0].size()/sizeof(int16_t)); i++) {
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(int16_t)); i++) {
         ASSERT_EQ(((int16_t*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
@@ -505,7 +505,7 @@ static void assertBinaryInputsINT32(const std::string& modelName, const std::opt
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
     size_t i;
-    for(i = 0; i< (grpc_request.raw_input_contents()[0].size()/sizeof(int32_t)); i++) {
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(int32_t)); i++) {
         ASSERT_EQ(((int32_t*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
@@ -540,7 +540,7 @@ static void assertBinaryInputsINT64(const std::string& modelName, const std::opt
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
     size_t i;
-    for(i = 0; i< (grpc_request.raw_input_contents()[0].size()/sizeof(int64_t)); i++) {
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(int64_t)); i++) {
         ASSERT_EQ(((int64_t*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
@@ -575,7 +575,7 @@ static void assertBinaryInputsFP32(const std::string& modelName, const std::opti
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
     size_t i;
-    for(i = 0; i< (grpc_request.raw_input_contents()[0].size()/sizeof(float)); i++) {
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(float)); i++) {
         ASSERT_EQ(((float*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
@@ -610,7 +610,7 @@ static void assertBinaryInputsFP64(const std::string& modelName, const std::opti
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
     size_t i;
-    for(i = 0; i< (grpc_request.raw_input_contents()[0].size()/sizeof(double)); i++) {
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(double)); i++) {
         ASSERT_EQ(((double*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
