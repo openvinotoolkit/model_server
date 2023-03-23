@@ -45,10 +45,10 @@ Note: frozen graph is created using [freeze_graph.py](https://github.com/tensorf
 
 ## Build OVMS with CPU extension library for sentencepiece_tokenizer layer
 
-Model universal-sentence-encoder-multilingual includes a layer SentencepieceTokenizer which is not supported by OpenVINO at the moment. It can be however implemented using a [cpu extention](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations/user_ie_extensions/sentence_piece), which is a dynamic library performing the execution of the model layer.
-The layer SentencepieceTokenizer expects on the input a list of strings. The cpu extension replaces the input format to an array with UINT precision with a shape [-1]. It is serialized representation of the list of strings in a form or bytes. When this extension is deployed in OpenVINO Model Server, you don't need to worry about the serialization as it is handled internally. The model server accepts the input in a string format and performs the conversion to OpenVINO requirement transparently.
+Model universal-sentence-encoder-multilingual includes a layer SentencepieceTokenizer which is not supported by OpenVINO at the moment. It can be however implemented using a [CPU extension](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations/user_ie_extensions/sentence_piece), which is a dynamic library performing the execution of the model layer.
+The layer SentencepieceTokenizer expects on the input a list of strings. The CPU extension replaces the input format to an array with UINT8 precision with a shape `[-1]`. It is serialized representation of the list of strings in a form or bytes. When this extension is deployed in OpenVINO Model Server, you don't need to worry about the serialization as it is handled internally. The model server accepts the input in a string format and performs the conversion to OpenVINO requirement transparently.
 
-Until it is published, the docker image with OpenVINO Model Server including the cpu extention has to be built using the commands:
+Until it is published, the docker image with OpenVINO Model Server including the CPU extension has to be built using the commands:
 
 ```
 git clone -b develop https://github.com/openvinotoolkit/model_server
@@ -73,7 +73,7 @@ docker logs ovms
 
 OpenVINO Model Server can accept the input in a form of strings. Below is a code snipped based on `tensorflow_serving_api` python library:
 ```python
-data = np.array([“string1”, “string1”, “string_n”])
+data = np.array(["string1", "string1", "string_n"])
 predict_request = predict_pb2.PredictRequest()
 predict_request.model_spec.name = "my_model"
 predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
