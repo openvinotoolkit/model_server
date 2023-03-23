@@ -464,7 +464,7 @@ TEST_F(TestLoadModelWithMapping, SuccessfulLoad) {
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);
+    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);
     EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
     EXPECT_EQ(modelInstance.getOutputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
 }
@@ -483,7 +483,7 @@ TEST_F(TestLoadModelWithMapping, SuccessfulLoadBytesEncoded) {
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);
+    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);
     EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
     EXPECT_EQ(modelInstance.getOutputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
 }
@@ -892,9 +892,9 @@ TEST(TensorMap, TestProcessingHintFromShape_1) {
             std::make_shared<ovms::TensorInfo>("Input_U8_3_N", ovms::Precision::U8, ovms::shape_t{3})},
     });
 
-    EXPECT_EQ(servableInputs["Input_FP32_1_224_224_3_NHWC"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::IMAGE);
-    EXPECT_EQ(servableInputs["Input_U8_1_3_NCHW"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_2D_U8);
-    EXPECT_EQ(servableInputs["Input_U8_3_N"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_1D_U8);
+    EXPECT_EQ(servableInputs["Input_FP32_1_224_224_3_NHWC"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::IMAGE);
+    EXPECT_EQ(servableInputs["Input_U8_1_3_NCHW"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_2D_U8);
+    EXPECT_EQ(servableInputs["Input_U8_3_N"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_1D_U8);
 }
 
 TEST(TensorMap, TestProcessingHintFromShape_1_Demultiplexer) {
@@ -907,7 +907,7 @@ TEST(TensorMap, TestProcessingHintFromShape_1_Demultiplexer) {
             std::make_shared<ovms::TensorInfo>("Input_U8_1_3_N", ovms::Precision::U8, ovms::shape_t{3})->createCopyWithDemultiplexerDimensionPrefix(1)},
     });
 
-    EXPECT_EQ(servableInputs["Input_FP32_1_1_224_224_3_NHWC"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::IMAGE);
-    EXPECT_EQ(servableInputs["Input_U8_1_1_3_NCHW"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);  // due to demultiplexer
-    EXPECT_EQ(servableInputs["Input_U8_1_3_N"]->getProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);       // due to demultiplexer
+    EXPECT_EQ(servableInputs["Input_FP32_1_1_224_224_3_NHWC"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::IMAGE);
+    EXPECT_EQ(servableInputs["Input_U8_1_1_3_NCHW"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);  // due to demultiplexer
+    EXPECT_EQ(servableInputs["Input_U8_1_3_N"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);       // due to demultiplexer
 }

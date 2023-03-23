@@ -198,7 +198,7 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
-    if (servableOutput->getProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
         return convertOVTensor2DToStringResponse(tensor, responseOutput);
     }
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
@@ -236,7 +236,7 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
-    if (servableOutput->getProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
         return convertOVTensor2DToStringResponse(tensor, responseOutput);
     }
     auto status = serializePrecision(responseOutput, servableOutput, tensor);

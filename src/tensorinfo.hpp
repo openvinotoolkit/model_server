@@ -172,7 +172,8 @@ public:
          */
     const Shape& getShape() const;
 
-    ProcessingHint getProcessingHint() const;
+    ProcessingHint getPreProcessingHint() const;
+    ProcessingHint getPostProcessingHint() const;
 
     bool isInfluencedByDemultiplexer() const;
 
@@ -220,8 +221,9 @@ protected:
          */
     bool influencedByDemultiplexer = false;
 
-    void createProcessingHint();
-    TensorInfo::ProcessingHint processingHint = TensorInfo::ProcessingHint::NO_PROCESSING;
+    void createProcessingHints();
+    TensorInfo::ProcessingHint preProcessingHint = TensorInfo::ProcessingHint::NO_PROCESSING;
+    TensorInfo::ProcessingHint postProcessingHint = TensorInfo::ProcessingHint::NO_PROCESSING;
 };
 
 }  // namespace ovms
