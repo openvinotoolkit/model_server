@@ -166,4 +166,14 @@ std::string& createOrGetString(KFSTensorOutputProto& proto, int index) {
     }
     return *proto.mutable_contents()->mutable_bytes_contents(index);
 }
+void setBatchSize(KFSTensorOutputProto& proto, int64_t batch) {
+    if (proto.shape_size() == 0) {
+        proto.add_shape(batch);
+    } else {
+        proto.set_shape(0, batch);
+    }
+}
+void setStringPrecision(KFSTensorOutputProto& proto) {
+    proto.set_datatype("BYTES");
+}
 }  // namespace ovms

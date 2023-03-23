@@ -44,4 +44,6 @@ Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::strin
 bool isNativeFileFormatUsed(const TFSInputTensorType& request);
 bool requiresProcessing(const TFSInputTensorType& proto);
 std::string& createOrGetString(TFSInputTensorType& proto, int index);
+void setBatchSize(TFSInputTensorType& proto, int64_t batch);
+void setStringPrecision(TFSInputTensorType& proto);
 }  // namespace ovms

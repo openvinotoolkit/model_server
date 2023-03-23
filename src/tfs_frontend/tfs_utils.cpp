@@ -158,4 +158,14 @@ std::string& createOrGetString(TFSInputTensorType& proto, int index) {
     }
     return *proto.mutable_string_val(index);
 }
+
+void setBatchSize(TFSInputTensorType& proto, int64_t batch) {
+    if (proto.tensor_shape().dim_size() == 0) {
+        proto.mutable_tensor_shape()->add_dim();
+    }
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batch);
+}
+void setStringPrecision(TFSInputTensorType& proto) {
+    proto.set_dtype(TFSDataType::DT_STRING);
+}
 }  // namespace ovms

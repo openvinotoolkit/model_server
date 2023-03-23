@@ -23,8 +23,11 @@
 
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
+#include "stringutils.hpp"
 
 namespace ovms {
+
+const std::string STRING_SERIALIZATION_HINT_NAME_SUFFIX = "_string_2d_u8";
 
 // in case we change behaviour for this constructor we may need to write additional tests for TensorInfo intersection / DAGs
 TensorInfo::TensorInfo(const std::string& name,
@@ -61,7 +64,9 @@ TensorInfo::ProcessingHint TensorInfo::getProcessingHint() const {
 
 void TensorInfo::createProcessingHint() {
     size_t expectedDimsForImage = this->influencedByDemultiplexer ? 5 : 4;
-    if (this->shape.size() == 2 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
+    if (endsWith(this->getMappedName(), STRING_SERIALIZATION_HINT_NAME_SUFFIX) && this->shape.size() == 2 && !this->influencedByDemultiplexer) {
+        this->processingHint = TensorInfo::ProcessingHint::STRING_2D_U8;
+    } else if (this->shape.size() == 2 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
         this->processingHint = TensorInfo::ProcessingHint::STRING_2D_U8;
     } else if (this->shape.size() == 1 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
         this->processingHint = TensorInfo::ProcessingHint::STRING_1D_U8;

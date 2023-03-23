@@ -528,10 +528,19 @@ Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tenso
 // TODO: What about partial gathering?
 template <typename TensorType>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst) {
-    // TODO: assert for ov::Tensor being 2d
-    for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
-        const char* strStart = reinterpret_cast<const char*>(tensor.data<unsigned char>() + i * tensor.get_shape()[1]);
-        size_t strLen = strnlen(strStart, tensor.get_shape()[1]);
+    if (tensor.get_shape().size() != 2) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+    if (tensor.get_element_type() != ov::element::Type_t::u8) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto batchSize = tensor.get_shape()[0];
+    auto maxStringLen = tensor.get_shape()[1];
+    setBatchSize(dst, batchSize);
+    setStringPrecision(dst);
+    for (size_t i = 0; i < batchSize; i++) {
+        const char* strStart = reinterpret_cast<const char*>(tensor.data<unsigned char>() + i * maxStringLen);
+        size_t strLen = strnlen(strStart, maxStringLen);
         createOrGetString(dst, i).assign(strStart, strLen);
     }
     return StatusCode::OK;
