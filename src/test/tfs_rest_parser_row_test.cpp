@@ -411,7 +411,6 @@ TEST(TFSRestParserRow, NamedInstanceNotAnObject) {
 TEST(TFSRestParserRow, CouldNotDetectNamedOrNoNamed) {
     TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":["1", "2"]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[null, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
 }
 

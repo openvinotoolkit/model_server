@@ -212,7 +212,7 @@ Status TFSRestParser::parseRowFormat(rapidjson::Value& node) {
                 return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
             }
         }
-    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber() || isBinary(node.GetArray()[0])) {
+    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber() || isBinary(node.GetArray()[0]) || node.GetArray()[0].IsString()) {
         // no named format
         if (requestProto.inputs_size() != 1) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;

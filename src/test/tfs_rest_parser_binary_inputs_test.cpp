@@ -77,6 +77,39 @@ TEST_F(TFSRestParserBinaryInputs, RowString) {
     EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
 }
 
+TEST_F(TFSRestParserBinaryInputs, ColumnString) {
+    std::string request = R"({"signature_name":"","inputs":{"i":["abcd"]}})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+}
+
+TEST_F(TFSRestParserBinaryInputs, ColumnStringUnnamed) {
+    std::string request = R"({"signature_name":"","inputs":["abcd"]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+}
+
+TEST_F(TFSRestParserBinaryInputs, RowStringUnnamed) {
+    std::string request = R"({"signature_name":"","instances":["abcd"]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+}
+
 TEST_F(TFSRestParserBinaryInputs, RowStringBatchSize2) {
     std::string request = R"({"signature_name":"","instances":[{"i":"abcd"}, {"i":"efgh"}]})";
 
