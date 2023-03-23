@@ -28,7 +28,7 @@ The graph format represents the input and output as a tensorname so we will appl
           "Func/StatefulPartitionedCall/input/_0": "inputs"
        },
        "outputs":{
-          "Func/StatefulPartitionedCall/output/_500":"ouputs"
+          "Func/StatefulPartitionedCall/output/_500":"outputs"
        }
 }
 ``` 
@@ -60,7 +60,7 @@ make docker_build SENTENCEPIECE=1 OV_SOURCE_ORG=rkazants OV_CONTRIB_ORG=rkazants
 ## Start the model server in a container
 When the new docker image is built, you can start the service with a command:
 ```bash
-docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libuser_ov_extensions.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
+docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual-frozen:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libuser_ov_extensions.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
 ```
 
 Check the container logs to confirm successful start:
