@@ -234,10 +234,11 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     if (!status.ok()) {
         return grpc(status);
     }
-    if (request->model_name() == "mediapipeDummy") {
+    const std::string ServableName = request->model_name();
+    if (0 == ServableName.rfind("mediapipe", 0)) {
         return grpc(Status(StatusCode::OK));
     }
-    if (!reporter && request->model_name() == "mediapipeDummy") {
+    if (!reporter) {
         SPDLOG_ERROR("If this is mediapipe test you need to exclude it from this check");
         return grpc(Status(StatusCode::INTERNAL_ERROR));  // should not happen
     }
@@ -279,20 +280,33 @@ class MediapipeGraphExecutor {
     ::mediapipe::CalculatorGraphConfig config;
     const std::string OUTPUT_NAME = "out";
     const std::string INPUT_NAME = "in";
-    const std::string SERVABLE_NAME = "mediapipeDummy";
+    const std::string servableName;
     const uint16_t SERVABLE_VERSION = 1;
 
 public:
-    MediapipeGraphExecutor() {
-        config =
-            ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(DUMMY_MEDIAPIPE_GRAPH);
+    MediapipeGraphExecutor(const std::string servableName) :
+        servableName(servableName) {
+        std::string chosenConfig;
+        if (servableName == "mediapipeDummy") {
+            chosenConfig = DUMMY_MEDIAPIPE_GRAPH;
+        } else if (servableName == "mediapipeAdd") {
+            chosenConfig = ADD_MEDIAPIPE_GRAPH;
+        } else if (servableName == "mediapipeDummyADAPT") {
+            chosenConfig = DUMMY_MEDIAPIPE_GRAPH_ADAPT;
+        } else if (servableName == "mediapipeAddADAPT") {
+            chosenConfig = ADD_MEDIAPIPE_GRAPH_ADAPT;
+        } else {
+            throw 42;  // FIXME
+        }
+        config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(chosenConfig);
     }
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
         auto ret = graph.Initialize(config);
         std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
         // TODO validate number of inputs
         // TODO validate input names against input streams
-        std::vector<std::string> outputNames{OUTPUT_NAME};
+        //       std::vector<std::string> outputNames{OUTPUT_NAME};
+        auto outputNames = config.output_stream();
         for (auto name : outputNames) {
             auto absStatus = graph.AddOutputStreamPoller(OUTPUT_NAME);
             if (!absStatus.ok()) {
@@ -300,14 +314,18 @@ public:
             }
             outputPollers.emplace(name, std::move(absStatus).value());
         }
-        std::vector<std::string> inputNames{INPUT_NAME};
-        graph.StartRun({});  // TODO retcode
+        auto inputNames = config.input_stream();
+        auto ret2 = graph.StartRun({});  // TODO retcode
+        if (!ret2.ok()) {
+            SPDLOG_ERROR("ER:\"{}\"", ret2.message());
+        }
         for (auto name : inputNames) {
+            SPDLOG_ERROR("Tensor to deserialize:\"{}\"", name);
             ov::Tensor input_tensor = bruteForceDeserialize(name, request);
             auto abstatus = graph.AddPacketToInputStream(
-                INPUT_NAME, ::mediapipe::MakePacket<ov::Tensor>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
+                name, ::mediapipe::MakePacket<ov::Tensor>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
             if (!abstatus.ok()) {
-                SPDLOG_ERROR("ER NOOOOK: {}", abstatus.message());
+                SPDLOG_ERROR("ER NOK: \"{}\", {}", abstatus.message(), abstatus.raw_code());
             }
             graph.CloseInputStream(name);  // TODO retcode
         }
@@ -315,11 +333,12 @@ public:
         ::mediapipe::Packet packet;
         for (auto& [outputStreamName, poller] : outputPollers) {
             while (poller.Next(&packet)) {
+                SPDLOG_ERROR("Received tensor: {}", outputStreamName);
                 auto received = packet.Get<ov::Tensor>();
                 float* dataOut = (float*)received.data();
                 auto timestamp = packet.Timestamp();
                 std::stringstream ss;
-                ss << "HelloOVMS Received tensor: [";
+                ss << "ServiceImpl Received tensor: [";
                 for (int x = 0; x < 10; ++x) {
                     ss << dataOut[x] << " ";
                 }
@@ -343,11 +362,11 @@ public:
                     ss2 << data[i] << " ";
                 }
                 ss2 << "]";
-                SPDLOG_ERROR("ER: {}", ss2.str());
+                SPDLOG_ERROR("ServiceImpl OutputData: {}", ss2.str());
                 outputContentString->assign((char*)received.data(), received.get_byte_size());
             }
         }
-        response->set_model_name(SERVABLE_NAME);
+        response->set_model_name(servableName);
         response->set_id("1");  // TODO later
         response->set_model_version(std::to_string(SERVABLE_VERSION));
         return StatusCode::OK;
@@ -366,11 +385,12 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         status = getPipeline(request, response, pipelinePtr);
     }
     if (!status.ok()) {
+        const std::string ServableName = request->model_name();
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcModelInfer);
-        } else if (request->model_name() == "mediapipeDummy") {
+        } else if (0 == ServableName.rfind("mediapipe", 0)) {
             // TODO mediapipe metrics
-            MediapipeGraphExecutor executor;
+            MediapipeGraphExecutor executor(request->model_name());
             auto status = executor.infer(request, response, executionContext, reporterOut);
             return status;
         }

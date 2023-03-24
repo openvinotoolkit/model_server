@@ -20,6 +20,8 @@
 
 extern const std::string DUMMY_MEDIAPIPE_GRAPH;
 extern const std::string ADD_MEDIAPIPE_GRAPH;
+extern const std::string DUMMY_MEDIAPIPE_GRAPH_ADAPT;
+extern const std::string ADD_MEDIAPIPE_GRAPH_ADAPT;
 
 absl::Status ExecuteDummy(size_t requestCount, size_t inputStreamDelayMs);
 absl::Status ExecuteAdd(size_t requestCount, size_t inputStreamDelayMs);
