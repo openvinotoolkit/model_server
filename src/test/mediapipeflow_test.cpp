@@ -126,7 +126,8 @@ TEST_P(MediapipeFlowAddTest, Infer) {
 const std::vector<std::string> mediaGraphsDummy{"mediapipeDummy",
     "mediapipeDummyADAPT"};
 const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
-    "mediapipeAddADAPT"};
+    "mediapipeAddADAPT",
+    "mediapipeAddADAPTFULL"};
 
 INSTANTIATE_TEST_SUITE_P(
     Test,

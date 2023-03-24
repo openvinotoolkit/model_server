@@ -268,9 +268,9 @@ static ov::Tensor bruteForceDeserialize(const std::string& requestedName, const 
         auto outTensor = ov::Tensor(precision, shape, const_cast<void*>((const void*)bufferLocation->c_str()));
         return outTensor;
     } catch (const std::exception& e) {
-        SPDLOG_ERROR("ER:{}", e.what());
+        SPDLOG_DEBUG("Kserve mediapipe request deserialization failed:{}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_DEBUG("KServe mediapipe request deserialization failed");
     }
     return ov::Tensor();
 }
@@ -295,13 +295,20 @@ public:
             chosenConfig = DUMMY_MEDIAPIPE_GRAPH_ADAPT;
         } else if (servableName == "mediapipeAddADAPT") {
             chosenConfig = ADD_MEDIAPIPE_GRAPH_ADAPT;
+        } else if (servableName == "mediapipeAddADAPTFULL") {
+            chosenConfig = ADD_MEDIAPIPE_GRAPH_ADAPT_FULL;
         } else {
             throw 42;  // FIXME
         }
         config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(chosenConfig);
     }
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
+        SPDLOG_DEBUG("Start KServe request mediapipe graph:{} execution", request->model_name());
         auto ret = graph.Initialize(config);
+        if (!ret.ok()) {
+            SPDLOG_DEBUG("KServe request for mediapipe graph:{} execution failed with message: {}", request->model_name(), ret.message());
+        }
+
         std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
         // TODO validate number of inputs
         // TODO validate input names against input streams
@@ -317,23 +324,33 @@ public:
         auto inputNames = config.input_stream();
         auto ret2 = graph.StartRun({});  // TODO retcode
         if (!ret2.ok()) {
-            SPDLOG_ERROR("ER:\"{}\"", ret2.message());
+            SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", request->model_name(), ret2.message());
+            throw 43;  // TODO retcode
         }
         for (auto name : inputNames) {
-            SPDLOG_ERROR("Tensor to deserialize:\"{}\"", name);
+            SPDLOG_TRACE("Tensor to deserialize:\"{}\"", name);
             ov::Tensor input_tensor = bruteForceDeserialize(name, request);
             auto abstatus = graph.AddPacketToInputStream(
                 name, ::mediapipe::MakePacket<ov::Tensor>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
             if (!abstatus.ok()) {
-                SPDLOG_ERROR("ER NOK: \"{}\", {}", abstatus.message(), abstatus.raw_code());
+                SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {}. Error message: {}, error code: {}",
+                    name, request->model_name(), abstatus.message(), abstatus.raw_code());
+                throw 44;
             }
-            graph.CloseInputStream(name);  // TODO retcode
+            abstatus = graph.CloseInputStream(name);  // TODO retcode
+            if (!abstatus.ok()) {
+                SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {}. Error message: {}, error code: {}",
+                    name, request->model_name(), abstatus.message(), abstatus.raw_code());
+                throw 45;
+            }
+            SPDLOG_TRACE("Tensor to deserialize:\"{}\"", name);
         }
         // receive outputs
         ::mediapipe::Packet packet;
         for (auto& [outputStreamName, poller] : outputPollers) {
+            SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
             while (poller.Next(&packet)) {
-                SPDLOG_ERROR("Received tensor: {}", outputStreamName);
+                SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
                 auto received = packet.Get<ov::Tensor>();
                 float* dataOut = (float*)received.data();
                 auto timestamp = packet.Timestamp();
@@ -343,7 +360,7 @@ public:
                     ss << dataOut[x] << " ";
                 }
                 ss << " ]  timestamp: " << timestamp.DebugString();
-                SPDLOG_ERROR(ss.str());
+                SPDLOG_DEBUG(ss.str());
                 auto* output = response->add_outputs();
                 output->clear_shape();
                 output->set_name(outputStreamName);
@@ -362,10 +379,11 @@ public:
                     ss2 << data[i] << " ";
                 }
                 ss2 << "]";
-                SPDLOG_ERROR("ServiceImpl OutputData: {}", ss2.str());
+                SPDLOG_DEBUG("ServiceImpl OutputData: {}", ss2.str());
                 outputContentString->assign((char*)received.data(), received.get_byte_size());
             }
         }
+        SPDLOG_DEBUG("Received all output stream packets for graph: {}", request->model_name());
         response->set_model_name(servableName);
         response->set_id("1");  // TODO later
         response->set_model_version(std::to_string(SERVABLE_VERSION));

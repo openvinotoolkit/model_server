@@ -17,14 +17,17 @@
 
 #include <openvino/openvino.hpp>
 
+#include "../ovms.h"           // NOLINT
+#include "../stringutils.hpp"  // TODO dispose
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "ovms.h"  // NOLINT
-#include "src/ovmscalculator.pb.h"
-#include "stringutils.hpp"  // TODO dispose
+#include "src/mediapipe_internal/ovmscalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
+#define MLOG(A) std::cout << __FILE__ << ":" << __LINE__ << A << std::endl;
+
+#define MLOGA(A) std::cout << __FILE__ << ":" << __LINE__ << " " << (void*)(A) << std::endl;
 
 using std::cout;
 using std::endl;
@@ -145,8 +148,13 @@ class OVMSInferenceAdapter {
     uint64_t servableVersion;
 
 public:
+    std::unordered_map<std::string, std::string> inputTagToName;
+    std::unordered_map<std::string, std::string> outputNameToTag;
+
+public:
     OVMSInferenceAdapter(::mediapipe::CalculatorContext* cc) :
         servableName(cc->Options<OVMSCalculatorOptions>().servable_name()) {
+        MLOG("Adapter construct");
         OVMS_ServerSettings* _serverSettings{nullptr};
         OVMS_ModelsSettings* _modelsSettings{nullptr};
         const auto& options = cc->Options<OVMSCalculatorOptions>();
@@ -160,6 +168,9 @@ public:
         }
         auto servableVersionOpt = ovms::stou32(options.servable_version().c_str());
         servableVersion = servableVersionOpt.value_or(0);
+    }
+    virtual ~OVMSInferenceAdapter() {
+        MLOG("Adapter destruct");
     }
     virtual InferenceOutput infer(const InferenceInput& input) {
         /////////////////////
@@ -387,7 +398,6 @@ public:
     }
 };
 
-REGISTER_CALCULATOR(OVMSOVCalculator);
 class ModelAPICalculator : public CalculatorBase {
     std::unique_ptr<OVMSInferenceAdapter> adapter;
     std::unordered_map<std::string, std::string> outputNameToTag;
@@ -481,5 +491,185 @@ public:
     }
 };
 
+const std::string SESSION_TAG{"SESSION"};
+
+struct AdapterWrapper {
+    std::unique_ptr<OVMSInferenceAdapter> adapter;
+    AdapterWrapper(OVMSInferenceAdapter* adapter) :
+        adapter(adapter) {
+        MLOG("Wrapper constr");
+    }
+    ~AdapterWrapper() {
+        MLOG("Wrapper destr");
+    }
+};
+
+class ModelAPISideFeedCalculator : public CalculatorBase {
+    OVMSInferenceAdapter* session{nullptr};
+
+public:
+    static absl::Status GetContract(CalculatorContract* cc) {
+        MLOG("Main GetContract start");
+        RET_CHECK(!cc->Inputs().GetTags().empty());
+        RET_CHECK(!cc->Outputs().GetTags().empty());
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            cc->Inputs().Tag(tag).Set<ov::Tensor>();
+        }
+        for (const std::string& tag : cc->Outputs().GetTags()) {
+            cc->Outputs().Tag(tag).Set<ov::Tensor>();
+        }
+        cc->InputSidePackets().Tag(SESSION_TAG.c_str()).Set<AdapterWrapper>();
+        MLOG("Main GetContract end");
+        return absl::OkStatus();
+    }
+
+    absl::Status Close(CalculatorContext* cc) final {
+        MLOG("Main Close");
+        return absl::OkStatus();
+    }
+    absl::Status Open(CalculatorContext* cc) final {
+        MLOG("Main Open start");
+        session = cc->InputSidePackets()
+                      .Tag(SESSION_TAG.c_str())
+                      .Get<AdapterWrapper>()
+                      .adapter.get();
+        MLOGA(session);
+        for (CollectionItemId id = cc->Inputs().BeginId();
+             id < cc->Inputs().EndId(); ++id) {
+            if (!cc->Inputs().Get(id).Header().IsEmpty()) {
+                cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
+            }
+        }
+        if (cc->OutputSidePackets().NumEntries() != 0) {
+            for (CollectionItemId id = cc->InputSidePackets().BeginId();
+                 id < cc->InputSidePackets().EndId(); ++id) {
+                cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
+            }
+        }
+        cc->SetOffset(TimestampDiff(0));
+
+        MLOG("Main Open end");
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(CalculatorContext* cc) final {
+        MLOG("Main process start");
+        cc->GetCounter("PassThrough")->Increment();
+        if (cc->Inputs().NumEntries() == 0) {
+            return tool::StatusStop();
+        }
+        /////////////////////
+        // PREPARE INPUT MAP
+        /////////////////////
+
+        const auto& inputTagInputMap = session->inputTagToName;
+        InferenceInput input;
+        InferenceOutput output;
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            MLOG("Main process start");
+            MLOG(tag);
+            const char* realInputName = inputTagInputMap.at(tag).c_str();
+            MLOG("Main process start");
+            auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
+            input[realInputName] = packet;
+            ov::Tensor input_tensor(packet);
+            const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
+            std::stringstream ss;
+            ss << endl
+               << "ModelAPICalculator received tensor: [ ";
+            for (int x = 0; x < 10; ++x) {
+                ss << input_tensor_access[x] << " ";
+            }
+            ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
+            cout << ss.str() << endl;
+        }
+        //////////////////
+        //  INFERENCE
+        //////////////////
+        output = session->infer(input);
+        auto outputsCount = output.size();
+        RET_CHECK(outputsCount == cc->Outputs().GetTags().size());
+        // TODO check for existence of each tag
+        for (const auto& tag : cc->Outputs().GetTags()) {
+            MLOG(tag);
+        }
+
+        for (const auto& [outputName, outputTagName] : session->outputNameToTag) {
+            MLOG(outputName);
+            MLOG(outputTagName);
+            ov::Tensor* outOvTensor = new ov::Tensor(output.at(outputName));
+            // TODO check buffer ownership
+            cc->Outputs().Tag(outputTagName).Add(outOvTensor, cc->InputTimestamp());
+        }
+        MLOG("Main process end");
+        return absl::OkStatus();
+    }
+};
+
+class ModelAPISessionCalculator : public CalculatorBase {
+    std::unique_ptr<AdapterWrapper> adapter;
+    std::unordered_map<std::string, std::string> outputNameToTag;
+
+public:
+    static absl::Status GetContract(CalculatorContract* cc) {
+        MLOG("Session GetContract start");
+        RET_CHECK(cc->Inputs().GetTags().empty());
+        RET_CHECK(cc->Outputs().GetTags().empty());
+        cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set<AdapterWrapper>();
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        RET_CHECK(!options.servable_name().empty());
+        MLOG("Session GetContract middle");
+        // TODO validate version from string
+        // TODO validate service url format
+        RET_CHECK(options.config_path().empty() ||
+                  options.service_url().empty());
+        // TODO validate tag_to_tensor maps so that key fulfill regex
+        MLOG("Session GetContract end");
+        return absl::OkStatus();
+    }
+
+    absl::Status Close(CalculatorContext* cc) final {
+        return absl::OkStatus();
+    }
+    absl::Status Open(CalculatorContext* cc) final {
+        MLOG("Session Open start");
+        for (CollectionItemId id = cc->Inputs().BeginId();
+             id < cc->Inputs().EndId(); ++id) {
+            if (!cc->Inputs().Get(id).Header().IsEmpty()) {
+                cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
+            }
+        }
+        if (cc->OutputSidePackets().NumEntries() != 0) {
+            for (CollectionItemId id = cc->InputSidePackets().BeginId();
+                 id < cc->InputSidePackets().EndId(); ++id) {
+                cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
+            }
+        }
+        cc->SetOffset(TimestampDiff(0));
+
+        auto session = std::make_unique<AdapterWrapper>(new OVMSInferenceAdapter(cc));
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        for (const auto& [key, value] : options.tag_to_output_tensor_names()) {
+            session->adapter->outputNameToTag[value] = key;
+        }
+        for (const auto& [key, value] : options.tag_to_input_tensor_names()) {
+            session->adapter->inputTagToName[key] = value;
+        }
+        MLOG("Session create adapter");
+        MLOGA(session.get()->adapter.get());
+        cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(Adopt(session.release()));
+        MLOG("SessionOpen end");
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(CalculatorContext* cc) final {
+        MLOG("SessionProcess");
+        return absl::OkStatus();
+    }
+};
+
+REGISTER_CALCULATOR(OVMSOVCalculator);
 REGISTER_CALCULATOR(ModelAPICalculator);
+REGISTER_CALCULATOR(ModelAPISessionCalculator);
+REGISTER_CALCULATOR(ModelAPISideFeedCalculator);
 }  // namespace mediapipe
