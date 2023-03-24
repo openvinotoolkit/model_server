@@ -286,10 +286,10 @@ static Status handleBinaryInput(const int binary_input_size, size_t& binary_inpu
     return StatusCode::OK;
 }
 
-static size_t calculateBinaryDataSize(::KFSRequest::InferInputTensor& input, size_t& binary_data_size) {
+static size_t calculateBinaryDataSize(::KFSRequest::InferInputTensor& input) {
     auto element_size = KFSDataTypeSize(input.datatype());
     size_t elements_number = std::accumulate(std::begin(input.shape()), std::end(input.shape()), 1, std::multiplies<size_t>());
-    binary_data_size = elements_number * element_size;
+    size_t binary_data_size = elements_number * element_size;
     return binary_data_size;
 }
 
@@ -301,6 +301,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
         auto input = grpc_request.mutable_inputs()->Mutable(i);
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
+        size_t binary_input_size;
         if (binary_data_size_parameter != input->parameters().end()) {
             auto status = validateContentFieldsEmptiness(*input);
             if (!status.ok()) {
@@ -308,10 +309,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
                 return status;
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
-                auto binary_input_size = binary_data_size_parameter->second.int64_param();
-                auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input, grpc_request.add_raw_input_contents());
-                if (!status.ok())
-                    return status;
+                binary_input_size = binary_data_size_parameter->second.int64_param();
             } else {
                 SPDLOG_DEBUG("binary_data_size parameter type should be int64 or string");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
@@ -319,16 +317,15 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
         } else {
             if (!isInputEmpty(*input))
                 continue;
-            size_t binary_data_size;
             if (grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
-                binary_data_size = binary_buffer_size;
+                binary_input_size = binary_buffer_size;
             } else {
-                binary_data_size = calculateBinaryDataSize(*input, binary_data_size);
+                binary_input_size = calculateBinaryDataSize(*input);
             }
-            auto status = handleBinaryInput(binary_data_size, binary_input_offset, binary_buffer_size, binary_inputs, *input, grpc_request.add_raw_input_contents());
-            if (!status.ok())
-                return status;
         }
+        auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input, grpc_request.add_raw_input_contents());
+        if (!status.ok())
+            return status;
     }
     return StatusCode::OK;
 }

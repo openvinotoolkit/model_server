@@ -338,6 +338,63 @@ inline static int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tens
     return tensor.contents().bytes_contents_size();
 }
 
+inline static Status getInputs(const std::string* buffer, std::vector<std::string> inputs) {
+    if (buffer == nullptr) {
+        return StatusCode::OK;
+    }
+    size_t offset = 0;
+    if (buffer->size() < sizeof(uint32_t)) {
+        return StatusCode::IMAGE_PARSING_FAILED;
+    }
+    while (offset < buffer->size()) {
+        uint64_t inputSize = *((int32_t*)(buffer->data() + offset));
+        offset += sizeof(uint32_t);
+        inputs.push_back(buffer->substr(offset, inputSize));
+        offset += inputSize;
+    }
+    if (offset != buffer->size()) {
+        return StatusCode::IMAGE_PARSING_FAILED;
+    }
+    return StatusCode::OK;
+}
+
+// inline static int getNumerOfInputs(const std::string* buffer) {
+//     int numberOfInputs = 0;
+//     size_t offset = 0;
+//     if (buffer->size() < sizeof(uint32_t)) {
+//         0;
+//     }
+//     while (offset < buffer->size()) {
+//         uint64_t inputSize = *((int32_t*)(buffer->data() + offset));
+//         offset += (sizeof(uint32_t) + inputSize);
+//         numberOfInputs++;
+//     }
+//     if (offset != buffer->size()) {
+//         0;
+//     }
+//     return numberOfInputs;
+// }
+
+// inline static std::string getNextInput(const std::string* buffer, size_t& offset) {
+//     int numberOfInputs = 0;
+//     if (buffer->size() < offset + sizeof(uint32_t)) {
+//         0;
+//     }
+//     uint64_t inputSize = *((int32_t*)(buffer->data() + offset));
+//     offset += (sizeof(uint32_t) + inputSize);
+
+
+//     while (offset < buffer->size()) {
+        
+//         numberOfInputs++;
+//     }
+//     if (offset != buffer->size()) {
+//         0;
+//     }
+//     return numberOfInputs;
+// }
+
+
 template <typename TensorType>
 static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
@@ -349,9 +406,17 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
     bool enforceResolutionAlignment = !resizeSupported;
 
     bool rawInputsContentsUsed = (buffer != nullptr);
-    int numberOfInputs = (!rawInputsContentsUsed ? getBinaryInputsSize(src) : 1);
+    std::vector<std::string> inputs;
+    auto status = getInputs(buffer, inputs);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+    int numberOfInputs = (!rawInputsContentsUsed ? getBinaryInputsSize(src) : inputs.size());
+    if(numberOfInputs == 0){
+        return StatusCode::INVALID_NO_OF_INPUTS;
+    }
     for (int i = 0; i < numberOfInputs; i++) {
-        cv::Mat image = convertStringToMat(!rawInputsContentsUsed ? getBinaryInput(src, i) : *buffer);
+        cv::Mat image = convertStringToMat(!rawInputsContentsUsed ? getBinaryInput(src, i) : inputs[i]);
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
