@@ -1434,3 +1434,62 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Option
         }]
 })");
 }
+
+class KFSMakeJsonFromPredictResponseStringTest : public ::testing::Test {
+protected:
+    KFSResponse proto;
+    std::string json;
+    KFSTensorOutputProto *string_output_1, *string_output_2;
+    std::optional<int> inferenceHeaderContentLength;
+
+    void SetUp() override {
+        proto.set_model_name("model");
+        proto.set_id("id");
+
+        string_output_1 = proto.add_outputs();
+        string_output_1->set_name("string_output_1");
+        string_output_1->set_datatype("BYTES");
+        string_output_1->mutable_shape()->Add(2);
+        string_output_1->mutable_contents()->mutable_bytes_contents()->Add()->assign("hello world");
+        string_output_1->mutable_contents()->mutable_bytes_contents()->Add()->assign("welcome to kfs");
+
+        string_output_2 = proto.add_outputs();
+        string_output_2->set_name("string_output_2_string");
+        string_output_2->set_datatype("BYTES");
+        string_output_2->mutable_shape()->Add(2);
+        string_output_2->mutable_contents()->mutable_bytes_contents()->Add()->assign("my 1 string");
+        string_output_2->mutable_contents()->mutable_bytes_contents()->Add()->assign("my second string");
+    }
+};
+
+TEST_F(KFSMakeJsonFromPredictResponseStringTest, Positive) {
+    auto status = makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength, {"string_output_1"});
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    SPDLOG_INFO("Generated JSON content:\n__{}__", json);
+
+    ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
+    std::string expectedJson = R"({
+    "model_name": "model",
+    "id": "id",
+    "outputs": [{
+            "name": "string_output_1",
+            "shape": [2],
+            "datatype": "BYTES",
+            "parameters": {
+                "binary_data_size": 33
+            }
+        }, {
+            "name": "string_output_2_string",
+            "shape": [2],
+            "datatype": "BYTES",
+            "data": ["my 1 string", "my second string"]
+        }]
+})";
+    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
+    ASSERT_EQ(json.size(), expectedJson.size() + 33);
+    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
+    std::vector<uint8_t> binaryData = {
+        11, 0, 0, 0, 'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd',
+        14, 0, 0, 0, 'w', 'e', 'l', 'c', 'o', 'm', 'e', ' ', 't', 'o', ' ', 'k', 'f', 's'};
+    EXPECT_EQ(std::memcmp(json.substr(inferenceHeaderContentLength.value()).data(), binaryData.data(), 33), 0);
+}
