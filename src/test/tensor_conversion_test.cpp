@@ -608,6 +608,8 @@ public:
         std::unique_ptr<char[]> image_bytes;
 
         readRgbJpg(filesize, image_bytes);
+        uint8_t imageSize[] = {0x9E, 0x02, 0x00, 0x00};
+        buffer.append((char*)imageSize, 4);
         buffer.append(image_bytes.get(), filesize);
     }
 };
@@ -618,19 +620,32 @@ TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Positive) {
     ov::Tensor tensor;
 
     auto tensorInfo = std::make_shared<const TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
-
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 3);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_batchSizeBiggerThan1) {
+TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Positive_batchSizeBiggerThan1) {
+    uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
+    this->requestTensor.mutable_shape()->Clear();
+    this->requestTensor.mutable_shape()->Add(2);
+
+    size_t filesize;
+    std::unique_ptr<char[]> image_bytes;
+    readRgbJpg(filesize, image_bytes);
+    uint8_t imageSize[] = {0x9E, 0x02, 0x00, 0x00};
+    this->buffer.append((char*)imageSize, 4);
+    this->buffer.append(image_bytes.get(), filesize);
+
     ov::Tensor tensor;
 
     auto tensorInfo = std::make_shared<const TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, Layout{"NHWC"});
 
-    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::INVALID_BATCH_SIZE);
+    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &this->buffer), ovms::StatusCode::OK);
+    ASSERT_EQ(tensor.get_size(), 6);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_emptyString) {
@@ -639,7 +654,7 @@ TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_emptyString) 
     auto tensorInfo = std::make_shared<const TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
 
     std::string empty;
-    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &empty), ovms::StatusCode::BYTES_CONTENTS_EMPTY);
+    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, tensorInfo, &empty), ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
 template <typename TensorType>
