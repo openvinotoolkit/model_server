@@ -35,7 +35,7 @@ cc_library(
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
     deps = [
-        "@openvino//:openvino_old_headers",
+        "@linux_openvino//:openvino_old_headers",
     ]
 )
 
@@ -56,7 +56,7 @@ cc_library(
     strip_include_prefix = "include/ie",
     visibility = ["//visibility:public"],
     deps = [
-        "@openvino//:ngraph",
-        "@openvino//:openvino_new_headers",
+        "@linux_openvino//:ngraph",
+        "@linux_openvino//:openvino_new_headers",
     ],
 )
