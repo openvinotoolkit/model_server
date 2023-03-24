@@ -119,6 +119,126 @@ ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t
     std::memcpy(output->data(), voutputData, bytesize);
     return output;
 }
+ov::Tensor makeOvTensorO(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+    ov::Shape ovShape;
+    for (size_t i = 0; i < dimCount; ++i) {
+        ovShape.push_back(shape[i]);
+    }
+    // here we make copy of underlying OVMS repsonse tensor
+    ov::Tensor output(CAPI2OVPrecision(datatype), ovShape);
+    std::memcpy(output.data(), voutputData, bytesize);
+    return output;
+}
+}  // namespace
+
+namespace {
+
+using InferenceOutput = std::map<std::string, ov::Tensor>;
+using InferenceInput = std::map<std::string, ov::Tensor>;
+// TODO
+// * why std::map
+// * no ret code from infer()
+// * no ret code from load()
+class OVMSInferenceAdapter {
+    OVMS_Server* cserver{nullptr};
+    const std::string servableName;
+    uint64_t servableVersion;
+
+public:
+    OVMSInferenceAdapter(::mediapipe::CalculatorContext* cc) :
+        servableName(cc->Options<OVMSCalculatorOptions>().servable_name()) {
+        OVMS_ServerSettings* _serverSettings{nullptr};
+        OVMS_ModelsSettings* _modelsSettings{nullptr};
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        OVMS_ServerNew(&cserver);  // TODO retcheck's;
+        if (!options.config_path().empty()) {
+            OVMS_ServerSettingsNew(&_serverSettings);
+            OVMS_ModelsSettingsNew(&_modelsSettings);
+            OVMS_ModelsSettingsSetConfigPath(_modelsSettings, options.config_path().c_str());
+            OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_DEBUG);
+            // OVMS_ServerStartFromConfigurationFile(cserver, _serverSettings, _modelsSettings);
+        }
+        auto servableVersionOpt = ovms::stou32(options.servable_version().c_str());
+        servableVersion = servableVersionOpt.value_or(0);
+    }
+    virtual InferenceOutput infer(const InferenceInput& input) {
+        /////////////////////
+        // PREPARE REQUEST
+        /////////////////////
+        OVMS_InferenceRequest* request{nullptr};
+        OVMS_InferenceRequestNew(&request, cserver, servableName.c_str(), servableVersion);
+        CREATE_GUARD(requestGuard, OVMS_InferenceRequest, request);
+
+        // PREPARE EACH INPUT
+        // extract single tensor
+        for (const auto& [name, input_tensor] : input) {
+            // TODO validate existence of tag key in map
+            // or handle inference when there is no need for mapping
+            const char* realInputName = name.c_str();
+
+            const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
+            std::stringstream ss;
+            ss << endl
+               << __FILE__ << ":" << __LINE__ << " Adapter received tensor: [ ";
+            for (int x = 0; x < 10; ++x) {
+                ss << input_tensor_access[x] << " ";
+            }
+            ss << " ]" << endl;
+            cout << ss.str() << endl;
+            const auto& inputShape = input_tensor.get_shape();
+            OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
+            OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size());  // TODO retcode
+            const uint32_t NOT_USED_NUM = 0;
+            // TODO handle hardcoded buffertype, notUsedNum additional options? side packets?
+            OVMS_InferenceRequestInputSetData(request,
+                realInputName,
+                reinterpret_cast<void*>(input_tensor.data()),
+                input_tensor.get_byte_size(),
+                OVMS_BUFFERTYPE_CPU,
+                NOT_USED_NUM);  // TODO retcode
+        }
+        //////////////////
+        //  INFERENCE
+        //////////////////
+        OVMS_InferenceResponse* response = nullptr;
+        if (nullptr != OVMS_Inference(cserver, request, &response)) {
+            std::cout << "DUPA0" << std::endl;
+        }
+        CREATE_GUARD(responseGuard, OVMS_InferenceResponse, response);
+        // verify GetOutputCount
+        uint32_t outputCount = 42;
+        OVMS_InferenceResponseGetOutputCount(response, &outputCount);
+        uint32_t parameterCount = 42;
+        OVMS_InferenceResponseGetParameterCount(response, &parameterCount);
+        // TODO handle output filtering. Graph definition could suggest
+        // that we are not interested in all outputs from OVMS Inference
+        const void* voutputData;
+        size_t bytesize = 42;
+        uint32_t outputId = 0;
+        OVMS_DataType datatype = (OVMS_DataType)199;
+        const uint64_t* shape{nullptr};
+        uint32_t dimCount = 42;
+        OVMS_BufferType bufferType = (OVMS_BufferType)199;
+        uint32_t deviceId = 42;
+        const char* outputName{nullptr};
+        InferenceOutput output;
+        for (size_t i = 0; i < outputCount; ++i) {
+            OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
+            output[outputName] = makeOvTensorO(datatype, shape, dimCount, voutputData, bytesize);  // TODO optimize FIXME
+        }
+        return output;
+    }
+    virtual void loadModel(const std::shared_ptr<const ov::Model>& model, ov::Core& core,
+        const std::string& device, const ov::AnyMap& compilationConfig) {}
+    virtual ov::Shape getInputShape(const std::string& inputName) const { return {}; }  // TODO
+    virtual std::vector<std::string> getInputNames() { return {}; }                     // TODO
+    virtual std::vector<std::string> getOutputNames() { return {}; }                    // TODO
+                                                                                        //    virtual const ov::AnyMap& getModelConfig() const = 0; // TODO
+    virtual const std::string& getModelConfig() const {
+        static std::string res{"MODEL_CONFIG_JSON"};
+        return res;
+    }  // TODO
+};
 }  // namespace
 
 class OVMSOVCalculator : public CalculatorBase {
@@ -268,4 +388,98 @@ public:
 };
 
 REGISTER_CALCULATOR(OVMSOVCalculator);
+class ModelAPICalculator : public CalculatorBase {
+    std::unique_ptr<OVMSInferenceAdapter> adapter;
+    std::unordered_map<std::string, std::string> outputNameToTag;
+
+public:
+    static absl::Status GetContract(CalculatorContract* cc) {
+        RET_CHECK(!cc->Inputs().GetTags().empty());
+        RET_CHECK(!cc->Outputs().GetTags().empty());
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            cc->Inputs().Tag(tag).Set<ov::Tensor>();
+        }
+        for (const std::string& tag : cc->Outputs().GetTags()) {
+            cc->Outputs().Tag(tag).Set<ov::Tensor>();
+        }
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        RET_CHECK(!options.servable_name().empty());
+        // TODO validate version from string
+        // TODO validate service url format
+        RET_CHECK(options.config_path().empty() ||
+                  options.service_url().empty());
+        // TODO validate tag_to_tensor maps so that key fulfill regex
+        return absl::OkStatus();
+    }
+
+    absl::Status Close(CalculatorContext* cc) final {
+        return absl::OkStatus();
+    }
+    absl::Status Open(CalculatorContext* cc) final {
+        adapter = std::make_unique<OVMSInferenceAdapter>(cc);
+        for (CollectionItemId id = cc->Inputs().BeginId();
+             id < cc->Inputs().EndId(); ++id) {
+            if (!cc->Inputs().Get(id).Header().IsEmpty()) {
+                cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
+            }
+        }
+        if (cc->OutputSidePackets().NumEntries() != 0) {
+            for (CollectionItemId id = cc->InputSidePackets().BeginId();
+                 id < cc->InputSidePackets().EndId(); ++id) {
+                cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
+            }
+        }
+        cc->SetOffset(TimestampDiff(0));
+
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        for (const auto& [key, value] : options.tag_to_output_tensor_names()) {
+            outputNameToTag[value] = key;
+        }
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(CalculatorContext* cc) final {
+        cc->GetCounter("PassThrough")->Increment();
+        if (cc->Inputs().NumEntries() == 0) {
+            return tool::StatusStop();
+        }
+        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        /////////////////////
+        // PREPARE INPUT MAP
+        /////////////////////
+
+        const auto inputTagInputMap = options.tag_to_input_tensor_names();
+        const auto inputTagOutputMap = options.tag_to_output_tensor_names();
+        InferenceInput input;
+        InferenceOutput output;
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            const char* realInputName = inputTagInputMap.at(tag).c_str();
+            auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
+            input[realInputName] = packet;
+            ov::Tensor input_tensor(packet);
+            const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
+            std::stringstream ss;
+            ss << endl
+               << "ModelAPICalculator received tensor: [ ";
+            for (int x = 0; x < 10; ++x) {
+                ss << input_tensor_access[x] << " ";
+            }
+            ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
+            cout << ss.str() << endl;
+        }
+        //////////////////
+        //  INFERENCE
+        //////////////////
+        output = adapter->infer(input);
+        RET_CHECK(output.size() == cc->Outputs().GetTags().size());
+        for (const auto& [outputName, outputTagName] : outputNameToTag) {
+            ov::Tensor* outOvTensor = new ov::Tensor(output.at(outputName));
+            // TODO check buffer ownership
+            cc->Outputs().Tag(outputTagName).Add(outOvTensor, cc->InputTimestamp());
+        }
+        return absl::OkStatus();
+    }
+};
+
+REGISTER_CALCULATOR(ModelAPICalculator);
 }  // namespace mediapipe
