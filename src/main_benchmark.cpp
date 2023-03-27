@@ -177,7 +177,7 @@ static void installSignalHandlers() {
 
 using shape_t = std::vector<size_t>;
 
-OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& servableName, uint32_t servableVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
+OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceRequestNew(&request, server, servableName.c_str(), servableVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
@@ -279,7 +279,11 @@ int main(int argc, char** argv) {
     // model parameters
     ///////////////////////
     std::string servableName(cliparser.result->operator[]("servable_name").as<std::string>());
-    uint64_t  servableVersion(cliparser.result->operator[]("servable_version").as<uint64_t>());
+    int64_t servableVersion(cliparser.result->operator[]("servable_version").as<int64_t>());
+    if (servableVersion < 0) {
+        std::cerr << "servableVersion cannot be negative" << std::endl;
+        return EX_USAGE;
+    }
     // input names handling
     std::string cliInputsNames(cliparser.result->operator[]("inputs_names").as<std::string>());
     auto inputsNames = ovms::tokenize(cliInputsNames, ',');

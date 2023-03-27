@@ -29,7 +29,7 @@
 #include "ovms.h"  // NOLINT
 
 const char* MODEL_NAME = "dummy";
-const uint64_t MODEL_VERSION = 1;
+const int64_t MODEL_VERSION = 1;
 const char* INPUT_NAME = "b";
 constexpr size_t DIM_COUNT = 2;
 constexpr size_t SHAPE[DIM_COUNT] = {1, 10};

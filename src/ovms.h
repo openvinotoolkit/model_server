@@ -332,7 +332,7 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
 // \param servableName The name of the servable to be used
 // \param servableVersion The version of the servable to be used
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, uint32_t servableVersion);
+OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, int64_t servableVersion);
 void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 
 // Set the data of the input buffer. Ownership of data needs to be maintained during inference.
