@@ -66,6 +66,27 @@ TEST_F(TFSRestParserBinaryInputs, BatchSize2) {
     EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
+TEST_F(TFSRestParserBinaryInputs, RowStringMixedPrecision) {
+    std::string request = R"({"signature_name":"","instances":[{"i": "abcd"}, {"i": 1234}]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+}
+
+TEST_F(TFSRestParserBinaryInputs, ColumnStringMixedPrecision) {
+    std::string request = R"({"signature_name":"","inputs":{"i":["abcd", "efg", 52.1, "xyz"]}})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(TFSRestParserBinaryInputs, ColumnStringMixedPrecision2) {
+    std::string request = R"({"signature_name":"","inputs":{"i":[[2,3,4],[5,"abcd",7]]}})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
 TEST_F(TFSRestParserBinaryInputs, RowString) {
     std::string request = R"({"signature_name":"","instances":[{"i":"abcd"}]})";
 
