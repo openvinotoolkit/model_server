@@ -101,7 +101,7 @@ load("@google_mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["ovmscalculator.proto"],
+    srcs = ["mediapipe_internal/ovmscalculator.proto"],
     visibility = ["//visibility:public"],
     deps = [
         "@google_mediapipe//mediapipe/framework:calculator_options_proto",
@@ -201,6 +201,7 @@ cc_library(
         "mediapipe_internal/calculator_graph.hpp",
         "mediapipe_internal/mediapipedemo.cpp",
         "mediapipe_internal/mediapipedemo.hpp",
+        "mediapipe_internal/ovms_calculator.cc",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",
@@ -266,7 +267,6 @@ cc_library(
         "dags/pipelineeventqueue.hpp",
         "dags/pipeline_factory.cpp",
         "dags/pipeline_factory.hpp",
-        "ovms_calculator.cc",
         "precision.cpp",
         "precision.hpp",
         #"stream_prediction_service.cpp",

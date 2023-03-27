@@ -104,9 +104,8 @@ const std::string DUMMY_MEDIAPIPE_GRAPH_ADAPT = R"pb(
     input_stream: "in"
     output_stream: "out"
     node {
-      calculator: "ModelAPICalculator"
-      input_stream: "B:in"
-      output_stream: "A:out"
+      calculator: "ModelAPISessionCalculator"
+      output_side_packet: "SESSION:session"
       node_options: {
             [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
               servable_name: "dummy"
@@ -122,6 +121,12 @@ const std::string DUMMY_MEDIAPIPE_GRAPH_ADAPT = R"pb(
               config_path: "/ovms/src/test/mediapipe/config_standard_dummy.json"
             }
       }
+    }
+    node {
+      calculator: "ModelAPISideFeedCalculator"
+      input_side_packet: "SESSION:session"
+      input_stream: "B:in"
+      output_stream: "A:out"
     }
 )pb";
 
@@ -153,6 +158,41 @@ const std::string ADD_MEDIAPIPE_GRAPH_ADAPT = R"pb(
               config_path: "/ovms/src/test/mediapipe/config_standard_add.json"
             }
       }
+    }
+)pb";
+const std::string ADD_MEDIAPIPE_GRAPH_ADAPT_FULL = R"pb(
+    input_stream: "in1"
+    input_stream: "in2"
+    output_stream: "out"
+    node {
+      calculator: "ModelAPISessionCalculator"
+      output_side_packet: "SESSION:session"
+      node_options: {
+            [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+              servable_name: "add"
+              servable_version: "1"
+              tag_to_input_tensor_names {
+                key: "INPUT1"
+                value: "input1"
+              }
+              tag_to_input_tensor_names {
+                key: "INPUT2"
+                value: "input2"
+              }
+              tag_to_output_tensor_names {
+                key: "SUM"
+                value: "sum"
+              }
+              config_path: "/ovms/src/test/mediapipe/config_standard_add.json"
+            }
+      }
+    }
+    node {
+      calculator: "ModelAPISideFeedCalculator"
+      input_side_packet: "SESSION:session"
+      input_stream: "INPUT1:in1"
+      input_stream: "INPUT2:in2"
+      output_stream: "SUM:out"
     }
 )pb";
 
