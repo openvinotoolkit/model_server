@@ -17,6 +17,7 @@
 
 #include "kfs_frontend/kfs_utils.hpp"
 #include "ov_utils.hpp"
+#include "tensor_conversion.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
@@ -197,6 +198,9 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+        return convertOVTensor2DToStringResponse(tensor, responseOutput);
+    }
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
     if (!status.ok()) {
         return status;
@@ -232,6 +236,9 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+        return convertOVTensor2DToStringResponse(tensor, responseOutput);
+    }
     auto status = serializePrecision(responseOutput, servableOutput, tensor);
     if (!status.ok()) {
         return status;

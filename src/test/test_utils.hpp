@@ -234,11 +234,17 @@ std::string readableError(const T* expected_output, const T* actual_output, cons
     }
     return ss.str();
 }
+void assertStringOutputProto(const tensorflow::TensorProto& proto, const std::vector<std::string>& expectedStrings);
+void assertStringOutputProto(const KFSTensorOutputProto& proto, const std::vector<std::string>& expectedStrings);
+void assertStringOutputProto(const ovms::InferenceTensor& proto, const std::vector<std::string>& expectedStrings);
+
+void assertStringResponse(const tensorflow::serving::PredictResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName);
+void assertStringResponse(const ::KFSResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName);
+void assertStringResponse(const ovms::InferenceResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName);
 
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
-    tensorflow::serving::PredictRequest& request,
     tensorflow::serving::PredictResponse& response,
     const std::vector<size_t>& expectedShape,
     bool checkRaw = true) {
@@ -263,7 +269,6 @@ void checkIncrement4DimResponse(const std::string outputName,
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
-    ::KFSRequest& request,
     ::KFSResponse& response,
     const std::vector<size_t>& expectedShape,
     bool checkRaw = true) {

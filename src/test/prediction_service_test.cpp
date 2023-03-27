@@ -624,6 +624,46 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMapping) {
     performPrediction(config.getName(), config.getVersion(), request, nullptr, nullptr, manager, this->dummyModelInputMapping, this->dummyModelOutputMapping);
 }
 
+TYPED_TEST(TestPredictWithMapping, SuccesfullOnPassthrough_2D_U8ModelWithMapping) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    this->modelPath = this->directoryPath + "/passthrough/";
+    this->mappingConfigPath = this->modelPath + "1/mapping_config.json";
+    std::filesystem::copy("/ovms/src/test/passthrough", this->modelPath, std::filesystem::copy_options::recursive);
+    this->ovmsConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "passhtrough_u8",
+                "base_path": "/ovms/src/test/passthrough"
+            }
+        }
+    ]
+})";
+    const std::string modelPathToReplace{"/ovms/src/test/passthrough"};
+    auto it = this->ovmsConfig.find(modelPathToReplace);
+    ASSERT_NE(it, std::string::npos);
+    this->ovmsConfig.replace(this->ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), this->modelPath);
+    this->configFilePath = this->directoryPath + "/ovms_config.json";
+    createConfigFileWithContent(this->ovmsConfig, this->configFilePath);
+    createConfigFileWithContent(R"({
+        "outputs": {"copy:0": "copy:0_string"}
+    })",
+        this->mappingConfigPath);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.loadConfig(this->configFilePath);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    typename TypeParam::first_type request;
+    prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, {"String_123", "", "zebra"});
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(manager.getModelInstance("passhtrough_u8", 1, modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    assertStringResponse(response, {"String_123", "", "zebra"}, "copy:0_string");
+}
+
 TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMappingSpecificShapeAuto) {
     Preparer<typename TypeParam::first_type> preparer;
     typename TypeParam::first_type request;

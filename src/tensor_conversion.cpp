@@ -29,10 +29,12 @@
 
 #include <openvino/openvino.hpp>
 
+#include "kfs_frontend/kfs_utils.hpp"
 #include "logging.hpp"
 #include "opencv2/opencv.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -523,6 +525,27 @@ Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tenso
     return StatusCode::OK;
 }
 
+// TODO: What about partial gathering?
+template <typename TensorType>
+Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst) {
+    if (tensor.get_shape().size() != 2) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+    if (tensor.get_element_type() != ov::element::Type_t::u8) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto batchSize = tensor.get_shape()[0];
+    auto maxStringLen = tensor.get_shape()[1];
+    setBatchSize(dst, batchSize);
+    setStringPrecision(dst);
+    for (size_t i = 0; i < batchSize; i++) {
+        const char* strStart = reinterpret_cast<const char*>(tensor.data<unsigned char>() + i * maxStringLen);
+        size_t strLen = strnlen(strStart, maxStringLen);
+        createOrGetString(dst, i).assign(strStart, strLen);
+    }
+    return StatusCode::OK;
+}
+
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer);
 
@@ -531,5 +554,8 @@ template Status convertStringRequestToOVTensor2D<::KFSRequest::InferInputTensor>
 
 template Status convertStringRequestToOVTensor1D<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
 template Status convertStringRequestToOVTensor1D<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+
+template Status convertOVTensor2DToStringResponse<tensorflow::TensorProto>(const ov::Tensor& tensor, tensorflow::TensorProto& dst);
+template Status convertOVTensor2DToStringResponse<::KFSResponse::InferOutputTensor>(const ov::Tensor& tensor, ::KFSResponse::InferOutputTensor& dst);
 
 }  // namespace ovms

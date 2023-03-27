@@ -235,4 +235,5 @@ Status serializePredictResponse(
     }
     return StatusCode::OK;
 }
+
 }  // namespace ovms

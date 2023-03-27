@@ -148,7 +148,24 @@ bool isNativeFileFormatUsed(const TFSInputTensorType& proto) {
     // return request.string_val_size() > 0;
 }
 
-bool requiresProcessing(const TFSInputTensorType& proto) {
+bool requiresPreProcessing(const TFSInputTensorType& proto) {
     return proto.dtype() == tensorflow::DataType::DT_STRING;
+}
+
+std::string& createOrGetString(TFSInputTensorType& proto, int index) {
+    while (proto.string_val_size() <= index) {
+        proto.add_string_val();
+    }
+    return *proto.mutable_string_val(index);
+}
+
+void setBatchSize(TFSInputTensorType& proto, int64_t batch) {
+    if (proto.tensor_shape().dim_size() == 0) {
+        proto.mutable_tensor_shape()->add_dim();
+    }
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batch);
+}
+void setStringPrecision(TFSInputTensorType& proto) {
+    proto.set_dtype(TFSDataType::DT_STRING);
 }
 }  // namespace ovms

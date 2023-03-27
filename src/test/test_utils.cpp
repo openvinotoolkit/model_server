@@ -349,6 +349,41 @@ void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<s
     }
 }
 
+void assertStringOutputProto(const tensorflow::TensorProto& proto, const std::vector<std::string>& expectedStrings) {
+    ASSERT_EQ(proto.string_val_size(), expectedStrings.size());
+    for (size_t i = 0; i < expectedStrings.size(); i++) {
+        ASSERT_EQ(proto.string_val(i), expectedStrings[i]);
+    }
+}
+void assertStringOutputProto(const KFSTensorOutputProto& proto, const std::vector<std::string>& expectedStrings) {
+    ASSERT_EQ(proto.contents().bytes_contents_size(), expectedStrings.size());
+    for (size_t i = 0; i < expectedStrings.size(); i++) {
+        ASSERT_EQ(proto.contents().bytes_contents(i), expectedStrings[i]);
+    }
+}
+void assertStringOutputProto(const ovms::InferenceTensor& proto, const std::vector<std::string>& expectedStrings) {
+    FAIL() << "not implemented";
+}
+
+void assertStringResponse(const tensorflow::serving::PredictResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName) {
+    ASSERT_EQ(proto.outputs().count(outputName), 1);
+    ASSERT_EQ(proto.outputs().at(outputName).dtype(), tensorflow::DataType::DT_STRING);
+    ASSERT_EQ(proto.outputs().at(outputName).tensor_shape().dim_size(), 1);
+    ASSERT_EQ(proto.outputs().at(outputName).tensor_shape().dim(0).size(), expectedStrings.size());
+    assertStringOutputProto(proto.outputs().at(outputName), expectedStrings);
+}
+void assertStringResponse(const ::KFSResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName) {
+    ASSERT_EQ(proto.outputs_size(), 1);
+    ASSERT_EQ(proto.outputs(0).name(), outputName);
+    ASSERT_EQ(proto.outputs(0).datatype(), "BYTES");
+    ASSERT_EQ(proto.outputs(0).shape_size(), 1);
+    ASSERT_EQ(proto.outputs(0).shape(0), expectedStrings.size());
+    assertStringOutputProto(proto.outputs(0), expectedStrings);
+}
+void assertStringResponse(const ovms::InferenceResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName) {
+    FAIL() << "not implemented";
+}
+
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize) {
     auto& tensor = (*request.mutable_inputs())[inputName];
     size_t filesize = 0;
