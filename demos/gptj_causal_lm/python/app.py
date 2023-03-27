@@ -48,13 +48,11 @@ while True:
     predicted_token_id = token = torch.argmax(torch.nn.functional.softmax(torch.Tensor(results[0,-1,:]),dim=-1),dim=-1)
     word = tokenizer.decode(predicted_token_id)
     input_sentence += word
-    # print(f"Iteration: {iteration}\nLast predicted token: {predicted_token_id}\nLast latency: {last_latency}s\n{input_sentence}")
     print(word, end='', flush=True)
     iteration += 1
     if predicted_token_id == args['eos_token_id']:
         break
 
-# split line below to 3 different lines
 print(f"Number of iterations: {iteration}")
 print(f"First latency: {first_latency}s")
 print(f"Last latency: {last_latency}s")

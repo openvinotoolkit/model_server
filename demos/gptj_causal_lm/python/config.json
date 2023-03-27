@@ -1,0 +1,123 @@
+{
+    "model_config_list": [
+        {"config": {
+            "name": "gpt",
+            "base_path": "/onnx",
+            "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": 1}}}
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_gpt_pipeline",
+            "inputs": [
+                "texts"
+            ],
+            "nodes": [
+                {
+                    "name": "node_1",
+                    "type": "custom",
+                    "inputs": [
+                        {
+                            "texts": {
+                                "node_name": "request",
+                                "data_item": "texts"
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "data_item": "input_ids",
+                            "alias": "out"
+                        },
+                        {
+                            "data_item": "attention_mask",
+                            "alias": "attention"
+                        }
+                    ],
+                    "library_name": "tokenizer",
+                    "params": {
+                        "max_ids_arr_length": "4096",
+                        "model_path": "/workspace/tokenizers/gpt2.bin"
+                    }
+                },
+                {
+                    "name": "gpt_node",
+                    "model_name": "gpt",
+                    "type": "DL model",
+                    "inputs": [
+                        {
+                            "input_ids": {
+                                "node_name": "node_1",
+                                "data_item": "out"
+                            }
+                        },
+                        {
+                            "attention_mask": {
+                                "node_name": "node_1",
+                                "data_item": "attention"
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "data_item": "logits",
+                            "alias": "logits"
+                        }
+                    ]
+                },
+                {
+                    "name": "node_2",
+                    "type": "custom",
+                    "inputs": [
+                        {
+                            "logits": {
+                                "node_name": "gpt_node",
+                                "data_item": "logits"
+                            }
+                        },
+                        {
+                            "input_ids": {
+                                "node_name": "node_1",
+                                "data_item": "out"
+                            }
+                        },
+                        {
+                            "attention_mask": {
+                                "node_name": "node_1",
+                                "data_item": "attention"
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "data_item": "texts",
+                            "alias": "texts"
+                        }
+                    ],
+                    "library_name": "detokenizer",
+                    "params": {
+                        "max_buffer_length": "8192",
+                        "model_path": "/workspace/tokenizers/gpt2.i2w"
+                    }
+                }
+            ],
+            "outputs": [
+                {
+                    "autocompletions_string": {
+                        "node_name": "node_2",
+                        "data_item": "texts"
+                    }
+                }
+            ]
+        }
+    ],
+    "custom_node_library_config_list": [
+        {
+            "name": "tokenizer",
+            "base_path": "/workspace/lib/libtokenizer.so"
+        },
+        {
+            "name": "detokenizer",
+            "base_path": "/workspace/lib/libdetokenizer.so"
+        }
+    ]
+}
