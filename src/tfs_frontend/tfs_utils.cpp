@@ -148,7 +148,7 @@ bool isNativeFileFormatUsed(const TFSInputTensorType& proto) {
     // return request.string_val_size() > 0;
 }
 
-bool requiresProcessing(const TFSInputTensorType& proto) {
+bool requiresPreProcessing(const TFSInputTensorType& proto) {
     return proto.dtype() == tensorflow::DataType::DT_STRING;
 }
 

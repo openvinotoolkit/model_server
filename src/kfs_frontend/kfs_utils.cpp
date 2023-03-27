@@ -156,7 +156,7 @@ bool isNativeFileFormatUsed(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
 }
 
-bool requiresProcessing(const KFSTensorInputProto& proto) {
+bool requiresPreProcessing(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
 }
 

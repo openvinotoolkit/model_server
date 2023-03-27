@@ -648,7 +648,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnPassthrough_2D_U8ModelWithMapping
     this->configFilePath = this->directoryPath + "/ovms_config.json";
     createConfigFileWithContent(this->ovmsConfig, this->configFilePath);
     createConfigFileWithContent(R"({
-        "outputs": {"copy:0": "copy:0_string_2d_u8"}
+        "outputs": {"copy:0": "copy:0_string"}
     })",
         this->mappingConfigPath);
     ConstructorEnabledModelManager manager;
@@ -661,7 +661,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnPassthrough_2D_U8ModelWithMapping
     ASSERT_EQ(manager.getModelInstance("passhtrough_u8", 1, modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
     ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-    assertStringResponse(response, {"String_123", "", "zebra"}, "copy:0_string_2d_u8");
+    assertStringResponse(response, {"String_123", "", "zebra"}, "copy:0_string");
 }
 
 TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMappingSpecificShapeAuto) {

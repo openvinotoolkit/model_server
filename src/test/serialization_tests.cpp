@@ -764,7 +764,7 @@ public:
 using MyTypes = ::testing::Types<TFPredictResponse, ::KFSResponse>;
 TYPED_TEST_SUITE(SerializeString, MyTypes);
 
-// Serialization to string due to suffix _string_2d_u8 in mapping
+// Serialization to string due to suffix _string in mapping
 TYPED_TEST(SerializeString, Valid_2D_U8_String) {
     std::vector<uint8_t> data = {
         'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
@@ -775,7 +775,7 @@ TYPED_TEST(SerializeString, Valid_2D_U8_String) {
     OutputGetter<MockedTensorProvider&> outputGetter(provider);
 
     ovms::tensor_map_t infos;
-    infos["out_string_2d_u8"] = std::make_shared<ovms::TensorInfo>("out", "out_string_2d_u8", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
+    infos["out_string"] = std::make_shared<ovms::TensorInfo>("out", "out_string", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
 
     bool useSharedOutputContent = false;  // TODO: support raw field
     ASSERT_EQ(serializePredictResponse(outputGetter,
@@ -786,10 +786,10 @@ TYPED_TEST(SerializeString, Valid_2D_U8_String) {
                   getTensorInfoName,
                   useSharedOutputContent),
         ovms::StatusCode::OK);
-    assertStringResponse(this->response, {"String_123", "zebra", ""}, "out_string_2d_u8");
+    assertStringResponse(this->response, {"String_123", "zebra", ""}, "out_string");
 }
 
-// Serialization to U8 due to missing suffix _string_2d_u8 in mapping
+// Serialization to U8 due to missing suffix _string in mapping
 TYPED_TEST(SerializeString, Valid_2D_U8_NonString) {
     std::vector<uint8_t> data = {
         'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
@@ -800,7 +800,7 @@ TYPED_TEST(SerializeString, Valid_2D_U8_NonString) {
     OutputGetter<MockedTensorProvider&> outputGetter(provider);
 
     ovms::tensor_map_t infos;
-    infos["out_string_2d_u8"] = std::make_shared<ovms::TensorInfo>("out", "out", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
+    infos["out_string"] = std::make_shared<ovms::TensorInfo>("out", "out", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
 
     bool useSharedOutputContent = false;  // TODO: support raw field
     ASSERT_EQ(serializePredictResponse(outputGetter,

@@ -27,7 +27,7 @@
 
 namespace ovms {
 
-const std::string STRING_SERIALIZATION_HINT_NAME_SUFFIX = "_string_2d_u8";
+const std::string STRING_SERIALIZATION_HINT_NAME_SUFFIX = "_string";
 
 // in case we change behaviour for this constructor we may need to write additional tests for TensorInfo intersection / DAGs
 TensorInfo::TensorInfo(const std::string& name,
@@ -80,7 +80,7 @@ void TensorInfo::createProcessingHints() {
     }
 
     // Post
-    if (endsWith(this->getMappedName(), STRING_SERIALIZATION_HINT_NAME_SUFFIX) && this->shape.size() == 2) {
+    if (this->precision == ovms::Precision::U8 && this->shape.size() == 2 && endsWith(this->getMappedName(), STRING_SERIALIZATION_HINT_NAME_SUFFIX)) {
         this->postProcessingHint = TensorInfo::ProcessingHint::STRING_2D_U8;
     } else {
         this->postProcessingHint = TensorInfo::ProcessingHint::NO_PROCESSING;

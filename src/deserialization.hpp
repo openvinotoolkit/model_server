@@ -355,7 +355,7 @@ Status deserializePredictRequest(
             auto& requestInput = requestInputItr->second;
             ov::Tensor tensor;
 
-            if (requiresProcessing(requestInput)) {
+            if (requiresPreProcessing(requestInput)) {
                 switch (tensorInfo->getPreProcessingHint()) {
                 case TensorInfo::ProcessingHint::STRING_1D_U8:
                     SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
@@ -429,7 +429,7 @@ Status deserializePredictRequest(
             auto inputIndex = requestInputItr - request.inputs().begin();
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
-            if (requiresProcessing(*requestInputItr)) {
+            if (requiresPreProcessing(*requestInputItr)) {
                 switch (tensorInfo->getPreProcessingHint()) {
                 case TensorInfo::ProcessingHint::STRING_1D_U8:
                     SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);

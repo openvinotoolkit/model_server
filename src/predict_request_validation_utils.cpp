@@ -900,7 +900,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         const Dimension& batchSize = inputInfo->getShape()[batchIndex.value()];
         Mode shapeMode = getShapeMode(shapeInfo, name);
 
-        if (requiresProcessing(proto)) {
+        if (requiresPreProcessing(proto)) {
             const auto processingHint = inputInfo->getPreProcessingHint();
             if (processingHint == TensorInfo::ProcessingHint::STRING_1D_U8) {
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 1D string input: name: {}; batch size: {}",
