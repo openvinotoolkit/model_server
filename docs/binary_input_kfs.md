@@ -4,7 +4,10 @@
 
 KServe API allows sending the model input data in a variety of formats inside the [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#tensor-data-1) objects or in `raw_input_contents` field of [ModelInferRequest](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-1).
    
-When the data is sent in the `bytes_contents` field of `InferTensorContents` and input `datatype` is set to `BYTES`, such input is interpreted as a binary encoded image. The `BYTES` datatype is dedicated to binary encoded **images** and if it's set, the data **must** be placed in `bytes_contents` or in `raw_input_contents` if batch size is equal to 1.
+When the data is sent in the `bytes_contents` field of `InferTensorContents` and input `datatype` is set to `BYTES`, such input is interpreted as a binary encoded image. The `BYTES` datatype is dedicated to binary encoded **images** and if it's set, the data **must** be placed in `bytes_contents` or in `raw_input_contents` 
+
+If data is located in `raw_input_contents` you need to precede data of every batch by 4 bytes conatining size of this batch. For example, if batch would contain three images of sizes 370, 480, 500 bytes the content of raw_input_contents[index_of_thi_input] would look like this: 
+<0x72010000 (=370)><370 bytes of first image><0xE0010000 (=480)><480 bytes of second image> <0xF4010000 (=500)><500 bytes of third image>
 
 Note, that while the model metadata reports the inputs shape with layout `NHWC`, the binary data must be sent with 
 shape: `[N]` with datatype: `BYTES`. Where `N` represents number of images converted to string bytes.

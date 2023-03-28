@@ -132,6 +132,7 @@ public:
     Status checkShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status validateTensorContent(const InputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const;
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
+    Status validateRawInputContentsFormatAndShape(const ovms::TensorInfo& inputInfo, const RequestType& request, const size_t& bufferId, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status validatePrecision(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     Status checkStringShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status validateRequestCoherency() const;
@@ -401,7 +402,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
-    if (servableBatchSize.match(rsi.getDim(0))) {
+    if (servableBatchSize.match(rsi.getDim(0)) && rsi.getDim(0) == proto.contents().bytes_contents_size()) {
         return StatusCode::OK;
     }
     if (batchingMode == AUTO) {
@@ -837,6 +838,83 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
     return StatusCode::OK;
 }
 
+template <>
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateRawInputContentsFormatAndShape(const ovms::TensorInfo& inputInfo, const TFSRequestType& request, const size_t& bufferId, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    SPDLOG_DEBUG("Raw input contents not supported for TFS API.");
+    return StatusCode::INTERNAL_ERROR;
+}
+
+template <>
+Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateRawInputContentsFormatAndShape(const ovms::TensorInfo& inputInfo, const KFSRequest& request, const size_t& bufferId, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    auto& buffer = request.raw_input_contents()[bufferId];
+    size_t batchSize = 0;
+    size_t maxStringLength = 0;
+    size_t offset = 0;
+    if (buffer.size() < sizeof(int32_t)) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid raw input size - {}", servableName, servableVersion, buffer.size());
+        return StatusCode::INVALID_STRING_INPUT;
+    }
+    while (offset < buffer.size()) {
+        size_t inputSize = *((int32_t*)(buffer.data() + offset));
+        maxStringLength = std::max(maxStringLength, inputSize);
+        offset += (sizeof(int32_t) + inputSize);
+        batchSize++;
+    }
+    if (offset != buffer.size()) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid raw input format(every input need to be preceded by four bytes of its size)", servableName, servableVersion);
+        return StatusCode::INVALID_STRING_INPUT;
+    }
+
+    if (batchSize <= 0) {
+        std::stringstream ss;
+        ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+
+    const auto& shape = inputInfo.getShape();
+    size_t width = maxStringLength + 1;
+    if (!shape[0].match(static_cast<dimension_value_t>(batchSize))) {
+        if (batchingMode == AUTO) {
+                finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+        } else {
+            std::stringstream ss;
+            ss << "Expected: " << shape[0].toString() << "; Actual: " << batchSize << "; input name: " << getCurrentlyValidatedInputName();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_BATCH_SIZE, details);
+        }
+    }
+    if(inputInfo.getProcessingHint() != TensorInfo::ProcessingHint::STRING_2D_U8){
+        return StatusCode::OK;
+    }
+
+    if (shape[1].match(static_cast<dimension_value_t>(width))) {
+        return StatusCode::OK;
+    }
+
+    if (shapeMode == AUTO) {
+        finalStatus = StatusCode::RESHAPE_REQUIRED;
+        return StatusCode::OK;
+    } else {
+        auto stringInputShape = Shape({static_cast<int64_t>(batchSize), static_cast<int64_t>(width)});
+        std::stringstream ss;
+        ss << "; Expected max null terminated string length: " << shape[1].toString()
+           << "; got: " << width
+           << "; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_SHAPE, details);
+    }
+}
+
+template <>
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateRawInputContentsFormatAndShape(const ovms::TensorInfo& inputInfo, const ovms::InferenceRequest& request, const size_t& bufferId, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    SPDLOG_DEBUG("Raw input contents not supported for C-API.");
+    return StatusCode::INTERNAL_ERROR;
+}
+
 static Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name) {
     if (shapeInfo.size() == 0) {
         return Mode::FIXED;
@@ -902,6 +980,11 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
 
         if (requiresPreProcessing(proto)) {
             const auto processingHint = inputInfo->getPreProcessingHint();
+            if(dataInRawInputContents(request))
+            {
+                RETURN_IF_ERR(validateRawInputContentsFormatAndShape(*inputInfo, request, bufferId, finalStatus, batchingMode, shapeMode));
+                continue;
+            }
             if (processingHint == TensorInfo::ProcessingHint::STRING_1D_U8) {
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 1D string input: name: {}; batch size: {}",
                     servableName, servableVersion, name, batchSize.toString());
@@ -911,9 +994,6 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 2D string input: name: {}; batch size: {}",
                     servableName, servableVersion, name, batchSize.toString());
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
-                if (dataInRawInputContents(request)) {
-                    RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
-                }
                 RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
                 RETURN_IF_ERR(checkStringShapeMismatch(proto, *inputInfo, finalStatus, batchingMode, shapeMode));
                 continue;
@@ -921,12 +1001,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing binary image input: name: {}; batch size: {}",
                     servableName, servableVersion, name, batchSize.toString());
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
-                if (!dataInRawInputContents(request)) {
-                    RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
-                } else {
-                    SPDLOG_DEBUG("When the image is placed in raw_inputs_contents batch size cannot be bigger than 1.");
-                    return StatusCode::INVALID_BATCH_SIZE;
-                }
+                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
                 continue;
             } else {
                 SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
