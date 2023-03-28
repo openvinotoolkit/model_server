@@ -26,7 +26,7 @@ import tritonclient.grpc as grpclient
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Sends requests via KServe REST API using binary encoded images. '
+    parser = argparse.ArgumentParser(description='Sends requests via KServe gRPC API using images in format supported by OpenCV. '
                                                  'It displays performance statistics and optionally the model accuracy')
     parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
     parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
