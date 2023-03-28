@@ -202,6 +202,7 @@ endif
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
 	@cd src/custom_nodes && make BASE_OS=$(BASE_OS)
+	@cd src/custom_nodes/tokenizer && make BASE_OS=$(BASE_OS)
 endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
