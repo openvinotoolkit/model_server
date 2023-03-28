@@ -707,40 +707,6 @@ TEST_F(KFSMakeJsonFromPredictResponseRawTest, Positive) {
 })");
 }
 
-TEST_F(KFSMakeJsonFromPredictResponseRawTest, Positive_binary) {
-    int output2DataSize = 10 * sizeof(int8_t);
-    output2->set_datatype("BYTES");
-    output2->mutable_shape()->Clear();
-    output2->mutable_shape()->Add(1);
-    output2->mutable_shape()->Add(output2DataSize);
-
-    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::OK);
-    ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
-    std::string expectedJson = R"({
-    "model_name": "model",
-    "id": "id",
-    "outputs": [{
-            "name": "output1",
-            "shape": [2, 1, 4],
-            "datatype": "FP32",
-            "data": [5.0, 10.0, -3.0, 2.5, 9.0, 55.5, -0.5, -1.5]
-        }, {
-            "name": "output2",
-            "shape": [1, 10],
-            "datatype": "BYTES",
-            "parameters": {
-                "binary_data_size": 10
-            }
-        }]
-})";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + output2DataSize);
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    for (int i = 0; i < output2DataSize; i++) {
-        EXPECT_EQ((int)json.substr(inferenceHeaderContentLength.value())[i], data2[i]);
-    }
-}
-
 TEST_F(KFSMakeJsonFromPredictResponseRawTest, EmptyRawOutputContentsError) {
     proto.mutable_raw_output_contents()->Clear();
     EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::REST_SERIALIZE_NO_DATA);
@@ -1109,59 +1075,57 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint64_binary) {
     assertDataBinary(data, expectedJson);
 }
 
-TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, BYTES_1) {
-    int8_t data = -53;
-    output->set_datatype("BYTES");
-    auto* output_contents = proto.add_raw_output_contents();
-    output_contents->assign(reinterpret_cast<const char*>(&data), sizeof(int8_t));
-    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::OK);
-    ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
-    std::string expectedJson = R"({
-    "model_name": "model",
-    "id": "id",
-    "outputs": [{
-            "name": "output",
-            "shape": [1, 1],
-            "datatype": "BYTES",
-            "parameters": {
-                "binary_data_size": 1
-            }
-        }]
-})";
-    ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + sizeof(int8_t));
-    EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    EXPECT_EQ((int)json.substr(inferenceHeaderContentLength.value())[0], data);
-}
-
-TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, BYTES_2) {
-    int8_t data[] = {-53, 1, 2, 3};
-    int dataSize = 4;
+TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, raw_BYTES_string) {
+    uint8_t data[] = {4, 0, 0, 0, 'a', 'b', 'c', 'd', 3, 0, 0, 0, 'e', 'f', 'g'};
+    int dataSize = 15;
     output->set_datatype("BYTES");
     output->mutable_shape()->Clear();
-    output->mutable_shape()->Add(1);
-    output->mutable_shape()->Add(dataSize);
+    output->mutable_shape()->Add(2);  // batch size
     auto* output_contents = proto.add_raw_output_contents();
     output_contents->assign(reinterpret_cast<const char*>(&data), dataSize);
-    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::OK);
-    ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
+    auto status = makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
     std::string expectedJson = R"({
     "model_name": "model",
     "id": "id",
     "outputs": [{
             "name": "output",
-            "shape": [1, 4],
+            "shape": [2],
+            "datatype": "BYTES",
+            "data": ["abcd", "efg"]
+        }]
+})";
+    ASSERT_EQ(json.size(), expectedJson.size());
+    ASSERT_EQ(json, expectedJson);
+}
+
+TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, raw_BYTES_string_binary) {
+    uint8_t data[] = {4, 0, 0, 0, 'a', 'b', 'c', 'd', 3, 0, 0, 0, 'e', 'f', 'g'};
+    int dataSize = 15;
+    output->set_datatype("BYTES");
+    output->mutable_shape()->Clear();
+    output->mutable_shape()->Add(2);  // batch size
+    auto* output_contents = proto.add_raw_output_contents();
+    output_contents->assign(reinterpret_cast<const char*>(&data), dataSize);
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength, {"output"}), StatusCode::OK);
+    std::string expectedJson = R"({
+    "model_name": "model",
+    "id": "id",
+    "outputs": [{
+            "name": "output",
+            "shape": [2],
             "datatype": "BYTES",
             "parameters": {
-                "binary_data_size": 4
+                "binary_data_size": 15
             }
         }]
 })";
+    ASSERT_TRUE(inferenceHeaderContentLength.has_value());
     ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + dataSize * sizeof(int8_t));
+    ASSERT_EQ(json.size(), expectedJson.size() + dataSize);
     EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
     for (int i = 0; i < dataSize; i++) {
-        EXPECT_EQ((int)json.substr(inferenceHeaderContentLength.value())[i], data[i]);
+        EXPECT_EQ((uint8_t)json.substr(inferenceHeaderContentLength.value())[i], data[i]);
     }
 }
 
@@ -1201,15 +1165,48 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positi
     KFSTensorOutputProto* bytes_val_proto = proto.add_outputs();
     bytes_val_proto->set_name("bytes_val_proto");
     bytes_val_proto->set_datatype("BYTES");
-    int dataSize = 10;
-    bytes_val_proto->mutable_shape()->Add(dataSize);
+    bytes_val_proto->mutable_shape()->Add(2);
     auto bytes_val = bytes_val_proto->mutable_contents()->mutable_bytes_contents()->Add();
-    // *bytes_val = i;
-    for (uint8_t i = 0; i < dataSize; i++) {
-        bytes_val->append((char*)&i, 1);
-    }
+    bytes_val->assign("string_1");
+    bytes_val = bytes_val_proto->mutable_contents()->mutable_bytes_contents()->Add();
+    bytes_val->assign("string_2");
 
     ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::OK);
+    std::string expectedJson = R"({
+    "model_name": "model",
+    "id": "id",
+    "outputs": [{
+            "name": "single_uint64_val",
+            "shape": [1],
+            "datatype": "UINT64",
+            "data": [5000000000]
+        }, {
+            "name": "two_uint32_vals",
+            "shape": [2],
+            "datatype": "UINT32",
+            "data": [4000000000, 1]
+        }, {
+            "name": "bytes_val_proto",
+            "shape": [2],
+            "datatype": "BYTES",
+            "data": ["string_1", "string_2"]
+        }]
+})";
+    ASSERT_EQ(json.size(), expectedJson.size());
+    EXPECT_EQ(json, expectedJson);
+}
+
+TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positive_BYTES_binary) {
+    KFSTensorOutputProto* bytes_val_proto = proto.add_outputs();
+    bytes_val_proto->set_name("bytes_val_proto");
+    bytes_val_proto->set_datatype("BYTES");
+    bytes_val_proto->mutable_shape()->Add(2);
+    auto bytes_val = bytes_val_proto->mutable_contents()->mutable_bytes_contents()->Add();
+    bytes_val->assign("string_1");
+    bytes_val = bytes_val_proto->mutable_contents()->mutable_bytes_contents()->Add();
+    bytes_val->assign("string_2");
+
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength, {"bytes_val_proto"}), StatusCode::OK);
     ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
     std::string expectedJson = R"({
     "model_name": "model",
@@ -1226,18 +1223,19 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positi
             "data": [4000000000, 1]
         }, {
             "name": "bytes_val_proto",
-            "shape": [10],
+            "shape": [2],
             "datatype": "BYTES",
             "parameters": {
-                "binary_data_size": 10
+                "binary_data_size": 24
             }
         }]
 })";
+    std::vector<std::uint8_t> expectedBinaryData = {8, 0, 0, 0, 's', 't', 'r', 'i', 'n', 'g', '_', '1', 8, 0, 0, 0, 's', 't', 'r', 'i', 'n', 'g', '_', '2'};
     ASSERT_EQ(inferenceHeaderContentLength.value(), expectedJson.size());
-    ASSERT_EQ(json.size(), expectedJson.size() + dataSize * sizeof(int8_t));
+    ASSERT_EQ(json.size(), expectedJson.size() + expectedBinaryData.size());
     EXPECT_EQ(json.substr(0, inferenceHeaderContentLength.value()), expectedJson);
-    for (uint8_t i = 0; i < dataSize; i++) {
-        EXPECT_EQ((uint8_t)json.substr(inferenceHeaderContentLength.value())[i], i);
+    for (uint8_t i = 0; i < expectedBinaryData.size(); i++) {
+        EXPECT_EQ((uint8_t)json.substr(inferenceHeaderContentLength.value())[i], expectedBinaryData[i]);
     }
 }
 
@@ -1465,7 +1463,6 @@ protected:
 TEST_F(KFSMakeJsonFromPredictResponseStringTest, Positive) {
     auto status = makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength, {"string_output_1"});
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    SPDLOG_INFO("Generated JSON content:\n__{}__", json);
 
     ASSERT_EQ(inferenceHeaderContentLength.has_value(), true);
     std::string expectedJson = R"({
