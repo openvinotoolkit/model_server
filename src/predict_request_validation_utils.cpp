@@ -886,7 +886,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
             return Status(StatusCode::INVALID_BATCH_SIZE, details);
         }
     }
-    if (inputInfo.getProcessingHint() != TensorInfo::ProcessingHint::STRING_2D_U8) {
+    if (inputInfo.getPreProcessingHint() != TensorInfo::ProcessingHint::STRING_2D_U8) {
         return StatusCode::OK;
     }
 
