@@ -288,7 +288,7 @@ static void appendBinaryOutput(std::string& bytesOutputsBuffer, char* output, si
         }                                                                                                                             \
     }
 
-#define PARSE_OUTPUT_DATA_EX(CONTENTS_FIELD, WRITER_TYPE)                                                                                                              \
+#define PARSE_OUTPUT_DATA_STRING(CONTENTS_FIELD, WRITER_TYPE)                                                                                                          \
     expectedContentSize = 0;                                                                                                                                           \
     if (seekDataInValField) {                                                                                                                                          \
         if (binaryOutput) {                                                                                                                                            \
@@ -305,7 +305,7 @@ static void appendBinaryOutput(std::string& bytesOutputsBuffer, char* output, si
             }                                                                                                                                                          \
         } else {                                                                                                                                                       \
             for (auto& sentence : tensor.contents().CONTENTS_FIELD()) {                                                                                                \
-                writer.WRITER_TYPE(sentence.c_str());                                                                                                                  \
+                writer.WRITER_TYPE(sentence.data(), sentence.size());                                                                                                  \
             }                                                                                                                                                          \
         }                                                                                                                                                              \
     } else {                                                                                                                                                           \
@@ -319,8 +319,7 @@ static void appendBinaryOutput(std::string& bytesOutputsBuffer, char* output, si
                 i += sizeof(length);                                                                                                                                   \
                 if (i + length > response_proto.raw_output_contents(tensor_it).size())                                                                                 \
                     return StatusCode::INTERNAL_ERROR;                                                                                                                 \
-                std::string out = std::string(response_proto.raw_output_contents(tensor_it).data() + i, length);                                                       \
-                writer.WRITER_TYPE(out.c_str());                                                                                                                       \
+                writer.WRITER_TYPE(response_proto.raw_output_contents(tensor_it).data() + i, length);                                                                  \
                 i += length;                                                                                                                                           \
             }                                                                                                                                                          \
         }                                                                                                                                                              \
@@ -383,7 +382,7 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         } else if (tensor.datatype() == "UINT64") {
             PARSE_OUTPUT_DATA(uint64_contents, uint64_t, Uint64)
         } else if (tensor.datatype() == "BYTES") {
-            PARSE_OUTPUT_DATA_EX(bytes_contents, String)
+            PARSE_OUTPUT_DATA_STRING(bytes_contents, String)
         } else {
             return StatusCode::REST_UNSUPPORTED_PRECISION;
         }

@@ -1095,6 +1095,7 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, raw_BYTES_string) {
             "data": ["abcd", "efg"]
         }]
 })";
+    SPDLOG_INFO(json);
     ASSERT_EQ(json.size(), expectedJson.size());
     ASSERT_EQ(json, expectedJson);
 }
