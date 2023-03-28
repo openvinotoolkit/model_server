@@ -20,6 +20,8 @@ include(ExternalProject)
 
 set(BLINGFIRE_SHA 5089d31914cbed7a24589e753bd6cd362a377fbb)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_subdirectory(src)
 
 if (WITH_TESTS)

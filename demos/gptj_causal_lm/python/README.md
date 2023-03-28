@@ -102,9 +102,9 @@ tensor([[[ 8.4078,  7.2025,  5.1148,  ..., -6.6914, -6.7891, -6.6537],
 predicted word:  a
 ```
 
-# Advanced usage in DAG
+# Pipeline mode with server side tokenization and detokenization
 
-Offload tokenizaton and detokenization step from client to the server. OVMS can convert string proto to `2D U8` tensor and pass the data to tokenization custom node. This way we generate tokens for `gpt-j-6b` model automatically and get the response as text instead of probabilities.
+This variant offloads tokenizaton and detokenization step from client to the server. OVMS can convert string proto to `2D U8` tensor and pass the data to tokenization custom node. This way we generate tokens for `gpt-j-6b` model automatically and get the response as text instead of probability vector.
 
 ![diagram](../../../src/custom_nodes/tokenizer/diagram.svg)
 

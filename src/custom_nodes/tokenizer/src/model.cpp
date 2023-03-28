@@ -54,7 +54,7 @@ std::vector<int64_t> BlingFireModel::tokenize(const std::string& text, int maxId
     std::vector<int64_t> vec(idsLength);
     std::transform(ids.get(), ids.get() + idsLength, vec.begin(),
         [](int32_t val) { return static_cast<int64_t>(val); });
-    return std::move(vec);
+    return vec;
 }
 
 std::string BlingFireModel::detokenize(const std::vector<int64_t>& tokens, int maxBufferLength, bool skipSpecialTokens) {
@@ -62,9 +62,9 @@ std::string BlingFireModel::detokenize(const std::vector<int64_t>& tokens, int m
     std::transform(tokens.begin(), tokens.end(), ids.get(),
         [](int64_t val) { return static_cast<int32_t>(val); });
     std::string str(maxBufferLength + 1, '\0');  // +1 due to null ending
-    const int strLength = BlingFire::IdsToText(handle, ids.get(), tokens.size(), str.data(), maxBufferLength, skipSpecialTokens);
+    BlingFire::IdsToText(handle, ids.get(), tokens.size(), str.data(), maxBufferLength, skipSpecialTokens);
     str.resize(std::strlen(str.data()));  // remove all remaining zero bytes
-    return std::move(str);
+    return str;
 }
 
 }  // namespace tokenizer
