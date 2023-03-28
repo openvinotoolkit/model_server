@@ -877,7 +877,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     size_t width = maxStringLength + 1;
     if (!shape[0].match(static_cast<dimension_value_t>(batchSize))) {
         if (batchingMode == AUTO) {
-                finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+            finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
         } else {
             std::stringstream ss;
             ss << "Expected: " << shape[0].toString() << "; Actual: " << batchSize << "; input name: " << getCurrentlyValidatedInputName();
@@ -886,7 +886,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
             return Status(StatusCode::INVALID_BATCH_SIZE, details);
         }
     }
-    if(inputInfo.getProcessingHint() != TensorInfo::ProcessingHint::STRING_2D_U8){
+    if (inputInfo.getProcessingHint() != TensorInfo::ProcessingHint::STRING_2D_U8) {
         return StatusCode::OK;
     }
 
@@ -980,8 +980,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
 
         if (requiresPreProcessing(proto)) {
             const auto processingHint = inputInfo->getPreProcessingHint();
-            if(dataInRawInputContents(request))
-            {
+            if (dataInRawInputContents(request)) {
                 RETURN_IF_ERR(validateRawInputContentsFormatAndShape(*inputInfo, request, bufferId, finalStatus, batchingMode, shapeMode));
                 continue;
             }

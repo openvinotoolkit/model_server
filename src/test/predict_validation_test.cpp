@@ -1212,7 +1212,6 @@ TEST_F(KFSPredictValidationRawInputContents, InvalidBatchSize_BatchSizeChangeReq
     input->mutable_shape()->Clear();
     input->mutable_shape()->Add(2);
 
-
     servableInputs.clear();
     ovms::shape_t shape = {1, 15};
     servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
@@ -1246,7 +1245,7 @@ TEST_F(KFSPredictValidationRawInputContents, InputTooSmall) {
     uint8_t invalidBuffer[] = {0x0E, 0x00, 0x00};
     binaryInputRequest.mutable_raw_input_contents()->Clear();
     auto invalidContent = binaryInputRequest.add_raw_input_contents();
-    invalidContent->append((char*)invalidBuffer,3);
+    invalidContent->append((char*)invalidBuffer, 3);
 
     servableInputs.clear();
     ovms::shape_t shape = {1, 3};
@@ -1266,7 +1265,7 @@ TEST_F(KFSPredictValidationRawInputContents, InvalidFormat) {
     uint8_t invalidBuffer[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     binaryInputRequest.mutable_raw_input_contents()->Clear();
     auto invalidContent = binaryInputRequest.add_raw_input_contents();
-    invalidContent->append((char*)invalidBuffer,7);
+    invalidContent->append((char*)invalidBuffer, 7);
 
     servableInputs.clear();
     ovms::shape_t shape = {1};
