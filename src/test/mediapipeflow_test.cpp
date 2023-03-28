@@ -25,6 +25,7 @@
 #include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
@@ -121,6 +122,22 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     ASSERT_EQ(outputs[0].shape().size(), 2);
     ASSERT_EQ(outputs[0].shape()[0], 1);
     ASSERT_EQ(outputs[0].shape()[1], 10);
+}
+
+TEST(Mediapipe, MetadataDummy) {
+    ovms::MediapipeGraphExecutor mediapipeDummy("mediapipeDummy");
+    tensor_map_t inputs = mediapipeDummy.getInputsInfo();
+    tensor_map_t outputs = mediapipeDummy.getOutputsInfo();
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_NE(inputs.find("in"), inputs.end());
+    ASSERT_NE(outputs.find("out"), outputs.end());
+    const auto& input = inputs.at("in");
+    EXPECT_EQ(input->getShape(), Shape({}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::UNDEFINED);
+    const auto& output = outputs.at("out");
+    EXPECT_EQ(output->getShape(), Shape({}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
 const std::vector<std::string> mediaGraphsDummy{"mediapipeDummy",
