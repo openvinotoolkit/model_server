@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from re import I
 import sys
 sys.path.append("../../../../demos/common/python")
 
