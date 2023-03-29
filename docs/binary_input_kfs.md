@@ -6,7 +6,7 @@ KServe API allows sending the model input data in a variety of formats inside th
    
 When the data is sent in the `bytes_contents` field of `InferTensorContents` and input `datatype` is set to `BYTES`, such input is interpreted as a binary encoded image. The `BYTES` datatype is dedicated to binary encoded **images** and if it's set, the data **must** be placed in `bytes_contents` or in `raw_input_contents` 
 
-If data is located in `raw_input_contents` you need to precede data of every batch by 4 bytes conatining size of this batch. For example, if batch would contain three images of sizes 370, 480, 500 bytes the content of raw_input_contents[index_of_thi_input] would look like this: 
+If data is located in `raw_input_contents` you need to precede data of every batch by 4 bytes conatining size of this batch. For example, if batch would contain three images of sizes 370, 480, 500 bytes the content of raw_input_contents[index_of_the_input] would look like this: 
 <0x72010000 (=370)><370 bytes of first image><0xE0010000 (=480)><480 bytes of second image> <0xF4010000 (=500)><500 bytes of third image>
 
 Note, that while the model metadata reports the inputs shape with layout `NHWC`, the binary data must be sent with 
@@ -23,7 +23,7 @@ KServe API also allows sending binary encoded data via HTTP interface. The tenso
 For binary inputs, the `parameters` map in the JSON part contains `binary_data_size` field for each binary input that indicates the size of the data on the input. Since there's no strict limitations on image resolution and format (as long as it can be loaded by OpenCV), images might be of different sizes. To send a batch of images you need to precede data of every batch by 4 bytes conatining size of this batch and specify their combined size in `binary_data_size`. For example, if batch would contain three images of sizes 370, 480, 500 bytes the content of input buffer inside binary extension would look like this: 
 <0x72010000 (=370)><370 bytes of first image><0xE0010000 (=480)><480 bytes of second image> <0xF4010000 (=500)><500 bytes of third image>
 And in that case binary_data_size would be 1350(370 + 480 + 500)
-Fortunately function set_data_from_numpy in triton client lib that we use in our http_infer_binary_resnet.py sample automatically converts given images to this format.
+Fortunately function set_data_from_numpy in triton client lib that we use in our [REST sample](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_binary_resnet.py) automatically converts given images to this format.
 
 If the request contains only one input `binary_data_size` parameter can be omitted - in this case whole buffer is treated as a input image.
 
@@ -48,7 +48,7 @@ For the Raw Data binary inputs `binary_data_size` parameter can be omitted since
 
 ## Usage examples
 
-Sample clients that use binary inputs via KFS API can be found here ([REST sample](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_binary_resnet.py))/([GRPC sample](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_binary_resnet.py))
+Sample clients that use binary inputs via KFS API can be found here ([REST sample](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/http_infer_binary_resnet.py))/([GRPC sample](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/grpc_infer_binary_resnet.py))
 Also, see the ([README](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/kserve-api/samples/README.md))
 
 

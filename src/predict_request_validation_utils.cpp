@@ -849,22 +849,11 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     auto& buffer = request.raw_input_contents()[bufferId];
     size_t batchSize = 0;
     size_t maxStringLength = 0;
-    size_t offset = 0;
-    if (buffer.size() < sizeof(int32_t)) {
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid raw input size - {}", servableName, servableVersion, buffer.size());
-        return StatusCode::INVALID_STRING_INPUT;
+    auto status = getRawInputContentsBatchSizeAndLength(buffer, batchSize, maxStringLength);
+    if(!status.ok()) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Parsing raw input contents failed.", servableName, servableVersion, buffer.size());
+        return status;
     }
-    while (offset < buffer.size()) {
-        size_t inputSize = *((int32_t*)(buffer.data() + offset));
-        maxStringLength = std::max(maxStringLength, inputSize);
-        offset += (sizeof(int32_t) + inputSize);
-        batchSize++;
-    }
-    if (offset != buffer.size()) {
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid raw input format(every input need to be preceded by four bytes of its size)", servableName, servableVersion);
-        return StatusCode::INVALID_STRING_INPUT;
-    }
-
     if (batchSize <= 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();

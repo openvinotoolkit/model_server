@@ -301,7 +301,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
         auto input = grpc_request.mutable_inputs()->Mutable(i);
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
-        size_t binary_input_size;
+        size_t binary_input_size = 0;
         if (binary_data_size_parameter != input->parameters().end()) {
             auto status = validateContentFieldsEmptiness(*input);
             if (!status.ok()) {

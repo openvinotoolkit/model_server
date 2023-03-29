@@ -222,20 +222,12 @@ static Status validateTensor(const std::shared_ptr<const TensorInfo>& tensorInfo
 }
 
 inline static int getNumberOfInputs(const std::string* buffer) {
-    int numberOfInputs = 0;
-    size_t offset = 0;
-    if (buffer->size() < sizeof(uint32_t)) {
+    size_t batchSize;
+    size_t maxStringLength;
+    auto status = getRawInputContentsBatchSizeAndLength(*buffer, batchSize, maxStringLength);
+    if(!status.ok())
         return 0;
-    }
-    while (offset < buffer->size()) {
-        uint64_t inputSize = *((int32_t*)(buffer->data() + offset));
-        offset += (sizeof(uint32_t) + inputSize);
-        numberOfInputs++;
-    }
-    if (offset != buffer->size()) {
-        return 0;
-    }
-    return numberOfInputs;
+    return batchSize;
 }
 
 static Status validateTensor(const std::shared_ptr<const TensorInfo>& tensorInfo,
@@ -362,12 +354,11 @@ inline static Status getInputs(const std::string* buffer, std::vector<std::strin
         return StatusCode::OK;
     }
     size_t offset = 0;
-    if (buffer->size() < sizeof(uint32_t)) {
-        return StatusCode::IMAGE_PARSING_FAILED;
-    }
-    while (offset < buffer->size()) {
+    while (offset + sizeof(uint32_t) <= buffer->size()) {
         uint64_t inputSize = *((int32_t*)(buffer->data() + offset));
         offset += sizeof(uint32_t);
+        if(offset + inputSize > buffer->size())
+            break;
         inputs.push_back(buffer->substr(offset, inputSize));
         offset += inputSize;
     }
@@ -513,27 +504,28 @@ static Status convertStringRequestFromBufferToOVTensor2D(const tensorflow::Tenso
 static Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
     int batchSize = 0;
     size_t offset = 0;
-    if (buffer->size() < sizeof(uint32_t)) {
-        return StatusCode::INVALID_STRING_INPUT;
-    }
     size_t maxStringLength = 0;
-    while (offset < buffer->size()) {
-        uint64_t inputSize = *((int32_t*)(buffer->data() + offset));
+    while (offset + sizeof(uint32_t) <= buffer->size()) {
+        size_t inputSize = *((int32_t*)(buffer->data() + offset));
         offset += (sizeof(uint32_t) + inputSize);
         maxStringLength = std::max(maxStringLength, inputSize);
         batchSize++;
     }
     if (offset != buffer->size()) {
+        SPDLOG_ERROR("offset {}", offset);
+        SPDLOG_ERROR("buffer->size() {}", buffer->size());
         return StatusCode::INVALID_STRING_INPUT;
     }
     size_t width = maxStringLength + 1;
     offset = 0;
     tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(batchSize), width});
     for (int i = 0; i < batchSize; i++) {
-        int32_t inputSize = *((int32_t*)(buffer->data() + offset));
+        size_t inputSize = *((int32_t*)(buffer->data() + offset));
         offset += sizeof(uint32_t);
-        std::memcpy(tensor.data<unsigned char>() + i * width, reinterpret_cast<const unsigned char*>(buffer->data() + offset), inputSize);
-        tensor.data<unsigned char>()[i * width + inputSize] = 0;
+        auto data = tensor.data<unsigned char>() + i * width;
+        std::memcpy(data, reinterpret_cast<const unsigned char*>(buffer->data() + offset), inputSize);
+        for(size_t j = inputSize; j < width; j++)
+            data[j] = 0;
         offset += inputSize;
     }
     return StatusCode::OK;
@@ -572,13 +564,9 @@ static Status convertStringRequestFromBufferToOVTensor1D(const tensorflow::Tenso
 }
 
 static Status convertStringRequestFromBufferToOVTensor1D(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
-    if (buffer->size() < sizeof(uint32_t)) {
-        SPDLOG_DEBUG("STRING input is too small, should at least 4 bytes.");
-        return StatusCode::NOT_IMPLEMENTED;
-    }
     std::vector<uint32_t> stringSizes;
     uint32_t totalStringsLength = 0;
-    while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) < buffer->size()) {
+    while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) + sizeof(uint32_t) <= buffer->size()) {
         uint64_t inputSize = *((int32_t*)(buffer->data() + totalStringsLength + stringSizes.size() * sizeof(uint32_t)));
         stringSizes.push_back(inputSize);
         totalStringsLength += inputSize;

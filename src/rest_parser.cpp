@@ -605,7 +605,7 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
             if (value.IsString()) {
                 input.mutable_contents()->add_bytes_contents(value.GetString());
             } else {
-                SPDLOG_DEBUG("For REST datatype BYTES is supported only for strings or with binary data extension");
+                SPDLOG_DEBUG("BYTES datatype used in REST request, but data contains non string JSON values");
                 return StatusCode::REST_COULD_NOT_PARSE_INPUT;
             }
         }

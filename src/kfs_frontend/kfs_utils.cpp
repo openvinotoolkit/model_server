@@ -176,4 +176,22 @@ void setBatchSize(KFSTensorOutputProto& proto, int64_t batch) {
 void setStringPrecision(KFSTensorOutputProto& proto) {
     proto.set_datatype("BYTES");
 }
+Status getRawInputContentsBatchSizeAndLength(const std::string& buffer, size_t& batchSize, size_t& maxStringLength) {
+    size_t offset = 0;
+    size_t tmpBatchSize = 0;
+    size_t tmpMaxStringLength = 0;
+    while (offset + sizeof(int32_t) <= buffer.size()) {
+        size_t inputSize = *((int32_t*)(buffer.data() + offset));
+        tmpMaxStringLength = std::max(tmpMaxStringLength, inputSize);
+        offset += (sizeof(int32_t) + inputSize);
+        tmpBatchSize++;
+    }
+    if (offset != buffer.size()) {
+        SPDLOG_DEBUG("Raw input contents invalid format.Every input need to be preceded by four bytes of its size.");
+        return StatusCode::INVALID_STRING_INPUT;
+    }
+    batchSize = tmpBatchSize;
+    maxStringLength = tmpMaxStringLength;
+    return StatusCode::OK;
+}
 }  // namespace ovms
