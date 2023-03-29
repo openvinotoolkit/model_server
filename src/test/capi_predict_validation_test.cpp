@@ -409,7 +409,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectInputWithNoBuffer) {
     ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(servableInputs));
 
     InferenceRequest request("NOT_USED", 42);
-    std::array<size_t, 4> shape{1, 1, 1, 1};
+    std::array<int64_t, 4> shape{1, 1, 1, 1};
     request.addInput("Input_FP32_1_1_1_1_NHWC", OVMS_DATATYPE_FP32, shape.data(), shape.size());
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();

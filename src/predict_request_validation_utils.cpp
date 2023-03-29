@@ -22,6 +22,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <spdlog/spdlog.h>
 
@@ -52,7 +53,7 @@ using TFSRequestType = tensorflow::serving::PredictRequest;
 using TFSInputTensorType = tensorflow::TensorProto;
 using TFSInputTensorIteratorType = google::protobuf::Map<std::string, TFSInputTensorType>::const_iterator;
 using TFSShapeType = tensorflow::TensorShapeProto;
-using CAPIShapeType = std::vector<int64_t>;
+using CAPIShapeType = std::vector<int64_t>;  // TODO: signed_shape_t?
 
 template <>
 dimension_value_t RequestShapeInfo<KFSTensorInputProto, KFSShapeType>::getDim(size_t i) {
@@ -64,7 +65,7 @@ dimension_value_t RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getDim(siz
 }
 
 template <>
-dimension_value_t RequestShapeInfo<InferenceTensor, shape_t>::getDim(size_t i) {
+dimension_value_t RequestShapeInfo<InferenceTensor, CAPIShapeType>::getDim(size_t i) {
     return tensor.getShape()[i];
 }
 template <>
@@ -76,7 +77,7 @@ size_t RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getShapeSize() {
     return tensor.tensor_shape().dim_size();
 }
 template <>
-size_t RequestShapeInfo<InferenceTensor, shape_t>::getShapeSize() {
+size_t RequestShapeInfo<InferenceTensor, CAPIShapeType>::getShapeSize() {
     return tensor.getShape().size();
 }
 template <>

@@ -545,7 +545,7 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
         elementsCount *= dim;
     }
 
-    request.addInput(name.c_str(), datatype, reinterpret_cast<const size_t*>(shape.data()), shape.size());
+    request.addInput(name.c_str(), datatype, shape.data(), shape.size());
 
     size_t dataSize = 0;
     if (isShapeNegative) {

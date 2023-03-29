@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "ovms.h"  // NOLINT
+#include "ovms.h"     // NOLINT
 #include "shape.hpp"  // TODO: remove?
 
 namespace ovms {
@@ -28,7 +28,6 @@ class Status;
 
 class InferenceTensor {
     const OVMS_DataType datatype;
-    //shape_t shape;
     std::vector<int64_t> shape;
     std::unique_ptr<Buffer> buffer;
 
