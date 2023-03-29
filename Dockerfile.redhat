@@ -34,6 +34,7 @@ ARG minitrace_flags
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 
+RUN yum -y update
 # Needed because the UBI codeready-builder doesn't have opencl-headers and python36 is our default, which is below the required support level
 RUN if [ "$RH_ENTITLEMENT" == "1" ] ; then \
         yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
