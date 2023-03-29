@@ -930,9 +930,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 size_t maxStringLength = 0;
                 RETURN_IF_ERR(getRawInputContentsBatchSizeAndLength(buffer, inputBatchSize, maxStringLength));
                 inputWidth = maxStringLength + 1;
-            }
-            else
-            {
+            } else {
                 inputBatchSize = getStringBatchSize(proto);
                 inputWidth = getStringInputWidth(proto);
             }

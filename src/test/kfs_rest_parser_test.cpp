@@ -917,7 +917,6 @@ TEST_F(KFSRestParserTest, parseInvalidRequestStringInput) {
     ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
-
 TEST_F(KFSRestParserTest, parseInvalidDataNotHeterogenous) {
     std::string request = R"({
     "inputs" : [
