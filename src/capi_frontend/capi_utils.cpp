@@ -29,7 +29,7 @@
 
 namespace ovms {
 
-std::string tensorShapeToString(const shape_t& shape) {
+std::string tensorShapeToString(const std::vector<int64_t>& shape) {
     return TensorInfo::shapeToString(shape);
 }
 
@@ -142,11 +142,15 @@ const std::string& getRequestServableName(const ovms::InferenceRequest& request)
 }
 Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size) {
     InferenceTensor* outputTensor{nullptr};
+    std::vector<int64_t> s;
+    for (auto& dim : shape) {
+        s.push_back(static_cast<int64_t>(dim));
+    }
     Status status = response->addOutput(
         name,
         getPrecisionAsOVMSDataType(ovElementTypeToOvmsPrecision(precision)),
-        shape.data(),
-        shape.size());
+        s.data(),
+        s.size());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to prepare consolidated tensor, servable: {}; tensor with name: {}", response->getServableName(), name);
         return StatusCode::INTERNAL_ERROR;

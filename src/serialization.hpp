@@ -205,7 +205,7 @@ Status serializePredictResponse(
         status = response->addOutput(
             outputInfo->getMappedName(),
             getPrecisionAsOVMSDataType(actualPrecision),
-            tensor.get_shape().data(),
+            reinterpret_cast<const int64_t*>(tensor.get_shape().data()),  // ?
             tensor.get_shape().size());
         if (status == StatusCode::DOUBLE_TENSOR_INSERT) {
             // DAG demultiplexer CAPI handling

@@ -37,7 +37,7 @@ public:
     // this constructor can be removed with prediction tests overhaul
     InferenceRequest();
     InferenceRequest(const char* modelName, model_version_t modelVersion);
-    Status addInput(const char* name, OVMS_DataType datatype, const size_t* shape, size_t dimCount);
+    Status addInput(const char* name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
     Status getInput(const char* name, const InferenceTensor** tensor) const;
     uint64_t getInputsSize() const;
     Status removeInput(const char* name);

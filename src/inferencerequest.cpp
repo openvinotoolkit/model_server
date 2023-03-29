@@ -31,7 +31,7 @@ const std::string& InferenceRequest::getServableName() const {
 model_version_t InferenceRequest::getServableVersion() const {
     return this->servableVersion;
 }
-Status InferenceRequest::addInput(const char* name, OVMS_DataType datatype, const size_t* shape, size_t dimCount) {
+Status InferenceRequest::addInput(const char* name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount) {
     auto [it, emplaced] = inputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
@@ -107,7 +107,13 @@ Status InferenceRequest::getBatchSize(size_t& batchSize, size_t batchSizeIndex) 
 std::map<std::string, shape_t> InferenceRequest::getRequestShapes() const {
     std::map<std::string, shape_t> result;
     for (auto& [name, tensor] : inputs) {
-        result.emplace(name, tensor.getShape());
+        auto& shape = tensor.getShape();
+        shape_t myNewShape;
+        for (size_t i = 0; i < shape.size(); i++) {
+            // TODO: Error on negative?
+            myNewShape.push_back(static_cast<size_t>(shape[i]));
+        }
+        result.emplace(name, myNewShape);
     }
     return result;
 }

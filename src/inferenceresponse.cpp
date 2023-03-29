@@ -44,7 +44,7 @@ model_version_t InferenceResponse::getServableVersion() const {
     return this->servableVersion;
 }
 
-Status InferenceResponse::addOutput(const std::string& name, OVMS_DataType datatype, const size_t* shape, size_t dimCount) {
+Status InferenceResponse::addOutput(const std::string& name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount) {
     auto it = std::find_if(outputs.begin(),
         outputs.end(),
         [&name](const std::pair<std::string, InferenceTensor>& pair) {

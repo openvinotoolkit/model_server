@@ -17,9 +17,10 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "ovms.h"  // NOLINT
-#include "shape.hpp"
+#include "shape.hpp"  // TODO: remove?
 
 namespace ovms {
 class Buffer;
@@ -27,11 +28,12 @@ class Status;
 
 class InferenceTensor {
     const OVMS_DataType datatype;
-    shape_t shape;
+    //shape_t shape;
+    std::vector<int64_t> shape;
     std::unique_ptr<Buffer> buffer;
 
 public:
-    InferenceTensor(OVMS_DataType datatype, const size_t* shape, size_t dimCount);
+    InferenceTensor(OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
     ~InferenceTensor();
     InferenceTensor(InferenceTensor&&);
     InferenceTensor(const InferenceTensor&) = delete;
@@ -41,7 +43,7 @@ public:
     Status setBuffer(std::unique_ptr<Buffer>&& buffer);
     Status removeBuffer();
     OVMS_DataType getDataType() const;
-    const shape_t& getShape() const;
+    const std::vector<int64_t>& getShape() const;
     const Buffer* const getBuffer() const;
 };
 }  // namespace ovms
