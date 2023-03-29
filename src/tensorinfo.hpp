@@ -188,7 +188,7 @@ public:
     bool isTensorSpecEqual(const TensorInfo& other) const;
 
     static std::string shapeToString(const shape_t& shape);
-    static std::string shapeToString(const std::vector<int64_t>& shape);  // TODO: Templatize
+    static std::string shapeToString(const signed_shape_t& shape);  // TODO: Templatize
 
     static std::shared_ptr<const TensorInfo> getUnspecifiedTensorInfo();
 

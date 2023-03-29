@@ -78,12 +78,12 @@ public:
             Layout{"NC"});
     }
 
-    void prepareRequest(const std::vector<float>& requestData, TFSRequestType& request, const std::string& customPipelineInputName, const signed_shape_t& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+    void prepareRequest(const std::vector<float>& requestData, TFSRequestType& request, const std::string& customPipelineInputName, const ovms::signed_shape_t& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
         request.Clear();
         preparePredictRequest(request, inputs_info_t{{customPipelineInputName, {shape, ovms::Precision::FP32}}}, requestData);
     }
 
-    void prepareRequest(const std::vector<float>& requestData, KFSRequest& request, const std::string& customPipelineInputName, const signed_shape_t& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+    void prepareRequest(const std::vector<float>& requestData, KFSRequest& request, const std::string& customPipelineInputName, const ovms::signed_shape_t& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
         request.Clear();
         prepareKFSInferInputTensor(request, customPipelineInputName, std::make_tuple(shape, ovmsPrecisionToKFSPrecision(ovms::Precision::FP32)), requestData);
     }
@@ -687,7 +687,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     tensorflow::serving::PredictRequest simpleModelRequest;
     preparePredictRequest(simpleModelRequest,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     std::vector<float> requestData{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
     auto& input = (*simpleModelRequest.mutable_inputs())[DUMMY_MODEL_INPUT_NAME];
     input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));

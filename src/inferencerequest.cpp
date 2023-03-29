@@ -104,16 +104,14 @@ Status InferenceRequest::getBatchSize(size_t& batchSize, size_t batchSizeIndex) 
     batchSize = shape[batchSizeIndex];
     return StatusCode::OK;
 }
+
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 std::map<std::string, shape_t> InferenceRequest::getRequestShapes() const {
     std::map<std::string, shape_t> result;
     for (auto& [name, tensor] : inputs) {
-        auto& shape = tensor.getShape();
-        shape_t myNewShape;
-        for (size_t i = 0; i < shape.size(); i++) {
-            // TODO: Error on negative?
-            myNewShape.push_back(static_cast<size_t>(shape[i]));
-        }
-        result.emplace(name, myNewShape);
+        result.emplace(name, shape_t(
+                                 tensor.getShape().data(),
+                                 tensor.getShape().data() + tensor.getShape().size()));
     }
     return result;
 }

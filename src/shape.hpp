@@ -33,6 +33,7 @@ constexpr char DIMENSION_RANGE_DELIMETER = ':';
 enum Mode { FIXED,
     AUTO };
 using shape_t = std::vector<size_t>;
+using signed_shape_t = std::vector<dimension_value_t>;
 
 class Dimension {
     dimension_value_t minimum, maximum;

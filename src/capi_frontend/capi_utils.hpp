@@ -27,7 +27,7 @@ class InferenceResponse;
 class InferenceTensor;
 class Status;
 
-std::string tensorShapeToString(const std::vector<int64_t>& tensorShape);
+std::string tensorShapeToString(const signed_shape_t& tensorShape);
 OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
 Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype);
 Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string& name, bool& nativeFileFormatUsed);

@@ -28,7 +28,7 @@ class Status;
 
 class InferenceTensor {
     const OVMS_DataType datatype;
-    std::vector<int64_t> shape;
+    signed_shape_t shape;
     std::unique_ptr<Buffer> buffer;
 
 public:
@@ -42,7 +42,7 @@ public:
     Status setBuffer(std::unique_ptr<Buffer>&& buffer);
     Status removeBuffer();
     OVMS_DataType getDataType() const;
-    const std::vector<int64_t>& getShape() const;
+    const signed_shape_t& getShape() const;
     const Buffer* const getBuffer() const;
 };
 }  // namespace ovms

@@ -50,7 +50,7 @@ Status InferenceTensor::setBuffer(std::unique_ptr<Buffer>&& buffer) {
 OVMS_DataType InferenceTensor::getDataType() const {
     return this->datatype;
 }
-const std::vector<int64_t>& InferenceTensor::getShape() const {
+const signed_shape_t& InferenceTensor::getShape() const {
     return this->shape;
 }
 const Buffer* const InferenceTensor::getBuffer() const {

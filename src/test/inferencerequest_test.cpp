@@ -49,7 +49,7 @@ const uint32_t PRIORITY{7};
 const uint64_t REQUEST_ID{3};
 
 const std::string INPUT_NAME{"NOT_RANDOM_NAME"};
-const std::vector<int64_t> INPUT_SHAPE{1, 3, 220, 230};
+const ovms::signed_shape_t INPUT_SHAPE{1, 3, 220, 230};
 const std::array<float, 10> INPUT_DATA{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
 constexpr size_t INPUT_DATA_BYTESIZE{INPUT_DATA.size() * sizeof(float)};
 const OVMS_DataType DATATYPE{OVMS_DATATYPE_FP32};

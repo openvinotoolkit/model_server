@@ -237,7 +237,7 @@ std::string TensorInfo::shapeToString(const shape_t& shape) {
     return oss.str();
 }
 
-std::string TensorInfo::shapeToString(const std::vector<int64_t>& shape) {
+std::string TensorInfo::shapeToString(const signed_shape_t& shape) {
     std::ostringstream oss;
     oss << "(";
     size_t i = 0;
