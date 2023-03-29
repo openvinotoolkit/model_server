@@ -512,8 +512,6 @@ static Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::Inf
         batchSize++;
     }
     if (offset != buffer->size()) {
-        SPDLOG_ERROR("offset {}", offset);
-        SPDLOG_ERROR("buffer->size() {}", buffer->size());
         return StatusCode::INVALID_STRING_INPUT;
     }
     size_t width = maxStringLength + 1;

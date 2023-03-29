@@ -128,13 +128,13 @@ public:
     Status checkIfShapeValuesNegative(const InputTensorType& proto) const;
     Status validateNumberOfBinaryInputShapeDimensions(const InputTensorType& proto) const;
     Status checkBatchSizeMismatch(const InputTensorType& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
-    Status checkBinaryBatchSizeMismatch(const InputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
+    Status checkBinaryBatchSizeMismatch(const InputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode, size_t inputBatchSize) const;
     Status checkShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status validateTensorContent(const InputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const;
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     Status validateRawInputContentsFormatAndShape(const ovms::TensorInfo& inputInfo, const RequestType& request, const size_t& bufferId, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status validatePrecision(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
-    Status checkStringShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
+    Status checkStringShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode, size_t inputBatchSize, size_t inputWidth) const;
     Status validateRequestCoherency() const;
     Status validate();
 };
@@ -368,14 +368,18 @@ Status RequestValidator<RequestType, InputTensorType, InputIteratorType, ShapeTy
 }
 
 template <>
-Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::checkBinaryBatchSizeMismatch(const TFSInputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::checkBinaryBatchSizeMismatch(const TFSInputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode, size_t inputBatchSize) const {
     RequestShapeInfo<TFSInputTensorType, TFSShapeType> rsi(proto);
-    if (proto.string_val_size() <= 0) {
+    if (inputBatchSize <= 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+    if (rsi.getDim(0) != static_cast<dimension_value_t>(inputBatchSize)) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Batch size in request {} does not match actual {}", servableName, servableVersion, rsi.getDim(0), inputBatchSize);
+        return StatusCode::INVALID_BATCH_SIZE;
     }
     if (servableBatchSize.match(rsi.getDim(0))) {
         return StatusCode::OK;
@@ -393,16 +397,20 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     return StatusCode::OK;
 }
 template <>
-Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::checkBinaryBatchSizeMismatch(const KFSTensorInputProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::checkBinaryBatchSizeMismatch(const KFSTensorInputProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode, size_t inputBatchSize) const {
     RequestShapeInfo<KFSTensorInputProto, KFSShapeType> rsi(proto);
-    if (proto.contents().bytes_contents_size() <= 0) {
+    if (inputBatchSize <= 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
-    if (servableBatchSize.match(rsi.getDim(0)) && rsi.getDim(0) == proto.contents().bytes_contents_size()) {
+    if (rsi.getDim(0) != static_cast<dimension_value_t>(inputBatchSize)) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Batch size in request {} does not match actual {}", servableName, servableVersion, rsi.getDim(0), inputBatchSize);
+        return StatusCode::INVALID_BATCH_SIZE;
+    }
+    if (servableBatchSize.match(rsi.getDim(0))) {
         return StatusCode::OK;
     }
     if (batchingMode == AUTO) {
@@ -418,7 +426,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     return StatusCode::OK;
 }
 template <>
-Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkBinaryBatchSizeMismatch(const InferenceTensor& tensor, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::checkBinaryBatchSizeMismatch(const InferenceTensor& tensor, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode, size_t inputBatchSize) const {
     RequestShapeInfo<InferenceTensor, shape_t> rsi(tensor);
     if (rsi.getDim(0) <= 0) {
         std::stringstream ss;
@@ -521,17 +529,15 @@ static size_t getStringBatchSize(const InferenceTensor& src) {
 
 // To be called only for already validated proto against models with two dimensions.
 template <typename RequestType, typename InputTensorType, typename IteratorType, typename ShapeType>
-Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::checkStringShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::checkStringShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode, size_t inputBatchSize, size_t inputWidth) const {
     const auto& shape = inputInfo.getShape();
     bool mismatch = false;
-    size_t width = getStringInputWidth(proto);
-    size_t batchSize = getStringBatchSize(proto);
     if (batchingMode == AUTO) {  // Skip batch dimension
-        if (!shape[1].match(static_cast<dimension_value_t>(width))) {
+        if (!shape[1].match(static_cast<dimension_value_t>(inputWidth))) {
             mismatch = true;
         }
     } else {  // Do not skip batch dimension
-        if (!shape.match(ov::Shape{batchSize, width})) {
+        if (!shape.match(ov::Shape{inputBatchSize, inputWidth})) {
             mismatch = true;
         }
     }
@@ -542,12 +548,12 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         finalStatus = StatusCode::RESHAPE_REQUIRED;
         return StatusCode::OK;
     } else {
-        auto stringInputShape = Shape({static_cast<int64_t>(batchSize), static_cast<int64_t>(width)});
+        auto stringInputShape = Shape({static_cast<int64_t>(inputBatchSize), static_cast<int64_t>(inputWidth)});
         std::stringstream ss;
         ss << "Expected batch size: " << shape[0].toString()
-           << "; got: " << batchSize
+           << "; got: " << inputBatchSize
            << "; Expected max null terminated string length: " << shape[1].toString()
-           << "; got: " << width
+           << "; got: " << inputWidth
            << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", servableName, servableVersion, details);
@@ -838,72 +844,6 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
     return StatusCode::OK;
 }
 
-template <>
-Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateRawInputContentsFormatAndShape(const ovms::TensorInfo& inputInfo, const TFSRequestType& request, const size_t& bufferId, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    SPDLOG_DEBUG("Raw input contents not supported for TFS API.");
-    return StatusCode::INTERNAL_ERROR;
-}
-
-template <>
-Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateRawInputContentsFormatAndShape(const ovms::TensorInfo& inputInfo, const KFSRequest& request, const size_t& bufferId, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    auto& buffer = request.raw_input_contents()[bufferId];
-    size_t batchSize = 0;
-    size_t maxStringLength = 0;
-    auto status = getRawInputContentsBatchSizeAndLength(buffer, batchSize, maxStringLength);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("[servable name: {} version: {}] Parsing raw input contents failed.", servableName, servableVersion, buffer.size());
-        return status;
-    }
-    if (batchSize <= 0) {
-        std::stringstream ss;
-        ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
-        return Status(StatusCode::INVALID_BATCH_SIZE, details);
-    }
-
-    const auto& shape = inputInfo.getShape();
-    size_t width = maxStringLength + 1;
-    if (!shape[0].match(static_cast<dimension_value_t>(batchSize))) {
-        if (batchingMode == AUTO) {
-            finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
-        } else {
-            std::stringstream ss;
-            ss << "Expected: " << shape[0].toString() << "; Actual: " << batchSize << "; input name: " << getCurrentlyValidatedInputName();
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
-            return Status(StatusCode::INVALID_BATCH_SIZE, details);
-        }
-    }
-    if (inputInfo.getPreProcessingHint() != TensorInfo::ProcessingHint::STRING_2D_U8) {
-        return StatusCode::OK;
-    }
-
-    if (shape[1].match(static_cast<dimension_value_t>(width))) {
-        return StatusCode::OK;
-    }
-
-    if (shapeMode == AUTO) {
-        finalStatus = StatusCode::RESHAPE_REQUIRED;
-        return StatusCode::OK;
-    } else {
-        auto stringInputShape = Shape({static_cast<int64_t>(batchSize), static_cast<int64_t>(width)});
-        std::stringstream ss;
-        ss << "; Expected max null terminated string length: " << shape[1].toString()
-           << "; got: " << width
-           << "; input name: " << getCurrentlyValidatedInputName();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", servableName, servableVersion, details);
-        return Status(StatusCode::INVALID_SHAPE, details);
-    }
-}
-
-template <>
-Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, shape_t>::validateRawInputContentsFormatAndShape(const ovms::TensorInfo& inputInfo, const ovms::InferenceRequest& request, const size_t& bufferId, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    SPDLOG_DEBUG("Raw input contents not supported for C-API.");
-    return StatusCode::INTERNAL_ERROR;
-}
-
 static Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name) {
     if (shapeInfo.size() == 0) {
         return Mode::FIXED;
@@ -928,6 +868,20 @@ static bool dataInRawInputContents(const TFSRequestType& request) {
 
 static bool dataInRawInputContents(const KFSRequest& request) {
     return request.raw_input_contents().size() > 0;
+}
+
+static std::string getRawInputContents(const ovms::InferenceRequest& request, size_t bufferId) {
+    SPDLOG_DEBUG("Raw input contents is not supported for C-API");
+    return "";
+}
+
+static std::string getRawInputContents(const TFSRequestType& request, size_t bufferId) {
+    SPDLOG_DEBUG("Raw input contents is not supported for TFS API");
+    return "";
+}
+
+static std::string getRawInputContents(const KFSRequest& request, size_t bufferId) {
+    return request.raw_input_contents()[bufferId];
 }
 
 #define RETURN_IF_ERR(X)   \
@@ -969,9 +923,18 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
 
         if (requiresPreProcessing(proto)) {
             const auto processingHint = inputInfo->getPreProcessingHint();
+            size_t inputBatchSize = 0;
+            size_t inputWidth = 0;
             if (dataInRawInputContents(request)) {
-                RETURN_IF_ERR(validateRawInputContentsFormatAndShape(*inputInfo, request, bufferId, finalStatus, batchingMode, shapeMode));
-                continue;
+                auto buffer = getRawInputContents(request, bufferId);
+                size_t maxStringLength = 0;
+                RETURN_IF_ERR(getRawInputContentsBatchSizeAndLength(buffer, inputBatchSize, maxStringLength));
+                inputWidth = maxStringLength + 1;
+            }
+            else
+            {
+                inputBatchSize = getStringBatchSize(proto);
+                inputWidth = getStringInputWidth(proto);
             }
             if (processingHint == TensorInfo::ProcessingHint::STRING_1D_U8) {
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 1D string input: name: {}; batch size: {}",
@@ -982,14 +945,14 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 2D string input: name: {}; batch size: {}",
                     servableName, servableVersion, name, batchSize.toString());
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
-                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
-                RETURN_IF_ERR(checkStringShapeMismatch(proto, *inputInfo, finalStatus, batchingMode, shapeMode));
+                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode, inputBatchSize));
+                RETURN_IF_ERR(checkStringShapeMismatch(proto, *inputInfo, finalStatus, batchingMode, shapeMode, inputBatchSize, inputWidth));
                 continue;
             } else if (processingHint == TensorInfo::ProcessingHint::IMAGE) {
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing binary image input: name: {}; batch size: {}",
                     servableName, servableVersion, name, batchSize.toString());
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
-                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode));
+                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode, inputBatchSize));
                 continue;
             } else {
                 SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",

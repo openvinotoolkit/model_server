@@ -1174,6 +1174,26 @@ TEST_F(KFSPredictValidationRawInputContents, ValidRequest_BatchSizeBiggerThan1) 
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
+TEST_F(KFSPredictValidationRawInputContents, BatchSizeDoesNotMatchNumberOfStringInBuffer) {
+    content->append((char*)stringDataSize, 4);
+    content->append(stringData);
+    content->append((char*)stringDataSize, 4);
+    content->append(stringData);
+    input->mutable_shape()->Clear();
+    input->mutable_shape()->Add(2);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {1, 15};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::U8,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
 TEST_F(KFSPredictValidationRawInputContents, InvalidBatchSize) {
     content->append((char*)stringDataSize, 4);
     content->append(stringData);

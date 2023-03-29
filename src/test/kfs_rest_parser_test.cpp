@@ -902,6 +902,22 @@ TEST_F(KFSRestParserTest, parseInvalidRequestStringInput_datatypeNotU8) {
     ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
+TEST_F(KFSRestParserTest, parseInvalidRequestStringInput) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "BYTES",
+        "data" : [ "zebra", "openvino", 123]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+
 TEST_F(KFSRestParserTest, parseInvalidDataNotHeterogenous) {
     std::string request = R"({
     "inputs" : [

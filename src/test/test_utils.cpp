@@ -289,13 +289,11 @@ void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std:
     if (!putBufferInInputTensorContent) {
         size_t dataSize = 0;
         for (auto input : data) {
-            SPDLOG_ERROR("DATA1 {}", input);
             dataSize += input.size() + 4;
         }
         content->resize(dataSize);
         size_t offset = 0;
         for (auto input : data) {
-            SPDLOG_ERROR("DATA2 {}", input);
             uint32_t inputSize = input.size();
             std::memcpy(content->data() + offset, reinterpret_cast<const unsigned char*>(&inputSize), sizeof(uint32_t));
             offset += sizeof(uint32_t);

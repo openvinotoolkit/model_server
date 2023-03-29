@@ -268,14 +268,6 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
     return true;
 }
 
-static Status validateContentFieldsEmptiness(KFSTensorInputProto& input) {
-    if (!isInputEmpty(input)) {
-        SPDLOG_DEBUG("{} contents is not empty. Content field should be empty when using binary inputs extension.", input.datatype());
-        return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
-    }
-    return StatusCode::OK;
-}
-
 static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
     if (binary_input_offset + binary_input_size > binary_buffer_size) {
         SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
@@ -303,10 +295,9 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");
         size_t binary_input_size = 0;
         if (binary_data_size_parameter != input->parameters().end()) {
-            auto status = validateContentFieldsEmptiness(*input);
-            if (!status.ok()) {
+            if (!isInputEmpty(*input)) {
                 SPDLOG_DEBUG("Request contains both data in json and binary inputs");
-                return status;
+                return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 binary_input_size = binary_data_size_parameter->second.int64_param();
