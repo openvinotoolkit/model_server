@@ -225,7 +225,7 @@ inline static int getNumberOfInputs(const std::string* buffer) {
     size_t batchSize;
     size_t maxStringLength;
     auto status = getRawInputContentsBatchSizeAndLength(*buffer, batchSize, maxStringLength);
-    if(!status.ok())
+    if (!status.ok())
         return 0;
     return batchSize;
 }
@@ -357,7 +357,7 @@ inline static Status getInputs(const std::string* buffer, std::vector<std::strin
     while (offset + sizeof(uint32_t) <= buffer->size()) {
         uint64_t inputSize = *((int32_t*)(buffer->data() + offset));
         offset += sizeof(uint32_t);
-        if(offset + inputSize > buffer->size())
+        if (offset + inputSize > buffer->size())
             break;
         inputs.push_back(buffer->substr(offset, inputSize));
         offset += inputSize;
@@ -524,7 +524,7 @@ static Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::Inf
         offset += sizeof(uint32_t);
         auto data = tensor.data<unsigned char>() + i * width;
         std::memcpy(data, reinterpret_cast<const unsigned char*>(buffer->data() + offset), inputSize);
-        for(size_t j = inputSize; j < width; j++)
+        for (size_t j = inputSize; j < width; j++)
             data[j] = 0;
         offset += inputSize;
     }

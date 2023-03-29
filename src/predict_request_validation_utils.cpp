@@ -850,7 +850,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
     size_t batchSize = 0;
     size_t maxStringLength = 0;
     auto status = getRawInputContentsBatchSizeAndLength(buffer, batchSize, maxStringLength);
-    if(!status.ok()) {
+    if (!status.ok()) {
         SPDLOG_DEBUG("[servable name: {} version: {}] Parsing raw input contents failed.", servableName, servableVersion, buffer.size());
         return status;
     }

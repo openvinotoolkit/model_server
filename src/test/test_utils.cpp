@@ -34,8 +34,8 @@ void prepareBinaryPredictRequest(ovms::InferenceRequest& request, const std::str
 void prepareBinaryPredictRequestNoShape(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }  // CAPI binary not supported
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize) { throw 42; }      // CAPI binary not supported
 
-void prepareInferStringRequest(ovms::InferenceRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent) { throw 42; }  // CAPI binary not supported
-void prepareInferStringTensor(ovms::InferenceTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content){ throw 42; }  // CAPI binary not supported
+void prepareInferStringRequest(ovms::InferenceRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent) { throw 42; }                     // CAPI binary not supported
+void prepareInferStringTensor(ovms::InferenceTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) { throw 42; }  // CAPI binary not supported
 
 void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool putBufferInInputTensorContent) {
     request.mutable_inputs()->Clear();
@@ -277,8 +277,8 @@ void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
     return readImage("/ovms/src/test/binaryutils/rgb4x4.jpg", filesize, image_bytes);
 }
 
-void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content){
-    if(!putBufferInInputTensorContent && content == nullptr){
+void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {
+    if (!putBufferInInputTensorContent && content == nullptr) {
         SPDLOG_ERROR("Preparation of infer string tensor failed");
         return;
     }
@@ -335,7 +335,7 @@ void prepareInferStringRequest(::KFSRequest& request, const std::string& name, c
     prepareInferStringTensor(*tensor, name, data, putBufferInInputTensorContent, content);
 }
 
-void prepareInferStringTensor(tensorflow::TensorProto& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content){
+void prepareInferStringTensor(tensorflow::TensorProto& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {
     tensor.set_dtype(tensorflow::DataType::DT_STRING);
     tensor.mutable_tensor_shape()->add_dim()->set_size(data.size());
     for (auto inputData : data) {

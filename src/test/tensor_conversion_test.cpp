@@ -698,7 +698,8 @@ public:
     }
 
     void prepareStringTensorWithRawInputContents(tensorflow::TensorProto& tensor, std::vector<std::string> inputStrings, std::string& buffer) {
-        SPDLOG_ERROR("RawInputContents not supported for TFS API");;
+        SPDLOG_ERROR("RawInputContents not supported for TFS API");
+        ;
     }
     void prepareStringTensorWithRawInputContents(::KFSRequest::InferInputTensor& tensor, std::vector<std::string> inputStrings, std::string& buffer) {
         prepareInferStringTensor(tensor, "UNUSED", inputStrings, false, &buffer);
@@ -718,7 +719,7 @@ TYPED_TEST(StringInputsConversionTest, positive) {
 
 TYPED_TEST(StringInputsConversionTest, rawInputContents_positive) {
     if (typeid(TypeParam) == typeid(TFSInputTensorType))
-         GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
+        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {"String_123"};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
@@ -737,7 +738,7 @@ TYPED_TEST(StringInputsConversionTest, positive_batch_size_2) {
 
 TYPED_TEST(StringInputsConversionTest, rawInputContents_positive_batch_size_2) {
     if (typeid(TypeParam) == typeid(TFSInputTensorType))
-         GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
+        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {"String_123", "zebra"};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
@@ -756,7 +757,7 @@ TYPED_TEST(StringInputsConversionTest, positive_batch_size_3_one_string_empty) {
 
 TYPED_TEST(StringInputsConversionTest, rawInputContents_positive_batch_size_3_one_string_empty) {
     if (typeid(TypeParam) == typeid(TFSInputTensorType))
-         GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
+        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {"String_123", "zebra", ""};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
@@ -777,7 +778,7 @@ TYPED_TEST(StringInputsConversionTest, positive_empty_inputs) {
 TYPED_TEST(StringInputsConversionTest, rawInputContents_positive_empty_inputs) {
     // This case can't happen because request validation dont allow empty strings
     if (typeid(TypeParam) == typeid(TFSInputTensorType))
-         GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
+        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
@@ -809,7 +810,7 @@ TYPED_TEST(StringInputsConversionTest, u8_1d) {
 
 TYPED_TEST(StringInputsConversionTest, rawInputContents_u8_1d) {
     if (typeid(TypeParam) == typeid(TFSInputTensorType))
-         GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
+        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {"ala", "", "ma", "kota"};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
