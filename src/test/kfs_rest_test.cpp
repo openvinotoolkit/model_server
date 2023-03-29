@@ -439,6 +439,7 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_noBinaryDataSizeParameter) {
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_noBinaryDataSizeParameter_twoInputs) {
+    // This scenario will fail because binary_data_size parameter is required for BYTES datatype when there are more than 1 inputs in request
     std::string binaryData{0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03};
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\"}, {\"name\":\"c\",\"shape\":[1],\"datatype\":\"BYTES\"}]}";
     request_body += binaryData;
@@ -672,16 +673,6 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBufferSmallerThanExpected_noBinaryDat
     ::KFSRequest grpc_request;
     int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
     ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_BINARY_BUFFER_EXCEEDED);
-}
-
-TEST_F(HttpRestApiHandlerTest, binaryInputsBytes_noBinaryDataSizeParameter_twoInputs) {
-    std::string binaryData{0x00, 0x00, 0x00, 0x00};
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\"}, {\"name\":\"a\",\"shape\":[1],\"datatype\":\"BYTES\"}]}";
-    request_body += binaryData;
-
-    ::KFSRequest grpc_request;
-    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidBinaryDataSizeParameter) {

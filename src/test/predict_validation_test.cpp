@@ -1240,8 +1240,6 @@ TEST_F(KFSPredictValidationRawInputContents, InvalidWidth_ReshapeRequired) {
 }
 
 TEST_F(KFSPredictValidationRawInputContents, InputTooSmall) {
-    input->set_name(inputName);
-    input->set_datatype("BYTES");
     uint8_t invalidBuffer[] = {0x0E, 0x00, 0x00};
     binaryInputRequest.mutable_raw_input_contents()->Clear();
     auto invalidContent = binaryInputRequest.add_raw_input_contents();
@@ -1260,8 +1258,6 @@ TEST_F(KFSPredictValidationRawInputContents, InputTooSmall) {
 }
 
 TEST_F(KFSPredictValidationRawInputContents, InvalidFormat) {
-    input->set_name(inputName);
-    input->set_datatype("BYTES");
     uint8_t invalidBuffer[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     binaryInputRequest.mutable_raw_input_contents()->Clear();
     auto invalidContent = binaryInputRequest.add_raw_input_contents();
