@@ -96,7 +96,7 @@ Output subset [-0.00552395  0.00599533 -0.01480555  0.01098945 -0.09355522 -0.08
 The same can be achieved using REST API interface and even a simple `curl` command:
 
 ```bash
-curl -X POST http://localhost:8000/v1/models/muse/predict \
+curl -X POST http://localhost:8000/v1/models/usem:predict \
 -H 'Content-Type: application/json' \
 -d '{"instances": ["dog", "Puppies are nice.", "I enjoy taking long walks along the beach with my dog."]}'
 ```  
