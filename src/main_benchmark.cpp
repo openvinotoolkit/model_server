@@ -33,6 +33,7 @@
 
 namespace {
 
+using signed_shape_t = std::vector<int64_t>;
 class BenchmarkCLIParser {
     std::unique_ptr<cxxopts::Options> options;
 
@@ -112,7 +113,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
     }
 }
 
-std::vector<size_t> parseShapes(const std::string& cliInputShapes) {
+signed_shape_t parseShapes(const std::string& cliInputShapes) {
     auto inputShapes = ovms::tokenize(cliInputShapes, ';');
     if (inputShapes.size() != 1) {
         std::cout << __LINE__ << std::endl;
@@ -129,11 +130,11 @@ std::vector<size_t> parseShapes(const std::string& cliInputShapes) {
     }
     std::string shapeString = firstShape.substr(leftBracket + 1, rightBracket - leftBracket - 1);
     auto dimsString = ovms::tokenize(shapeString, ',');
-    std::vector<std::size_t> shape;
+    signed_shape_t shape;
     std::transform(dimsString.begin(), dimsString.end(), std::back_inserter(shape),
-                                   [](const std::string& s) -> std::size_t {
+                                   [](const std::string& s) -> int64_t {
         auto dimOpt = ovms::stoi64(s);
-        if (!dimOpt.has_value()) {
+        if (!dimOpt.has_value() || dimOpt.value() <= 0) {
             std::cout << __LINE__ << " " << s << std::endl;
             throw std::invalid_argument("Invalid shape argument");
         }
@@ -175,13 +176,11 @@ static void installSignalHandlers() {
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
 
-using shape_t = std::vector<size_t>;
-
-OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
+OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName, const void* data) {
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceRequestNew(&request, server, servableName.c_str(), servableVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
-    size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+    int64_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<int64_t>());
     OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);
     return request;
 }
@@ -295,7 +294,7 @@ int main(int argc, char** argv) {
     // datatype handling
     OVMS_DataType datatype = OVMS_DATATYPE_FP32;
     // shape handling
-    std::vector<std::size_t> shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
+    signed_shape_t shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
     ///////////////////////
     // benchmark parameters
     ///////////////////////
@@ -305,7 +304,7 @@ int main(int argc, char** argv) {
     size_t threadCount = nireq * threadsPerIreq;
     size_t niterPerThread = niter / threadCount;
 
-    size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+    int64_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<int64_t>());
     std::vector<float> data(elementsCount, 0.1);
 
     ///////////////////////

@@ -32,7 +32,7 @@ const char* MODEL_NAME = "dummy";
 const int64_t MODEL_VERSION = 1;
 const char* INPUT_NAME = "b";
 constexpr size_t DIM_COUNT = 2;
-constexpr size_t SHAPE[DIM_COUNT] = {1, 10};
+constexpr int64_t SHAPE[DIM_COUNT] = {1, 10};
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
     size_t bytesize = 0;
     uint32_t outputId = outputCount - 1;
     OVMS_DataType datatype = (OVMS_DataType)42;
-    const uint64_t* shape{nullptr};
+    const int64_t* shape{nullptr};
     uint32_t dimCount = 0;
     OVMS_BufferType bufferType = (OVMS_BufferType)42;
     uint32_t deviceId = 42;
