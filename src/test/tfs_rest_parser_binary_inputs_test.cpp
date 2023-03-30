@@ -95,6 +95,8 @@ TEST_F(TFSRestParserBinaryInputs, RowString) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
     EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
 }
 
@@ -113,6 +115,8 @@ TEST_F(TFSRestParserBinaryInputs, RowStringInvalidShape) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
     EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
 }
 
@@ -124,6 +128,8 @@ TEST_F(TFSRestParserBinaryInputs, RowStringStaticShape) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
     EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
 }
 
@@ -135,6 +141,8 @@ TEST_F(TFSRestParserBinaryInputs, ColumnString) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
     EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
 }
 
@@ -146,6 +154,8 @@ TEST_F(TFSRestParserBinaryInputs, ColumnStringUnnamed) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
     EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
 }
 
@@ -157,6 +167,8 @@ TEST_F(TFSRestParserBinaryInputs, RowStringUnnamed) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
     EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
 }
 
@@ -168,6 +180,8 @@ TEST_F(TFSRestParserBinaryInputs, RowStringBatchSize2) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 2);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
     EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
     EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(1).c_str(), "efgh"), 0);
 }
