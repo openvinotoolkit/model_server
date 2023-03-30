@@ -20,6 +20,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <algorithm>
 
 #include "../logging.hpp"
 #include "../profiler.hpp"

@@ -699,7 +699,6 @@ public:
 
     void prepareStringTensorWithRawInputContents(tensorflow::TensorProto& tensor, std::vector<std::string> inputStrings, std::string& buffer) {
         SPDLOG_ERROR("RawInputContents not supported for TFS API");
-        ;
     }
     void prepareStringTensorWithRawInputContents(::KFSRequest::InferInputTensor& tensor, std::vector<std::string> inputStrings, std::string& buffer) {
         prepareInferStringTensor(tensor, "UNUSED", inputStrings, false, &buffer);
