@@ -341,19 +341,6 @@ int main(int argc, char** argv) {
     OVMS_InferenceResponseDelete(response);
 
     ///////////////////////
-    // prepare response data
-    ///////////////////////
-    uint32_t outputCount = 0;
-    const void* voutputData;
-    size_t bytesize = 0;
-    uint32_t outputId = outputCount - 1;
-    OVMS_DataType responseDatatype = (OVMS_DataType) 42;
-    const uint64_t* outputShape{nullptr};
-    uint32_t dimCount = 0;
-    OVMS_BufferType bufferType = (OVMS_BufferType)42;
-    uint32_t deviceId = 42;
-    const char* outputName{nullptr};
-    ///////////////////////
     // setup workload machinery
     ///////////////////////
     std::vector<std::unique_ptr<std::thread>> workerThreads;
