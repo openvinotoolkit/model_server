@@ -34,6 +34,7 @@ ARG minitrace_flags
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 
+RUN yum -y update
 # Needed because the UBI codeready-builder doesn't have opencl-headers and python36 is our default, which is below the required support level
 RUN if [ "$RH_ENTITLEMENT" == "1" ] ; then \
         yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
@@ -133,12 +134,12 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 WORKDIR /boost
 # hadolint ignore=DL3003
 RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
-    tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
-    ./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
-    --with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
-    --with-random --with-thread --with-atomic --with-regex \
-    --with-log --with-locale \
-    install
+        tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
+        ./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+                --with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
+                --with-random --with-thread --with-atomic --with-regex \
+                --with-log --with-locale \
+                install
 
 COPY third_party /ovms/third_party/
 

@@ -46,6 +46,7 @@ ARG NVIDIA=0
 ENV GPU=$GPU
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN yum -y update
 # hadolint ignore=DL3003,DL3041,SC2164
 RUN yum install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
         if [ "$GPU" == "1" ] ; then \
