@@ -20,6 +20,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "../deserialization.hpp"
@@ -76,39 +77,79 @@ static ov::Tensor bruteForceDeserialize(const std::string& requestedName, const 
 const tensor_map_t MediapipeGraphExecutor::getInputsInfo() const {
     return this->inputsInfo;
 }
+
 const tensor_map_t MediapipeGraphExecutor::getOutputsInfo() const {
     return this->outputsInfo;
 }
-MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string name,
-    MetricRegistry* registry,
-    const MetricConfig* metricConfig) :
-    name(name),
-    status(name) {
-    if (name == "mediapipeDummy") {
-        chosenConfig = DUMMY_MEDIAPIPE_GRAPH;
-    } else if (name == "mediapipeAdd") {
-        chosenConfig = ADD_MEDIAPIPE_GRAPH;
-    } else if (name == "mediapipeDummyADAPT") {
-        chosenConfig = DUMMY_MEDIAPIPE_GRAPH_ADAPT;
-    } else if (name == "mediapipeAddADAPT") {
-        chosenConfig = ADD_MEDIAPIPE_GRAPH_ADAPT;
-    } else if (name == "mediapipeAddADAPTFULL") {
-        chosenConfig = ADD_MEDIAPIPE_GRAPH_ADAPT_FULL;
-    } else {
-        throw 42;  // FIXME
+
+MediapipeGraphConfig MediapipeGraphExecutor::MGC;
+
+Status MediapipeGraphExecutor::validateForConfigFileExistence() {
+    // TODO check for existence only
+    std::ifstream ifs(this->mgconfig.graphPath);
+    if (!ifs.is_open()) {
+        return StatusCode::FILE_INVALID;
     }
-    config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(chosenConfig);  // TODO do not die
-    // TODO @atobiszei add validation
+    std::string configContent;  // write directly to this @atobiszei
+
+    ifs.seekg(0, std::ios::end);
+    configContent.reserve(ifs.tellg());
+    ifs.seekg(0, std::ios::beg);
+
+    configContent.assign((std::istreambuf_iterator<char>(ifs)),
+        std::istreambuf_iterator<char>());
+    SPDLOG_DEBUG("ER:{}", configContent);
+    this->chosenConfig = std::move(configContent);
+    return StatusCode::OK;
+}
+Status MediapipeGraphExecutor::validateForConfigLoadableness() {
+    bool res = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
+    if (!res) {
+        SPDLOG_ERROR("ER");
+        return StatusCode::FILE_INVALID;  // TODO @atobiszei error for parsing proto
+    }
+    return StatusCode::OK;
+}
+Status MediapipeGraphExecutor::validate(ModelManager& manager) {
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
+    ValidationResultNotifier notifier(this->status, this->loadedNotify);
+    Status validationResult = validateForConfigFileExistence();
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
+    validationResult = validateForConfigLoadableness();
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
+    // 1 validate existence of graphdef file
+    // 2 validate protoreading capabilities
+    // 3 validate 1<= outputs
+    // 4 validate 1<= inputs
+    // 5 validate no side_packets?
+    SPDLOG_ERROR("ER:{}", this->mgconfig.graphPath);
+    ::mediapipe::CalculatorGraphConfig proto;
     auto status = createInputsInfo();
     if (!status.ok()) {
         throw 52;  // TODO @atobiszei
     }
     status = createOutputsInfo();
     if (!status.ok()) {
-        throw 52;  // TODO @atobiszei
+        throw 53;  // TODO @atobiszei
     }
-    this->status.handle(ValidationPassedEvent());  // TODO atobiszei RAII
+    notifier.passed = true;
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
+    return StatusCode::OK;
+}  // TODO
+
+MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string name,
+    const MediapipeGraphConfig& config,
+    MetricRegistry* registry,
+    const MetricConfig* metricConfig) :
+    name(name),
+    status(this->name) {
+    mgconfig = config;
 }
+
 Status MediapipeGraphExecutor::createInputsInfo() {
     auto outputNames = config.output_stream();
     for (auto name : outputNames) {
@@ -150,7 +191,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         throw 43;  // TODO retcode
     }
     for (auto name : inputNames) {
-        SPDLOG_TRACE("Tensor to deserialize:\"{}\"", name);
+        SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
         ov::Tensor input_tensor = bruteForceDeserialize(name, request);
         auto abstatus = graph.AddPacketToInputStream(
             name, ::mediapipe::MakePacket<ov::Tensor>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
@@ -165,11 +206,13 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
                 name, request->model_name(), abstatus.message(), abstatus.raw_code());
             throw 45;
         }
-        SPDLOG_TRACE("Tensor to deserialize:\"{}\"", name);
+        SPDLOG_ERROR("Tensor to deserialize:\"{}\"", name);
     }
     // receive outputs
     ::mediapipe::Packet packet;
+    SPDLOG_ERROR("ER");
     for (auto& [outputStreamName, poller] : outputPollers) {
+        SPDLOG_ERROR("ER");
         SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
         while (poller.Next(&packet)) {
             SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);

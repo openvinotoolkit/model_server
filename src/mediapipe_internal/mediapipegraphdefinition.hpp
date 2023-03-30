@@ -23,11 +23,8 @@
 
 #include "..//kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../execution_context.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
-#include "../modelmanager.hpp"
-#include "../status.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
@@ -38,12 +35,47 @@
 #include "mediapipedemo.hpp"
 
 namespace ovms {
+class MetricConfig;
+class MetricRegistry;
+class ModelManager;
+class Status;
+
+struct MediapipeGraphConfig {
+    std::string graphPath;
+};
+
 class MediapipeGraphExecutor {
+    struct ValidationResultNotifier {
+        ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
+            status(status),
+            loadedNotify(loadedNotify) {
+            SPDLOG_ERROR("ER:{}", status.getName());
+        }
+        ~ValidationResultNotifier() {
+            if (passed) {
+                status.handle(ValidationPassedEvent());
+                loadedNotify.notify_all();
+            } else {
+                status.handle(ValidationFailedEvent());
+            }
+            SPDLOG_ERROR("ER:{}", status.getName());
+        }
+        bool passed = false;
+
+    private:
+        PipelineDefinitionStatus& status;
+        std::condition_variable& loadedNotify;
+    };
+
+    static MediapipeGraphConfig MGC;
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
     const std::string name;
     PipelineDefinitionStatus status;
+    std::condition_variable loadedNotify;
+
     std::string chosenConfig;  // TODO make const @atobiszei
+    MediapipeGraphConfig mgconfig;
     ::mediapipe::CalculatorGraphConfig config;
     const uint16_t SERVABLE_VERSION = 1;
     tensor_map_t inputsInfo;
@@ -51,6 +83,7 @@ class MediapipeGraphExecutor {
 
 public:
     MediapipeGraphExecutor(const std::string name,
+        const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,
         const MetricConfig* metricConfig = nullptr);
     const std::string& getName() const { return name; }
@@ -65,8 +98,14 @@ public:
 
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
     // TODO simultaneous infer & reload handling
+    Status validate(ModelManager& manager);
+
 private:
     Status createInputsInfo();
     Status createOutputsInfo();
+
+protected:
+    Status validateForConfigFileExistence();
+    Status validateForConfigLoadableness();
 };
 }  // namespace ovms
