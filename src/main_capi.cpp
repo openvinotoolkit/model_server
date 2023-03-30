@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
     uint32_t outputId = outputCount - 1;
     OVMS_DataType datatype = (OVMS_DataType)42;
     const int64_t* shape{nullptr};
-    uint32_t dimCount = 0;
+    size_t dimCount = 0;
     OVMS_BufferType bufferType = (OVMS_BufferType)42;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};

@@ -100,7 +100,7 @@ int main() {
     const char* oName = NULL;  // not needed
     OVMS_DataType oType;  // not needed
     const int64_t* oShape;  // not needed
-    uint32_t oDims;  // not needed
+    size_t oDims;  // not needed
     const void* oData = NULL;
     size_t oNumBytes = 0;
     OVMS_BufferType oBuffType;  // not needed
