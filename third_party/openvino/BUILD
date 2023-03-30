@@ -53,7 +53,6 @@ cc_library(
     srcs = glob([
         "lib/intel64/libopenvino.so"
     ]),
-    data = [ "lib/intel64/plugins.xml" ],
     strip_include_prefix = "include/ie",
     visibility = ["//visibility:public"],
     deps = [
