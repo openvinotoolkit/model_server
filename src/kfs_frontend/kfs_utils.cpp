@@ -176,7 +176,7 @@ void setBatchSize(KFSTensorOutputProto& proto, int64_t batch) {
 void setStringPrecision(KFSTensorOutputProto& proto) {
     proto.set_datatype("BYTES");
 }
-Status getRawInputContentsBatchSizeAndLength(const std::string& buffer, size_t& batchSize, size_t& maxStringLength) {
+Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, size_t& batchSize, size_t& width) {
     size_t offset = 0;
     size_t tmpBatchSize = 0;
     size_t tmpMaxStringLength = 0;
@@ -191,7 +191,7 @@ Status getRawInputContentsBatchSizeAndLength(const std::string& buffer, size_t& 
         return StatusCode::INVALID_STRING_INPUT;
     }
     batchSize = tmpBatchSize;
-    maxStringLength = tmpMaxStringLength;
+    width = tmpMaxStringLength + 1;
     return StatusCode::OK;
 }
 }  // namespace ovms

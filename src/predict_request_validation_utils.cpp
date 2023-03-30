@@ -927,9 +927,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
             size_t inputWidth = 0;
             if (dataInRawInputContents(request)) {
                 auto buffer = getRawInputContents(request, bufferId);
-                size_t maxStringLength = 0;
-                RETURN_IF_ERR(getRawInputContentsBatchSizeAndLength(buffer, inputBatchSize, maxStringLength));
-                inputWidth = maxStringLength + 1;
+                RETURN_IF_ERR(getRawInputContentsBatchSizeAndLength(buffer, inputBatchSize, inputWidth));
             } else {
                 inputBatchSize = getStringBatchSize(proto);
                 inputWidth = getStringInputWidth(proto);
