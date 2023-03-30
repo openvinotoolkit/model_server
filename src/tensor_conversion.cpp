@@ -222,7 +222,7 @@ static Status validateTensor(const std::shared_ptr<const TensorInfo>& tensorInfo
 }
 
 inline static int getNumberOfInputs(const std::string* buffer) {
-    size_t batchSize;
+    int32_t batchSize;
     size_t width;
     auto status = getRawInputContentsBatchSizeAndWidth(*buffer, batchSize, width);
     if (!status.ok())
