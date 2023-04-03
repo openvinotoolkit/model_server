@@ -264,7 +264,7 @@ cc_library(
         "dags/pipelineeventqueue.hpp",
         "dags/pipeline_factory.cpp",
         "dags/pipeline_factory.hpp",
-        #"ovms_calculator.cc",
+        "ovms_calculator.cc",
         "precision.cpp",
         "precision.hpp",
         #"stream_prediction_service.cpp",
@@ -344,10 +344,10 @@ cc_library(
         "@cpprest//:sdk",
         "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
-        #"@mediapipe//mediapipe/framework:calculator_framework",
-        #"@mediapipe//mediapipe/framework/port:logging",
-        #"@mediapipe//mediapipe/framework/port:parse_text_proto",
-        #"@mediapipe//mediapipe/framework/port:status",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework/port:logging",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/port:status",
         "@mediapipe_calculators//:mediapipe_calculators",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
@@ -357,7 +357,7 @@ cc_library(
         "@linux_opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
         "//src/kfserving_api:kfserving_api_cpp",
-        #"//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+        "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
         #"//src/tfservingstream_api:stream_prediction_service_cpp",
     ],
     local_defines = [
