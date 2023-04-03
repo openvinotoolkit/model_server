@@ -18,11 +18,13 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-genrule(
-    name = "aws_cmake",
-    outs = ["build"],
-    cmd = 'cd external/awssdk && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " .. && make',
-)
+# TODO: Decide if we want to switch to genrule cmake for all docker compilations
+# | sed -E 's:(/sandbox/.+)::g')
+#genrule(
+#    name = "aws_cmake",
+#    outs = ["build"],
+#    cmd = 'cd external/awssdk && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " .. && make',
+#)
 
 cc_library(
     name = "core",
