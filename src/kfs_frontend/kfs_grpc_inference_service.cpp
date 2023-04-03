@@ -30,7 +30,7 @@
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
-//#include "../mediapipe_internal/mediapipedemo.hpp"
+#include "../mediapipe_internal/mediapipedemo.hpp"
 #include "../metric.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -45,10 +45,10 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
-//#include "mediapipe/framework/calculator_graph.h"
-//#include "mediapipe/framework/port/logging.h"
-//#include "mediapipe/framework/port/parse_text_proto.h"
-//#include "mediapipe/framework/port/status.h"
+#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/port/logging.h"
+#include "mediapipe/framework/port/parse_text_proto.h"
+#include "mediapipe/framework/port/status.h"
 namespace {
 enum : unsigned int {
     TOTAL,
@@ -274,7 +274,7 @@ static ov::Tensor bruteForceDeserialize(const std::string& requestedName, const 
     }
     return ov::Tensor();
 }
-/*
+
 class MediapipeGraphExecutor {
     ::mediapipe::CalculatorGraph graph;
     ::mediapipe::CalculatorGraphConfig config;
@@ -372,7 +372,7 @@ public:
         return StatusCode::OK;
     }
 };
-*/
+
 Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
     OVMS_PROFILE_FUNCTION();
     std::shared_ptr<ovms::ModelInstance> modelInstance;
@@ -390,8 +390,8 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcModelInfer);
         } else if (0 == ServableName.rfind("mediapipe", 0)) {
             // TODO mediapipe metrics
-            //MediapipeGraphExecutor executor(request->model_name());
-            //auto status = executor.infer(request, response, executionContext, reporterOut);
+            MediapipeGraphExecutor executor(request->model_name());
+            auto status = executor.infer(request, response, executionContext, reporterOut);
             return StatusCode::OK;
         }
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
