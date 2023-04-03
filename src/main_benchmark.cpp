@@ -90,7 +90,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 "MODEL_NAME")
             ("servable_version",
                 "workload threads per ireq",
-                cxxopts::value<uint64_t>()->default_value("0"),
+                cxxopts::value<int64_t>()->default_value("0"),
                 "MODEL_VERSION")
             ("inputs_names",
                 "Comma separated list of inputs names",
