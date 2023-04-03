@@ -30,7 +30,10 @@ RUN cd $(bazel info output_base)/external/build_bazel_rules_apple/ && patch -p1 
 WORKDIR /ovms/
 RUN /cov/bin/cov-configure --gcc --config coverity_config.xml && \
     /cov/bin/cov-configure --comptype gcc --compiler /usr/bin/gcc && \
-    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:static_analysis && cmake /client/cpp/kserve-api && make --jobs=$(nproc); \
+    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:static_analysis && cmake /client/cpp/kserve-api && make --jobs=$(nproc) && \
+    cd /ovms/src/custom_nodes/tokenizer && \
+    mkdir build && cd build && \
+    cmake .. && make --jobs=$(nproc) && \
     cd /example_cpp_client/cpp && \
     bazel build --spawn_strategy=standalone //src:all'
 
