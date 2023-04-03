@@ -853,6 +853,12 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::MODEL_NOT_LOADED;
     }
+    try {
+        bool isModelLoadedFromCache = compiledModel->get_property(ov::loaded_from_cache);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Is model loaded from cache: {}", isModelLoadedFromCache);
+    } catch (...) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+    }
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
     return status;
