@@ -279,7 +279,7 @@ void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
 
 void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {
     if (!putBufferInInputTensorContent && content == nullptr) {
-        SPDLOG_ERROR("Preparation of infer string tensor failed");
+        throw std::runtime_error("Preparation of infer string tensor failed");
         return;
     }
     tensor.set_name(name);
