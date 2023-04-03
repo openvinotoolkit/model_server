@@ -471,6 +471,17 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_sizeInBytesBiggerThanBuffer) {
     // Data correctness will be checked at the stage of grpc input deserialization
 }
 
+TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_BinaryDataSizeBiggerThanActualBuffer) {
+    std::string binaryData{0x16, 0x00};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":8}}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_BINARY_BUFFER_EXCEEDED);
+    // Data correctness will be checked at the stage of grpc input deserialization
+}
+
 static void assertBinaryInputsINT16(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData) {
     assertSingleBinaryInput(modelName, modelVersion, grpc_request);
 

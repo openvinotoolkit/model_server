@@ -320,6 +320,29 @@ TEST_F(KFSRestParserTest, parseValidRequestStringInput) {
     ASSERT_THAT(proto.inputs()[0].contents().bytes_contents(), ElementsAre("zebra", "openvino", "123"));
 }
 
+TEST_F(KFSRestParserTest, parseValidRequestStringInputNested) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "BYTES",
+        "data" : [ ["zebra"], ["openvino", "123"]]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(3));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
+    ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 3);
+    ASSERT_THAT(proto.inputs()[0].contents().bytes_contents(), ElementsAre("zebra", "openvino", "123"));
+}
+
 TEST_F(KFSRestParserTest, parseValidRequestBYTES) {
     std::string request = R"({
     "inputs" : [
