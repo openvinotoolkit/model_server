@@ -83,7 +83,7 @@ cc_shared_library(
         "@mediapipe//:__subpackages__",
         "@com_github_glog_glog//:__subpackages__",
         "@com_github_gflags_gflags//:__subpackages__",
-        #"@mediapipe_calculators//:__subpackages__",
+        "@mediapipe_calculators//:__subpackages__",
         "@arm_neon_2_x86_sse//:__subpackages__",
         "@ruy//:__subpackages__",
         "@cpuinfo//:__subpackages__",
@@ -265,10 +265,6 @@ cc_library(
         "dags/pipelineeventqueue.hpp",
         "dags/pipeline_factory.cpp",
         "dags/pipeline_factory.hpp",
-<<<<<<< HEAD
-=======
-        "ovms_calculator.cc",
->>>>>>> Add source
         "precision.cpp",
         "precision.hpp",
         #"stream_prediction_service.cpp",
