@@ -105,7 +105,7 @@ TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithEscapedPath) {
     std::string request = "/v1/models/..iO!.0?E*/versions/1/metadata";
     ovms::HttpRequestComponents comp;
 
-    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
 }
 
 TEST_F(HttpRestApiHandlerTest, RegexParseReadyWithImplicitVersion) {
