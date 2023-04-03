@@ -208,7 +208,7 @@ genrule(
         "export INSTALL_DIR=$$(pwd)/$(@D)/libevent",
         "export TMP_DIR=$$(mktemp -d -t libevent.XXXXXX)",
         "mkdir -p $$TMP_DIR",
-        "cp -R $$(pwd)/external/com_github_libevent_libevent/* $$TMP_DIR",
+        "cp -R $$(pwd | sed -E 's:(/sandbox/.+)::g')/external/com_github_libevent_libevent/* $$TMP_DIR",
         "cd $$TMP_DIR",
         "./autogen.sh",
         "./configure --prefix=$$INSTALL_DIR CFLAGS=-fPIC CXXFLAGS=-fPIC --enable-shared=no --disable-openssl",

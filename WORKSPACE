@@ -87,14 +87,14 @@ http_archive(
 ################################### Official mediapipe repository #########
 #### Will be used on feature release
 git_repository(
-    name = "google_mediapipe",
+    name = "mediapipe",
     remote = "https://github.com/google/mediapipe",
     tag = "v0.9.1",
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
 #local_repository(
-#    name = "google_mediapipe",
+#    name = "mediapipe",
 #    path = "/mediapipe/",
 #)
 
@@ -159,7 +159,7 @@ http_archive(
     ],
 )
 
-load("@google_mediapipe//third_party:external_files.bzl", "external_files")
+load("@mediapipe//third_party:external_files.bzl", "external_files")
 external_files()
 
 new_local_repository(
@@ -294,7 +294,7 @@ http_archive(
 
 # RapidJSON
 http_archive(
-    name = "rapidjson",
+    name = "com_github_tencent_rapidjson",
     url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.zip",
     sha256 = "8e00c38829d6785a2dfb951bb87c6974fa07dfe488aa5b25deec4b8bc0f6a3ab",
     strip_prefix = "rapidjson-1.1.0",
