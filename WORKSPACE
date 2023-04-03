@@ -285,7 +285,7 @@ grpc_extra_deps()
 
 # cxxopts
 http_archive(
-    name = "cxxopts",
+    name = "com_github_jarro2783_cxxopts",
     url = "https://github.com/jarro2783/cxxopts/archive/v2.2.0.zip",
     sha256 = "f9640c00d9938bedb291a21f9287902a3a8cee38db6910b905f8eba4a6416204",
     strip_prefix = "cxxopts-2.2.0",
@@ -303,7 +303,7 @@ http_archive(
 
 # spdlog
 http_archive(
-    name = "spdlog",
+    name = "com_github_gabime_spdlog",
     url = "https://github.com/gabime/spdlog/archive/v1.4.0.tar.gz",
     sha256 = "afd18f62d1bc466c60bef088e6b637b0284be88c515cedc59ad4554150af6043",
     strip_prefix = "spdlog-1.4.0",

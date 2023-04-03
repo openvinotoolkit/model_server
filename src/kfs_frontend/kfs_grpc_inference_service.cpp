@@ -410,7 +410,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
             // TODO mediapipe metrics
             MediapipeGraphExecutor executor(request->model_name());
             auto status = executor.infer(request, response, executionContext, reporterOut);
-            return StatusCode::OK;
+            return status;
         }
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return status;
