@@ -259,16 +259,16 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_name());
         status = getPipeline(request, response, pipelinePtr);
-    }
-    if (status == StatusCode::PIPELINE_DEFINITION_NAME_MISSING) {
-        // TODO ediapipe metricsa
-        SPDLOG_ERROR("ER:{}", status.string());
-        std::shared_ptr<MediapipeGraphExecutor> executor;
-        status = this->modelManager.createPipeline(executor, request->model_name(), request, response);
-        SPDLOG_ERROR("ER:{}", status.string());
-        status = executor->infer(request, response, executionContext, reporterOut);
-        SPDLOG_ERROR("ER:{}", status.string());
-        return status;
+        if (status == StatusCode::PIPELINE_DEFINITION_NAME_MISSING) {
+            SPDLOG_DEBUG("Requested DAG: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
+            std::shared_ptr<MediapipeGraphExecutor> executor;
+            status = this->modelManager.createPipeline(executor, request->model_name(), request, response);
+            if (!status.ok()) {
+                return status;
+            }
+            status = executor->infer(request, response, executionContext, reporterOut);
+            return status;
+        }
     }
     if (!status.ok()) {
         const std::string ServableName = request->model_name();

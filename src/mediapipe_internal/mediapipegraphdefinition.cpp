@@ -85,31 +85,30 @@ const tensor_map_t MediapipeGraphExecutor::getOutputsInfo() const {
 MediapipeGraphConfig MediapipeGraphExecutor::MGC;
 
 Status MediapipeGraphExecutor::validateForConfigFileExistence() {
-    // TODO check for existence only
     std::ifstream ifs(this->mgconfig.graphPath);
     if (!ifs.is_open()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to open mediapipe graph definition: {}, file: {}\n", this->getName(), this->mgconfig.graphPath);
         return StatusCode::FILE_INVALID;
     }
-    std::string configContent;  // write directly to this @atobiszei
-
+    this->chosenConfig.clear();
     ifs.seekg(0, std::ios::end);
-    configContent.reserve(ifs.tellg());
+    this->chosenConfig.reserve(ifs.tellg());
     ifs.seekg(0, std::ios::beg);
 
-    configContent.assign((std::istreambuf_iterator<char>(ifs)),
+    this->chosenConfig.assign((std::istreambuf_iterator<char>(ifs)),
         std::istreambuf_iterator<char>());
-    SPDLOG_DEBUG("ER:{}", configContent);
-    this->chosenConfig = std::move(configContent);
     return StatusCode::OK;
 }
+
 Status MediapipeGraphExecutor::validateForConfigLoadableness() {
     bool res = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
     if (!res) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::FILE_INVALID;  // TODO @atobiszei error for parsing proto
     }
     return StatusCode::OK;
 }
+
 Status MediapipeGraphExecutor::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
@@ -121,25 +120,25 @@ Status MediapipeGraphExecutor::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
-    // 1 validate existence of graphdef file
-    // 2 validate protoreading capabilities
+    // TODO
     // 3 validate 1<= outputs
     // 4 validate 1<= inputs
     // 5 validate no side_packets?
-    SPDLOG_ERROR("ER:{}", this->mgconfig.graphPath);
     ::mediapipe::CalculatorGraphConfig proto;
     auto status = createInputsInfo();
     if (!status.ok()) {
-        throw 52;  // TODO @atobiszei
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create inputs info for mediapipe graph definition: {}", getName());
+        return status;
     }
     status = createOutputsInfo();
     if (!status.ok()) {
-        throw 53;  // TODO @atobiszei
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
+        return status;
     }
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
     return StatusCode::OK;
-}  // TODO
+}
 
 MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string name,
     const MediapipeGraphConfig& config,
@@ -159,7 +158,7 @@ Status MediapipeGraphExecutor::createInputsInfo() {
 }
 
 Status MediapipeGraphExecutor::createOutputsInfo() {
-    auto inputNames = config.input_stream();
+    auto inputNames = this->config.input_stream();
     for (auto name : inputNames) {
         inputsInfo.insert({name, TensorInfo::getUnspecifiedTensorInfo()});
     }
@@ -168,7 +167,7 @@ Status MediapipeGraphExecutor::createOutputsInfo() {
 Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
     SPDLOG_DEBUG("Start KServe request mediapipe graph:{} execution", request->model_name());
     ::mediapipe::CalculatorGraph graph;
-    auto ret = graph.Initialize(config);
+    auto ret = graph.Initialize(this->config);
     if (!ret.ok()) {
         SPDLOG_DEBUG("KServe request for mediapipe graph:{} execution failed with message: {}", request->model_name(), ret.message());
     }
@@ -176,7 +175,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
     // TODO validate number of inputs
     // TODO validate input names against input streams
-    auto outputNames = config.output_stream();
+    auto outputNames = this->config.output_stream();
     for (auto name : outputNames) {
         auto absStatus = graph.AddOutputStreamPoller(name);
         if (!absStatus.ok()) {
@@ -184,7 +183,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         }
         outputPollers.emplace(name, std::move(absStatus).value());
     }
-    auto inputNames = config.input_stream();
+    auto inputNames = this->config.input_stream();
     auto ret2 = graph.StartRun({});  // TODO retcode
     if (!ret2.ok()) {
         SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", request->model_name(), ret2.message());

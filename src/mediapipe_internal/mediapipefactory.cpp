@@ -54,8 +54,10 @@ bool MediapipeFactory::definitionExists(const std::string& name) const {
 }
 
 MediapipeGraphExecutor* MediapipeFactory::findDefinitionByName(const std::string& name) const {
+    SPDLOG_ERROR("NOT_IMPLEMENTED");
     return nullptr;  // TODO
 }
+
 Status MediapipeFactory::reloadDefinition(const std::string& pipelineName,  // TODO
     const MediapipeGraphConfig& config,
     ModelManager& manager) {
@@ -69,17 +71,21 @@ Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipelin
     ModelManager& manager) const {
     auto it = definitions.find(name);
     if (it == definitions.end()) {
-        // TODO log
+        SPDLOG_DEBUG("Mediapipe graph with requested name: {} does not exist", name);  // TODO logger
         return StatusCode::NOT_IMPLEMENTED;
     }
     pipeline = it->second;
     return StatusCode::OK;
 }
 
-void MediapipeFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager) {}  // TODO
-Status MediapipeFactory::revalidatePipelines(ModelManager&) {                                                    // TODO
+void MediapipeFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager) {
+    SPDLOG_ERROR("NOT_IMPLEMENTED");
+}  // TODO
+Status MediapipeFactory::revalidatePipelines(ModelManager&) {
+    // TODO
+    SPDLOG_ERROR("NOT_IMPLEMENTED");
     return StatusCode::OK;
 }
-// const std::vector<std::string> getPipelinesNames() const;
+
 MediapipeFactory::~MediapipeFactory() = default;
 }  // namespace ovms
