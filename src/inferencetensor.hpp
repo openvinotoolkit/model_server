@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "ovms.h"     // NOLINT
-#include "shape.hpp"  // TODO: remove?
+#include "shape.hpp"
 
 namespace ovms {
 class Buffer;

@@ -110,8 +110,8 @@ std::map<std::string, shape_t> InferenceRequest::getRequestShapes() const {
     std::map<std::string, shape_t> result;
     for (auto& [name, tensor] : inputs) {
         result.emplace(name, shape_t(
-                                 tensor.getShape().data(),
-                                 tensor.getShape().data() + tensor.getShape().size()));
+                                 reinterpret_cast<shape_t::const_pointer>(tensor.getShape().data()),
+                                 reinterpret_cast<shape_t::const_pointer>(tensor.getShape().data() + tensor.getShape().size())));
     }
     return result;
 }

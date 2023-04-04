@@ -132,7 +132,7 @@ signed_shape_t parseShapes(const std::string& cliInputShapes) {
     auto dimsString = ovms::tokenize(shapeString, ',');
     signed_shape_t shape;
     std::transform(dimsString.begin(), dimsString.end(), std::back_inserter(shape),
-                                   [](const std::string& s) -> int64_t {
+                                   [](const std::string& s) -> signed_shape_t::value_type {
         auto dimOpt = ovms::stoi64(s);
         if (!dimOpt.has_value() || dimOpt.value() <= 0) {
             std::cout << __LINE__ << " " << s << std::endl;
@@ -180,7 +180,7 @@ OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& se
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceRequestNew(&request, server, servableName.c_str(), servableVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
-    int64_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<int64_t>());
+    auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
     OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);
     return request;
 }
@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
     size_t threadCount = nireq * threadsPerIreq;
     size_t niterPerThread = niter / threadCount;
 
-    int64_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<int64_t>());
+    auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
     std::vector<float> data(elementsCount, 0.1);
 
     ///////////////////////

@@ -87,7 +87,7 @@ const KFSShapeType& RequestShapeInfo<KFSTensorInputProto, KFSShapeType>::getShap
     return tensor.shape();
 }
 template <>
-const signed_shape_t& RequestShapeInfo<InferenceTensor, signed_shape_t>::getShape() {  // TODO: Declare signed_shape_t
+const signed_shape_t& RequestShapeInfo<InferenceTensor, signed_shape_t>::getShape() {
     return tensor.getShape();
 }
 template <typename RequestType, typename InputTensorType, typename InputIterator, typename ShapeType>
@@ -427,7 +427,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
 }
 template <>
 Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const InferenceTensor*, signed_shape_t>::checkBinaryBatchSizeMismatch(const InferenceTensor& tensor, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode, int32_t inputBatchSize) const {
-    RequestShapeInfo<InferenceTensor, CAPIShapeType> rsi(tensor);
+    RequestShapeInfo<InferenceTensor, signed_shape_t> rsi(tensor);
     if (rsi.getDim(0) <= 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
