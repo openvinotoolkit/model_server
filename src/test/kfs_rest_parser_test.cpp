@@ -297,6 +297,52 @@ TEST_F(KFSRestParserTest, parseValidRequestBOOL) {
     ASSERT_THAT(proto.inputs()[0].contents().bool_contents(), ElementsAre(true, true, false, false));
 }
 
+TEST_F(KFSRestParserTest, parseValidRequestStringInput) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "BYTES",
+        "data" : [ "zebra", "openvino", "123"]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(3));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
+    ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 3);
+    ASSERT_THAT(proto.inputs()[0].contents().bytes_contents(), ElementsAre("zebra", "openvino", "123"));
+}
+
+TEST_F(KFSRestParserTest, parseValidRequestStringInputNested) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "BYTES",
+        "data" : [ ["zebra"], ["openvino", "123"]]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(3));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
+    ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 3);
+    ASSERT_THAT(proto.inputs()[0].contents().bytes_contents(), ElementsAre("zebra", "openvino", "123"));
+}
+
 TEST_F(KFSRestParserTest, parseValidRequestBYTES) {
     std::string request = R"({
     "inputs" : [
@@ -862,6 +908,36 @@ TEST_F(KFSRestParserTest, parseInvalidRequestWithInputsMissing) {
     std::string request = R"({})";
     auto status = parser.parse(request.c_str());
     ASSERT_EQ(status, StatusCode::REST_NO_INPUTS_FOUND);
+}
+
+TEST_F(KFSRestParserTest, parseInvalidRequestStringInput_datatypeNotU8) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "UINT16",
+        "data" : [ "zebra", "openvino", "123"]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(KFSRestParserTest, parseInvalidRequestStringInput) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "BYTES",
+        "data" : [ "zebra", "openvino", 123]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
 TEST_F(KFSRestParserTest, parseInvalidDataNotHeterogenous) {

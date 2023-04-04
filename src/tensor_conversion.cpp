@@ -221,6 +221,15 @@ static Status validateTensor(const std::shared_ptr<const TensorInfo>& tensorInfo
     return StatusCode::OK;
 }
 
+inline static int getNumberOfInputs(const std::string* buffer) {
+    int32_t batchSize;
+    size_t width;
+    auto status = getRawInputContentsBatchSizeAndWidth(*buffer, batchSize, width);
+    if (!status.ok())
+        return 0;
+    return batchSize;
+}
+
 static Status validateTensor(const std::shared_ptr<const TensorInfo>& tensorInfo,
     const ::KFSRequest::InferInputTensor& src,
     const std::string* buffer) {
@@ -237,7 +246,7 @@ static Status validateTensor(const std::shared_ptr<const TensorInfo>& tensorInfo
         return StatusCode::INVALID_SHAPE;
     }
 
-    size_t batchSize = !rawInputsContentsUsed ? src.contents().bytes_contents_size() : 1;
+    size_t batchSize = !rawInputsContentsUsed ? src.contents().bytes_contents_size() : getNumberOfInputs(buffer);
     if (checkBatchSizeMismatch(tensorInfo, batchSize)) {
         SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
             tensorInfo->getMappedName(),
@@ -340,6 +349,25 @@ inline static int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tens
     return tensor.contents().bytes_contents_size();
 }
 
+inline static Status getInputs(const std::string* buffer, std::vector<std::string>& inputs) {
+    if (buffer == nullptr) {
+        return StatusCode::OK;
+    }
+    size_t offset = 0;
+    while (offset + sizeof(uint32_t) <= buffer->size()) {
+        uint64_t inputSize = *((int32_t*)(buffer->data() + offset));
+        offset += sizeof(uint32_t);
+        if (offset + inputSize > buffer->size())
+            break;
+        inputs.push_back(buffer->substr(offset, inputSize));
+        offset += inputSize;
+    }
+    if (offset != buffer->size()) {
+        return StatusCode::IMAGE_PARSING_FAILED;
+    }
+    return StatusCode::OK;
+}
+
 template <typename TensorType>
 static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
@@ -351,9 +379,14 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
     bool enforceResolutionAlignment = !resizeSupported;
 
     bool rawInputsContentsUsed = (buffer != nullptr);
-    int numberOfInputs = (!rawInputsContentsUsed ? getBinaryInputsSize(src) : 1);
+    std::vector<std::string> inputs;
+    auto status = getInputs(buffer, inputs);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+    int numberOfInputs = (!rawInputsContentsUsed ? getBinaryInputsSize(src) : inputs.size());
     for (int i = 0; i < numberOfInputs; i++) {
-        cv::Mat image = convertStringToMat(!rawInputsContentsUsed ? getBinaryInput(src, i) : *buffer);
+        cv::Mat image = convertStringToMat(!rawInputsContentsUsed ? getBinaryInput(src, i) : inputs[i]);
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
@@ -464,15 +497,46 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
     return StatusCode::OK;
 }
 
+static Status convertStringRequestFromBufferToOVTensor2D(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
+    return StatusCode::NOT_IMPLEMENTED;
+}
+
+static Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
+    int batchSize = 0;
+    size_t offset = 0;
+    size_t maxStringLength = 0;
+    while (offset + sizeof(uint32_t) <= buffer->size()) {
+        size_t inputSize = *((int32_t*)(buffer->data() + offset));
+        offset += (sizeof(uint32_t) + inputSize);
+        maxStringLength = std::max(maxStringLength, inputSize);
+        batchSize++;
+    }
+    if (offset != buffer->size()) {
+        return StatusCode::INVALID_STRING_INPUT;
+    }
+    size_t width = maxStringLength + 1;
+    offset = 0;
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(batchSize), width});
+    for (int i = 0; i < batchSize; i++) {
+        size_t inputSize = *((int32_t*)(buffer->data() + offset));
+        offset += sizeof(uint32_t);
+        auto data = tensor.data<unsigned char>() + i * width;
+        std::memcpy(data, reinterpret_cast<const unsigned char*>(buffer->data() + offset), inputSize);
+        for (size_t j = inputSize; j < width; j++)
+            data[j] = 0;
+        offset += inputSize;
+    }
+    return StatusCode::OK;
+}
+
 template <typename TensorType>
 Status convertStringRequestToOVTensor2D(
     const TensorType& src,
     ov::Tensor& tensor,
     const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
-    if (nullptr != buffer) {
-        SPDLOG_DEBUG("STRING input should be located in bytes_contents field.");
-        return StatusCode::NOT_IMPLEMENTED;
+    if (buffer != nullptr) {
+        return convertStringRequestFromBufferToOVTensor2D(src, tensor, buffer);
     }
     int batchSize = getBinaryInputsSize(src);
     size_t maxStringLength = 0;
@@ -493,8 +557,43 @@ Status convertStringRequestToOVTensor2D(
     return StatusCode::OK;
 }
 
+static Status convertStringRequestFromBufferToOVTensor1D(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
+    return StatusCode::NOT_IMPLEMENTED;
+}
+
+static Status convertStringRequestFromBufferToOVTensor1D(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
+    std::vector<uint32_t> stringSizes;
+    uint32_t totalStringsLength = 0;
+    while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) + sizeof(uint32_t) <= buffer->size()) {
+        uint64_t inputSize = *((int32_t*)(buffer->data() + totalStringsLength + stringSizes.size() * sizeof(uint32_t)));
+        stringSizes.push_back(inputSize);
+        totalStringsLength += inputSize;
+    }
+    uint64_t batchSize = stringSizes.size();
+    if ((totalStringsLength + batchSize * sizeof(uint32_t)) != buffer->size()) {
+        return StatusCode::INVALID_STRING_INPUT;
+    }
+    int64_t metadataLength = sizeof(uint32_t) * (batchSize + 2);
+    int64_t width = totalStringsLength + metadataLength;
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<size_t>(width)});
+    uint32_t* data = reinterpret_cast<uint32_t*>(tensor.data<uint8_t>());
+    data[0] = static_cast<uint32_t>(batchSize);
+    data[1] = 0;  // first string start offset
+    unsigned char* condensedStringsStart = tensor.data<unsigned char>() + metadataLength;
+    uint32_t tensorStringsOffset = 0;
+    for (uint32_t i = 0; i < stringSizes.size(); i++) {
+        data[i + 2] = data[i + 1] + stringSizes[i];
+        std::memcpy(condensedStringsStart + tensorStringsOffset, reinterpret_cast<const unsigned char*>(buffer->data() + (i + 1) * sizeof(uint32_t) + tensorStringsOffset), stringSizes[i]);
+        tensorStringsOffset += stringSizes[i];
+    }
+    return StatusCode::OK;
+}
+
 template <typename TensorType>
 Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
+    if (buffer != nullptr) {
+        return convertStringRequestFromBufferToOVTensor1D(src, tensor, buffer);
+    }
     int batchSize = getBinaryInputsSize(src);
     int64_t totalStringsLength = 0;
     for (int i = 0; i < batchSize; i++) {
