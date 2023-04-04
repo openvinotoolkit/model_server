@@ -50,10 +50,9 @@ cc_shared_library(
     dynamic_deps = [],
     static_deps = ["@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
-        "@rapidjson//:__subpackages__",
-        "@spdlog//:__subpackages__",
+        "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
-        "@cxxopts//:__subpackages__",
+        "@com_github_jarro2783_cxxopts//:__subpackages__",
         "@awssdk//:__subpackages__",
         "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
@@ -83,6 +82,7 @@ cc_shared_library(
         "@zlib//:__subpackages__",
         "@oneTBB//:__subpackages__",
         "@google_mediapipe//:__subpackages__",
+        "@mediapipe//:__subpackages__",
         "@com_github_glog_glog//:__subpackages__",
         "@com_github_gflags_gflags//:__subpackages__",
         "@mediapipe_calculators//:__subpackages__",
@@ -97,15 +97,15 @@ cc_shared_library(
     roots = ["//src:ovms_lib"],
 )
 
-load("@google_mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["mediapipe_internal/ovmscalculator.proto"],
     visibility = ["//visibility:public"],
     deps = [
-        "@google_mediapipe//mediapipe/framework:calculator_options_proto",
-        "@google_mediapipe//mediapipe/framework:calculator_proto",
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
     ],
 )
 
@@ -334,9 +334,9 @@ cc_library(
         "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
         "@org_tensorflow//tensorflow/core:framework",
-        "@rapidjson//:rapidjson",
-        "@spdlog//:spdlog",
-        "@cxxopts//:cxxopts",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@com_github_gabime_spdlog//:spdlog",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
         "@awssdk//:s3",
         "@awssdk//:core",
         "@awssdk//:deps",
@@ -344,10 +344,10 @@ cc_library(
         "@cpprest//:sdk",
         "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
-        "@google_mediapipe//mediapipe/framework:calculator_framework",
-        "@google_mediapipe//mediapipe/framework/port:logging",
-        "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
-        "@google_mediapipe//mediapipe/framework/port:status",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework/port:logging",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/port:status",
         "@mediapipe_calculators//:mediapipe_calculators",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
@@ -405,14 +405,14 @@ cc_library(
 cc_binary(
     name = "object_detection_openvino",
     data = [
-        "@google_mediapipe//mediapipe/models:ssdlite_object_detection.xml",
-        "@google_mediapipe//mediapipe/models:ssdlite_object_detection.bin",
-        "@google_mediapipe//mediapipe/models:ssdlite_object_detection_labelmap.txt",
+        "@mediapipe//mediapipe/models:ssdlite_object_detection.xml",
+        "@mediapipe//mediapipe/models:ssdlite_object_detection.bin",
+        "@mediapipe//mediapipe/models:ssdlite_object_detection_labelmap.txt",
     ],
     deps = [
-        "@google_mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
+        "@mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
         #TODO:enable_image_transformation_calculator++"@mediapipe_calculators//:mediapipe_calculators",
-        "@google_mediapipe//mediapipe/graphs/object_detection:desktop_openvino_calculators",
+        "@mediapipe//mediapipe/graphs/object_detection:desktop_openvino_calculators",
     ],
 )
 
@@ -424,7 +424,7 @@ cc_binary(
     ],
     linkshared = 1,
     deps = [
-        "@rapidjson//:rapidjson",
+        "@com_github_tencent_rapidjson//:rapidjson",
     ],
 )
 
@@ -451,8 +451,8 @@ cc_library(
         "//src:ovms_lib",
         "//src:ovmscalculatoroptions_cc_proto",
         "@org_tensorflow//tensorflow/core:framework",
-        "@google_mediapipe//mediapipe/framework:calculator_framework",
-        "@google_mediapipe//mediapipe/framework/port:status",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework/port:status",
     ],
     alwayslink = 1,
 )
@@ -462,10 +462,10 @@ cc_binary(
     srcs = ["hello_world.cc"],
     deps = [
         "//src:ovms_lib",
-        "@google_mediapipe//mediapipe/framework:calculator_framework",
-        "@google_mediapipe//mediapipe/framework/port:logging",
-        "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
-        "@google_mediapipe//mediapipe/framework/port:status",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework/port:logging",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/port:status",
     ],
 )
 cc_binary(
@@ -474,10 +474,10 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "//src:ovms_calculator",
-        "@google_mediapipe//mediapipe/framework:calculator_framework",
-        "@google_mediapipe//mediapipe/framework/port:logging",
-        "@google_mediapipe//mediapipe/framework/port:parse_text_proto",
-        "@google_mediapipe//mediapipe/framework/port:status",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework/port:logging",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/port:status",
     ],
 )
 
