@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "ovms.h"     // NOLINT
+#include "ovms.h"  // NOLINT
 #include "shape.hpp"
 
 namespace ovms {

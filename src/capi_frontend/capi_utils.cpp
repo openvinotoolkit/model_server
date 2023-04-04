@@ -25,12 +25,11 @@
 #include "../logging.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"
-#include "../tensorinfo.hpp"
 
 namespace ovms {
 
 std::string tensorShapeToString(const signed_shape_t& shape) {
-    return TensorInfo::shapeToString(shape);
+    return shapeToString(shape);
 }
 
 OVMS_DataType getPrecisionAsOVMSDataType(Precision precision) {
@@ -145,7 +144,7 @@ Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::str
     Status status = response->addOutput(
         name,
         getPrecisionAsOVMSDataType(ovElementTypeToOvmsPrecision(precision)),
-        reinterpret_cast<const int64_t*>(shape.data()),  // signed unsigned issue?
+        reinterpret_cast<const int64_t*>(shape.data()),
         shape.size());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to prepare consolidated tensor, servable: {}; tensor with name: {}", response->getServableName(), name);

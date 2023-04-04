@@ -23,8 +23,8 @@
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
 #include "../profiler.hpp"
+#include "../shape.hpp"
 #include "../status.hpp"
-#include "../tensorinfo.hpp"
 #include "nodesession.hpp"
 #include "tensormap.hpp"
 
@@ -252,7 +252,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             if (dag_executor_logger->level() <= spdlog::level::debug) {
                 std::stringstream ss;
                 ss << "Node: " << getName() << " input demultiplied: " << tensorName
-                   << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
+                   << "; Actual: " << shapeToString(dividedTensor.get_shape());
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
             }
             auto sessionKey = newSessionMetadatas[i].getSessionKey();

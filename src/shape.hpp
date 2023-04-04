@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -34,6 +35,21 @@ enum Mode { FIXED,
     AUTO };
 using shape_t = std::vector<size_t>;
 using signed_shape_t = std::vector<dimension_value_t>;
+
+template <typename T>
+std::string shapeToString(const T& shape) {
+    std::ostringstream oss;
+    oss << "(";
+    size_t i = 0;
+    if (shape.size() > 0) {
+        for (; i < shape.size() - 1; i++) {
+            oss << shape[i] << ",";
+        }
+        oss << shape[i];
+    }
+    oss << ")";
+    return oss.str();
+}
 
 class Dimension {
     dimension_value_t minimum, maximum;
