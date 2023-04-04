@@ -5,7 +5,7 @@
 TensorFlow Serving API allows sending the model input data in a variety of formats inside the [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) objects.
 Array data is passed inside the `tensor_content` field, which represents the input data buffer.
 
-When the data is sent in the `string_val` field, such input is interpreted as a binary encoded image. 
+When the data is sent in the `string_val` field to the model with 4-dimension shape, such input is interpreted as a binary encoded image. 
 
 Note, that while the model metadata reports the inputs shape with layout NHWC, the binary data must be sent with 
 shape: [N] with dtype: DT_STRING. Where N represents number of images converted to string bytes.

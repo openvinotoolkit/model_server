@@ -81,6 +81,14 @@ Custom nodes can generate the results which have dynamic size depending on the i
 In such case, function `getInputsInfo` should return value `0` on the dimension with dynamic size. It could be input with
 variable resolution or batch size. 
 
+**String inputs support**
+There is a feature that allowes clients to send strings via TFS api(datatype DT_STRING) or KFS api(datatype "BYTES") to the models that has 2-dimensional shape and U8 precision. OVMS, after receiving request containig such inputs converts them to the 2 dimensional U8 array of  shape [number of strings, length of the longest string + 1] with padding filled with zeros. For example batch of three strings ["String_123", "", "zebra"] would be converted to:
+['S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,  // String_123
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                       // ""
+'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0]             // "zebra"
+
+Example of custom node using this fature is our [Tokenizer](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/tokenizer). 
+
 ### "getOutputInfo" function
 Similar to the previous function but defining the metadata of the output.
 
