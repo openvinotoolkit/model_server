@@ -267,6 +267,40 @@ TEST_F(CAPIPredictValidation, RequestWrongShapeValues) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
 }
 
+TEST_F(CAPIPredictValidation, RequestNegativeBatchValue) {
+    modelConfig.setBatchingParams("auto");
+    preparePredictRequest(request,
+        {{"Input_FP32_1_224_224_3_NHWC",
+             std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
+            {"Input_U8_1_3_62_62_NCHW",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{-1, 3, 62, 62}, ovms::Precision::U8}},
+            {"Input_I64_1_6_128_128_16_NCDHW",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
+            {"Input_U16_1_2_8_4_NCHW",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
+}
+
+TEST_F(CAPIPredictValidation, RequestNegativeShapeValues) {
+    modelConfig.setBatchingParams("auto");
+    preparePredictRequest(request,
+        {{"Input_FP32_1_224_224_3_NHWC",
+             std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 224, 224, 3}, ovms::Precision::FP32}},
+            {"Input_U8_1_3_62_62_NCHW",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 3, -62, 62}, ovms::Precision::U8}},
+            {"Input_I64_1_6_128_128_16_NCDHW",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
+            {"Input_U16_1_2_8_4_NCHW",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
+        requestData);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
+}
+
 TEST_F(CAPIPredictValidation, RequestWrongShapeValuesTwoInputsOneWrong) {  // one input fails validation, request denied
     modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"auto\"}");
     preparePredictRequest(request,
