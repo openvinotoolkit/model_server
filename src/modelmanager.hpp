@@ -33,6 +33,7 @@
 
 #include "dags/pipeline_factory.hpp"
 #include "global_sequences_viewer.hpp"
+#include "mediapipe_internal/mediapipefactory.hpp"
 #include "metric_config.hpp"
 #include "model.hpp"
 #include "modelconfig.hpp"
@@ -76,6 +77,7 @@ protected:
     std::unique_ptr<ov::Core> ieCore;
 
     PipelineFactory pipelineFactory;
+    MediapipeFactory mediapipeFactory;
 
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
 
@@ -103,6 +105,7 @@ private:
     Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
     Status loadCustomNodeLibrariesConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
+    Status loadMediapipeGraphsConfig(rapidjson::Document& configJson);
     Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 
     /**
@@ -265,6 +268,9 @@ public:
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
     }
+    const MediapipeFactory& getMediapipeFactory() const {
+        return mediapipeFactory;
+    }
 
     const CustomNodeLibraryManager& getCustomNodeLibraryManager() const;
 
@@ -312,11 +318,15 @@ public:
 
     template <typename RequestType, typename ResponseType>
     Status createPipeline(std::unique_ptr<Pipeline>& pipeline,
-        const std::string name,
+        const std::string& name,
         const RequestType* request,
         ResponseType* response) {
         return pipelineFactory.create(pipeline, name, request, response, *this);
     }
+    Status createPipeline(std::shared_ptr<MediapipeGraphExecutor>& graph,
+        const std::string& name,
+        const KFSRequest* request,
+        KFSResponse* response);
 
     const bool pipelineDefinitionExists(const std::string& name) const {
         return pipelineFactory.definitionExists(name);

@@ -1785,3 +1785,39 @@ TEST(SchemaTest, DemultiplexerConfigGatherFromNodeTypeInvalid) {
     auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigGatherFromNodeTypeInvalidParsed, ovms::MODELS_CONFIG_SCHEMA);
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
+
+TEST(SchemaTest, MediapipeConfigPositive) {
+    const char* mediapipeConfigPositive = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_model",
+            "graph_path": "dummy_path"
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(mediapipeConfigPositive);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+TEST(SchemaTest, MediapipeConfigNegativeAdditionalMediapipeConfigField) {
+    const char* mediapipeConfigNegative = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_model",
+            "graph_path": "dummy_path",
+            "someField": "ovms_rules"
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(mediapipeConfigNegative);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}

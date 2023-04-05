@@ -1,16 +1,18 @@
-// Copyright 2019 The MediaPipe Authors.
+//*****************************************************************************
+// Copyright 2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//*****************************************************************************
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
@@ -291,15 +293,13 @@ public:
         return absl::OkStatus();
     }
     absl::Status Open(CalculatorContext* cc) final {
-        for (CollectionItemId id = cc->Inputs().BeginId();
-             id < cc->Inputs().EndId(); ++id) {
+        for (CollectionItemId id = cc->Inputs().BeginId(); id < cc->Inputs().EndId(); ++id) {
             if (!cc->Inputs().Get(id).Header().IsEmpty()) {
                 cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
             }
         }
         if (cc->OutputSidePackets().NumEntries() != 0) {
-            for (CollectionItemId id = cc->InputSidePackets().BeginId();
-                 id < cc->InputSidePackets().EndId(); ++id) {
+            for (CollectionItemId id = cc->InputSidePackets().BeginId(); id < cc->InputSidePackets().EndId(); ++id) {
                 cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
             }
         }
@@ -321,10 +321,6 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        cc->GetCounter("PassThrough")->Increment();
-        if (cc->Inputs().NumEntries() == 0) {
-            return tool::StatusStop();
-        }
         const auto& options = cc->Options<OVMSCalculatorOptions>();
         /////////////////////
         // PREPARE REQUEST
@@ -449,7 +445,6 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        cc->GetCounter("PassThrough")->Increment();
         if (cc->Inputs().NumEntries() == 0) {
             return tool::StatusStop();
         }
@@ -554,7 +549,6 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         MLOG("Main process start");
-        cc->GetCounter("PassThrough")->Increment();
         if (cc->Inputs().NumEntries() == 0) {
             return tool::StatusStop();
         }
