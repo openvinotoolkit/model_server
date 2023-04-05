@@ -112,6 +112,19 @@ const char* MODELS_CONFIG_SCHEMA = R"({
                 }
             ]
         },
+    "mediapipe_config": {
+        "type": "object",
+        "required": ["name", "graph_path"],
+        "properties": {
+             "name": {
+                 "type": "string"
+             },
+             "graph_path": {
+                 "type": "string"
+             }
+        },
+        "additionalProperties": false
+    },
 		"model_config": {
 			"type": "object",
 			"required": ["config"],
@@ -347,6 +360,12 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"$ref": "#/definitions/pipeline_config"
 			}
 		},
+    "mediapipe_config_list": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/mediapipe_config"
+      }
+    },
 		"custom_node_library_config_list": {
 			"type": "array",
 			"items": {

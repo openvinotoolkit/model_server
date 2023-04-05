@@ -151,7 +151,6 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         // ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK); // TODO restore
         ASSERT_EQ(OVMS_GRPCInference2((void*)&server, (void*)&request, (void*)&response), nullptr);
     }
-    SPDLOG_ERROR("ER");
     // Failed single model calls
     for (int i = 0; i < numberOfFailedRequests; i++) {
         request.Clear();
