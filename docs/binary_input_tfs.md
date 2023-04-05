@@ -18,7 +18,7 @@ TensorFlow Serving API also allows sending binary encoded data via HTTP interfac
 
 ```
 <input_name>: {"b64":<Base64 encoded data>}
-```t
+```
 
 On the server side, the Base64 encoded data is decoded to raw binary and loaded using OpenCV which then converts it to OpenVINO-friendly data format for inference.
    
