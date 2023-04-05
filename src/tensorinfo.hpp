@@ -187,8 +187,6 @@ public:
 
     bool isTensorSpecEqual(const TensorInfo& other) const;
 
-    static std::string shapeToString(const shape_t& shape);
-
     static std::shared_ptr<const TensorInfo> getUnspecifiedTensorInfo();
 
     const std::optional<Dimension> getBatchSize() const;

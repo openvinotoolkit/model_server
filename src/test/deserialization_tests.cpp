@@ -102,7 +102,7 @@ protected:
     }
 
     void SetUpTensorProto(OVMS_DataType dataType) {
-        std::array<size_t, 2> shape{1, DUMMY_MODEL_INPUT_SIZE};
+        std::array<int64_t, 2> shape{1, DUMMY_MODEL_INPUT_SIZE};
         tensorCapi = std::make_unique<InferenceTensor>(dataType,
             shape.data(),
             shape.size());
@@ -125,7 +125,7 @@ class CAPIPredictRequest : public CAPIPredict {
 protected:
     InferenceRequest request{"dummy", 1};
     static const std::string DATA;
-    static constexpr std::array<size_t, 2> SHAPE{1, 10};
+    static constexpr std::array<int64_t, 2> SHAPE{1, 10};
     void SetUp() {
         CAPIPredict::SetUp();
         request.addInput(DUMMY_MODEL_INPUT_NAME,

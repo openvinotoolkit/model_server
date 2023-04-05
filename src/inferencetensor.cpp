@@ -27,7 +27,7 @@ InferenceTensor::InferenceTensor(InferenceTensor&& rhs) :
     datatype(std::move(rhs.datatype)),
     shape(std::move(rhs.shape)),
     buffer(std::move(rhs.buffer)) {}
-InferenceTensor::InferenceTensor(OVMS_DataType datatype, const size_t* shape, size_t dimCount) :
+InferenceTensor::InferenceTensor(OVMS_DataType datatype, const int64_t* shape, size_t dimCount) :
     datatype(datatype),
     shape(shape, shape + dimCount) {}
 
@@ -50,7 +50,7 @@ Status InferenceTensor::setBuffer(std::unique_ptr<Buffer>&& buffer) {
 OVMS_DataType InferenceTensor::getDataType() const {
     return this->datatype;
 }
-const shape_t& InferenceTensor::getShape() const {
+const signed_shape_t& InferenceTensor::getShape() const {
     return this->shape;
 }
 const Buffer* const InferenceTensor::getBuffer() const {

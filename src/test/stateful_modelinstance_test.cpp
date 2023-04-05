@@ -98,8 +98,8 @@ public:
     std::string dummyModelName;
     ovms::model_version_t modelVersion;
     inputs_info_t modelInput;
-    std::pair<std::string, std::tuple<signed_shape_t, tensorflow::DataType>> sequenceId;
-    std::pair<std::string, std::tuple<signed_shape_t, tensorflow::DataType>> sequenceControlStart;
+    std::pair<std::string, std::tuple<ovms::signed_shape_t, tensorflow::DataType>> sequenceId;
+    std::pair<std::string, std::tuple<ovms::signed_shape_t, tensorflow::DataType>> sequenceControlStart;
     std::unique_ptr<ov::Core> ieCore;
 
     void SetUpConfig(const std::string& configContent) {
@@ -118,7 +118,7 @@ public:
         SetUpConfig(modelStatefulConfig);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
         modelInput = {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}};
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}};
     }
 
     void TearDown() override {
@@ -130,8 +130,8 @@ public:
 class StatefulModelInstanceInputValidation : public ::testing::Test {
 public:
     inputs_info_t modelInput;
-    std::pair<std::string, std::tuple<signed_shape_t, tensorflow::DataType>> sequenceId;
-    std::pair<std::string, std::tuple<signed_shape_t, tensorflow::DataType>> sequenceControlStart;
+    std::pair<std::string, std::tuple<ovms::signed_shape_t, tensorflow::DataType>> sequenceId;
+    std::pair<std::string, std::tuple<ovms::signed_shape_t, tensorflow::DataType>> sequenceControlStart;
     std::unique_ptr<ov::Core> ieCore;
 
     void SetUp() override {

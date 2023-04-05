@@ -310,7 +310,7 @@ class CAPIInference : public ::testing::Test {};
 
 TEST_F(CAPIInference, TensorSetMovedBuffer) {
     constexpr size_t elementsCount = 2;
-    std::array<size_t, elementsCount> shape{1, elementsCount};
+    std::array<int64_t, elementsCount> shape{1, elementsCount};
     InferenceTensor tensor(OVMS_DATATYPE_FP32, shape.data(), shape.size());
     std::unique_ptr<Buffer> bufferNull;
     ASSERT_EQ(tensor.setBuffer(std::move(bufferNull)), ovms::StatusCode::OK);
@@ -349,7 +349,7 @@ TEST_F(CAPIInference, Basic) {
     ASSERT_NE(nullptr, request);
 
     // adding input
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     // setting buffer
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
@@ -385,8 +385,8 @@ TEST_F(CAPIInference, Basic) {
     size_t bytesize = 42;
     uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
-    const uint64_t* shape{nullptr};
-    uint32_t dimCount = 42;
+    const int64_t* shape{nullptr};
+    size_t dimCount = 42;
     OVMS_BufferType bufferType = (OVMS_BufferType)199;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
@@ -430,9 +430,9 @@ TEST_F(CAPIInference, Basic) {
     // one will be removed together with request but without buffer attached
     // one will be removed with buffer directly
     // one will be removed without buffer directly
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITHOUT_BUFFER_REMOVED_WITH_REQUEST", OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITH_BUFFER_REMOVED_DIRECTLY", OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITHOUT_BUFFER_REMOVED_DIRECTLY", OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITHOUT_BUFFER_REMOVED_WITH_REQUEST", OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITH_BUFFER_REMOVED_DIRECTLY", OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "INPUT_WITHOUT_BUFFER_REMOVED_DIRECTLY", OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, "INPUT_WITH_BUFFER_REMOVED_DIRECTLY", reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
     // we will add buffer and remove it to check separate buffer removal
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, "INPUT_WITHOUT_BUFFER_REMOVED_DIRECTLY", reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
@@ -490,12 +490,12 @@ TEST_F(CAPIInference, NegativeInference) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_NO_OF_INPUTS);
 
     // negative no input buffer
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_REQUEST);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, nullptr, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_REQUEST);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, nullptr, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_STRING);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, nullptr, DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_TABLE);
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     // fail with adding input second time
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()), StatusCode::DOUBLE_TENSOR_INSERT);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), StatusCode::DOUBLE_TENSOR_INSERT);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_CONTENT_SIZE);
 
     // setting buffer
@@ -529,7 +529,7 @@ TEST_F(CAPIInference, NegativeInference) {
     // negative no model
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
 
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_REQUEST);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddInput(nullptr, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()), StatusCode::NONEXISTENT_REQUEST);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, requestNoModel, &reponseNoModel), StatusCode::NONEXISTENT_REQUEST);
     OVMS_InferenceRequestDelete(requestNoModel);
 
@@ -540,7 +540,7 @@ TEST_F(CAPIInference, NegativeInference) {
 
 namespace {
 const std::string MODEL_NAME{"SomeModelName"};
-const uint64_t MODEL_VERSION{42};
+const int64_t MODEL_VERSION{42};
 const std::string PARAMETER_NAME{"sequence_id"};
 const OVMS_DataType PARAMETER_DATATYPE{OVMS_DATATYPE_I32};
 
@@ -558,7 +558,7 @@ const OVMS_DataType DATATYPE{OVMS_DATATYPE_FP32};
 TEST_F(CAPIInference, ResponseRetrieval) {
     auto cppResponse = std::make_unique<InferenceResponse>(MODEL_NAME, MODEL_VERSION);
     // add output
-    std::array<size_t, 2> cppOutputShape{1, DUMMY_MODEL_INPUT_SIZE};
+    std::array<int64_t, 2> cppOutputShape{1, DUMMY_MODEL_INPUT_SIZE};
     auto cppStatus = cppResponse->addOutput(INPUT_NAME.c_str(), DATATYPE, cppOutputShape.data(), cppOutputShape.size());
     ASSERT_EQ(cppStatus, StatusCode::OK) << cppStatus.string();
     InferenceTensor* cpptensor = nullptr;
@@ -599,8 +599,8 @@ TEST_F(CAPIInference, ResponseRetrieval) {
     size_t bytesize = 42;
     uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
-    const uint64_t* shape{nullptr};
-    uint32_t dimCount = 42;
+    const int64_t* shape{nullptr};
+    size_t dimCount = 42;
     OVMS_BufferType bufferType = (OVMS_BufferType)199;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
@@ -642,7 +642,7 @@ TEST_F(CAPIInference, CallInferenceServerNotStarted) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_NE(nullptr, cserver);
     ASSERT_NE(nullptr, request);
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
@@ -667,8 +667,8 @@ protected:
     size_t bytesize = 42;
     uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
-    const uint64_t* shape{nullptr};
-    uint32_t dimCount = 42;
+    const int64_t* shape{nullptr};
+    size_t dimCount = 42;
     OVMS_BufferType bufferType = (OVMS_BufferType)199;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
@@ -720,7 +720,7 @@ TEST_F(CAPIDagInference, BasicDummyDag) {
     ASSERT_NE(nullptr, request);
 
     // adding input
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, reinterpret_cast<const size_t*>(DUMMY_MODEL_SHAPE.data()), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     // setting buffer
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
@@ -771,7 +771,7 @@ TEST_F(CAPIDagInference, DynamicEntryDummyDag) {
 
     // adding input
     const size_t demultiplyCount = 3;
-    std::array<size_t, demultiplyCount> inputShape{demultiplyCount, 1, 10};
+    std::array<int64_t, demultiplyCount> inputShape{demultiplyCount, 1, 10};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, inputShape.data(), inputShape.size()));
     // setting buffer
     std::array<float, DUMMY_MODEL_INPUT_SIZE * demultiplyCount> data;

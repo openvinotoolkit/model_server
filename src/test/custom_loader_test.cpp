@@ -602,7 +602,7 @@ TEST_F(TestCustomLoader, CustomLoaderPrediction) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     performPredict("dummy", 1, request);
 }
 
@@ -651,7 +651,7 @@ TEST_F(TestCustomLoader, CustomLoaderPredictDeletePredict) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     tensorflow::serving::PredictResponse response;
     ASSERT_EQ(performInferenceWithRequest(request, response), ovms::StatusCode::OK);
 
@@ -678,7 +678,7 @@ TEST_F(TestCustomLoader, CustomLoaderPredictNewVersionPredict) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     performPredict("dummy", 1, request);
 
     // Copy version 1 to version 2
@@ -688,7 +688,7 @@ TEST_F(TestCustomLoader, CustomLoaderPredictNewVersionPredict) {
 
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     performPredict("dummy", 2, request);
 }
 
@@ -708,7 +708,7 @@ TEST_F(TestCustomLoader, CustomLoaderPredictNewModelPredict) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     performPredict("dummy", 1, request);
 
     // Copy model1 to model2
@@ -725,7 +725,7 @@ TEST_F(TestCustomLoader, CustomLoaderPredictNewModelPredict) {
 
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     performPredict("dummy", 1, request);
     performPredict("dummy-new", 1, request);
 }
@@ -746,7 +746,7 @@ TEST_F(TestCustomLoader, CustomLoaderPredictRemoveCustomLoaderOptionsPredict) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     performPredict("dummy", 1, request);
 
     // Replace model path in the config string
@@ -776,7 +776,7 @@ TEST_F(TestCustomLoader, PredictNormalModelAddCustomLoaderOptionsPredict) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     performPredict("dummy", 1, request);
 
     // Replace model path in the config string
@@ -807,7 +807,7 @@ TEST_F(TestCustomLoader, CustomLoaderOptionWithUnknownLibrary) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     tensorflow::serving::PredictResponse response;
     ASSERT_EQ(performInferenceWithRequest(request, response), ovms::StatusCode::MODEL_VERSION_MISSING);
 }
@@ -825,7 +825,7 @@ TEST_F(TestCustomLoader, CustomLoaderWithMissingModelFiles) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     tensorflow::serving::PredictResponse response;
     ASSERT_EQ(performInferenceWithRequest(request, response), ovms::StatusCode::MODEL_VERSION_MISSING);
 }
@@ -897,7 +897,7 @@ TEST_F(TestCustomLoader, CustomLoaderPredictionUsingManyCustomLoaders) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
 
     performPredict("dummy-a", 1, request);
     performPredict("dummy-b", 1, request);
@@ -1041,7 +1041,7 @@ TEST_F(TestCustomLoader, CustomLoaderMultipleLoaderWithSameLoaderName) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     performPredict("dummy", 1, request);
 }
 

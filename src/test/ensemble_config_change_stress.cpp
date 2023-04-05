@@ -1402,7 +1402,7 @@ public:
     }
     virtual inputs_info_t getExpectedInputsInfo() {
         return {{pipelineInputName,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
     }
 
     virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest() {
@@ -1845,9 +1845,9 @@ public:
     }
     inputs_info_t getExpectedInputsInfo() override {
         return {{pipelineInputName,
-                    std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
+                    std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
             {pipelineFactorsInputName,
-                std::tuple<signed_shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
     }
     void checkPipelineResponse(const std::string& pipelineOutputName,
         tensorflow::serving::PredictRequest& request,
