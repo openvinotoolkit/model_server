@@ -20,8 +20,6 @@
 
 namespace ovms {
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2) {
     return (t1.name == t2.name) &&
            (t1.data == t2.data) &&
@@ -48,13 +46,5 @@ bool CustomNodeOutputAllocator::is_equal(const CustomNodeOutputAllocator& other)
            (nodeLibrary == other.nodeLibrary) &&
            (tensor == other.tensor);
 }
-bool CustomNodeOutputAllocator::is_equal(const AllocatorImpl& other) const {
-    const CustomNodeOutputAllocator* otherPtr = dynamic_cast<const CustomNodeOutputAllocator*>(&other);
-    if (otherPtr == nullptr) {
-        return false;
-    }
-    return this->is_equal(*otherPtr);
-}
-#pragma GCC diagnostic pop
 
 }  // namespace ovms
