@@ -227,7 +227,7 @@ $request_output =
 
 Besides numerical values, it is possible to pass binary inputs using Binary Data extension:
 
-As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and model shape has 4 dimensions. Every batch the BYTES input needs to be preced by 4 bytes, litte endian, that contains its size. 
+As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and model or pipeline have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. Every batch the BYTES input needs to be preced by 4 bytes, litte endian, that contains its size. 
 
 ```JSON
 Content-Type: application/octet-stream

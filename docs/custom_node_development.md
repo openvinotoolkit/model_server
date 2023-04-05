@@ -81,14 +81,6 @@ Custom nodes can generate the results which have dynamic size depending on the i
 In such case, function `getInputsInfo` should return value `0` on the dimension with dynamic size. It could be input with
 variable resolution or batch size. 
 
-**String inputs support**
-There is a feature that allowes clients to send strings via TFS api(datatype DT_STRING) or KFS api(datatype "BYTES") to the models that has 2-dimensional shape and U8 precision. OVMS, after receiving request containig such inputs converts them to the 2 dimensional U8 array of  shape [number of strings, length of the longest string + 1] with padding filled with zeros. For example batch of three strings ["String_123", "", "zebra"] would be converted to:
-['S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,  // String_123
-0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                       // ""
-'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0]             // "zebra"
-
-Example of custom node using this fature is our [Tokenizer](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/tokenizer). 
-
 ### "getOutputInfo" function
 Similar to the previous function but defining the metadata of the output.
 
@@ -130,6 +122,27 @@ Just add include statement like:
 ```
 #include "opencv2/core.hpp"
 ```
+
+## String support
+There is a feature that allows clients to send or receive strings via TFS api(datatype DT_STRING) or KFS api(datatype "BYTES"). Example of custom node using this feature is our [Tokenizer](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/tokenizer). 
+
+### inputs
+When strings are send to the custom node that has 2-dimensional shape and U8 precision OVMS, after receiving request containig such inputs converts them to the 2 dimensional U8 array of  shape [number of strings, length of the longest string + 1] with padding filled with zeros. For example batch of three strings ["String_123", "", "zebra"] would be converted to:
+```
+['S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,  // String_123
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                       // ""
+'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0]             // "zebra"
+```
+
+### outputs
+
+When the name of the custom node output is suffixed with _string, its shape has 2 dimensions and precision is U8 OVMS treats data of such output as array that contains string in every row with padding filled with zeros and convert automatically data of such outputs to strings. For example U8 array:
+```
+['S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,  // String_123
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                       // ""
+'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0]             // "zebra"
+```
+would be converted to ["String_123", "", "zebra"].
 
 ## Building
 
