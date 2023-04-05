@@ -682,7 +682,7 @@ void randomizePort(std::string& port) {
     std::uniform_int_distribution<> dist{0, 9};
     for (auto j : {1, 2, 3}) {
         char* digitToRandomize = (char*)port.c_str() + j;
-        *digitToRandomize += dist(eng);
+        *digitToRandomize = '0' + dist(eng);
     }
 }
 

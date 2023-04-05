@@ -23,8 +23,10 @@
 #include <gtest/gtest.h>
 
 #include "../config.hpp"
+#include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
@@ -45,12 +47,16 @@ protected:
 
     const Precision precision = Precision::FP32;
     std::unique_ptr<std::thread> t;
+    std::string port = "9178";
     void SetUpServer(const char* configPath) {
         server.setShutdownRequest(0);
+        randomizePort(this->port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
-            (char*)configPath};
-        int argc = 3;
+            (char*)configPath,
+            (char*)"--port",
+            (char*)port.c_str()};
+        int argc = 5;
         t.reset(new std::thread([&argc, &argv, this]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
@@ -72,18 +78,19 @@ protected:
 class MediapipeFlowAddTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_standard_add.json");
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
     }
 };
 class MediapipeFlowDummyTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_standard_dummy.json");
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json");
     }
 };
 
 TEST_P(MediapipeFlowDummyTest, Infer) {
-    KFSInferenceServiceImpl impl(server);
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
 
@@ -103,7 +110,8 @@ TEST_P(MediapipeFlowDummyTest, Infer) {
     ASSERT_EQ(outputs[0].shape()[1], 10);
 }
 TEST_P(MediapipeFlowAddTest, Infer) {
-    KFSInferenceServiceImpl impl(server);
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
     const std::string modelName = GetParam();
@@ -123,11 +131,51 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     ASSERT_EQ(outputs[0].shape()[1], 10);
 }
 
+TEST(Mediapipe, MetadataDummy) {
+    ConstructorEnabledModelManager manager;
+    ovms::MediapipeGraphConfig mgc{"/ovms/src/test/mediapipe/graphdummy.pbtxt"};
+    ovms::MediapipeGraphExecutor mediapipeDummy("mediapipeDummy", mgc);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    tensor_map_t inputs = mediapipeDummy.getInputsInfo();
+    tensor_map_t outputs = mediapipeDummy.getOutputsInfo();
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_NE(inputs.find("in"), inputs.end());
+    ASSERT_NE(outputs.find("out"), outputs.end());
+    const auto& input = inputs.at("in");
+    EXPECT_EQ(input->getShape(), Shape({}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::UNDEFINED);
+    const auto& output = outputs.at("out");
+    EXPECT_EQ(output->getShape(), Shape({}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
+}
+
 const std::vector<std::string> mediaGraphsDummy{"mediapipeDummy",
-    "mediapipeDummyADAPT"};
+    "mediapipeDummyADAPT",
+    "mediapipeDummyADAPTFULL"};
 const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
     "mediapipeAddADAPT",
     "mediapipeAddADAPTFULL"};
+
+class MediapipeConfig : public MediapipeFlowTest {
+public:
+    void TearDown() override {}
+};
+
+const std::string NAME = "Name";
+TEST_F(MediapipeConfig, MediapipeGraphDefinitionNonExistentFile) {
+    ConstructorEnabledModelManager manager;
+    MediapipeGraphConfig mgc{"/ovms/NONEXISTENT_FILE"};
+    MediapipeGraphExecutor mge(NAME, mgc);
+    EXPECT_EQ(mge.validate(manager), StatusCode::FILE_INVALID);
+}
+
+TEST_F(MediapipeConfig, MediapipeAdd) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+}
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
