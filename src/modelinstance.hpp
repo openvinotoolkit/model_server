@@ -230,11 +230,9 @@ protected:
 
     template <typename RequestType>
     const Status validate(const RequestType* request);
-     
-
 
 private:
-     /**
+    /**
          * @brief Holds model required file names. First is loaded
          */
     std::vector<std::string> modelFiles;
@@ -374,9 +372,8 @@ public:
          *
          * @return vector of paths
          */
-    const std::vector<std::string> getModelFiles() const{
+    const std::vector<std::string> getModelFiles() const {
         return modelFiles;
-
     }
     /**
          * @brief Gets version

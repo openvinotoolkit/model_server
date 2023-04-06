@@ -133,15 +133,15 @@ const ovms::ModelConfig PASSTHROUGH_MODEL_CONFIG{
 const ovms::ModelConfig DUMMY_SAVED_MODEL_CONFIG{
     "dummy_saved_model",
     dummy_saved_model_location,  // base path
-    "CPU",                 // target device
-    "1",                   // batchsize
-    1,                     // NIREQ
-    false,                 // is stateful
-    true,                  // idle sequence cleanup enabled
-    false,                 // low latency transformation enabled
-    500,                   // stateful sequence max number
-    "",                    // cache directory
-    1,                     // model_version unused since version are read from path
+    "CPU",                       // target device
+    "1",                         // batchsize
+    1,                           // NIREQ
+    false,                       // is stateful
+    true,                        // idle sequence cleanup enabled
+    false,                       // low latency transformation enabled
+    500,                         // stateful sequence max number
+    "",                          // cache directory
+    1,                           // model_version unused since version are read from path
     dummy_saved_model_location,  // local path
 };
 
