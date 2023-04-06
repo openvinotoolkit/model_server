@@ -372,7 +372,7 @@ public:
          *
          * @return vector of paths
          */
-    const std::vector<std::string> getModelFiles() const {
+    const std::vector<std::string>& getModelFiles() const {
         return modelFiles;
     }
     /**
