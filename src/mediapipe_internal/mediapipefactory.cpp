@@ -42,9 +42,9 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-    std::shared_ptr<MediapipeGraphExecutor> graphDefinition = std::make_shared<MediapipeGraphExecutor>(pipelineName, config, manager.getMetricRegistry(), &manager.getMetricConfig());
+    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, manager.getMetricRegistry(), &manager.getMetricConfig());
     auto stat = graphDefinition->validate(manager);
-    auto it = definitions.insert({pipelineName, std::move(graphDefinition)});
+    auto it = definitions.insert({pipelineName, std::move(graphDefinition)}); // TODO check if inserted
     return StatusCode::OK;
 }
 
@@ -53,7 +53,7 @@ bool MediapipeFactory::definitionExists(const std::string& name) const {
     return this->definitions.find(name) != this->definitions.end();
 }
 
-MediapipeGraphExecutor* MediapipeFactory::findDefinitionByName(const std::string& name) const {
+MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::string& name) const {
     SPDLOG_ERROR("NOT_IMPLEMENTED");
     return nullptr;  // TODO
 }
@@ -74,8 +74,8 @@ Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipelin
         SPDLOG_DEBUG("Mediapipe graph with requested name: {} does not exist", name);  // TODO logger
         return StatusCode::NOT_IMPLEMENTED;
     }
-    pipeline = it->second;
-    return StatusCode::OK;
+    auto status = it->second->create(pipeline, request, response);
+    return status;
 }
 
 void MediapipeFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager) {

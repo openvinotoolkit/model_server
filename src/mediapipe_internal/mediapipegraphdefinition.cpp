@@ -46,7 +46,7 @@ enum : unsigned int {
 }
 
 namespace ovms {
-MediapipeGraphConfig MediapipeGraphExecutor::MGC;
+MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 static ov::Tensor bruteForceDeserialize(const std::string& requestedName, const KFSRequest* request) {
     auto requestInputItr = std::find_if(request->inputs().begin(), request->inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
@@ -77,15 +77,15 @@ static ov::Tensor bruteForceDeserialize(const std::string& requestedName, const 
     return ov::Tensor();
 }
 
-const tensor_map_t MediapipeGraphExecutor::getInputsInfo() const {
+const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
     return this->inputsInfo;
 }
 
-const tensor_map_t MediapipeGraphExecutor::getOutputsInfo() const {
+const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
     return this->outputsInfo;
 }
 
-Status MediapipeGraphExecutor::validateForConfigFileExistence() {
+Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     std::ifstream ifs(this->mgconfig.graphPath);
     if (!ifs.is_open()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to open mediapipe graph definition: {}, file: {}\n", this->getName(), this->mgconfig.graphPath);
@@ -101,7 +101,7 @@ Status MediapipeGraphExecutor::validateForConfigFileExistence() {
     return StatusCode::OK;
 }
 
-Status MediapipeGraphExecutor::validateForConfigLoadableness() {
+Status MediapipeGraphDefinition::validateForConfigLoadableness() {
     bool success = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
     if (!success) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
@@ -110,7 +110,7 @@ Status MediapipeGraphExecutor::validateForConfigLoadableness() {
     return StatusCode::OK;
 }
 
-Status MediapipeGraphExecutor::validate(ModelManager& manager) {
+Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
     Status validationResult = validateForConfigFileExistence();
@@ -141,7 +141,7 @@ Status MediapipeGraphExecutor::validate(ModelManager& manager) {
     return StatusCode::OK;
 }
 
-MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string name,
+MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     const MediapipeGraphConfig& config,
     MetricRegistry* registry,
     const MetricConfig* metricConfig) :
@@ -150,7 +150,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string name,
     mgconfig = config;
 }
 
-Status MediapipeGraphExecutor::createInputsInfo() {
+Status MediapipeGraphDefinition::createInputsInfo() {
     auto outputNames = config.output_stream();
     for (auto name : outputNames) {
         outputsInfo.insert({name, TensorInfo::getUnspecifiedTensorInfo()});
@@ -158,13 +158,20 @@ Status MediapipeGraphExecutor::createInputsInfo() {
     return StatusCode::OK;
 }
 
-Status MediapipeGraphExecutor::createOutputsInfo() {
+Status MediapipeGraphDefinition::createOutputsInfo() {
     auto inputNames = this->config.input_stream();
     for (auto name : inputNames) {
         inputsInfo.insert({name, TensorInfo::getUnspecifiedTensorInfo()});
     }
     return StatusCode::OK;
 }
+
+Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response) {
+        pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), this->config);
+    return StatusCode::OK;
+}
+Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, KFSRequest* request, KFSResponse* response);
+MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const ::mediapipe::CalculatorGraphConfig& config) : name(name), config(config) {}
 Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
     SPDLOG_DEBUG("Start KServe request mediapipe graph:{} execution", request->model_name());
     ::mediapipe::CalculatorGraph graph;
@@ -174,7 +181,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         SPDLOG_DEBUG("KServe request for mediapipe graph:{} execution failed with message: {}", request->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
-
+    SPDLOG_ERROR("ER");
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
     // TODO validate number of inputs
     // TODO validate input names against input streams
@@ -254,7 +261,8 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     SPDLOG_DEBUG("Received all output stream packets for graph: {}", request->model_name());
     response->set_model_name(name);
     response->set_id("1");  // TODO later
-    response->set_model_version(std::to_string(VERSION));
+    response->set_model_version(std::to_string(MediapipeGraphDefinition::VERSION));
     return StatusCode::OK;
 }
+
 }  // namespace ovms
