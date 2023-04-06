@@ -46,6 +46,8 @@ enum : unsigned int {
 }
 
 namespace ovms {
+MediapipeGraphConfig MediapipeGraphExecutor::MGC;
+
 static ov::Tensor bruteForceDeserialize(const std::string& requestedName, const KFSRequest* request) {
     auto requestInputItr = std::find_if(request->inputs().begin(), request->inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
     if (requestInputItr == request->inputs().end()) {
@@ -54,8 +56,10 @@ static ov::Tensor bruteForceDeserialize(const std::string& requestedName, const 
     auto inputIndex = requestInputItr - request->inputs().begin();
     bool deserializeFromSharedInputContents = request->raw_input_contents().size() > 0;
     auto bufferLocation = deserializeFromSharedInputContents ? &request->raw_input_contents()[inputIndex] : nullptr;
-    if (!bufferLocation)
+    if (!bufferLocation) {
+        SPDLOG_ERROR("Reading buffer for Mediapipe KServe is now only supported when using raw_input_contents");
         throw 42;
+    }
     ov::Shape shape;
     for (int i = 0; i < requestInputItr->shape().size(); i++) {
         shape.push_back(requestInputItr->shape()[i]);
@@ -81,8 +85,6 @@ const tensor_map_t MediapipeGraphExecutor::getOutputsInfo() const {
     return this->outputsInfo;
 }
 
-MediapipeGraphConfig MediapipeGraphExecutor::MGC;
-
 Status MediapipeGraphExecutor::validateForConfigFileExistence() {
     std::ifstream ifs(this->mgconfig.graphPath);
     if (!ifs.is_open()) {
@@ -100,10 +102,10 @@ Status MediapipeGraphExecutor::validateForConfigFileExistence() {
 }
 
 Status MediapipeGraphExecutor::validateForConfigLoadableness() {
-    bool res = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
-    if (!res) {
+    bool success = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
+    if (!success) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
-        return StatusCode::FILE_INVALID;  // TODO @atobiszei error for parsing proto
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
     return StatusCode::OK;
 }
@@ -166,9 +168,11 @@ Status MediapipeGraphExecutor::createOutputsInfo() {
 Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
     SPDLOG_DEBUG("Start KServe request mediapipe graph:{} execution", request->model_name());
     ::mediapipe::CalculatorGraph graph;
-    auto ret = graph.Initialize(this->config);
-    if (!ret.ok()) {
-        SPDLOG_DEBUG("KServe request for mediapipe graph:{} execution failed with message: {}", request->model_name(), ret.message());
+    auto absStatus = graph.Initialize(this->config);
+    if (!absStatus.ok()) {
+        const std::string absMessage = absStatus.ToString();
+        SPDLOG_DEBUG("KServe request for mediapipe graph:{} execution failed with message: {}", request->model_name(), absMessage);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
 
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
@@ -176,35 +180,38 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     // TODO validate input names against input streams
     auto outputNames = this->config.output_stream();
     for (auto name : outputNames) {
-        auto absStatus = graph.AddOutputStreamPoller(name);
-        if (!absStatus.ok()) {
-            return StatusCode::NOT_IMPLEMENTED;
+        auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
+        if (!absStatusOrPoller.ok()) {
+            const std::string absMessage = absStatusOrPoller.status().ToString();
+            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, std::move(absMessage));
         }
-        outputPollers.emplace(name, std::move(absStatus).value());
+        outputPollers.emplace(name, std::move(absStatusOrPoller).value());
     }
     auto inputNames = this->config.input_stream();
-    auto ret2 = graph.StartRun({});  // TODO retcode
-    if (!ret2.ok()) {
-        SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", request->model_name(), ret2.message());
-        throw 43;  // TODO retcode
+    absStatus = graph.StartRun({});
+    if (!absStatus.ok()) {
+        const std::string absMessage = absStatus.ToString();
+        SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", request->model_name(), absMessage);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, std::move(absMessage));
     }
     for (auto name : inputNames) {
         SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
         ov::Tensor input_tensor = bruteForceDeserialize(name, request);
-        auto abstatus = graph.AddPacketToInputStream(
+        absStatus = graph.AddPacketToInputStream(
             name, ::mediapipe::MakePacket<ov::Tensor>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
-        if (!abstatus.ok()) {
-            SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {}. Error message: {}, error code: {}",
-                name, request->model_name(), abstatus.message(), abstatus.raw_code());
-            throw 44;
+        if (!absStatus.ok()) {
+            const std::string absMessage = absStatus.ToString();
+            SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
+                name, request->model_name(), absStatus.message(), absStatus.raw_code());
+            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
         }
-        abstatus = graph.CloseInputStream(name);  // TODO retcode
-        if (!abstatus.ok()) {
-            SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {}. Error message: {}, error code: {}",
-                name, request->model_name(), abstatus.message(), abstatus.raw_code());
-            throw 45;
+        absStatus = graph.CloseInputStream(name);
+        if (!absStatus.ok()) {
+            const std::string absMessage = absStatus.ToString();
+            SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
+                name, request->model_name(), absMessage);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
         }
-        SPDLOG_ERROR("Tensor to deserialize:\"{}\"", name);
     }
     // receive outputs
     ::mediapipe::Packet packet;

@@ -27,7 +27,6 @@
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-//#define MLOG(A) std::cout << __FILE__ << ":" << __LINE__ << A << std::endl;
 #define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
 
 using std::endl;
