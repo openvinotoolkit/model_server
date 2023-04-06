@@ -32,7 +32,6 @@
 #include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
-#include "mediapipedemo.hpp"
 
 namespace ovms {
 class MetricConfig;
@@ -49,7 +48,6 @@ class MediapipeGraphExecutor {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
             status(status),
             loadedNotify(loadedNotify) {
-            SPDLOG_ERROR("ER:{}", status.getName());
         }
         ~ValidationResultNotifier() {
             if (passed) {
@@ -58,7 +56,6 @@ class MediapipeGraphExecutor {
             } else {
                 status.handle(ValidationFailedEvent());
             }
-            SPDLOG_ERROR("ER:{}", status.getName());
         }
         bool passed = false;
 

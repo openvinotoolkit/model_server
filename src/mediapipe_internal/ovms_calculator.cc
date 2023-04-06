@@ -27,11 +27,9 @@
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-#define MLOG(A) std::cout << __FILE__ << ":" << __LINE__ << A << std::endl;
+//#define MLOG(A) std::cout << __FILE__ << ":" << __LINE__ << A << std::endl;
+#define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
 
-#define MLOGA(A) std::cout << __FILE__ << ":" << __LINE__ << " " << (void*)(A) << std::endl;
-
-using std::cout;
 using std::endl;
 
 namespace {
@@ -147,32 +145,19 @@ using InferenceInput = std::map<std::string, ov::Tensor>;
 class OVMSInferenceAdapter {
     OVMS_Server* cserver{nullptr};
     const std::string servableName;
-    uint64_t servableVersion;
+    uint32_t servableVersion;
 
 public:
     std::unordered_map<std::string, std::string> inputTagToName;
     std::unordered_map<std::string, std::string> outputNameToTag;
 
 public:
-    OVMSInferenceAdapter(::mediapipe::CalculatorContext* cc) :
-        servableName(cc->Options<OVMSCalculatorOptions>().servable_name()) {
-        MLOG("Adapter construct");
-        OVMS_ServerSettings* _serverSettings{nullptr};
-        OVMS_ModelsSettings* _modelsSettings{nullptr};
-        const auto& options = cc->Options<OVMSCalculatorOptions>();
+    OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion = 0) :
+        servableName(servableName),
+        servableVersion(servableVersion) {
         OVMS_ServerNew(&cserver);  // TODO retcheck's;
-        if (!options.config_path().empty()) {
-            OVMS_ServerSettingsNew(&_serverSettings);
-            OVMS_ModelsSettingsNew(&_modelsSettings);
-            OVMS_ModelsSettingsSetConfigPath(_modelsSettings, options.config_path().c_str());
-            OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_DEBUG);
-            // OVMS_ServerStartFromConfigurationFile(cserver, _serverSettings, _modelsSettings);
-        }
-        auto servableVersionOpt = ovms::stou32(options.servable_version().c_str());
-        servableVersion = servableVersionOpt.value_or(0);
     }
     virtual ~OVMSInferenceAdapter() {
-        MLOG("Adapter destruct");
     }
     virtual InferenceOutput infer(const InferenceInput& input) {
         /////////////////////
@@ -191,13 +176,12 @@ public:
 
             const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
             std::stringstream ss;
-            ss << endl
-               << __FILE__ << ":" << __LINE__ << " Adapter received tensor: [ ";
+            ss << " Adapter received tensor: [ ";
             for (int x = 0; x < 10; ++x) {
                 ss << input_tensor_access[x] << " ";
             }
-            ss << " ]" << endl;
-            cout << ss.str() << endl;
+            ss << " ]";
+            MLOG(ss.str());
             const auto& inputShape = input_tensor.get_shape();
             OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
             OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size());  // TODO retcode
@@ -215,7 +199,7 @@ public:
         //////////////////
         OVMS_InferenceResponse* response = nullptr;
         if (nullptr != OVMS_Inference(cserver, request, &response)) {
-            std::cout << "DUPA0" << std::endl;
+            MLOG("Inference failed!");
         }
         CREATE_GUARD(responseGuard, OVMS_InferenceResponse, response);
         // verify GetOutputCount
@@ -343,13 +327,12 @@ public:
             ov::Tensor input_tensor(packet);
             const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
             std::stringstream ss;
-            ss << endl
-               << "Calculator received tensor: [ ";
+            ss << "Calculator received tensor: [ ";
             for (int x = 0; x < 10; ++x) {
                 ss << input_tensor_access[x] << " ";
             }
-            ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
-            cout << ss.str() << endl;
+            ss << " ] timestamp: " << cc->InputTimestamp().DebugString();
+            MLOG(ss.str());
             const auto& inputShape = input_tensor.get_shape();
             OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
             ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size()));
@@ -422,7 +405,9 @@ public:
         return absl::OkStatus();
     }
     absl::Status Open(CalculatorContext* cc) final {
-        adapter = std::make_unique<OVMSInferenceAdapter>(cc);
+        const std::string& servableName = cc->Options<OVMSCalculatorOptions>().servable_name();
+        const std::string& servableVersion = cc->Options<OVMSCalculatorOptions>().servable_version();
+        adapter = std::make_unique<OVMSInferenceAdapter>(servableName);  // TODO pass version as well
         for (CollectionItemId id = cc->Inputs().BeginId();
              id < cc->Inputs().EndId(); ++id) {
             if (!cc->Inputs().Get(id).Header().IsEmpty()) {
@@ -464,13 +449,12 @@ public:
             ov::Tensor input_tensor(packet);
             const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
             std::stringstream ss;
-            ss << endl
-               << "ModelAPICalculator received tensor: [ ";
+            ss << "ModelAPICalculator received tensor: [ ";
             for (int x = 0; x < 10; ++x) {
                 ss << input_tensor_access[x] << " ";
             }
             ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
-            cout << ss.str() << endl;
+            MLOG(ss.str());
         }
         //////////////////
         //  INFERENCE
@@ -528,7 +512,6 @@ public:
                       .Tag(SESSION_TAG.c_str())
                       .Get<AdapterWrapper>()
                       .adapter.get();
-        MLOGA(session);
         for (CollectionItemId id = cc->Inputs().BeginId();
              id < cc->Inputs().EndId(); ++id) {
             if (!cc->Inputs().Get(id).Header().IsEmpty()) {
@@ -560,22 +543,18 @@ public:
         InferenceInput input;
         InferenceOutput output;
         for (const std::string& tag : cc->Inputs().GetTags()) {
-            MLOG("Main process start");
-            MLOG(tag);
             const char* realInputName = inputTagInputMap.at(tag).c_str();
-            MLOG("Main process start");
             auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
             input[realInputName] = packet;
             ov::Tensor input_tensor(packet);
             const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
             std::stringstream ss;
-            ss << endl
-               << "ModelAPICalculator received tensor: [ ";
+            ss << "ModelAPICalculator received tensor: [ ";
             for (int x = 0; x < 10; ++x) {
                 ss << input_tensor_access[x] << " ";
             }
             ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
-            cout << ss.str() << endl;
+            MLOG(ss.str());
         }
         //////////////////
         //  INFERENCE
@@ -584,13 +563,8 @@ public:
         auto outputsCount = output.size();
         RET_CHECK(outputsCount == cc->Outputs().GetTags().size());
         // TODO check for existence of each tag
-        for (const auto& tag : cc->Outputs().GetTags()) {
-            MLOG(tag);
-        }
 
         for (const auto& [outputName, outputTagName] : session->outputNameToTag) {
-            MLOG(outputName);
-            MLOG(outputTagName);
             ov::Tensor* outOvTensor = new ov::Tensor(output.at(outputName));
             // TODO check buffer ownership
             cc->Outputs().Tag(outputTagName).Add(outOvTensor, cc->InputTimestamp());
@@ -641,7 +615,9 @@ public:
         }
         cc->SetOffset(TimestampDiff(0));
 
-        auto session = std::make_unique<AdapterWrapper>(new OVMSInferenceAdapter(cc));
+        const std::string& servableName = cc->Options<OVMSCalculatorOptions>().servable_name();
+        const std::string& servableVersion = cc->Options<OVMSCalculatorOptions>().servable_version();
+        auto session = std::make_unique<AdapterWrapper>(new OVMSInferenceAdapter(servableName));
         const auto& options = cc->Options<OVMSCalculatorOptions>();
         for (const auto& [key, value] : options.tag_to_output_tensor_names()) {
             session->adapter->outputNameToTag[value] = key;
@@ -650,7 +626,6 @@ public:
             session->adapter->inputTagToName[key] = value;
         }
         MLOG("Session create adapter");
-        MLOGA(session.get()->adapter.get());
         cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(Adopt(session.release()));
         MLOG("SessionOpen end");
         return absl::OkStatus();

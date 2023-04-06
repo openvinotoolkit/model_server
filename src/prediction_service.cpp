@@ -31,7 +31,6 @@
 #include "execution_context.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpc_utils.hpp"
-#include "mediapipe_internal/calculator_graph.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"

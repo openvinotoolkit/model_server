@@ -30,7 +30,6 @@
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
-#include "../mediapipe_internal/mediapipedemo.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../metric.hpp"
 #include "../modelinstance.hpp"

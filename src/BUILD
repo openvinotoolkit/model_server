@@ -195,10 +195,6 @@ cc_library(
         "kfs_frontend/kfs_grpc_inference_service.hpp",
         "kfs_frontend/kfs_utils.cpp",
         "kfs_frontend/kfs_utils.hpp",
-        "mediapipe_internal/calculator_graph.cpp",
-        "mediapipe_internal/calculator_graph.hpp",
-        "mediapipe_internal/mediapipedemo.cpp",
-        "mediapipe_internal/mediapipedemo.hpp",
         "mediapipe_internal/mediapipefactory.cpp",
         "mediapipe_internal/mediapipefactory.hpp",
         "mediapipe_internal/mediapipegraphdefinition.cpp",
@@ -750,7 +746,6 @@ cc_test(
     name = "ovms_test",
     linkstatic = 1,
     srcs = [
-        "test/ovmscalculator_test.cpp",
         "test/azurefilesystem_test.cpp",
         "test/binaryutils_test.cpp",
         "test/c_api_tests.cpp",

@@ -26,7 +26,6 @@
 #include "../deserialization.hpp"
 #include "../execution_context.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
-#include "../mediapipe_internal/mediapipedemo.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
 #include "../serialization.hpp"
@@ -209,9 +208,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     }
     // receive outputs
     ::mediapipe::Packet packet;
-    SPDLOG_ERROR("ER");
     for (auto& [outputStreamName, poller] : outputPollers) {
-        SPDLOG_ERROR("ER");
         SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
         while (poller.Next(&packet)) {
             SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
