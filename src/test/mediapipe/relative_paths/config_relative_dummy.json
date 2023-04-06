@@ -1,0 +1,31 @@
+{
+    "model_config_list": [
+        {"config": {
+                "name": "dummy1",
+                "base_path": "dummy1",
+                "shape": "(1, 10)"
+        	},
+         "config": {
+                "name": "dummy2",
+                "base_path": "dummy2",
+                "shape": "(1, 10)"
+        	}
+	}
+    ],
+    "mediapipe_config_list": [
+        {
+            "name":"mediapipeAddADAPTFULL",
+            "graph_path":"graph1/graphaddadapterfull.pbtxt"
+        },
+        {
+            "name":"mediapipeAddADAPT",
+            "graph_path":"graph2/graphaddadapter.pbtxt"
+        }
+    ],
+    "custom_node_library_config_list": [
+        {
+            "name": "face_blur_lib",
+            "base_path": "/workspace/lib/libcustom_node_face_blur.so"
+        }
+    ]
+}

@@ -59,6 +59,11 @@ private:
     std::string basePath;
 
     /**
+         * @brief Json config directory path
+         */
+    std::string jsonConfigDirectoryPath;
+
+    /**
          * @brief Model local destination path on disk after downloading from online storage
          */
     std::string localPath;
@@ -303,7 +308,25 @@ public:
          * @param basePath 
          */
     void setBasePath(const std::string& basePath) {
+    // Full path case
+    if (basePath.find_last_of("/\\") == 0)
         this->basePath = basePath;
+    else
+    // Relative path case
+        this->basePath = this->jsonConfigDirectoryPath + basePath;
+
+        std::cout << "basePath " << this->basePath <<std::endl;
+    }
+
+    /**
+         * @brief Set json config directory path
+         * 
+         * @param configFileFullPath 
+         */
+    void setJsonConfigDirectoryPath(const std::string& configFileFullPath) {
+        std::cout << "configFileFullPath " << configFileFullPath <<std::endl;
+        this->jsonConfigDirectoryPath = configFileFullPath.substr(0, configFileFullPath.find_last_of("/\\") + 1);
+        std::cout << "jsonConfigDirectoryPath " << this->jsonConfigDirectoryPath <<std::endl;
     }
 
     /**

@@ -272,6 +272,8 @@ Status ModelManager::startFromConfig() {
         modelConfig.setBatchSize(std::nullopt);
     }
 
+    modelConfig.setJsonConfigDirectoryPath(config.configPath());
+
     return reloadModelWithVersions(modelConfig);
 }
 
@@ -651,7 +653,7 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     }
 }
 
-Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
+Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, const std::string& jsonFilePath) {
     Status firstErrorStatus = StatusCode::OK;
 
     const auto itr = configJson.FindMember("model_config_list");
@@ -666,6 +668,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
+        modelConfig.setJsonConfigDirectoryPath(jsonFilePath);
         auto status = modelConfig.parseNode(configs["config"]);
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
@@ -692,6 +695,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
             continue;
         }
+        
         status = reloadModelWithVersions(modelConfig);
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
 
@@ -831,7 +835,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     std::vector<ModelConfig> gatedModelConfigs;
-    status = loadModelsConfig(configJson, gatedModelConfigs);
+    status = loadModelsConfig(configJson, gatedModelConfigs, jsonFilename);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }

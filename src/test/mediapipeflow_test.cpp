@@ -75,6 +75,23 @@ protected:
         server.setShutdownRequest(0);
     }
 };
+
+class MediapipeRelativePathTest : public MediapipeFlowTest {
+    public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy.json");
+    }
+};
+
+TEST_P(MediapipeRelativePathTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    //TODO
+    }
+
 class MediapipeFlowAddTest : public MediapipeFlowTest {
 public:
     void SetUp() {
