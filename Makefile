@@ -440,12 +440,3 @@ cpu_extension:
 		--build-arg APT_OV_PACKAGE=${APT_OV_PACKAGE} .
 	mkdir -p ./lib/${BASE_OS}
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${BASE_OS}
-
-sentencepiece_extension:
-	cd src/example/SentencePieceExtension && \
-	docker build -f Dockerfile.$(BASE_OS) -t sentence_piece_extension:latest \
-		--build-arg http_proxy=${http_proxy} \
-		--build-arg https_proxy=${https_proxy} \
-		--build-arg no_proxy=${no_proxy} \
-		--build-arg DLDT_PACKAGE_URL=${DLDT_PACKAGE_URL} \
-		--build-arg APT_OV_PACKAGE=${APT_OV_PACKAGE} .
