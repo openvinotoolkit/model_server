@@ -281,8 +281,6 @@ cc_library(
         "stringutils.hpp",
         "systeminfo.cpp",
         "systeminfo.hpp",
-        "systeminfo_impl.cpp",
-        "systeminfo_impl.hpp",
         "queue.hpp",
         "tensorinfo.cpp",
         "tensorinfo.hpp",
@@ -322,6 +320,7 @@ cc_library(
         "@opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
         "//src/kfserving_api:kfserving_api_cpp",
+        "@oneTBB//:tbb",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
