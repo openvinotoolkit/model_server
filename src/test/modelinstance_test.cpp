@@ -89,7 +89,6 @@ TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance
     EXPECT_FALSE(modelInstance.canUnloadInstance());
 }
 
-
 TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
@@ -401,7 +400,7 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
 
-    EXPECT_EQ(model_files.front(), directoryPath +"/test_saved_model/1/");
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model/1/");
 }
 
 TEST_F(TestLoadModel, CheckTFModelHandling) {
