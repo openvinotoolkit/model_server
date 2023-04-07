@@ -89,6 +89,7 @@ TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance
     EXPECT_FALSE(modelInstance.canUnloadInstance());
 }
 
+
 TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
@@ -167,10 +168,11 @@ TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
     EXPECT_EQ(ovms::ModelVersionState::END, mockModelInstance.getStatus().getState());
 }
 
-class TestLoadModel : public ::testing::Test {
+class TestLoadModel : public TestWithTempDir {
 protected:
     std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
+        TestWithTempDir::SetUp();
         ieCore = std::make_unique<ov::Core>();
     }
 };
@@ -299,7 +301,7 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
 TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
-    const std::string modelPath = "/tmp/test_load_model";
+    const std::string modelPath = directoryPath + "/test_load_model";
     std::filesystem::create_directories(modelPath);
     ovms::model_version_t version = 1;
     const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
@@ -335,7 +337,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
 TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
-    const std::string modelPath = "/tmp/test_load_model";
+    const std::string modelPath = directoryPath + "/test_load_model";
     std::filesystem::create_directories(modelPath);
     ovms::model_version_t version = 1;
     const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
@@ -371,7 +373,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
 TEST_F(TestLoadModel, CheckSavedModelHandling) {
     ovms::ModelInstance modelInstance("saved-model", UNUSED_MODEL_VERSION, *ieCore);
 
-    const std::string modelPath = "/tmp/test_saved_model";
+    const std::string modelPath = directoryPath + "/test_saved_model";
     std::filesystem::create_directories(modelPath);
     ovms::model_version_t version = 1;
     const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
@@ -399,13 +401,13 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
 
-    EXPECT_EQ(model_files.front(), "/tmp/test_saved_model/1/");
+    EXPECT_EQ(model_files.front(), directoryPath +"/test_saved_model/1/");
 }
 
 TEST_F(TestLoadModel, CheckTFModelHandling) {
     ovms::ModelInstance modelInstance("tf", UNUSED_MODEL_VERSION, *ieCore);
 
-    const std::string modelPath = "/tmp/test_tf";
+    const std::string modelPath = directoryPath + "/test_tf";
     std::filesystem::create_directories(modelPath);
     ovms::model_version_t version = 1;
     const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
@@ -433,13 +435,13 @@ TEST_F(TestLoadModel, CheckTFModelHandling) {
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
 
-    EXPECT_EQ(model_files.front(), "/tmp/test_tf/1/model.pb");
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_tf/1/model.pb");
 }
 
 TEST_F(TestLoadModel, CheckONNXModelHandling) {
     ovms::ModelInstance modelInstance("tf", UNUSED_MODEL_VERSION, *ieCore);
 
-    const std::string modelPath = "/tmp/test_onnx";
+    const std::string modelPath = directoryPath + "/test_onnx";
     std::filesystem::create_directories(modelPath);
     ovms::model_version_t version = 1;
     const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
@@ -467,7 +469,7 @@ TEST_F(TestLoadModel, CheckONNXModelHandling) {
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
 
-    EXPECT_EQ(model_files.front(), "/tmp/test_onnx/1/my-model.onnx");
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_onnx/1/my-model.onnx");
 }
 
 TEST_F(TestLoadModel, SuccessfulLoad) {
