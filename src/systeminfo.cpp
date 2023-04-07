@@ -19,6 +19,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+
 #include <openvino/core/parallel.hpp>
 
 #include "logging.hpp"
