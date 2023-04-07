@@ -14,7 +14,7 @@ When sending data in the array format, all bytes are in the same sequence in `te
 
 ## HTTP
 
-TensorFlow Serving API also allows sending binary encoded data via HTTP interface to the model or pipeline that have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. The binary data needs to be Base64 encoded and put into `inputs` or `instances` field as a map in form:
+TensorFlow Serving API also allows sending encoded images via HTTP interface to the model or pipeline that have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. The binary data needs to be Base64 encoded and put into `inputs` or `instances` field as a map in form:
 
 ```
 <input_name>: {"b64":<Base64 encoded data>}

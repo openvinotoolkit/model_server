@@ -331,50 +331,54 @@ When creating a Python-based client application, you can use Triton client libra
 
     .. code-block:: python
 
-        from tritonclient.grpc import service_pb2, service_pb2_grpc
-        from tritonclient.utils import *
+        import tritonclient.grpc as grpclient
 
-        client = grpcclient.InferenceServerClient("localhost:9000")
+        triton_client = grpclient.InferenceServerClient(
+            url="address",
+            ssl=False,
+            verbose=False)
+        
         image_data = []
         with open("image_path", 'rb') as f:
             image_data.append(f.read())
         inputs = []
-        inputs.append(service_pb2.ModelInferRequest().InferInputTensor())
-        inputs[0].name = args['input_name']
-        inputs[0].datatype = "BYTES"
-        inputs[0].shape.extend([1])
-        inputs[0].contents.bytes_contents.append(image_data[0])
+        inputs.append(grpclient.InferInput('input_name', 1, "BYTES"))
+        nmpy = np.array(image_data , dtype=np.object_)
+        inputs[0].set_data_from_numpy(nmpy)
 
         outputs = []
-        outputs.append(service_pb2.ModelInferRequest().InferRequestedOutputTensor())
-        outputs[0].name = "output_name"
+        outputs.append(grpclient.InferRequestedOutput("output_name"))
 
-        request = service_pb2.ModelInferRequest()
-        request.model_name = "model_name'"
-        request.inputs.extend(inputs)
-        request.outputs.extend(outputs)
-        response = grpc_stub.ModelInfer(request)
+        results = triton_client.infer(model_name="model_name",
+                                  inputs=inputs,
+                                  outputs=outputs)
 
 .. tab:: python [REST]
 
     .. code-block:: python
 
-        import requests
-        import json
+        import tritonclient.http as httpclient
 
-        url = f"http://{address}/v2/models/{model_name}/infer"
-        http_session = requests.session()
-
+        triton_client = httpclient.InferenceServerClient(
+                    url="address",
+                    ssl=False,
+                    ssl_options=None,
+                    verbose=False)
+        
         image_data = []
-        image_binary_size = []
         with open("image_path", 'rb') as f:
             image_data.append(f.read())
-            image_binary_size.append(len(image_data[-1]))
-        image_binary_size_str = ",".join(map(str, image_binary_size))
-        inference_header = {"inputs":[{"name":input_name,"shape":[batch_i],"datatype":"BYTES","parameters":{"binary_data_size":image_binary_size_str}}]}
-        inference_header_binary = json.dumps(inference_header).encode()
+        inputs = []
+        inputs.append(httpclient.InferInput('input_name', 1, "BYTES"))
+        nmpy = np.array(image_data , dtype=np.object_)
+        inputs[0].set_data_from_numpy(nmpy)
 
-        results = http_session.post(url, inference_header_binary + b''.join(image_data), headers={"Inference-Header-Content-Length":str(len(inference_header_binary))})
+        outputs = []
+        outputs.append(httpclient.InferRequestedOutput("output_name"))
+
+        results = triton_client.infer(model_name="model_name",
+                                  inputs=inputs,
+                                  outputs=outputs)
 
 .. tab:: cpp [GRPC]
 

@@ -308,7 +308,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
         } else {
             if (!isInputEmpty(*input))
                 continue;
-            if (grpc_request.mutable_inputs()->size() == 1) {
+            if (grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
                 binary_input_size = binary_buffer_size;
             } else {
                 binary_input_size = calculateBinaryDataSize(*input);

@@ -124,7 +124,7 @@ Just add include statement like:
 ```
 
 ## String support
-There is a feature that allows clients to send or receive strings via TFS api(datatype DT_STRING) or KFS api(datatype "BYTES"). Example of custom node using this feature is our [Tokenizer](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/tokenizer). 
+There are special consideration when handling in the custom nodes the input sent by the clients as string. Such data when received by the OVMS frontend, is automatically converted to a 2D array with shape [-1,-1]. Example of custom node using this feature is our [Tokenizer](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/tokenizer). 
 
 ### inputs
 When strings are send to the custom node that has 2-dimensional shape and U8 precision OVMS, after receiving request containig such inputs converts them to the 2 dimensional U8 array of  shape [number of strings, length of the longest string + 1] with padding filled with zeros. For example batch of three strings ["String_123", "", "zebra"] would be converted to:
