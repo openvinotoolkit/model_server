@@ -80,6 +80,7 @@ cc_shared_library(
         "@com_github_grpc_grpc//:__subpackages__",
         "@upb//:__subpackages__",
         "@zlib//:__subpackages__",
+        "@oneTBB//:__subpackages__",
     ],
     features = [],
     roots = ["//src:ovms_lib"],
