@@ -363,6 +363,8 @@ class BaseClient(metaclass=abc.ABCMeta):
             dtype = tensorflow.dtypes.int32
         elif dtype == self.DTYPE_INT_64:
             dtype = tensorflow.dtypes.int64
+        elif dtype == self.DTYPE_UINT_8:
+            dtype = tensorflow.dtypes.uint8
         else: raise ValueError(f"not supported type: {dtype}")
         return shape, dtype
 
