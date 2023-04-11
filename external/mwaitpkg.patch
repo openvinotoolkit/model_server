@@ -1,0 +1,13 @@
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 3881d684..49175945 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -37,7 +37,7 @@ cc_library(
+     ]),
+     copts = ["-w"] + select({
+         "@platforms//os:windows": [""],
+-        "//conditions:default": ["-mwaitpkg"],
++        "//conditions:default": [""],
+     }),
+     defines =
+         select({
