@@ -212,6 +212,7 @@ Status ModelManager::startFromConfig() {
         return StatusCode::UNKNOWN_ERROR;
     }
 
+    this->setJsonConfigDirectoryPath(config.configPath());
     Status status = StatusCode::OK;
 
     // Reading metric config only once per server start
@@ -272,7 +273,7 @@ Status ModelManager::startFromConfig() {
         modelConfig.setBatchSize(std::nullopt);
     }
 
-    modelConfig.setJsonConfigDirectoryPath(config.configPath());
+    modelConfig.setJsonConfigDirectoryPath(this->jsonConfigDirectoryPath);
 
     return reloadModelWithVersions(modelConfig);
 }
@@ -360,7 +361,7 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 
 static Status processMediapipeConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory, ModelManager& manager) {
     const std::string mediapipeGraphName = pipelineConfig["name"].GetString();
-    const std::string mediapipeGraphFilePath = pipelineConfig["graph_path"].GetString();
+    const std::string mediapipeGraphFilePath = manager.getFullPath(pipelineConfig["graph_path"].GetString());
     if (mediapipesInConfigFile.find(mediapipeGraphName) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", mediapipeGraphName);
         return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
@@ -379,6 +380,7 @@ static Status processMediapipeConfig(rapidjson::Document& configJson, const rapi
     mediapipesInConfigFile.insert(mediapipeGraphName);
     return status;
 }
+
 static Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
     if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
@@ -508,7 +510,7 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
         librariesInConfig.emplace(libraryConfig.FindMember("name")->value.GetString());
         this->customNodeLibraryManager->loadLibrary(
             libraryConfig.FindMember("name")->value.GetString(),
-            libraryConfig.FindMember("base_path")->value.GetString());
+            this->getFullPath(libraryConfig.FindMember("base_path")->value.GetString()));
     }
     this->customNodeLibraryManager->unloadLibrariesRemovedFromConfig(librariesInConfig);
     return StatusCode::OK;
@@ -538,6 +540,7 @@ Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson) 
     }
     return firstErrorStatus;
 }
+
 Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("pipeline_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
@@ -653,7 +656,7 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     }
 }
 
-Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, const std::string& jsonFilePath) {
+Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs) {
     Status firstErrorStatus = StatusCode::OK;
 
     const auto itr = configJson.FindMember("model_config_list");
@@ -668,7 +671,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
-        modelConfig.setJsonConfigDirectoryPath(jsonFilePath);
+        modelConfig.setJsonConfigDirectoryPath(this->jsonConfigDirectoryPath);
         auto status = modelConfig.parseNode(configs["config"]);
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
@@ -827,6 +830,8 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     Status firstErrorStatus = StatusCode::OK;
+    
+    this->setJsonConfigDirectoryPath(jsonFilename);
 
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
@@ -835,7 +840,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     std::vector<ModelConfig> gatedModelConfigs;
-    status = loadModelsConfig(configJson, gatedModelConfigs, jsonFilename);
+    status = loadModelsConfig(configJson, gatedModelConfigs);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }

@@ -26,7 +26,6 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
-#include "logging.hpp"
 #include "model_version_policy.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"

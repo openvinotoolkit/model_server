@@ -101,7 +101,7 @@ private:
     Status cleanupModelTmpFiles(ModelConfig& config);
     Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
-    Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, const std::string& jsonFilePath);
+    Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
     Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
     Status loadCustomNodeLibrariesConfig(rapidjson::Document& configJson);
     Status loadPipelinesConfig(rapidjson::Document& configJson);
@@ -206,9 +206,42 @@ private:
      */
     std::string modelCacheDirectory;
 
+
+
     MetricRegistry* metricRegistry;
 
+    /**
+     * @brief Json config directory path
+     * 
+     */
+    std::string jsonConfigDirectoryPath;
+
+    /**
+     * @brief Set json config directory path
+     * 
+     * @param configFileFullPath 
+     */
+    void setJsonConfigDirectoryPath(const std::string& configFileFullPath) {
+        this->jsonConfigDirectoryPath = configFileFullPath.substr(0, configFileFullPath.find_last_of("/\\") + 1);
+    }
+
 public:
+    /**
+     * @brief Get the full path from relative or full path
+     * 
+     * @return const std::string& 
+     */
+    const std::string& getFullPath(const std::string& pathToCheck) const {
+        if (pathToCheck.at(0) == '/')
+            return pathToCheck;
+        else {
+        // Relative path case
+            if (this->jsonConfigDirectoryPath.empty())
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Using relative path without setting configuration directory path.");
+            return this->jsonConfigDirectoryPath + pathToCheck;
+        }
+    }
+
     /**
      * @brief Mutex for blocking concurrent add & find of model
      */

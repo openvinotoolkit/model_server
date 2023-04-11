@@ -40,7 +40,7 @@ TEST(ModelConfig, getters_setters) {
     auto path = config.getBasePath();
     EXPECT_EQ(path, "/path");
 
-    config.setJsonConfigDirectoryPath("/pathto/Config.json");
+    config.setJsonConfigDirectoryPath("/pathto/");
     config.setBasePath("relative/path");
     path = config.getBasePath();
     EXPECT_EQ(path, "/pathto/relative/path");

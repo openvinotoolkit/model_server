@@ -25,7 +25,7 @@
     "custom_node_library_config_list": [
         {
             "name": "face_blur_lib",
-            "base_path": "/workspace/lib/libcustom_node_face_blur.so"
+            "base_path": "workspace/lib/libcustom_node_face_blur.so"
         }
     ]
 }

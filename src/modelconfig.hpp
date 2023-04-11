@@ -27,6 +27,7 @@
 #include <rapidjson/document.h>
 
 #include "layout_configuration.hpp"
+#include "logging.hpp"
 #include "metric_config.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
@@ -311,11 +312,12 @@ public:
        // Full path case
        if (basePath.at(0) == '/')
            this->basePath = basePath;
-       else
+       else {
        // Relative path case
+           if (this->jsonConfigDirectoryPath.empty())
+               SPDLOG_LOGGER_WARN(modelmanager_logger, "Using model relative path without setting configuration directory path.");
            this->basePath = this->jsonConfigDirectoryPath + basePath;
-
-        std::cout << "basePath " << this->basePath <<std::endl;
+       }
     }
 
     /**
@@ -323,10 +325,8 @@ public:
          * 
          * @param configFileFullPath 
          */
-    void setJsonConfigDirectoryPath(const std::string& configFileFullPath) {
-        std::cout << "configFileFullPath " << configFileFullPath <<std::endl;
-        this->jsonConfigDirectoryPath = configFileFullPath.substr(0, configFileFullPath.find_last_of("/\\") + 1);
-        std::cout << "jsonConfigDirectoryPath " << this->jsonConfigDirectoryPath <<std::endl;
+    void setJsonConfigDirectoryPath(const std::string& jsonDirectoryPath) {
+        this->jsonConfigDirectoryPath = jsonDirectoryPath;
     }
 
     /**
