@@ -308,12 +308,12 @@ public:
          * @param basePath 
          */
     void setBasePath(const std::string& basePath) {
-    // Full path case
-    if (basePath.find_last_of("/\\") == 0)
-        this->basePath = basePath;
-    else
-    // Relative path case
-        this->basePath = this->jsonConfigDirectoryPath + basePath;
+       // Full path case
+       if (basePath.at(0) == '/')
+           this->basePath = basePath;
+       else
+       // Relative path case
+           this->basePath = this->jsonConfigDirectoryPath + basePath;
 
         std::cout << "basePath " << this->basePath <<std::endl;
     }

@@ -120,27 +120,6 @@ const char* relative_config_2_models = R"({
     }]
 })";
 
-const char* relative_config_2_models_new = R"({
-   "model_config_list": [
-    {
-      "config": {
-        "name": "resnet",
-        "base_path": "models/dummy1",
-        "target_device": "CPU",
-        "model_version_policy": {"all": {}}
-      }
-    },
-    {
-      "config": {
-        "name": "alpha",
-        "base_path": "/tmp/models/dummy2",
-        "target_device": "CPU",
-	"batch_size": "auto",
-        "model_version_policy": {"all": {}}
-      }
-    }]
-})";
-
 const std::string FIRST_MODEL_NAME = "resnet";
 const std::string SECOND_MODEL_NAME = "alpha";
 
@@ -578,13 +557,13 @@ void setupModelsDirs() {
 
 const std::vector<std::string> WATCHER_TEST_CONFIGS{
     config_2_models,
-    //relative_config_2_models,
+    relative_config_2_models,
 };
 
 class ModelManagerWatcher2Models : public ::testing::TestWithParam<std::string> {};
 
 std::string fromContentsToString(const std::string& configContents) {
-    return configContents.find("tmp") ? "FullPath" : "RelativePath";
+    return configContents.find("tmp") == std::string::npos ? "FullPath" : "RelativePath";
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -795,8 +774,36 @@ TEST_F(ModelManager, ReadsVersionsFromDisk) {
     EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
 }
 
+TEST_F(ModelManager, ReadsVersionsFromDiskRelativePath) {
+    const std::string path = "test_model/";
+
+    for (auto i : {1, 5, 8, 10}) {
+        std::filesystem::create_directories(path + std::to_string(i));
+    }
+
+    std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
+    ovms::model_versions_t versions;
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+
+    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
+
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
+}
+
 TEST_F(ModelManager, PathEscapeError1) {
     const std::string path = "/tmp/../test_model/";
+
+    ovms::model_versions_t versions;
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+
+    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
+
+    EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}
+
+TEST_F(ModelManager, PathEscapeError1RelativePath) {
+    const std::string path = "tmp/../test_model/";
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
@@ -819,6 +826,20 @@ TEST_F(ModelManager, PathEscapeError2) {
 
 TEST_F(ModelManager, ReadVersionsInvalidPath) {
     const std::string path = "/tmp/inexisting_path/8bt4kv";
+
+    try {
+        std::filesystem::remove(path);
+    } catch (const std::filesystem::filesystem_error&) {
+    }
+
+    std::vector<ovms::model_version_t> versions;
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
+    EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}
+
+TEST_F(ModelManager, ReadVersionsInvalidPathRelativePath) {
+    const std::string path = "inexisting_path/8bt4kv";
 
     try {
         std::filesystem::remove(path);
@@ -1320,6 +1341,39 @@ TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
       "config": {
         "name": "same_name",
         "base_path": "/tmp/models/dummy2"
+      }
+    }]})";
+    std::filesystem::create_directories(model_1_path);
+    std::filesystem::create_directories(model_2_path);
+    std::string fileToReload = "/tmp/ovms_config_file2.json";
+    createConfigFileWithContent(configWithTwoSameNames, fileToReload);
+    modelMock = std::make_shared<MockModel>();
+    MockModelManager manager;
+
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+        .Times(1)
+        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
+    auto status = manager.startFromFile(fileToReload);
+    auto models = manager.getModels().size();
+    EXPECT_EQ(models, 1);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+    modelMock.reset();
+}
+
+TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameNameRelativePath) {
+    const char* configWithTwoSameNames = R"({
+   "model_config_list": [
+    {
+      "config": {
+        "name": "same_name",
+        "base_path": "models/dummy1"
+      }
+    },
+    {
+      "config": {
+        "name": "same_name",
+        "base_path": "models/dummy2"
       }
     }]})";
     std::filesystem::create_directories(model_1_path);
