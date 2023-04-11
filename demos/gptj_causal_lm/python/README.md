@@ -145,6 +145,7 @@ docker run -d --rm -p 9000:9000 \
 
 Install Tensorflow Serving API package:
 ```bash
+pip install --upgrade pip
 pip install tensorflow-serving-api==2.11.0
 ```
 

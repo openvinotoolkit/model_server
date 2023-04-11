@@ -96,6 +96,7 @@ curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/mode
 Go to the folder with the client script and install dependencies. Create a folder for inference results and run the client script:
 
 ```bash
+pip install --upgrade pip
 pip install -r client_requirements.txt
 
 mkdir results
