@@ -253,4 +253,6 @@ git_repository(
     name = "oneTBB",
     branch = "master",
     remote = "https://github.com/oneapi-src/oneTBB/",
+    patch_args = ["-p1"],
+    patches = ["mwaitpkg.patch",]
 )
