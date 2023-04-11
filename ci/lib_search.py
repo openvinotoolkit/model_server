@@ -115,6 +115,7 @@ def check_dir(start_dir):
         'bazel_rules_apple.patch',
         "pom.xml",
         "go.sum",
+        "mwaitpkg.patch",
         ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
