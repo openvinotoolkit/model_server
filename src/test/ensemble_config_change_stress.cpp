@@ -1024,7 +1024,7 @@ public:
         const std::string modelPathToReplace{"/ovms/src/test/dummy"};
         auto it = ovmsConfig.find(modelPathToReplace);
         if (it != std::string::npos) {
-            ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+            ovmsConfig.replace(it, modelPathToReplace.size(), modelPath);
         }
         configFilePath = directoryPath + "/ovms_config.json";
     }

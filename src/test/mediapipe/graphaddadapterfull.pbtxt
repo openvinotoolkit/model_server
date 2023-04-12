@@ -20,9 +20,20 @@ node {
   calculator: "ModelAPISessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
       servable_name: "add"
       servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "ModelAPISideFeedCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "INPUT1:in1"
+  input_stream: "INPUT2:in2"
+  output_stream: "SUM:out"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
       tag_to_input_tensor_names {
         key: "INPUT1"
         value: "input1"
@@ -37,12 +48,5 @@ node {
       }
     }
   }
-}
-node {
-  calculator: "ModelAPISideFeedCalculator"
-  input_side_packet: "SESSION:session"
-  input_stream: "INPUT1:in1"
-  input_stream: "INPUT2:in2"
-  output_stream: "SUM:out"
 }
 

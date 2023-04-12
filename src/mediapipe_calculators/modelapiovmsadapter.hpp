@@ -45,10 +45,6 @@ class OVMSInferenceAdapter {
     uint32_t servableVersion;
 
 public:
-    std::unordered_map<std::string, std::string> inputTagToName;
-    std::unordered_map<std::string, std::string> outputNameToTag;
-
-public:
     OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion = 0);
     virtual ~OVMSInferenceAdapter();
     virtual InferenceOutput infer(const InferenceInput& input);
