@@ -72,6 +72,14 @@ TEST_F(TestUnloadModel, SuccessfulUnload) {
     EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
 }
 
+TEST_F(TestUnloadModel, SuccessfulUnloadSaved_Model) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ASSERT_EQ(modelInstance.loadModel(DUMMY_SAVED_MODEL_CONFIG), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    modelInstance.retireModel();
+    EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
+}
+
 TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
@@ -159,10 +167,11 @@ TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
     EXPECT_EQ(ovms::ModelVersionState::END, mockModelInstance.getStatus().getState());
 }
 
-class TestLoadModel : public ::testing::Test {
+class TestLoadModel : public TestWithTempDir {
 protected:
     std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
+        TestWithTempDir::SetUp();
         ieCore = std::make_unique<ov::Core>();
     }
 };
@@ -291,7 +300,7 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
 TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
-    const std::string modelPath = "/tmp/test_load_model";
+    const std::string modelPath = directoryPath + "/test_load_model";
     std::filesystem::create_directories(modelPath);
     ovms::model_version_t version = 1;
     const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
@@ -327,7 +336,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
 TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
-    const std::string modelPath = "/tmp/test_load_model";
+    const std::string modelPath = directoryPath + "/test_load_model";
     std::filesystem::create_directories(modelPath);
     ovms::model_version_t version = 1;
     const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
@@ -358,6 +367,154 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
     };
     auto status = modelInstance.loadModel(config);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
+}
+
+TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+
+    const std::string modelPath = directoryPath + "/test_multiple_models";
+    std::filesystem::create_directories(modelPath);
+    ovms::model_version_t version = 1;
+    const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
+    if (!std::filesystem::exists(versionDirectoryPath)) {
+        ASSERT_TRUE(std::filesystem::create_directories(versionDirectoryPath));
+    }
+    {
+        std::ofstream xmlFile{versionDirectoryPath + "/model.xml"};
+        xmlFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+    {
+        std::ofstream binFile{versionDirectoryPath + "/model.bin"};
+        binFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+    {
+        std::ofstream onnxFile{versionDirectoryPath + "/model.onnx"};
+        onnxFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+    {
+        std::ofstream savedModelFile{versionDirectoryPath + "/saved_model.pb"};
+        savedModelFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+
+    const ovms::ModelConfig config{
+        "NOT_USED_NAME",
+        modelPath,  // base path
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        false,      // is stateful
+        false,      // idle sequence cleanup enabled
+        false,      // low latency transformation enabled
+        500,        // stateful sequence max number,
+        "",         // cache dir
+        version,    // version
+        modelPath,  // local path
+    };
+    auto status = modelInstance.loadModel(config);
+    auto model_files = modelInstance.getModelFiles();
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_multiple_models/1/model.xml");
+}
+
+TEST_F(TestLoadModel, CheckSavedModelHandling) {
+    ovms::ModelInstance modelInstance("saved-model", UNUSED_MODEL_VERSION, *ieCore);
+
+    const std::string modelPath = directoryPath + "/test_saved_model";
+    std::filesystem::create_directories(modelPath);
+    ovms::model_version_t version = 1;
+    const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
+    if (!std::filesystem::exists(versionDirectoryPath)) {
+        ASSERT_TRUE(std::filesystem::create_directories(versionDirectoryPath));
+    }
+    {
+        std::ofstream savedModelFile{versionDirectoryPath + "/saved_model.pb"};
+        savedModelFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+    const ovms::ModelConfig config{
+        "saved-model",
+        modelPath,  // base path
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        false,      // is stateful
+        false,      // idle sequence cleanup enabled
+        false,      // low latency transformation enabled
+        500,        // stateful sequence max number,
+        "",         // cache dir
+        version,    // version
+        modelPath,  // local path
+    };
+    auto status = modelInstance.loadModel(config);
+    auto model_files = modelInstance.getModelFiles();
+
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model/1/");
+}
+
+TEST_F(TestLoadModel, CheckTFModelHandling) {
+    ovms::ModelInstance modelInstance("tf", UNUSED_MODEL_VERSION, *ieCore);
+
+    const std::string modelPath = directoryPath + "/test_tf";
+    std::filesystem::create_directories(modelPath);
+    ovms::model_version_t version = 1;
+    const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
+    if (!std::filesystem::exists(versionDirectoryPath)) {
+        ASSERT_TRUE(std::filesystem::create_directories(versionDirectoryPath));
+    }
+    {
+        std::ofstream savedModelFile{versionDirectoryPath + "/model.pb"};
+        savedModelFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+    const ovms::ModelConfig config{
+        "saved-model",
+        modelPath,  // base path
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        false,      // is stateful
+        false,      // idle sequence cleanup enabled
+        false,      // low latency transformation enabled
+        500,        // stateful sequence max number,
+        "",         // cache dir
+        version,    // version
+        modelPath,  // local path
+    };
+    auto status = modelInstance.loadModel(config);
+    auto model_files = modelInstance.getModelFiles();
+    ASSERT_NE(model_files.size(), 0);
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_tf/1/model.pb");
+}
+
+TEST_F(TestLoadModel, CheckONNXModelHandling) {
+    ovms::ModelInstance modelInstance("tf", UNUSED_MODEL_VERSION, *ieCore);
+
+    const std::string modelPath = directoryPath + "/test_onnx";
+    std::filesystem::create_directories(modelPath);
+    ovms::model_version_t version = 1;
+    const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
+    if (!std::filesystem::exists(versionDirectoryPath)) {
+        ASSERT_TRUE(std::filesystem::create_directories(versionDirectoryPath));
+    }
+    {
+        std::ofstream savedModelFile{versionDirectoryPath + "/my-model.onnx"};
+        savedModelFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+    const ovms::ModelConfig config{
+        "saved-model",
+        modelPath,  // base path
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        false,      // is stateful
+        false,      // idle sequence cleanup enabled
+        false,      // low latency transformation enabled
+        500,        // stateful sequence max number,
+        "",         // cache dir
+        version,    // version
+        modelPath,  // local path
+    };
+    auto status = modelInstance.loadModel(config);
+    auto model_files = modelInstance.getModelFiles();
+
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_onnx/1/my-model.onnx");
 }
 
 TEST_F(TestLoadModel, SuccessfulLoad) {

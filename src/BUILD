@@ -707,6 +707,7 @@ cc_test(
         "test/summator/1/summator.bin",
         "test/passthrough/1/passthrough.xml",
         "test/passthrough/1/passthrough.bin",
+        "test/dummy_saved_model/1/saved_model.pb",
     ],
     linkopts = [
         "-lxml2",
