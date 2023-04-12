@@ -1191,6 +1191,22 @@ std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& baseP
     return std::make_shared<LocalFileSystem>();
 }
 
+bool ModelManager::isLocalFilesystem(const std::string& basePath) {
+    if (basePath.rfind(S3FileSystem::S3_URL_PREFIX, 0) == 0) {
+        return false;
+    }
+    if (basePath.rfind(GCSFileSystem::GCS_URL_PREFIX, 0) == 0) {
+        return false;
+    }
+    if (basePath.rfind(AzureFileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
+        return false;
+    }
+    if (basePath.rfind(AzureFileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
+        return false;
+    }
+    return true;
+}
+
 Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, const std::string& base, model_versions_t& versions) {
     files_list_t dirs;
 

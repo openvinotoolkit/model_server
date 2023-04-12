@@ -230,7 +230,7 @@ public:
      * @return const std::string& 
      */
     const std::string getFullPath(const std::string& pathToCheck) const {
-        if (pathToCheck.at(0) == '/') {
+        if (this->isLocalFilesystem(pathToCheck) && pathToCheck.at(0) == '/') {
             return pathToCheck;
         } else {
             // Relative path case
@@ -465,6 +465,8 @@ public:
         std::shared_ptr<model_versions_t>& versionsToStartIn);
 
     static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
+
+    static bool isLocalFilesystem(const std::string& basePath);
 
     /**
      * @brief Check if configuration file reload is needed.
