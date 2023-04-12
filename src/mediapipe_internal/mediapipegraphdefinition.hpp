@@ -64,6 +64,7 @@ class MediapipeGraphDefinition {
         PipelineDefinitionStatus& status;
         std::condition_variable& loadedNotify;
     };
+
 public:
     MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
@@ -79,6 +80,7 @@ public:
 private:
     Status createInputsInfo();
     Status createOutputsInfo();
+
 public:
     const tensor_map_t getInputsInfo() const;
     const tensor_map_t getOutputsInfo() const;
@@ -86,16 +88,18 @@ public:
     // TODO simultaneous infer & reload handling
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
 
-
     Status validate(ModelManager& manager);
+
 protected:
     Status validateForConfigFileExistence();
     Status validateForConfigLoadableness();
+
 private:
     static MediapipeGraphConfig MGC;
     // Pipelines are not versioned and any available definition has constant version equal 1.
 public:
     static constexpr model_version_t VERSION = 1;
+
 private:
     const std::string name;
     PipelineDefinitionStatus status;
@@ -106,12 +110,5 @@ private:
     ::mediapipe::CalculatorGraphConfig config;
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
-};
-class MediapipeGraphExecutor {
-        const std::string name;
-    const ::mediapipe::CalculatorGraphConfig config;
-        public:
-    MediapipeGraphExecutor(const std::string& name, const ::mediapipe::CalculatorGraphConfig& config);
-    Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 };
 }  // namespace ovms

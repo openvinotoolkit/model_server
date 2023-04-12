@@ -199,6 +199,8 @@ cc_library(
         "mediapipe_internal/mediapipefactory.hpp",
         "mediapipe_internal/mediapipegraphdefinition.cpp",
         "mediapipe_internal/mediapipegraphdefinition.hpp",
+        "mediapipe_internal/mediapipegraphexecutor.cpp",
+        "mediapipe_internal/mediapipegraphexecutor.hpp",
         "mediapipe_internal/ovms_calculator.cc",
         "metric.cpp",
         "metric.hpp",

@@ -31,6 +31,7 @@
 #include "../grpc_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../metric.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
