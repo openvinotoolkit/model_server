@@ -48,7 +48,7 @@ namespace {
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
 
-ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
+static ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
     static std::unordered_map<OVMS_DataType, ov::element::Type_t> precisionMap{
         {OVMS_DATATYPE_FP64, ov::element::Type_t::f64},
         {OVMS_DATATYPE_FP32, ov::element::Type_t::f32},
@@ -79,7 +79,8 @@ ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
     }
     return it->second;
 }
-OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype) {
+
+static OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype) {
     static std::unordered_map<ov::element::Type_t, OVMS_DataType> precisionMap{
         {ov::element::Type_t::f64, OVMS_DATATYPE_FP64},
         {ov::element::Type_t::f32, OVMS_DATATYPE_FP32},
@@ -111,7 +112,7 @@ OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype) {
     return it->second;
 }
 
-ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);
@@ -121,7 +122,7 @@ ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t
     std::memcpy(output->data(), voutputData, bytesize);
     return output;
 }
-ov::Tensor makeOvTensorO(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);
@@ -131,110 +132,6 @@ ov::Tensor makeOvTensorO(OVMS_DataType datatype, const uint64_t* shape, uint32_t
     std::memcpy(output.data(), voutputData, bytesize);
     return output;
 }
-}  // namespace
-
-namespace {
-
-using InferenceOutput = std::map<std::string, ov::Tensor>;
-using InferenceInput = std::map<std::string, ov::Tensor>;
-// TODO
-// * why std::map
-// * no ret code from infer()
-// * no ret code from load()
-class OVMSInferenceAdapter {
-    OVMS_Server* cserver{nullptr};
-    const std::string servableName;
-    uint32_t servableVersion;
-
-public:
-    std::unordered_map<std::string, std::string> inputTagToName;
-    std::unordered_map<std::string, std::string> outputNameToTag;
-
-public:
-    OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion = 0) :
-        servableName(servableName),
-        servableVersion(servableVersion) {
-        OVMS_ServerNew(&cserver);  // TODO retcheck's;
-    }
-    virtual ~OVMSInferenceAdapter() {
-    }
-    virtual InferenceOutput infer(const InferenceInput& input) {
-        /////////////////////
-        // PREPARE REQUEST
-        /////////////////////
-        OVMS_InferenceRequest* request{nullptr};
-        OVMS_InferenceRequestNew(&request, cserver, servableName.c_str(), servableVersion);
-        CREATE_GUARD(requestGuard, OVMS_InferenceRequest, request);
-
-        // PREPARE EACH INPUT
-        // extract single tensor
-        for (const auto& [name, input_tensor] : input) {
-            // TODO validate existence of tag key in map
-            // or handle inference when there is no need for mapping
-            const char* realInputName = name.c_str();
-
-            const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
-            std::stringstream ss;
-            ss << " Adapter received tensor: [ ";
-            for (int x = 0; x < 10; ++x) {
-                ss << input_tensor_access[x] << " ";
-            }
-            ss << " ]";
-            MLOG(ss.str());
-            const auto& inputShape = input_tensor.get_shape();
-            OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
-            OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size());  // TODO retcode
-            const uint32_t NOT_USED_NUM = 0;
-            // TODO handle hardcoded buffertype, notUsedNum additional options? side packets?
-            OVMS_InferenceRequestInputSetData(request,
-                realInputName,
-                reinterpret_cast<void*>(input_tensor.data()),
-                input_tensor.get_byte_size(),
-                OVMS_BUFFERTYPE_CPU,
-                NOT_USED_NUM);  // TODO retcode
-        }
-        //////////////////
-        //  INFERENCE
-        //////////////////
-        OVMS_InferenceResponse* response = nullptr;
-        if (nullptr != OVMS_Inference(cserver, request, &response)) {
-            MLOG("Inference failed!");
-        }
-        CREATE_GUARD(responseGuard, OVMS_InferenceResponse, response);
-        // verify GetOutputCount
-        uint32_t outputCount = 42;
-        OVMS_InferenceResponseGetOutputCount(response, &outputCount);
-        uint32_t parameterCount = 42;
-        OVMS_InferenceResponseGetParameterCount(response, &parameterCount);
-        // TODO handle output filtering. Graph definition could suggest
-        // that we are not interested in all outputs from OVMS Inference
-        const void* voutputData;
-        size_t bytesize = 42;
-        uint32_t outputId = 0;
-        OVMS_DataType datatype = (OVMS_DataType)199;
-        const uint64_t* shape{nullptr};
-        uint32_t dimCount = 42;
-        OVMS_BufferType bufferType = (OVMS_BufferType)199;
-        uint32_t deviceId = 42;
-        const char* outputName{nullptr};
-        InferenceOutput output;
-        for (size_t i = 0; i < outputCount; ++i) {
-            OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
-            output[outputName] = makeOvTensorO(datatype, shape, dimCount, voutputData, bytesize);  // TODO optimize FIXME
-        }
-        return output;
-    }
-    virtual void loadModel(const std::shared_ptr<const ov::Model>& model, ov::Core& core,
-        const std::string& device, const ov::AnyMap& compilationConfig) {}
-    virtual ov::Shape getInputShape(const std::string& inputName) const { return {}; }  // TODO
-    virtual std::vector<std::string> getInputNames() { return {}; }                     // TODO
-    virtual std::vector<std::string> getOutputNames() { return {}; }                    // TODO
-                                                                                        //    virtual const ov::AnyMap& getModelConfig() const = 0; // TODO
-    virtual const std::string& getModelConfig() const {
-        static std::string res{"MODEL_CONFIG_JSON"};
-        return res;
-    }  // TODO
-};
 }  // namespace
 
 class OVMSOVCalculator : public CalculatorBase {
@@ -376,268 +273,5 @@ public:
     }
 };
 
-class ModelAPICalculator : public CalculatorBase {
-    std::unique_ptr<OVMSInferenceAdapter> adapter;
-    std::unordered_map<std::string, std::string> outputNameToTag;
-
-public:
-    static absl::Status GetContract(CalculatorContract* cc) {
-        RET_CHECK(!cc->Inputs().GetTags().empty());
-        RET_CHECK(!cc->Outputs().GetTags().empty());
-        for (const std::string& tag : cc->Inputs().GetTags()) {
-            cc->Inputs().Tag(tag).Set<ov::Tensor>();
-        }
-        for (const std::string& tag : cc->Outputs().GetTags()) {
-            cc->Outputs().Tag(tag).Set<ov::Tensor>();
-        }
-        const auto& options = cc->Options<OVMSCalculatorOptions>();
-        RET_CHECK(!options.servable_name().empty());
-        // TODO validate version from string
-        // TODO validate service url format
-        RET_CHECK(options.config_path().empty() ||
-                  options.service_url().empty());
-        // TODO validate tag_to_tensor maps so that key fulfill regex
-        return absl::OkStatus();
-    }
-
-    absl::Status Close(CalculatorContext* cc) final {
-        return absl::OkStatus();
-    }
-    absl::Status Open(CalculatorContext* cc) final {
-        const std::string& servableName = cc->Options<OVMSCalculatorOptions>().servable_name();
-        const std::string& servableVersion = cc->Options<OVMSCalculatorOptions>().servable_version();
-        adapter = std::make_unique<OVMSInferenceAdapter>(servableName);  // TODO pass version as well
-        for (CollectionItemId id = cc->Inputs().BeginId();
-             id < cc->Inputs().EndId(); ++id) {
-            if (!cc->Inputs().Get(id).Header().IsEmpty()) {
-                cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
-            }
-        }
-        if (cc->OutputSidePackets().NumEntries() != 0) {
-            for (CollectionItemId id = cc->InputSidePackets().BeginId();
-                 id < cc->InputSidePackets().EndId(); ++id) {
-                cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
-            }
-        }
-        cc->SetOffset(TimestampDiff(0));
-
-        const auto& options = cc->Options<OVMSCalculatorOptions>();
-        for (const auto& [key, value] : options.tag_to_output_tensor_names()) {
-            outputNameToTag[value] = key;
-        }
-        return absl::OkStatus();
-    }
-
-    absl::Status Process(CalculatorContext* cc) final {
-        if (cc->Inputs().NumEntries() == 0) {
-            return tool::StatusStop();
-        }
-        const auto& options = cc->Options<OVMSCalculatorOptions>();
-        /////////////////////
-        // PREPARE INPUT MAP
-        /////////////////////
-
-        const auto inputTagInputMap = options.tag_to_input_tensor_names();
-        const auto inputTagOutputMap = options.tag_to_output_tensor_names();
-        InferenceInput input;
-        InferenceOutput output;
-        for (const std::string& tag : cc->Inputs().GetTags()) {
-            const char* realInputName = inputTagInputMap.at(tag).c_str();
-            auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
-            input[realInputName] = packet;
-            ov::Tensor input_tensor(packet);
-            const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
-            std::stringstream ss;
-            ss << "ModelAPICalculator received tensor: [ ";
-            for (int x = 0; x < 10; ++x) {
-                ss << input_tensor_access[x] << " ";
-            }
-            ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
-            MLOG(ss.str());
-        }
-        //////////////////
-        //  INFERENCE
-        //////////////////
-        output = adapter->infer(input);
-        RET_CHECK(output.size() == cc->Outputs().GetTags().size());
-        for (const auto& [outputName, outputTagName] : outputNameToTag) {
-            ov::Tensor* outOvTensor = new ov::Tensor(output.at(outputName));
-            // TODO check buffer ownership
-            cc->Outputs().Tag(outputTagName).Add(outOvTensor, cc->InputTimestamp());
-        }
-        return absl::OkStatus();
-    }
-};
-
-const std::string SESSION_TAG{"SESSION"};
-
-struct AdapterWrapper {
-    std::unique_ptr<OVMSInferenceAdapter> adapter;
-    AdapterWrapper(OVMSInferenceAdapter* adapter) :
-        adapter(adapter) {
-        MLOG("Wrapper constr");
-    }
-    ~AdapterWrapper() {
-        MLOG("Wrapper destr");
-    }
-};
-
-class ModelAPISideFeedCalculator : public CalculatorBase {
-    OVMSInferenceAdapter* session{nullptr};
-
-public:
-    static absl::Status GetContract(CalculatorContract* cc) {
-        MLOG("Main GetContract start");
-        RET_CHECK(!cc->Inputs().GetTags().empty());
-        RET_CHECK(!cc->Outputs().GetTags().empty());
-        for (const std::string& tag : cc->Inputs().GetTags()) {
-            cc->Inputs().Tag(tag).Set<ov::Tensor>();
-        }
-        for (const std::string& tag : cc->Outputs().GetTags()) {
-            cc->Outputs().Tag(tag).Set<ov::Tensor>();
-        }
-        cc->InputSidePackets().Tag(SESSION_TAG.c_str()).Set<AdapterWrapper>();
-        MLOG("Main GetContract end");
-        return absl::OkStatus();
-    }
-
-    absl::Status Close(CalculatorContext* cc) final {
-        MLOG("Main Close");
-        return absl::OkStatus();
-    }
-    absl::Status Open(CalculatorContext* cc) final {
-        MLOG("Main Open start");
-        session = cc->InputSidePackets()
-                      .Tag(SESSION_TAG.c_str())
-                      .Get<AdapterWrapper>()
-                      .adapter.get();
-        for (CollectionItemId id = cc->Inputs().BeginId();
-             id < cc->Inputs().EndId(); ++id) {
-            if (!cc->Inputs().Get(id).Header().IsEmpty()) {
-                cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
-            }
-        }
-        if (cc->OutputSidePackets().NumEntries() != 0) {
-            for (CollectionItemId id = cc->InputSidePackets().BeginId();
-                 id < cc->InputSidePackets().EndId(); ++id) {
-                cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
-            }
-        }
-        cc->SetOffset(TimestampDiff(0));
-
-        MLOG("Main Open end");
-        return absl::OkStatus();
-    }
-
-    absl::Status Process(CalculatorContext* cc) final {
-        MLOG("Main process start");
-        if (cc->Inputs().NumEntries() == 0) {
-            return tool::StatusStop();
-        }
-        /////////////////////
-        // PREPARE INPUT MAP
-        /////////////////////
-
-        const auto& inputTagInputMap = session->inputTagToName;
-        InferenceInput input;
-        InferenceOutput output;
-        for (const std::string& tag : cc->Inputs().GetTags()) {
-            const char* realInputName = inputTagInputMap.at(tag).c_str();
-            auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
-            input[realInputName] = packet;
-            ov::Tensor input_tensor(packet);
-            const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
-            std::stringstream ss;
-            ss << "ModelAPICalculator received tensor: [ ";
-            for (int x = 0; x < 10; ++x) {
-                ss << input_tensor_access[x] << " ";
-            }
-            ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
-            MLOG(ss.str());
-        }
-        //////////////////
-        //  INFERENCE
-        //////////////////
-        output = session->infer(input);
-        auto outputsCount = output.size();
-        RET_CHECK(outputsCount == cc->Outputs().GetTags().size());
-        // TODO check for existence of each tag
-
-        for (const auto& [outputName, outputTagName] : session->outputNameToTag) {
-            ov::Tensor* outOvTensor = new ov::Tensor(output.at(outputName));
-            // TODO check buffer ownership
-            cc->Outputs().Tag(outputTagName).Add(outOvTensor, cc->InputTimestamp());
-        }
-        MLOG("Main process end");
-        return absl::OkStatus();
-    }
-};
-
-class ModelAPISessionCalculator : public CalculatorBase {
-    std::unique_ptr<AdapterWrapper> adapter;
-    std::unordered_map<std::string, std::string> outputNameToTag;
-
-public:
-    static absl::Status GetContract(CalculatorContract* cc) {
-        MLOG("Session GetContract start");
-        RET_CHECK(cc->Inputs().GetTags().empty());
-        RET_CHECK(cc->Outputs().GetTags().empty());
-        cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set<AdapterWrapper>();
-        const auto& options = cc->Options<OVMSCalculatorOptions>();
-        RET_CHECK(!options.servable_name().empty());
-        MLOG("Session GetContract middle");
-        // TODO validate version from string
-        // TODO validate service url format
-        RET_CHECK(options.config_path().empty() ||
-                  options.service_url().empty());
-        // TODO validate tag_to_tensor maps so that key fulfill regex
-        MLOG("Session GetContract end");
-        return absl::OkStatus();
-    }
-
-    absl::Status Close(CalculatorContext* cc) final {
-        return absl::OkStatus();
-    }
-    absl::Status Open(CalculatorContext* cc) final {
-        MLOG("Session Open start");
-        for (CollectionItemId id = cc->Inputs().BeginId();
-             id < cc->Inputs().EndId(); ++id) {
-            if (!cc->Inputs().Get(id).Header().IsEmpty()) {
-                cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
-            }
-        }
-        if (cc->OutputSidePackets().NumEntries() != 0) {
-            for (CollectionItemId id = cc->InputSidePackets().BeginId();
-                 id < cc->InputSidePackets().EndId(); ++id) {
-                cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
-            }
-        }
-        cc->SetOffset(TimestampDiff(0));
-
-        const std::string& servableName = cc->Options<OVMSCalculatorOptions>().servable_name();
-        const std::string& servableVersion = cc->Options<OVMSCalculatorOptions>().servable_version();
-        auto session = std::make_unique<AdapterWrapper>(new OVMSInferenceAdapter(servableName));
-        const auto& options = cc->Options<OVMSCalculatorOptions>();
-        for (const auto& [key, value] : options.tag_to_output_tensor_names()) {
-            session->adapter->outputNameToTag[value] = key;
-        }
-        for (const auto& [key, value] : options.tag_to_input_tensor_names()) {
-            session->adapter->inputTagToName[key] = value;
-        }
-        MLOG("Session create adapter");
-        cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(Adopt(session.release()));
-        MLOG("SessionOpen end");
-        return absl::OkStatus();
-    }
-
-    absl::Status Process(CalculatorContext* cc) final {
-        MLOG("SessionProcess");
-        return absl::OkStatus();
-    }
-};
-
 REGISTER_CALCULATOR(OVMSOVCalculator);
-REGISTER_CALCULATOR(ModelAPICalculator);
-REGISTER_CALCULATOR(ModelAPISessionCalculator);
-REGISTER_CALCULATOR(ModelAPISideFeedCalculator);
 }  // namespace mediapipe

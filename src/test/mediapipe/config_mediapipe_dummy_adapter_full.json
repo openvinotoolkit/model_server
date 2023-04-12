@@ -13,10 +13,6 @@
         "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull.pbtxt"
     },
     {
-        "name":"mediapipeDummyADAPT",
-        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapter.pbtxt"
-    },
-    {
         "name":"mediapipeDummy",
         "graph_path":"/ovms/src/test/mediapipe/graphdummy.pbtxt"
     }

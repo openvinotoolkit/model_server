@@ -151,10 +151,8 @@ TEST(Mediapipe, MetadataDummy) {
 }
 
 const std::vector<std::string> mediaGraphsDummy{"mediapipeDummy",
-    "mediapipeDummyADAPT",
     "mediapipeDummyADAPTFULL"};
 const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
-    "mediapipeAddADAPT",
     "mediapipeAddADAPTFULL"};
 
 class MediapipeConfig : public MediapipeFlowTest {

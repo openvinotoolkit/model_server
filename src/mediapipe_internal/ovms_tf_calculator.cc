@@ -1,16 +1,18 @@
-// Copyright 2019 The MediaPipe Authors.
+//*****************************************************************************
+// Copyright 2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//*****************************************************************************
 #include <iostream>
 
 #include "tensorflow/core/framework/tensor.h"
@@ -95,22 +97,10 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         cout << __FILE__ << ":" << __LINE__ << endl;
-        cc->GetCounter("PassThrough")->Increment();
         if (cc->Inputs().NumEntries() == 0) {
             return tool::StatusStop();
         }
         std::cout << __FILE__ << " " << __LINE__ << std::endl;
-        // PASSING packets
-        /*    for (CollectionItemId id = cc->Inputs().BeginId();
-         id < cc->Inputs().EndId(); ++id) {
-      if (!cc->Inputs().Get(id).IsEmpty()) {
-        VLOG(3) << "Passing " << cc->Inputs().Get(id).Name() << " to "
-                << cc->Outputs().Get(id).Name() << " at "
-                << cc->InputTimestamp().DebugString();
-        cc->Outputs().Get(id).AddPacket(cc->Inputs().Get(id).Value());
-      }
-    }
-    */
         // extract packet
         cout << __FILE__ << ":" << __LINE__ << endl;
         // extract single tensor
@@ -159,20 +149,6 @@ public:
         CollectionItemId id = cc->Inputs().BeginId();
         auto outputPacketContent = std::make_unique<tf::Tensor>(output_tensor);
         cc->Outputs().Tag(OVMSTFTensorTag).Add(outputPacketContent.release(), cc->InputTimestamp());
-        /*
-      cc->Outputs().Tag(kTensorOut).Add(output.release(), cc->InputTimestamp());$
-      std::vector<int> input;$
-      if (cc->Inputs().HasTag(kSingleInt)) {$
-        input.push_back(cc->Inputs().Tag(kSingleInt).Get<int>());$
-      } else {$
-        input = cc->Inputs().Tag(kVectorInt).Value().Get<std::vector<int>>();$
-      }$
-      CHECK_GE(input.size(), 1);$
-      const int32 length = input.size();$
-      tensor_shape = tf::TensorShape({length});$
-      auto output = ::absl::make_unique<tf::Tensor>(options_.tensor_data_type(),$
-                                                    tensor_shape);$
-*/
 
         OVMS_InferenceRequest* request{nullptr};
         OVMS_InferenceRequestNew(&request, cserver, MODEL_NAME, MODEL_VERSION);

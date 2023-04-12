@@ -13,10 +13,6 @@
         "graph_path":"/ovms/src/test/mediapipe/graphaddadapterfull.pbtxt"
     },
     {
-        "name":"mediapipeAddADAPT",
-        "graph_path":"/ovms/src/test/mediapipe/graphaddadapter.pbtxt"
-    },
-    {
         "name":"mediapipeAdd",
         "graph_path":"/ovms/src/test/mediapipe/graphadd.pbtxt"
     }
