@@ -48,6 +48,11 @@ private:
          */
     std::string loaderConfigFile;
 
+    /**
+         * @brief Json config directory path
+         */
+    std::string jsonConfigDirectoryPath;
+
 public:
     /**
          * @brief Construct a new Custom Loader Config object
@@ -103,7 +108,24 @@ public:
          * @param libraryPath
          */
     void setLibraryPath(const std::string& libraryPath) {
-        this->libraryPath = libraryPath;
+        // Full path case
+       if (libraryPath.at(0) == '/')
+           this->libraryPath = libraryPath;
+       else {
+       // Relative path case
+           if (this->jsonConfigDirectoryPath.empty())
+               SPDLOG_ERROR("Using library relative path without setting configuration directory path.");
+           this->libraryPath = this->jsonConfigDirectoryPath + libraryPath;
+       }
+    }
+
+    /**
+         * @brief Set json config directory path
+         * 
+         * @param jsonDirectoryPath 
+         */
+    void setJsonConfigDirectoryPath(const std::string& jsonDirectoryPath) {
+        this->jsonConfigDirectoryPath = jsonDirectoryPath;
     }
 
     /**

@@ -194,6 +194,13 @@ TEST_F(MediapipeConfig, MediapipeAdd) {
     manager.join();
 }
 
+TEST_F(MediapipeConfig, MediapipeFullRelativePaths) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+}
+
 INSTANTIATE_TEST_SUITE_P(
     Test,
     MediapipeFlowAddTest,

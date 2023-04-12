@@ -323,7 +323,7 @@ public:
     /**
          * @brief Set json config directory path
          * 
-         * @param configFileFullPath 
+         * @param jsonDirectoryPath 
          */
     void setJsonConfigDirectoryPath(const std::string& jsonDirectoryPath) {
         this->jsonConfigDirectoryPath = jsonDirectoryPath;

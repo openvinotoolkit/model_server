@@ -231,7 +231,7 @@ public:
      * 
      * @return const std::string& 
      */
-    const std::string& getFullPath(const std::string& pathToCheck) const {
+    const std::string getFullPath(const std::string& pathToCheck) const {
         if (pathToCheck.at(0) == '/')
             return pathToCheck;
         else {

@@ -617,6 +617,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
         SPDLOG_INFO("Reading Custom Loader: {} configuration", loaderName);
 
         CustomLoaderConfig loaderConfig;
+        loaderConfig.setJsonConfigDirectoryPath(this->jsonConfigDirectoryPath);
         auto status = loaderConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
