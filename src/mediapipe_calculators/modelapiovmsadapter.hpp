@@ -15,15 +15,19 @@
 // limitations under the License.
 //*****************************************************************************
 #include <iostream>
+#include <map>
+#include <memory>
 #include <sstream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <openvino/openvino.hpp>
 
 #include "../ovms.h"  // NOLINT
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "src/mediapipe_internal/ovmscalculator.pb.h"
+#include "src/mediapipe_calculators/ovmscalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 
@@ -51,10 +55,10 @@ public:
     virtual void loadModel(const std::shared_ptr<const ov::Model>& model, ov::Core& core,
         const std::string& device, const ov::AnyMap& compilationConfig);
     virtual ov::Shape getInputShape(const std::string& inputName) const;  // TODO
-    virtual std::vector<std::string> getInputNames();                // TODO
+    virtual std::vector<std::string> getInputNames();                     // TODO
     virtual std::vector<std::string> getOutputNames();                    // TODO
-                                                                                        //    virtual const ov::AnyMap& getModelConfig() const = 0; // TODO
-    virtual const std::string& getModelConfig() const; // TODO
+                                                                          //    virtual const ov::AnyMap& getModelConfig() const = 0; // TODO
+    virtual const std::string& getModelConfig() const;                    // TODO
 };
 }  // namespace ovms
 }  // namespace mediapipe

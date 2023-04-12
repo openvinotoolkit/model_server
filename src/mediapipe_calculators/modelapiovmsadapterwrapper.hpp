@@ -18,9 +18,9 @@
 
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "src/mediapipe_internal/ovmscalculator.pb.h"
+#include "src/mediapipe_calculators/ovmscalculator.pb.h"
 namespace mediapipe {
-     namespace ovms {
+namespace ovms {
 
 class OVMSInferenceAdapter;
 

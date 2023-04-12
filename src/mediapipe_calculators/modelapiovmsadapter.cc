@@ -13,18 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "modelapiovmsadapter.h"
+#include "modelapiovmsadapter.hpp"
 
 #include <iostream>
+#include <map>
+#include <memory>
 #include <sstream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <openvino/openvino.hpp>
 
 #include "../stringutils.hpp"  // TODO dispose
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "src/mediapipe_internal/ovmscalculator.pb.h"
+#include "src/mediapipe_calculators/ovmscalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
@@ -55,10 +59,10 @@ using InferenceInput = std::map<std::string, ov::Tensor>;
 // * no ret code from infer()
 // * no ret code from load()
 namespace ovms {
-OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype);
-ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype);
-ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize);
-ov::Tensor makeOvTensorO(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize);
+static OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype);
+static ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype);
+static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize);
+static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize);
 
 OVMSInferenceAdapter::OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion) :
     servableName(servableName),
@@ -143,7 +147,7 @@ const std::string& OVMSInferenceAdapter::getModelConfig() const {
     static std::string res{"MODEL_CONFIG_JSON"};
     return res;
 }  // TODO
-OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype) {
+static OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype) {
     static std::unordered_map<ov::element::Type_t, OVMS_DataType> precisionMap{
         {ov::element::Type_t::f64, OVMS_DATATYPE_FP64},
         {ov::element::Type_t::f32, OVMS_DATATYPE_FP32},
@@ -175,7 +179,7 @@ OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype) {
     return it->second;
 }
 
-ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
+static ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
     static std::unordered_map<OVMS_DataType, ov::element::Type_t> precisionMap{
         {OVMS_DATATYPE_FP64, ov::element::Type_t::f64},
         {OVMS_DATATYPE_FP32, ov::element::Type_t::f32},
@@ -207,7 +211,7 @@ ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
     return it->second;
 }
 
-ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);
@@ -217,7 +221,8 @@ ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t
     std::memcpy(output->data(), voutputData, bytesize);
     return output;
 }
-ov::Tensor makeOvTensorO(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+
+static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);

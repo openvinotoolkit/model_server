@@ -83,7 +83,7 @@ enum : unsigned int {
     TOTAL,
     TIMER_END
 };
-}
+}  // namespace
 
 Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
     Timer<TIMER_END> timer;
