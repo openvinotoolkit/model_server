@@ -369,6 +369,52 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
 }
 
+TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+
+    const std::string modelPath = directoryPath + "/test_multiple_models";
+    std::filesystem::create_directories(modelPath);
+    ovms::model_version_t version = 1;
+    const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
+    if (!std::filesystem::exists(versionDirectoryPath)) {
+        ASSERT_TRUE(std::filesystem::create_directories(versionDirectoryPath));
+    }
+    {
+        std::ofstream xmlFile{versionDirectoryPath + "/model.xml"};
+        xmlFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+    {
+        std::ofstream binFile{versionDirectoryPath + "/model.bin"};
+        binFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+    {
+        std::ofstream onnxFile{versionDirectoryPath + "/model.onnx"};
+        onnxFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+    {
+        std::ofstream savedModelFile{versionDirectoryPath + "/saved_model.pb"};
+        savedModelFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+
+    const ovms::ModelConfig config{
+        "NOT_USED_NAME",
+        modelPath,  // base path
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        false,      // is stateful
+        false,      // idle sequence cleanup enabled
+        false,      // low latency transformation enabled
+        500,        // stateful sequence max number,
+        "",         // cache dir
+        version,    // version
+        modelPath,  // local path
+    };
+    auto status = modelInstance.loadModel(config);
+    auto model_files = modelInstance.getModelFiles();
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_multiple_models/1/model.xml");
+}
+
 TEST_F(TestLoadModel, CheckSavedModelHandling) {
     ovms::ModelInstance modelInstance("saved-model", UNUSED_MODEL_VERSION, *ieCore);
 
@@ -433,7 +479,7 @@ TEST_F(TestLoadModel, CheckTFModelHandling) {
     };
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
-
+    ASSERT_NE(model_files.size(), 0);
     EXPECT_EQ(model_files.front(), directoryPath + "/test_tf/1/model.pb");
 }
 
