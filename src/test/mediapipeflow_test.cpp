@@ -76,22 +76,6 @@ protected:
     }
 };
 
-class MediapipeRelativePathTest : public MediapipeFlowTest {
-    public:
-    void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy.json");
-    }
-};
-
-TEST_P(MediapipeRelativePathTest, Infer) {
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ::KFSRequest request;
-    ::KFSResponse response;
-
-    //TODO
-    }
-
 class MediapipeFlowAddTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -191,6 +175,13 @@ TEST_F(MediapipeConfig, MediapipeAdd) {
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    for (auto& graphName : mediaGraphsAdd) {
+        auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName(graphName);
+        EXPECT_NE(graphDefinition, nullptr);
+        EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
+    }
+
     manager.join();
 }
 
@@ -198,6 +189,31 @@ TEST_F(MediapipeConfig, MediapipeFullRelativePaths) {
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    EXPECT_NE(definitionAdd, nullptr);
+    EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
+
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    EXPECT_NE(definitionFull, nullptr);
+    EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
+
+    manager.join();
+}
+
+TEST_F(MediapipeConfig, MediapipeFullRelativePathsNegative) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy_negative.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    EXPECT_NE(definitionAdd, nullptr);
+    EXPECT_EQ(definitionAdd->getStatus().isAvailable(), false);
+
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    EXPECT_NE(definitionFull, nullptr);
+    EXPECT_EQ(definitionFull->getStatus().isAvailable(), false);
+
     manager.join();
 }
 

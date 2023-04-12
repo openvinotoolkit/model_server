@@ -109,14 +109,14 @@ public:
          */
     void setLibraryPath(const std::string& libraryPath) {
         // Full path case
-       if (libraryPath.at(0) == '/')
-           this->libraryPath = libraryPath;
-       else {
-       // Relative path case
-           if (this->jsonConfigDirectoryPath.empty())
-               SPDLOG_ERROR("Using library relative path without setting configuration directory path.");
-           this->libraryPath = this->jsonConfigDirectoryPath + libraryPath;
-       }
+        if (libraryPath.at(0) == '/') {
+            this->libraryPath = libraryPath;
+        } else {
+            // Relative path case
+            if (this->jsonConfigDirectoryPath.empty())
+                SPDLOG_ERROR("Using library relative path without setting configuration directory path.");
+            this->libraryPath = this->jsonConfigDirectoryPath + libraryPath;
+        }
     }
 
     /**

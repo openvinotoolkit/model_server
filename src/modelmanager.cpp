@@ -699,7 +699,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
             continue;
         }
-        
+
         status = reloadModelWithVersions(modelConfig);
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
 
@@ -831,7 +831,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     Status firstErrorStatus = StatusCode::OK;
-    
+
     this->setJsonConfigDirectoryPath(jsonFilename);
 
     // load the custom loader config, if available

@@ -206,8 +206,6 @@ private:
      */
     std::string modelCacheDirectory;
 
-
-
     MetricRegistry* metricRegistry;
 
     /**
@@ -232,10 +230,10 @@ public:
      * @return const std::string& 
      */
     const std::string getFullPath(const std::string& pathToCheck) const {
-        if (pathToCheck.at(0) == '/')
+        if (pathToCheck.at(0) == '/') {
             return pathToCheck;
-        else {
-        // Relative path case
+        } else {
+            // Relative path case
             if (this->jsonConfigDirectoryPath.empty())
                 SPDLOG_LOGGER_WARN(modelmanager_logger, "Using relative path without setting configuration directory path.");
             return this->jsonConfigDirectoryPath + pathToCheck;

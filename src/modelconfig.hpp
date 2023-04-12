@@ -309,15 +309,15 @@ public:
          * @param basePath 
          */
     void setBasePath(const std::string& basePath) {
-       // Full path case
-       if (basePath.at(0) == '/')
-           this->basePath = basePath;
-       else {
-       // Relative path case
-           if (this->jsonConfigDirectoryPath.empty())
-               SPDLOG_LOGGER_WARN(modelmanager_logger, "Using model relative path without setting configuration directory path.");
-           this->basePath = this->jsonConfigDirectoryPath + basePath;
-       }
+        // Full path case
+        if (basePath.at(0) == '/') {
+            this->basePath = basePath;
+        } else {
+            // Relative path case
+            if (this->jsonConfigDirectoryPath.empty())
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Using model relative path without setting configuration directory path.");
+            this->basePath = this->jsonConfigDirectoryPath + basePath;
+        }
     }
 
     /**
