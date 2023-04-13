@@ -95,7 +95,6 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         SPDLOG_DEBUG("KServe request for mediapipe graph:{} execution failed with message: {}", request->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
-    SPDLOG_ERROR("ER");
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
     // TODO validate number of inputs
     // TODO validate input names against input streams

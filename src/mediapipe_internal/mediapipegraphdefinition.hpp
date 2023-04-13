@@ -76,12 +76,6 @@ public:
     }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     const model_version_t getVersion() const { return VERSION; }
-    // METADATA
-private:
-    Status createInputsInfo();
-    Status createOutputsInfo();
-
-public:
     const tensor_map_t getInputsInfo() const;
     const tensor_map_t getOutputsInfo() const;
 
@@ -90,25 +84,27 @@ public:
 
     Status validate(ModelManager& manager);
 
+    // Pipelines are not versioned and any available definition has constant version equal 1.
+    static constexpr model_version_t VERSION = 1;
+
 protected:
     Status validateForConfigFileExistence();
     Status validateForConfigLoadableness();
-
 private:
+    Status createInputsInfo();
+    Status createOutputsInfo();
+
     static MediapipeGraphConfig MGC;
-    // Pipelines are not versioned and any available definition has constant version equal 1.
-public:
-    static constexpr model_version_t VERSION = 1;
-
-private:
     const std::string name;
-    PipelineDefinitionStatus status;
-    std::condition_variable loadedNotify;
 
     std::string chosenConfig;  // TODO make const @atobiszei
     MediapipeGraphConfig mgconfig;
     ::mediapipe::CalculatorGraphConfig config;
+
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
+
+    PipelineDefinitionStatus status;
+    std::condition_variable loadedNotify;
 };
 }  // namespace ovms

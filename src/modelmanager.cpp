@@ -530,9 +530,9 @@ Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson) 
         }
         mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFile), *this);
     } catch (const std::exception& e) {
-        SPDLOG_ERROR("ER:{}", e.what());
+        SPDLOG_ERROR("Failed to process mediapipe graph config:{}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("Failed to process mediapipe graph config.");
     }
     return firstErrorStatus;
 }
