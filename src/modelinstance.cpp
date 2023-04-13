@@ -740,6 +740,9 @@ void ModelInstance::fetchModelFiles(bool& found, ArrayType ext) {
             if (file.empty()) {
                 found = false;
             }
+            if (endsWith(file, "saved_model.pb")) {
+                file = file.substr(0, file.find("saved_model.pb"));
+            }
             modelFiles.push_back(file);
         }
     }

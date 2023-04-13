@@ -233,6 +233,11 @@ protected:
 
 private:
     /**
+         * @brief Holds model required file names. First is loaded
+         */
+    std::vector<std::string> modelFiles;
+
+    /**
          * @brief Holds the information about inputs and it's parameters
          */
     tensor_map_t inputsInfo;
@@ -241,11 +246,6 @@ private:
          * @brief Holds the information about outputs and it's parameters
          */
     tensor_map_t outputsInfo;
-
-    /**
-      * @brief Holds model required file names. First is loaded
-      */
-    std::vector<std::string> modelFiles;
 
     /**
          * @brief OpenVINO inference execution stream pool
@@ -367,6 +367,14 @@ public:
         return path;
     }
 
+    /**
+         * @brief Gets model files' paths
+         *
+         * @return vector of paths
+         */
+    const std::vector<std::string>& getModelFiles() const {
+        return modelFiles;
+    }
     /**
          * @brief Gets version
          *

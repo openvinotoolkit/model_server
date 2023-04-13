@@ -88,14 +88,14 @@ ifeq ($(BASE_OS),ubuntu)
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   endif
   INSTALL_DRIVER_VERSION ?= "22.35.24055"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.0.0.10369.0985d6a8cd8_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.0.0.10463.9f0e5577446_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "22.28.23726"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.0.0.10369.0985d6a8cd8_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.0.0.10463.9f0e5577446_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -192,11 +192,6 @@ endif
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
-  endif
-endif
-ifeq ($(SENTENCEPIECE),1)
-  ifeq ($(OV_USE_BINARY),1)
-	@echo "Building sentencepiece custom extension requires OV built from source. To build sentencepiece custom extension and OV from source make command should look like this 'SENTENCEPIECE=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
   endif
 endif
 ifeq ($(BUILD_CUSTOM_NODES),true)

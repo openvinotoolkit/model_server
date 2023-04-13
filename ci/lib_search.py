@@ -116,6 +116,7 @@ def check_dir(start_dir):
         "pom.xml",
         "go.sum",
         "mwaitpkg.patch",
+        'saved_model.pb',
         ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
