@@ -114,6 +114,7 @@ const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::INVALID_BUFFER_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_DEVICE_ID, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_STRING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_INPUT_FORMAT, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
