@@ -302,7 +302,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 binary_input_size = binary_data_size_parameter->second.int64_param();
             } else {
-                SPDLOG_DEBUG("binary_data_size parameter type should be int64 or string");
+                SPDLOG_DEBUG("binary_data_size parameter type should be int64");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
             }
         } else {
