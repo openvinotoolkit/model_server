@@ -194,11 +194,6 @@ ifeq ($(NVIDIA),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
   endif
 endif
-ifeq ($(SENTENCEPIECE),1)
-  ifeq ($(OV_USE_BINARY),1)
-	@echo "Building sentencepiece custom extension requires OV built from source. To build sentencepiece custom extension and OV from source make command should look like this 'SENTENCEPIECE=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
-  endif
-endif
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
 	@cd src/custom_nodes && make BASE_OS=$(BASE_OS)
