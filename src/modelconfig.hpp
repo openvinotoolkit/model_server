@@ -310,7 +310,7 @@ public:
          */
     void setBasePath(const std::string& basePath) {
         // Full path case
-        if (basePath.at(0) == '/') {
+        if (ModelManager::isLocalFilesystem(pathToCheck) && basePath.at(0) == '/') {
             this->basePath = basePath;
         } else {
             // Relative path case
