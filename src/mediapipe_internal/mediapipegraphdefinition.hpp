@@ -90,6 +90,7 @@ public:
 protected:
     Status validateForConfigFileExistence();
     Status validateForConfigLoadableness();
+
 private:
     Status createInputsInfo();
     Status createOutputsInfo();
