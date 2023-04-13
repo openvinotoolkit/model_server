@@ -26,6 +26,7 @@
 
 #include <rapidjson/document.h>
 
+#include "filesystem.hpp"
 #include "layout_configuration.hpp"
 #include "logging.hpp"
 #include "metric_config.hpp"
@@ -310,7 +311,7 @@ public:
          */
     void setBasePath(const std::string& basePath) {
         // Full path case
-        if (ModelManager::isLocalFilesystem(pathToCheck) && basePath.at(0) == '/') {
+        if (FileSystem::isLocalFilesystem(basePath) && basePath.at(0) == '/') {
             this->basePath = basePath;
         } else {
             // Relative path case

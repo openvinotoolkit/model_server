@@ -853,8 +853,6 @@ TEST_F(ModelManager, ReadVersionsInvalidPathRelativePath) {
 }
 
 TEST(ModelManagerWatcher, StartFromFile) {
-    std::filesystem::create_directories(model_1_path);
-    std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file1.json";
     createConfigFileWithContent(config_1_model, fileToReload);
     modelMock = std::make_shared<MockModel>();
@@ -870,8 +868,6 @@ TEST(ModelManagerWatcher, StartFromFile) {
 }
 
 TEST(ModelManagerWatcher, StartFromFileRelativePath) {
-    std::filesystem::create_directories(model_1_path);
-    std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file1.json";
     createConfigFileWithContent(relative_config_1_model, fileToReload);
     modelMock = std::make_shared<MockModel>();
@@ -909,8 +905,6 @@ TEST(ModelManagerWatcher, StartFromFileWhenModelFilesMissingRelativePath) {
 }
 
 TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
-    std::filesystem::create_directories(model_1_path);
-    std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file2.json";
     createConfigFileWithContent(config_1_model, fileToReload);
     modelMock = std::make_shared<MockModel>();
@@ -942,8 +936,6 @@ TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
 }
 
 TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModelRelativePath) {
-    std::filesystem::create_directories(model_1_path);
-    std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file2.json";
     createConfigFileWithContent(relative_config_1_model, fileToReload);
     modelMock = std::make_shared<MockModel>();

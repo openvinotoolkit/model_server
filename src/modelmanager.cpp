@@ -1174,37 +1174,32 @@ std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::
 }
 
 std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& basePath) {
-    if (basePath.rfind(S3FileSystem::S3_URL_PREFIX, 0) == 0) {
+    if (basePath.rfind(FileSystem::S3_URL_PREFIX, 0) == 0) {
         Aws::SDKOptions options;
         Aws::InitAPI(options);
         return std::make_shared<S3FileSystem>(options, basePath);
     }
-    if (basePath.rfind(GCSFileSystem::GCS_URL_PREFIX, 0) == 0) {
+    if (basePath.rfind(FileSystem::GCS_URL_PREFIX, 0) == 0) {
         return std::make_shared<ovms::GCSFileSystem>();
     }
-    if (basePath.rfind(AzureFileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
+    if (basePath.rfind(FileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
         return std::make_shared<ovms::AzureFileSystem>();
     }
-    if (basePath.rfind(AzureFileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
+    if (basePath.rfind(FileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
         return std::make_shared<ovms::AzureFileSystem>();
     }
     return std::make_shared<LocalFileSystem>();
 }
 
-bool ModelManager::isLocalFilesystem(const std::string& basePath) {
-    if (basePath.rfind(S3FileSystem::S3_URL_PREFIX, 0) == 0) {
-        return false;
+const std::string ModelManager::getFullPath(const std::string& pathToCheck) const {
+    if (FileSystem::isLocalFilesystem(pathToCheck) && pathToCheck.at(0) == '/') {
+        return pathToCheck;
+    } else {
+        // Relative path case
+        if (this->jsonConfigDirectoryPath.empty())
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Using relative path without setting configuration directory path.");
+        return this->jsonConfigDirectoryPath + pathToCheck;
     }
-    if (basePath.rfind(GCSFileSystem::GCS_URL_PREFIX, 0) == 0) {
-        return false;
-    }
-    if (basePath.rfind(AzureFileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
-        return false;
-    }
-    if (basePath.rfind(AzureFileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
-        return false;
-    }
-    return true;
 }
 
 Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, const std::string& base, model_versions_t& versions) {

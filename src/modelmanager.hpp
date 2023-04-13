@@ -36,7 +36,6 @@
 #include "mediapipe_internal/mediapipefactory.hpp"
 #include "metric_config.hpp"
 #include "model.hpp"
-#include "modelconfig.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -49,6 +48,7 @@ class CNLIMWrapper;
 class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricRegistry;
+class ModelConfig;
 class FileSystem;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
@@ -229,16 +229,7 @@ public:
      * 
      * @return const std::string& 
      */
-    const std::string getFullPath(const std::string& pathToCheck) const {
-        if (this->isLocalFilesystem(pathToCheck) && pathToCheck.at(0) == '/') {
-            return pathToCheck;
-        } else {
-            // Relative path case
-            if (this->jsonConfigDirectoryPath.empty())
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Using relative path without setting configuration directory path.");
-            return this->jsonConfigDirectoryPath + pathToCheck;
-        }
-    }
+    const std::string getFullPath(const std::string& pathToCheck) const;
 
     /**
      * @brief Mutex for blocking concurrent add & find of model
@@ -465,8 +456,6 @@ public:
         std::shared_ptr<model_versions_t>& versionsToStartIn);
 
     static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
-
-    static bool isLocalFilesystem(const std::string& basePath);
 
     /**
      * @brief Check if configuration file reload is needed.

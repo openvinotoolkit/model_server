@@ -124,8 +124,6 @@ public:
      */
     StatusCode deleteFileFolder(const std::string& path) override;
 
-    static const std::string S3_URL_PREFIX;
-
 private:
     /**
      * @brief 

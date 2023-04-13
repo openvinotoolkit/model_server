@@ -158,6 +158,7 @@ cc_library(
         "dags/exitnodesession.cpp",
         "dags/exitnodesession.hpp",
         "filesystem.hpp",
+        "filesystem.cpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
         "global_sequences_viewer.hpp",
