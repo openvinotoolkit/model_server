@@ -391,29 +391,26 @@ When creating a Python-based client application, you can use Triton client libra
             std::unique_ptr<tc::InferenceServerGrpcClient> client;
             tc::InferenceServerGrpcClient::Create(&client, "localhost:9000");
 
-            std::vector<int64_t> shape{1, 10};
+            std::vector<int64_t> shape{1};
             tc::InferInput* input;
-            tc::InferInput::Create(&input, "input_name", shape, "FP32");
+            tc::InferInput::Create(&input, "input_name", shape, "BYTES");
             std::shared_ptr<tc::InferInput> input_ptr;
             input_ptr.reset(input)
 
-            std::ifstream fileImg("image_path", std::ios::binary);
-            fileImg.seekg(0, std::ios::end);
-            int bufferLength = fileImg.tellg();
-            fileImg.seekg(0, std::ios::beg);
+            std::ifstream file(fileName, std::ios::binary);
+            file.unsetf(std::ios::skipws);
+            std::streampos fileSize;
 
-            char* buffer = new char[bufferLength];
-            fileImg.read(buffer, bufferLength);
-
-            std::vector<uint8_t> input_data = std::vector<uint8_t>(buffer, buffer + bufferLength);
-            input_ptr->AppendRaw(input_data);
+            file.seekg(0, std::ios::end);
+            fileSize = file.tellg();
+            file.seekg(0, std::ios::beg);
+            std::ostringstream oss;
+            oss << file.rdbuf();
+            input_ptr->AppendFromString({oss.str()});
 
             tc::InferOptions options("model_name");
             tc::InferResult* result;
             client->Infer(&result, options, inputs);
-            input->Reset();
-
-            delete buffer;
         }
 
 .. tab:: cpp [REST]
@@ -429,27 +426,24 @@ When creating a Python-based client application, you can use Triton client libra
 
             std::vector<int64_t> shape{1};
             tc::InferInput* input;
-            tc::InferInput::Create(&input, input_name, shape, "BYTES");
+            tc::InferInput::Create(&input, "input_name", shape, "BYTES");
             std::shared_ptr<tc::InferInput> input_ptr;
             input_ptr.reset(input)
 
-            std::ifstream fileImg("image_path", std::ios::binary);
-            fileImg.seekg(0, std::ios::end);
-            int bufferLength = fileImg.tellg();
-            fileImg.seekg(0, std::ios::beg);
+            std::ifstream file(fileName, std::ios::binary);
+            file.unsetf(std::ios::skipws);
+            std::streampos fileSize;
 
-            char* buffer = new char[bufferLength];
-            fileImg.read(buffer, bufferLength);
-
-            std::vector<uint8_t> input_data = std::vector<uint8_t>(buffer, buffer + bufferLength);
-            input_ptr->AppendRaw(input_data);
+            file.seekg(0, std::ios::end);
+            fileSize = file.tellg();
+            file.seekg(0, std::ios::beg);
+            std::ostringstream oss;
+            oss << file.rdbuf();
+            input_ptr->AppendFromString({oss.str()});
 
             tc::InferOptions options("model_name");
             tc::InferResult* result;
             client->Infer(&result, options, inputs);
-            input->Reset();
-
-            delete buffer;
         }
 
 .. tab:: java
@@ -474,8 +468,10 @@ When creating a Python-based client application, you can use Triton client libra
             input.addShape(1);
 
             FileInputStream imageStream = new FileInputStream("image_path");
-            request.clearRawInputContents();
-            request.addRawInputContents(ByteString.readFrom(imageStream));
+            InferTensorContents.Builder input_data = InferTensorContents.newBuilder();
+            input_data.addBytesContents(ByteString.readFrom(imageStream));
+            input.setContents(input_data);
+            request.addInputs(0, input);
 
             ModelInferResponse response = grpc_stub.modelInfer(request.build());
             
@@ -492,20 +488,24 @@ When creating a Python-based client application, you can use Triton client libra
 
         ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-        inferInputs := []*grpc_client.ModelInferRequest_InferInputTensor{
-            &grpc_client.ModelInferRequest_InferInputTensor{
-                Name:     "0",
-                Datatype: "BYTES",
-                Shape:    []int64{1},
-            },
+        bytes, err := ioutil.ReadFile(fileName)
+        contents := grpc_client.InferTensorContents{}
+        contents.BytesContents = append(contents.BytesContents, bytes) 
+
+        inferInput := grpc_client.ModelInferRequest_InferInputTensor{
+            Name:     "0",
+            Datatype: "BYTES",
+            Shape:    []int64{1},
+            Contents: &contents,
         }
 
-        bytes, err := ioutil.ReadFile(fileName)
-	    modelInferRequest.RawInputContents = append(modelInferRequest.RawInputContents, bytes) 
+        inferInputs := []*grpc_client.ModelInferRequest_InferInputTensor{
+            &inferInput,
+        }
 
         modelInferRequest := grpc_client.ModelInferRequest{
-            ModelName:    "model_name",
-            ModelVersion: "model_version",
+            ModelName:    modelName,
+            ModelVersion: modelVersion,
             Inputs:       inferInputs,
         }
 
@@ -518,6 +518,9 @@ When creating a Python-based client application, you can use Triton client libra
         echo -n '{"inputs” : [{"name" : "0", "shape" : [1], "datatype" : "BYTES"}]}' > request.json
         stat --format=%s request.json
         66
+        printf "%x\n" `stat -c "%s" ./image.jpeg`
+        1c21
+        echo -n -e '\x21\x1c\x00\x00' >> request.json
         cat ./image.jpeg >> request.json
         curl --data-binary "@./request.json" -X POST http://localhost:8000/v2/models/resnet/versions/0/infer -H "Inference-Header-Content-Length: 66"
 

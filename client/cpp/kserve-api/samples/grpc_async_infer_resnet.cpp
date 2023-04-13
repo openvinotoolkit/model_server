@@ -62,7 +62,7 @@ namespace tc = triton::client;
         }                                                                \
     }
 
-std::vector<uint8_t> load(const std::string& fileName) {
+std::string load(const std::string& fileName) {
     std::ifstream file(fileName, std::ios::binary);
     file.unsetf(std::ios::skipws);
     std::streampos fileSize;
@@ -70,15 +70,12 @@ std::vector<uint8_t> load(const std::string& fileName) {
     file.seekg(0, std::ios::end);
     fileSize = file.tellg();
     file.seekg(0, std::ios::beg);
+    std::ostringstream oss;
+    oss << file.rdbuf();
 
-    std::vector<uint8_t> vec;
-    vec.reserve(fileSize);
-
-    vec.insert(vec.begin(),
-               std::istream_iterator<uint8_t>(file),
-               std::istream_iterator<uint8_t>());
-    return vec;
+    return oss.str();
 }
+
 
 int main(int argc, char** argv) {
     cxxopts::Options opt("grpc_async_infer_resnet", "Sends requests via KServe gRPC API.");
@@ -151,14 +148,19 @@ int main(int argc, char** argv) {
 
     std::vector<int64_t> shape{1};
 
-    // Initialize the inputs with the data.
-    tc::InferInput* input;
+    std::vector<tc::InferInput*> inputs;
+    std::vector<std::shared_ptr<tc::InferInput>> input_ptrs;
+    for (int i = 0; i < imgs.size(); i++) {
+        tc::InferInput* input;
+        inputs.push_back(input);
 
-    FAIL_IF_ERR(
-        tc::InferInput::Create(&input, input_name, shape, "BYTES"),
-        "unable to get input");
-    std::shared_ptr<tc::InferInput> input_ptr;
-    input_ptr.reset(input);
+        FAIL_IF_ERR(
+            tc::InferInput::Create(&input, input_name, shape, "BYTES"),
+            "unable to get input");
+        std::shared_ptr<tc::InferInput> input_ptr;
+        input_ptr.reset(input);
+        input_ptrs.push_back(input_ptr);
+    }
 
     tc::InferOptions options(model_name);
     if (args.count("model_version"))
@@ -169,7 +171,6 @@ int main(int argc, char** argv) {
         std::cerr << "The provided argument is of a wrong type" << std::endl;
         return 1;
     }
-    std::vector<tc::InferInput*> inputs = {input_ptr.get()};
 
     std::vector<std::string> classes;
     std::ifstream lb_f(args["labels_list"].as<std::string>());
@@ -178,7 +179,7 @@ int main(int argc, char** argv) {
         classes.push_back(tmp);
     }
 
-    std::vector<std::vector<uint8_t>> input_data;
+    std::vector<std::string> input_data;
     input_data.reserve(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
         try {
@@ -196,8 +197,9 @@ int main(int argc, char** argv) {
     int completedRequestCount = 0;
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < imgs.size(); i++) {
+        std::vector<tc::InferInput*> inputs = {input_ptrs[i].get()};
         FAIL_IF_ERR(
-            input_ptr->AppendRaw(input_data[i]),
+            input_ptrs[i]->AppendFromString({input_data[i]}),
             "unable to set data for input");
         client->AsyncInfer(
             [&, i](tc::InferResult* result) -> int {
@@ -231,7 +233,6 @@ int main(int argc, char** argv) {
                 return 0;
             },
             options, inputs);
-        input->Reset();
     }
     {
         std::unique_lock<std::mutex> lk(mtx);

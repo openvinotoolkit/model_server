@@ -34,6 +34,7 @@ import org.apache.commons.cli.ParseException;
 
 import com.google.protobuf.ByteString;
 
+import inference.GrpcPredictV2.InferTensorContents;
 import inference.GRPCInferenceServiceGrpc;
 import inference.GRPCInferenceServiceGrpc.GRPCInferenceServiceBlockingStub;
 import inference.GrpcPredictV2.ModelInferRequest;
@@ -102,8 +103,6 @@ public class grpc_infer_resnet {
 		input.setDatatype("BYTES");
 		input.addShape(1);
 
-		request.addInputs(0, input);
-
 		List<String> labels = new ArrayList<>();
 		try (FileInputStream fis = new FileInputStream(cmd.getOptionValue("lbs"))) {
 			try (Scanner sc = new Scanner(fis)) {
@@ -118,13 +117,15 @@ public class grpc_infer_resnet {
 		try (FileInputStream fis = new FileInputStream(cmd.getOptionValue("imgs"))) {
 			try (Scanner sc = new Scanner(fis)) {
 				while (sc.hasNext()) {
-
+					request.clearInputs();
 					String[] line = sc.nextLine().split(" ");
 					String fileName = line[0];
 					int label = Integer.parseInt(line[1]);
 					FileInputStream imageStream = new FileInputStream(fileName);
-					request.clearRawInputContents();
-					request.addRawInputContents(ByteString.readFrom(imageStream));
+					InferTensorContents.Builder input_data = InferTensorContents.newBuilder();
+					input_data.addBytesContents(ByteString.readFrom(imageStream));
+					input.setContents(input_data);
+					request.addInputs(0, input);
 
 					ModelInferResponse response = grpc_stub.modelInfer(request.build());
 
