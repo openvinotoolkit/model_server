@@ -363,7 +363,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8) {
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
     ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
-    auto params = grpc_request.parameters();
+    auto params = grpc_request.inputs()[0].parameters();
+    ASSERT_EQ(params.count("binary_data_size"), 1);
+    ASSERT_EQ(params["binary_data_size"].int64_param(), 4);
     ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT8");
 
@@ -390,7 +392,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8_twoInputs) {
     ASSERT_EQ(grpc_request.raw_input_contents_size(), 2);
     ASSERT_EQ(grpc_request.model_name(), modelName);
     ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
-    auto params = grpc_request.parameters();
+    auto params1 = grpc_request.inputs()[0].parameters();
+    ASSERT_EQ(params1.count("binary_data_size"), 1);
+    ASSERT_EQ(params1["binary_data_size"].int64_param(), 4);
     ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT8");
 
@@ -402,7 +406,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8_twoInputs) {
         ASSERT_EQ(content, i++);
     }
     ASSERT_EQ(i, 4);
-
+    auto params2 = grpc_request.inputs()[1].parameters();
+    ASSERT_EQ(params2.count("binary_data_size"), 1);
+    ASSERT_EQ(params2["binary_data_size"].int64_param(), 4);
     ASSERT_EQ(grpc_request.inputs()[1].name(), "c");
     ASSERT_EQ(grpc_request.inputs()[1].datatype(), "INT8");
 
