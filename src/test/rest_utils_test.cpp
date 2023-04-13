@@ -66,6 +66,35 @@ protected:
     }
 };
 
+class TFSMakeJsonFromPredictResponseStringTest : public ::testing::TestWithParam<ovms::Order> {
+protected:
+    TFSResponseType proto;
+    std::string json;
+    TFSOutputTensorType* output1;
+
+    void SetUp() override {
+        output1 = &((*proto.mutable_outputs())["output1_string"]);
+
+        output1->set_dtype(tensorflow::DataType::DT_STRING);
+
+        output1->add_string_val("Hello");
+        output1->mutable_tensor_shape()->add_dim()->set_size(1);
+        output1->mutable_tensor_shape()->add_dim()->set_size(1);
+    }
+};
+
+TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveRow) {
+    std::string expected_json = "{\n    \"predictions\": [[\"Hello\"]\n    ]\n}";
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::ROW), StatusCode::OK);
+    EXPECT_EQ(json, expected_json);
+}
+
+TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveColumn) {
+    std::string expected_json = "{\n    \"outputs\": [\n        [\n            \"Hello\"\n        ]\n    ]\n}";
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::OK);
+    EXPECT_EQ(json, expected_json);
+}
+
 TEST_F(TFSMakeJsonFromPredictResponseRawTest, CannotConvertUnknownOrder) {
     EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::UNKNOWN), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
 }
