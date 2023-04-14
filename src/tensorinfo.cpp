@@ -71,7 +71,7 @@ void TensorInfo::createProcessingHints() {
     size_t expectedDimsForImage = this->influencedByDemultiplexer ? 5 : 4;
     if (this->shape.size() == 2 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
         this->preProcessingHint = TensorInfo::ProcessingHint::STRING_2D_U8;
-    } else if (this->shape.size() == 1 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
+    } else if (this->shape.size() == 1 && this->precision == ovms::Precision::U8 && this->shape.at(0).isDynamic() && !this->influencedByDemultiplexer) {
         this->preProcessingHint = TensorInfo::ProcessingHint::STRING_1D_U8;
     } else if (this->shape.size() == expectedDimsForImage) {
         this->preProcessingHint = TensorInfo::ProcessingHint::IMAGE;
