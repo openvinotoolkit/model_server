@@ -14,15 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <string>
+#include <memory>
 
-#include "absl/status/status.h"  // TODO include as system lib
+#include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/port/canonical_errors.h"
+#include "src/mediapipe_calculators/ovmscalculator.pb.h"
+namespace mediapipe {
+namespace ovms {
 
-extern const std::string DUMMY_MEDIAPIPE_GRAPH;
-extern const std::string ADD_MEDIAPIPE_GRAPH;
-extern const std::string DUMMY_MEDIAPIPE_GRAPH_ADAPT;
-extern const std::string ADD_MEDIAPIPE_GRAPH_ADAPT;
-extern const std::string ADD_MEDIAPIPE_GRAPH_ADAPT_FULL;
+class OVMSInferenceAdapter;
 
-absl::Status ExecuteDummy(size_t requestCount, size_t inputStreamDelayMs);
-absl::Status ExecuteAdd(size_t requestCount, size_t inputStreamDelayMs);
+struct AdapterWrapper {
+    std::unique_ptr<OVMSInferenceAdapter> adapter;
+    AdapterWrapper(OVMSInferenceAdapter* adapter);
+    ~AdapterWrapper();
+};
+}  // namespace ovms
+}  // namespace mediapipe

@@ -36,7 +36,7 @@ struct BoxMetadata {
     float originalHeight;
 };
 
-bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, int rotationAngleThreshold) {
+static bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, int rotationAngleThreshold) {
     const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
@@ -86,7 +86,7 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     return true;
 }
 
-bool copy_boxes_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
+static bool copy_boxes_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
     const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
@@ -113,7 +113,7 @@ bool copy_boxes_into_output(struct CustomNodeTensor* output, const std::vector<c
     return true;
 }
 
-bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::vector<float>& confidences) {
+static bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::vector<float>& confidences) {
     const uint64_t outputBatch = confidences.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 

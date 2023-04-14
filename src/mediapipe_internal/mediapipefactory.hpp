@@ -35,10 +35,11 @@ namespace ovms {
 class ModelManager;
 class Status;
 class MediapipeGraphConfig;
+class MediapipeGraphDefinition;
 class MediapipeGraphExecutor;
 
 class MediapipeFactory {
-    std::map<std::string, std::shared_ptr<MediapipeGraphExecutor>> definitions;
+    std::map<std::string, std::shared_ptr<MediapipeGraphDefinition>> definitions;
     mutable std::shared_mutex definitionsMtx;
 
 public:
@@ -63,7 +64,7 @@ public:
         KFSResponse* response,
         ModelManager& manager) const;
 
-    MediapipeGraphExecutor* findDefinitionByName(const std::string& name) const;
+    MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
     Status reloadDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
         ModelManager& manager);

@@ -26,8 +26,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "inferencerequest.hpp"
-#include "inferenceresponse.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
@@ -41,6 +39,8 @@
 namespace ovms {
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
+class InferenceRequest;
+class InferenceResponse;
 class PipelineDefinition;
 class Status;
 template <typename T1, typename T2>

@@ -13,21 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <gtest/gtest.h>
+#include "modelapiovmsadapterwrapper.hpp"
 
-#include "../mediapipe_internal/mediapipedemo.hpp"
-#include "mediapipe/framework/port/status.h"
+#include <memory>
 
-TEST(Mediapipe, PureDummyGraph) {
-    size_t requestCount = 3;
-    size_t inputStreamDelayMs = 0;
-    auto grphExecution = ExecuteDummy(requestCount, inputStreamDelayMs);
-    CHECK(grphExecution.ok());
+#include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/port/canonical_errors.h"
+#include "modelapiovmsadapter.hpp"
+#include "src/mediapipe_calculators/ovmscalculator.pb.h"
+// here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
+// for the one inside OVMS repo it makes sense to reuse code from ovms lib
+namespace mediapipe {
+namespace ovms {
+
+AdapterWrapper::AdapterWrapper(OVMSInferenceAdapter* adapter) :
+    adapter(adapter) {
+    LOG(ERROR) << "Wrapper constr";
 }
-
-TEST(Mediapipe, PureAddGraph) {
-    size_t requestCount = 3;
-    size_t inputStreamDelayMs = 0;
-    auto grphExecution = ExecuteAdd(requestCount, inputStreamDelayMs);
-    CHECK(grphExecution.ok());
+AdapterWrapper::~AdapterWrapper() {
+    LOG(ERROR) << "Wrapper destr";
 }
+}  // namespace ovms
+}  // namespace mediapipe
