@@ -109,7 +109,7 @@ public:
          */
     void setLibraryPath(const std::string& libraryPath) {
         // Full path case
-        if (libraryPath.at(0) == '/') {
+        if (FileSystem::isLocalFilesystem(libraryPath) && libraryPath.at(0) == '/') {
             this->libraryPath = libraryPath;
         } else {
             // Relative path case
