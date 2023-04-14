@@ -14,23 +14,33 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include "../status.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wbuiltin-macro-redefined"
+#include "..//kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
+#include "../metric.hpp"
 #include "mediapipe/framework/calculator_graph.h"
-#include "mediapipe/framework/port/parse_text_proto.h"
+#include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/status.h"
-#pragma GCC diagnostic pop
 
 namespace ovms {
+class MetricConfig;
+class MetricRegistry;
+class ModelManager;
+class MediapipeGraphExecutor;
+class Status;
 
-class OVMSCalculatorGraph {
+class MediapipeGraphExecutor {
+    const std::string name;
+    const ::mediapipe::CalculatorGraphConfig config;
+
 public:
-    mediapipe::CalculatorGraphConfig config;
-    mediapipe::CalculatorGraph graph;
-    OVMSCalculatorGraph();
-    absl::Status execute();
+    MediapipeGraphExecutor(const std::string& name, const ::mediapipe::CalculatorGraphConfig& config);
+    Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 };
-
 }  // namespace ovms

@@ -29,7 +29,7 @@ static constexpr const char* TEXT_IMAGES_TENSOR_NAME = "text_images";
 static constexpr const char* COORDINATES_TENSOR_NAME = "text_coordinates";
 static constexpr const char* CONFIDENCE_TENSOR_NAME = "confidence_levels";
 
-bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale) {
+static bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale) {
     const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
@@ -75,7 +75,7 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     return true;
 }
 
-bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
+static bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
     const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
@@ -102,7 +102,7 @@ bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::ve
     return true;
 }
 
-bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
+static bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
     const uint64_t outputBatch = scores.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 

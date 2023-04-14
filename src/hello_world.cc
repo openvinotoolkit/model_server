@@ -31,7 +31,7 @@ using std::endl;
 namespace mediapipe {
 namespace tf = ::tensorflow;
 
-absl::Status ExecuteDummy() {
+static absl::Status ExecuteDummy() {
     // Configures a simple graph, which concatenates 2 PassThroughCalculators.
     CalculatorGraphConfig config =
         ParseTextProtoOrDie<CalculatorGraphConfig>(R"pb(
@@ -90,7 +90,8 @@ absl::Status ExecuteDummy() {
     cout << __FILE__ << ":" << __LINE__ << endl;
     return graph.WaitUntilDone();
 }
-absl::Status PrintHelloWorld() {
+
+static absl::Status PrintHelloWorld() {
     // Configures a simple graph, which concatenates 2 PassThroughCalculators.
     CalculatorGraphConfig config =
         ParseTextProtoOrDie<CalculatorGraphConfig>(R"pb(

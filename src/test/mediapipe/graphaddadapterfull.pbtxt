@@ -35,7 +35,6 @@ node {
         key: "SUM"
         value: "sum"
       }
-      config_path: "/ovms/src/test/mediapipe/config_standard_add.json"
     }
   }
 }
