@@ -108,9 +108,13 @@ public:
          * @param libraryPath
          */
     void setLibraryPath(const std::string& libraryPath) {
-        // Full path case
-        if (FileSystem::isLocalFilesystem(libraryPath) && libraryPath.at(0) == '/') {
+        if (!FileSystem::isLocalFilesystem(libraryPath)) {
+            // Cloud filesystem
             this->libraryPath = libraryPath;
+        } else if (libraryPath.at(0) == '/') {
+            // Full path case
+            this->libraryPath = libraryPath;
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Setting full path {}.", libraryPath);
         } else {
             // Relative path case
             if (this->jsonConfigDirectoryPath.empty())

@@ -310,9 +310,13 @@ public:
          * @param basePath 
          */
     void setBasePath(const std::string& basePath) {
-        // Full path case
-        if (FileSystem::isLocalFilesystem(basePath) && basePath.at(0) == '/') {
+        if (!FileSystem::isLocalFilesystem(basePath)) {
+            // Cloud filesystem
             this->basePath = basePath;
+        } else if (basePath.at(0) == '/') {
+            // Full path case
+            this->basePath = basePath;
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Setting full path {}.", basePath);
         } else {
             // Relative path case
             if (this->jsonConfigDirectoryPath.empty())

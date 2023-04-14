@@ -220,7 +220,8 @@ private:
      * @param configFileFullPath 
      */
     void setJsonConfigDirectoryPath(const std::string& configFileFullPath) {
-        this->jsonConfigDirectoryPath = configFileFullPath.substr(0, configFileFullPath.find_last_of("/\\") + 1);
+        auto directory = configFileFullPath.substr(0, configFileFullPath.find_last_of("/\\") + 1);
+        directory.empty() ? this->jsonConfigDirectoryPath = std::filesystem::current_path() : this->jsonConfigDirectoryPath = directory;
     }
 
 public:

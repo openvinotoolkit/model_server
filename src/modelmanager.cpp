@@ -1192,7 +1192,11 @@ std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& baseP
 }
 
 const std::string ModelManager::getFullPath(const std::string& pathToCheck) const {
-    if (FileSystem::isLocalFilesystem(pathToCheck) && pathToCheck.at(0) == '/') {
+    if (!FileSystem::isLocalFilesystem(pathToCheck)) {
+        // Cloud filesystem
+        return pathToCheck;
+    } else if (pathToCheck.at(0) == '/') {
+        // Full path case
         return pathToCheck;
     } else {
         // Relative path case
