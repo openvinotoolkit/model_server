@@ -268,12 +268,12 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
     return true;
 }
 
-static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
+static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs_buffer, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
     if (binary_input_offset + binary_input_size > binary_buffer_size) {
         SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
         return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
     }
-    rawInputContentsBuffer->assign(binary_inputs + binary_input_offset, binary_buffer_size);
+    rawInputContentsBuffer->assign(binary_inputs_buffer + binary_input_offset, binary_input_size);
     binary_input_offset += binary_input_size;
     return StatusCode::OK;
 }
@@ -286,7 +286,7 @@ static size_t calculateBinaryDataSize(::KFSRequest::InferInputTensor& input) {
 }
 
 static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
-    const char* binary_inputs = &(request_body[endOfJson]);
+    const char* binary_inputs_buffer = &(request_body[endOfJson]);
     size_t binary_buffer_size = request_body.length() - endOfJson;
 
     size_t binary_input_offset = 0;
@@ -302,7 +302,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
                 binary_input_size = binary_data_size_parameter->second.int64_param();
             } else {
-                SPDLOG_DEBUG("binary_data_size parameter type should be int64 or string");
+                SPDLOG_DEBUG("binary_data_size parameter type should be int64");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
             }
         } else {
@@ -314,7 +314,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
                 binary_input_size = calculateBinaryDataSize(*input);
             }
         }
-        auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs, *input, grpc_request.add_raw_input_contents());
+        auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs_buffer, *input, grpc_request.add_raw_input_contents());
         if (!status.ok())
             return status;
     }

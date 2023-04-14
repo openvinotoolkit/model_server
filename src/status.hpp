@@ -100,6 +100,7 @@ enum class StatusCode {
     INVALID_BUFFER_TYPE,            /*!< Invalid buffer type */
     INVALID_DEVICE_ID,              /*!< Invalid buffer device id */
     INVALID_STRING_INPUT,           /*!< Invalid string input */
+    INVALID_INPUT_FORMAT,           /*!< Invalid format of the input inside buffer */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */

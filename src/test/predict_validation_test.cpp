@@ -1274,7 +1274,7 @@ TEST_F(KFSPredictValidationRawInputContents, InputTooSmall) {
         ovms::Layout{"NHWC"});
 
     auto status = instance->mockValidate(&binaryInputRequest);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_STRING_INPUT);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_INPUT_FORMAT);
 }
 
 TEST_F(KFSPredictValidationRawInputContents, InvalidFormat) {
@@ -1292,7 +1292,7 @@ TEST_F(KFSPredictValidationRawInputContents, InvalidFormat) {
         ovms::Layout{"NHWC"});
 
     auto status = instance->mockValidate(&binaryInputRequest);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_STRING_INPUT);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_INPUT_FORMAT);
 }
 
 class KFSPredictValidationArbitraryBatchPosition : public KFSPredictValidation {
