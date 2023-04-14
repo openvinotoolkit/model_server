@@ -31,7 +31,6 @@ node {
             key: "A"
             value: "a"
           }
-          config_path: "/ovms/src/test/mediapipe/config_standard_dummy.json"
         }
   }
 }

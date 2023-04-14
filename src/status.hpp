@@ -234,6 +234,14 @@ enum class StatusCode {
     PIPELINE_DEMULTIPLEXER_NO_RESULTS,
     PIPELINE_INPUTS_AMBIGUOUS_METADATA,
 
+    // Mediapipe
+    MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID,
+    MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
+    MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR,
+    MEDIAPIPE_GRAPH_START_ERROR,
+    MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR,
+    MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM,
+
     // Custom Loader
     CUSTOM_LOADER_LIBRARY_INVALID,
     CUSTOM_LOADER_LIBRARY_LOAD_FAILED,
@@ -313,6 +321,7 @@ class Status {
 
     static const std::unordered_map<const StatusCode, const std::string> statusMessageMap;
 
+public:
     void appendDetails(const std::string& details) {
         ensureMessageAllocated();
         *this->message += " - " + details;
@@ -323,7 +332,6 @@ class Status {
         }
     }
 
-public:
     Status(StatusCode code = StatusCode::OK) :
         code(code) {
         if (code == StatusCode::OK) {
@@ -382,10 +390,8 @@ public:
     const std::string& string() const {
         return this->message ? *this->message : statusMessageMap.at(code);
     }
-
     operator const std::string&() const {
         return this->string();
     }
 };
-
 }  // namespace ovms
