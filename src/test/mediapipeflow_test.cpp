@@ -95,6 +95,66 @@ public:
     }
 };
 
+class MediapipeFlowDummySeparateConfigTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_separate_config.json");
+    }
+};
+
+TEST_P(MediapipeFlowDummySeparateConfigTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName = GetParam();
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+    preparePredictRequest(request, inputsMeta);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    auto outputs = response.outputs();
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(outputs[0].name(), "out");
+    ASSERT_EQ(outputs[0].shape().size(), 2);
+    ASSERT_EQ(outputs[0].shape()[0], 1);
+    ASSERT_EQ(outputs[0].shape()[1], 10);
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+class MediapipeFlowDummyDummyInSubconfigAndConfigTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_dummy_in_both_config_and_subconfig.json");
+    }
+};
+
+TEST_P(MediapipeFlowDummyDummyInSubconfigAndConfigTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName = GetParam();
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+    preparePredictRequest(request, inputsMeta);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    auto outputs = response.outputs();
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(outputs[0].name(), "out");
+    ASSERT_EQ(outputs[0].shape().size(), 2);
+    ASSERT_EQ(outputs[0].shape()[0], 1);
+    ASSERT_EQ(outputs[0].shape()[1], 10);
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
 TEST_P(MediapipeFlowDummyTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -118,6 +178,7 @@ TEST_P(MediapipeFlowDummyTest, Infer) {
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
 }
+
 TEST_P(MediapipeFlowAddTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -451,6 +512,22 @@ TEST_F(MediapipeConfig, MediapipeFullRelativePaths) {
     manager.join();
 }
 
+TEST_F(MediapipeConfig, MediapipeFullRelativePathsSeparateConfig) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy_separate_config.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    EXPECT_NE(definitionAdd, nullptr);
+    EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
+
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    EXPECT_NE(definitionFull, nullptr);
+    EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
+
+    manager.join();
+}
+
 TEST_F(MediapipeConfig, MediapipeFullRelativePathsNegative) {
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy_negative.json");
@@ -475,6 +552,8 @@ class MediapipeConfigChanges : public TestWithTempDir {
 public:
     static const std::string mgdName;
     static const std::string configFileWithGraphPathToReplace;
+    static const std::string configFileWithGraphPathToReplaceWithoutModel;
+    static const std::string configFileWithGraphPathToReplaceAndSubconfig;
     static const std::string configFileWithoutGraph;
     static const std::string pbtxtContent;
     template <typename Request, typename Response>
@@ -496,6 +575,31 @@ const std::string MediapipeConfigChanges::configFileWithGraphPathToReplace = R"(
         }
         }
     ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeGraph",
+        "graph_path":"XYZ"
+    }
+    ]
+}
+)";
+
+const std::string MediapipeConfigChanges::configFileWithGraphPathToReplaceAndSubconfig = R"(
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeGraph",
+        "graph_path":"XYZ",
+        "subconfig":"SUBCONFIG_PATH"
+    }
+    ]
+}
+)";
+
+const std::string MediapipeConfigChanges::configFileWithGraphPathToReplaceWithoutModel = R"(
+{
+    "model_config_list": [],
     "mediapipe_config_list": [
     {
         "name":"mediapipeGraph",
@@ -614,8 +718,63 @@ TEST_F(MediapipeConfigChanges, AddImroperGraphThenFixWithReloadThenBreakAgain) {
     modelManager.loadConfig(configFilePath);
     definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
-    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+}
+
+TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
+    std::string configFileContent = configFileWithGraphPathToReplace;
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    const std::string modelPathToReplace{"XYZ"};
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    createConfigFileWithContent(pbtxtContent, graphFilePath);
+    ConstructorEnabledModelManager modelManager;
+    modelManager.loadConfig(configFilePath);
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    auto model = modelManager.findModelByName("dummy");
+    ASSERT_NE(nullptr, model->getDefaultModelInstance());
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getErrorCode(), ModelVersionStatusErrorCode::OK);
+    auto definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+    // now we retire the model
+    configFileContent = configFileWithGraphPathToReplaceWithoutModel;
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    modelManager.loadConfig(configFilePath);
+    model = modelManager.findModelByName("dummy");
+    ASSERT_EQ(nullptr, model->getDefaultModelInstance());
+    definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+    // now we add again
+    std::string subconfigFilePath = directoryPath + "/subconfig.json";
+    configFileContent = configFileWithoutGraph;
+    createConfigFileWithContent(configFileContent, subconfigFilePath);
+    configFileContent = configFileWithGraphPathToReplaceAndSubconfig;
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    const std::string subconfigPathToReplace{"SUBCONFIG_PATH"};
+    configFileContent.replace(configFileContent.find(subconfigPathToReplace), subconfigPathToReplace.size(), subconfigFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    modelManager.loadConfig(configFilePath);
+    model = modelManager.findModelByName("dummy");
+    ASSERT_NE(nullptr, model->getDefaultModelInstance());
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getErrorCode(), ModelVersionStatusErrorCode::OK);
+    definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+}
+
+TEST_F(MediapipeConfig, MediapipeFullRelativePathsSeparateConfigsNegative) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy_separate_config_negative.json");
+    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    manager.join();
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -628,6 +787,13 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     MediapipeFlowDummyTest,
+    ::testing::ValuesIn(mediaGraphsDummy),
+    [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
+        return info.param;
+    });
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    MediapipeFlowDummySeparateConfigTest,
     ::testing::ValuesIn(mediaGraphsDummy),
     [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
         return info.param;

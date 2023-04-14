@@ -366,6 +366,7 @@ cc_library(
                 "mediapipe_internal/mediapipefactory.cpp",
                 "mediapipe_internal/mediapipefactory.hpp",
                 "mediapipe_internal/mediapipegraphconfig.hpp",
+                "mediapipe_internal/mediapipegraphconfig.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.hpp",
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
