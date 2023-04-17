@@ -316,7 +316,6 @@ public:
         } else if (basePath.at(0) == '/') {
             // Full path case
             this->basePath = basePath;
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Setting full path {}.", basePath);
         } else {
             // Relative path case
             if (this->jsonConfigDirectoryPath.empty())

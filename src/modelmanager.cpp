@@ -1201,7 +1201,7 @@ const std::string ModelManager::getFullPath(const std::string& pathToCheck) cons
     } else {
         // Relative path case
         if (this->jsonConfigDirectoryPath.empty())
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Using relative path without setting configuration directory path.");
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Using relative path without setting configuration directory path.");
         return this->jsonConfigDirectoryPath + pathToCheck;
     }
 }

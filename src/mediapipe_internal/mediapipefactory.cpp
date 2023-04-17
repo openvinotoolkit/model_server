@@ -53,7 +53,7 @@ bool MediapipeFactory::definitionExists(const std::string& name) const {
     return this->definitions.find(name) != this->definitions.end();
 }
 
-MediapipeGraphExecutor* MediapipeFactory::findDefinitionByName(const std::string& name) const {
+MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::string& name) const {
     auto it = definitions.find(name);
     if (it == std::end(definitions)) {
         return nullptr;
