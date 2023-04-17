@@ -212,7 +212,8 @@ Status ModelManager::startFromConfig() {
         return StatusCode::UNKNOWN_ERROR;
     }
 
-    this->setJsonConfigDirectoryPath(config.configPath());
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger,"DUPE config.configPath() {}", config.configPath());
+    this->setRootDirectoryPath("");
     Status status = StatusCode::OK;
 
     // Reading metric config only once per server start
@@ -273,7 +274,8 @@ Status ModelManager::startFromConfig() {
         modelConfig.setBatchSize(std::nullopt);
     }
 
-    modelConfig.setJsonConfigDirectoryPath(this->jsonConfigDirectoryPath);
+    modelConfig.setRootDirectoryPath(this->rootDirectoryPath);
+    modelConfig.setBasePath(modelConfig.getBasePath());
 
     return reloadModelWithVersions(modelConfig);
 }
@@ -617,7 +619,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
         SPDLOG_INFO("Reading Custom Loader: {} configuration", loaderName);
 
         CustomLoaderConfig loaderConfig;
-        loaderConfig.setJsonConfigDirectoryPath(this->jsonConfigDirectoryPath);
+        loaderConfig.setRootDirectoryPath(this->rootDirectoryPath);
         auto status = loaderConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
@@ -672,7 +674,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
-        modelConfig.setJsonConfigDirectoryPath(this->jsonConfigDirectoryPath);
+        modelConfig.setRootDirectoryPath(this->rootDirectoryPath);
         auto status = modelConfig.parseNode(configs["config"]);
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
@@ -832,7 +834,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 
     Status firstErrorStatus = StatusCode::OK;
 
-    this->setJsonConfigDirectoryPath(jsonFilename);
+    this->setRootDirectoryPath(jsonFilename);
 
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
@@ -1200,9 +1202,9 @@ const std::string ModelManager::getFullPath(const std::string& pathToCheck) cons
         return pathToCheck;
     } else {
         // Relative path case
-        if (this->jsonConfigDirectoryPath.empty())
+        if (this->rootDirectoryPath.empty())
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Using relative path without setting configuration directory path.");
-        return this->jsonConfigDirectoryPath + pathToCheck;
+        return this->rootDirectoryPath + pathToCheck;
     }
 }
 

@@ -212,16 +212,17 @@ private:
      * @brief Json config directory path
      * 
      */
-    std::string jsonConfigDirectoryPath;
+    std::string rootDirectoryPath;
 
     /**
      * @brief Set json config directory path
      * 
      * @param configFileFullPath 
      */
-    void setJsonConfigDirectoryPath(const std::string& configFileFullPath) {
-        auto directory = configFileFullPath.substr(0, configFileFullPath.find_last_of("/\\") + 1);
-        directory.empty() ? this->jsonConfigDirectoryPath = std::filesystem::current_path() : this->jsonConfigDirectoryPath = directory;
+    void setRootDirectoryPath(const std::string& configFileFullPath) {
+        auto configDirectory = configFileFullPath.substr(0, configFileFullPath.find_last_of("/\\") + 1);
+        std::string currentWorkingDir = std::filesystem::current_path();
+        configDirectory.empty() ? this->rootDirectoryPath = currentWorkingDir + "/" : this->rootDirectoryPath = configDirectory;
     }
 
 public:

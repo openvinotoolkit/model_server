@@ -51,7 +51,7 @@ private:
     /**
          * @brief Json config directory path
          */
-    std::string jsonConfigDirectoryPath;
+    std::string rootDirectoryPath;
 
 public:
     /**
@@ -117,19 +117,19 @@ public:
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Setting full path {}.", libraryPath);
         } else {
             // Relative path case
-            if (this->jsonConfigDirectoryPath.empty())
+            if (this->rootDirectoryPath.empty())
                 SPDLOG_ERROR("Using library relative path without setting configuration directory path.");
-            this->libraryPath = this->jsonConfigDirectoryPath + libraryPath;
+            this->libraryPath = this->rootDirectoryPath + libraryPath;
         }
     }
 
     /**
-         * @brief Set json config directory path
+         * @brief Set root directory path
          * 
-         * @param jsonDirectoryPath 
+         * @param rootDirectoryPath 
          */
-    void setJsonConfigDirectoryPath(const std::string& jsonDirectoryPath) {
-        this->jsonConfigDirectoryPath = jsonDirectoryPath;
+    void setRootDirectoryPath(const std::string& rootDirectoryPath) {
+        this->rootDirectoryPath = rootDirectoryPath;
     }
 
     /**

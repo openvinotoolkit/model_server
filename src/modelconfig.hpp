@@ -63,7 +63,7 @@ private:
     /**
          * @brief Json config directory path
          */
-    std::string jsonConfigDirectoryPath;
+    std::string rootDirectoryPath;
 
     /**
          * @brief Model local destination path on disk after downloading from online storage
@@ -318,19 +318,19 @@ public:
             this->basePath = basePath;
         } else {
             // Relative path case
-            if (this->jsonConfigDirectoryPath.empty())
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Using model relative path without setting configuration directory path.");
-            this->basePath = this->jsonConfigDirectoryPath + basePath;
+            if (this->rootDirectoryPath.empty())
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Using model relative path without setting configuration directory path.");
+            this->basePath = this->rootDirectoryPath + basePath;
         }
     }
 
     /**
-         * @brief Set json config directory path
+         * @brief Set root directory path
          * 
-         * @param jsonDirectoryPath 
+         * @param rootDirectoryPath 
          */
-    void setJsonConfigDirectoryPath(const std::string& jsonDirectoryPath) {
-        this->jsonConfigDirectoryPath = jsonDirectoryPath;
+    void setRootDirectoryPath(const std::string& rootDirectoryPath) {
+        this->rootDirectoryPath = rootDirectoryPath;
     }
 
     /**
