@@ -113,9 +113,10 @@ def check_dir(start_dir):
         'tftext.patch',
         'vehicle_images.txt',
         'bazel_rules_apple.patch',
-        'pom.xml',
-        'go.sum',
-        'saved_model.pb'
+        "pom.xml",
+        "go.sum",
+        "mwaitpkg.patch",
+        'saved_model.pb',
         ]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']

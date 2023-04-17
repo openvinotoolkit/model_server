@@ -248,3 +248,11 @@ new_local_repository(
     path = "/opt/opencv",
 )
 ################## END OF OPENCV DEPENDENCY ##########
+
+git_repository(
+    name = "oneTBB",
+    branch = "v2021.8.0",
+    remote = "https://github.com/oneapi-src/oneTBB/",
+    patch_args = ["-p1"],
+    patches = ["mwaitpkg.patch",]
+)
