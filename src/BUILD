@@ -99,7 +99,7 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["mediapipe_internal/ovmscalculator.proto"],
+    srcs = ["mediapipe_calculators/ovmscalculator.proto"],
     visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
@@ -196,15 +196,19 @@ cc_library(
         "kfs_frontend/kfs_grpc_inference_service.hpp",
         "kfs_frontend/kfs_utils.cpp",
         "kfs_frontend/kfs_utils.hpp",
-        "mediapipe_internal/calculator_graph.cpp",
-        "mediapipe_internal/calculator_graph.hpp",
-        "mediapipe_internal/mediapipedemo.cpp",
-        "mediapipe_internal/mediapipedemo.hpp",
         "mediapipe_internal/mediapipefactory.cpp",
         "mediapipe_internal/mediapipefactory.hpp",
         "mediapipe_internal/mediapipegraphdefinition.cpp",
         "mediapipe_internal/mediapipegraphdefinition.hpp",
-        "mediapipe_internal/ovms_calculator.cc",
+        "mediapipe_internal/mediapipegraphexecutor.cpp",
+        "mediapipe_internal/mediapipegraphexecutor.hpp",
+        "mediapipe_calculators/modelapiovmsadapter.cc",
+        "mediapipe_calculators/modelapiovmsadapter.hpp",
+        "mediapipe_calculators/modelapiovmsadapterwrapper.cc",
+        "mediapipe_calculators/modelapiovmsadapterwrapper.hpp",
+        "mediapipe_calculators/ovms_calculator.cc",
+        "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
+        "mediapipe_calculators/modelapiovmssessioncalculator.cc",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",
@@ -751,7 +755,6 @@ cc_test(
     name = "ovms_test",
     linkstatic = 1,
     srcs = [
-        "test/ovmscalculator_test.cpp",
         "test/azurefilesystem_test.cpp",
         "test/binaryutils_test.cpp",
         "test/c_api_tests.cpp",

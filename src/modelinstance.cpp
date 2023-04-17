@@ -34,6 +34,8 @@
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
+#include "inferencerequest.hpp"
+#include "inferenceresponse.hpp"
 #include "layout.hpp"
 #include "layout_configuration.hpp"
 #include "logging.hpp"

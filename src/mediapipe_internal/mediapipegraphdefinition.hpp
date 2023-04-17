@@ -32,24 +32,23 @@
 #include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
-#include "mediapipedemo.hpp"
 
 namespace ovms {
 class MetricConfig;
 class MetricRegistry;
 class ModelManager;
+class MediapipeGraphExecutor;
 class Status;
 
 struct MediapipeGraphConfig {
     std::string graphPath;
 };
 
-class MediapipeGraphExecutor {
+class MediapipeGraphDefinition {
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
             status(status),
             loadedNotify(loadedNotify) {
-            SPDLOG_ERROR("ER:{}", status.getName());
         }
         ~ValidationResultNotifier() {
             if (passed) {
@@ -58,7 +57,6 @@ class MediapipeGraphExecutor {
             } else {
                 status.handle(ValidationFailedEvent());
             }
-            SPDLOG_ERROR("ER:{}", status.getName());
         }
         bool passed = false;
 
@@ -67,22 +65,8 @@ class MediapipeGraphExecutor {
         std::condition_variable& loadedNotify;
     };
 
-    static MediapipeGraphConfig MGC;
-    // Pipelines are not versioned and any available definition has constant version equal 1.
-    static constexpr model_version_t VERSION = 1;
-    const std::string name;
-    PipelineDefinitionStatus status;
-    std::condition_variable loadedNotify;
-
-    std::string chosenConfig;  // TODO make const @atobiszei
-    MediapipeGraphConfig mgconfig;
-    ::mediapipe::CalculatorGraphConfig config;
-    const uint16_t SERVABLE_VERSION = 1;
-    tensor_map_t inputsInfo;
-    tensor_map_t outputsInfo;
-
 public:
-    MediapipeGraphExecutor(const std::string name,
+    MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,
         const MetricConfig* metricConfig = nullptr);
@@ -92,20 +76,36 @@ public:
     }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     const model_version_t getVersion() const { return VERSION; }
-    // METADATA
     const tensor_map_t getInputsInfo() const;
     const tensor_map_t getOutputsInfo() const;
 
-    Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
     // TODO simultaneous infer & reload handling
+    Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
+
     Status validate(ModelManager& manager);
+
+    // Pipelines are not versioned and any available definition has constant version equal 1.
+    static constexpr model_version_t VERSION = 1;
+
+protected:
+    Status validateForConfigFileExistence();
+    Status validateForConfigLoadableness();
 
 private:
     Status createInputsInfo();
     Status createOutputsInfo();
 
-protected:
-    Status validateForConfigFileExistence();
-    Status validateForConfigLoadableness();
+    static MediapipeGraphConfig MGC;
+    const std::string name;
+
+    std::string chosenConfig;  // TODO make const @atobiszei
+    MediapipeGraphConfig mgconfig;
+    ::mediapipe::CalculatorGraphConfig config;
+
+    tensor_map_t inputsInfo;
+    tensor_map_t outputsInfo;
+
+    PipelineDefinitionStatus status;
+    std::condition_variable loadedNotify;
 };
 }  // namespace ovms
