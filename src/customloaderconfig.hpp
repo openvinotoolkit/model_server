@@ -114,7 +114,6 @@ public:
         } else if (libraryPath.at(0) == '/') {
             // Full path case
             this->libraryPath = libraryPath;
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Setting full path {}.", libraryPath);
         } else {
             // Relative path case
             if (this->rootDirectoryPath.empty())
