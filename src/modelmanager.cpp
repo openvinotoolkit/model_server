@@ -212,7 +212,6 @@ Status ModelManager::startFromConfig() {
         return StatusCode::UNKNOWN_ERROR;
     }
 
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger,"DUPE config.configPath() {}", config.configPath());
     this->setRootDirectoryPath("");
     Status status = StatusCode::OK;
 
