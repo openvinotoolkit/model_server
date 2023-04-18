@@ -19,9 +19,19 @@ node {
   calculator: "ModelAPISessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
       servable_name: "dummy"
       servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "ModelAPISideFeedCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "B:in"
+  output_stream: "A:out"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
       tag_to_input_tensor_names {
         key: "B"
         value: "b"
@@ -32,11 +42,5 @@ node {
       }
     }
   }
-}
-node {
-  calculator: "ModelAPISideFeedCalculator"
-  input_side_packet: "SESSION:session"
-  input_stream: "B:in"
-  output_stream: "A:out"
 }
 

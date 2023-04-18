@@ -25,7 +25,7 @@
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "modelapiovmsadapter.hpp"
 #include "modelapiovmsadapterwrapper.hpp"
-#include "src/mediapipe_calculators/ovmscalculator.pb.h"
+#include "src/mediapipe_calculators/modelapiovmssessioncalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
@@ -47,14 +47,12 @@ public:
         RET_CHECK(cc->Inputs().GetTags().empty());
         RET_CHECK(cc->Outputs().GetTags().empty());
         cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set<AdapterWrapper>();
-        const auto& options = cc->Options<OVMSCalculatorOptions>();
+        const auto& options = cc->Options<ModelAPIOVMSSessionCalculatorOptions>();
         RET_CHECK(!options.servable_name().empty());
         MLOG("Session GetContract middle");
         // TODO validate version from string
         // TODO validate service url format
-        RET_CHECK(options.config_path().empty() ||
-                  options.service_url().empty());
-        // TODO validate tag_to_tensor maps so that key fulfill regex
+        // this is for later support for remote server inference
         MLOG("Session GetContract end");
         return absl::OkStatus();
     }
@@ -78,16 +76,10 @@ public:
         }
         cc->SetOffset(TimestampDiff(0));
 
-        const std::string& servableName = cc->Options<OVMSCalculatorOptions>().servable_name();
-        const std::string& servableVersion = cc->Options<OVMSCalculatorOptions>().servable_version();
+        const auto& options = cc->Options<ModelAPIOVMSSessionCalculatorOptions>();
+        const std::string& servableName = options.servable_name();
+        const std::string& servableVersion = options.servable_version();
         auto session = std::make_unique<AdapterWrapper>(new OVMSInferenceAdapter(servableName));
-        const auto& options = cc->Options<OVMSCalculatorOptions>();
-        for (const auto& [key, value] : options.tag_to_output_tensor_names()) {
-            session->adapter->outputNameToTag[value] = key;
-        }
-        for (const auto& [key, value] : options.tag_to_input_tensor_names()) {
-            session->adapter->inputTagToName[key] = value;
-        }
         MLOG("Session create adapter");
         cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(Adopt(session.release()));
         MLOG("SessionOpen end");
