@@ -319,7 +319,7 @@ public:
         } else {
             // Relative path case
             if (this->rootDirectoryPath.empty())
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Using model relative path without setting configuration directory path.");
+                throw std::logic_error("Using model relative path without setting configuration directory path.");
             this->basePath = this->rootDirectoryPath + basePath;
         }
     }

@@ -760,35 +760,51 @@ TEST(ModelManagerWatcher, parseConfigWhenOnlyPipelineDefinitionProvided) {
 TEST_F(ModelManager, ReadsVersionsFromDisk) {
     const std::string path = "/tmp/test_model/";
 
-    for (auto i : {1, 5, 8, 10}) {
-        std::filesystem::create_directories(path + std::to_string(i));
+    try {
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::create_directories(path + std::to_string(i));
+        }
+
+        std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
+        ovms::model_versions_t versions;
+        std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+
+        auto status = fixtureManager.readAvailableVersions(fs, path, versions);
+
+        EXPECT_EQ(status, ovms::StatusCode::OK);
+        EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
+    } catch (...) {
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::remove(path + std::to_string(i));
+        }
+
+        std::filesystem::remove(path + "unknown_dir11");  // invalid version directory
     }
-
-    std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
-    ovms::model_versions_t versions;
-    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
-
-    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
-
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
 }
 
 TEST_F(ModelManager, ReadsVersionsFromDiskRelativePath) {
     const std::string path = "test_model/";
 
-    for (auto i : {1, 5, 8, 10}) {
-        std::filesystem::create_directories(path + std::to_string(i));
+    try {
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::create_directories(path + std::to_string(i));
+        }
+
+        std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
+        ovms::model_versions_t versions;
+        std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+
+        auto status = fixtureManager.readAvailableVersions(fs, path, versions);
+
+        EXPECT_EQ(status, ovms::StatusCode::OK);
+        EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
+    } catch (...) {
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::remove(path + std::to_string(i));
+        }
+
+        std::filesystem::remove(path + "unknown_dir11");  // invalid version directory
     }
-
-    std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
-    ovms::model_versions_t versions;
-    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
-
-    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
-
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
 }
 
 TEST_F(ModelManager, PathEscapeError1) {

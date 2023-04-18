@@ -117,7 +117,7 @@ public:
         } else {
             // Relative path case
             if (this->rootDirectoryPath.empty())
-                SPDLOG_ERROR("Using library relative path without setting configuration directory path.");
+                throw std::logic_error("Using library relative path without setting configuration directory path.");
             this->libraryPath = this->rootDirectoryPath + libraryPath;
         }
     }
@@ -160,10 +160,13 @@ public:
             this->setLibraryPath(v["library_path"].GetString());
             if (v.HasMember("loader_config_file"))
                 this->setLoaderConfigFile(v["loader_config_file"].GetString());
+        } catch (std::logic_error& e) {
+            SPDLOG_DEBUG("Relative path error: {}", e.what());
+            return StatusCode::INTERNAL_ERROR;
         } catch (...) {
             SPDLOG_ERROR("There was an error parsing the custom loader config");
             return StatusCode::JSON_INVALID;
-        }
+        } 
         return StatusCode::OK;
     }
 };

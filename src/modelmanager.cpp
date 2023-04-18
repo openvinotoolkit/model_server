@@ -274,7 +274,13 @@ Status ModelManager::startFromConfig() {
     }
 
     modelConfig.setRootDirectoryPath(this->rootDirectoryPath);
-    modelConfig.setBasePath(modelConfig.getBasePath());
+
+    try {
+        modelConfig.setBasePath(modelConfig.getBasePath());
+    } catch (std::logic_error& e) {
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+        return StatusCode::INTERNAL_ERROR;
+    }
 
     return reloadModelWithVersions(modelConfig);
 }
@@ -675,6 +681,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         ModelConfig modelConfig;
         modelConfig.setRootDirectoryPath(this->rootDirectoryPath);
         auto status = modelConfig.parseNode(configs["config"]);
+
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed due to error: {}", modelConfig.getName(), status.string());
@@ -720,6 +727,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         } else {
             newModelConfigs.emplace(modelName, std::move(modelConfig));
         }
+
     }
     this->servedModelConfigs = std::move(newModelConfigs);
     retireModelsRemovedFromConfigFile(modelsInConfigFile, modelsWithInvalidConfig);
