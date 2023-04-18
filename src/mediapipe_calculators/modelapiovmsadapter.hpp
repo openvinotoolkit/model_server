@@ -53,8 +53,8 @@ public:
     virtual ov::Shape getInputShape(const std::string& inputName) const;  // TODO
     virtual std::vector<std::string> getInputNames();                     // TODO
     virtual std::vector<std::string> getOutputNames();                    // TODO
-                                                                          //    virtual const ov::AnyMap& getModelConfig() const = 0; // TODO
-    virtual const std::string& getModelConfig() const;                    // TODO
+    //    virtual const ov::AnyMap& getModelConfig() const = 0; // TODO
+    virtual const std::string& getModelConfig() const;  // TODO
 };
 }  // namespace ovms
 }  // namespace mediapipe

@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 
 #include "../buffer.hpp"
+#include "../capi_frontend/capi_utils.hpp"
 #include "../inferenceresponse.hpp"
 #include "../ovms.h"
 #include "test_utils.hpp"
@@ -632,6 +633,190 @@ TEST_F(CAPIInference, ResponseRetrieval) {
     cppResponse.release();
     OVMS_InferenceResponseDelete(nullptr);
     OVMS_InferenceResponseDelete(response);
+}
+
+class CAPIMetadata : public ::testing::Test {
+protected:
+    static OVMS_Server* cserver;
+
+public:
+    static void SetUpTestSuite() {
+        std::string port = "9000";
+        randomizePort(port);
+        // prepare options
+        OVMS_ServerSettings* serverSettings = nullptr;
+        OVMS_ModelsSettings* modelsSettings = nullptr;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+        ASSERT_NE(serverSettings, nullptr);
+        ASSERT_NE(modelsSettings, nullptr);
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_metadata_all.json"));
+        cserver = nullptr;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+        OVMS_ServableMetadata* servableMetadata = nullptr;
+        const std::string servableName = "dummy";
+        model_version_t servableVersion = 1;
+        ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata), StatusCode::SERVER_NOT_READY_FOR_INFERENCE);  // TODO Server_Not_Ready
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+        SPDLOG_ERROR("server:{}:", (void*)cserver);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
+    }
+    static void TearDownTestSuite() {
+        SPDLOG_ERROR("server:{}:", (void*)cserver);
+        OVMS_ServerDelete(cserver);
+        cserver = nullptr;
+    }
+    void checkMetadata(const std::string& servableName,
+        int64_t servableVersion,
+        const tensor_map_t& inputsInfo,
+        const tensor_map_t& outputsInfo) {
+        OVMS_ServableMetadata* servableMetadata = nullptr;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata));
+        ASSERT_NE(nullptr, servableMetadata);
+        uint32_t inputCount = 42;
+        uint32_t outputCount = 42;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInputsCount(servableMetadata, &inputCount));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutputsCount(servableMetadata, &outputCount));
+        ASSERT_EQ(inputsInfo.size(), inputCount);
+        ASSERT_EQ(outputsInfo.size(), outputCount);
+
+        uint32_t id = 0;
+        OVMS_DataType datatype = (OVMS_DataType)199;
+        int64_t* shapeMin{nullptr};
+        int64_t* shapeMax{nullptr};
+        size_t dimCount = 42;
+        const char* tensorName{nullptr};
+        std::set<std::string> inputNames;
+        std::set<std::string> outputNames;
+        for (id = 0; id < inputCount; ++id) {
+            ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
+            auto it = inputsInfo.find(tensorName);
+            ASSERT_NE(it, inputsInfo.end());
+            inputNames.insert(tensorName);
+            EXPECT_EQ(datatype, ovms::getPrecisionAsOVMSDataType(it->second->getPrecision()));
+            auto& expectedShape = it->second->getShape();
+            ASSERT_EQ(expectedShape.size(), dimCount);
+            SPDLOG_ERROR("Compare: {}", tensorName);
+            SPDLOG_ERROR("Exp: {}", expectedShape.toString());
+            for (size_t i = 0; i < expectedShape.size(); ++i) {
+                SPDLOG_ERROR("ACT: {} {}", shapeMin[i], shapeMax[i]);
+                EXPECT_EQ(expectedShape[i], ovms::Dimension(shapeMin[i], shapeMax[i]));
+            }
+        }
+        EXPECT_EQ(inputNames.size(), inputCount);
+        for (id = 0; id < outputCount; ++id) {
+            ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
+            auto it = outputsInfo.find(tensorName);
+            ASSERT_NE(it, outputsInfo.end());
+            outputNames.insert(tensorName);
+            EXPECT_EQ(datatype, ovms::getPrecisionAsOVMSDataType(it->second->getPrecision()));
+            auto& expectedShape = it->second->getShape();
+            ASSERT_EQ(expectedShape.size(), dimCount);
+            for (size_t i = 0; i < expectedShape.size(); ++i) {
+                EXPECT_EQ(expectedShape[i], ovms::Dimension(shapeMin[i], shapeMax[i]));
+            }
+        }
+        EXPECT_EQ(outputNames.size(), outputCount);
+    }
+
+    void checkServableAsDummy(const std::string& servableName) {
+        model_version_t servableVersion = 1;
+        ovms::tensor_map_t inputsInfo({{DUMMY_MODEL_INPUT_NAME,
+            std::make_shared<ovms::TensorInfo>(DUMMY_MODEL_INPUT_NAME, ovms::Precision::FP32, ovms::Shape{1, 10})}});
+        ovms::tensor_map_t outputsInfo({{DUMMY_MODEL_OUTPUT_NAME,
+            std::make_shared<ovms::TensorInfo>(DUMMY_MODEL_OUTPUT_NAME, ovms::Precision::FP32, ovms::Shape{1, 10})}});
+        checkMetadata(servableName, servableVersion, inputsInfo, outputsInfo);
+    }
+};
+OVMS_Server* CAPIMetadata::cserver = nullptr;
+
+TEST_F(CAPIMetadata, Negative) {
+    OVMS_ServableMetadata* servableMetadata = nullptr;
+    const std::string servableName = "dummy";
+    model_version_t servableVersion = 1;
+    // nullptr tests
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(nullptr, servableName.c_str(), servableVersion, &servableMetadata), StatusCode::NONEXISTENT_SERVER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, nullptr, servableVersion, &servableMetadata), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, nullptr), StatusCode::NONEXISTENT_METADATA);
+    // negative missing servable
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, "NONEXISTENT_NAME", servableVersion, &servableMetadata), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, servableName.c_str(), -1, &servableMetadata), StatusCode::MODEL_VERSION_MISSING);
+    // proper call
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata));
+    ASSERT_NE(nullptr, servableMetadata);
+    uint32_t inputCount = 42;
+    uint32_t outputCount = 42;
+    // OVMS_ServableMetadataGetInputsCount
+    // negative
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInputsCount(nullptr, &inputCount), StatusCode::NONEXISTENT_METADATA);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInputsCount(servableMetadata, nullptr), StatusCode::NONEXISTENT_NUMBER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutputsCount(nullptr, &outputCount), StatusCode::NONEXISTENT_METADATA);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutputsCount(servableMetadata, nullptr), StatusCode::NONEXISTENT_NUMBER);
+
+    // check inputs
+    uint32_t id = 0;
+    OVMS_DataType datatype = (OVMS_DataType)199;
+    int64_t* shapeMin{nullptr};
+    int64_t* shapeMax{nullptr};
+    size_t dimCount = 42;
+    const char* tensorName{nullptr};
+    // OVMS_ServableMetadataGetInput
+    // negative
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInput(nullptr, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_METADATA);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInput(servableMetadata, 412, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_TENSOR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInput(servableMetadata, id, nullptr, &datatype, &dimCount, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, nullptr, &dimCount, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_NUMBER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, &datatype, nullptr, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_NUMBER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, &datatype, &dimCount, nullptr, &shapeMax), StatusCode::NONEXISTENT_TABLE);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, nullptr), StatusCode::NONEXISTENT_TABLE);
+    // check outputs
+    id = 0;
+    datatype = (OVMS_DataType)199;
+    shapeMin = nullptr;
+    shapeMax = nullptr;
+    dimCount = 42;
+    tensorName = nullptr;
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(nullptr, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_METADATA);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, 412, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_TENSOR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, nullptr, &datatype, &dimCount, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, nullptr, &dimCount, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_NUMBER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, nullptr, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_NUMBER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, nullptr, &shapeMax), StatusCode::NONEXISTENT_TABLE);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, nullptr), StatusCode::NONEXISTENT_TABLE);
+}
+
+TEST_F(CAPIMetadata, BasicDummy) {
+    const std::string servableName{"dummy"};
+    checkServableAsDummy(servableName);
+}
+
+TEST_F(CAPIMetadata, BasicDummyDag) {
+    const std::string servableName{"pipeline1Dummy"};
+    checkServableAsDummy(servableName);
+}
+
+TEST_F(CAPIMetadata, DummyDynamicShapes) {
+    const std::string servableName = "dummyDynamic";
+    model_version_t servableVersion = 1;
+    ovms::tensor_map_t inputsInfo({{DUMMY_MODEL_INPUT_NAME,
+        std::make_shared<ovms::TensorInfo>(DUMMY_MODEL_INPUT_NAME, ovms::Precision::FP32, ovms::Shape{ovms::Dimension::any(), {1, 10}})}});
+    ovms::tensor_map_t outputsInfo({{DUMMY_MODEL_OUTPUT_NAME,
+        std::make_shared<ovms::TensorInfo>(DUMMY_MODEL_OUTPUT_NAME, ovms::Precision::FP32, ovms::Shape{ovms::Dimension::any(), {1, 10}})}});
+    checkMetadata(servableName, servableVersion, inputsInfo, outputsInfo);
+}
+
+TEST_F(CAPIMetadata, TwoInputsAddModel) {
+    const std::string servableName = "add";
+    model_version_t servableVersion = 1;
+    ovms::tensor_map_t inputsInfo({{SUM_MODEL_INPUT_NAME_1,
+                                       std::make_shared<ovms::TensorInfo>(SUM_MODEL_INPUT_NAME_1, ovms::Precision::FP32, ovms::Shape{1, 3})},
+        {SUM_MODEL_INPUT_NAME_2,
+            std::make_shared<ovms::TensorInfo>(SUM_MODEL_INPUT_NAME_2, ovms::Precision::FP32, ovms::Shape{1, 3})}});
+    ovms::tensor_map_t outputsInfo({{SUM_MODEL_OUTPUT_NAME,
+        std::make_shared<ovms::TensorInfo>(SUM_MODEL_OUTPUT_NAME, ovms::Precision::FP32, ovms::Shape{1, 3})}});
+    checkMetadata(servableName, servableVersion, inputsInfo, outputsInfo);
 }
 
 TEST_F(CAPIInference, CallInferenceServerNotStarted) {

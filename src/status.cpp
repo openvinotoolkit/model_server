@@ -282,6 +282,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NONEXISTENT_NUMBER, "Tried to use nonexisting number"},
     {StatusCode::NONEXISTENT_SETTINGS, "Tried to use nonexisting settings"},
     {StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL, "Tried to remove nonexisting parameter"},
+    {StatusCode::NONEXISTENT_METADATA, "Tried to use nonexisting metadata"},
     {StatusCode::NONEXISTENT_RESPONSE, "Tried to use nonexisting response"},
     {StatusCode::NONEXISTENT_REQUEST, "Tried to use nonexisting request"},
     {StatusCode::NONEXISTENT_SERVER, "Tried to use nonexisting server"},

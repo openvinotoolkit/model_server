@@ -14,11 +14,14 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <string>
 
 #include "../buffer.hpp"
 #include "../dags/pipeline.hpp"
+#include "../dags/pipelinedefinition.hpp"
+#include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
 #include "../inferenceparameter.hpp"
 #include "../inferencerequest.hpp"
@@ -32,10 +35,12 @@
 #include "../prediction_service.hpp"
 #include "../profiler.hpp"
 #include "../servablemanagermodule.hpp"
+#include "../servablemetadata.hpp"
 #include "../server.hpp"
 #include "../server_settings.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
+#include "capi_utils.hpp"
 
 using ovms::Buffer;
 using ovms::ExecutionContext;
@@ -45,6 +50,9 @@ using ovms::InferenceResponse;
 using ovms::InferenceTensor;
 using ovms::ModelInstanceUnloadGuard;
 using ovms::ModelManager;
+using ovms::Pipeline;
+using ovms::PipelineDefinition;
+using ovms::PipelineDefinitionUnloadGuard;
 using ovms::ServableManagerModule;
 using ovms::Server;
 using ovms::Status;
@@ -580,9 +588,7 @@ enum : unsigned int {
     TIMER_END
 };
 
-static Status getModelInstance(ovms::Server& server, const InferenceRequest* request, std::shared_ptr<ovms::ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
-    OVMS_PROFILE_FUNCTION();
+static Status getModelManager(Server& server, ModelManager** modelManager) {
     if (!server.isLive()) {
         return ovms::Status(ovms::StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "not live");
     }
@@ -593,28 +599,48 @@ static Status getModelInstance(ovms::Server& server, const InferenceRequest* req
     if (!servableModule) {
         return ovms::Status(ovms::StatusCode::INTERNAL_ERROR, "missing servable manager");
     }
-    auto& modelManager = dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
-    return modelManager.getModelInstance(request->getServableName(), request->getServableVersion(), modelInstance, modelInstanceUnloadGuardPtr);
+    *modelManager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+    return StatusCode::OK;
 }
 
-Status getPipeline(ovms::Server& server, const InferenceRequest* request,
+static Status getModelInstance(ovms::Server& server, const std::string& modelName, int64_t modelVersion, std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
+    ModelManager* modelManager{nullptr};
+    auto status = getModelManager(server, &modelManager);
+    if (!status.ok()) {
+        return status;
+    }
+    return modelManager->getModelInstance(modelName, modelVersion, modelInstance, modelInstanceUnloadGuardPtr);
+}
+
+static Status getPipeline(ovms::Server& server, const InferenceRequest* request,
     InferenceResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     OVMS_PROFILE_FUNCTION();
-    if (!server.isLive()) {
-        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "not live");
+    ModelManager* modelManager{nullptr};
+    auto status = getModelManager(server, &modelManager);
+    if (!status.ok()) {
+        return status;
     }
-    if (!server.isReady()) {
-        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "not ready");
-    }
-    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
-    if (!servableModule) {
-        return ovms::Status(ovms::StatusCode::INTERNAL_ERROR, "missing servable manager");
-    }
-    auto& modelManager = dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
-    return modelManager.createPipeline(pipelinePtr, request->getServableName(), request, response);
+    return modelManager->createPipeline(pipelinePtr, request->getServableName(), request, response);
 }
+
+static Status getPipelineDefinition(Server& server, const std::string& servableName, PipelineDefinition** pipelineDefinition, std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard) {
+    ModelManager* modelManager{nullptr};
+    Status status = getModelManager(server, &modelManager);
+    if (!status.ok()) {
+        return status;
+    }
+    *pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
+    if (!*pipelineDefinition) {
+        return Status(StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
+    }
+    return (*pipelineDefinition)->waitForLoaded(unloadGuard, 0);
+}
+
 }  // namespace
+
 OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response) {
     OVMS_PROFILE_FUNCTION();
     using std::chrono::microseconds;
@@ -631,7 +657,6 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     }
     auto req = reinterpret_cast<ovms::InferenceRequest*>(request);
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
-    std::unique_ptr<ovms::InferenceResponse> res(new ovms::InferenceResponse(req->getServableName(), req->getServableVersion()));
 
     SPDLOG_DEBUG("Processing C-API request for model: {}; version: {}",
         req->getServableName(),
@@ -641,8 +666,9 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    auto status = getModelInstance(server, req, modelInstance, modelInstanceUnloadGuard);
+    auto status = getModelInstance(server, req->getServableName(), req->getServableVersion(), modelInstance, modelInstanceUnloadGuard);
 
+    std::unique_ptr<ovms::InferenceResponse> res(new ovms::InferenceResponse(req->getServableName(), req->getServableVersion()));
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
         status = getPipeline(server, req, res.get(), pipelinePtr);
@@ -680,6 +706,136 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     }
     SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
     *response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
+    return nullptr;
+}
+
+OVMS_Status* OVMS_ServableMetadataGet(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, OVMS_ServableMetadata** servableMetadata) {
+    if (serverPtr == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+    }
+    if (servableName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
+    if (servableMetadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+    }
+    // TODO check inputs
+    // TODO metrics
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::Pipeline> pipelinePtr;
+    ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+    auto status = getModelInstance(server, servableName, servableVersion, modelInstance, modelInstanceUnloadGuard);
+
+    if (status == StatusCode::MODEL_NAME_MISSING) {
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", servableName);
+        PipelineDefinition* pipelineDefinition = nullptr;
+        std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+        status = getPipelineDefinition(server, servableName, &pipelineDefinition, unloadGuard);
+        if (!status.ok() || !pipelineDefinition) {
+            return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
+        }
+        *servableMetadata = reinterpret_cast<OVMS_ServableMetadata*>(new ovms::ServableMetadata(servableName, servableVersion, pipelineDefinition->getInputsInfo(), pipelineDefinition->getOutputsInfo()));
+        return nullptr;
+    }
+    if (!status.ok()) {
+        if (modelInstance) {
+            //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
+        }
+        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    *servableMetadata = reinterpret_cast<OVMS_ServableMetadata*>(new ovms::ServableMetadata(servableName, servableVersion, modelInstance->getInputsInfo(), modelInstance->getOutputsInfo()));
+    return nullptr;
+}
+
+OVMS_Status* OVMS_ServableMetadataGetInputsCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
+    if (servableMetadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+    }
+    if (count == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
+    *count = metadata->getInputsInfo().size();
+    return nullptr;
+}
+
+OVMS_Status* OVMS_ServableMetadataGetOutputsCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
+    if (servableMetadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+    }
+    if (count == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
+    *count = metadata->getOutputsInfo().size();
+    return nullptr;
+}
+OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax) {
+    if (servableMetadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+    }
+    if (name == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
+    if (datatype == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    if (dimCount == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    if (shapeMin == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+    }
+    if (shapeMax == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+    }
+    ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
+    if (id >= metadata->getInputsInfo().size()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TENSOR));
+    }
+    auto it = std::next(metadata->getInputsInfo().begin(), id);
+    *name = it->second->getName().c_str();
+    *datatype = getPrecisionAsOVMSDataType(it->second->getPrecision());
+    *dimCount = metadata->getInputDimsMin().at(*name).size();
+    *shapeMin = const_cast<int64_t*>(metadata->getInputDimsMin().at(*name).data());
+    *shapeMax = const_cast<int64_t*>(metadata->getInputDimsMax().at(*name).data());
+    return nullptr;
+}
+
+OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax) {
+    if (servableMetadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+    }
+    if (name == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+    }
+    if (datatype == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    if (dimCount == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+    }
+    if (shapeMin == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+    }
+    if (shapeMax == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+    }
+    ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
+    if (id >= metadata->getInputsInfo().size()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TENSOR));
+    }
+    if (id >= metadata->getOutputsInfo().size()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TENSOR));
+    }
+    auto it = std::next(metadata->getOutputsInfo().begin(), id);
+    *name = it->second->getName().c_str();
+    *datatype = getPrecisionAsOVMSDataType(it->second->getPrecision());
+    *dimCount = metadata->getOutputDimsMin().at(*name).size();
+    *shapeMin = const_cast<int64_t*>(metadata->getOutputDimsMin().at(*name).data());
+    *shapeMax = const_cast<int64_t*>(metadata->getOutputDimsMax().at(*name).data());
     return nullptr;
 }
 
