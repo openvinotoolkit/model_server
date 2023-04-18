@@ -342,3 +342,24 @@ new_local_repository(
     build_file = "@//third_party/mediapipe_calculators:BUILD",
     path = "/ovms/third_party/mediapipe_calculators",
 )
+
+# Geti Mediapipe Calculators
+git_repository(
+    name = "geti_calculators",
+    remote = "git@github.com:intel-innersource/applications.ai.geti.mediapipe.git",
+    commit = "938d443b43f742a8c5b98be56224f5aacb322442"
+)
+
+# OpenVINO Model API
+new_git_repository(
+    name = "model_api",
+    build_file_content = """\
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["model_api/cpp/**"]),
+    visibility = ["//visibility:public"],
+)
+""",
+    remote = "https://github.com/openvinotoolkit/model_api.git",
+    commit = "cb483472c2ea3a016fbafe703cf6b246564e3965",
+)
