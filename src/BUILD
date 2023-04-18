@@ -108,6 +108,24 @@ mediapipe_proto_library(
         "@mediapipe//mediapipe/framework:calculator_proto",
     ],
 )
+mediapipe_proto_library(
+    name = "modelapiovmsinferencecalculator_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["mediapipe_calculators/modelapiovmsinferencecalculator.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
+mediapipe_proto_library(
+    name = "modelapiovmssessioncalculator_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["mediapipe_calculators/modelapiovmssessioncalculator.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
 
 cc_library(
     name = "ovms_lib",
@@ -367,6 +385,8 @@ cc_library(
         "//src/kfserving_api:kfserving_api_cpp",
         "@oneTBB//:tbb",
         "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+        "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+        "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
         #"//src/tfservingstream_api:stream_prediction_service_cpp",
     ],
     local_defines = [
