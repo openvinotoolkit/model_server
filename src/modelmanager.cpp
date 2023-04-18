@@ -727,7 +727,6 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         } else {
             newModelConfigs.emplace(modelName, std::move(modelConfig));
         }
-
     }
     this->servedModelConfigs = std::move(newModelConfigs);
     retireModelsRemovedFromConfigFile(modelsInConfigFile, modelsWithInvalidConfig);

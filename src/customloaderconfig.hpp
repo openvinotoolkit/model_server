@@ -166,7 +166,7 @@ public:
         } catch (...) {
             SPDLOG_ERROR("There was an error parsing the custom loader config");
             return StatusCode::JSON_INVALID;
-        } 
+        }
         return StatusCode::OK;
     }
 };
