@@ -46,6 +46,9 @@ build --spawn_strategy=standalone
 build --genrule_strategy=standalone
 
 build --define=grpc_no_ares=true
+build --define=MEDIAPIPE_DISABLE_GPU=1
+coverage --define=MEDIAPIPE_DISABLE_GPU=1
+test --define=MEDIAPIPE_DISABLE_GPU=1
 
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
