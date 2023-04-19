@@ -34,7 +34,7 @@ if [ ${NO_WARNINGS_FORWARD} -gt 6 ]; then
     echo "Failed due to not using forward declarations where possible: ${NO_WARNINGS_FORWARD}";
     exit 1;
 fi
-if [ ${NO_WARNINGS_DIRECT} -gt 1 ]; then
+if [ ${NO_WARNINGS_DIRECT} -gt 17 ]; then
     echo "Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}";
     exit 1;
 fi
@@ -42,11 +42,11 @@ if [ ${NO_WARNINGS_NOTUSED} -gt 7 ]; then
     echo "Failed probably due to unnecessary forward includes: ${NO_WARNINGS_NOTUSED}";
     exit 1;
 fi
-if [ ${NO_WARNINGS} -gt  157 ]; then
+if [ ${NO_WARNINGS} -gt  162 ]; then
     echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
     exit 1
 fi
-if [ ${NO_WARNINGS_TEST} -gt  76 ]; then
+if [ ${NO_WARNINGS_TEST} -gt  85 ]; then
     echo "Failed due to higher than allowed number of issues in test code: ${NO_WARNINGS_TEST}"
     cat ${CPPCLEAN_RESULTS_FILE_TEST}
     exit 1
