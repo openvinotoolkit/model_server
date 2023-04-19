@@ -112,7 +112,7 @@ static OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype) {
     return it->second;
 }
 
-static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);
@@ -122,7 +122,7 @@ static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const uint64_t* shape, u
     std::memcpy(output->data(), voutputData, bytesize);
     return output;
 }
-static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);
@@ -229,7 +229,8 @@ public:
             }
             ss << " ] timestamp: " << cc->InputTimestamp().DebugString();
             MLOG(ss.str());
-            const auto& inputShape = input_tensor.get_shape();
+            const auto& ovInputShape = input_tensor.get_shape();
+            std::vector<int64_t> inputShape(ovInputShape.begin(), ovInputShape.end()); // TODO ensure ov tensors shapes conversions return error in all calcs
             OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
             ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size()));
             const uint32_t notUsedNum = 0;
@@ -259,7 +260,7 @@ public:
         size_t bytesize = 42;
         uint32_t outputId = 0;
         OVMS_DataType datatype = (OVMS_DataType)199;
-        const uint64_t* shape{nullptr};
+        const int64_t* shape{nullptr};
         uint32_t dimCount = 42;
         OVMS_BufferType bufferType = (OVMS_BufferType)199;
         uint32_t deviceId = 42;

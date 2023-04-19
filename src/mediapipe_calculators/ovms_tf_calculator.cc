@@ -119,7 +119,7 @@ public:
         tfsrequest.mutable_model_spec()->mutable_name()->assign(MODEL_NAME);
         tfsrequest.mutable_model_spec()->mutable_version()->set_value(MODEL_VERSION);
         const char* DUMMY_MODEL_INPUT_NAME = "b";
-        const std::vector<size_t> DUMMY_MODEL_SHAPE{1, 10};
+        const std::vector<int64_t> DUMMY_MODEL_SHAPE{1, 10};
         const size_t DUMMY_MODEL_INPUT_SIZE = 10;
 
         cout << __FILE__ << ":" << __LINE__ << endl;
@@ -171,7 +171,7 @@ public:
         size_t bytesize = 42;
         uint32_t outputId = 0;
         OVMS_DataType datatype = (OVMS_DataType)199;
-        const uint64_t* shape{nullptr};
+        const int64_t* shape{nullptr};
         uint32_t dimCount = 42;
         OVMS_BufferType bufferType = (OVMS_BufferType)199;
         uint32_t deviceId = 42;
