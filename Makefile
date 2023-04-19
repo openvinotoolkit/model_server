@@ -64,9 +64,9 @@ CMAKE_BUILD_TYPE ?= Release
 MINITRACE ?= OFF
 
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
-  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg --define=MEDIAPIPE_DISABLE_GPU=1"
+  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "
 else
-  BAZEL_DEBUG_FLAGS=" --strip=never --define=MEDIAPIPE_DISABLE_GPU=1"
+  BAZEL_DEBUG_FLAGS=" --strip=never "
 endif
 
 ifeq ($(MINITRACE),ON)
