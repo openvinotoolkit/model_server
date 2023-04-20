@@ -66,7 +66,7 @@ protected:
     }
 };
 
-class TFSMakeJsonFromPredictResponseStringTest : public ::testing::TestWithParam<ovms::Order> {
+class TFSMakeJsonFromPredictResponseStringTest : public ::testing::Test {
 protected:
     TFSResponseType proto;
     std::string json;
@@ -74,23 +74,40 @@ protected:
 
     void SetUp() override {
         output1 = &((*proto.mutable_outputs())["output1_string"]);
-
         output1->set_dtype(tensorflow::DataType::DT_STRING);
-
-        output1->add_string_val("Hello");
-        output1->mutable_tensor_shape()->add_dim()->set_size(1);
-        output1->mutable_tensor_shape()->add_dim()->set_size(1);
     }
 };
 
 TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveRow) {
-    std::string expected_json = "{\n    \"predictions\": [[\"Hello\"]\n    ]\n}";
+    output1->add_string_val("Hello");
+    output1->mutable_tensor_shape()->add_dim()->set_size(1);
+    std::string expected_json = "{\n    \"predictions\": [\"Hello\"\n    ]\n}";
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::ROW), StatusCode::OK);
+    EXPECT_EQ(json, expected_json);
+}
+
+TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveRowBatchSize2) {
+    output1->add_string_val("Hello");
+    output1->add_string_val("World");
+    output1->mutable_tensor_shape()->add_dim()->set_size(2);
+    std::string expected_json = "{\n    \"predictions\": [\"Hello\", \"World\"\n    ]\n}";
     ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::ROW), StatusCode::OK);
     EXPECT_EQ(json, expected_json);
 }
 
 TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveColumn) {
-    std::string expected_json = "{\n    \"outputs\": [\n        [\n            \"Hello\"\n        ]\n    ]\n}";
+    output1->add_string_val("Hello");
+    output1->mutable_tensor_shape()->add_dim()->set_size(1);
+    std::string expected_json = "{\n    \"outputs\": [\n        \"Hello\"\n    ]\n}";
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::OK);
+    EXPECT_EQ(json, expected_json);
+}
+
+TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveColumnBatchSize2) {
+    output1->add_string_val("Hello");
+    output1->add_string_val("World");
+    output1->mutable_tensor_shape()->add_dim()->set_size(2);
+    std::string expected_json = "{\n    \"outputs\": [\n        \"Hello\",\n        \"World\"\n    ]\n}";
     ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::OK);
     EXPECT_EQ(json, expected_json);
 }
