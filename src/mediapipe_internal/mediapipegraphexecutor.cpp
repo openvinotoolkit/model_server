@@ -140,15 +140,24 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         while (poller.Next(&packet)) {
             SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
             auto received = packet.Get<ov::Tensor>();
-            float* dataOut = (float*)received.data();
-            auto timestamp = packet.Timestamp();
-            std::stringstream ss;
-            ss << "ServiceImpl Received tensor: [";
-            for (int x = 0; x < 10; ++x) {
-                ss << dataOut[x] << " ";
+            if ((spdlog::default_logger_raw()->level() == spdlog::level::debug) &&
+                (received.get_element_type() == ov::element::Type_t::f32)) {
+                // TODO remove before release
+                float* dataOut = (float*)received.data();
+                auto timestamp = packet.Timestamp();
+                std::stringstream ss;
+                ss << "ServiceImpl Received tensor: [";
+                auto shape = received.get_shape();
+                size_t elementsCount = 1;
+                for (auto& dim : shape) {
+                    elementsCount *= dim;
+                }
+                for (size_t x = 0; x < elementsCount; ++x) {
+                    ss << dataOut[x] << " ";
+                }
+                ss << " ]  timestamp: " << timestamp.DebugString();
+                SPDLOG_DEBUG(ss.str());
             }
-            ss << " ]  timestamp: " << timestamp.DebugString();
-            SPDLOG_DEBUG(ss.str());
             auto* output = response->add_outputs();
             output->clear_shape();
             output->set_name(outputStreamName);
@@ -160,14 +169,18 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
             for (const auto& dim : shape) {
                 output->add_shape(dim);
             }
-            float* data = (float*)received.data();
-            std::stringstream ss2;
-            ss2 << "[ ";
-            for (size_t i = 0; i < 10; ++i) {
-                ss2 << data[i] << " ";
+            if ((spdlog::default_logger_raw()->level() == spdlog::level::debug) &&
+                (received.get_element_type() == ov::element::Type_t::f32)) {
+                // TODO remove before release
+                float* data = (float*)received.data();
+                std::stringstream ss2;
+                ss2 << "[ ";
+                for (size_t i = 0; i < 10; ++i) {
+                    ss2 << data[i] << " ";
+                }
+                ss2 << "]";
+                SPDLOG_DEBUG("ServiceImpl OutputData: {}", ss2.str());
             }
-            ss2 << "]";
-            SPDLOG_DEBUG("ServiceImpl OutputData: {}", ss2.str());
             outputContentString->assign((char*)received.data(), received.get_byte_size());
         }
     }

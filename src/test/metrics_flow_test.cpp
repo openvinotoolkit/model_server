@@ -148,8 +148,7 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         request.mutable_model_spec()->mutable_name()->assign(modelName);
         inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {DUMMY_MODEL_SHAPE, correctPrecision}}};
         preparePredictRequest(request, inputsMeta);
-        // ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK); // TODO restore
-        ASSERT_EQ(OVMS_GRPCInference2((void*)&server, (void*)&request, (void*)&response), nullptr);
+        ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
     // Failed single model calls
     for (int i = 0; i < numberOfFailedRequests; i++) {
