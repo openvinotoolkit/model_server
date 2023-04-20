@@ -45,7 +45,7 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, manager.getMetricRegistry(), &manager.getMetricConfig());
     auto stat = graphDefinition->validate(manager);
     auto it = definitions.insert({pipelineName, std::move(graphDefinition)});  // TODO check if inserted
-    return StatusCode::OK;
+    return stat;
 }
 
 bool MediapipeFactory::definitionExists(const std::string& name) const {

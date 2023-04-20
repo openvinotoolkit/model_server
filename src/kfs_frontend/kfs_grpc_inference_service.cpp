@@ -235,8 +235,9 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     if (!status.ok()) {
         return grpc(status);
     }
-    const std::string ServableName = request->model_name();
-    if (0 == ServableName.rfind("mediapipe", 0)) {
+    const std::string servableName = request->model_name();
+    if (0 == servableName.rfind("mediapipe", 0)) {
+        // TODO need to enable reporter for mediapipe
         return grpc(Status(StatusCode::OK));
     }
     if (!reporter) {
@@ -271,7 +272,6 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         }
     }
     if (!status.ok()) {
-        const std::string ServableName = request->model_name();
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcModelInfer);
         }

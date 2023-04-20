@@ -44,7 +44,6 @@ class MachineState {
 public:
     MachineState(const std::string& name) :
         name(name) {}
-    const std::string getName() { return name; }
     template <typename Event>
     void handle(const Event& event) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} state: {} handling: {}: {}",

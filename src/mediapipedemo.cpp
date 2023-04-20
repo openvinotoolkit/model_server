@@ -42,6 +42,7 @@ using mediapipe::Packet;
 using mediapipe::ParseTextProtoOrDie;
 using mediapipe::Timestamp;
 
+// TODO remove before release after integration
 static absl::Status ExecuteDummy(size_t requestCount, size_t inputStreamDelayMs) {
     // You have to have 2 different prefixes fo two different input/output streams even if they don't mean anything
     // if model input name does not follow mediapipe convention [A-Z_][A-Z0-9_]* we have to either (1) use model mapping with models or change DAG config. (2) Another option is to use protobuf side packet/option that would map mediapipe input stream TAG with actual model input. (2) seems better as it wouldn't require ingerence in OVMS config just to follow mediapipe convention
