@@ -31,21 +31,21 @@ docker run -it --network host -e no_proxy=localhost bert-client:latest --grpc_ad
 
 Docker image with BERT client by default start the container with a command:
 ```
-python bert_question_answering.py -v vocab.txt -i "https://en.wikipedia.org/wiki/BERT_(language_model)" --question "what is bert" --grpc_port 9000 --input_names input_ids,attention_mask,token_type_ids,position_ids
+python bert_question_answering.py -v vocab.txt -i "https://en.wikipedia.org/w/index.php?title=BERT_(language_model)&oldid=1148859098" --question "what is bert" --grpc_port 9000 --input_names input_ids,attention_mask,token_type_ids,position_ids
 ```
 You can change the entrypoint to adjust to different parameters
 
 Example of the output snippet:
 ```bash
 question: what is bert
-[ INFO ] Sequence of length 366 is processed with 11.27 requests/sec (0.089 sec per request)
-[ INFO ] Sequence of length 305 is processed with 12.53 requests/sec (0.08 sec per request)
-[ INFO ] Sequence of length 349 is processed with 11.89 requests/sec (0.084 sec per request)
-[ INFO ] Sequence of length 110 is processed with 18.75 requests/sec (0.053 sec per request)
+[ INFO ] Sequence of length 418 is processed with 9.91 requests/sec (0.1 sec per request)
+[ INFO ] Sequence of length 305 is processed with 12.08 requests/sec (0.083 sec per request)
+[ INFO ] Sequence of length 349 is processed with 12.14 requests/sec (0.082 sec per request)
+[ INFO ] Sequence of length 110 is processed with 17.98 requests/sec (0.056 sec per request)
 [ INFO ] The performance below is reported only for reference purposes, please use the benchmark_app tool (part of the OpenVINO samples) for any actual measurements.
-[ INFO ] 4 requests were processed in 0.33sec (0.083sec per request)
-[ INFO ] ---answer: 0.17 Bidirectional Encoder Representations from Transformers
-[ INFO ]    Bidirectional Encoder Representations from Transformers (BERT) is a family of masked-language models introduced in 2018 by researchers at Google.[1][2] A 2020 literature survey concluded that "in a little over a year, BERT has become a ubiquitous baseline in Natural Language Processing (NLP) experiments counting over 150 research publications analyzing and improving the model."[3]
+[ INFO ] 4 requests were processed in 0.34sec (0.086sec per request)
+[ INFO ] ---answer: 0.35 Bidirectional Encoder Representations from Transformers
+[ INFO ]    This is the current revision of this page, as edited by Mandarax (talk | contribs) at 19:01, 8 April 2023 (Correct capitalization). The present address (URL) is a permanent link to this version.Bidirectional Encoder Representations from Transformers (BERT) is a family of masked-language models introduced in 2018 by researchers at Google.[1][2] A 2020 literature survey concluded that "in a little over a year, BERT has become a ubiquitous baseline in Natural Language Processing (NLP) experiments counting over 150 research publications analyzing and improving the model."[3]
 BERT was originally implemented in the English language at two model sizes:[1] (1) BERTBASE: 12 encoders with 12 bidirectional self-attention heads totaling 110 million parameters, and (2) BERTLARGE: 24 encoders with 16 bidirectional self-attention heads totaling 340 million parameters. Both models were pre-trained on the Toronto BookCorpus[4] (800M words) and English Wikipedia  (2,500M words).
 BERT is based on the transformer architecture. Specifically, BERT is composed of Transformer encoder layers.
 BERT was pre-trained simultaneously on two tasks:  language modeling (15% of tokens were masked, and the training objective was to predict the original token given its context) and next sentence prediction (the training objective was to classify if two spans of text appeared sequentially in the training corpus).[5] As a result of this training process, BERT learns latent representations of words and sentences in context. After pre-training, BERT can be fine-tuned with fewer resources on smaller datasets to optimize its performance on specific tasks such as NLP tasks (language inference, text classification) and sequence-to-sequence based language generation tasks (question-answering, conversational response generation).[1][6] The pre-training stage is significantly more computationally expensive than fine-tuning.
