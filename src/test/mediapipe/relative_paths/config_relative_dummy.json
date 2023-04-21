@@ -19,7 +19,7 @@
         },
         {
             "name":"mediapipeAddADAPT",
-            "graph_path":"graph2/graphaddadapter.pbtxt"
+            "graph_path":"graph2/graphadd.pbtxt"
         }
     ]
 }
