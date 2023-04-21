@@ -86,7 +86,7 @@ In a scenario with a single connections is 1, set the following parameter:
 
 `--plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}'`
 
-When the number of concurrent requests is high, adjust the number of streams. Make sure, however, that the number of streams is lower than the average volum of concurrent inference operations. Otherwise, the server might not be fully utilized.
+When the number of concurrent requests is high, adjust the number of streams. Make sure, however, that the number of streams is lower than the average volume of concurrent inference operations. Otherwise, the server might not be fully utilized.
 Number of streams should not exceed the number of CPU cores.
 
 For example, with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
