@@ -87,6 +87,7 @@ In a scenario with a single connections/client, set the following parameter:
 `--plugin_config '{"NUM_STREAMS": "1"}'`
 
 When the number of concurrent requests is high, increase the number of streams. Make sure, however, that the number of streams is lower than the average volume of concurrent inference operations. Otherwise, the server might not be fully utilized.
+
 Number of streams should not exceed the number of cores.
 
 For example, with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
