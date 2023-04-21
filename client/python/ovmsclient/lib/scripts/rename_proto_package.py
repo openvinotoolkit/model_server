@@ -22,7 +22,7 @@ base_path = "ovmsclient/tfs_compat/protos"
 proto_paths = []
 for root, subdirs, files in os.walk(base_path):
     for file in files:
-        if file[-6:] == ".proto":
+        if file.endswith(".proto"):
             file_path = os.path.join(root, file)
             proto_paths.append(file_path)
 
