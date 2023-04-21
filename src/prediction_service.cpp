@@ -106,6 +106,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_spec().name());
         status = getPipeline(request, response, pipelinePtr);
     }
+
     if (!status.ok()) {
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);

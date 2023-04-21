@@ -483,15 +483,18 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
     OVMS_PROFILE_FUNCTION();
     auto status = validateTensor(tensorInfo, src, buffer);
     if (status != StatusCode::OK) {
+        SPDLOG_DEBUG("Input native file format validation failed");
         return status;
     }
     std::vector<cv::Mat> images;
     status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo, buffer);
     if (!status.ok()) {
+        SPDLOG_DEBUG("Input native file format conversion failed");
         return status;
     }
     tensor = convertMatsToTensor(images, tensorInfo);
     if (!tensor) {
+        SPDLOG_DEBUG("Input native file format conversion failed");
         return StatusCode::IMAGE_PARSING_FAILED;
     }
     return StatusCode::OK;
@@ -512,6 +515,7 @@ static Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::Inf
         batchSize++;
     }
     if (offset != buffer->size()) {
+        SPDLOG_DEBUG("Input string format conversion failed");
         return StatusCode::INVALID_STRING_INPUT;
     }
     size_t width = maxStringLength + 1;
@@ -571,6 +575,7 @@ static Status convertStringRequestFromBufferToOVTensor1D(const ::KFSRequest::Inf
     }
     uint64_t batchSize = stringSizes.size();
     if ((totalStringsLength + batchSize * sizeof(uint32_t)) != buffer->size()) {
+        SPDLOG_DEBUG("Input string format conversion failed");
         return StatusCode::INVALID_STRING_INPUT;
     }
     int64_t metadataLength = sizeof(uint32_t) * (batchSize + 2);

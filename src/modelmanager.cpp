@@ -52,6 +52,8 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
+#include "mediapipe_internal/mediapipefactory.hpp"
+#include "mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "metric_config.hpp"
 #include "metric_registry.hpp"
 #include "modelinstance.hpp"  // for logging
@@ -354,6 +356,27 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
     return StatusCode::OK;
 }
 
+static Status processMediapipeConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory, ModelManager& manager) {
+    const std::string mediapipeGraphName = pipelineConfig["name"].GetString();
+    const std::string mediapipeGraphFilePath = pipelineConfig["graph_path"].GetString();
+    if (mediapipesInConfigFile.find(mediapipeGraphName) != mediapipesInConfigFile.end()) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", mediapipeGraphName);
+        return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
+    }
+    MediapipeGraphConfig config{mediapipeGraphFilePath};
+    if (!factory.definitionExists(mediapipeGraphName)) {
+        SPDLOG_DEBUG("Mediapipe graph:{} was not loaded so far. Triggering load", mediapipeGraphName);
+        auto status = factory.createDefinition(mediapipeGraphName, config, manager);
+        mediapipesInConfigFile.insert(mediapipeGraphName);
+        return status;
+    }
+    SPDLOG_DEBUG("Mediapipe graph:{} is already loaded. Triggering reload", mediapipeGraphName);
+    auto status = factory.reloadDefinition(mediapipeGraphName,
+        config,
+        manager);
+    mediapipesInConfigFile.insert(mediapipeGraphName);
+    return status;
+}
 static Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
     if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
@@ -489,6 +512,30 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
     return StatusCode::OK;
 }
 
+Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson) {
+    const auto itrp = configJson.FindMember("mediapipe_config_list");
+    if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
+        mediapipeFactory.retireOtherThan({}, *this);
+        return StatusCode::OK;
+    }
+    std::set<std::string> mediapipesInConfigFile;
+    Status firstErrorStatus = StatusCode::OK;
+    try {
+        for (const auto& mediapipeGraphConfig : itrp->value.GetArray()) {
+            auto status = processMediapipeConfig(configJson, mediapipeGraphConfig, mediapipesInConfigFile, mediapipeFactory, *this);
+            if (status != StatusCode::OK) {
+                IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            }
+        }
+        mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFile), *this);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to process mediapipe graph config:{}", e.what());
+    } catch (...) {
+        SPDLOG_ERROR("Failed to process mediapipe graph config.");
+    }
+    return firstErrorStatus;
+}
 Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("pipeline_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
@@ -793,6 +840,10 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
     status = loadPipelinesConfig(configJson);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+    status = loadMediapipeGraphsConfig(configJson);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
@@ -1380,4 +1431,10 @@ const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() cons
     return *customNodeLibraryManager;
 }
 
+Status ModelManager::createPipeline(std::shared_ptr<MediapipeGraphExecutor>& graph,
+    const std::string& name,
+    const KFSRequest* request,
+    KFSResponse* response) {
+    return this->mediapipeFactory.create(graph, name, request, response, *this);
+}
 }  // namespace ovms

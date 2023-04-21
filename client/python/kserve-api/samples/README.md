@@ -360,7 +360,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 grpc_infer_binary_resnet.py --grpc_port 9000 --images_list ../../resnet_input_images.txt  --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+python3 grpc_infer_binary_resnet.py --grpc_port 9000 --images_list ../../resnet_input_images.txt --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 27.09 ms; speed 36.92 fps

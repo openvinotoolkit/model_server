@@ -29,6 +29,7 @@
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../ovms.h"  // NOLINT
+#include "../prediction_service.hpp"
 #include "../profiler.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"

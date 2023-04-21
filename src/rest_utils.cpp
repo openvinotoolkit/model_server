@@ -180,6 +180,13 @@ Status makeJsonFromPredictResponse(
                     tensor.add_uint64_val(*reinterpret_cast<uint64_t*>(tensor.mutable_tensor_content()->data() + i));
             }
             break;
+        case DataType::DT_STRING:
+            if (seekDataInValField) {
+                auto status = checkValField(tensor.string_val_size(), tensor.tensor_shape().dim(0).size());
+                if (!status.ok())
+                    return status;
+            }
+            break;
         default:
             return StatusCode::REST_UNSUPPORTED_PRECISION;
         }

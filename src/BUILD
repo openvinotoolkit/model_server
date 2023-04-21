@@ -43,16 +43,16 @@ cc_library(
 )
 
 load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
+load("@tensorflow_serving//tensorflow_serving:serving.bzl", "serving_tensorflow_proto_dep")
 
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
     static_deps = ["@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
-        "@rapidjson//:__subpackages__",
-        "@spdlog//:__subpackages__",
+        "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
-        "@cxxopts//:__subpackages__",
+        "@com_github_jarro2783_cxxopts//:__subpackages__",
         "@awssdk//:__subpackages__",
         "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
@@ -74,16 +74,57 @@ cc_shared_library(
         "@double_conversion//:__subpackages__",
         "@nsync//:__subpackages__",
         "@eigen_archive//:__subpackages__",
-        "@openvino//:__subpackages__",
+        "@linux_openvino//:__subpackages__",
         "@com_github_jupp0r_prometheus_cpp//:__subpackages__",
         "@//:__subpackages__",
         "@com_github_grpc_grpc//:__subpackages__",
         "@upb//:__subpackages__",
         "@zlib//:__subpackages__",
         "@oneTBB//:__subpackages__",
+        "@google_mediapipe//:__subpackages__",
+        "@mediapipe//:__subpackages__",
+        "@com_github_glog_glog//:__subpackages__",
+        "@com_github_gflags_gflags//:__subpackages__",
+        "@mediapipe_calculators//:__subpackages__",
+        "@arm_neon_2_x86_sse//:__subpackages__",
+        "@ruy//:__subpackages__",
+        "@cpuinfo//:__subpackages__",
+        "@clog//:__subpackages__",
+        "@gemmlowp//:__subpackages__",
+        "@flatbuffers//:__subpackages__",
     ],
     features = [],
     roots = ["//src:ovms_lib"],
+)
+
+load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+
+mediapipe_proto_library(
+    name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["mediapipe_calculators/ovmscalculator.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
+mediapipe_proto_library(
+    name = "modelapiovmsinferencecalculator_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["mediapipe_calculators/modelapiovmsinferencecalculator.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
+mediapipe_proto_library(
+    name = "modelapiovmssessioncalculator_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["mediapipe_calculators/modelapiovmssessioncalculator.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
 )
 
 cc_library(
@@ -174,6 +215,19 @@ cc_library(
         "kfs_frontend/kfs_grpc_inference_service.hpp",
         "kfs_frontend/kfs_utils.cpp",
         "kfs_frontend/kfs_utils.hpp",
+        "mediapipe_internal/mediapipefactory.cpp",
+        "mediapipe_internal/mediapipefactory.hpp",
+        "mediapipe_internal/mediapipegraphdefinition.cpp",
+        "mediapipe_internal/mediapipegraphdefinition.hpp",
+        "mediapipe_internal/mediapipegraphexecutor.cpp",
+        "mediapipe_internal/mediapipegraphexecutor.hpp",
+        "mediapipe_calculators/modelapiovmsadapter.cc",
+        "mediapipe_calculators/modelapiovmsadapter.hpp",
+        "mediapipe_calculators/modelapiovmsadapterwrapper.cc",
+        "mediapipe_calculators/modelapiovmsadapterwrapper.hpp",
+        "mediapipe_calculators/ovms_calculator.cc",
+        "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
+        "mediapipe_calculators/modelapiovmssessioncalculator.cc",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",
@@ -303,9 +357,9 @@ cc_library(
         "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
         "@org_tensorflow//tensorflow/core:framework",
-        "@rapidjson//:rapidjson",
-        "@spdlog//:spdlog",
-        "@cxxopts//:cxxopts",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@com_github_gabime_spdlog//:spdlog",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
         "@awssdk//:s3",
         "@awssdk//:core",
         "@awssdk//:deps",
@@ -313,23 +367,31 @@ cc_library(
         "@cpprest//:sdk",
         "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework/port:logging",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/port:status",
+        "@mediapipe_calculators//:mediapipe_calculators",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
-        "@openvino//:openvino",
-        "@opencv//:opencv",
+        "@linux_openvino//:openvino",
+        "@linux_opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
         "//src/kfserving_api:kfserving_api_cpp",
         "@oneTBB//:tbb",
+        "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+        "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+        "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
     copts = [
-        "-Wall",
+        #"-Wall",
         "-Wno-unknown-pragmas",
-        "-Werror",
+#TODO:  "-Werror", mediapipe
     ],
     visibility = [
         "//visibility:public",
@@ -339,7 +401,8 @@ cc_library(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-    ]
+    ],
+    alwayslink = 1,
 )
 
 cc_binary(
@@ -350,7 +413,19 @@ cc_binary(
     ],
     linkshared = 1,
     deps = [
-        "@rapidjson//:rapidjson",
+        "@com_github_tencent_rapidjson//:rapidjson",
+    ],
+)
+
+cc_binary(
+    name = "hello_world",
+    srcs = ["hello_world.cc"],
+    deps = [
+        "//src:ovms_lib",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework/port:logging",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/port:status",
     ],
 )
 
@@ -426,7 +501,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -445,7 +520,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -490,7 +565,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -509,7 +584,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -528,7 +603,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -577,8 +652,6 @@ cc_binary(
     name = "capi_benchmark",
     srcs = [
         "main_benchmark.cpp",
-        "stringutils.cpp",
-        "stringutils.hpp",
     ],
     linkopts = [
         "-lpthread",
@@ -648,6 +721,7 @@ cc_test(
         "test/kfs_rest_test.cpp",
         "test/layout_test.cpp",
         "test/localfilesystem_test.cpp",
+        "test/mediapipeflow_test.cpp",
         "test/metrics_flow_test.cpp",
         "test/metrics_test.cpp",
         "test/metric_config_test.cpp",
@@ -738,7 +812,7 @@ cc_test(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        "-Werror",
+        #"-Werror", TODO mediapipe temporary enablement
     ],
 )
 

@@ -361,8 +361,10 @@ int Server::start(int argc, char** argv) {
 // C-API Start
 Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
-        if (this->isLive())
+        if (this->isLive()) {
+            SPDLOG_ERROR("Cannot start OVMS - server is already live");
             return StatusCode::SERVER_ALREADY_STARTED;
+        }
         auto& config = ovms::Config::instance();
         if (!config.parse(serverSettings, modelsSettings))
             return StatusCode::OPTIONS_USAGE_ERROR;

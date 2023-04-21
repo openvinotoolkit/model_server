@@ -17,7 +17,10 @@
 
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
@@ -27,6 +30,8 @@
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../metric.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -41,7 +46,10 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
-
+#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/port/logging.h"
+#include "mediapipe/framework/port/parse_text_proto.h"
+#include "mediapipe/framework/port/status.h"
 namespace {
 enum : unsigned int {
     TOTAL,
@@ -227,7 +235,13 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     if (!status.ok()) {
         return grpc(status);
     }
+    const std::string servableName = request->model_name();
+    if (0 == servableName.rfind("mediapipe", 0)) {
+        // TODO need to enable reporter for mediapipe
+        return grpc(Status(StatusCode::OK));
+    }
     if (!reporter) {
+        SPDLOG_ERROR("If this is mediapipe test you need to exclude it from this check");
         return grpc(Status(StatusCode::INTERNAL_ERROR));  // should not happen
     }
     double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);
@@ -246,6 +260,16 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_name());
         status = getPipeline(request, response, pipelinePtr);
+        if (status == StatusCode::PIPELINE_DEFINITION_NAME_MISSING) {
+            SPDLOG_DEBUG("Requested DAG: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
+            std::shared_ptr<MediapipeGraphExecutor> executor;
+            status = this->modelManager.createPipeline(executor, request->model_name(), request, response);
+            if (!status.ok()) {
+                return status;
+            }
+            status = executor->infer(request, response, executionContext, reporterOut);
+            return status;
+        }
     }
     if (!status.ok()) {
         if (modelInstance) {
@@ -257,7 +281,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     if (pipelinePtr) {
         reporterOut = &pipelinePtr->getMetricReporter();
         status = pipelinePtr->execute(executionContext);
-    } else {
+    } else if (modelInstance) {
         reporterOut = &modelInstance->getMetricReporter();
         status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
     }

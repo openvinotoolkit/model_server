@@ -150,7 +150,6 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         preparePredictRequest(request, inputsMeta);
         ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
-
     // Failed single model calls
     for (int i = 0; i < numberOfFailedRequests; i++) {
         request.Clear();
