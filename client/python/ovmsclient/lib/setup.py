@@ -49,7 +49,7 @@ long_description = (this_directory / "docs/pypi_overview.md").read_text()
 
 setuptools.setup(
      name="ovmsclient",
-     version="2022.3",
+     version="2023.0",
      license="Apache License 2.0",
      author="Intel Corporation",
      author_email="ovms.engineering@intel.com",
