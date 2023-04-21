@@ -31,6 +31,7 @@ namespace ovms {
 namespace fs = std::filesystem;
 
 using files_list_t = std::set<std::string>;
+
 class FileSystem {
 public:
     /**
@@ -146,6 +147,30 @@ public:
         std::size_t lhs = path.find("../");
         std::size_t rhs = path.find("/..");
         return (std::string::npos != lhs && lhs == 0) || (std::string::npos != rhs && rhs == path.length() - 3) || std::string::npos != path.find("/../");
+    }
+
+    static const std::string S3_URL_PREFIX;
+
+    static const std::string GCS_URL_PREFIX;
+
+    static const std::string AZURE_URL_FILE_PREFIX;
+
+    static const std::string AZURE_URL_BLOB_PREFIX;
+
+    static bool isLocalFilesystem(const std::string& basePath) {
+        if (basePath.rfind(S3_URL_PREFIX, 0) == 0) {
+            return false;
+        }
+        if (basePath.rfind(GCS_URL_PREFIX, 0) == 0) {
+            return false;
+        }
+        if (basePath.rfind(AZURE_URL_FILE_PREFIX, 0) == 0) {
+            return false;
+        }
+        if (basePath.rfind(AZURE_URL_BLOB_PREFIX, 0) == 0) {
+            return false;
+        }
+        return true;
     }
 
     std::string appendSlash(const std::string& name) {

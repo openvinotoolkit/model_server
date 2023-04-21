@@ -24,9 +24,6 @@
 
 namespace ovms {
 
-const std::string AzureFileSystem::AZURE_URL_FILE_PREFIX = "azfs://";
-const std::string AzureFileSystem::AZURE_URL_BLOB_PREFIX = "az://";
-
 static as::cloud_storage_account createDefaultOrAnonymousAccount() {
     try {
         const char* env_cred = std::getenv("AZURE_STORAGE_CONNECTION_STRING");

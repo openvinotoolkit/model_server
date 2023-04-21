@@ -28,6 +28,13 @@ TEST(NodeLibraryManagerTest, NewManagerExpectMissingLibrary) {
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_MISSING);
 }
 
+TEST(NodeLibraryManagerTest, UnSuccessfullLibraryLoading) {
+    CustomNodeLibraryManager manager;
+    NodeLibrary library;
+    auto status = manager.loadLibrary("random_name", "ovms/bazel-bin/src/lib_node_mock.so");
+    ASSERT_EQ(status, StatusCode::PATH_INVALID);
+}
+
 TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
     CustomNodeLibraryManager manager;
     NodeLibrary library;

@@ -555,9 +555,9 @@ StatusCode AzureStorageBlob::parseFilePath(const std::string& path) {
     fullUri_ = path;
     int share_start = 0;
     // Blob path
-    if (path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos) {
-        share_start = path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) + AzureFileSystem::AZURE_URL_BLOB_PREFIX.size();
-    } else if (path.find(AzureFileSystem::AZURE_URL_FILE_PREFIX) != std::string::npos) {
+    if (path.find(FileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos) {
+        share_start = path.find(FileSystem::AZURE_URL_BLOB_PREFIX) + FileSystem::AZURE_URL_BLOB_PREFIX.size();
+    } else if (path.find(FileSystem::AZURE_URL_FILE_PREFIX) != std::string::npos) {
         // File path
         SPDLOG_LOGGER_ERROR(azurestorage_logger, "Wrong object type - az:// prefix in path required, azure:// found:", path);
         return StatusCode::AS_INVALID_PATH;
@@ -1154,9 +1154,9 @@ StatusCode AzureStorageFile::parseFilePath(const std::string& path) {
     fullUri_ = path;
     int share_start = 0;
     // File or directory path
-    if (path.find(AzureFileSystem::AZURE_URL_FILE_PREFIX) != std::string::npos) {
-        share_start = path.find(AzureFileSystem::AZURE_URL_FILE_PREFIX) + AzureFileSystem::AZURE_URL_FILE_PREFIX.size();
-    } else if (path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos) {
+    if (path.find(FileSystem::AZURE_URL_FILE_PREFIX) != std::string::npos) {
+        share_start = path.find(FileSystem::AZURE_URL_FILE_PREFIX) + FileSystem::AZURE_URL_FILE_PREFIX.size();
+    } else if (path.find(FileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos) {
         // Blob path
         SPDLOG_LOGGER_ERROR(azurestorage_logger, "Wrong object type. azfs:// prefix in path required, found az://:", path);
         return StatusCode::AS_INVALID_PATH;
@@ -1212,7 +1212,7 @@ std::shared_ptr<AzureStorageAdapter> AzureStorageFactory::getNewAzureStorageObje
 }
 
 bool AzureStorageFactory::isBlobStoragePath(std::string path) {
-    return (path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos);
+    return (path.find(FileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos);
 }
 
 }  // namespace ovms
