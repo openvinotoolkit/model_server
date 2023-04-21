@@ -120,38 +120,6 @@ const char* relative_config_2_models = R"({
     }]
 })";
 
-const char* relative_config_1_model = R"({
-   "model_config_list": [
-    {
-      "config": {
-        "name": "resnet",
-        "base_path": "models/dummy1",
-        "target_device": "CPU",
-        "model_version_policy": {"all": {}}
-      }
-   }]
-})";
-
-const char* relative_config_2_models = R"({
-   "model_config_list": [
-    {
-      "config": {
-        "name": "resnet",
-        "base_path": "models/dummy1",
-        "target_device": "CPU",
-        "model_version_policy": {"all": {}}
-      }
-    },
-    {
-      "config": {
-        "name": "alpha",
-        "base_path": "models/dummy2",
-        "target_device": "CPU",
-        "model_version_policy": {"all": {}}
-      }
-    }]
-})";
-
 const std::string FIRST_MODEL_NAME = "resnet";
 const std::string SECOND_MODEL_NAME = "alpha";
 
@@ -805,6 +773,12 @@ TEST_F(ModelManager, ReadsVersionsFromDisk) {
 
         EXPECT_EQ(status, ovms::StatusCode::OK);
         EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
+
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::remove(path + std::to_string(i));
+        }
+
+        std::filesystem::remove(path + "unknown_dir11");  // invalid version directory
     } catch (...) {
         for (auto i : {1, 5, 8, 10}) {
             std::filesystem::remove(path + std::to_string(i));
@@ -830,6 +804,12 @@ TEST_F(ModelManager, ReadsVersionsFromDiskRelativePath) {
 
         EXPECT_EQ(status, ovms::StatusCode::OK);
         EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
+
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::remove(path + std::to_string(i));
+        }
+
+        std::filesystem::remove(path + "unknown_dir11");  // invalid version directory
     } catch (...) {
         for (auto i : {1, 5, 8, 10}) {
             std::filesystem::remove(path + std::to_string(i));
