@@ -23,17 +23,24 @@ Known models with such format:
 
 # Building custom node library
 
-You can build the shared library of the custom node simply by running cmake (minimum 3.10):
+You can build the shared library of the custom node simply by running command in the context of this document:
 ```bash
 git clone https://github.com/openvinotoolkit/model_server && cd model_server/src/custom_nodes/tokenizer
-mkdir build && cd build
-cmake .. && make -j`nproc`
+make
 ```
-It will compile the libraries:
-```
-ls src/*.so
+It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.
 
-src/libdetokenizer.so  src/libtokenizer.so
+You can also select base OS between RH 8.5 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
+```bash
+make BASE_OS=redhat
+```
+
+It will compile the libraries:
+```bash
+ls lib/redhat -A1
+
+libdetokenizer.so
+libtokenizer.so
 ```
 
 
