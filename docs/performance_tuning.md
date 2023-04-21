@@ -78,16 +78,16 @@ OpenVINO&trade; Model Server can be tuned to a single client use case or a high 
 execution streams. They split the available resources to perform parallel execution of multiple requests.
 It is particularly efficient for models which cannot effectively consume all CPU cores or for CPUs with high number of cores.
 
-By default, number of streams is optimized for execution with minimal latency with low concurency. 
-If this default configuration is not suitable, adjust it with the `NUM_STREAMS` parameter defined as part 
-of the device plugin configuration or set the performance hint to `throughput`. 
+By default, number of streams is optimized for execution with minimal latency with low concurrency. The number of execution streams will be equal to the number of CPU sockets or GPU cards.
+If that default configuration is not suitable, adjust it with the `NUM_STREAMS` parameter defined as part 
+of the device plugin configuration or set the performance hint to `THROUGHPUT`. 
 
-In a scenario with a single connections is 1, set the following parameter:
+In a scenario with a single connections/client, set the following parameter:
 
-`--plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}'`
+`--plugin_config '{"NUM_STREAMS": "1"}'`
 
-When the number of concurrent requests is high, adjust the number of streams. Make sure, however, that the number of streams is lower than the average volum of concurrent inference operations. Otherwise, the server might not be fully utilized.
-Number of streams should not exceed the number of CPU cores.
+When the number of concurrent requests is high, increase the number of streams. Make sure, however, that the number of streams is lower than the average volume of concurrent inference operations. Otherwise, the server might not be fully utilized.
+Number of streams should not exceed the number of cores.
 
 For example, with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
 
