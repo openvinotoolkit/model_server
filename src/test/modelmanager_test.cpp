@@ -910,21 +910,6 @@ TEST(ModelManagerWatcher, StartFromFileRelativePath) {
     modelMock.reset();
 }
 
-TEST(ModelManagerWatcher, StartFromFileRelativePath) {
-    std::string fileToReload = "/tmp/ovms_config_file1.json";
-    createConfigFileWithContent(relative_config_1_model, fileToReload);
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
-
-    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
-        .Times(1)
-        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
-    auto status = manager.startFromFile(fileToReload);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    manager.join();
-    modelMock.reset();
-}
-
 TEST(ModelManagerWatcher, StartFromFileWhenModelFilesMissing) {
     std::filesystem::create_directories(model_1_path);
     std::string fileToReload = "/tmp/ovms_config_file1.json";
@@ -965,37 +950,6 @@ TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
     });
     t.join();
     createConfigFileWithContent(config_2_models, fileToReload);
-    bool isNeeded = false;
-    manager.configFileReloadNeeded(isNeeded);
-    ASSERT_EQ(isNeeded, true);
-    std::thread s([&manager]() {
-        waitForOVMSConfigReload(manager);
-    });
-    s.join();
-    models = manager.getModels().size();
-    EXPECT_EQ(models, 2);
-    manager.join();
-    modelMock.reset();
-}
-
-TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModelRelativePath) {
-    std::string fileToReload = "/tmp/ovms_config_file2.json";
-    createConfigFileWithContent(relative_config_1_model, fileToReload);
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
-    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
-        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
-
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher(true);
-    auto models = manager.getModels().size();
-    EXPECT_EQ(models, 1);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    std::thread t([&manager]() {
-        waitForOVMSConfigReload(manager);
-    });
-    t.join();
-    createConfigFileWithContent(relative_config_2_models, fileToReload);
     bool isNeeded = false;
     manager.configFileReloadNeeded(isNeeded);
     ASSERT_EQ(isNeeded, true);
@@ -1460,39 +1414,6 @@ TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameNameRelativePath) {
     modelMock.reset();
 }
 
-TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameNameRelativePath) {
-    const char* configWithTwoSameNames = R"({
-   "model_config_list": [
-    {
-      "config": {
-        "name": "same_name",
-        "base_path": "models/dummy1"
-      }
-    },
-    {
-      "config": {
-        "name": "same_name",
-        "base_path": "models/dummy2"
-      }
-    }]})";
-    std::filesystem::create_directories(model_1_path);
-    std::filesystem::create_directories(model_2_path);
-    std::string fileToReload = "/tmp/ovms_config_file2.json";
-    createConfigFileWithContent(configWithTwoSameNames, fileToReload);
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
-
-    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
-        .Times(1)
-        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
-    auto status = manager.startFromFile(fileToReload);
-    auto models = manager.getModels().size();
-    EXPECT_EQ(models, 1);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    manager.join();
-    modelMock.reset();
-}
-
 class MockModelManagerWithModelInstancesJustChangingStates : public ovms::ModelManager {
 public:
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
@@ -1538,42 +1459,6 @@ TEST_F(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFrom
     }
     // we remove SECOND_MODEL from config file and expect to have all versions of it retired
     createConfigFileWithContent(config_1_model, fileToReload);
-    waitForOVMSConfigReload(manager);
-    models = manager.getModels();
-    ASSERT_EQ(models.size(), 2);
-    for (auto& versionModelInstance : manager.getModels().at(FIRST_MODEL_NAME)->getModelVersions()) {
-        EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
-    }
-    for (auto& versionModelInstance : manager.getModels().at(SECOND_MODEL_NAME)->getModelVersions()) {
-        EXPECT_EQ(ovms::ModelVersionState::END, versionModelInstance.second->getStatus().getState());
-    }
-    manager.join();
-}
-
-TEST_F(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJsonRelative) {
-    std::filesystem::create_directories(model_1_path);
-    std::filesystem::create_directories(model_2_path);
-    std::string fileToReload = "/tmp/ovms_config_file2.json";
-    createConfigFileWithContent(relative_config_2_models, fileToReload);
-    modelMock = std::make_shared<MockModel>();
-    MockModelManagerWithModelInstancesJustChangingStates manager;
-    manager.registerVersionToLoad(1);
-    manager.registerVersionToLoad(2);
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher(true);
-    auto models = manager.getModels();
-    ASSERT_EQ(models.size(), 2);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    waitForOVMSConfigReload(manager);
-    models = manager.getModels();
-    ASSERT_EQ(models.size(), 2);
-    for (auto& nameModel : models) {
-        for (auto& versionModelInstance : nameModel.second->getModelVersions()) {
-            ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
-        }
-    }
-    // we remove SECOND_MODEL from config file and expect to have all versions of it retired
-    createConfigFileWithContent(relative_config_1_model, fileToReload);
     waitForOVMSConfigReload(manager);
     models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
