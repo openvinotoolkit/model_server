@@ -81,7 +81,7 @@ Status InferenceRequest::removeParameter(const char* name) {
     if (count) {
         return StatusCode::OK;
     }
-    return StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL;
+    return StatusCode::NONEXISTENT_PARAMETER;
 }
 const InferenceParameter* InferenceRequest::getParameter(const char* name) const {
     auto it = parameters.find(name);

@@ -63,7 +63,7 @@ int deinitialize(void* customNodeLibraryInternalManager) {
     return 0;
 }
 
-int retrieveInputs(
+static int retrieveInputs(
     // in
     const struct CustomNodeTensor* inputs,
     int inputsCount,
@@ -86,7 +86,7 @@ int retrieveInputs(
     return 0;
 }
 
-int validateInputs(
+static int validateInputs(
     const CustomNodeTensor* logitsTensor,
     const CustomNodeTensor* inputIdsTensor,
     const CustomNodeTensor* attentionMaskTensor) {

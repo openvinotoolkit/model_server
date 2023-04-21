@@ -446,7 +446,7 @@ TEST_F(CAPIInference, Basic) {
     // we will remove 1 of two parameters
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestRemoveParameter(request, "sequence_id"));
     // 2nd time should report error
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestRemoveParameter(request, "sequence_id"), StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestRemoveParameter(request, "sequence_id"), StatusCode::NONEXISTENT_PARAMETER);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestRemoveParameter(nullptr, "sequence_id"), StatusCode::NONEXISTENT_REQUEST);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestRemoveParameter(request, nullptr), StatusCode::NONEXISTENT_STRING);
 
@@ -627,7 +627,7 @@ TEST_F(CAPIInference, ResponseRetrieval) {
     ASSERT_EQ(cppStatus, StatusCode::OK) << cppStatus.string();
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceResponseGetOutput(response, outputId + 1, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId), StatusCode::INTERNAL_ERROR);
     // negative scenario nonexistsing parameter
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceResponseGetParameter(response, 123, &parameterDatatype, &parameterData), StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceResponseGetParameter(response, 123, &parameterDatatype, &parameterData), StatusCode::NONEXISTENT_PARAMETER);
     // final cleanup
     // we release unique_ptr ownership here so that we can free it safely via C-API
     cppResponse.release();
@@ -657,14 +657,12 @@ public:
         OVMS_ServableMetadata* servableMetadata = nullptr;
         const std::string servableName = "dummy";
         model_version_t servableVersion = 1;
-        ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata), StatusCode::SERVER_NOT_READY_FOR_INFERENCE);  // TODO Server_Not_Ready
+        ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata), StatusCode::SERVER_NOT_READY);
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
-        SPDLOG_ERROR("server:{}:", (void*)cserver);
         OVMS_ModelsSettingsDelete(modelsSettings);
         OVMS_ServerSettingsDelete(serverSettings);
     }
     static void TearDownTestSuite() {
-        SPDLOG_ERROR("server:{}:", (void*)cserver);
         OVMS_ServerDelete(cserver);
         cserver = nullptr;
     }
@@ -698,10 +696,7 @@ public:
             EXPECT_EQ(datatype, ovms::getPrecisionAsOVMSDataType(it->second->getPrecision()));
             auto& expectedShape = it->second->getShape();
             ASSERT_EQ(expectedShape.size(), dimCount);
-            SPDLOG_ERROR("Compare: {}", tensorName);
-            SPDLOG_ERROR("Exp: {}", expectedShape.toString());
             for (size_t i = 0; i < expectedShape.size(); ++i) {
-                SPDLOG_ERROR("ACT: {} {}", shapeMin[i], shapeMax[i]);
                 EXPECT_EQ(expectedShape[i], ovms::Dimension(shapeMin[i], shapeMax[i]));
             }
         }
@@ -831,7 +826,7 @@ TEST_F(CAPIInference, CallInferenceServerNotStarted) {
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::SERVER_NOT_READY_FOR_INFERENCE);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::SERVER_NOT_READY);
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceRequestDelete(request);
     OVMS_ServerDelete(cserver);

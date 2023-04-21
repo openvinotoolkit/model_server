@@ -568,7 +568,7 @@ OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* res, uin
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     const InferenceParameter* parameter = response->getParameter(id);
     if (nullptr == parameter) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PARAMETER));
     }
     *datatype = parameter->getDataType();
     *data = parameter->getData();
@@ -590,10 +590,10 @@ enum : unsigned int {
 
 static Status getModelManager(Server& server, ModelManager** modelManager) {
     if (!server.isLive()) {
-        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "not live");
+        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not live");
     }
     if (!server.isReady()) {
-        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "not ready");
+        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not ready");
     }
     const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     if (!servableModule) {
