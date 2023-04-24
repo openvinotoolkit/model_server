@@ -54,8 +54,12 @@ bool MediapipeFactory::definitionExists(const std::string& name) const {
 }
 
 MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::string& name) const {
-    SPDLOG_ERROR("NOT_IMPLEMENTED");
-    return nullptr;  // TODO
+    auto it = definitions.find(name);
+    if (it == std::end(definitions)) {
+        return nullptr;
+    } else {
+        return it->second.get();
+    }
 }
 
 Status MediapipeFactory::reloadDefinition(const std::string& pipelineName,  // TODO

@@ -31,6 +31,11 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::PATH_INVALID;
     }
 
+    if (basePath.at(0) != '/') {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} is relative, should have already been constructed as full path for library {}.", basePath, name);
+        return StatusCode::PATH_INVALID;
+    }
+
     auto it = libraries.find(name);
     if (it != libraries.end() && it->second.basePath == basePath) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom node library name: {} is already loaded", name);

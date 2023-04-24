@@ -75,6 +75,7 @@ protected:
         server.setShutdownRequest(0);
     }
 };
+
 class MediapipeFlowAddTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -177,14 +178,19 @@ TEST_F(MediapipeConfig, MediapipeAdd) {
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
-    // TODO add check for status
+
+    for (auto& graphName : mediaGraphsAdd) {
+        auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName(graphName);
+        EXPECT_NE(graphDefinition, nullptr);
+        EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
+    }
+
     manager.join();
 }
 
 class MediapipeNoTagMapping : public TestWithTempDir {
 protected:
     ovms::Server& server = ovms::Server::instance();
-
     const Precision precision = Precision::FP32;
     std::unique_ptr<std::thread> t;
     std::string port = "9178";
@@ -206,7 +212,6 @@ protected:
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
         }
     }
-
     void TearDown() {
         server.setShutdownRequest(1);
         t->join();
@@ -257,8 +262,7 @@ node {
   input_side_packet: "SESSION:session"
   input_stream: "B:in"
   output_stream: "A:out"
-}
-)";
+  )";
     const std::string pbtxtPath = this->directoryPath + "/graphDummyUppercase.pbtxt";
     createConfigFileWithContent(graphPbtxt, pbtxtPath);
     configJson.replace(it, pathToReplace.size(), pbtxtPath);
@@ -266,13 +270,11 @@ node {
     const std::string configJsonPath = this->directoryPath + "/config.json";
     createConfigFileWithContent(configJson, configJsonPath);
     this->SetUpServer(configJsonPath.c_str());
-
     // INFER
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
-
     const std::string modelName = "mediapipeDummyUppercase";
     request.Clear();
     response.Clear();
@@ -282,6 +284,38 @@ node {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeConfig, MediapipeFullRelativePaths) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    EXPECT_NE(definitionAdd, nullptr);
+    EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
+
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    EXPECT_NE(definitionFull, nullptr);
+    EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
+
+    manager.join();
+}
+
+TEST_F(MediapipeConfig, MediapipeFullRelativePathsNegative) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy_negative.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    EXPECT_NE(definitionAdd, nullptr);
+    EXPECT_EQ(definitionAdd->getStatus().isAvailable(), false);
+
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    EXPECT_NE(definitionFull, nullptr);
+    EXPECT_EQ(definitionFull->getStatus().isAvailable(), false);
+
+    manager.join();
 }
 
 INSTANTIATE_TEST_SUITE_P(

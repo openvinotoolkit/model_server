@@ -88,6 +88,38 @@ const char* config_2_models_new = R"({
     }]
 })";
 
+const char* relative_config_1_model = R"({
+   "model_config_list": [
+    {
+      "config": {
+        "name": "resnet",
+        "base_path": "models/dummy1",
+        "target_device": "CPU",
+        "model_version_policy": {"all": {}}
+      }
+   }]
+})";
+
+const char* relative_config_2_models = R"({
+   "model_config_list": [
+    {
+      "config": {
+        "name": "resnet",
+        "base_path": "models/dummy1",
+        "target_device": "CPU",
+        "model_version_policy": {"all": {}}
+      }
+    },
+    {
+      "config": {
+        "name": "alpha",
+        "base_path": "models/dummy2",
+        "target_device": "CPU",
+        "model_version_policy": {"all": {}}
+      }
+    }]
+})";
+
 const std::string FIRST_MODEL_NAME = "resnet";
 const std::string SECOND_MODEL_NAME = "alpha";
 
@@ -523,13 +555,33 @@ void setupModelsDirs() {
     std::filesystem::create_directory("/tmp/models/dummy2");
 }
 
-TEST(ModelManagerWatcher, configRelodNotNeededManyThreads) {
+const std::vector<std::string> WATCHER_TEST_CONFIGS{
+    config_2_models,
+    relative_config_2_models,
+};
+
+class ModelManagerWatcher2Models : public ::testing::TestWithParam<std::string> {};
+
+std::string fromContentsToString(const std::string& configContents) {
+    return configContents.find("tmp") == std::string::npos ? "FullPath" : "RelativePath";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    ModelManagerWatcher2Models,
+    ::testing::ValuesIn(WATCHER_TEST_CONFIGS),
+    [](const ::testing::TestParamInfo<ModelManagerWatcher2Models::ParamType>& info) {
+        return fromContentsToString(info.param);
+    });
+
+TEST_P(ModelManagerWatcher2Models, configRelodNotNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
     setupModelsDirs();
-    createConfigFileWithContent(config_2_models, configFile);
+    std::string config_contents = GetParam();
+    createConfigFileWithContent(config_contents, configFile);
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -553,13 +605,14 @@ TEST(ModelManagerWatcher, configRelodNotNeededManyThreads) {
     modelMock.reset();
 }
 
-TEST(ModelManagerWatcher, configRelodNeededManyThreads) {
+TEST_P(ModelManagerWatcher2Models, configRelodNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
     setupModelsDirs();
-    createConfigFileWithContent(config_2_models, configFile);
+    std::string config_contents = GetParam();
+    createConfigFileWithContent(config_contents, configFile);
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -589,13 +642,14 @@ TEST(ModelManagerWatcher, configRelodNeededManyThreads) {
     modelMock.reset();
 }
 
-TEST(ModelManagerWatcher, configReloadNeededChange) {
+TEST_P(ModelManagerWatcher2Models, configReloadNeededChange) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    createConfigFileWithContent(config_2_models, configFile);
+    std::string config_contents = GetParam();
+    createConfigFileWithContent(config_contents, configFile);
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -612,13 +666,14 @@ TEST(ModelManagerWatcher, configReloadNeededChange) {
     modelMock.reset();
 }
 
-TEST(ModelManagerWatcher, loadConfigManyThreads) {
+TEST_P(ModelManagerWatcher2Models, loadConfigManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
     setupModelsDirs();
-    createConfigFileWithContent(config_2_models, configFile);
+    std::string config_contents = GetParam();
+    createConfigFileWithContent(config_contents, configFile);
 
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
@@ -641,13 +696,14 @@ TEST(ModelManagerWatcher, loadConfigManyThreads) {
     modelMock.reset();
 }
 
-TEST(ModelManagerWatcher, configReloadNeededBeforeConfigLoad) {
+TEST_P(ModelManagerWatcher2Models, configReloadNeededBeforeConfigLoad) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    createConfigFileWithContent(config_2_models, configFile);
+    std::string config_contents = GetParam();
+    createConfigFileWithContent(config_contents, configFile);
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -704,22 +760,78 @@ TEST(ModelManagerWatcher, parseConfigWhenOnlyPipelineDefinitionProvided) {
 TEST_F(ModelManager, ReadsVersionsFromDisk) {
     const std::string path = "/tmp/test_model/";
 
-    for (auto i : {1, 5, 8, 10}) {
-        std::filesystem::create_directories(path + std::to_string(i));
-    }
+    try {
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::create_directories(path + std::to_string(i));
+        }
 
-    std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
+        std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
+        ovms::model_versions_t versions;
+        std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+
+        auto status = fixtureManager.readAvailableVersions(fs, path, versions);
+
+        EXPECT_EQ(status, ovms::StatusCode::OK);
+        EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
+
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::remove(path + std::to_string(i));
+        }
+
+        std::filesystem::remove(path + "unknown_dir11");  // invalid version directory
+    } catch (...) {
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::remove(path + std::to_string(i));
+        }
+
+        std::filesystem::remove(path + "unknown_dir11");  // invalid version directory
+    }
+}
+
+TEST_F(ModelManager, ReadsVersionsFromDiskRelativePath) {
+    const std::string path = "test_model/";
+
+    try {
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::create_directories(path + std::to_string(i));
+        }
+
+        std::filesystem::create_directories(path + "unknown_dir11");  // invalid version directory
+        ovms::model_versions_t versions;
+        std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+
+        auto status = fixtureManager.readAvailableVersions(fs, path, versions);
+
+        EXPECT_EQ(status, ovms::StatusCode::OK);
+        EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
+
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::remove(path + std::to_string(i));
+        }
+
+        std::filesystem::remove(path + "unknown_dir11");  // invalid version directory
+    } catch (...) {
+        for (auto i : {1, 5, 8, 10}) {
+            std::filesystem::remove(path + std::to_string(i));
+        }
+
+        std::filesystem::remove(path + "unknown_dir11");  // invalid version directory
+    }
+}
+
+TEST_F(ModelManager, PathEscapeError1) {
+    const std::string path = "/tmp/../test_model/";
+
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
 
     auto status = fixtureManager.readAvailableVersions(fs, path, versions);
 
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1, 5, 8, 10));
+    EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
-TEST_F(ModelManager, PathEscapeError1) {
-    const std::string path = "/tmp/../test_model/";
+TEST_F(ModelManager, PathEscapeError1RelativePath) {
+    const std::string path = "tmp/../test_model/";
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
@@ -754,11 +866,38 @@ TEST_F(ModelManager, ReadVersionsInvalidPath) {
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
+TEST_F(ModelManager, ReadVersionsInvalidPathRelativePath) {
+    const std::string path = "inexisting_path/8bt4kv";
+
+    try {
+        std::filesystem::remove(path);
+    } catch (const std::filesystem::filesystem_error&) {
+    }
+
+    std::vector<ovms::model_version_t> versions;
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+    auto status = fixtureManager.readAvailableVersions(fs, path, versions);
+    EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}
+
 TEST(ModelManagerWatcher, StartFromFile) {
-    std::filesystem::create_directories(model_1_path);
-    std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file1.json";
     createConfigFileWithContent(config_1_model, fileToReload);
+    modelMock = std::make_shared<MockModel>();
+    MockModelManager manager;
+
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+        .Times(1)
+        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
+    auto status = manager.startFromFile(fileToReload);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+    modelMock.reset();
+}
+
+TEST(ModelManagerWatcher, StartFromFileRelativePath) {
+    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    createConfigFileWithContent(relative_config_1_model, fileToReload);
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
@@ -782,9 +921,18 @@ TEST(ModelManagerWatcher, StartFromFileWhenModelFilesMissing) {
     manager.join();
 }
 
-TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
+TEST(ModelManagerWatcher, StartFromFileWhenModelFilesMissingRelativePath) {
     std::filesystem::create_directories(model_1_path);
-    std::filesystem::create_directories(model_2_path);
+    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    createConfigFileWithContent(relative_config_1_model, fileToReload);
+    ConstructorEnabledModelManager manager;
+    ASSERT_TRUE(std::filesystem::is_empty(model_1_path));
+    auto status = manager.startFromFile(fileToReload);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+}
+
+TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
     std::string fileToReload = "/tmp/ovms_config_file2.json";
     createConfigFileWithContent(config_1_model, fileToReload);
     modelMock = std::make_shared<MockModel>();
@@ -802,6 +950,37 @@ TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
     });
     t.join();
     createConfigFileWithContent(config_2_models, fileToReload);
+    bool isNeeded = false;
+    manager.configFileReloadNeeded(isNeeded);
+    ASSERT_EQ(isNeeded, true);
+    std::thread s([&manager]() {
+        waitForOVMSConfigReload(manager);
+    });
+    s.join();
+    models = manager.getModels().size();
+    EXPECT_EQ(models, 2);
+    manager.join();
+    modelMock.reset();
+}
+
+TEST(ModelManagerWatcher, ConfigReloadingShouldAddNewModelRelativePath) {
+    std::string fileToReload = "/tmp/ovms_config_file2.json";
+    createConfigFileWithContent(relative_config_1_model, fileToReload);
+    modelMock = std::make_shared<MockModel>();
+    MockModelManager manager;
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
+
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher(true);
+    auto models = manager.getModels().size();
+    EXPECT_EQ(models, 1);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    std::thread t([&manager]() {
+        waitForOVMSConfigReload(manager);
+    });
+    t.join();
+    createConfigFileWithContent(relative_config_2_models, fileToReload);
     bool isNeeded = false;
     manager.configFileReloadNeeded(isNeeded);
     ASSERT_EQ(isNeeded, true);
@@ -1202,6 +1381,39 @@ TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
     modelMock.reset();
 }
 
+TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameNameRelativePath) {
+    const char* configWithTwoSameNames = R"({
+   "model_config_list": [
+    {
+      "config": {
+        "name": "same_name",
+        "base_path": "models/dummy1"
+      }
+    },
+    {
+      "config": {
+        "name": "same_name",
+        "base_path": "models/dummy2"
+      }
+    }]})";
+    std::filesystem::create_directories(model_1_path);
+    std::filesystem::create_directories(model_2_path);
+    std::string fileToReload = "/tmp/ovms_config_file2.json";
+    createConfigFileWithContent(configWithTwoSameNames, fileToReload);
+    modelMock = std::make_shared<MockModel>();
+    MockModelManager manager;
+
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+        .Times(1)
+        .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
+    auto status = manager.startFromFile(fileToReload);
+    auto models = manager.getModels().size();
+    EXPECT_EQ(models, 1);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+    modelMock.reset();
+}
+
 class MockModelManagerWithModelInstancesJustChangingStates : public ovms::ModelManager {
 public:
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
@@ -1247,6 +1459,42 @@ TEST_F(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFrom
     }
     // we remove SECOND_MODEL from config file and expect to have all versions of it retired
     createConfigFileWithContent(config_1_model, fileToReload);
+    waitForOVMSConfigReload(manager);
+    models = manager.getModels();
+    ASSERT_EQ(models.size(), 2);
+    for (auto& versionModelInstance : manager.getModels().at(FIRST_MODEL_NAME)->getModelVersions()) {
+        EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
+    }
+    for (auto& versionModelInstance : manager.getModels().at(SECOND_MODEL_NAME)->getModelVersions()) {
+        EXPECT_EQ(ovms::ModelVersionState::END, versionModelInstance.second->getStatus().getState());
+    }
+    manager.join();
+}
+
+TEST_F(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJsonRelative) {
+    std::filesystem::create_directories(model_1_path);
+    std::filesystem::create_directories(model_2_path);
+    std::string fileToReload = "/tmp/ovms_config_file2.json";
+    createConfigFileWithContent(relative_config_2_models, fileToReload);
+    modelMock = std::make_shared<MockModel>();
+    MockModelManagerWithModelInstancesJustChangingStates manager;
+    manager.registerVersionToLoad(1);
+    manager.registerVersionToLoad(2);
+    auto status = manager.startFromFile(fileToReload);
+    manager.startWatcher(true);
+    auto models = manager.getModels();
+    ASSERT_EQ(models.size(), 2);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    waitForOVMSConfigReload(manager);
+    models = manager.getModels();
+    ASSERT_EQ(models.size(), 2);
+    for (auto& nameModel : models) {
+        for (auto& versionModelInstance : nameModel.second->getModelVersions()) {
+            ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
+        }
+    }
+    // we remove SECOND_MODEL from config file and expect to have all versions of it retired
+    createConfigFileWithContent(relative_config_1_model, fileToReload);
     waitForOVMSConfigReload(manager);
     models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
@@ -1603,7 +1851,7 @@ TEST_F(ReloadAvailableModelDueToConfigChange, SameConfig_ExpectNoReloads) {
 
 TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToBasePathChange) {
     mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, *ieCore, config);
-    config.setBasePath("new/custom/path");
+    config.setBasePath("/new/custom/path");
     ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }

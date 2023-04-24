@@ -177,6 +177,7 @@ cc_library(
         "dags/exit_node.hpp",
         "dags/exitnodesession.cpp",
         "dags/exitnodesession.hpp",
+        "filesystem.cpp",
         "filesystem.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",

@@ -212,6 +212,7 @@ Status ModelManager::startFromConfig() {
         return StatusCode::UNKNOWN_ERROR;
     }
 
+    this->setRootDirectoryPath("");
     Status status = StatusCode::OK;
 
     // Reading metric config only once per server start
@@ -270,6 +271,15 @@ Status ModelManager::startFromConfig() {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Both shape and batch size have been defined. Batch size parameter will be ignored.");
         modelConfig.setBatchingMode(FIXED);
         modelConfig.setBatchSize(std::nullopt);
+    }
+
+    modelConfig.setRootDirectoryPath(this->rootDirectoryPath);
+
+    try {
+        modelConfig.setBasePath(modelConfig.getBasePath());
+    } catch (std::logic_error& e) {
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+        return StatusCode::INTERNAL_ERROR;
     }
 
     return reloadModelWithVersions(modelConfig);
@@ -358,7 +368,7 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 
 static Status processMediapipeConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory, ModelManager& manager) {
     const std::string mediapipeGraphName = pipelineConfig["name"].GetString();
-    const std::string mediapipeGraphFilePath = pipelineConfig["graph_path"].GetString();
+    const std::string mediapipeGraphFilePath = manager.getFullPath(pipelineConfig["graph_path"].GetString());
     if (mediapipesInConfigFile.find(mediapipeGraphName) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", mediapipeGraphName);
         return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
@@ -377,6 +387,7 @@ static Status processMediapipeConfig(rapidjson::Document& configJson, const rapi
     mediapipesInConfigFile.insert(mediapipeGraphName);
     return status;
 }
+
 static Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
     const std::string pipelineName = pipelineConfig["name"].GetString();
     if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
@@ -506,7 +517,7 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
         librariesInConfig.emplace(libraryConfig.FindMember("name")->value.GetString());
         this->customNodeLibraryManager->loadLibrary(
             libraryConfig.FindMember("name")->value.GetString(),
-            libraryConfig.FindMember("base_path")->value.GetString());
+            this->getFullPath(libraryConfig.FindMember("base_path")->value.GetString()));
     }
     this->customNodeLibraryManager->unloadLibrariesRemovedFromConfig(librariesInConfig);
     return StatusCode::OK;
@@ -536,6 +547,7 @@ Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson) 
     }
     return firstErrorStatus;
 }
+
 Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("pipeline_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
@@ -612,6 +624,7 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
         SPDLOG_INFO("Reading Custom Loader: {} configuration", loaderName);
 
         CustomLoaderConfig loaderConfig;
+        loaderConfig.setRootDirectoryPath(this->rootDirectoryPath);
         auto status = loaderConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
@@ -666,7 +679,9 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
+        modelConfig.setRootDirectoryPath(this->rootDirectoryPath);
         auto status = modelConfig.parseNode(configs["config"]);
+
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed due to error: {}", modelConfig.getName(), status.string());
@@ -692,6 +707,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
             continue;
         }
+
         status = reloadModelWithVersions(modelConfig);
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
 
@@ -823,6 +839,8 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
     Status firstErrorStatus = StatusCode::OK;
+
+    this->setRootDirectoryPath(jsonFilename);
 
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
@@ -1164,21 +1182,36 @@ std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::
 }
 
 std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& basePath) {
-    if (basePath.rfind(S3FileSystem::S3_URL_PREFIX, 0) == 0) {
+    if (basePath.rfind(FileSystem::S3_URL_PREFIX, 0) == 0) {
         Aws::SDKOptions options;
         Aws::InitAPI(options);
         return std::make_shared<S3FileSystem>(options, basePath);
     }
-    if (basePath.rfind(GCSFileSystem::GCS_URL_PREFIX, 0) == 0) {
+    if (basePath.rfind(FileSystem::GCS_URL_PREFIX, 0) == 0) {
         return std::make_shared<ovms::GCSFileSystem>();
     }
-    if (basePath.rfind(AzureFileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
+    if (basePath.rfind(FileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
         return std::make_shared<ovms::AzureFileSystem>();
     }
-    if (basePath.rfind(AzureFileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
+    if (basePath.rfind(FileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
         return std::make_shared<ovms::AzureFileSystem>();
     }
     return std::make_shared<LocalFileSystem>();
+}
+
+const std::string ModelManager::getFullPath(const std::string& pathToCheck) const {
+    if (!FileSystem::isLocalFilesystem(pathToCheck)) {
+        // Cloud filesystem
+        return pathToCheck;
+    } else if (pathToCheck.at(0) == '/') {
+        // Full path case
+        return pathToCheck;
+    } else {
+        // Relative path case
+        if (this->rootDirectoryPath.empty())
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Using relative path without setting configuration directory path.");
+        return this->rootDirectoryPath + pathToCheck;
+    }
 }
 
 Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, const std::string& base, model_versions_t& versions) {
