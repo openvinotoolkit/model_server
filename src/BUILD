@@ -723,6 +723,7 @@ cc_test(
         "test/layout_test.cpp",
         "test/localfilesystem_test.cpp",
         "test/mediapipeflow_test.cpp",
+        "test/mediapipe_validation_test.cpp",
         "test/metrics_flow_test.cpp",
         "test/metrics_test.cpp",
         "test/metric_config_test.cpp",
