@@ -21,13 +21,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include "..//kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
+#include "mediapipegraphconfig.hpp"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
@@ -39,10 +40,6 @@ class MetricRegistry;
 class ModelManager;
 class MediapipeGraphExecutor;
 class Status;
-
-struct MediapipeGraphConfig {
-    std::string graphPath;
-};
 
 class MediapipeGraphDefinition {
     struct ValidationResultNotifier {
