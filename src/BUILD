@@ -803,6 +803,7 @@ cc_test(
         ] + select({
         "//conditions:default": [
             "test/mediapipeflow_test.cpp",
+            "test/mediapipe_validation_test.cpp",
         ],
         "//src:disable_mediapipe" : [],
         }),

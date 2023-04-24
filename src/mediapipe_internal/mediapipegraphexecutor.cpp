@@ -78,7 +78,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             ss << "expected " << expectedBytes << " bytes for input with name: " << requestedName << " but got " << bufferLocation.size() << " bytes";
             SPDLOG_DEBUG(ss.str());
             return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ss.str());
-        }   
+        }
         outTensor = ov::Tensor(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
         return StatusCode::OK;
     } catch (const std::exception& e) {
@@ -116,8 +116,6 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
-    // TODO validate number of inputs
-    // TODO validate input names against input streams
     auto outputNames = this->config.output_stream();
     for (auto name : outputNames) {
         auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
@@ -135,8 +133,10 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, std::move(absMessage));
     }
     if (inputNames.size() != request->inputs().size()) {
-        SPDLOG_DEBUG("Failed to deserialize tensor: {}; request contains unexpected number of inputs", name);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Request contains unexpected number of inputs");
+        std::stringstream ss;
+        ss << "Failed to infer mediapipegraph, expected number of inputs: " << inputNames.size() << "; actual: " << request->inputs().size();
+        SPDLOG_DEBUG(ss.str());
+        return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, ss.str());
     }
     for (auto name : inputNames) {
         SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
