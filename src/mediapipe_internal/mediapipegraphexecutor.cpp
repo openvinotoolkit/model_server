@@ -40,34 +40,53 @@
 #include "mediapipegraphdefinition.hpp"  // for version in response
 
 namespace ovms {
-static ov::Tensor bruteForceDeserialize(const std::string& requestedName, const KFSRequest* request) {
+static Status deserializeTensor(const std::string& requestedName, const KFSRequest* request, ov::Tensor& outTensor) {
     auto requestInputItr = std::find_if(request->inputs().begin(), request->inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
     if (requestInputItr == request->inputs().end()) {
-        return ov::Tensor();  // TODO
+        std::stringstream ss;
+        ss << "cannot find request input with expected name: " << requestedName;
+        SPDLOG_DEBUG(ss.str());
+        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ss.str());
     }
-    auto inputIndex = requestInputItr - request->inputs().begin();
     bool deserializeFromSharedInputContents = request->raw_input_contents().size() > 0;
-    auto bufferLocation = deserializeFromSharedInputContents ? &request->raw_input_contents()[inputIndex] : nullptr;
-    if (!bufferLocation) {
-        SPDLOG_ERROR("Reading buffer for Mediapipe KServe is now only supported when using raw_input_contents");
-        throw 42;
+    if (request->raw_input_contents().size() == 0 || request->raw_input_contents().size() != request->inputs().size()) {
+        std::stringstream ss;
+        ss << "cannot find data in raw_input_content for input with name: " << requestedName;
+        SPDLOG_DEBUG(ss.str());
+        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ss.str());
     }
-    ov::Shape shape;
-    for (int i = 0; i < requestInputItr->shape().size(); i++) {
-        shape.push_back(requestInputItr->shape()[i]);
-    }
-    ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
-    // TODO handle both KFS input handling ways
+
+    auto inputIndex = requestInputItr - request->inputs().begin();
+    auto& bufferLocation = request->raw_input_contents().at(inputIndex);
+
     try {
-        // TODO: dk Validate precision, shape and buffer size
-        auto outTensor = ov::Tensor(precision, shape, const_cast<void*>((const void*)bufferLocation->c_str()));
-        return outTensor;
+        ov::Shape shape;
+        for (int i = 0; i < requestInputItr->shape().size(); i++) {
+            if (requestInputItr->shape()[i] <= 0) {
+                std::stringstream ss;
+                ss << "negative shape value found for input with name: " << requestedName;
+                SPDLOG_DEBUG(ss.str());
+                return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ss.str());
+            }
+            shape.push_back(requestInputItr->shape()[i]);
+        }
+        ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
+        size_t expectElementsCount = ov::shape_size(shape.begin(), shape.end());
+        size_t expectedBytes = precision.size() * expectElementsCount;
+        if (expectedBytes != bufferLocation.size()) {
+            std::stringstream ss;
+            ss << "expected " << expectedBytes << " bytes for input with name: " << requestedName << " but got " << bufferLocation.size() << " bytes";
+            SPDLOG_DEBUG(ss.str());
+            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ss.str());
+        }   
+        outTensor = ov::Tensor(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
+        return StatusCode::OK;
     } catch (const std::exception& e) {
         SPDLOG_DEBUG("Kserve mediapipe request deserialization failed:{}", e.what());
     } catch (...) {
         SPDLOG_DEBUG("KServe mediapipe request deserialization failed");
     }
-    return ov::Tensor();
+    return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Unexpected error during Tensor creation");
 }
 
 MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const ::mediapipe::CalculatorGraphConfig& config) :
@@ -115,12 +134,17 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", request->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, std::move(absMessage));
     }
+    if (inputNames.size() != request->inputs().size()) {
+        SPDLOG_DEBUG("Failed to deserialize tensor: {}; request contains unexpected number of inputs", name);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Request contains unexpected number of inputs");
+    }
     for (auto name : inputNames) {
         SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
-        ov::Tensor input_tensor = bruteForceDeserialize(name, request);
-        if (!input_tensor) {
+        ov::Tensor input_tensor;
+        auto status = deserializeTensor(name, request, input_tensor);
+        if (!status.ok()) {
             SPDLOG_DEBUG("Failed to deserialize tensor: {}", name);
-            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Failed to deserialize tensor");
+            return status;
         }
         absStatus = graph.AddPacketToInputStream(
             name, ::mediapipe::MakePacket<ov::Tensor>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
