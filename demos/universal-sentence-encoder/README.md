@@ -22,16 +22,15 @@ universal-sentence-encoder-multilingual/
 ```
 
 In case the input and output names are changed during the model load in OpenVINO backend, apply a `mapping_config.json` to adjust them from the model server network interface.
-```json
-{
-       "inputs":{ 
-          "serving_default_inputs": "inputs"
-       },
-       "outputs":{
-          "StatefulPartitionedCall:0":"outputs"
-       }
-}
-``` 
+```bash
+echo '{
+ "inputs": {
+     "serving_default_inputs": "inputs"
+     },
+ "outputs":{
+         "StatefulPartitionedCall:0": "outputs"
+     }
+}' > universal-sentence-encoder-multilingual/1/mapping_config.json
 
 ```
 tree universal-sentence-encoder-multilingual
@@ -53,17 +52,18 @@ The layer SentencepieceTokenizer expects on the input a list of strings. The CPU
 
 Until it is published, the docker image with OpenVINO Model Server including the CPU extension has to be built using the commands:
 
-```
+```bash
 git clone -b develop https://github.com/openvinotoolkit/model_server
 cd model_server
 make docker_build SENTENCEPIECE=1 OV_CONTRIB_ORG=rkazants OV_CONTRIB_BRANCH=rkazants/sentence_tokenizer_optimization OV_USE_BINARY=0
+cd ..
 
 ```
 
 ## Start the model server in a container
 When the new docker image is built, you can start the service with a command:
 ```bash
-docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual-frozen:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libuser_ov_extensions.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
+docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libuser_ov_extensions.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
 ```
 
 Check the container logs to confirm successful start:
@@ -85,8 +85,8 @@ predict_response = prediction_service_stub.Predict(predict_request, 10.0)
 
 Here is a basic client execution :
 ```bash
-pip install -r requirements.txt
-python send_strings.py --grpc_port 9000 --string "I enjoy taking long walks along the beach with my dog."
+pip install -r model_server/demos/universal-sentence-encoder/requirements.txt
+python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 9000 --string "I enjoy taking long walks along the beach with my dog."
 processing time 6.931 ms.
 Output shape (1, 512)
 Output subset [-0.00552395  0.00599533 -0.01480555  0.01098945 -0.09355522 -0.08445048
@@ -117,7 +117,7 @@ docker run -it -p 8500:8500 -p 8501:8501 -v $(pwd)/universal-sentence-encoder-mu
 
 Run the client
 ```bash
-python send_strings.py --grpc_port 8500 --input_name inputs --output_name outputs --string "I enjoy taking long walks along the beach with my dog."
+python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 8500 --input_name inputs --output_name outputs --string "I enjoy taking long walks along the beach with my dog."
 
 processing time 12.167000000000002 ms.
 Output shape (1, 512)
