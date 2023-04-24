@@ -41,43 +41,52 @@
 
 namespace ovms {
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest* request, ov::Tensor& outTensor) {
+    std::string model_version{"1"};  // TODO later
     auto requestInputItr = std::find_if(request->inputs().begin(), request->inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
     if (requestInputItr == request->inputs().end()) {
         std::stringstream ss;
-        ss << "cannot find request input with expected name: " << requestedName;
-        SPDLOG_DEBUG(ss.str());
-        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ss.str());
+        ss << "Required input: " << requestedName;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Missing input with specific name - {}", request->model_name(), model_version, details);
+        return Status(StatusCode::INVALID_MISSING_INPUT, details);
     }
-    bool deserializeFromSharedInputContents = request->raw_input_contents().size() > 0;
     if (request->raw_input_contents().size() == 0 || request->raw_input_contents().size() != request->inputs().size()) {
         std::stringstream ss;
-        ss << "cannot find data in raw_input_content for input with name: " << requestedName;
-        SPDLOG_DEBUG(ss.str());
-        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ss.str());
+        ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request->model_name(), model_version, details);
+        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
     }
-
     auto inputIndex = requestInputItr - request->inputs().begin();
     auto& bufferLocation = request->raw_input_contents().at(inputIndex);
-
     try {
         ov::Shape shape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
             if (requestInputItr->shape()[i] <= 0) {
                 std::stringstream ss;
-                ss << "negative shape value found for input with name: " << requestedName;
-                SPDLOG_DEBUG(ss.str());
-                return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ss.str());
+                ss << "Negative or zero dimension size is not acceptable: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request->model_name(), model_version, details);
+                return Status(StatusCode::INVALID_SHAPE, details);
             }
             shape.push_back(requestInputItr->shape()[i]);
         }
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         size_t expectElementsCount = ov::shape_size(shape.begin(), shape.end());
         size_t expectedBytes = precision.size() * expectElementsCount;
+        if (expectedBytes <= 0) {
+            std::stringstream ss;
+            ss << "Invalid precision with expected bytes equal to 0: " << requestInputItr->datatype() << "; input name: " << requestedName;
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request->model_name(), model_version, details);
+            return Status(StatusCode::INVALID_PRECISION, details);
+        }
         if (expectedBytes != bufferLocation.size()) {
             std::stringstream ss;
-            ss << "expected " << expectedBytes << " bytes for input with name: " << requestedName << " but got " << bufferLocation.size() << " bytes";
-            SPDLOG_DEBUG(ss.str());
-            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ss.str());
+            ss << "Expected: " << expectedBytes << " bytes; Actual: " << bufferLocation.size() << " bytes; input name: " << requestedName;
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", request->model_name(), model_version, details);
+            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
         outTensor = ov::Tensor(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
         return StatusCode::OK;
@@ -86,7 +95,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     } catch (...) {
         SPDLOG_DEBUG("KServe mediapipe request deserialization failed");
     }
-    return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Unexpected error during Tensor creation");
+    return Status(StatusCode::INTERNAL_ERROR, "Unexpected error during Tensor creation");
 }
 
 MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const ::mediapipe::CalculatorGraphConfig& config) :
@@ -110,6 +119,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     SPDLOG_DEBUG("Start KServe request mediapipe graph:{} execution", request->model_name());
     ::mediapipe::CalculatorGraph graph;
     auto absStatus = graph.Initialize(this->config);
+    std::string model_version{"1"};  // TODO later
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("KServe request for mediapipe graph:{} execution failed with message: {}", request->model_name(), absMessage);
@@ -134,9 +144,10 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     }
     if (inputNames.size() != request->inputs().size()) {
         std::stringstream ss;
-        ss << "Failed to infer mediapipegraph, expected number of inputs: " << inputNames.size() << "; actual: " << request->inputs().size();
-        SPDLOG_DEBUG(ss.str());
-        return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, ss.str());
+        ss << "Expected: " << inputNames.size() << "; Actual: " << request->inputs().size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", request->model_name(), model_version, details);
+        return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
     }
     for (auto name : inputNames) {
         SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
@@ -215,7 +226,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     }
     SPDLOG_DEBUG("Received all output stream packets for graph: {}", request->model_name());
     response->set_model_name(name);
-    response->set_id("1");  // TODO later
+    response->set_id(model_version);
     response->set_model_version(std::to_string(MediapipeGraphDefinition::VERSION));
     return StatusCode::OK;
 }
