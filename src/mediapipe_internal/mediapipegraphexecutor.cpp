@@ -59,6 +59,7 @@ static ov::Tensor bruteForceDeserialize(const std::string& requestedName, const 
     ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
     // TODO handle both KFS input handling ways
     try {
+        // TODO: dk Validate precision, shape and buffer size
         auto outTensor = ov::Tensor(precision, shape, const_cast<void*>((const void*)bufferLocation->c_str()));
         return outTensor;
     } catch (const std::exception& e) {
@@ -117,6 +118,10 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     for (auto name : inputNames) {
         SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
         ov::Tensor input_tensor = bruteForceDeserialize(name, request);
+        if (!input_tensor) {
+            SPDLOG_DEBUG("Failed to deserialize tensor: {}", name);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Failed to deserialize tensor");
+        }
         absStatus = graph.AddPacketToInputStream(
             name, ::mediapipe::MakePacket<ov::Tensor>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
         if (!absStatus.ok()) {
