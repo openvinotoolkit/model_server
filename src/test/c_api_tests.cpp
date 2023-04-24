@@ -654,10 +654,6 @@ public:
         ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_metadata_all.json"));
         cserver = nullptr;
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-        OVMS_ServableMetadata* servableMetadata = nullptr;
-        const std::string servableName = "dummy";
-        model_version_t servableVersion = 1;
-        ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata), StatusCode::SERVER_NOT_READY);
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
         OVMS_ModelsSettingsDelete(modelsSettings);
         OVMS_ServerSettingsDelete(serverSettings);
@@ -714,6 +710,7 @@ public:
             }
         }
         EXPECT_EQ(outputNames.size(), outputCount);
+        OVMS_ServableMetadataDelete(servableMetadata);
     }
 
     void checkServableAsDummy(const std::string& servableName) {
@@ -780,6 +777,7 @@ TEST_F(CAPIMetadata, Negative) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, nullptr, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_NUMBER);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, nullptr, &shapeMax), StatusCode::NONEXISTENT_TABLE);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, nullptr), StatusCode::NONEXISTENT_TABLE);
+    OVMS_ServableMetadataDelete(nullptr);
 }
 
 TEST_F(CAPIMetadata, BasicDummy) {

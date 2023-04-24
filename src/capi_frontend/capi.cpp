@@ -838,6 +838,11 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
     *shapeMax = const_cast<int64_t*>(metadata->getOutputDimsMax().at(*name).data());
     return nullptr;
 }
+void OVMS_ServableMetadataDelete(OVMS_ServableMetadata* metadata) {
+    if (metadata == nullptr)
+        return;
+    delete reinterpret_cast<ovms::ServableMetadata*>(metadata);
+}
 
 #ifdef __cplusplus
 }

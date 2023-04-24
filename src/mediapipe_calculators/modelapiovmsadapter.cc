@@ -45,8 +45,9 @@ using std::endl;
             OVMS_StatusGetCode(err, &code);                                                  \
             OVMS_StatusGetDetails(err, &msg);                                                \
             LOG(ERROR) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
+            std::runtime_error exc(msg);                                                     \
             OVMS_StatusDelete(err);                                                          \
-            RET_CHECK(err == nullptr);                                                       \
+            throw exc;                                                                       \
         }                                                                                    \
     }
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
@@ -67,10 +68,11 @@ static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, si
 OVMSInferenceAdapter::OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {
-    OVMS_ServerNew(&cserver);  // TODO retcheck's;
+    OVMS_ServerNew(&this->cserver);  // TODO retcheck's;
 }
 OVMSInferenceAdapter::~OVMSInferenceAdapter() {
 }
+
 InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     /////////////////////
     // PREPARE REQUEST
@@ -139,15 +141,67 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     return output;
 }
 void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& model, ov::Core& core,
-    const std::string& device, const ov::AnyMap& compilationConfig) {}
-ov::Shape OVMSInferenceAdapter::getInputShape(const std::string& inputName) const { return {}; }  // TODO
-std::vector<std::string> OVMSInferenceAdapter::getInputNames() { return {}; }                     // TODO
-std::vector<std::string> OVMSInferenceAdapter::getOutputNames() { return {}; }                    // TODO
-                                                                                                  //    virtual const ov::AnyMap& getModelConfig() const = 0; // TODO
-const std::string& OVMSInferenceAdapter::getModelConfig() const {
-    static std::string res{"MODEL_CONFIG_JSON"};
-    return res;
-}  // TODO
+    const std::string& device, const ov::AnyMap& compilationConfig) {
+    // no need to load but we need to extract metadata
+    OVMS_ServableMetadata* servableMetadata = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata));
+    uint32_t inputCount = 0;
+    uint32_t outputCount = 0;
+    // TODO ensure Metadata object removal in all paths
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInputsCount(servableMetadata, &inputCount));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutputsCount(servableMetadata, &outputCount));
+
+    uint32_t id = 0;
+    OVMS_DataType datatype = (OVMS_DataType)199;
+    int64_t* shapeMin{nullptr};
+    int64_t* shapeMax{nullptr};
+    size_t dimCount = 42;
+    const char* tensorName{nullptr};
+    for (id = 0; id < inputCount; ++id) {
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
+        inputNames.emplace_back(tensorName);
+        shapeMinMax inputMinMax;
+        for (size_t i = 0; i < dimCount; ++i) {
+            // TODO test adapter dynamic shapes
+            inputMinMax.first.emplace_back(shapeMin[i]);
+            inputMinMax.second.emplace_back(shapeMax[i]);
+        }
+        this->inShapesMinMaxes.insert({tensorName, std::move(inputMinMax)});
+    }
+    for (id = 0; id < outputCount; ++id) {
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
+        outputNames.emplace_back(tensorName);
+    }
+    OVMS_ServableMetadataDelete(servableMetadata);
+}
+
+ov::Shape OVMSInferenceAdapter::getInputShape(const std::string& inputName) const {
+    auto it = inShapesMinMaxes.find(inputName);
+    if (it == inShapesMinMaxes.end()) {
+        throw std::runtime_error(std::string("Adapter could not find input:") + inputName);  // TODO error handling
+    }
+
+    ov::Shape ovShape;
+    const auto& [minBorder, maxBorder] = it->second;
+    ovShape.reserve(minBorder.size());
+    for (const auto& d : minBorder) {
+        ovShape.emplace_back(d);
+    }
+    ov::Shape ovShape2;
+    for (const auto& d : maxBorder) {
+        ovShape2.emplace_back(d);
+    }
+    return ovShape;
+}
+
+std::vector<std::string> OVMSInferenceAdapter::getInputNames() const { return inputNames; }
+
+std::vector<std::string> OVMSInferenceAdapter::getOutputNames() const { return outputNames; }
+
+const ov::AnyMap& OVMSInferenceAdapter::getModelConfig() const {
+    return modelConfig;
+}
+
 static OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype) {
     static std::unordered_map<ov::element::Type_t, OVMS_DataType> precisionMap{
         {ov::element::Type_t::f64, OVMS_DATATYPE_FP64},

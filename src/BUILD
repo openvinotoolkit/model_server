@@ -86,6 +86,7 @@ cc_shared_library(
         "@com_github_glog_glog//:__subpackages__",
         "@com_github_gflags_gflags//:__subpackages__",
         "@mediapipe_calculators//:__subpackages__",
+        "@model_api//:__subpackages__",
         "@arm_neon_2_x86_sse//:__subpackages__",
         "@ruy//:__subpackages__",
         "@cpuinfo//:__subpackages__",
@@ -387,6 +388,7 @@ cc_library(
         "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
         "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
         "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+        "@model_api//:adapter_api",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
