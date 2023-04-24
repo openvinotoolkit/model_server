@@ -219,6 +219,7 @@ cc_library(
         "kfs_frontend/kfs_utils.hpp",
         "mediapipe_internal/mediapipefactory.cpp",
         "mediapipe_internal/mediapipefactory.hpp",
+        "mediapipe_internal/mediapipegraphconfig.hpp",
         "mediapipe_internal/mediapipegraphdefinition.cpp",
         "mediapipe_internal/mediapipegraphdefinition.hpp",
         "mediapipe_internal/mediapipegraphexecutor.cpp",
