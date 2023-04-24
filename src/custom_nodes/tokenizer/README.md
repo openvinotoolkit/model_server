@@ -23,14 +23,14 @@ Known models with such format:
 
 # Building custom node library
 
-You can build the shared library of the custom node simply by running command in the context of this document:
+You can build the shared library of the custom node simply by running the following commands:
 ```bash
 git clone https://github.com/openvinotoolkit/model_server && cd model_server/src/custom_nodes/tokenizer
 make
 ```
 It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.
 
-You can also select base OS between RH 8.5 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
+You can also select base OS between UBI 8.6 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
 ```bash
 make BASE_OS=redhat
 ```
