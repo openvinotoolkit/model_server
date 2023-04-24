@@ -20,27 +20,30 @@ universal-sentence-encoder-multilingual/
         └── variables.index
 
 ```
-Temporarily OVMS requires the model in a frozen graph format so a similar structure is to be created.
-The graph format represents the input and output as a tensorname so we will apply a `mapping_tensor.json` to adjust the model server names.
+
+In case the input and output names are changed during the model load in OpenVINO backend, apply a `mapping_config.json` to adjust them from the model server network interface.
 ```json
 {
        "inputs":{ 
-          "Func/StatefulPartitionedCall/input/_0": "inputs"
+          "serving_default_inputs": "inputs"
        },
        "outputs":{
-          "Func/StatefulPartitionedCall/output/_500":"outputs"
+          "StatefulPartitionedCall:0":"outputs"
        }
 }
 ``` 
 
 ```
-tree universal-sentence-encoder-multilingual-frozen
-universal-sentence-encoder-multilingual-frozen
+tree universal-sentence-encoder-multilingual
+universal-sentence-encoder-multilingual/
 └── 1
-    ├── mapping_config.json
-    └── muse.pb
+    ├── assets
+    ├── saved_model.pb
+    ├── mapping_config.json    
+    └── variables
+        ├── variables.data-00000-of-00001
+        └── variables.index
 ```
-Note: frozen graph is created using [freeze_graph.py](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/freeze_graph.py) script.
 
 
 ## Build OVMS with CPU extension library for sentencepiece_tokenizer layer
@@ -53,7 +56,7 @@ Until it is published, the docker image with OpenVINO Model Server including the
 ```
 git clone -b develop https://github.com/openvinotoolkit/model_server
 cd model_server
-make docker_build SENTENCEPIECE=1 OV_SOURCE_ORG=rkazants OV_CONTRIB_ORG=rkazants OV_SOURCE_BRANCH=muse_perf OV_CONTRIB_BRANCH=rkazants/sentence_tokenizer_optimization OV_USE_BINARY=0
+make docker_build SENTENCEPIECE=1 OV_CONTRIB_ORG=rkazants OV_CONTRIB_BRANCH=rkazants/sentence_tokenizer_optimization OV_USE_BINARY=0
 
 ```
 

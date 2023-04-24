@@ -54,7 +54,7 @@ OV_CONTRIB_BRANCH ?= master
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
-SENTENCEPIECE ?= 0
+SENTENCEPIECE ?= 1
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0

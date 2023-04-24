@@ -250,9 +250,16 @@ Check also [building from sources](https://github.com/openvinotoolkit/model_serv
 Example command to run container with NVIDIA support:
 
 ```bash
-   docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --target_device NVIDIA
+   curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
+
+   docker run -it --gpus all -p 9178:9178 -v ${PWD}/model:/model openvino/model_server:latest-cuda --model_path /model --model_name resnet --target_device NVIDIA
+```
+
+For models with layers not supported on NVIDIA plugin, you can use a vritual pluging `HETERO` which can use multiple devices listed after the colon:
+```bash
+   docker run -it --gpus all -p 9178:9178 -v ${PWD}/model:/model openvino/model_server:latest-cuda --model_path /model --model_name resnet --target_device HETERO:NVIDIA,CPU
 ```
 
 Check the supported [configuration parameters](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-configuration-parameters) and [supported layers](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-layers-and-limitations)
 
-Currently the AUTO, MULTI and HETERO virual plugins do not support NVIDIA plugin as an alternative device.
+Currently the AUTO and MULTI virual plugins do not support NVIDIA plugin as an alternative device.
