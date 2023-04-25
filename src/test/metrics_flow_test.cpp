@@ -41,7 +41,7 @@ using testing::HasSubstr;
 using testing::Not;
 
 // This checks for counter to be present with exact value and other remaining metrics of the family to be 0.
-void checkRequestsCounter(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, std::optional<model_version_t> endpointVersion, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
+static void checkRequestsCounter(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, std::optional<model_version_t> endpointVersion, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
     for (std::string _interface : std::set<std::string>{"gRPC", "REST"}) {
         for (std::string _api : std::set<std::string>{"TensorFlowServing", "KServe"}) {
             if (_api == "KServe") {

@@ -65,12 +65,12 @@ using MyTypes = ::testing::Types<
 
 TYPED_TEST_SUITE(ModelServiceTest, MyTypes);
 
-void executeModelStatus(const TFSGetModelStatusRequest& modelStatusRequest, TFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
+static void executeModelStatus(const TFSGetModelStatusRequest& modelStatusRequest, TFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
     modelStatusResponse.Clear();
     ASSERT_EQ(GetModelStatusImpl::getModelStatus(&modelStatusRequest, &modelStatusResponse, manager, context), statusCode);
 }
 
-void setModelStatusRequest(TFSGetModelStatusRequest& modelStatusRequest, const std::string& name, int version) {
+static void setModelStatusRequest(TFSGetModelStatusRequest& modelStatusRequest, const std::string& name, int version) {
     modelStatusRequest.Clear();
     auto model_spec = modelStatusRequest.mutable_model_spec();
     model_spec->Clear();
@@ -80,7 +80,7 @@ void setModelStatusRequest(TFSGetModelStatusRequest& modelStatusRequest, const s
     }
 }
 
-void verifyModelStatusResponse(const TFSGetModelStatusResponse& modelStatusResponse, const std::vector<int>& versions = {1}) {
+static void verifyModelStatusResponse(const TFSGetModelStatusResponse& modelStatusResponse, const std::vector<int>& versions = {1}) {
     ASSERT_EQ(modelStatusResponse.model_version_status_size(), versions.size());
     for (size_t i = 0; i < versions.size(); i++) {
         auto& model_version_status = modelStatusResponse.model_version_status()[i];
@@ -92,16 +92,16 @@ void verifyModelStatusResponse(const TFSGetModelStatusResponse& modelStatusRespo
     }
 }
 
-void verifyModelStatusResponse(const KFSGetModelStatusResponse& modelStatusResponse, const std::vector<int>& versions = {1}) {
+static void verifyModelStatusResponse(const KFSGetModelStatusResponse& modelStatusResponse, const std::vector<int>& versions = {1}) {
     ASSERT_TRUE(modelStatusResponse.ready());
 }
 
-void executeModelStatus(const KFSGetModelStatusRequest& modelStatusRequest, KFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
+static void executeModelStatus(const KFSGetModelStatusRequest& modelStatusRequest, KFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
     modelStatusResponse.Clear();
     ASSERT_EQ(KFSInferenceServiceImpl::getModelReady(&modelStatusRequest, &modelStatusResponse, manager, context), statusCode);
 }
 
-void setModelStatusRequest(KFSGetModelStatusRequest& modelStatusRequest, const std::string& name, int version) {
+static void setModelStatusRequest(KFSGetModelStatusRequest& modelStatusRequest, const std::string& name, int version) {
     modelStatusRequest.Clear();
     modelStatusRequest.set_name(name);
     if (version)

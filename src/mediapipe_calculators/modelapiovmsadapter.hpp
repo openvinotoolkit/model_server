@@ -54,7 +54,7 @@ class OVMSInferenceAdapter : public ::InferenceAdapter {
     ov::AnyMap modelConfig;
 
 public:
-    OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion = 0);
+    OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion = 0, OVMS_Server* server = nullptr);
     virtual ~OVMSInferenceAdapter();
     InferenceOutput infer(const InferenceInput& input) override;
     void loadModel(const std::shared_ptr<const ov::Model>& model, ov::Core& core,

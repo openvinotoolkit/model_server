@@ -127,7 +127,7 @@ TEST(DetokenizerTest, outputs_info) {
     ASSERT_EQ(ret, 0);
 }
 
-void prepare(std::vector<float> data, std::vector<size_t> shape, std::vector<std::vector<int64_t>> previousTokens, struct CustomNodeTensor* tensors) {
+static void prepare(std::vector<float> data, std::vector<size_t> shape, std::vector<std::vector<int64_t>> previousTokens, struct CustomNodeTensor* tensors) {
     // logits
     struct CustomNodeTensor* tensor = &tensors[0];
     tensor->dataBytes = data.size() * sizeof(float);

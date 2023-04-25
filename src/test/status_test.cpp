@@ -25,7 +25,7 @@
 #include "test_utils.hpp"
 
 namespace ovms {
-StatusCode& operator++(StatusCode& statusCode) {
+static StatusCode& operator++(StatusCode& statusCode) {
     if (statusCode == StatusCode::STATUS_CODE_END) {
         throw std::out_of_range("for E& operator ++ (E&)");
     }

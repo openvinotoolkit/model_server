@@ -125,7 +125,7 @@ TEST(TokenizerTest, outputs_info) {
     ASSERT_EQ(ret, 0);
 }
 
-void putStringsToTensor(std::vector<std::string> strings, struct CustomNodeTensor& tensor) {
+static void putStringsToTensor(std::vector<std::string> strings, struct CustomNodeTensor& tensor) {
     size_t maxStringLength = 0;
     for (auto& str : strings) {
         maxStringLength = std::max(str.size(), maxStringLength);

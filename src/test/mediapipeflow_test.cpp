@@ -21,6 +21,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <openvino/openvino.hpp>
 
 #include "../config.hpp"
 #include "../grpcservermodule.hpp"
@@ -144,13 +145,139 @@ TEST_P(MediapipeFlowAddTest, AdapterMetadata) {
     const std::string modelName = "add";
     mediapipe::ovms::OVMSInferenceAdapter adapter(modelName);
     const std::shared_ptr<const ov::Model> model;
-    ov::Core core;
+    ov::Core unusedCore;
     ov::AnyMap notUsedAnyMap;
-    adapter.loadModel(model, core, "NOT_USED", notUsedAnyMap);
+    adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
     EXPECT_THAT(adapter.getInputNames(), ElementsAre(SUM_MODEL_INPUT_NAME_1, SUM_MODEL_INPUT_NAME_2));
     EXPECT_THAT(adapter.getOutputNames(), ElementsAre(SUM_MODEL_OUTPUT_NAME));
     EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_1), ov::Shape({1, 10}));
     EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_2), ov::Shape({1, 10}));
+}
+
+namespace {
+class MockModelInstance : public ovms::ModelInstance {
+public:
+    MockModelInstance(ov::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
+    }
+    ov::AnyMap getRTInfo() const override {
+        std::vector<std::string> mockLabels;
+        for (size_t i = 0; i < 5; i++) {
+            mockLabels.emplace_back(std::to_string(i));
+        }
+        ov::AnyMap configuration = {
+            {"layout", "data:HWCN"},
+            {"resize_type", "unnatural"},  // fit_to_window
+            {"labels", mockLabels}};
+        return configuration;
+    }
+};
+
+class MockModel : public ovms::Model {
+public:
+    MockModel(const std::string& name) :
+        Model(name, false /*stateful*/, nullptr) {}
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
+        return std::make_shared<MockModelInstance>(ieCore);
+    }
+};
+
+class MockModelManager : public ovms::ModelManager {
+    ovms::MetricRegistry registry;
+
+public:
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+        return std::make_shared<MockModel>(name);
+    }
+
+public:
+    MockModelManager(const std::string& modelCacheDirectory = "") :
+        ovms::ModelManager(modelCacheDirectory, &registry) {
+    }
+    ~MockModelManager() {
+        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+        join();
+        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+        models.clear();
+        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+    }
+};
+
+class MockedServableManagerModule : public ovms::ServableManagerModule {
+    mutable MockModelManager mockModelManager;
+
+public:
+    MockedServableManagerModule(ovms::Server& ovmsServer) :
+        ovms::ServableManagerModule(ovmsServer) {
+    }
+    ModelManager& getServableManager() const override {
+        return mockModelManager;
+    }
+};
+
+class MockedServer : public Server {
+public:
+    MockedServer() = default;
+    std::unique_ptr<Module> createModule(const std::string& name) override {
+        if (name != ovms::SERVABLE_MANAGER_MODULE_NAME)
+            return Server::createModule(name);
+        return std::make_unique<MockedServableManagerModule>(*this);
+    };
+    Module* getModule(const std::string& name) {
+        return const_cast<Module*>(Server::getModule(name));
+    }
+};
+
+}  // namespace
+
+#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)   \
+    {                                         \
+        auto* err = C_API_CALL;               \
+        if (err != nullptr) {                 \
+            uint32_t code = 0;                \
+            const char* msg = nullptr;        \
+            OVMS_StatusGetCode(err, &code);   \
+            OVMS_StatusGetDetails(err, &msg); \
+            std::string smsg(msg);            \
+            OVMS_StatusDelete(err);           \
+            EXPECT_EQ(0, code) << smsg;       \
+            ASSERT_EQ(err, nullptr) << smsg;  \
+        }                                     \
+    }
+TEST(Mediapipe, AdapterRTInfo) {
+    MockedServer server;
+    OVMS_Server* cserver = reinterpret_cast<OVMS_Server*>(&server);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
+    // we will use dummy model that will have mocked rt_info
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json"));
+
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    const std::string mockedModelName = "dummy";
+    mediapipe::ovms::OVMSInferenceAdapter adapter(mockedModelName, 1, cserver);
+    const std::shared_ptr<const ov::Model> model;
+    /*ov::AnyMap configuration = {
+        {"layout", "data:HWCN"},
+        {"resize_type", "unnatural"}, //fit_to_window
+        {"labels", mockLabels}*/
+    ov::Core unusedCore;
+    ov::AnyMap notUsedAnyMap;
+    adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
+    ov::AnyMap modelConfig = adapter.getModelConfig();
+    ASSERT_EQ(modelConfig.size(), 3);
+    auto it = modelConfig.find("resize_type");
+    ASSERT_NE(modelConfig.end(), it);
+    EXPECT_EQ(std::string("unnatural"), it->second.as<std::string>());
+    it = modelConfig.find("layout");
+    ASSERT_NE(modelConfig.end(), it);
+    ASSERT_EQ(std::string("data:HWCN"), it->second.as<std::string>());
+    it = modelConfig.find("labels");
+    ASSERT_NE(modelConfig.end(), it);
+    const std::vector<std::string>& resultLabels = it->second.as<std::vector<std::string>>();
+    EXPECT_THAT(resultLabels, ElementsAre("0", "1", "2", "3", "4"));
 }
 
 TEST(Mediapipe, MetadataDummy) {

@@ -27,6 +27,7 @@ namespace ovms {
 using capi_tensor_shapes_map_t = std::unordered_map<std::string, std::vector<dimension_value_t>>;
 
 class ServableMetadata {
+    static const ov::AnyMap EMPTY_RT_INFO;
     const std::string name;
     const model_version_t version;
     tensor_map_t inputsInfo;
@@ -35,17 +36,22 @@ class ServableMetadata {
     capi_tensor_shapes_map_t inDimMax;
     capi_tensor_shapes_map_t outDimMin;
     capi_tensor_shapes_map_t outDimMax;
-    // 2nd for outputs
+    ov::AnyMap rtInfo;
+
 public:
     ServableMetadata(const std::string& name,
         model_version_t version,
         const tensor_map_t& inputsInfo,
-        const tensor_map_t& outputsInfo);
+        const tensor_map_t& outputsInfo,
+        const ov::AnyMap& anyMap = EMPTY_RT_INFO);
     const tensor_map_t& getInputsInfo() const { return inputsInfo; }
     const tensor_map_t& getOutputsInfo() const { return outputsInfo; }
     const capi_tensor_shapes_map_t& getInputDimsMin() const { return this->inDimMin; }
     const capi_tensor_shapes_map_t& getInputDimsMax() const { return this->inDimMax; }
     const capi_tensor_shapes_map_t& getOutputDimsMin() const { return this->outDimMin; }
     const capi_tensor_shapes_map_t& getOutputDimsMax() const { return this->outDimMax; }
+    const ov::AnyMap& getRTInfo() const {
+        return this->rtInfo;
+    }
 };
 }  // namespace ovms

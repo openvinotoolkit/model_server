@@ -501,6 +501,14 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* metadata, uint
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
 
+// TODO
+// Get the RTInfo metadata of servable.
+//
+// \param metadata The metadata object
+// \param rtinfo The ptr to the ov::AnyMap
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataGetRTInfo(OVMS_ServableMetadata* metadata, void** RTInfo);
+
 // Deallocates a status object.
 //
 //  \param metadata The metadata object
