@@ -44,6 +44,7 @@ CHECK_COVERAGE ?=0
 RUN_TESTS ?= 1
 NVIDIA ?=0
 BUILD_NGINX ?= 0
+DISABLE_MEDIAPIPE ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -63,10 +64,15 @@ BAZEL_BUILD_TYPE ?= opt
 CMAKE_BUILD_TYPE ?= Release
 MINITRACE ?= OFF
 
+DISABLE_MEDIAPIPE_PARAMS ?= ""
+ifeq ($(DISABLE_MEDIAPIPE),1)
+	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "
+endif
+
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
-  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "
+  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "$(DISABLE_MEDIAPIPE_PARAMS)
 else
-  BAZEL_DEBUG_FLAGS=" --strip=never "
+  BAZEL_DEBUG_FLAGS=" --strip=never "$(DISABLE_MEDIAPIPE_PARAMS)
 endif
 
 ifeq ($(MINITRACE),ON)
