@@ -385,7 +385,7 @@ static Status processMediapipeConfig(rapidjson::Document& configJson, const rapi
         return status;
     }
     SPDLOG_DEBUG("Mediapipe graph:{} is already loaded. Triggering reload", config.getGraphName());
-    auto status = factory.reloadDefinition(config.getGraphName(),
+    status = factory.reloadDefinition(config.getGraphName(),
         config,
         manager);
     mediapipesInConfigFile.insert(config.getGraphName());

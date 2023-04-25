@@ -81,7 +81,6 @@ cc_shared_library(
         "@upb//:__subpackages__",
         "@zlib//:__subpackages__",
         "@oneTBB//:__subpackages__",
-        "@google_mediapipe//:__subpackages__",
         "@mediapipe//:__subpackages__",
         "@com_github_glog_glog//:__subpackages__",
         "@com_github_gflags_gflags//:__subpackages__",

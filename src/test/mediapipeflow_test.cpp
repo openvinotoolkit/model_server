@@ -88,12 +88,6 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json");
     }
 };
-class MediapipeFlowKfsTest : public MediapipeFlowTest {
-public:
-    void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_kfs.json");
-    }
-};
 
 TEST_P(MediapipeFlowDummyTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -143,34 +137,9 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
-TEST_P(MediapipeFlowKfsTest, Infer) {
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ::KFSRequest request;
-    ::KFSResponse response;
-    const std::string modelName = GetParam();
-    request.Clear();
-    response.Clear();
-    inputs_info_t inputsMeta{
-        {"in", {DUMMY_MODEL_SHAPE, precision}}
-        };
-    std::vector<float> requestData1{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
-    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
-    preparePredictRequest(request, inputsMeta, requestData1);
-    request.mutable_model_name()->assign(modelName);
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    auto outputs = response.outputs();
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(outputs[0].name(), "out");
-    ASSERT_EQ(outputs[0].shape().size(), 2);
-    ASSERT_EQ(outputs[0].shape()[0], 1);
-    ASSERT_EQ(outputs[0].shape()[1], 10);
-    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
-}
-
 TEST(Mediapipe, MetadataDummy) {
     ConstructorEnabledModelManager manager;
-    ovms::MediapipeGraphConfig mgc{"/ovms/src/test/mediapipe/graphdummy.pbtxt"};
+    ovms::MediapipeGraphConfig mgc{"mediapipeDummy","/ovms/src/test/mediapipe/graphdummy.pbtxt"};
     ovms::MediapipeGraphDefinition mediapipeDummy("mediapipeDummy", mgc);
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     tensor_map_t inputs = mediapipeDummy.getInputsInfo();
@@ -191,7 +160,6 @@ const std::vector<std::string> mediaGraphsDummy{"mediapipeDummy",
     "mediapipeDummyADAPTFULL"};
 const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
     "mediapipeAddADAPTFULL"};
-const std::vector<std::string> mediaGraphsKfs{"mediapipeDummyKFS"};
 
 class MediapipeConfig : public MediapipeFlowTest {
 public:
@@ -201,7 +169,7 @@ public:
 const std::string NAME = "Name";
 TEST_F(MediapipeConfig, MediapipeGraphDefinitionNonExistentFile) {
     ConstructorEnabledModelManager manager;
-    MediapipeGraphConfig mgc{"/ovms/NONEXISTENT_FILE"};
+    MediapipeGraphConfig mgc{"noname","/ovms/NONEXISTENT_FILE"};
     MediapipeGraphDefinition mgd(NAME, mgc);
     EXPECT_EQ(mgd.validate(manager), StatusCode::FILE_INVALID);
 }
@@ -363,14 +331,4 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::ValuesIn(mediaGraphsDummy),
     [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
         return info.param;
-    });
-
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    MediapipeFlowKfsTest,
-    ::testing::ValuesIn(mediaGraphsKfs),
-    [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
-        return info.param;
-    });
-
-    
+    });    
