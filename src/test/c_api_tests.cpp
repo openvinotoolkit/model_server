@@ -664,8 +664,8 @@ public:
     }
     void checkMetadata(const std::string& servableName,
         int64_t servableVersion,
-        const tensor_map_t& inputsInfo,
-        const tensor_map_t& outputsInfo) {
+        const tensor_map_t& expectedInputsInfo,
+        const tensor_map_t& expectedOutputsInfo) {
         OVMS_ServableMetadata* servableMetadata = nullptr;
         ASSERT_CAPI_STATUS_NULL(OVMS_GetServableMetadata(cserver, servableName.c_str(), servableVersion, &servableMetadata));
         ASSERT_NE(nullptr, servableMetadata);
@@ -673,8 +673,8 @@ public:
         uint32_t outputCount = 42;
         ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInputsCount(servableMetadata, &inputCount));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutputsCount(servableMetadata, &outputCount));
-        ASSERT_EQ(inputsInfo.size(), inputCount);
-        ASSERT_EQ(outputsInfo.size(), outputCount);
+        ASSERT_EQ(expectedInputsInfo.size(), inputCount);
+        ASSERT_EQ(expectedOutputsInfo.size(), outputCount);
 
         uint32_t id = 0;
         OVMS_DataType datatype = (OVMS_DataType)199;
@@ -686,8 +686,8 @@ public:
         std::set<std::string> outputNames;
         for (id = 0; id < inputCount; ++id) {
             ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
-            auto it = inputsInfo.find(tensorName);
-            ASSERT_NE(it, inputsInfo.end());
+            auto it = expectedInputsInfo.find(tensorName);
+            ASSERT_NE(it, expectedInputsInfo.end());
             inputNames.insert(tensorName);
             EXPECT_EQ(datatype, ovms::getPrecisionAsOVMSDataType(it->second->getPrecision()));
             auto& expectedShape = it->second->getShape();
@@ -699,8 +699,8 @@ public:
         EXPECT_EQ(inputNames.size(), inputCount);
         for (id = 0; id < outputCount; ++id) {
             ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
-            auto it = outputsInfo.find(tensorName);
-            ASSERT_NE(it, outputsInfo.end());
+            auto it = expectedOutputsInfo.find(tensorName);
+            ASSERT_NE(it, expectedOutputsInfo.end());
             outputNames.insert(tensorName);
             EXPECT_EQ(datatype, ovms::getPrecisionAsOVMSDataType(it->second->getPrecision()));
             auto& expectedShape = it->second->getShape();

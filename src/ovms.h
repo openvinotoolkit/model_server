@@ -444,6 +444,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request,
 
 // Get OVMS_ServableMetadata object
 //
+// Creates OVMS_ServableMetadata object describing inputs and outputs.
 // Returned object needs to be deleted after use with OVMS_ServableMetadataDelete
 // if call succeeded.
 //
@@ -468,10 +469,10 @@ OVMS_Status* OVMS_ServableMetadataGetInputsCount(OVMS_ServableMetadata* metadata
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServableMetadataGetOutputsCount(OVMS_ServableMetadata* metadata, uint32_t* count);
 
-// Get the input metadata of servable.
+// Get the metadata of servable input given the index
 //
 // The received shapeMin and shapeMax indicate whether the underlying servable accepts
-// a shape range or fully dynamic input. A value of -1 for both shapeMin and shapeMax
+// a shape range or fully dynamic shape. A value of -1 for both shapeMin and shapeMax
 // for a specific dimension means that the servable accepts any value on that dimension.
 //
 // \param metadata The metadata object
@@ -484,10 +485,10 @@ OVMS_Status* OVMS_ServableMetadataGetOutputsCount(OVMS_ServableMetadata* metadat
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
 
-// Get the output metadata of servable.
+// Get the metadata of servable output given the index
 //
 // The received shapeMin and shapeMax indicate whether the underlying servable accepts
-// a shape range or fully dynamic input. A value of -1 for both shapeMin and shapeMax
+// a shape range or fully dynamic shape. A value of -1 for both shapeMin and shapeMax
 // for a specific dimension means that the servable accepts any value on that dimension.
 //
 // \param metadata The metadata object

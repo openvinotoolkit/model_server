@@ -41,10 +41,6 @@ public:
         model_version_t version,
         const tensor_map_t& inputsInfo,
         const tensor_map_t& outputsInfo);
-    ServableMetadata(const std::string& name,
-        model_version_t version,
-        tensor_map_t&& inputsInfo,
-        tensor_map_t&& outputsInfo);
     const tensor_map_t& getInputsInfo() const { return inputsInfo; }
     const tensor_map_t& getOutputsInfo() const { return outputsInfo; }
     const capi_tensor_shapes_map_t& getInputDimsMin() const { return this->inDimMin; }

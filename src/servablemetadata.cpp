@@ -41,30 +41,4 @@ ServableMetadata::ServableMetadata(const std::string& name,
         }
     }
 }
-
-ServableMetadata::ServableMetadata(const std::string& name,
-    model_version_t version,
-    tensor_map_t&& inputsInfo,
-    tensor_map_t&& outputsInfo) :
-    name(name),
-    version(version),
-    inputsInfo(inputsInfo),
-    outputsInfo(outputsInfo) {
-    for (auto& [key, tensorInfo] : this->inputsInfo) {
-        auto& inDimsMin = this->inDimMin[key];
-        auto& inDimsMax = this->inDimMax[key];
-        for (auto& dim : tensorInfo->getShape()) {
-            inDimsMin.emplace_back(dim.getLowerBound());
-            inDimsMax.emplace_back(dim.getUpperBound());
-        }
-    }
-    for (auto& [key, tensorInfo] : this->outputsInfo) {
-        auto& outDimsMin = this->outDimMin[key];
-        auto& outDimsMax = this->outDimMax[key];
-        for (auto& dim : tensorInfo->getShape()) {
-            outDimsMin.emplace_back(dim.getLowerBound());
-            outDimsMax.emplace_back(dim.getUpperBound());
-        }
-    }
-}
 }  // namespace ovms

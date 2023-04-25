@@ -160,7 +160,7 @@ void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& mod
     for (id = 0; id < inputCount; ++id) {
         ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
         inputNames.emplace_back(tensorName);
-        shapeMinMax inputMinMax;
+        shape_min_max_t inputMinMax;
         for (size_t i = 0; i < dimCount; ++i) {
             // TODO test adapter dynamic shapes
             inputMinMax.first.emplace_back(shapeMin[i]);
