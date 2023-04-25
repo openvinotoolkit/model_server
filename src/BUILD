@@ -21,6 +21,22 @@
 #    ],
 #)
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
+
+config_setting(
+    name = "disable_mediapipe",
+    define_values = {
+        "MEDIAPIPE_DISABLE": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_disable_mediapipe",
+    negate = ":disable_mediapipe",
+)
+
 constraint_setting(name = "linux_distribution_family")
 constraint_value(constraint_setting = "linux_distribution_family", name = "fedora") # like RHEL/CentOS
 constraint_value(constraint_setting = "linux_distribution_family", name = "debian") # like Ubuntu
@@ -81,18 +97,21 @@ cc_shared_library(
         "@upb//:__subpackages__",
         "@zlib//:__subpackages__",
         "@oneTBB//:__subpackages__",
-        "@mediapipe//:__subpackages__",
-        "@com_github_glog_glog//:__subpackages__",
-        "@com_github_gflags_gflags//:__subpackages__",
-        "@mediapipe_calculators//:__subpackages__",
-        "@model_api//:__subpackages__",
-        "@arm_neon_2_x86_sse//:__subpackages__",
-        "@ruy//:__subpackages__",
-        "@cpuinfo//:__subpackages__",
-        "@clog//:__subpackages__",
-        "@gemmlowp//:__subpackages__",
-        "@flatbuffers//:__subpackages__",
-    ],
+    ] + select({
+        "//conditions:default": [
+            "@mediapipe//:__subpackages__",
+            "@com_github_glog_glog//:__subpackages__",
+            "@com_github_gflags_gflags//:__subpackages__",
+            "@mediapipe_calculators//:__subpackages__",
+            "@arm_neon_2_x86_sse//:__subpackages__",
+            "@ruy//:__subpackages__",
+            "@cpuinfo//:__subpackages__",
+            "@clog//:__subpackages__",
+            "@gemmlowp//:__subpackages__",
+            "@flatbuffers//:__subpackages__",
+            ],
+        "//src:disable_mediapipe" : [],
+        }),
     features = [],
     roots = ["//src:ovms_lib"],
 )
