@@ -21,9 +21,6 @@ LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG ov_source_branch=master
-ARG ov_contrib_branch=master
-
 ARG JOBS
 COPY entitlement /etc/pki/entitlement
 COPY rhsm-ca /etc/rhsm/ca
@@ -133,7 +130,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             unzip \
             vim \
             xz \
-            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm \
             http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/libusb-devel-0.1.5-12.el8.x86_64.rpm \
             http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/libusb-0.1.5-12.el8.x86_64.rpm \
             http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/libusbx-devel-1.0.23-4.el8.x86_64.rpm && \
@@ -171,15 +168,22 @@ ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 ARG minitrace_flags
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
-
+ARG ov_source_branch=master
+ARG ov_contrib_branch=master
+ARG sentencepiece=0
+ARG ov_source_org=openvinotoolkit
+ARG ov_contrib_org=openvinotoolkit
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
 
+RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
+
+
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 # hadolint ignore=DL3003
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino /openvino && cd /openvino && git checkout "$ov_source_branch" && git submodule update --init --recursive
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && dnf clean all
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
@@ -203,6 +207,15 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2022
+
+# install sample apps including benchmark_app
+RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
+#################### END OF OPENVINO BINARY INSTALL
+
+# SENTENCEPIECE_EXTENSION
+ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
+WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
+RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="sentence_piece" && cmake --build . --parallel $JOBS
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
