@@ -368,6 +368,7 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 
 static Status processMediapipeConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory, ModelManager& manager) {
     MediapipeGraphConfig config;
+    config.setRootDirectoryPath(manager.getRootDirectoryPath());
     auto status = config.parseNode(pipelineConfig);
     if (status != StatusCode::OK) {
         SPDLOG_ERROR("Parsing graph config failed");
@@ -375,7 +376,7 @@ static Status processMediapipeConfig(rapidjson::Document& configJson, const rapi
     }
 
     if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());  
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
         return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
     }
     if (!factory.definitionExists(config.getGraphName())) {

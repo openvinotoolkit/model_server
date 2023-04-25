@@ -23,8 +23,8 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
+#include "../filesystem.hpp"
 #include "../status.hpp"
-#include "../stringutils.hpp"
 
 namespace ovms {
 
@@ -47,6 +47,11 @@ private:
          * @brief Flag determing should we pass whole KFSrequest
          */
     bool passKfsRequest;
+
+    /**
+         * @brief Json config directory path
+         */
+    std::string rootDirectoryPath;
 
 public:
     /**
@@ -104,6 +109,28 @@ public:
          */
     void setGraphPath(const std::string& graphPath) {
         this->graphPath = graphPath;
+
+        if (!FileSystem::isLocalFilesystem(graphPath)) {
+            // Cloud filesystem
+            this->graphPath = graphPath;
+        } else if (graphPath.at(0) == '/') {
+            // Full path case
+            this->graphPath = graphPath;
+        } else {
+            // Relative path case
+            if (this->rootDirectoryPath.empty())
+                throw std::logic_error("Using graph relative path without setting configuration directory path.");
+            this->graphPath = this->rootDirectoryPath + graphPath;
+        }
+    }
+
+    /**
+         * @brief Set root directory path
+         *
+         * @param rootDirectoryPath
+         */
+    void setRootDirectoryPath(const std::string& rootDirectoryPath) {
+        this->rootDirectoryPath = rootDirectoryPath;
     }
 
     /**
@@ -137,12 +164,14 @@ public:
                 this->setPassKfsRequestFlag(v["graph_pass_kfs_request"].GetBool());
             else
                 this->setPassKfsRequestFlag(false);
+        } catch (std::logic_error& e) {
+            SPDLOG_DEBUG("Relative path error: {}", e.what());
+            return StatusCode::INTERNAL_ERROR;
         } catch (...) {
             SPDLOG_ERROR("There was an error parsing the mediapipe graph config");
             return StatusCode::JSON_INVALID;
         }
         return StatusCode::OK;
     }
-    
 };
 }  // namespace ovms

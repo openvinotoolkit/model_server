@@ -139,7 +139,7 @@ TEST_P(MediapipeFlowAddTest, Infer) {
 
 TEST(Mediapipe, MetadataDummy) {
     ConstructorEnabledModelManager manager;
-    ovms::MediapipeGraphConfig mgc{"mediapipeDummy","/ovms/src/test/mediapipe/graphdummy.pbtxt"};
+    ovms::MediapipeGraphConfig mgc{"mediapipeDummy", "/ovms/src/test/mediapipe/graphdummy.pbtxt"};
     ovms::MediapipeGraphDefinition mediapipeDummy("mediapipeDummy", mgc);
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     tensor_map_t inputs = mediapipeDummy.getInputsInfo();
@@ -169,7 +169,7 @@ public:
 const std::string NAME = "Name";
 TEST_F(MediapipeConfig, MediapipeGraphDefinitionNonExistentFile) {
     ConstructorEnabledModelManager manager;
-    MediapipeGraphConfig mgc{"noname","/ovms/NONEXISTENT_FILE"};
+    MediapipeGraphConfig mgc{"noname", "/ovms/NONEXISTENT_FILE"};
     MediapipeGraphDefinition mgd(NAME, mgc);
     EXPECT_EQ(mgd.validate(manager), StatusCode::FILE_INVALID);
 }
@@ -331,4 +331,4 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::ValuesIn(mediaGraphsDummy),
     [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
         return info.param;
-    });    
+    });
