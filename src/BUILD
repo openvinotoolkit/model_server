@@ -24,6 +24,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 
+#To build without mediapipe use flags - bazel build -s --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 //src:ovms
 config_setting(
     name = "disable_mediapipe",
     define_values = {
@@ -235,20 +236,6 @@ cc_library(
         "kfs_frontend/kfs_grpc_inference_service.hpp",
         "kfs_frontend/kfs_utils.cpp",
         "kfs_frontend/kfs_utils.hpp",
-        "mediapipe_internal/mediapipefactory.cpp",
-        "mediapipe_internal/mediapipefactory.hpp",
-        "mediapipe_internal/mediapipegraphconfig.hpp",
-        "mediapipe_internal/mediapipegraphdefinition.cpp",
-        "mediapipe_internal/mediapipegraphdefinition.hpp",
-        "mediapipe_internal/mediapipegraphexecutor.cpp",
-        "mediapipe_internal/mediapipegraphexecutor.hpp",
-        "mediapipe_calculators/modelapiovmsadapter.cc",
-        "mediapipe_calculators/modelapiovmsadapter.hpp",
-        "mediapipe_calculators/modelapiovmsadapterwrapper.cc",
-        "mediapipe_calculators/modelapiovmsadapterwrapper.hpp",
-        "mediapipe_calculators/ovms_calculator.cc",
-        "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
-        "mediapipe_calculators/modelapiovmssessioncalculator.cc",
         "metric.cpp",
         "metric.hpp",
         "metric_config.cpp",
@@ -373,7 +360,24 @@ cc_library(
         "logging.cpp",
         "tensor_conversion.hpp",
         "tensor_conversion.cpp",
-    ],
+         ] + select({
+        "//conditions:default": [
+            "mediapipe_internal/mediapipefactory.cpp",
+            "mediapipe_internal/mediapipefactory.hpp",
+            "mediapipe_internal/mediapipegraphdefinition.cpp",
+            "mediapipe_internal/mediapipegraphdefinition.hpp",
+            "mediapipe_internal/mediapipegraphexecutor.cpp",
+            "mediapipe_internal/mediapipegraphexecutor.hpp",
+            "mediapipe_calculators/modelapiovmsadapter.cc",
+            "mediapipe_calculators/modelapiovmsadapter.hpp",
+            "mediapipe_calculators/modelapiovmsadapterwrapper.cc",
+            "mediapipe_calculators/modelapiovmsadapterwrapper.hpp",
+            "mediapipe_calculators/ovms_calculator.cc",
+            "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
+            "mediapipe_calculators/modelapiovmssessioncalculator.cc",
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
         "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
@@ -390,11 +394,6 @@ cc_library(
         "@cpprest//:sdk",
         "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@mediapipe//mediapipe/framework/port:logging",
-        "@mediapipe//mediapipe/framework/port:parse_text_proto",
-        "@mediapipe//mediapipe/framework/port:status",
-        "@mediapipe_calculators//:mediapipe_calculators",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
@@ -404,11 +403,19 @@ cc_library(
         "@com_github_jupp0r_prometheus_cpp//core",
         "//src/kfserving_api:kfserving_api_cpp",
         "@oneTBB//:tbb",
-        "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-        "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-        "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-        "@model_api//:adapter_api",
-    ],
+        ] + select({
+        "//conditions:default": [
+            "@mediapipe//mediapipe/framework:calculator_framework",
+            "@mediapipe//mediapipe/framework/port:logging",
+            "@mediapipe//mediapipe/framework/port:parse_text_proto",
+            "@mediapipe//mediapipe/framework/port:status",
+            "@mediapipe_calculators//:mediapipe_calculators",
+            "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+            "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+            "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
@@ -745,7 +752,6 @@ cc_test(
         "test/kfs_rest_test.cpp",
         "test/layout_test.cpp",
         "test/localfilesystem_test.cpp",
-        "test/mediapipeflow_test.cpp",
         "test/metrics_flow_test.cpp",
         "test/metrics_test.cpp",
         "test/metric_config_test.cpp",
@@ -791,7 +797,12 @@ cc_test(
         "test/test_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
-    ],
+        ] + select({
+        "//conditions:default": [
+            "test/mediapipeflow_test.cpp",
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
     data = [
         "test/add_two_inputs_model/1/add.xml",
         "test/add_two_inputs_model/1/add.bin",
