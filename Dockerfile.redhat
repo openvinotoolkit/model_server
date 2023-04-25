@@ -177,8 +177,8 @@ ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
 
+# hadolint ignore=DL3003
 RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
-
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
@@ -224,7 +224,6 @@ ENV OPENVINO_CONTRIB=/openvino_contrib
 
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    git clone https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout "$ov_contrib_branch" && git submodule update --init --recursive && \
     mkdir "${OPENVINO_BUILD_PATH}" && \
     cd "${OPENVINO_BUILD_PATH}" && \
     cmake "${OPENVINO_HOME}" \
