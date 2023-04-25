@@ -54,7 +54,7 @@ Until it is published, the docker image with OpenVINO Model Server including the
 ```bash
 git clone -b develop https://github.com/openvinotoolkit/model_server
 cd model_server
-make docker_build SENTENCEPIECE=1 OV_CONTRIB_ORG=rkazants OV_CONTRIB_BRANCH=rkazants/sentence_tokenizer_optimization OV_USE_BINARY=0
+make docker_build SENTENCEPIECE=1 OV_USE_BINARY=0
 cd ..
 
 ```
