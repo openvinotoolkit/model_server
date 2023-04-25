@@ -824,9 +824,6 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
     }
     ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
-    if (id >= metadata->getInputsInfo().size()) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TENSOR));
-    }
     if (id >= metadata->getOutputsInfo().size()) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TENSOR));
     }
