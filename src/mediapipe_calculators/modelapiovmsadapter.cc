@@ -144,7 +144,7 @@ void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& mod
     const std::string& device, const ov::AnyMap& compilationConfig) {
     // no need to load but we need to extract metadata
     OVMS_ServableMetadata* servableMetadata = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata));
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableMetadata(cserver, servableName.c_str(), servableVersion, &servableMetadata));
     uint32_t inputCount = 0;
     uint32_t outputCount = 0;
     // TODO ensure Metadata object removal in all paths

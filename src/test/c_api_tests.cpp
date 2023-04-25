@@ -667,7 +667,7 @@ public:
         const tensor_map_t& inputsInfo,
         const tensor_map_t& outputsInfo) {
         OVMS_ServableMetadata* servableMetadata = nullptr;
-        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata));
+        ASSERT_CAPI_STATUS_NULL(OVMS_GetServableMetadata(cserver, servableName.c_str(), servableVersion, &servableMetadata));
         ASSERT_NE(nullptr, servableMetadata);
         uint32_t inputCount = 42;
         uint32_t outputCount = 42;
@@ -729,14 +729,14 @@ TEST_F(CAPIMetadata, Negative) {
     const std::string servableName = "dummy";
     model_version_t servableVersion = 1;
     // nullptr tests
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(nullptr, servableName.c_str(), servableVersion, &servableMetadata), StatusCode::NONEXISTENT_SERVER);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, nullptr, servableVersion, &servableMetadata), StatusCode::NONEXISTENT_STRING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, nullptr), StatusCode::NONEXISTENT_METADATA);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableMetadata(nullptr, servableName.c_str(), servableVersion, &servableMetadata), StatusCode::NONEXISTENT_SERVER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableMetadata(cserver, nullptr, servableVersion, &servableMetadata), StatusCode::NONEXISTENT_STRING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableMetadata(cserver, servableName.c_str(), servableVersion, nullptr), StatusCode::NONEXISTENT_METADATA);
     // negative missing servable
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, "NONEXISTENT_NAME", servableVersion, &servableMetadata), StatusCode::MODEL_NAME_MISSING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGet(cserver, servableName.c_str(), -1, &servableMetadata), StatusCode::MODEL_VERSION_MISSING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableMetadata(cserver, "NONEXISTENT_NAME", servableVersion, &servableMetadata), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableMetadata(cserver, servableName.c_str(), -1, &servableMetadata), StatusCode::MODEL_VERSION_MISSING);
     // proper call
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGet(cserver, servableName.c_str(), servableVersion, &servableMetadata));
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableMetadata(cserver, servableName.c_str(), servableVersion, &servableMetadata));
     ASSERT_NE(nullptr, servableMetadata);
     uint32_t inputCount = 42;
     uint32_t outputCount = 42;

@@ -452,7 +452,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request,
 // \param servableVersion The version of the servable to be used
 // \param metadata The metadata object to be created
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_ServableMetadataGet(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableMetadata** metadata);
+OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableMetadata** metadata);
 
 // Get the number of inputs of servable.
 //
@@ -482,7 +482,7 @@ OVMS_Status* OVMS_ServableMetadataGetOutputsCount(OVMS_ServableMetadata* metadat
 // \param shapeMin The shape lower bounds of the input
 // \param shapeMax The shape upper bounds of the input
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax);
+OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
 
 // Get the output metadata of servable.
 //
@@ -498,7 +498,7 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* metadata, uint
 // \param shapeMin The shape of the output
 // \param shapeMax The shape of the output
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax);
+OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
 
 // Deallocates a status object.
 //

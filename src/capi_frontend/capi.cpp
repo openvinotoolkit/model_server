@@ -709,7 +709,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServableMetadataGet(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, OVMS_ServableMetadata** servableMetadata) {
+OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, OVMS_ServableMetadata** servableMetadata) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
     }
