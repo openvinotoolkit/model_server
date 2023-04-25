@@ -41,16 +41,16 @@ using InferenceInput = std::map<std::string, ov::Tensor>;
 
 // TODO
 // * why std::map
-using shapeBorder = std::vector<int64_t>;
-using shapeMinMax = std::pair<shapeBorder, shapeBorder>;
-using shapesMinMax_t = std::unordered_map<std::string, shapeMinMax>;
+using shape_border_t = std::vector<int64_t>;
+using shape_min_max_t = std::pair<shape_border_t, shape_border_t>;
+using shapes_min_max_t = std::unordered_map<std::string, shape_min_max_t>;
 class OVMSInferenceAdapter : public ::InferenceAdapter {
     OVMS_Server* cserver{nullptr};
     const std::string servableName;
     uint32_t servableVersion;
     std::vector<std::string> inputNames;
     std::vector<std::string> outputNames;
-    shapesMinMax_t inShapesMinMaxes;
+    shapes_min_max_t inShapesMinMaxes;
     ov::AnyMap modelConfig;
 
 public:

@@ -187,6 +187,7 @@ ov::Shape OVMSInferenceAdapter::getInputShape(const std::string& inputName) cons
     for (const auto& d : minBorder) {
         ovShape.emplace_back(d);
     }
+    // TODO support partial shapes (dynamic)
     ov::Shape ovShape2;
     for (const auto& d : maxBorder) {
         ovShape2.emplace_back(d);
