@@ -26,6 +26,7 @@
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_calculators/modelapiovmsadapter.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
@@ -135,6 +136,21 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     ASSERT_EQ(outputs[0].shape()[0], 1);
     ASSERT_EQ(outputs[0].shape()[1], 10);
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
+
+using testing::ElementsAre;
+
+TEST_P(MediapipeFlowAddTest, AdapterMetadata) {
+    const std::string modelName = "add";
+    mediapipe::ovms::OVMSInferenceAdapter adapter(modelName);
+    const std::shared_ptr<const ov::Model> model;
+    ov::Core core;
+    ov::AnyMap notUsedAnyMap;
+    adapter.loadModel(model, core, "NOT_USED", notUsedAnyMap);
+    EXPECT_THAT(adapter.getInputNames(), ElementsAre(SUM_MODEL_INPUT_NAME_1, SUM_MODEL_INPUT_NAME_2));
+    EXPECT_THAT(adapter.getOutputNames(), ElementsAre(SUM_MODEL_OUTPUT_NAME));
+    EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_1), ov::Shape({1, 10}));
+    EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_2), ov::Shape({1, 10}));
 }
 
 TEST(Mediapipe, MetadataDummy) {

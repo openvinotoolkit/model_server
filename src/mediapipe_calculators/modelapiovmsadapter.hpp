@@ -20,8 +20,10 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include <adapters/inference_adapter.h>  // TODO fix path  model_api/model_api/cpp/adapters/include/adapters/inference_adapter.h
 #include <openvino/openvino.hpp>
 
 #include "../ovms.h"  // NOLINT
@@ -39,22 +41,28 @@ using InferenceInput = std::map<std::string, ov::Tensor>;
 
 // TODO
 // * why std::map
-class OVMSInferenceAdapter {
+using shape_border_t = std::vector<int64_t>;
+using shape_min_max_t = std::pair<shape_border_t, shape_border_t>;
+using shapes_min_max_t = std::unordered_map<std::string, shape_min_max_t>;
+class OVMSInferenceAdapter : public ::InferenceAdapter {
     OVMS_Server* cserver{nullptr};
     const std::string servableName;
     uint32_t servableVersion;
+    std::vector<std::string> inputNames;
+    std::vector<std::string> outputNames;
+    shapes_min_max_t inShapesMinMaxes;
+    ov::AnyMap modelConfig;
 
 public:
     OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion = 0);
     virtual ~OVMSInferenceAdapter();
-    virtual InferenceOutput infer(const InferenceInput& input);
-    virtual void loadModel(const std::shared_ptr<const ov::Model>& model, ov::Core& core,
-        const std::string& device, const ov::AnyMap& compilationConfig);
-    virtual ov::Shape getInputShape(const std::string& inputName) const;  // TODO
-    virtual std::vector<std::string> getInputNames();                     // TODO
-    virtual std::vector<std::string> getOutputNames();                    // TODO
-                                                                          //    virtual const ov::AnyMap& getModelConfig() const = 0; // TODO
-    virtual const std::string& getModelConfig() const;                    // TODO
+    InferenceOutput infer(const InferenceInput& input) override;
+    void loadModel(const std::shared_ptr<const ov::Model>& model, ov::Core& core,
+        const std::string& device, const ov::AnyMap& compilationConfig) override;
+    ov::Shape getInputShape(const std::string& inputName) const override;
+    std::vector<std::string> getInputNames() const override;
+    std::vector<std::string> getOutputNames() const override;
+    const ov::AnyMap& getModelConfig() const override;  // TODO
 };
 }  // namespace ovms
 }  // namespace mediapipe

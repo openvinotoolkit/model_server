@@ -27,6 +27,8 @@ typedef struct OVMS_Status_ OVMS_Status;
 typedef struct OVMS_ServerSettings_ OVMS_ServerSettings;
 typedef struct OVMS_ModelsSettings_ OVMS_ModelsSettings;
 
+typedef struct OVMS_ServableMetadata_ OVMS_ServableMetadata;
+
 #define OVMS_API_VERSION_MAJOR 0
 #define OVMS_API_VERSION_MINOR 3
 
@@ -434,10 +436,75 @@ void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 
 // Execute synchronous inference.
 //
+// \param server The server object
 // \param request The request object
 // \param response The respons object. In case of success, caller takes the ownership of the response
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
+
+// Get OVMS_ServableMetadata object
+//
+// Creates OVMS_ServableMetadata object describing inputs and outputs.
+// Returned object needs to be deleted after use with OVMS_ServableMetadataDelete
+// if call succeeded.
+//
+// \param server The server object
+// \param servableName The name of the servable to be used
+// \param servableVersion The version of the servable to be used
+// \param metadata The metadata object to be created
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableMetadata** metadata);
+
+// Get the number of inputs of servable.
+//
+// \param metadata The metadata object
+// \param count The parameter count to be set
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataGetInputsCount(OVMS_ServableMetadata* metadata, uint32_t* count);
+
+// Get the number of outputs of servable.
+//
+// \param metadata The metadata object
+// \param count The parameter count to be set
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataGetOutputsCount(OVMS_ServableMetadata* metadata, uint32_t* count);
+
+// Get the metadata of servable input given the index
+//
+// The received shapeMin and shapeMax indicate whether the underlying servable accepts
+// a shape range or fully dynamic shape. A value of -1 for both shapeMin and shapeMax
+// for a specific dimension means that the servable accepts any value on that dimension.
+//
+// \param metadata The metadata object
+// \param id The id of the input
+// \param name The name of the input
+// \param datatype The data type of the input
+// \param dimCount The number of dimensions of the shape
+// \param shapeMin The shape lower bounds of the input
+// \param shapeMax The shape upper bounds of the input
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
+
+// Get the metadata of servable output given the index
+//
+// The received shapeMin and shapeMax indicate whether the underlying servable accepts
+// a shape range or fully dynamic shape. A value of -1 for both shapeMin and shapeMax
+// for a specific dimension means that the servable accepts any value on that dimension.
+//
+// \param metadata The metadata object
+// \param id The id of the output
+// \param name The name of the output
+// \param datatype The data type of the output
+// \param dimCount The number of dimensions of the shape
+// \param shapeMin The shape of the output
+// \param shapeMax The shape of the output
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
+
+// Deallocates a status object.
+//
+//  \param metadata The metadata object
+void OVMS_ServableMetadataDelete(OVMS_ServableMetadata* metadata);
 
 #ifdef __cplusplus
 }
