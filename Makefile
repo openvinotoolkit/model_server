@@ -228,8 +228,8 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	@docker pull $(BASE_IMAGE)
   ifeq ($(BASE_OS),redhat)
 	@docker pull registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
-	ifeq ($(NVIDIA),1)
-	  @docker pull docker.io/nvidia/cuda:11.8.0-runtime-ubi8
+    ifeq ($(NVIDIA),1)
+	@docker pull docker.io/nvidia/cuda:11.8.0-runtime-ubi8
     endif
   endif
 endif
