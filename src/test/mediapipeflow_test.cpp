@@ -89,12 +89,6 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json");
     }
 };
-class MediapipeFlowKfsTest : public MediapipeFlowTest {
-public:
-    void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_kfs.json");
-    }
-};
 
 TEST_P(MediapipeFlowDummyTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -144,7 +138,6 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
-<<<<<<< HEAD
 using testing::ElementsAre;
 
 TEST_P(MediapipeFlowAddTest, AdapterMetadata) {
@@ -187,7 +180,7 @@ TEST_P(MediapipeFlowKfsTest, Infer) {
 
 TEST(Mediapipe, MetadataDummy) {
     ConstructorEnabledModelManager manager;
-    ovms::MediapipeGraphConfig mgc{"/ovms/src/test/mediapipe/graphdummy.pbtxt"};
+    ovms::MediapipeGraphConfig mgc{"mediapipeDummy","/ovms/src/test/mediapipe/graphdummy.pbtxt"};
     ovms::MediapipeGraphDefinition mediapipeDummy("mediapipeDummy", mgc);
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     tensor_map_t inputs = mediapipeDummy.getInputsInfo();
@@ -208,7 +201,6 @@ const std::vector<std::string> mediaGraphsDummy{"mediapipeDummy",
     "mediapipeDummyADAPTFULL"};
 const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
     "mediapipeAddADAPTFULL"};
-const std::vector<std::string> mediaGraphsKfs{"mediapipeDummyKFS"};
 
 class MediapipeConfig : public MediapipeFlowTest {
 public:
@@ -218,7 +210,7 @@ public:
 const std::string NAME = "Name";
 TEST_F(MediapipeConfig, MediapipeGraphDefinitionNonExistentFile) {
     ConstructorEnabledModelManager manager;
-    MediapipeGraphConfig mgc{"/ovms/NONEXISTENT_FILE"};
+    MediapipeGraphConfig mgc{"noname","/ovms/NONEXISTENT_FILE"};
     MediapipeGraphDefinition mgd(NAME, mgc);
     EXPECT_EQ(mgd.validate(manager), StatusCode::FILE_INVALID);
 }
@@ -380,14 +372,4 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::ValuesIn(mediaGraphsDummy),
     [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
         return info.param;
-    });
-
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    MediapipeFlowKfsTest,
-    ::testing::ValuesIn(mediaGraphsKfs),
-    [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
-        return info.param;
-    });
-
-    
+    });    
