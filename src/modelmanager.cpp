@@ -371,7 +371,7 @@ static Status processMediapipeConfig(rapidjson::Document& configJson, const rapi
     config.setRootDirectoryPath(manager.getRootDirectoryPath());
     auto status = config.parseNode(pipelineConfig);
     if (status != StatusCode::OK) {
-        SPDLOG_ERROR("Parsing graph config failed");
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing graph config failed");
         return status;
     }
 
