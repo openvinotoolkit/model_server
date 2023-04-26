@@ -111,7 +111,7 @@ Use together with `OV_CONTRIB_BRANCH` to specify which branch from [OpenVINO con
 
 Example:
 ```bash
-make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=releases/2022/3 OV_CONTRIB_BRANCH=releases/2022/3
+make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=master OV_CONTRIB_BRANCH=master
 ```
 
 <hr />

@@ -9,6 +9,7 @@ In this experiment we are going to use a TensorFlow model from [tfhub.dev ](http
 curl --create-dir  https://storage.googleapis.com/tfhub-modules/google/universal-sentence-encoder-multilingual/3.tar.gz -o universal-sentence-encoder-multilingual/1/3.tar.gz
 tar -xzf universal-sentence-encoder-multilingual/1/3.tar.gz -C universal-sentence-encoder-multilingual/1/
 rm universal-sentence-encoder-multilingual/1/3.tar.gz
+chmod -R 755 universal-sentence-encoder-multilingual
 tree universal-sentence-encoder-multilingual/
 
 universal-sentence-encoder-multilingual/
