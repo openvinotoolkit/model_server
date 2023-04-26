@@ -168,7 +168,7 @@ public:
         }
         ov::AnyMap configuration = {
             {"layout", "data:HWCN"},
-            {"resize_type", "unnatural"},  // fit_to_window
+            {"resize_type", "unnatural"},
             {"labels", mockLabels}};
         return configuration;
     }
