@@ -380,12 +380,12 @@ static Status processMediapipeConfig(rapidjson::Document& configJson, const rapi
         return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
     }
     if (!factory.definitionExists(config.getGraphName())) {
-        SPDLOG_DEBUG("Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
         status = factory.createDefinition(config.getGraphName(), config, manager);
         mediapipesInConfigFile.insert(config.getGraphName());
         return status;
     }
-    SPDLOG_DEBUG("Mediapipe graph:{} is already loaded. Triggering reload", config.getGraphName());
+    SPDLOG_LOGGER_WARN(modelmanager_logger, "Mediapipe graph:{} is already loaded. Triggering reload", config.getGraphName());
     status = factory.reloadDefinition(config.getGraphName(),
         config,
         manager);
