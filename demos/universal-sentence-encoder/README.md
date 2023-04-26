@@ -29,7 +29,7 @@ echo '{
      "serving_default_inputs": "inputs"
      },
  "outputs":{
-         "StatefulPartitionedCall:0": "outputs"
+         "Identity": "outputs"
      }
 }' > universal-sentence-encoder-multilingual/1/mapping_config.json
 
