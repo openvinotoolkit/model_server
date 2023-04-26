@@ -44,7 +44,7 @@ CHECK_COVERAGE ?=0
 RUN_TESTS ?= 1
 NVIDIA ?=0
 BUILD_NGINX ?= 0
-DISABLE_MEDIAPIPE ?= 0
+MEDIAPIPE_DISABLE ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -65,7 +65,7 @@ CMAKE_BUILD_TYPE ?= Release
 MINITRACE ?= OFF
 
 DISABLE_MEDIAPIPE_PARAMS ?= ""
-ifeq ($(DISABLE_MEDIAPIPE),1)
+ifeq ($(MEDIAPIPE_DISABLE),1)
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "
 endif
 

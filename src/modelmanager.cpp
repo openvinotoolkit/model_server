@@ -562,7 +562,7 @@ Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson) 
 #else
     if (itrp != configJson.MemberEnd()) {
         SPDLOG_ERROR("Configuration file has mediapipe property. Mediapipe support was disabled during build.");
-        return StatusCode::INTERNAL_ERROR;
+        return StatusCode::CONFIG_FILE_INVALID;
     } else {
         return StatusCode::OK;
     }

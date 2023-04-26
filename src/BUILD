@@ -104,6 +104,7 @@ cc_shared_library(
             "@com_github_glog_glog//:__subpackages__",
             "@com_github_gflags_gflags//:__subpackages__",
             "@mediapipe_calculators//:__subpackages__",
+            "@model_api//:__subpackages__",
             "@arm_neon_2_x86_sse//:__subpackages__",
             "@ruy//:__subpackages__",
             "@cpuinfo//:__subpackages__",

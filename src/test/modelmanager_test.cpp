@@ -155,6 +155,13 @@ TEST_F(ModelManager, ConfigParseNoModels) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
+#if (MEDIAPIPE_DISABLE == 1)
+TEST_F(ModelManager, ConfigParseDisableMediapipe) {
+    auto status = fixtureManager.startFromFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
+    EXPECT_EQ(status, ovms::StatusCode::CONFIG_FILE_INVALID);
+}
+#endif
+
 TEST_F(ModelManager, WrongConfigFile) {
     std::string configFile = "123/tmp/not_a_valid_file_name";
     auto status = fixtureManager.startFromFile(configFile);
