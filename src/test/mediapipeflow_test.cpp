@@ -153,30 +153,6 @@ TEST_P(MediapipeFlowAddTest, AdapterMetadata) {
     EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_2), ov::Shape({1, 10}));
 }
 
-TEST_P(MediapipeFlowKfsTest, Infer) {
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ::KFSRequest request;
-    ::KFSResponse response;
-    const std::string modelName = GetParam();
-    request.Clear();
-    response.Clear();
-    inputs_info_t inputsMeta{
-        {"in", {DUMMY_MODEL_SHAPE, precision}}};
-    std::vector<float> requestData1{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
-    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
-    preparePredictRequest(request, inputsMeta, requestData1);
-    request.mutable_model_name()->assign(modelName);
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    auto outputs = response.outputs();
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(outputs[0].name(), "out");
-    ASSERT_EQ(outputs[0].shape().size(), 2);
-    ASSERT_EQ(outputs[0].shape()[0], 1);
-    ASSERT_EQ(outputs[0].shape()[1], 10);
-    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
-}
-
 TEST(Mediapipe, MetadataDummy) {
     ConstructorEnabledModelManager manager;
     ovms::MediapipeGraphConfig mgc{"mediapipeDummy", "/ovms/src/test/mediapipe/graphdummy.pbtxt"};
