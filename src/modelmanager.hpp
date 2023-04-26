@@ -234,6 +234,15 @@ public:
     const std::string getFullPath(const std::string& pathToCheck) const;
 
     /**
+     * @brief Get the config root path 
+     *
+     * @return const std::string&
+     */
+    const std::string getRootDirectoryPath() const {
+        return rootDirectoryPath;
+    }
+
+    /**
      * @brief Mutex for blocking concurrent add & find of model
      */
     mutable std::shared_mutex modelsMtx;
