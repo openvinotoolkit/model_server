@@ -508,7 +508,7 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* metadata, uin
 // \param metadata The metadata object
 // \param info The ptr to the ov::AnyMap*
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_ServableMetadataGetInfo(OVMS_ServableMetadata* metadata, void** info);
+OVMS_Status* OVMS_ServableMetadataGetInfo(OVMS_ServableMetadata* metadata, const void** info);
 // #endif
 
 // Deallocates a status object.

@@ -176,7 +176,7 @@ void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& mod
         outputNames.emplace_back(tensorName);
     }
     const ov::AnyMap* servableMetadataRtInfo;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInfo(servableMetadata, const_cast<void**>(reinterpret_cast<const void**>(&servableMetadataRtInfo))));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
     this->modelConfig = *servableMetadataRtInfo;
     OVMS_ServableMetadataDelete(servableMetadata);
 }

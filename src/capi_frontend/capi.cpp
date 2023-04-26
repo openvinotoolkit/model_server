@@ -836,7 +836,7 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServableMetadataGetInfo(OVMS_ServableMetadata* servableMetadata, void** info) {
+OVMS_Status* OVMS_ServableMetadataGetInfo(OVMS_ServableMetadata* servableMetadata, const void** info) {
     if (servableMetadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
     }
