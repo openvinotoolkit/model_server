@@ -36,7 +36,7 @@ class ServableMetadata {
     capi_tensor_shapes_map_t inDimMax;
     capi_tensor_shapes_map_t outDimMin;
     capi_tensor_shapes_map_t outDimMax;
-    ov::AnyMap rtInfo;
+    ov::AnyMap extraInfo;
 
 public:
     ServableMetadata(const std::string& name,
@@ -50,8 +50,8 @@ public:
     const capi_tensor_shapes_map_t& getInputDimsMax() const { return this->inDimMax; }
     const capi_tensor_shapes_map_t& getOutputDimsMin() const { return this->outDimMin; }
     const capi_tensor_shapes_map_t& getOutputDimsMax() const { return this->outDimMax; }
-    const ov::AnyMap& getRTInfo() const {
-        return this->rtInfo;
+    const ov::AnyMap& getExtraInfo() const {
+        return this->extraInfo;
     }
 };
 }  // namespace ovms

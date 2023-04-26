@@ -27,7 +27,7 @@ ServableMetadata::ServableMetadata(const std::string& name,
     version(version),
     inputsInfo(inputsInfo),
     outputsInfo(outputsInfo),
-    rtInfo(anyMap) {
+    extraInfo(anyMap) {
     for (auto& [key, tensorInfo] : this->inputsInfo) {
         auto& inDimsMin = this->inDimMin[key];
         auto& inDimsMax = this->inDimMax[key];
