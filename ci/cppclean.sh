@@ -43,7 +43,7 @@ if [ ${NO_WARNINGS_NOTUSED} -gt 7 ]; then
     exit 1;
 fi
 
-if [ ${NO_WARNINGS} -gt  162 ]; then
+if [ ${NO_WARNINGS} -gt  161 ]; then
     echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
     exit 1
 fi
