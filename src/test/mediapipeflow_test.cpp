@@ -36,6 +36,7 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
+#include "../stringutils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -251,7 +252,10 @@ TEST(Mediapipe, AdapterRTInfo) {
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
+    std::string port{"5555"};
+    randomizePort(port);
+    uint32_t portNum = ovms::stou32(port).value();
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, portNum));
     // we will use dummy model that will have mocked rt_info
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json"));
 
