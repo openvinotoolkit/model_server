@@ -364,6 +364,7 @@ cc_library(
         "//conditions:default": [
             "mediapipe_internal/mediapipefactory.cpp",
             "mediapipe_internal/mediapipefactory.hpp",
+            "mediapipe_internal/mediapipegraphconfig.hpp",
             "mediapipe_internal/mediapipegraphdefinition.cpp",
             "mediapipe_internal/mediapipegraphdefinition.hpp",
             "mediapipe_internal/mediapipegraphexecutor.cpp",
@@ -413,6 +414,7 @@ cc_library(
             "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
             "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
             "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+            "@model_api//:adapter_api",
         ],
         "//src:disable_mediapipe" : [],
         }),

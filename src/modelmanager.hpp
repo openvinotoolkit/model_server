@@ -52,10 +52,8 @@ class CustomNodeLibraryManager;
 class MetricRegistry;
 class ModelConfig;
 class FileSystem;
-#if (MEDIAPIPE_DISABLE == 1)
 class MediapipeFactory;
 class MediapipeGraphExecutor;
-#endif
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 /**
