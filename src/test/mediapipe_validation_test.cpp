@@ -31,26 +31,26 @@
 using namespace ovms;
 
 class MediapipeValidationTest : public ::testing::Test {
-protected:
-    ovms::Server& server = ovms::Server::instance();
-    const ovms::Module* grpcModule;
+public:
+    static std::unique_ptr<std::thread> thread;
+
     KFSInferenceServiceImpl* impl;
     ::KFSRequest request;
     ::KFSResponse response;
 
     const Precision precision = Precision::FP32;
-    std::unique_ptr<std::thread> t;
-    std::string port = "9178";
-    void SetUpServer(const char* configPath) {
+    static void SetUpServer(const char* configPath) {
+        ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(0);
-        randomizePort(this->port);
+        std::string port = "9187";
+        randomizePort(port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath,
             (char*)"--port",
             (char*)port.c_str()};
         int argc = 5;
-        t.reset(new std::thread([&argc, &argv, this]() {
+        thread.reset(new std::thread([&argc, &argv, &server]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
         auto start = std::chrono::high_resolution_clock::now();
@@ -58,8 +58,6 @@ protected:
                (!server.isReady()) &&
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
         }
-        grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-        impl = &dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     }
     void prepareSingleInput() {
         request.Clear();
@@ -80,14 +78,24 @@ protected:
         request.mutable_model_name()->assign("mediapipeAddADAPTFULL");
     }
     void SetUp() override {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_all_graphs_adapter_full.json");
+        impl = &dynamic_cast<const ovms::GRPCServerModule*>(
+            ovms::Server::instance().getModule(ovms::GRPC_SERVER_MODULE_NAME))
+                    ->getKFSGrpcImpl();
     }
     void TearDown() {
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
+        impl = nullptr;
+    }
+    static void SetUpTestSuite() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_all_graphs_adapter_full.json");
+    }
+    static void TearDownTestSuite() {
+        ovms::Server::instance().setShutdownRequest(1);
+        thread->join();
+        ovms::Server::instance().setShutdownRequest(0);
     }
 };
+
+std::unique_ptr<std::thread> MediapipeValidationTest::thread = nullptr;
 
 TEST_F(MediapipeValidationTest, Ok1Input) {
     prepareSingleInput();
@@ -161,7 +169,6 @@ TEST_F(MediapipeValidationTest, BufferLargerThanExpected) {
     ASSERT_EQ(impl->ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
 }
 
-// input has weird precision
 TEST_F(MediapipeValidationTest, WrongPrecision) {
     prepareSingleInput();
     request.mutable_inputs(0)->set_datatype("unknown");
