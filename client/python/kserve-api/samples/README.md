@@ -825,7 +825,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list ../../resnet_input_images.txt --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list ../../resnet_input_images.txt --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 38.61 ms; speed 25.90 fps

@@ -156,8 +156,5 @@ if __name__ == '__main__':
         batch_i = 0
 
     print_statistics(processing_times, batch_size)
-
-    if args.get('labels_numpy_path') is not None:
-        print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
-
-
+    print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
+    
