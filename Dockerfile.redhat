@@ -174,6 +174,9 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && yum clean all
 
 WORKDIR /ovms
+
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
@@ -181,7 +184,33 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/co
 # hadolint ignore=SC2046
 RUN patch -d $(bazel info output_base)/external/build_bazel_rules_apple/ -p1 < /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch
 
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+# Mediapipe
+COPY BUILD.bazel /ovms/
+COPY yarn.lock /ovms/
+COPY package.json /ovms/
+
+# prebuild dependencies before copying sources
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} \
+    @org_tensorflow//tensorflow/core:framework \
+    @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
+    @tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto \
+    @minitrace//:trace \
+    @com_github_grpc_grpc//:grpc++ \
+    @com_github_tencent_rapidjson//:rapidjson \
+    @com_github_gabime_spdlog//:spdlog \
+    @com_github_jarro2783_cxxopts//:cxxopts \
+    @com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client \
+    @mediapipe//mediapipe/framework:calculator_framework \
+    @mediapipe//mediapipe/framework/port:logging \
+    @mediapipe//mediapipe/framework/port:parse_text_proto \
+    @mediapipe//mediapipe/framework/port:status \
+    @mediapipe_calculators//:mediapipe_calculators \
+    @tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server \
+    @tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api \
+    @tensorflow_serving//tensorflow_serving/util:threadpool_executor \
+    @tensorflow_serving//tensorflow_serving/util:json_tensor \
+    @com_github_jupp0r_prometheus_cpp//core \
+    @model_api//:adapter_api
 
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
@@ -207,13 +236,6 @@ LABEL description=${PROJECT_NAME}
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$build_type" = "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}-debug|g' /ovms/src/version.hpp" ; else bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" ; fi ;
 RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
-
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
-
-# Mediapipe
-COPY BUILD.bazel /ovms/
-COPY yarn.lock /ovms/
-COPY package.json /ovms/
 
 ARG RUN_TESTS=1
 ENV MEDIAPIPE_DISABLE_PARAMS=" --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "

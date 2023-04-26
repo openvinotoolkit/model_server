@@ -263,8 +263,6 @@ COPY MakefileCapi /ovms/
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-#~3min 25s
-RUN echo "Starting pre-build step3" && date
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
 # FROM BASE BUILD
@@ -281,8 +279,6 @@ COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
 # prebuild dependencies before copying sources
-# ~2min 11s
-RUN echo "Starting pre-build step3" && date
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} \
     @org_tensorflow//tensorflow/core:framework \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
@@ -304,7 +300,6 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} \
     @tensorflow_serving//tensorflow_serving/util:json_tensor \
     @com_github_jupp0r_prometheus_cpp//core \
     @model_api//:adapter_api
-RUN echo "Ended pre-build step" && date
 
 # Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
@@ -342,10 +337,7 @@ RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" == "1" ] ; then baz
     bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
 
 # C api shared library
-# 57s
-RUN echo "Starting actual build step" && date
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_shared
-RUN echo "Ended actual build step" && date
 
 # C api app with bazel
 # hadolint ignore=DL3059
