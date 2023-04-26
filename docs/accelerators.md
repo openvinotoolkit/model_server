@@ -251,6 +251,7 @@ Example command to run container with NVIDIA support:
 
 ```bash
    curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
+   chmod -R 755 model
 
    docker run -it --gpus all -p 9000:9000 -v ${PWD}/model:/model openvino/model_server:latest-cuda --model_path /model --model_name resnet --port 9000 --target_device NVIDIA
 ```
