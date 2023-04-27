@@ -51,9 +51,9 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
-    std::ifstream ifs(this->mgconfig.graphPath);
+    std::ifstream ifs(this->mgconfig.getGraphPath());
     if (!ifs.is_open()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to open mediapipe graph definition: {}, file: {}\n", this->getName(), this->mgconfig.graphPath);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to open mediapipe graph definition: {}, file: {}\n", this->getName(), this->mgconfig.getGraphPath());
         return StatusCode::FILE_INVALID;
     }
     this->chosenConfig.clear();
@@ -132,7 +132,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
 }
 
 Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response) {
-    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), this->config);
+    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config);
     return StatusCode::OK;
 }
 }  // namespace ovms

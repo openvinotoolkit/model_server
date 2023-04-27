@@ -44,6 +44,7 @@ CHECK_COVERAGE ?=0
 RUN_TESTS ?= 1
 NVIDIA ?=0
 BUILD_NGINX ?= 0
+MEDIAPIPE_DISABLE ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -63,10 +64,15 @@ BAZEL_BUILD_TYPE ?= opt
 CMAKE_BUILD_TYPE ?= Release
 MINITRACE ?= OFF
 
+DISABLE_MEDIAPIPE_PARAMS ?= ""
+ifeq ($(MEDIAPIPE_DISABLE),1)
+	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "
+endif
+
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
-  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "
+  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "$(DISABLE_MEDIAPIPE_PARAMS)
 else
-  BAZEL_DEBUG_FLAGS=" --strip=never "
+  BAZEL_DEBUG_FLAGS=" --strip=never "$(DISABLE_MEDIAPIPE_PARAMS)
 endif
 
 ifeq ($(MINITRACE),ON)
@@ -90,7 +96,7 @@ ifeq ($(BASE_OS),ubuntu)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
   INSTALL_DRIVER_VERSION ?= "22.35.24055"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.0.0.10463.9f0e5577446_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.0.0.10756.63f5c2f0e7c_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
@@ -103,7 +109,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "22.28.23726"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.0.0.10463.9f0e5577446_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.0.0.10756.63f5c2f0e7c_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server

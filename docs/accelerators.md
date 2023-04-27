@@ -107,7 +107,7 @@ Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 @sphinxdirective
 .. code-block:: sh
 
-    docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(id -u):$(id -g) \
     -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
     --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
@@ -243,16 +243,22 @@ The docker image of OpenVINO Model Server including support for NVIDIA can be bu
 ```bash
    git clone https://github.com/openvinotoolkit/model_server.git
    cd model_server
-   make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=releases/2022/3 OV_CONTRIB_BRANCH=releases/2022/3
+   make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=master OV_CONTRIB_BRANCH=master
+   cd ..
 ```
 Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/develop/docs/build_from_source.md).
 
 Example command to run container with NVIDIA support:
 
 ```bash
-   docker run -it --gpus all -p 9178:9178 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --target_device NVIDIA
+   docker run -it --gpus all -p 9000:9000 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --port 9000 --target_device NVIDIA
+```
+
+For models with layers not supported on NVIDIA plugin, you can use a vritual pluging `HETERO` which can use multiple devices listed after the colon:
+```bash
+   docker run -it --gpus all -p 9000:9000 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --port 9000 --target_device HETERO:NVIDIA,CPU
 ```
 
 Check the supported [configuration parameters](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-configuration-parameters) and [supported layers](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-layers-and-limitations)
 
-Currently the AUTO, MULTI and HETERO virual plugins do not support NVIDIA plugin as an alternative device.
+Currently the AUTO and MULTI virual plugins do not support NVIDIA plugin as an alternative device.

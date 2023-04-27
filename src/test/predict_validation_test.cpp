@@ -1454,7 +1454,7 @@ INSTANTIATE_TEST_SUITE_P(
         return toString(info.param);
     });
 
-void prepareInferStringInputWithTwoDimensionShapeTensor(::KFSRequest& request, const std::string& name) {
+static void prepareInferStringInputWithTwoDimensionShapeTensor(::KFSRequest& request, const std::string& name) {
     KFSTensorInputProto* tensor = request.add_inputs();
     tensor->set_name(name);
     tensor->set_datatype("BYTES");
@@ -1463,7 +1463,7 @@ void prepareInferStringInputWithTwoDimensionShapeTensor(::KFSRequest& request, c
     tensor->add_shape(1);
 }
 
-void prepareInferStringInputWithTwoDimensionShapeTensor(tensorflow::serving::PredictRequest& request, const std::string& name) {
+static void prepareInferStringInputWithTwoDimensionShapeTensor(tensorflow::serving::PredictRequest& request, const std::string& name) {
     request.mutable_inputs()->clear();
     auto& input = (*request.mutable_inputs())[name];
     input.set_dtype(tensorflow::DataType::DT_STRING);
@@ -1471,7 +1471,7 @@ void prepareInferStringInputWithTwoDimensionShapeTensor(tensorflow::serving::Pre
     input.mutable_tensor_shape()->add_dim()->set_size(1);
 }
 
-void prepareInferStringInputWithNegativeShape(::KFSRequest& request, const std::string& name) {
+static void prepareInferStringInputWithNegativeShape(::KFSRequest& request, const std::string& name) {
     KFSTensorInputProto* tensor = request.add_inputs();
     tensor->set_name(name);
     tensor->set_datatype("BYTES");
@@ -1479,7 +1479,7 @@ void prepareInferStringInputWithNegativeShape(::KFSRequest& request, const std::
     tensor->add_shape(-5);
 }
 
-void prepareInferStringInputWithNegativeShape(tensorflow::serving::PredictRequest& request, const std::string& name) {
+static void prepareInferStringInputWithNegativeShape(tensorflow::serving::PredictRequest& request, const std::string& name) {
     request.mutable_inputs()->clear();
     auto& input = (*request.mutable_inputs())[name];
     input.set_dtype(tensorflow::DataType::DT_STRING);

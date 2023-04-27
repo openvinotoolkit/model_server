@@ -7,7 +7,7 @@
                 "layout": "NHWC:NCHW",
                 "shape": "(1,224,224,3)",
                 "plugin_config": {
-                    "CPU_THROUGHPUT_STREAMS":  "1"
+                    "NUM_STREAMS":  "1"
                 }
             }
         }

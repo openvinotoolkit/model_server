@@ -1,4 +1,4 @@
-# Using inputs data in string format with universal-sentence-encoder model
+# Using inputs data in string format with universal-sentence-encoder model {#ovms_demo_universal-sentence-encoder}
 
 
 ## Download the model
@@ -9,6 +9,7 @@ In this experiment we are going to use a TensorFlow model from [tfhub.dev ](http
 curl --create-dir  https://storage.googleapis.com/tfhub-modules/google/universal-sentence-encoder-multilingual/3.tar.gz -o universal-sentence-encoder-multilingual/1/3.tar.gz
 tar -xzf universal-sentence-encoder-multilingual/1/3.tar.gz -C universal-sentence-encoder-multilingual/1/
 rm universal-sentence-encoder-multilingual/1/3.tar.gz
+chmod -R 755 universal-sentence-encoder-multilingual
 tree universal-sentence-encoder-multilingual/
 
 universal-sentence-encoder-multilingual/
@@ -20,27 +21,28 @@ universal-sentence-encoder-multilingual/
         └── variables.index
 
 ```
-Temporarily OVMS requires the model in a frozen graph format so a similar structure is to be created.
-The graph format represents the input and output as a tensorname so we will apply a `mapping_tensor.json` to adjust the model server names.
-```json
-{
-       "inputs":{ 
-          "Func/StatefulPartitionedCall/input/_0": "inputs"
-       },
-       "outputs":{
-          "Func/StatefulPartitionedCall/output/_500":"outputs"
-       }
-}
-``` 
 
-```
-tree universal-sentence-encoder-multilingual-frozen
-universal-sentence-encoder-multilingual-frozen
+In case the input and output names are changed during the model load in OpenVINO backend, apply a `mapping_config.json` to adjust them from the model server network interface.
+```bash
+echo '{
+ "inputs": {
+     "serving_default_inputs": "inputs"
+     },
+ "outputs":{
+         "Identity": "outputs"
+     }
+}' > universal-sentence-encoder-multilingual/1/mapping_config.json
+
+tree universal-sentence-encoder-multilingual/
+universal-sentence-encoder-multilingual/
 └── 1
-    ├── mapping_config.json
-    └── muse.pb
+    ├── assets
+    ├── saved_model.pb
+    ├── mapping_config.json    
+    └── variables
+        ├── variables.data-00000-of-00001
+        └── variables.index
 ```
-Note: frozen graph is created using [freeze_graph.py](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/freeze_graph.py) script.
 
 
 ## Build OVMS with CPU extension library for sentencepiece_tokenizer layer
@@ -50,17 +52,18 @@ The layer SentencepieceTokenizer expects on the input a list of strings. The CPU
 
 Until it is published, the docker image with OpenVINO Model Server including the CPU extension has to be built using the commands:
 
-```
+```bash
 git clone -b develop https://github.com/openvinotoolkit/model_server
 cd model_server
-make docker_build SENTENCEPIECE=1 OV_SOURCE_ORG=rkazants OV_CONTRIB_ORG=rkazants OV_SOURCE_BRANCH=muse_perf OV_CONTRIB_BRANCH=rkazants/sentence_tokenizer_optimization OV_USE_BINARY=0
+make docker_build SENTENCEPIECE=1 OV_USE_BINARY=0
+cd ..
 
 ```
 
 ## Start the model server in a container
 When the new docker image is built, you can start the service with a command:
 ```bash
-docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual-frozen:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libuser_ov_extensions.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
+docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libuser_ov_extensions.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
 ```
 
 Check the container logs to confirm successful start:
@@ -82,8 +85,8 @@ predict_response = prediction_service_stub.Predict(predict_request, 10.0)
 
 Here is a basic client execution :
 ```bash
-pip install -r requirements.txt
-python send_strings.py --grpc_port 9000 --string "I enjoy taking long walks along the beach with my dog."
+pip install -r model_server/demos/universal-sentence-encoder/requirements.txt
+python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 9000 --string "I enjoy taking long walks along the beach with my dog."
 processing time 6.931 ms.
 Output shape (1, 512)
 Output subset [-0.00552395  0.00599533 -0.01480555  0.01098945 -0.09355522 -0.08445048
@@ -108,13 +111,13 @@ The same client code can be used to send the requests to TensorFlow Serving comp
 
 Start TFS container:
 ```bash
-docker run -it -p 8500:8500 -p 8501:8501 -v $(pwd)/universal-sentence-encoder-multilingual:/models/usem -e MODEL_NAME=usem tensorflow/serving
+docker run -it -p 8500:8500 -p 9500:9500 -v $(pwd)/universal-sentence-encoder-multilingual:/models/usem -e MODEL_NAME=usem tensorflow/serving --port=9500 --rest_api_port=8500
 ```
 
 
 Run the client
 ```bash
-python send_strings.py --grpc_port 8500 --input_name inputs --output_name outputs --string "I enjoy taking long walks along the beach with my dog."
+python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 9500 --input_name inputs --output_name outputs --string "I enjoy taking long walks along the beach with my dog."
 
 processing time 12.167000000000002 ms.
 Output shape (1, 512)

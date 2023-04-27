@@ -281,7 +281,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NONEXISTENT_STRING, "Tried to use nonexisting string"},
     {StatusCode::NONEXISTENT_NUMBER, "Tried to use nonexisting number"},
     {StatusCode::NONEXISTENT_SETTINGS, "Tried to use nonexisting settings"},
-    {StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL, "Tried to remove nonexisting parameter"},
+    {StatusCode::NONEXISTENT_PARAMETER, "Tried to use nonexisting parameter"},
+    {StatusCode::NONEXISTENT_METADATA, "Tried to use nonexisting metadata"},
     {StatusCode::NONEXISTENT_RESPONSE, "Tried to use nonexisting response"},
     {StatusCode::NONEXISTENT_REQUEST, "Tried to use nonexisting request"},
     {StatusCode::NONEXISTENT_SERVER, "Tried to use nonexisting server"},
@@ -292,7 +293,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
     {StatusCode::NONEXISTENT_STATUS, "Tried to use nonexisting status"},
     {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
-    {StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "Server not in a state to perform inference"},
+    {StatusCode::SERVER_NOT_READY, "Server is not ready"},
 
     // Server Start errors
     {StatusCode::OPTIONS_USAGE_ERROR, "options validation error"},

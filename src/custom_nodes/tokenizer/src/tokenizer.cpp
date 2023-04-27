@@ -64,7 +64,7 @@ int deinitialize(void* customNodeLibraryInternalManager) {
     return 0;
 }
 
-int retrieveInputs(
+static int retrieveInputs(
     // in
     const struct CustomNodeTensor* inputs,
     int inputsCount,
@@ -81,7 +81,7 @@ int retrieveInputs(
     return 0;
 }
 
-int validateInputs(const CustomNodeTensor* textTensor) {
+static int validateInputs(const CustomNodeTensor* textTensor) {
     NODE_ASSERT(textTensor != nullptr, "Missing " INPUT_NAME_TEXTS " input");
     NODE_ASSERT(textTensor->precision == U8, INPUT_NAME_TEXTS " input is not U8");
 

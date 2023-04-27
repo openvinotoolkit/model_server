@@ -24,7 +24,6 @@
 
 namespace ovms {
 class Status;
-
 using dimension_value_t = std::int64_t;
 
 constexpr dimension_value_t DYNAMIC_DIMENSION = -1;
@@ -85,7 +84,6 @@ public:
     bool isAny() const;
     std::optional<Dimension> createIntersection(const Dimension& other) const;
 
-private:
     dimension_value_t getLowerBound() const;
     dimension_value_t getUpperBound() const;
 };

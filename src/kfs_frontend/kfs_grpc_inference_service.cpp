@@ -30,8 +30,10 @@
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#endif
 #include "../metric.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -46,10 +48,7 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
-#include "mediapipe/framework/calculator_graph.h"
-#include "mediapipe/framework/port/logging.h"
-#include "mediapipe/framework/port/parse_text_proto.h"
-#include "mediapipe/framework/port/status.h"
+
 namespace {
 enum : unsigned int {
     TOTAL,
@@ -262,6 +261,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         status = getPipeline(request, response, pipelinePtr);
         if (status == StatusCode::PIPELINE_DEFINITION_NAME_MISSING) {
             SPDLOG_DEBUG("Requested DAG: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
+#if (MEDIAPIPE_DISABLE == 0)
             std::shared_ptr<MediapipeGraphExecutor> executor;
             status = this->modelManager.createPipeline(executor, request->model_name(), request, response);
             if (!status.ok()) {
@@ -269,6 +269,9 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
             }
             status = executor->infer(request, response, executionContext, reporterOut);
             return status;
+#else
+            SPDLOG_ERROR("Requested DAG: {} does not exist. Mediapipe support was disabled during build process...", request->model_name());
+#endif
         }
     }
     if (!status.ok()) {

@@ -48,8 +48,6 @@ namespace ovms {
 namespace s3 = Aws::S3;
 namespace fs = std::filesystem;
 
-const std::string S3FileSystem::S3_URL_PREFIX = "s3://";
-
 StatusCode S3FileSystem::parsePath(const std::string& path, std::string* bucket, std::string* object) {
     std::smatch sm;
 
@@ -59,7 +57,7 @@ StatusCode S3FileSystem::parsePath(const std::string& path, std::string* bucket,
     }
 
     if (!std::regex_match(path, sm, s3_regex_)) {
-        int bucket_start = path.find(S3_URL_PREFIX) + S3_URL_PREFIX.size();
+        int bucket_start = path.find(FileSystem::S3_URL_PREFIX) + FileSystem::S3_URL_PREFIX.size();
         int bucket_end = path.find("/", bucket_start);
 
         if (bucket_end > bucket_start) {
@@ -85,8 +83,8 @@ StatusCode S3FileSystem::parsePath(const std::string& path, std::string* bucket,
 
 S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3_path) :
     options_(options),
-    s3_regex_(S3_URL_PREFIX + "([0-9a-zA-Z-.]+):([0-9]+)/([0-9a-z.-]+)(((/"
-                              "[0-9a-zA-Z.-_]+)*)?)"),
+    s3_regex_(FileSystem::S3_URL_PREFIX + "([0-9a-zA-Z-.]+):([0-9]+)/([0-9a-z.-]+)(((/"
+                                          "[0-9a-zA-Z.-_]+)*)?)"),
     proxy_regex_("^(https?)://(([^:]{1,128}):([^@]{1,256})@)?([^:/]{1,255})(:([0-9]{1,5}))?/?") {
     Aws::Client::ClientConfiguration config;
     Aws::Auth::AWSCredentials credentials;
@@ -254,7 +252,7 @@ StatusCode S3FileSystem::getDirectoryContents(const std::string& path, std::set<
     if (status != StatusCode::OK) {
         return status;
     }
-    std::string true_path = S3_URL_PREFIX + bucket + '/' + dir_path;
+    std::string true_path = FileSystem::S3_URL_PREFIX + bucket + '/' + dir_path;
 
     // Capture the full path to facilitate content listing
     full_dir = appendSlash(dir_path);
@@ -297,7 +295,7 @@ StatusCode S3FileSystem::getDirectorySubdirs(const std::string& path, std::set<s
     if (status != StatusCode::OK) {
         return status;
     }
-    std::string true_path = S3_URL_PREFIX + bucket + '/' + dir_path;
+    std::string true_path = FileSystem::S3_URL_PREFIX + bucket + '/' + dir_path;
     status = getDirectoryContents(true_path, subdirs);
     if (status != StatusCode::OK) {
         return status;
@@ -328,7 +326,7 @@ StatusCode S3FileSystem::getDirectoryFiles(const std::string& path, std::set<std
         return status;
     }
 
-    std::string true_path = S3_URL_PREFIX + bucket + '/' + dir_path;
+    std::string true_path = FileSystem::S3_URL_PREFIX + bucket + '/' + dir_path;
     status = getDirectoryContents(true_path, files);
     if (status != StatusCode::OK) {
         return status;
@@ -412,7 +410,7 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, const std::
         host_port = sm[2];
         bucket = sm[3];
         object = sm[4];
-        effective_path = S3_URL_PREFIX + bucket + object;
+        effective_path = FileSystem::S3_URL_PREFIX + bucket + object;
     } else {
         effective_path = path;
     }

@@ -67,9 +67,6 @@ enum : unsigned int {
 
 namespace ovms {
 
-const char* CPU_THROUGHPUT_STREAMS = "CPU_THROUGHPUT_STREAMS";
-const char* NIREQ = "NIREQ";
-
 const uint MAX_NIREQ_COUNT = 100000;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
@@ -319,6 +316,15 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
         return StatusCode::MODEL_NOT_LOADED;
     }
     return StatusCode::OK;
+}
+
+const std::string RT_INFO_KEY{"model_info"};
+
+ov::AnyMap ModelInstance::getRTInfo() const {
+    if (this->model->has_rt_info(RT_INFO_KEY)) {
+        return model->get_rt_info<ov::AnyMap>(RT_INFO_KEY);
+    }
+    return ov::AnyMap();
 }
 
 Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
@@ -593,7 +599,7 @@ Status ModelInstance::loadOVModel() {
     auto& modelFile = modelFiles[0];
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
     try {
-        model = loadOVModelPtr(modelFile);
+        this->model = loadOVModelPtr(modelFile);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading ov::Model model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
@@ -659,11 +665,11 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
-    // By default, set "PERFORMANCE_HINT" = "THROUGHPUT";
+    // By default, set "PERFORMANCE_HINT" = "LATENCY";
     if ((pluginConfig.count("NUM_STREAMS") == 1) || (pluginConfig.count("PERFORMANCE_HINT") == 1)) {
         return pluginConfig;
     } else {
-        pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
+        pluginConfig["PERFORMANCE_HINT"] = "LATENCY";
     }
     return pluginConfig;
 }

@@ -445,6 +445,8 @@ public:
         return inputsInfo;
     }
 
+    virtual ov::AnyMap getRTInfo() const;
+
     /**
          * @brief Get the Outputs Info object
          *
