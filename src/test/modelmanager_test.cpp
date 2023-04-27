@@ -556,7 +556,7 @@ TEST_F(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
     modelMock.reset();
 }
 
-void setupModelsDirs() {
+static void setupModelsDirs() {
     std::filesystem::create_directory("/tmp/models");
     std::filesystem::create_directory("/tmp/models/dummy1");
     std::filesystem::create_directory("/tmp/models/dummy2");
@@ -1525,7 +1525,7 @@ public:
     }
 };
 
-std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedModelVersionInstances(
+static std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedModelVersionInstances(
     std::map<ovms::ModelVersionState, ovms::model_versions_t> initialVersionStates,
     ov::Core& ieCore,
     const ovms::ModelConfig& modelConfig = ovms::ModelConfig{}) {
@@ -1970,8 +1970,6 @@ TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToShapeConfiguratio
 }
 
 class GetModelInstanceTest : public ::testing::Test {};
-
-class MockModel : public ovms::Model {};
 
 std::shared_ptr<ovms::Model> model;
 

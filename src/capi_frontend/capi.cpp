@@ -745,7 +745,7 @@ OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servab
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
-    *servableMetadata = reinterpret_cast<OVMS_ServableMetadata*>(new ovms::ServableMetadata(servableName, servableVersion, modelInstance->getInputsInfo(), modelInstance->getOutputsInfo()));
+    *servableMetadata = reinterpret_cast<OVMS_ServableMetadata*>(new ovms::ServableMetadata(servableName, servableVersion, modelInstance->getInputsInfo(), modelInstance->getOutputsInfo(), modelInstance->getRTInfo()));
     return nullptr;
 }
 
@@ -835,6 +835,19 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
     *shapeMax = const_cast<int64_t*>(metadata->getOutputDimsMax().at(*name).data());
     return nullptr;
 }
+
+OVMS_Status* OVMS_ServableMetadataGetInfo(OVMS_ServableMetadata* servableMetadata, const void** info) {
+    if (servableMetadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+    }
+    if (info == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+    }
+    ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
+    *info = const_cast<void*>(reinterpret_cast<const void*>(&(metadata->getInfo())));
+    return nullptr;
+}
+
 void OVMS_ServableMetadataDelete(OVMS_ServableMetadata* metadata) {
     if (metadata == nullptr)
         return;

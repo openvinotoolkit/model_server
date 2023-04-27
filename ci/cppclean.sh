@@ -19,15 +19,21 @@ CPPCLEAN_RESULTS_FILE_TEST="cppclean_test"
 cppclean ./src/ 2>&1 | grep -v "unable to find" | grep -v test > ${CPPCLEAN_RESULTS_FILE_SRC};
 cppclean ./src/ 2>&1 | grep -v "unable to find" | grep test > ${CPPCLEAN_RESULTS_FILE_TEST};
 NO_WARNINGS=$(wc -l ${CPPCLEAN_RESULTS_FILE_SRC} | awk '{print $1}')
-NO_WARNINGS_TEST=$(wc -l ${CPPCLEAN_RESULTS_FILE_TEST} | awk '{print $1}')
 NO_WARNINGS_FORWARD=$(grep "use a forward declaration instead" ${CPPCLEAN_RESULTS_FILE_SRC} | wc -l)
 NO_WARNINGS_DIRECT=$(grep "not found in any directly #included header" ${CPPCLEAN_RESULTS_FILE_SRC} | wc -l)
 NO_WARNINGS_NOTUSED=$(grep " not used$" ${CPPCLEAN_RESULTS_FILE_SRC} | wc -l)
+NO_WARNINGS_TEST=$(wc -l ${CPPCLEAN_RESULTS_FILE_TEST} | awk '{print $1}')
+NO_WARNINGS_TEST_FORWARD=$(grep "use a forward declaration instead" ${CPPCLEAN_RESULTS_FILE_TEST} | wc -l)
+NO_WARNINGS_TEST_DIRECT=$(grep "not found in any directly #included header" ${CPPCLEAN_RESULTS_FILE_TEST} | wc -l)
+NO_WARNINGS_TEST_NOTUSED=$(grep " not used$" ${CPPCLEAN_RESULTS_FILE_TEST} | wc -l)
 echo "Number of warnings:" ${NO_WARNINGS}
 echo "Number of warnings in tests:" ${NO_WARNINGS_TEST}
 echo "Number of warnings about not using forward delares:" ${NO_WARNINGS_FORWARD}
 echo "Number of warnings about not direct includes:" ${NO_WARNINGS_DIRECT}
 echo "Number of warnings about not used: " ${NO_WARNINGS_NOTUSED}
+echo "Number of warnings in tests about not using forward delares:" ${NO_WARNINGS_TEST_FORWARD}
+echo "Number of warnings in tests about not direct includes:" ${NO_WARNINGS_TEST_DIRECT}
+echo "Number of warnings in tests about not used: " ${NO_WARNINGS_TEST_NOTUSED}
 
 trap "cat ${CPPCLEAN_RESULTS_FILE_SRC}" err exit
 if [ ${NO_WARNINGS_FORWARD} -gt 7 ]; then
@@ -42,11 +48,23 @@ if [ ${NO_WARNINGS_NOTUSED} -gt 7 ]; then
     echo "Failed probably due to unnecessary forward includes: ${NO_WARNINGS_NOTUSED}";
     exit 1;
 fi
-if [ ${NO_WARNINGS} -gt  162 ]; then
+if [ ${NO_WARNINGS_TEST_FORWARD} -gt 1 ]; then
+    echo "Failed due to not using forward declarations where possible: ${NO_WARNINGS_TEST_FORWARD}";
+    exit 1;
+fi
+if [ ${NO_WARNINGS_TEST_DIRECT} -gt 11 ]; then
+    echo "Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_TEST_DIRECT}";
+    exit 1;
+fi
+if [ ${NO_WARNINGS_TEST_NOTUSED} -gt 0 ]; then
+    echo "Failed probably due to unnecessary forward includes: ${NO_WARNINGS_TEST_NOTUSED}";
+    exit 1;
+fi
+if [ ${NO_WARNINGS} -gt  158 ]; then
     echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
     exit 1
 fi
-if [ ${NO_WARNINGS_TEST} -gt  85 ]; then
+if [ ${NO_WARNINGS_TEST} -gt  52 ]; then
     echo "Failed due to higher than allowed number of issues in test code: ${NO_WARNINGS_TEST}"
     cat ${CPPCLEAN_RESULTS_FILE_TEST}
     exit 1

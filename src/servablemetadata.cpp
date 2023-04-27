@@ -16,14 +16,18 @@
 #include "servablemetadata.hpp"
 
 namespace ovms {
+
+const ov::AnyMap ServableMetadata::EMPTY_RT_INFO;
 ServableMetadata::ServableMetadata(const std::string& name,
     model_version_t version,
     const tensor_map_t& inputsInfo,
-    const tensor_map_t& outputsInfo) :
+    const tensor_map_t& outputsInfo,
+    const ov::AnyMap& anyMap) :
     name(name),
     version(version),
     inputsInfo(inputsInfo),
-    outputsInfo(outputsInfo) {
+    outputsInfo(outputsInfo),
+    info(anyMap) {
     for (auto& [key, tensorInfo] : this->inputsInfo) {
         auto& inDimsMin = this->inDimMin[key];
         auto& inDimsMax = this->inDimMax[key];

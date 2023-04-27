@@ -24,6 +24,7 @@
 #include "../capi_frontend/capi_utils.hpp"
 #include "../inferenceresponse.hpp"
 #include "../ovms.h"
+#include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -44,48 +45,6 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
     EXPECT_EQ(modelsSettings->maxSequenceNumber, std::nullopt);
     EXPECT_EQ(modelsSettings->idleSequenceCleanup, std::nullopt);
 }
-
-#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)   \
-    {                                         \
-        auto* err = C_API_CALL;               \
-        if (err != nullptr) {                 \
-            uint32_t code = 0;                \
-            const char* msg = nullptr;        \
-            OVMS_StatusGetCode(err, &code);   \
-            OVMS_StatusGetDetails(err, &msg); \
-            std::string smsg(msg);            \
-            OVMS_StatusDelete(err);           \
-            EXPECT_EQ(0, code) << smsg;       \
-            ASSERT_EQ(err, nullptr) << smsg;  \
-        }                                     \
-    }
-
-#define ASSERT_CAPI_STATUS_NOT_NULL(C_API_CALL) \
-    {                                           \
-        auto* err = C_API_CALL;                 \
-        if (err != nullptr) {                   \
-            OVMS_StatusDelete(err);             \
-        } else {                                \
-            ASSERT_NE(err, nullptr);            \
-        }                                       \
-    }
-
-#define ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(C_API_CALL, EXPECTED_STATUS_CODE)                              \
-    {                                                                                                          \
-        auto* err = C_API_CALL;                                                                                \
-        if (err != nullptr) {                                                                                  \
-            uint32_t code = 0;                                                                                 \
-            const char* details = nullptr;                                                                     \
-            ASSERT_EQ(OVMS_StatusGetCode(err, &code), nullptr);                                                \
-            ASSERT_EQ(OVMS_StatusGetDetails(err, &details), nullptr);                                          \
-            ASSERT_NE(details, nullptr);                                                                       \
-            ASSERT_EQ(code, static_cast<uint32_t>(EXPECTED_STATUS_CODE))                                       \
-                << std::string{"wrong code: "} + std::to_string(code) + std::string{"; details: "} << details; \
-            OVMS_StatusDelete(err);                                                                            \
-        } else {                                                                                               \
-            ASSERT_NE(err, nullptr);                                                                           \
-        }                                                                                                      \
-    }
 
 const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
 
@@ -710,6 +669,10 @@ public:
             }
         }
         EXPECT_EQ(outputNames.size(), outputCount);
+        const ov::AnyMap* servableMetadataRtInfo{nullptr};
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
+        ASSERT_NE(nullptr, servableMetadataRtInfo);
+        EXPECT_EQ(0, servableMetadataRtInfo->size());
         OVMS_ServableMetadataDelete(servableMetadata);
     }
 
@@ -777,6 +740,11 @@ TEST_F(CAPIMetadata, Negative) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, nullptr, &shapeMin, &shapeMax), StatusCode::NONEXISTENT_NUMBER);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, nullptr, &shapeMax), StatusCode::NONEXISTENT_TABLE);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, nullptr), StatusCode::NONEXISTENT_TABLE);
+    // check info
+    const ov::AnyMap* servableMetadataRtInfo;
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInfo(nullptr, reinterpret_cast<const void**>(&servableMetadataRtInfo)), StatusCode::NONEXISTENT_METADATA);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInfo(servableMetadata, nullptr), StatusCode::NONEXISTENT_DATA);
+
     OVMS_ServableMetadataDelete(nullptr);
 }
 

@@ -731,6 +731,7 @@ cc_test(
     srcs = [
         "test/azurefilesystem_test.cpp",
         "test/tensor_conversion_test.cpp",
+        "test/c_api_test_utils.hpp",
         "test/c_api_tests.cpp",
         "test/custom_loader_test.cpp",
         "test/custom_node_output_allocator_test.cpp",

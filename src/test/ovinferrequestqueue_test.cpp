@@ -47,7 +47,7 @@ TEST(OVInferRequestQueue, ShortQueue) {
     EXPECT_EQ(reqid, 0);
 }
 
-void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
+static void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     requestsQueue.returnStream(3);
 }

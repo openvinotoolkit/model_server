@@ -51,7 +51,7 @@ TEST(CustomNodeBuffersQueue, GetAllBuffers) {
     }
 }
 
-void getBufferAndReturn(BuffersQueue& buffersQueue) {
+static void getBufferAndReturn(BuffersQueue& buffersQueue) {
     void* buffer = buffersQueue.getBuffer();
     ASSERT_NE(nullptr, buffer) << "Failed to get buffer";
 }

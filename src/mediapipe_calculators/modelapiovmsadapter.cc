@@ -62,13 +62,16 @@ using InferenceInput = std::map<std::string, ov::Tensor>;
 namespace ovms {
 static OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype);
 static ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype);
-static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, size_t dimCount, const void* voutputData, size_t bytesize);
 static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, size_t dimCount, const void* voutputData, size_t bytesize);
 
-OVMSInferenceAdapter::OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion) :
+OVMSInferenceAdapter::OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion, OVMS_Server* cserver) :
     servableName(servableName),
     servableVersion(servableVersion) {
-    OVMS_ServerNew(&this->cserver);  // TODO retcheck's;
+    if (nullptr != cserver) {
+        this->cserver = cserver;
+    } else {
+        OVMS_ServerNew(&this->cserver);
+    }
 }
 OVMSInferenceAdapter::~OVMSInferenceAdapter() {
 }
@@ -172,6 +175,9 @@ void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& mod
         ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
         outputNames.emplace_back(tensorName);
     }
+    const ov::AnyMap* servableMetadataRtInfo;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
+    this->modelConfig = *servableMetadataRtInfo;
     OVMS_ServableMetadataDelete(servableMetadata);
 }
 
@@ -265,17 +271,6 @@ static ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
         return ov::element::Type_t::undefined;
     }
     return it->second;
-}
-
-static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, size_t dimCount, const void* voutputData, size_t bytesize) {
-    ov::Shape ovShape;
-    for (size_t i = 0; i < dimCount; ++i) {
-        ovShape.push_back(shape[i]);
-    }
-    // here we make copy of underlying OVMS repsonse tensor
-    ov::Tensor* output = new ov::Tensor(CAPI2OVPrecision(datatype), ovShape);
-    std::memcpy(output->data(), voutputData, bytesize);
-    return output;
 }
 
 static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, size_t dimCount, const void* voutputData, size_t bytesize) {

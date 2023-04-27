@@ -78,8 +78,11 @@ public:
 
         const auto& options = cc->Options<ModelAPIOVMSSessionCalculatorOptions>();
         const std::string& servableName = options.servable_name();
-        const std::string& servableVersion = options.servable_version();
-        auto session = std::make_unique<AdapterWrapper>(new OVMSInferenceAdapter(servableName));
+        const std::string& servableVersionStr = options.servable_version();
+        auto servableVersionOpt = ::ovms::stou32(servableVersionStr);
+        // 0 means default
+        uint32_t servableVersion = servableVersionOpt.value_or(0);
+        auto session = std::make_unique<AdapterWrapper>(new OVMSInferenceAdapter(servableName, servableVersion));
         MLOG("Session create adapter");
         cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(Adopt(session.release()));
         MLOG("SessionOpen end");

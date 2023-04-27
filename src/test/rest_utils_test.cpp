@@ -174,7 +174,7 @@ const char* rawPositiveFirstOrderResponseColumn = R"({
     }
 })";
 
-std::string getJsonResponseDependsOnOrder(ovms::Order order, const char* rowOrderResponse, const char* columnOrderResponse) {
+static std::string getJsonResponseDependsOnOrder(ovms::Order order, const char* rowOrderResponse, const char* columnOrderResponse) {
     switch (order) {
     case Order::ROW:
         return rowOrderResponse;
@@ -282,7 +282,7 @@ TEST_P(TFSMakeJsonFromPredictResponseRawTest, Positive_Noname) {
 
 std::vector<ovms::Order> SupportedOrders = {Order::ROW, Order::COLUMN};
 
-std::string toString(ovms::Order order) {
+static std::string toString(ovms::Order order) {
     switch (order) {
     case Order::ROW:
         return "ROW";

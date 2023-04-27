@@ -33,7 +33,7 @@ const std::string TMP_CONTENT = "filecontent123\r\n";
 const std::string TMP_DIR1 = "dir1";
 const std::string TMP_DIR2 = "dir2";
 
-void createTmpFiles() {
+static void createTmpFiles() {
     std::ofstream configFile(TMP_PATH + TMP_FILE);
     configFile << TMP_CONTENT << std::endl;
     configFile.close();
