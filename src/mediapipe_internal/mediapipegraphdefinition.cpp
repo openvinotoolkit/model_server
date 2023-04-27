@@ -132,7 +132,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
 }
 
 Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response) {
-    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), this->config);
+    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config);
     return StatusCode::OK;
 }
 }  // namespace ovms

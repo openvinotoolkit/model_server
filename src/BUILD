@@ -803,6 +803,7 @@ cc_test(
         ] + select({
         "//conditions:default": [
             "test/mediapipeflow_test.cpp",
+            "test/mediapipe_validation_test.cpp",
         ],
         "//src:disable_mediapipe" : [],
         }),
@@ -829,6 +830,7 @@ cc_test(
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
         "test/mediapipe/config_mediapipe_add_adapter_full.json",
+        "test/mediapipe/config_mediapipe_all_graphs_adapter_full.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json",
         "test/mediapipe/config_standard_add.json",
