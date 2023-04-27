@@ -37,6 +37,7 @@
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
+#include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -231,20 +232,6 @@ public:
 
 }  // namespace
 
-#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)   \
-    {                                         \
-        auto* err = C_API_CALL;               \
-        if (err != nullptr) {                 \
-            uint32_t code = 0;                \
-            const char* msg = nullptr;        \
-            OVMS_StatusGetCode(err, &code);   \
-            OVMS_StatusGetDetails(err, &msg); \
-            std::string smsg(msg);            \
-            OVMS_StatusDelete(err);           \
-            EXPECT_EQ(0, code) << smsg;       \
-            ASSERT_EQ(err, nullptr) << smsg;  \
-        }                                     \
-    }
 TEST(Mediapipe, AdapterRTInfo) {
     MockedServer server;
     OVMS_Server* cserver = reinterpret_cast<OVMS_Server*>(&server);
@@ -261,7 +248,8 @@ TEST(Mediapipe, AdapterRTInfo) {
 
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     const std::string mockedModelName = "dummy";
-    mediapipe::ovms::OVMSInferenceAdapter adapter(mockedModelName, 1, cserver);
+    uint32_t servableVersion = 1;
+    mediapipe::ovms::OVMSInferenceAdapter adapter(mockedModelName, servableVersion, cserver);
     const std::shared_ptr<const ov::Model> model;
     /*ov::AnyMap configuration = {
         {"layout", "data:HWCN"},
@@ -271,17 +259,29 @@ TEST(Mediapipe, AdapterRTInfo) {
     ov::AnyMap notUsedAnyMap;
     adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
     ov::AnyMap modelConfig = adapter.getModelConfig();
-    ASSERT_EQ(modelConfig.size(), 3);
-    auto it = modelConfig.find("resize_type");
-    ASSERT_NE(modelConfig.end(), it);
-    EXPECT_EQ(std::string("unnatural"), it->second.as<std::string>());
-    it = modelConfig.find("layout");
-    ASSERT_NE(modelConfig.end(), it);
-    ASSERT_EQ(std::string("data:HWCN"), it->second.as<std::string>());
-    it = modelConfig.find("labels");
-    ASSERT_NE(modelConfig.end(), it);
-    const std::vector<std::string>& resultLabels = it->second.as<std::vector<std::string>>();
-    EXPECT_THAT(resultLabels, ElementsAre("0", "1", "2", "3", "4"));
+    auto checkModelInfo = [](const ov::AnyMap& modelConfig) {
+        ASSERT_EQ(modelConfig.size(), 3);
+        auto it = modelConfig.find("resize_type");
+        ASSERT_NE(modelConfig.end(), it);
+        EXPECT_EQ(std::string("unnatural"), it->second.as<std::string>());
+        it = modelConfig.find("layout");
+        ASSERT_NE(modelConfig.end(), it);
+        ASSERT_EQ(std::string("data:HWCN"), it->second.as<std::string>());
+        it = modelConfig.find("labels");
+        ASSERT_NE(modelConfig.end(), it);
+        const std::vector<std::string>& resultLabels = it->second.as<std::vector<std::string>>();
+        EXPECT_THAT(resultLabels, ElementsAre("0", "1", "2", "3", "4"));
+    };
+    checkModelInfo(modelConfig);
+
+    OVMS_ServableMetadata* servableMetadata = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableMetadata(cserver, mockedModelName.c_str(), servableVersion, &servableMetadata));
+
+    const ov::AnyMap* servableMetadataRtInfo;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
+    ASSERT_NE(nullptr, servableMetadataRtInfo);
+    checkModelInfo(*servableMetadataRtInfo);
+    OVMS_ServableMetadataDelete(servableMetadata);
 }
 
 TEST(Mediapipe, MetadataDummy) {

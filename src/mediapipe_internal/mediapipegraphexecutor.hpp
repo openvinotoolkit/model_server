@@ -29,10 +29,6 @@
 #include "mediapipe/framework/port/status.h"
 
 namespace ovms {
-class MetricConfig;
-class MetricRegistry;
-class ModelManager;
-class MediapipeGraphExecutor;
 class Status;
 
 class MediapipeGraphExecutor {
