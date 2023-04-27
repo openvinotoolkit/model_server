@@ -33,7 +33,7 @@ echo '{
      }
 }' > universal-sentence-encoder-multilingual/1/mapping_config.json
 
-tree universal-sentence-encoder-multilingual
+tree universal-sentence-encoder-multilingual/
 universal-sentence-encoder-multilingual/
 └── 1
     ├── assets
