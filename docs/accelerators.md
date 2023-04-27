@@ -107,7 +107,7 @@ Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 @sphinxdirective
 .. code-block:: sh
 
-    docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(id -u):$(id -g) \
     -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
     --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
@@ -250,15 +250,12 @@ Check also [building from sources](https://github.com/openvinotoolkit/model_serv
 Example command to run container with NVIDIA support:
 
 ```bash
-   curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
-   chmod -R 755 model
-
-   docker run -it --gpus all -p 9000:9000 -v ${PWD}/model:/model openvino/model_server:latest-cuda --model_path /model --model_name resnet --port 9000 --target_device NVIDIA
+   docker run -it --gpus all -p 9000:9000 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --port 9000 --target_device NVIDIA
 ```
 
 For models with layers not supported on NVIDIA plugin, you can use a vritual pluging `HETERO` which can use multiple devices listed after the colon:
 ```bash
-   docker run -it --gpus all -p 9000:9000 -v ${PWD}/model:/model openvino/model_server:latest-cuda --model_path /model --model_name resnet --port 9000 --target_device HETERO:NVIDIA,CPU
+   docker run -it --gpus all -p 9000:9000 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --port 9000 --target_device HETERO:NVIDIA,CPU
 ```
 
 Check the supported [configuration parameters](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-configuration-parameters) and [supported layers](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-layers-and-limitations)

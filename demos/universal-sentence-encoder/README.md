@@ -1,4 +1,4 @@
-# Using inputs data in string format with universal-sentence-encoder model
+# Using inputs data in string format with universal-sentence-encoder model {#ovms_demo_universal-sentence-encoder}
 
 
 ## Download the model
@@ -111,13 +111,13 @@ The same client code can be used to send the requests to TensorFlow Serving comp
 
 Start TFS container:
 ```bash
-docker run -it -p 8500:8500 -p 8501:8501 -v $(pwd)/universal-sentence-encoder-multilingual:/models/usem -e MODEL_NAME=usem tensorflow/serving
+docker run -it -p 8500:8500 -p 9500:9500 -v $(pwd)/universal-sentence-encoder-multilingual:/models/usem -e MODEL_NAME=usem tensorflow/serving --port=9500 --rest_api_port=8500
 ```
 
 
 Run the client
 ```bash
-python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 8500 --input_name inputs --output_name outputs --string "I enjoy taking long walks along the beach with my dog."
+python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 9500 --input_name inputs --output_name outputs --string "I enjoy taking long walks along the beach with my dog."
 
 processing time 12.167000000000002 ms.
 Output shape (1, 512)
