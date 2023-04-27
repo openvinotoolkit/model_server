@@ -265,7 +265,7 @@ TEST(Mediapipe, AdapterRTInfo) {
     const std::shared_ptr<const ov::Model> model;
     /*ov::AnyMap configuration = {
         {"layout", "data:HWCN"},
-        {"resize_type", "unnatural"}, //fit_to_window
+        {"resize_type", "unnatural"},
         {"labels", mockLabels}*/
     ov::Core unusedCore;
     ov::AnyMap notUsedAnyMap;

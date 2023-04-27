@@ -66,7 +66,7 @@ MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::stri
 Status MediapipeFactory::reloadDefinition(const std::string& pipelineName,  // TODO
     const MediapipeGraphConfig& config,
     ModelManager& manager) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "reloading mediapipe graphs not implemented yet");
+    SPDLOG_LOGGER_ERROR(modelmanager_logger, "reloading mediapipe graphs not implemented yet");
     return StatusCode::OK;
 }
 

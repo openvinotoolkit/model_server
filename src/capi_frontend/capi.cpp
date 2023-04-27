@@ -844,7 +844,7 @@ OVMS_Status* OVMS_ServableMetadataGetInfo(OVMS_ServableMetadata* servableMetadat
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
     }
     ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
-    *info = const_cast<void*>(reinterpret_cast<const void*>(&(metadata->getExtraInfo())));
+    *info = const_cast<void*>(reinterpret_cast<const void*>(&(metadata->getInfo())));
     return nullptr;
 }
 
