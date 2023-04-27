@@ -39,6 +39,7 @@ RUN if [ -d /ovms/src/custom_nodes/lib/${BASE_OS} ] ; then true ; else exit 0 ; 
 RUN cp /ovms/metadata.json /ovms_release/
 RUN if [ "$sentencepiece" == "1" ]; then true ; else exit 0 ; fi ; cp -v /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so /ovms_release/lib/
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /ovms_release/lib/
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /ovms_release/lib/plugins.xml
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/runtime/3rdparty/hddl/config/* /ovms_release/lib/hddl/config/ || true
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -vr /opt/intel/openvino/runtime/3rdparty/hddl/etc/* /ovms_release/lib/hddl/etc/ || true
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/intel/openvino/install_dependencies/* /ovms_release/deps/
