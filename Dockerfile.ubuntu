@@ -279,27 +279,7 @@ COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
 # prebuild dependencies before copying sources
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} \
-    @org_tensorflow//tensorflow/core:framework \
-    @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
-    @tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto \
-    @minitrace//:trace \
-    @com_github_grpc_grpc//:grpc++ \
-    @com_github_tencent_rapidjson//:rapidjson \
-    @com_github_gabime_spdlog//:spdlog \
-    @com_github_jarro2783_cxxopts//:cxxopts \
-    @com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client \
-    @mediapipe//mediapipe/framework:calculator_framework \
-    @mediapipe//mediapipe/framework/port:logging \
-    @mediapipe//mediapipe/framework/port:parse_text_proto \
-    @mediapipe//mediapipe/framework/port:status \
-    @mediapipe_calculators//:mediapipe_calculators \
-    @tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server \
-    @tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api \
-    @tensorflow_serving//tensorflow_serving/util:threadpool_executor \
-    @tensorflow_serving//tensorflow_serving/util:json_tensor \
-    @com_github_jupp0r_prometheus_cpp//core \
-    @model_api//:adapter_api
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
 
 # Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
