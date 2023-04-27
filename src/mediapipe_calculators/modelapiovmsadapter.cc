@@ -53,6 +53,8 @@ using std::endl;
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 using InferenceOutput = std::map<std::string, ov::Tensor>;
 using InferenceInput = std::map<std::string, ov::Tensor>;
 // TODO
@@ -293,5 +295,7 @@ static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, si
     std::memcpy(output.data(), voutputData, bytesize);
     return output;
 }
+
+#pragma GCC diagnostic pop
 }  // namespace ovms
 }  // namespace mediapipe

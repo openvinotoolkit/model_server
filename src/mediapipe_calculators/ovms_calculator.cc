@@ -48,6 +48,8 @@ namespace {
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
     static std::unordered_map<OVMS_DataType, ov::element::Type_t> precisionMap{
         {OVMS_DATATYPE_FP64, ov::element::Type_t::f64},
@@ -121,7 +123,7 @@ static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, ui
     ov::Tensor* output = new ov::Tensor(CAPI2OVPrecision(datatype), ovShape);
     std::memcpy(output->data(), voutputData, bytesize);
     return output;
-}
+} 
 static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
@@ -131,7 +133,7 @@ static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, ui
     ov::Tensor output(CAPI2OVPrecision(datatype), ovShape);
     std::memcpy(output.data(), voutputData, bytesize);
     return output;
-}
+} 
 }  // namespace
 
 class OVMSOVCalculator : public CalculatorBase {
@@ -273,6 +275,6 @@ public:
         return absl::OkStatus();
     }
 };
-
+#pragma GCC diagnostic pop
 REGISTER_CALCULATOR(OVMSOVCalculator);
 }  // namespace mediapipe
