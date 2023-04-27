@@ -323,10 +323,11 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
 
 const std::string RT_INFO_KEY{"model_info"};
 
-void ModelInstance::loadRTInfo() {
+ov::AnyMap ModelInstance::getRTInfo() const {
     if (this->model->has_rt_info(RT_INFO_KEY)) {
-        this->rt_info = model->get_rt_info<ov::AnyMap>(RT_INFO_KEY);
+        return model->get_rt_info<ov::AnyMap>(RT_INFO_KEY);
     }
+    return ov::AnyMap();
 }
 
 Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
@@ -847,7 +848,6 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-        loadRTInfo();
         status = loadOVCompiledModel(this->config);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
