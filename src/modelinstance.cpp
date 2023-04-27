@@ -67,9 +67,6 @@ enum : unsigned int {
 
 namespace ovms {
 
-const char* CPU_THROUGHPUT_STREAMS = "CPU_THROUGHPUT_STREAMS";
-const char* NIREQ = "NIREQ";
-
 const uint MAX_NIREQ_COUNT = 100000;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
@@ -668,11 +665,11 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
-    // By default, set "PERFORMANCE_HINT" = "THROUGHPUT";
+    // By default, set "PERFORMANCE_HINT" = "LATENCY";
     if ((pluginConfig.count("NUM_STREAMS") == 1) || (pluginConfig.count("PERFORMANCE_HINT") == 1)) {
         return pluginConfig;
     } else {
-        pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
+        pluginConfig["PERFORMANCE_HINT"] = "LATENCY";
     }
     return pluginConfig;
 }
