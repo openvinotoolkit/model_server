@@ -18,7 +18,7 @@
 #include <string>
 #include <utility>
 
-#include "../inferenceresponse.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
 #include "../serialization.hpp"

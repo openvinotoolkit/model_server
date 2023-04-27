@@ -15,7 +15,8 @@
 //*****************************************************************************
 #include "inferencerequest.hpp"
 
-#include "status.hpp"
+#include "../status.hpp"
+
 namespace ovms {
 // this constructor can be removed with prediction tests overhaul
 InferenceRequest::InferenceRequest() :

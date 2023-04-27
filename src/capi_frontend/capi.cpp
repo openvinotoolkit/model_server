@@ -18,15 +18,10 @@
 #include <memory>
 #include <string>
 
-#include "../buffer.hpp"
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
-#include "../inferenceparameter.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
-#include "../inferencetensor.hpp"
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -35,12 +30,17 @@
 #include "../prediction_service.hpp"
 #include "../profiler.hpp"
 #include "../servablemanagermodule.hpp"
-#include "../servablemetadata.hpp"
 #include "../server.hpp"
-#include "../server_settings.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
+#include "buffer.hpp"
 #include "capi_utils.hpp"
+#include "inferenceparameter.hpp"
+#include "inferencerequest.hpp"
+#include "inferenceresponse.hpp"
+#include "inferencetensor.hpp"
+#include "servablemetadata.hpp"
+#include "server_settings.hpp"
 
 using ovms::Buffer;
 using ovms::ExecutionContext;

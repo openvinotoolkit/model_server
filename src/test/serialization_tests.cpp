@@ -29,9 +29,9 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "../buffer.hpp"
-#include "../inferenceresponse.hpp"
-#include "../inferencetensor.hpp"
+#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
+#include "../capi_frontend/inferencetensor.hpp"
 #include "../serialization.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"

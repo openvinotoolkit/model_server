@@ -29,14 +29,14 @@
 #include <spdlog/spdlog.h>
 #include <sys/types.h>
 
+#include "capi_frontend/inferencerequest.hpp"
+#include "capi_frontend/inferenceresponse.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
-#include "inferencerequest.hpp"
-#include "inferenceresponse.hpp"
 #include "layout.hpp"
 #include "layout_configuration.hpp"
 #include "logging.hpp"

@@ -23,9 +23,9 @@
 #include <spdlog/spdlog.h>
 #include <sysexits.h>
 
+#include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
-#include "server_settings.hpp"
 #include "systeminfo.hpp"
 
 namespace ovms {

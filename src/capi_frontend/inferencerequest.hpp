@@ -14,45 +14,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <map>
 #include <string>
-#include <utility>
-#include <vector>
+#include <unordered_map>
 
+#include "../modelversion.hpp"
+#include "../ovms.h"  // NOLINT
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
-#include "modelversion.hpp"
-#include "ovms.h"  // NOLINT
 
 namespace ovms {
 
 class Status;
 
-class InferenceResponse {
-    const std::string& servableName;
+class InferenceRequest {
+    const std::string servableName;
     const model_version_t servableVersion;
-    std::vector<InferenceParameter> parameters;
-    std::vector<std::pair<std::string, InferenceTensor>> outputs;
+    std::unordered_map<std::string, InferenceParameter> parameters;
+    std::unordered_map<std::string, InferenceTensor> inputs;
 
 public:
     // this constructor can be removed with prediction tests overhaul
-    InferenceResponse();
-    InferenceResponse(const std::string& servableName, model_version_t servableVersion);
-    Status addOutput(const std::string& name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
-    Status getOutput(uint32_t id, const std::string** name, const InferenceTensor** tensor) const;
-    Status getOutput(uint32_t id, const std::string** name, InferenceTensor** tensor);
+    InferenceRequest();
+    InferenceRequest(const char* modelName, model_version_t modelVersion);
+    Status addInput(const char* name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
+    Status getInput(const char* name, const InferenceTensor** tensor) const;
+    uint64_t getInputsSize() const;
+    Status removeInput(const char* name);
+    Status removeAllInputs();
 
+    Status setInputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType, std::optional<uint32_t> deviceId);
+    Status removeInputBuffer(const char* name);
     Status addParameter(const char* parameterName, OVMS_DataType datatype, const void* data);
-    const InferenceParameter* getParameter(uint32_t id) const;
+    Status removeParameter(const char* parameterName);
+    const InferenceParameter* getParameter(const char* name) const;
 
     const std::string& getServableName() const;
     model_version_t getServableVersion() const;
-    uint32_t getOutputCount() const;
-    uint32_t getParameterCount() const;
 
     Status setId();
     Status getId();
-    InferenceParameter* getInferenceParameter(const char* name);
 
-    void Clear();
+    Status setPriority();
+    Status getPriority();
+
+    Status setTimeoutMicorseconds(uint64_t microseconds);
+    InferenceParameter* getInferenceParameter(const char* name);
+    InferenceTensor* getTensor(const char* name);
+
+    Status getBatchSize(size_t& batchSize, size_t batchSizeIndex) const;
+    std::map<std::string, shape_t> getRequestShapes() const;
 };
 }  // namespace ovms
