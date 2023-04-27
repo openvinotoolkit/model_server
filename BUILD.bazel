@@ -62,15 +62,15 @@ cc_library(
         "@com_github_jupp0r_prometheus_cpp//core",
         "@oneTBB//:tbb",
         ] + select({
-        "//conditions:default": [
-            "@mediapipe//mediapipe/framework:calculator_framework",
-            "@mediapipe//mediapipe/framework/port:logging",
-            "@mediapipe//mediapipe/framework/port:parse_text_proto",
-            "@mediapipe//mediapipe/framework/port:status",
-            "@mediapipe_calculators//:mediapipe_calculators",
-            "@model_api//:adapter_api",
-        ],
-        "//:disable_mediapipe" : [],
+            "//conditions:default": [
+                "@mediapipe//mediapipe/framework:calculator_framework",
+                "@mediapipe//mediapipe/framework/port:logging",
+                "@mediapipe//mediapipe/framework/port:parse_text_proto",
+                "@mediapipe//mediapipe/framework/port:status",
+                "@mediapipe_calculators//:mediapipe_calculators",
+                "@model_api//:adapter_api",
+            ],
+            "//:disable_mediapipe" : [],
         }),
   visibility = ["//visibility:public"],
 )

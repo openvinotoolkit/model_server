@@ -362,35 +362,35 @@ cc_library(
         "tensor_conversion.hpp",
         "tensor_conversion.cpp",
          ] + select({
-        "//conditions:default": [
-            "mediapipe_internal/mediapipefactory.cpp",
-            "mediapipe_internal/mediapipefactory.hpp",
-            "mediapipe_internal/mediapipegraphconfig.hpp",
-            "mediapipe_internal/mediapipegraphdefinition.cpp",
-            "mediapipe_internal/mediapipegraphdefinition.hpp",
-            "mediapipe_internal/mediapipegraphexecutor.cpp",
-            "mediapipe_internal/mediapipegraphexecutor.hpp",
-            "mediapipe_calculators/modelapiovmsadapter.cc",
-            "mediapipe_calculators/modelapiovmsadapter.hpp",
-            "mediapipe_calculators/modelapiovmsadapterwrapper.cc",
-            "mediapipe_calculators/modelapiovmsadapterwrapper.hpp",
-            "mediapipe_calculators/ovms_calculator.cc",
-            "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
-            "mediapipe_calculators/modelapiovmssessioncalculator.cc",
-        ],
-        "//src:disable_mediapipe" : [],
+            "//conditions:default": [
+                "mediapipe_internal/mediapipefactory.cpp",
+                "mediapipe_internal/mediapipefactory.hpp",
+                "mediapipe_internal/mediapipegraphconfig.hpp",
+                "mediapipe_internal/mediapipegraphdefinition.cpp",
+                "mediapipe_internal/mediapipegraphdefinition.hpp",
+                "mediapipe_internal/mediapipegraphexecutor.cpp",
+                "mediapipe_internal/mediapipegraphexecutor.hpp",
+                "mediapipe_calculators/modelapiovmsadapter.cc",
+                "mediapipe_calculators/modelapiovmsadapter.hpp",
+                "mediapipe_calculators/modelapiovmsadapterwrapper.cc",
+                "mediapipe_calculators/modelapiovmsadapterwrapper.hpp",
+                "mediapipe_calculators/ovms_calculator.cc",
+                "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
+                "mediapipe_calculators/modelapiovmssessioncalculator.cc",
+            ],
+            "//src:disable_mediapipe" : [],
         }),
     deps = [
+        "//:ovms_dependencies",
         "//src/kfserving_api:kfserving_api_cpp",
         ] + select({
-        "//conditions:default": [
-            "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-            "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-            "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-        ],
-        "//src:disable_mediapipe" : [],
+            "//conditions:default": [
+                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+            ],
+            "//src:disable_mediapipe" : [],
         }),
-
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
