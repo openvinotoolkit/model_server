@@ -39,11 +39,9 @@ namespace ovms {
 namespace fs = std::filesystem;
 namespace gcs = google::cloud::storage;
 
-const std::string GCSFileSystem::GCS_URL_PREFIX = "gs://";
-
 StatusCode GCSFileSystem::parsePath(const std::string& path,
     std::string* bucket, std::string* object) {
-    int bucket_start = path.find(GCS_URL_PREFIX) + GCS_URL_PREFIX.size();
+    int bucket_start = path.find(FileSystem::GCS_URL_PREFIX) + FileSystem::GCS_URL_PREFIX.size();
     int bucket_end = path.find("/", bucket_start);
     if (bucket_end > bucket_start) {
         *bucket = path.substr(bucket_start, bucket_end - bucket_start);

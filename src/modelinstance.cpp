@@ -321,6 +321,14 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
     return StatusCode::OK;
 }
 
+const std::string RT_INFO_KEY{"model_info"};
+
+void ModelInstance::loadRTInfo() {
+    if (this->model->has_rt_info(RT_INFO_KEY)) {
+        this->rt_info = model->get_rt_info<ov::AnyMap>(RT_INFO_KEY);
+    }
+}
+
 Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork(config, this->model);
     if (!status.ok()) {
@@ -593,7 +601,7 @@ Status ModelInstance::loadOVModel() {
     auto& modelFile = modelFiles[0];
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
     try {
-        model = loadOVModelPtr(modelFile);
+        this->model = loadOVModelPtr(modelFile);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading ov::Model model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
@@ -839,6 +847,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
+        loadRTInfo();
         status = loadOVCompiledModel(this->config);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);

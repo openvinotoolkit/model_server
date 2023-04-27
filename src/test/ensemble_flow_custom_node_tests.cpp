@@ -1713,7 +1713,7 @@ enum class Method {
     MAXIMUM_AVERAGE,
 };
 
-std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> input, Method option) {
+static std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> input, Method option) {
     std::vector<float> expectedOutput(DUMMY_MODEL_OUTPUT_SIZE);
     size_t tensorsCount = input.size() / DUMMY_MODEL_OUTPUT_SIZE;
     // perform operations

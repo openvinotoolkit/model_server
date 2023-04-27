@@ -252,12 +252,16 @@ private:
          */
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
 
+    ov::AnyMap rt_info;
+
     /**
          * @brief Holds current usage count in predict requests
          * 
          * Needed for gating model unloading.
          */
     std::atomic<uint64_t> predictRequestsHandlesCount = 0;
+
+    void loadRTInfo();
 
     /**
          * @brief Internal method for loading tensors
@@ -443,6 +447,10 @@ public:
          */
     virtual const tensor_map_t& getInputsInfo() const {
         return inputsInfo;
+    }
+
+    virtual ov::AnyMap getRTInfo() const {
+        return this->rt_info;
     }
 
     /**

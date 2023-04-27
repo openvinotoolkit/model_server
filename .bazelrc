@@ -50,6 +50,10 @@ build --define=MEDIAPIPE_DISABLE_GPU=1
 coverage --define=MEDIAPIPE_DISABLE_GPU=1
 test --define=MEDIAPIPE_DISABLE_GPU=1
 
+build --define=MEDIAPIPE_DISABLE=0
+coverage --define=MEDIAPIPE_DISABLE=0
+test --define=MEDIAPIPE_DISABLE=0
+
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
 

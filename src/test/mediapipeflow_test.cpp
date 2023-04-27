@@ -21,11 +21,13 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <openvino/openvino.hpp>
 
 #include "../config.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_calculators/modelapiovmsadapter.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
@@ -34,6 +36,8 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
+#include "../stringutils.hpp"
+#include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -75,6 +79,7 @@ protected:
         server.setShutdownRequest(0);
     }
 };
+
 class MediapipeFlowAddTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -136,9 +141,152 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
+using testing::ElementsAre;
+
+TEST_P(MediapipeFlowAddTest, AdapterMetadata) {
+    const std::string modelName = "add";
+    mediapipe::ovms::OVMSInferenceAdapter adapter(modelName);
+    const std::shared_ptr<const ov::Model> model;
+    ov::Core unusedCore;
+    ov::AnyMap notUsedAnyMap;
+    adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
+    EXPECT_THAT(adapter.getInputNames(), ElementsAre(SUM_MODEL_INPUT_NAME_1, SUM_MODEL_INPUT_NAME_2));
+    EXPECT_THAT(adapter.getOutputNames(), ElementsAre(SUM_MODEL_OUTPUT_NAME));
+    EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_1), ov::Shape({1, 10}));
+    EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_2), ov::Shape({1, 10}));
+}
+
+namespace {
+class MockModelInstance : public ovms::ModelInstance {
+public:
+    MockModelInstance(ov::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
+    }
+    ov::AnyMap getRTInfo() const override {
+        std::vector<std::string> mockLabels;
+        for (size_t i = 0; i < 5; i++) {
+            mockLabels.emplace_back(std::to_string(i));
+        }
+        ov::AnyMap configuration = {
+            {"layout", "data:HWCN"},
+            {"resize_type", "unnatural"},
+            {"labels", mockLabels}};
+        return configuration;
+    }
+};
+
+class MockModel : public ovms::Model {
+public:
+    MockModel(const std::string& name) :
+        Model(name, false /*stateful*/, nullptr) {}
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
+        return std::make_shared<MockModelInstance>(ieCore);
+    }
+};
+
+class MockModelManager : public ovms::ModelManager {
+    ovms::MetricRegistry registry;
+
+public:
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+        return std::make_shared<MockModel>(name);
+    }
+
+public:
+    MockModelManager(const std::string& modelCacheDirectory = "") :
+        ovms::ModelManager(modelCacheDirectory, &registry) {
+    }
+    ~MockModelManager() {
+        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+        join();
+        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+        models.clear();
+        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
+    }
+};
+
+class MockedServableManagerModule : public ovms::ServableManagerModule {
+    mutable MockModelManager mockModelManager;
+
+public:
+    MockedServableManagerModule(ovms::Server& ovmsServer) :
+        ovms::ServableManagerModule(ovmsServer) {
+    }
+    ModelManager& getServableManager() const override {
+        return mockModelManager;
+    }
+};
+
+class MockedServer : public Server {
+public:
+    MockedServer() = default;
+    std::unique_ptr<Module> createModule(const std::string& name) override {
+        if (name != ovms::SERVABLE_MANAGER_MODULE_NAME)
+            return Server::createModule(name);
+        return std::make_unique<MockedServableManagerModule>(*this);
+    };
+    Module* getModule(const std::string& name) {
+        return const_cast<Module*>(Server::getModule(name));
+    }
+};
+
+}  // namespace
+
+TEST(Mediapipe, AdapterRTInfo) {
+    MockedServer server;
+    OVMS_Server* cserver = reinterpret_cast<OVMS_Server*>(&server);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    std::string port{"5555"};
+    randomizePort(port);
+    uint32_t portNum = ovms::stou32(port).value();
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, portNum));
+    // we will use dummy model that will have mocked rt_info
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json"));
+
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    const std::string mockedModelName = "dummy";
+    uint32_t servableVersion = 1;
+    mediapipe::ovms::OVMSInferenceAdapter adapter(mockedModelName, servableVersion, cserver);
+    const std::shared_ptr<const ov::Model> model;
+    /*ov::AnyMap configuration = {
+        {"layout", "data:HWCN"},
+        {"resize_type", "unnatural"},
+        {"labels", mockLabels}*/
+    ov::Core unusedCore;
+    ov::AnyMap notUsedAnyMap;
+    adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
+    ov::AnyMap modelConfig = adapter.getModelConfig();
+    auto checkModelInfo = [](const ov::AnyMap& modelConfig) {
+        ASSERT_EQ(modelConfig.size(), 3);
+        auto it = modelConfig.find("resize_type");
+        ASSERT_NE(modelConfig.end(), it);
+        EXPECT_EQ(std::string("unnatural"), it->second.as<std::string>());
+        it = modelConfig.find("layout");
+        ASSERT_NE(modelConfig.end(), it);
+        ASSERT_EQ(std::string("data:HWCN"), it->second.as<std::string>());
+        it = modelConfig.find("labels");
+        ASSERT_NE(modelConfig.end(), it);
+        const std::vector<std::string>& resultLabels = it->second.as<std::vector<std::string>>();
+        EXPECT_THAT(resultLabels, ElementsAre("0", "1", "2", "3", "4"));
+    };
+    checkModelInfo(modelConfig);
+
+    OVMS_ServableMetadata* servableMetadata = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableMetadata(cserver, mockedModelName.c_str(), servableVersion, &servableMetadata));
+
+    const ov::AnyMap* servableMetadataRtInfo;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
+    ASSERT_NE(nullptr, servableMetadataRtInfo);
+    checkModelInfo(*servableMetadataRtInfo);
+    OVMS_ServableMetadataDelete(servableMetadata);
+}
+
 TEST(Mediapipe, MetadataDummy) {
     ConstructorEnabledModelManager manager;
-    ovms::MediapipeGraphConfig mgc{"/ovms/src/test/mediapipe/graphdummy.pbtxt"};
+    ovms::MediapipeGraphConfig mgc{"mediapipeDummy", "/ovms/src/test/mediapipe/graphdummy.pbtxt"};
     ovms::MediapipeGraphDefinition mediapipeDummy("mediapipeDummy", mgc);
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     tensor_map_t inputs = mediapipeDummy.getInputsInfo();
@@ -168,7 +316,7 @@ public:
 const std::string NAME = "Name";
 TEST_F(MediapipeConfig, MediapipeGraphDefinitionNonExistentFile) {
     ConstructorEnabledModelManager manager;
-    MediapipeGraphConfig mgc{"/ovms/NONEXISTENT_FILE"};
+    MediapipeGraphConfig mgc{"noname", "/ovms/NONEXISTENT_FILE"};
     MediapipeGraphDefinition mgd(NAME, mgc);
     EXPECT_EQ(mgd.validate(manager), StatusCode::FILE_INVALID);
 }
@@ -177,14 +325,19 @@ TEST_F(MediapipeConfig, MediapipeAdd) {
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
-    // TODO add check for status
+
+    for (auto& graphName : mediaGraphsAdd) {
+        auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName(graphName);
+        EXPECT_NE(graphDefinition, nullptr);
+        EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
+    }
+
     manager.join();
 }
 
 class MediapipeNoTagMapping : public TestWithTempDir {
 protected:
     ovms::Server& server = ovms::Server::instance();
-
     const Precision precision = Precision::FP32;
     std::unique_ptr<std::thread> t;
     std::string port = "9178";
@@ -206,7 +359,6 @@ protected:
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
         }
     }
-
     void TearDown() {
         server.setShutdownRequest(1);
         t->join();
@@ -257,8 +409,7 @@ node {
   input_side_packet: "SESSION:session"
   input_stream: "B:in"
   output_stream: "A:out"
-}
-)";
+  )";
     const std::string pbtxtPath = this->directoryPath + "/graphDummyUppercase.pbtxt";
     createConfigFileWithContent(graphPbtxt, pbtxtPath);
     configJson.replace(it, pathToReplace.size(), pbtxtPath);
@@ -266,13 +417,11 @@ node {
     const std::string configJsonPath = this->directoryPath + "/config.json";
     createConfigFileWithContent(configJson, configJsonPath);
     this->SetUpServer(configJsonPath.c_str());
-
     // INFER
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
-
     const std::string modelName = "mediapipeDummyUppercase";
     request.Clear();
     response.Clear();
@@ -282,6 +431,38 @@ node {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeConfig, MediapipeFullRelativePaths) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    EXPECT_NE(definitionAdd, nullptr);
+    EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
+
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    EXPECT_NE(definitionFull, nullptr);
+    EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
+
+    manager.join();
+}
+
+TEST_F(MediapipeConfig, MediapipeFullRelativePathsNegative) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy_negative.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    EXPECT_NE(definitionAdd, nullptr);
+    EXPECT_EQ(definitionAdd->getStatus().isAvailable(), false);
+
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    EXPECT_NE(definitionFull, nullptr);
+    EXPECT_EQ(definitionFull->getStatus().isAvailable(), false);
+
+    manager.join();
 }
 
 INSTANTIATE_TEST_SUITE_P(

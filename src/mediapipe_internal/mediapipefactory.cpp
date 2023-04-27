@@ -29,6 +29,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../logging.hpp"
 #include "../modelmanager.hpp"
 #include "../status.hpp"
 #include "mediapipegraphdefinition.hpp"
@@ -54,13 +55,18 @@ bool MediapipeFactory::definitionExists(const std::string& name) const {
 }
 
 MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::string& name) const {
-    SPDLOG_ERROR("NOT_IMPLEMENTED");
-    return nullptr;  // TODO
+    auto it = definitions.find(name);
+    if (it == std::end(definitions)) {
+        return nullptr;
+    } else {
+        return it->second.get();
+    }
 }
 
 Status MediapipeFactory::reloadDefinition(const std::string& pipelineName,  // TODO
     const MediapipeGraphConfig& config,
     ModelManager& manager) {
+    SPDLOG_LOGGER_ERROR(modelmanager_logger, "reloading mediapipe graphs not implemented yet");
     return StatusCode::OK;
 }
 
@@ -71,7 +77,7 @@ Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipelin
     ModelManager& manager) const {
     auto it = definitions.find(name);
     if (it == definitions.end()) {
-        SPDLOG_DEBUG("Mediapipe graph with requested name: {} does not exist", name);  // TODO logger
+        SPDLOG_DEBUG("Mediapipe graph with requested name: {} does not exist", name);
         return StatusCode::NOT_IMPLEMENTED;
     }
     auto status = it->second->create(pipeline, request, response);
@@ -79,11 +85,11 @@ Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipelin
 }
 
 void MediapipeFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager) {
-    SPDLOG_ERROR("NOT_IMPLEMENTED");
+    SPDLOG_LOGGER_ERROR(modelmanager_logger, "retiring mediapipe graphs not implemented yet");
 }  // TODO
 Status MediapipeFactory::revalidatePipelines(ModelManager&) {
     // TODO
-    SPDLOG_ERROR("NOT_IMPLEMENTED");
+    SPDLOG_LOGGER_ERROR(modelmanager_logger, "revalidation of mediapipe graphs not implemented yet");
     return StatusCode::OK;
 }
 

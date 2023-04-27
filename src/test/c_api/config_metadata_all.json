@@ -1,0 +1,51 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+            }
+        },
+        {
+            "config": {
+                "name": "dummyDynamic",
+                "base_path": "/ovms/src/test/dummy",
+                "shape": {"b":"(-1,1:10)"}
+            }
+        },
+        {
+            "config": {
+                "name": "add",
+                "base_path": "/ovms/src/test/add_two_inputs_model",
+                "shape": {"input1":"(1, 3)",
+                          "input2":"(1, 3)"}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["b"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "b"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "a"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"a": {"node_name": "dummyNode",
+                                         "data_item": "a"}
+                }
+            ]
+        }
+    ]
+}

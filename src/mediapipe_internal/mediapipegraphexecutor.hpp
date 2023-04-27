@@ -29,18 +29,15 @@
 #include "mediapipe/framework/port/status.h"
 
 namespace ovms {
-class MetricConfig;
-class MetricRegistry;
-class ModelManager;
-class MediapipeGraphExecutor;
 class Status;
 
 class MediapipeGraphExecutor {
     const std::string name;
+    const std::string version;
     const ::mediapipe::CalculatorGraphConfig config;
 
 public:
-    MediapipeGraphExecutor(const std::string& name, const ::mediapipe::CalculatorGraphConfig& config);
+    MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 };
 }  // namespace ovms

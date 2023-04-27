@@ -38,7 +38,7 @@ ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
 Status ServableManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", SERVABLE_MANAGER_MODULE_NAME);
-    auto status = servableManager->start(config);
+    auto status = getServableManager().start(config);
     if (status.ok()) {
         state = ModuleState::INITIALIZED;
         SPDLOG_INFO("{} started", SERVABLE_MANAGER_MODULE_NAME);
@@ -52,7 +52,7 @@ void ServableManagerModule::shutdown() {
         return;
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", SERVABLE_MANAGER_MODULE_NAME);
-    servableManager->join();
+    getServableManager().join();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", SERVABLE_MANAGER_MODULE_NAME);
 }

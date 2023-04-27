@@ -33,10 +33,11 @@
 
 #include "dags/pipeline_factory.hpp"
 #include "global_sequences_viewer.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
+#endif
 #include "metric_config.hpp"
 #include "model.hpp"
-#include "modelconfig.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -49,7 +50,10 @@ class CNLIMWrapper;
 class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricRegistry;
+class ModelConfig;
 class FileSystem;
+class MediapipeFactory;
+class MediapipeGraphExecutor;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 /**
@@ -77,8 +81,9 @@ protected:
     std::unique_ptr<ov::Core> ieCore;
 
     PipelineFactory pipelineFactory;
+#if (MEDIAPIPE_DISABLE == 0)
     MediapipeFactory mediapipeFactory;
-
+#endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
 
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
@@ -208,7 +213,40 @@ private:
 
     MetricRegistry* metricRegistry;
 
+    /**
+     * @brief Json config directory path
+     *
+     */
+    std::string rootDirectoryPath;
+
+    /**
+     * @brief Set json config directory path
+     *
+     * @param configFileFullPath
+     */
+    void setRootDirectoryPath(const std::string& configFileFullPath) {
+        auto configDirectory = configFileFullPath.substr(0, configFileFullPath.find_last_of("/\\") + 1);
+        std::string currentWorkingDir = std::filesystem::current_path();
+        configDirectory.empty() ? this->rootDirectoryPath = currentWorkingDir + "/" : this->rootDirectoryPath = configDirectory;
+    }
+
 public:
+    /**
+     * @brief Get the full path from relative or full path
+     *
+     * @return const std::string&
+     */
+    const std::string getFullPath(const std::string& pathToCheck) const;
+
+    /**
+     * @brief Get the config root path 
+     *
+     * @return const std::string&
+     */
+    const std::string getRootDirectoryPath() const {
+        return rootDirectoryPath;
+    }
+
     /**
      * @brief Mutex for blocking concurrent add & find of model
      */
@@ -268,9 +306,12 @@ public:
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
     }
+
+#if (MEDIAPIPE_DISABLE == 0)
     const MediapipeFactory& getMediapipeFactory() const {
         return mediapipeFactory;
     }
+#endif
 
     const CustomNodeLibraryManager& getCustomNodeLibraryManager() const;
 

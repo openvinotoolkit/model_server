@@ -355,6 +355,21 @@ new_local_repository(
 )
 ################## END OF OPENCV DEPENDENCY ##########
 
+new_git_repository(
+    name = "model_api",
+    remote = "https:///github.com/openvinotoolkit/model_api/",
+    build_file_content = """
+cc_library(
+    name = "adapter_api",
+    hdrs = ["model_api/cpp/adapters/include/adapters/inference_adapter.h",],
+    includes = ["model_api/cpp/adapters/include"],
+    deps = ["@linux_openvino//:openvino"],
+    visibility = ["//visibility:public"],
+)
+    """,
+    commit = "0f1d080d2d7f0ac64605b231024dd3a8105153a4"
+)
+
 git_repository(
     name = "oneTBB",
     branch = "v2021.8.0",
