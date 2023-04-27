@@ -33,7 +33,9 @@
 
 #include "dags/pipeline_factory.hpp"
 #include "global_sequences_viewer.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
+#endif
 #include "metric_config.hpp"
 #include "model.hpp"
 #include "status.hpp"
@@ -50,6 +52,8 @@ class CustomNodeLibraryManager;
 class MetricRegistry;
 class ModelConfig;
 class FileSystem;
+class MediapipeFactory;
+class MediapipeGraphExecutor;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 /**
@@ -77,8 +81,9 @@ protected:
     std::unique_ptr<ov::Core> ieCore;
 
     PipelineFactory pipelineFactory;
+#if (MEDIAPIPE_DISABLE == 0)
     MediapipeFactory mediapipeFactory;
-
+#endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
 
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
@@ -301,9 +306,12 @@ public:
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
     }
+
+#if (MEDIAPIPE_DISABLE == 0)
     const MediapipeFactory& getMediapipeFactory() const {
         return mediapipeFactory;
     }
+#endif
 
     const CustomNodeLibraryManager& getCustomNodeLibraryManager() const;
 

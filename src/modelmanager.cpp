@@ -52,8 +52,10 @@
 #include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphdefinition.hpp"
+#endif
 #include "metric_config.hpp"
 #include "metric_registry.hpp"
 #include "modelinstance.hpp"  // for logging
@@ -367,6 +369,7 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 }
 
 static Status processMediapipeConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory, ModelManager& manager) {
+#if (MEDIAPIPE_DISABLE == 0)
     MediapipeGraphConfig config;
     config.setRootDirectoryPath(manager.getRootDirectoryPath());
     auto status = config.parseNode(pipelineConfig);
@@ -391,6 +394,10 @@ static Status processMediapipeConfig(rapidjson::Document& configJson, const rapi
         manager);
     mediapipesInConfigFile.insert(config.getGraphName());
     return status;
+#else
+    SPDLOG_ERROR("Mediapipe support was disabled during build process...");
+    return StatusCode::INTERNAL_ERROR;
+#endif
 }
 
 static Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
@@ -530,6 +537,7 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
 
 Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("mediapipe_config_list");
+#if (MEDIAPIPE_DISABLE == 0)
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
         mediapipeFactory.retireOtherThan({}, *this);
@@ -551,6 +559,15 @@ Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson) 
         SPDLOG_ERROR("Failed to process mediapipe graph config.");
     }
     return firstErrorStatus;
+#else
+    if (itrp != configJson.MemberEnd()) {
+        SPDLOG_ERROR("Configuration file has mediapipe property. Mediapipe support was disabled during build.");
+        return StatusCode::CONFIG_FILE_INVALID;
+    } else {
+        return StatusCode::OK;
+    }
+
+#endif
 }
 
 Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
@@ -1473,6 +1490,11 @@ Status ModelManager::createPipeline(std::shared_ptr<MediapipeGraphExecutor>& gra
     const std::string& name,
     const KFSRequest* request,
     KFSResponse* response) {
+#if (MEDIAPIPE_DISABLE == 0)
     return this->mediapipeFactory.create(graph, name, request, response, *this);
+#else
+    SPDLOG_ERROR("Mediapipe support was disabled during build process...");
+    return StatusCode::INTERNAL_ERROR;
+#endif
 }
 }  // namespace ovms
