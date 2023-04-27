@@ -142,6 +142,7 @@ ARG minitrace_flags
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
+ARG NVIDIA=0
 # hadolint ignore=DL3003
 RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
 
@@ -200,6 +201,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 
 # SENTENCEPIECE_EXTENSION
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
+
 WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
 RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="sentence_piece" && cmake --build . --parallel $JOBS
 
@@ -208,7 +210,6 @@ ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
 ENV OPENVINO_HOME=/openvino
 ENV OPENVINO_CONTRIB=/openvino_contrib
 
-ARG NVIDIA=0
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
