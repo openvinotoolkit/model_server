@@ -25,6 +25,7 @@
 #include <utility>
 
 #include <dirent.h>
+#include <malloc.h>
 #include <spdlog/spdlog.h>
 #include <sys/types.h>
 
@@ -1107,6 +1108,7 @@ void ModelInstance::unloadModelComponents() {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
+    malloc_trim(0);
 }
 
 const std::set<std::string>& ModelInstance::getOptionalInputNames() {
