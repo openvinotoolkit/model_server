@@ -261,6 +261,8 @@ COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 COPY MakefileCapi /ovms/
 
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
 # FROM BASE BUILD
@@ -271,7 +273,13 @@ COPY third_party /ovms/third_party/
 # hadolint ignore=SC2046
 RUN patch -d $(bazel info output_base)/external/build_bazel_rules_apple/ -p1 < /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch
 
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+# Mediapipe
+COPY BUILD.bazel /ovms/
+COPY yarn.lock /ovms/
+COPY package.json /ovms/
+
+# prebuild dependencies before copying sources
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
 
 # Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
@@ -295,12 +303,6 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
 RUN if [ "$build_type" == "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}-debug|g' /ovms/src/version.hpp" ; else bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" ; fi ;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
-
-# Mediapipe
-COPY BUILD.bazel /ovms/
-COPY yarn.lock /ovms/
-COPY package.json /ovms/
 
 ARG RUN_TESTS=1
 ENV MEDIAPIPE_DISABLE_PARAMS=" --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "
@@ -315,7 +317,7 @@ RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" == "1" ] ; then baz
     bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
 
 # C api shared library
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms_shared
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_shared
 
 # C api app with bazel
 # hadolint ignore=DL3059
