@@ -427,7 +427,7 @@ test_client_lib:
 		make clean
 
 tools_get_deps:
-	cd tools/deps/$(BASE_OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
+	cd tools/deps/$(BASE_OS) && docker build $(NO_CACHE_OPTION) --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
 	-docker rm -f ovms-$(BASE_OS)-deps
 	docker run -d --rm --name  ovms-$(BASE_OS)-deps  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG)
 	sleep 5
@@ -438,7 +438,7 @@ tools_get_deps:
 
 cpu_extension:
 	cd src/example/SampleCpuExtension && \
-	docker build -f Dockerfile.$(BASE_OS) -t sample_cpu_extension:latest \
+	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) -t sample_cpu_extension:latest \
 		--build-arg http_proxy=${http_proxy} \
 		--build-arg https_proxy=${https_proxy} \
 		--build-arg no_proxy=${no_proxy} \
