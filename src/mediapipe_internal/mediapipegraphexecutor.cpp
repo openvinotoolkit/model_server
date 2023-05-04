@@ -34,10 +34,13 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "mediapipe/framework/calculator_graph.h"
-#include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/status.h"
+#pragma GCC diagnostic pop
 #include "mediapipegraphdefinition.hpp"  // for version in response
+
 
 namespace ovms {
 static Status deserializeTensor(const std::string& requestedName, const std::string& requestedVersion, const KFSRequest* request, ov::Tensor& outTensor) {

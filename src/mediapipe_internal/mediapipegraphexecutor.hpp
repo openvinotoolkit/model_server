@@ -24,9 +24,11 @@
 #include "..//kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "mediapipe/framework/calculator_graph.h"
-#include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/status.h"
+#pragma GCC diagnostic pop
 
 namespace ovms {
 class Status;

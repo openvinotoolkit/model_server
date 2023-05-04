@@ -26,10 +26,13 @@
 #include <openvino/openvino.hpp>
 
 #include "../ovms.h"  // NOLINT
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#pragma GCC diagnostic pop
 // added only to deinitialize server here
 using std::cout;
 using std::endl;
