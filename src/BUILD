@@ -38,6 +38,19 @@ more_selects.config_setting_negation(
     negate = ":disable_mediapipe",
 )
 
+config_setting(
+    name = "fuzzer_build",
+    define_values = {
+        "FUZZER_BUILD": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_fuzzer_build",
+    negate = ":fuzzer_build",
+)
+
 constraint_setting(name = "linux_distribution_family")
 constraint_value(constraint_setting = "linux_distribution_family", name = "fedora") # like RHEL/CentOS
 constraint_value(constraint_setting = "linux_distribution_family", name = "debian") # like Ubuntu
@@ -393,11 +406,27 @@ cc_library(
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
+#TODO:  "-Werror", mediapipe
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
     ],
+        ] + select({
+            "//conditions:default": [
+            ],
+            "//src:fuzzer_build" : [
+                "-fsanitize=address,undefined,",
+                "-fprofile-generate",
+            ],
+    })
+          + select({
+            "//conditions:default": [
+            ],
+            "//src:disable_mediapipe" : [
+                "-Werror",
+            ],
+    }),
     visibility = [
         "//visibility:public",
     ],
@@ -406,7 +435,14 @@ cc_library(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-    ],
+    ] + select({
+        "//conditions:default": [
+        ],
+        "//src:fuzzer_build" : [
+            "-fsanitize-coverage=trace-pc-guard",
+            "-fprofile-generate",
+        ],
+    }),
     alwayslink = 1,
 )
 

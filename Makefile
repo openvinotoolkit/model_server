@@ -49,6 +49,7 @@ RUN_TESTS ?= 1
 NVIDIA ?=0
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
+FUZZER_BUILD ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -72,12 +73,17 @@ DISABLE_MEDIAPIPE_PARAMS ?= ""
 ifeq ($(MEDIAPIPE_DISABLE),1)
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "
 endif
-
-ifeq ($(BAZEL_BUILD_TYPE),dbg)
-  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "$(DISABLE_MEDIAPIPE_PARAMS)
-else
-  BAZEL_DEBUG_FLAGS=" --strip=never "$(DISABLE_MEDIAPIPE_PARAMS)
+FUZZER_BUILD_PARAMS ?= ""
+ifeq ($(FUZZER_BUILD),1)
+	FUZZER_BUILD_PARAMS = " --define FUZZER_BUILD=1 --cxxopt=-DFUZZER_BUILD=1 "
 endif
+
+BAZEL_DEBUG_BUILD_FLAGS ?= ""
+ifeq ($(BAZEL_BUILD_TYPE),dbg)
+    BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg "
+endif
+
+BAZEL_DEBUG_FLAGS=" --strip=never "$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(FUZZER_BUILD_PARAMS)
 
 ifeq ($(MINITRACE),ON)
   MINITRACE_FLAGS="--copt=-DMTR_ENABLED"
