@@ -157,12 +157,6 @@ http_archive(
     urls = [
         "https://github.com/google/glog/archive/0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6.zip",
     ],
-    patches = [
-        "glog.patch"
-    ],
-    patch_args = [
-        "-p1",
-    ],
 )
 
 load("@mediapipe//third_party:external_files.bzl", "external_files")
