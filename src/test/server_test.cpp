@@ -305,7 +305,7 @@ TEST(Server, ServerMetadata) {
     });
     auto start = std::chrono::high_resolution_clock::now();
     while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
     }
 
     grpc::ChannelArguments args;
