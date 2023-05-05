@@ -411,7 +411,7 @@ node {
   input_side_packet: "SESSION:session"
   input_stream: "B:in"
   output_stream: "A:out"
-  )";
+})";
     const std::string pbtxtPath = this->directoryPath + "/graphDummyUppercase.pbtxt";
     createConfigFileWithContent(graphPbtxt, pbtxtPath);
     configJson.replace(it, pathToReplace.size(), pbtxtPath);
