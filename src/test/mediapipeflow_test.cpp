@@ -28,6 +28,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_calculators/modelapiovmsadapter.hpp"
+#include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
@@ -37,6 +38,7 @@
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 
@@ -409,7 +411,7 @@ node {
   input_side_packet: "SESSION:session"
   input_stream: "B:in"
   output_stream: "A:out"
-  )";
+})";
     const std::string pbtxtPath = this->directoryPath + "/graphDummyUppercase.pbtxt";
     createConfigFileWithContent(graphPbtxt, pbtxtPath);
     configJson.replace(it, pathToReplace.size(), pbtxtPath);
@@ -463,6 +465,157 @@ TEST_F(MediapipeConfig, MediapipeFullRelativePathsNegative) {
     EXPECT_EQ(definitionFull->getStatus().isAvailable(), false);
 
     manager.join();
+}
+
+class MediapipeConfigChanges : public TestWithTempDir {
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+    }
+
+public:
+    static const std::string mgdName;
+    static const std::string configFileWithGraphPathToReplace;
+    static const std::string configFileWithoutGraph;
+    static const std::string pbtxtContent;
+    template <typename Request, typename Response>
+    static void checkStatus(ModelManager& manager, ovms::StatusCode code) {
+        std::shared_ptr<MediapipeGraphExecutor> executor;
+        Request request;
+        Response response;
+        auto status = manager.createPipeline(executor, mgdName, &request, &response);
+        EXPECT_EQ(status, code) << status.string();
+    }
+};
+const std::string MediapipeConfigChanges::mgdName{"mediapipeGraph"};
+const std::string MediapipeConfigChanges::configFileWithGraphPathToReplace = R"(
+{
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeGraph",
+        "graph_path":"XYZ"
+    }
+    ]
+}
+)";
+
+const std::string MediapipeConfigChanges::configFileWithoutGraph = R"(
+{
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ]
+}
+)";
+
+const std::string MediapipeConfigChanges::pbtxtContent = R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "ModelAPISessionCalculator"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+      servable_name: "dummy"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "ModelAPISideFeedCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "B:in"
+  output_stream: "A:out"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
+      tag_to_input_tensor_names {
+        key: "B"
+        value: "b"
+      }
+      tag_to_output_tensor_names {
+        key: "A"
+        value: "a"
+      }
+    }
+  }
+}
+)";
+
+TEST_F(MediapipeConfigChanges, AddProperGraphThenRetire) {
+    std::string configFileContent = configFileWithGraphPathToReplace;
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    const std::string modelPathToReplace{"XYZ"};
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    createConfigFileWithContent(pbtxtContent, graphFilePath);
+    ConstructorEnabledModelManager modelManager;
+    modelManager.loadConfig(configFilePath);
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    auto definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+    // now we retire
+    configFileContent = configFileWithoutGraph;
+    createConfigFileWithContent(configFileContent, configFilePath);
+    modelManager.loadConfig(configFilePath);
+    definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    // now we add again
+    configFileContent = configFileWithGraphPathToReplace;
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    modelManager.loadConfig(configFilePath);
+    definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+}
+
+TEST_F(MediapipeConfigChanges, AddImroperGraphThenFixWithReloadThenBreakAgain) {
+    std::string configFileContent = configFileWithGraphPathToReplace;
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    createConfigFileWithContent(configFileContent, configFilePath);
+    createConfigFileWithContent(pbtxtContent, graphFilePath);
+    ConstructorEnabledModelManager modelManager;
+    modelManager.loadConfig(configFilePath);
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    auto definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ovms::Status status;
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    // TODO check for tfs as well - now not supported
+    // checkStatus<TFSPredictRequest, TFSPredictResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    // now we fix the config
+    const std::string modelPathToReplace{"XYZ"};
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    modelManager.loadConfig(configFilePath);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+    // now we break
+    configFileContent = configFileWithGraphPathToReplace;
+    createConfigFileWithContent(configFileContent, configFilePath);
+    modelManager.loadConfig(configFilePath);
+    definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
 }
 
 INSTANTIATE_TEST_SUITE_P(
