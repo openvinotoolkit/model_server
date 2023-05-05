@@ -39,11 +39,6 @@ namespace ovms {
 Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     const MediapipeGraphConfig& config,
     ModelManager& manager) {
-    if (0 != pipelineName.rfind("mediapipe", 0)) {
-        // TODO need to enable reporter for mediapipe
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph not prefixed with \"mediapipe\": {}, will not work for now", pipelineName);
-        return StatusCode::NOT_IMPLEMENTED;
-    }
     if (definitionExists(pipelineName)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
