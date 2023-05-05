@@ -123,7 +123,7 @@ static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, ui
     ov::Tensor* output = new ov::Tensor(CAPI2OVPrecision(datatype), ovShape);
     std::memcpy(output->data(), voutputData, bytesize);
     return output;
-} 
+}
 static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
@@ -133,7 +133,7 @@ static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, ui
     ov::Tensor output(CAPI2OVPrecision(datatype), ovShape);
     std::memcpy(output.data(), voutputData, bytesize);
     return output;
-} 
+}
 }  // namespace
 
 class OVMSOVCalculator : public CalculatorBase {

@@ -38,7 +38,6 @@
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphdefinition.hpp"  // for version in response
 
-
 namespace ovms {
 static Status deserializeTensor(const std::string& requestedName, const std::string& requestedVersion, const KFSRequest* request, ov::Tensor& outTensor) {
     auto requestInputItr = std::find_if(request->inputs().begin(), request->inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });

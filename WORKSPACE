@@ -86,17 +86,17 @@ http_archive(
 
 ################################### Official mediapipe repository #########
 #### Will be used on feature release
-#git_repository(
-#    name = "mediapipe",
-#    remote = "https://github.com/google/mediapipe",
-#    tag = "v0.9.1",
-#)
+git_repository(
+    name = "mediapipe",
+    remote = "https://github.com/google/mediapipe",
+    tag = "v0.9.1",
+)
 
 # DEV mediapipe 1 source - adjust local repository path for build
-local_repository(
-    name = "mediapipe",
-    path = "/mediapipe/",
-)
+#local_repository(
+#    name = "mediapipe",
+#    path = "/mediapipe/",
+#)
 
 # Protobuf for Node dependencies
 http_archive(
