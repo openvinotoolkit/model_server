@@ -115,7 +115,17 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
         SPDLOG_DEBUG("ModelReady requested model {} is missing, trying to find pipeline with such name", name);
         auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
         if (!pipelineDefinition) {
-            return Status(StatusCode::MODEL_NAME_MISSING);
+#if (MEDIAPIPE_DISABLE == 0)
+            auto mediapipeGraphDefinition = manager.getMediapipeFactory().findDefinitionByName(name);
+            if (!mediapipeGraphDefinition) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            auto status = buildResponse(*mediapipeGraphDefinition, response);
+            // INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok())); TODO metrics
+            return status;
+#else
+            return StatusCode::MODEL_NAME_MISSING;
+#endif
         }
         auto status = buildResponse(*pipelineDefinition, response);
         INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok()));
@@ -309,6 +319,15 @@ Status KFSInferenceServiceImpl::buildResponse(
     response->set_ready(pipelineDefinition.getStatus().isAvailable());
     return StatusCode::OK;
 }
+
+#if (MEDIAPIPE_DISABLE == 0)
+Status KFSInferenceServiceImpl::buildResponse(
+    MediapipeGraphDefinition& definition,
+    KFSGetModelStatusResponse* response) {
+    response->set_ready(definition.getStatus().isAvailable());
+    return StatusCode::OK;
+}
+#endif
 
 static void addReadyVersions(Model& model,
     KFSModelMetadataResponse* response) {
