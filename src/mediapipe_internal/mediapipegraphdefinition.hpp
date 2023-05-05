@@ -67,6 +67,7 @@ public:
         const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,
         const MetricConfig* metricConfig = nullptr);
+
     const std::string& getName() const { return name; }
     const PipelineDefinitionStatus& getStatus() const {
         return this->status;
@@ -79,7 +80,9 @@ public:
     // TODO simultaneous infer & reload handling
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
 
+    Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
+    void retire(ModelManager& manager);
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;

@@ -39,6 +39,11 @@ namespace ovms {
 Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     const MediapipeGraphConfig& config,
     ModelManager& manager) {
+    if (0 != pipelineName.rfind("mediapipe", 0)) {
+        // TODO need to enable reporter for mediapipe
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph not prefixed with \"mediapipe\": {}, will not work for now", pipelineName);
+        return StatusCode::NOT_IMPLEMENTED;
+    }
     if (definitionExists(pipelineName)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
@@ -55,6 +60,7 @@ bool MediapipeFactory::definitionExists(const std::string& name) const {
 }
 
 MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::string& name) const {
+    // TODO thread safety
     auto it = definitions.find(name);
     if (it == std::end(definitions)) {
         return nullptr;
@@ -63,11 +69,16 @@ MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::stri
     }
 }
 
-Status MediapipeFactory::reloadDefinition(const std::string& pipelineName,  // TODO
+Status MediapipeFactory::reloadDefinition(const std::string& name,
     const MediapipeGraphConfig& config,
     ModelManager& manager) {
-    SPDLOG_LOGGER_ERROR(modelmanager_logger, "reloading mediapipe graphs not implemented yet");
-    return StatusCode::OK;
+    auto mgd = findDefinitionByName(name);
+    if (mgd == nullptr) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested to reload mediapipe graph definition but it does not exist: {}", name);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Reloading mediapipe graph: {}", name);
+    return mgd->reload(manager, config);
 }
 
 Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline,
@@ -84,12 +95,19 @@ Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipelin
     return status;
 }
 
-void MediapipeFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager) {
-    SPDLOG_LOGGER_ERROR(modelmanager_logger, "retiring mediapipe graphs not implemented yet");
-}  // TODO
+void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFile, ModelManager& manager) {
+    std::for_each(definitions.begin(),
+        definitions.end(),
+        [&graphsInConfigFile, &manager](auto& nameDefinitionPair) {
+            if (graphsInConfigFile.find(nameDefinitionPair.second->getName()) == graphsInConfigFile.end() && nameDefinitionPair.second->getStateCode() != PipelineDefinitionStateCode::RETIRED) {
+                nameDefinitionPair.second->retire(manager);
+            }
+        });
+}
+
 Status MediapipeFactory::revalidatePipelines(ModelManager&) {
-    // TODO
-    SPDLOG_LOGGER_ERROR(modelmanager_logger, "revalidation of mediapipe graphs not implemented yet");
+    // TODO potentially not needed if we do not validate presence of models required in pbtxt
+    SPDLOG_LOGGER_WARN(modelmanager_logger, "revalidation of mediapipe graphs not implemented yet");
     return StatusCode::OK;
 }
 

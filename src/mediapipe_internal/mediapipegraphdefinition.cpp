@@ -135,4 +135,16 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config);
     return StatusCode::OK;
 }
+
+Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGraphConfig& config) {
+    // TODO block creating new unloadGuards
+    // TODO thread safety
+    this->status.handle(ReloadEvent());
+    this->mgconfig = config;
+    return validate(manager);
+}
+
+void MediapipeGraphDefinition::retire(ModelManager& manager) {
+    this->status.handle(RetireEvent());
+}
 }  // namespace ovms
