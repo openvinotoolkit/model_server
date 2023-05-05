@@ -90,15 +90,23 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   ifeq ($(NVIDIA),1)
 	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04
+	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   else
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
+	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
   INSTALL_DRIVER_VERSION ?= "22.35.24055"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.0.0.10867.893b29eab49_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
+  ifeq ($(NVIDIA),1)
+    BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi8
+	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
+  else
+    BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
+	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
+  endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "22.28.23726"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.0.0.10867.893b29eab49_x86_64.tgz
@@ -199,6 +207,15 @@ ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
   endif
+  ifeq ($(BASE_OS),redhat)
+	@echo "copying RH entitlements"
+	@cp -ru /etc/pki/entitlement .
+	@cp -u /etc/rhsm/ca/* rhsm-ca/
+  endif
+endif
+ifeq ($(BASE_OS),redhat)
+	@mkdir -p entitlement
+	@mkdir -p rhsm-ca
 endif
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
@@ -217,6 +234,9 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	@docker pull $(BASE_IMAGE)
   ifeq ($(BASE_OS),redhat)
 	@docker pull registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
+    ifeq ($(NVIDIA),1)
+	@docker pull docker.io/nvidia/cuda:11.8.0-runtime-ubi8
+    endif
   endif
 endif
 ifneq ($(OVMS_METADATA_FILE),)
@@ -262,7 +282,7 @@ ovms_release_image: targz_package
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg GPU=0 \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
@@ -271,7 +291,7 @@ ovms_release_image: targz_package
     	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
     	--build-arg GPU=1 \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
 		--build-arg NVIDIA=$(NVIDIA) \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)

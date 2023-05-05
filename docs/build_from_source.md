@@ -120,7 +120,6 @@ make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=master OV_CONTRIB_BR
 
 By default set to `1`. When set to `0`, OpenVINO will be built from sources and `DLDT_PACKAGE_URL` will be omitted.  
 Use `OV_SOURCE_BRANCH` and `OV_SOURCE_ORG` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch and fork. By default `master` will be used and org `openvinotoolkit`.  
-Warning: _Maintained only for Ubuntu base OS._
 
 Example:
 ```bash

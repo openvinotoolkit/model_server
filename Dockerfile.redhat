@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2021 Intel Corporation
+# Copyright (c) 2020-2023 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,9 @@ LABEL version="1.0.0"
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS
+COPY entitlement /etc/pki/entitlement
+COPY rhsm-ca /etc/rhsm/ca
+RUN rm -f /etc/rhsm-host
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             boost169-atomic \
@@ -127,8 +130,37 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             unzip \
             vim \
             xz \
-            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm \
+            http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/libusb-devel-0.1.5-12.el8.x86_64.rpm \
+            http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/libusb-0.1.5-12.el8.x86_64.rpm \
+            http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/libusbx-devel-1.0.23-4.el8.x86_64.rpm && \
             yum clean all
+
+ARG NVIDIA=0
+# Add Nvidia dev tool if needed
+# hadolint ignore=DL3003
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
+    yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms && \
+    yum -y module disable python36 && \
+    yum install -y  \
+        libzstd-devel \
+        libcudnn8-8.6.0.163-1.cuda11.8 \
+        libcudnn8-devel-8.6.0.163-1.cuda11.8 \
+        libcutensor1-1.6.1.5-1 \
+        libcutensor-devel-1.6.1.5-1 \
+        cuda-cudart-devel-11-8 && \
+    # ignore errors on hosts with older nvidia drivers
+    yum install -y cuda-11-8 || true && \
+    yum install -y python38-Cython && \
+    curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin && \
+    curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
+    chmod a+x /usr/local/bin/sccache && \
+    curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 && \
+    curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv && \
+    mkdir -p ccache-4.3/build && cd ccache-4.3/build && \
+    cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. && \
+    ninja -v install && \
+    rm -rf /var/cache/yum
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
@@ -136,10 +168,36 @@ ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 ARG minitrace_flags
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
-
+ARG ov_source_branch=master
+ARG ov_contrib_branch=master
+ARG sentencepiece=0
+ARG ov_source_org=openvinotoolkit
+ARG ov_contrib_org=openvinotoolkit
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
+ARG CMAKE_BUILD_TYPE=Release
+
+# hadolint ignore=DL3003
+RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
+
+################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
+# Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
+# hadolint ignore=DL3003
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
+WORKDIR /openvino/build
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && dnf clean all
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
+    mkdir -p /opt/intel/openvino/extras && \
+    mkdir -p /opt/intel/openvino && \
+    ln -s /openvino/inference-engine/temp/opencv_*/opencv /opt/intel/openvino/extras && \
+    ln -s /usr/local/runtime /opt/intel/openvino && \
+    ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
+    ln -s /opt/intel/openvino /opt/intel/openvino_2022
+################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR $TEMP_DIR
@@ -150,6 +208,39 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2022
+
+# install sample apps including benchmark_app
+RUN yum install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
+    http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-2.2.2-1.el8.x86_64.rpm \
+    https://download-ib01.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/j/json-devel-3.6.1-2.el8.x86_64.rpm && \
+    rm -rf /var/cache/yum
+RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
+#################### END OF OPENVINO BINARY INSTALL
+
+# SENTENCEPIECE_EXTENSION
+ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
+WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
+RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="sentence_piece" && cmake --build . --parallel $JOBS
+
+# NVIDIA
+ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
+ENV OPENVINO_HOME=/openvino
+ENV OPENVINO_CONTRIB=/openvino_contrib
+
+# hadolint ignore=DL3003
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
+    mkdir "${OPENVINO_BUILD_PATH}" && \
+    cd "${OPENVINO_BUILD_PATH}" && \
+    cmake "${OPENVINO_HOME}" \
+    -DENABLE_NVIDIA=ON \
+    -DENABLE_TESTS=ON \
+    -DBUILD_arm_plugin=OFF \
+    -DBUILD_java_api=OFF \
+    -DOPENVINO_EXTRA_MODULES="${OPENVINO_CONTRIB}"/modules \
+    -DWHEEL_VERSION=2022.1.0 \
+    -DVERBOSE_BUILD=ON \
+    -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" && \
+    cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j "$JOBS"
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
@@ -208,7 +299,7 @@ RUN make
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2022.3"
+ARG PROJECT_VERSION="2023.0"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 
@@ -259,3 +350,4 @@ COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
 COPY demos /demos
+RUN rm -Rf /etc/entitlement /etc/rhsm/ca
