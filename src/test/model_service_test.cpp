@@ -192,7 +192,7 @@ TYPED_TEST(ModelServiceTest, MediapipeGraph) {
     std::string fileToReload = "/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json";
     ASSERT_EQ(this->manager.startFromFile(fileToReload), StatusCode::OK);
 
-    const std::string name = "mediapipeDummyADAPTFULL";
+    const std::string name = "mediaDummyADAPTFULL";
 
     // existing version
     int version = 1;
