@@ -132,6 +132,10 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
 }
 
 Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response) {
+    if (!this->getStatus().isAvailable()) {
+        SPDLOG_DEBUG("Failed to execute mediapipe graph: {} since it is not available", getName());
+        return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
+    }
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config);
     return StatusCode::OK;
 }
