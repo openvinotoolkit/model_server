@@ -34,6 +34,8 @@
 #include "dags/pipelinedefinition.hpp"
 #include "execution_context.hpp"
 #include "grpc_utils.hpp"
+#include "mediapipe_internal/mediapipefactory.hpp"
+#include "mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"
 #include "servablemanagermodule.hpp"
@@ -107,7 +109,14 @@ Status GetModelStatusImpl::getModelStatus(
         SPDLOG_DEBUG("GetModelStatus: Model {} is missing, trying to find pipeline with such name", requested_model_name);
         auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(requested_model_name);
         if (!pipelineDefinition) {
-            return StatusCode::MODEL_NAME_MISSING;
+            auto mediapipeGraphDefinition = manager.getMediapipeFactory().findDefinitionByName(requested_model_name);
+            if (!mediapipeGraphDefinition) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            addStatusToResponse(response, mediapipeGraphDefinition->getVersion(), mediapipeGraphDefinition->getStatus());
+            SPDLOG_DEBUG("model_service: response: {}", response->DebugString());
+            SPDLOG_DEBUG("MODEL_STATUS created a response for {} - {}", requested_model_name, requested_version);
+            return StatusCode::OK;
         }
         INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
 
