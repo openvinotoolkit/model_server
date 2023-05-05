@@ -34,11 +34,8 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
-#pragma GCC diagnostic pop
 #include "mediapipegraphdefinition.hpp"  // for version in response
 
 
