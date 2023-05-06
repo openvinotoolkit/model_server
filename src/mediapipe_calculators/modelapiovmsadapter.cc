@@ -117,8 +117,17 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     //////////////////
     OVMS_InferenceResponse* response = nullptr;
     InferenceOutput output;
-    if (nullptr != OVMS_Inference(cserver, request, &response)) {
-        MLOG("Inference failed!");
+    OVMS_Status* status = OVMS_Inference(cserver, request, &response);
+    if (nullptr != status) {
+        uint32_t code = 0;
+        const char* msg = nullptr;
+        OVMS_StatusGetCode(status, &code);
+        OVMS_StatusGetDetails(status, &msg);
+        std::stringstream ss;
+        ss << "Inference in OVMSAdapter failed:";
+        ss << msg << " code: " << code;
+        MLOG(ss.str());
+        OVMS_StatusDelete(status);
         return output;
     }
     CREATE_GUARD(responseGuard, OVMS_InferenceResponse, response);

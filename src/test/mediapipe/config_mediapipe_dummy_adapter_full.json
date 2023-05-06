@@ -9,11 +9,11 @@
     ],
     "mediapipe_config_list": [
     {
-        "name":"mediapipeDummyADAPTFULL",
+        "name":"mediaDummyADAPTFULL",
         "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull.pbtxt"
     },
     {
-        "name":"mediapipeDummy",
+        "name":"mediaDummy",
         "graph_path":"/ovms/src/test/mediapipe/graphdummy.pbtxt"
     }
     ]

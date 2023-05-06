@@ -245,12 +245,9 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
         return grpc(status);
     }
     const std::string servableName = request->model_name();
-    if (0 == servableName.rfind("mediapipe", 0)) {
-        // TODO need to enable reporter for mediapipe
-        return grpc(Status(StatusCode::OK));
-    }
     if (!reporter) {
-        SPDLOG_ERROR("If this is mediapipe test you need to exclude it from this check");
+        return grpc(Status(StatusCode::OK));
+        // TODO fix after Mediapipe metrics implementation
         return grpc(Status(StatusCode::INTERNAL_ERROR));  // should not happen
     }
     double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);

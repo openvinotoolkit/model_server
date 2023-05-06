@@ -288,8 +288,8 @@ TEST(Mediapipe, AdapterRTInfo) {
 
 TEST(Mediapipe, MetadataDummy) {
     ConstructorEnabledModelManager manager;
-    ovms::MediapipeGraphConfig mgc{"mediapipeDummy", "/ovms/src/test/mediapipe/graphdummy.pbtxt"};
-    ovms::MediapipeGraphDefinition mediapipeDummy("mediapipeDummy", mgc);
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "/ovms/src/test/mediapipe/graphdummy.pbtxt"};
+    ovms::MediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc);
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     tensor_map_t inputs = mediapipeDummy.getInputsInfo();
     tensor_map_t outputs = mediapipeDummy.getOutputsInfo();
@@ -305,8 +305,8 @@ TEST(Mediapipe, MetadataDummy) {
     EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
-const std::vector<std::string> mediaGraphsDummy{"mediapipeDummy",
-    "mediapipeDummyADAPTFULL"};
+const std::vector<std::string> mediaGraphsDummy{"mediaDummy",
+    "mediaDummyADAPTFULL"};
 const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
     "mediapipeAddADAPTFULL"};
 
