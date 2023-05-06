@@ -187,6 +187,33 @@ TYPED_TEST(ModelServiceTest, pipeline) {
     verifyModelStatusResponse(this->modelStatusResponse);
 }
 
+#if (MEDIAPIPE_DISABLE == 0)
+TYPED_TEST(ModelServiceTest, MediapipeGraph) {
+    std::string fileToReload = "/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json";
+    ASSERT_EQ(this->manager.startFromFile(fileToReload), StatusCode::OK);
+
+    const std::string name = "mediaDummyADAPTFULL";
+
+    // existing version
+    int version = 1;
+    setModelStatusRequest(this->modelStatusRequest, name, version);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_TEST_CONTEXT);
+    verifyModelStatusResponse(this->modelStatusResponse);
+
+    // No version specified - with 0 version value is not set in helper function
+    version = 0;
+    setModelStatusRequest(this->modelStatusRequest, name, version);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_TEST_CONTEXT);
+    verifyModelStatusResponse(this->modelStatusResponse);
+
+    // Any version
+    version = 5;
+    setModelStatusRequest(this->modelStatusRequest, name, version);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_TEST_CONTEXT);
+    verifyModelStatusResponse(this->modelStatusResponse);
+}
+#endif
+
 TYPED_TEST(ModelServiceTest, non_existing_model) {
     const std::string name = "non_existing_model";
     int version = 0;

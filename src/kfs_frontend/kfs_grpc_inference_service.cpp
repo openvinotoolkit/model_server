@@ -115,7 +115,17 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
         SPDLOG_DEBUG("ModelReady requested model {} is missing, trying to find pipeline with such name", name);
         auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
         if (!pipelineDefinition) {
-            return Status(StatusCode::MODEL_NAME_MISSING);
+#if (MEDIAPIPE_DISABLE == 0)
+            auto mediapipeGraphDefinition = manager.getMediapipeFactory().findDefinitionByName(name);
+            if (!mediapipeGraphDefinition) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            auto status = buildResponse(*mediapipeGraphDefinition, response);
+            // INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok())); TODO metrics
+            return status;
+#else
+            return StatusCode::MODEL_NAME_MISSING;
+#endif
         }
         auto status = buildResponse(*pipelineDefinition, response);
         INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok()));
@@ -235,12 +245,9 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
         return grpc(status);
     }
     const std::string servableName = request->model_name();
-    if (0 == servableName.rfind("mediapipe", 0)) {
-        // TODO need to enable reporter for mediapipe
-        return grpc(Status(StatusCode::OK));
-    }
     if (!reporter) {
-        SPDLOG_ERROR("If this is mediapipe test you need to exclude it from this check");
+        return grpc(Status(StatusCode::OK));
+        // TODO fix after Mediapipe metrics implementation
         return grpc(Status(StatusCode::INTERNAL_ERROR));  // should not happen
     }
     double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);
@@ -309,6 +316,15 @@ Status KFSInferenceServiceImpl::buildResponse(
     response->set_ready(pipelineDefinition.getStatus().isAvailable());
     return StatusCode::OK;
 }
+
+#if (MEDIAPIPE_DISABLE == 0)
+Status KFSInferenceServiceImpl::buildResponse(
+    MediapipeGraphDefinition& definition,
+    KFSGetModelStatusResponse* response) {
+    response->set_ready(definition.getStatus().isAvailable());
+    return StatusCode::OK;
+}
+#endif
 
 static void addReadyVersions(Model& model,
     KFSModelMetadataResponse* response) {

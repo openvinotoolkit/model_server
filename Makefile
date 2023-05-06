@@ -210,6 +210,7 @@ ifeq ($(NVIDIA),1)
   ifeq ($(BASE_OS),redhat)
 	@echo "copying RH entitlements"
 	@cp -ru /etc/pki/entitlement .
+	@mkdir rhsm-ca
 	@cp -u /etc/rhsm/ca/* rhsm-ca/
   endif
 endif
