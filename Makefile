@@ -55,7 +55,7 @@ OV_CONTRIB_BRANCH ?= master
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
-SENTENCEPIECE ?= 0
+SENTENCEPIECE ?= 1
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -96,7 +96,7 @@ ifeq ($(BASE_OS),ubuntu)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
   INSTALL_DRIVER_VERSION ?= "22.35.24055"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.0.0.10867.893b29eab49_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.0.0.10894.a5312f70db4_x86_64.tgz
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
@@ -109,7 +109,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "22.28.23726"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.0.0.10867.893b29eab49_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.0.0.10894.a5312f70db4_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
