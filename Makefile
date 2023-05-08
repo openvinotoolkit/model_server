@@ -218,17 +218,6 @@ ifeq ($(BASE_OS),redhat)
 	@mkdir -p entitlement
 	@mkdir -p rhsm-ca
 endif
-ifeq ($(BUILD_CUSTOM_NODES),true)
-	@echo "Building custom nodes"
-	@cd src/custom_nodes && make BASE_OS=$(BASE_OS)
-	@cd src/custom_nodes/tokenizer && make BASE_OS=$(BASE_OS)
-endif
-	@echo "Building docker image $(BASE_OS)"
-	# Provide metadata information into image if defined
-	@mkdir -p .workspace
-	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
-	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME})'
-	@bash -c '$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
@@ -240,6 +229,17 @@ ifeq ($(NO_DOCKER_CACHE),true)
     endif
   endif
 endif
+ifeq ($(BUILD_CUSTOM_NODES),true)
+	@echo "Building custom nodes"
+	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS)
+	@cd src/custom_nodes/tokenizer && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS)
+endif
+	@echo "Building docker image $(BASE_OS)"
+	# Provide metadata information into image if defined
+	@mkdir -p .workspace
+	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
+	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME})'
+	@bash -c '$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
 ifneq ($(OVMS_METADATA_FILE),)
 	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
 else
