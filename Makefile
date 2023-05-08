@@ -49,8 +49,8 @@ MEDIAPIPE_DISABLE ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= master
-OV_CONTRIB_BRANCH ?= master
+OV_SOURCE_BRANCH ?= releases/2023/0
+OV_CONTRIB_BRANCH ?= releases/2023/0
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
