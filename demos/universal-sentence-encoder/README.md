@@ -22,40 +22,17 @@ universal-sentence-encoder-multilingual/
 
 ```
 
-In case the input and output names are changed during the model load in OpenVINO backend, apply a `mapping_config.json` to adjust them from the model server network interface.
-```bash
-echo '{
- "inputs": {
-     "serving_default_inputs": "inputs"
-     },
- "outputs":{
-         "Identity": "outputs"
-     }
-}' > universal-sentence-encoder-multilingual/1/mapping_config.json
-
-tree universal-sentence-encoder-multilingual/
-universal-sentence-encoder-multilingual/
-└── 1
-    ├── assets
-    ├── saved_model.pb
-    ├── mapping_config.json    
-    └── variables
-        ├── variables.data-00000-of-00001
-        └── variables.index
-```
-
-
-## Build OVMS with CPU extension library for sentencepiece_tokenizer layer
+## Optionally build OVMS with CPU extension library for sentencepiece_tokenizer layer
 
 Model universal-sentence-encoder-multilingual includes a layer SentencepieceTokenizer which is not supported by OpenVINO at the moment. It can be however implemented using a [CPU extension](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations/user_ie_extensions/sentence_piece), which is a dynamic library performing the execution of the model layer.
 The layer SentencepieceTokenizer expects on the input a list of strings. The CPU extension replaces the input format to an array with UINT8 precision with a shape `[-1]`. It is serialized representation of the list of strings in a form or bytes. When this extension is deployed in OpenVINO Model Server, you don't need to worry about the serialization as it is handled internally. The model server accepts the input in a string format and performs the conversion to OpenVINO requirement transparently.
 
-Until it is published, the docker image with OpenVINO Model Server including the CPU extension has to be built using the commands:
+The image `openvino/model_server:2023.0` will include ready to use OpenVINO Model Server with the CPU extension. It can be also built from source using the commands:
 
 ```bash
-git clone -b develop https://github.com/openvinotoolkit/model_server
+git clone https://github.com/openvinotoolkit/model_server
 cd model_server
-make docker_build SENTENCEPIECE=1 OV_USE_BINARY=0
+make docker_build OV_USE_BINARY=0
 cd ..
 
 ```
