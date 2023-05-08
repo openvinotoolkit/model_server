@@ -68,6 +68,7 @@ RUN if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then true ; else ex
 	/ovms_release/lib/libovms_shared.so-2.params
 
 RUN find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+RUN cd /ovms_release/lib/ ; rm -f libopenvino_tensorflow_lite_frontend.so.2023.0.0 ; ln -s libopenvino_tensorflow_frontend.so.2023.0.0 libopenvino_tensorflow_lite_frontend.so.2023.0.0
 RUN find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
 RUN if [ -d /opt/intel/openvino/runtime/3rdparty ] ; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;; fi
 RUN find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
