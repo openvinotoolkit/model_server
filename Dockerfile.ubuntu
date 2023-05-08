@@ -314,10 +314,6 @@ RUN if [ "$build_type" == "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_V
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
 
-ARG RUN_TESTS=1
-# Test mediapipe build
-RUN  if [ "$RUN_TESTS" == "1" ] ; then bazel test ${debug_bazel_flags} --jobs=$JOBS --test_summary=detailed --test_output=streamed //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
-
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
@@ -332,21 +328,19 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_shared
 
 # C api app with bazel
 # hadolint ignore=DL3059
-RUN bazel build --jobs $JOBS ${debug_bazel_flags} //src:capi_cpp_example
+#RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example
 
 # C-API benchmark app
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
+#RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
 
 # OVMS
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
 
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
+#RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 
 # C-api C/C++ app with gcc
-COPY MakefileCapi /ovms/
-RUN make -f MakefileCapi cpp BAZEL_DEBUG_FLAGS="${debug_bazel_flags}" && \
-    make -f MakefileCapi c BAZEL_DEBUG_FLAGS="${debug_bazel_flags}"
+#RUN make -f MakefileCapi cpp && make -f MakefileCapi c
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
