@@ -774,6 +774,7 @@ Status ModelInstance::fetchModelFilepaths() {
     fetchModelFiles(found, ONNX_MODEL_FILES_EXTENSIONS);
     fetchModelFiles(found, PADDLE_MODEL_FILES_EXTENSIONS);
     fetchModelFiles(found, TF_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(found, TFLITE_MODEL_FILES_EXTENSIONS);
 
     if (!found) {
         SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
