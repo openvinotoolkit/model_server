@@ -62,6 +62,7 @@ predict_response = prediction_service_stub.Predict(predict_request, 10.0)
 
 Here is a basic client execution :
 ```bash
+pip install --upgrade pip
 pip install -r model_server/demos/universal-sentence-encoder/requirements.txt
 python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 9000 --string "I enjoy taking long walks along the beach with my dog."
 processing time 6.931 ms.
