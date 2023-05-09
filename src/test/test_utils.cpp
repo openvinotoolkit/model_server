@@ -106,17 +106,17 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
 }
 
 void waitForOVMSConfigReload(ovms::ModelManager& manager) {
-    // This is effectively multiplying by 1.2 to have 1 config reload in between
+    // This is effectively multiplying by 1.8 to have 1 config reload in between
     // two test steps
-    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+    const float WAIT_MULTIPLIER_FACTOR = 1.8;
     const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalSec() * 1000;
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
-    // This is effectively multiplying by 1.2 to have 1 config reload in between
+    // This is effectively multiplying by 1.8 to have 1 config reload in between
     // two test steps
-    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+    const float WAIT_MULTIPLIER_FACTOR = 1.8;
     const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalSec() * 1000;
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
