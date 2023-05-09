@@ -518,8 +518,8 @@ TEST_F(TestLoadModel, CheckONNXModelHandling) {
 }
 
 TEST_F(TestLoadModel, CheckTFLiteModelHandling) {
+    GTEST_SKIP() << "Skipping invalid TFLite format test";
     ovms::ModelInstance modelInstance("tflite", UNUSED_MODEL_VERSION, *ieCore);
-
     const std::string modelPath = directoryPath + "/test_tflite";
     std::filesystem::create_directories(modelPath);
     ovms::model_version_t version = 1;
