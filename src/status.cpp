@@ -293,6 +293,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
     {StatusCode::NONEXISTENT_STATUS, "Tried to use nonexisting status"},
     {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
+    {StatusCode::NONEXISTENT_PTR, "Tried to use nonexisting pointer"},
     {StatusCode::SERVER_NOT_READY, "Server is not ready"},
 
     // Server Start errors

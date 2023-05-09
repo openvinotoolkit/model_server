@@ -460,14 +460,14 @@ OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* server, const char* servableN
 // \param metadata The metadata object
 // \param count The parameter count to be set
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_ServableMetadataGetInputsCount(OVMS_ServableMetadata* metadata, uint32_t* count);
+OVMS_Status* OVMS_ServableMetadataGetInputCount(OVMS_ServableMetadata* metadata, uint32_t* count);
 
 // Get the number of outputs of servable.
 //
 // \param metadata The metadata object
 // \param count The parameter count to be set
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_ServableMetadataGetOutputsCount(OVMS_ServableMetadata* metadata, uint32_t* count);
+OVMS_Status* OVMS_ServableMetadataGetOutputCount(OVMS_ServableMetadata* metadata, uint32_t* count);
 
 // Get the metadata of servable input given the index
 //

@@ -66,9 +66,9 @@ extern "C" {
 
 OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor) {
     if (major == nullptr)
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "major version"));
     if (minor == nullptr)
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "minor version"));
     *major = OVMS_API_VERSION_MAJOR;
     *minor = OVMS_API_VERSION_MINOR;
     return nullptr;
@@ -83,9 +83,9 @@ void OVMS_StatusDelete(OVMS_Status* status) {
 OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
     uint32_t* code) {
     if (status == nullptr)
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "status"));
     if (code == nullptr)
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "code"));
     ovms::Status* sts = reinterpret_cast<ovms::Status*>(status);
     *code = static_cast<uint32_t>(sts->getCode());
     return nullptr;
@@ -94,9 +94,9 @@ OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
 OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
     const char** details) {
     if (status == nullptr)
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STATUS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "status"));
     if (details == nullptr)
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "details"));
     ovms::Status* sts = reinterpret_cast<ovms::Status*>(status);
     *details = sts->string().c_str();
     return nullptr;
@@ -104,7 +104,7 @@ OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
 
 OVMS_Status* OVMS_ServerSettingsNew(OVMS_ServerSettings** settings) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "settings"));
     }
     *settings = reinterpret_cast<OVMS_ServerSettings*>(new ovms::ServerSettingsImpl);
     return nullptr;
@@ -118,7 +118,7 @@ void OVMS_ServerSettingsDelete(OVMS_ServerSettings* settings) {
 
 OVMS_Status* OVMS_ModelsSettingsNew(OVMS_ModelsSettings** settings) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "model settings"));
     }
     *settings = reinterpret_cast<OVMS_ModelsSettings*>(new ovms::ModelsSettingsImpl);
     return nullptr;
@@ -133,7 +133,7 @@ void OVMS_ModelsSettingsDelete(OVMS_ModelsSettings* settings) {
 OVMS_Status* OVMS_ServerNew(OVMS_Server** server) {
     // Create new server once multi server configuration becomes possible.
     if (server == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
     *server = reinterpret_cast<OVMS_Server*>(&ovms::Server::instance());
     return nullptr;
@@ -151,13 +151,13 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerSettings* server_settings,
     OVMS_ModelsSettings* models_settings) {
     if (server == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
     if (server_settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     if (models_settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "model settings"));
     }
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(server_settings);
@@ -171,7 +171,7 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
 OVMS_Status* OVMS_ServerSettingsSetGrpcPort(OVMS_ServerSettings* settings,
     uint32_t grpcPort) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->grpcPort = grpcPort;
@@ -181,7 +181,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcPort(OVMS_ServerSettings* settings,
 OVMS_Status* OVMS_ServerSettingsSetRestPort(OVMS_ServerSettings* settings,
     uint32_t restPort) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->restPort = restPort;
@@ -191,7 +191,7 @@ OVMS_Status* OVMS_ServerSettingsSetRestPort(OVMS_ServerSettings* settings,
 OVMS_Status* OVMS_ServerSettingsSetGrpcWorkers(OVMS_ServerSettings* settings,
     uint32_t grpc_workers) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->grpcWorkers = grpc_workers;
@@ -201,10 +201,10 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcWorkers(OVMS_ServerSettings* settings,
 OVMS_Status* OVMS_ServerSettingsSetGrpcBindAddress(OVMS_ServerSettings* settings,
     const char* grpc_bind_address) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     if (grpc_bind_address == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "grpc bind address"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->grpcBindAddress.assign(grpc_bind_address);
@@ -214,7 +214,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcBindAddress(OVMS_ServerSettings* settings
 OVMS_Status* OVMS_ServerSettingsSetRestWorkers(OVMS_ServerSettings* settings,
     uint32_t rest_workers) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->restWorkers = rest_workers;
@@ -224,10 +224,10 @@ OVMS_Status* OVMS_ServerSettingsSetRestWorkers(OVMS_ServerSettings* settings,
 OVMS_Status* OVMS_ServerSettingsSetRestBindAddress(OVMS_ServerSettings* settings,
     const char* rest_bind_address) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     if (rest_bind_address == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "rest bind address"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->restBindAddress.assign(rest_bind_address);
@@ -237,10 +237,10 @@ OVMS_Status* OVMS_ServerSettingsSetRestBindAddress(OVMS_ServerSettings* settings
 OVMS_Status* OVMS_ServerSettingsSetGrpcChannelArguments(OVMS_ServerSettings* settings,
     const char* grpc_channel_arguments) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     if (grpc_channel_arguments == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "grpc channel arguments"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->grpcChannelArguments.assign(grpc_channel_arguments);
@@ -250,7 +250,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcChannelArguments(OVMS_ServerSettings* set
 OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->filesystemPollWaitSeconds = seconds;
@@ -260,7 +260,7 @@ OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings
 OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSettings* settings,
     uint32_t minutes) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->sequenceCleanerPollWaitMinutes = minutes;
@@ -270,7 +270,7 @@ OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSet
 OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->resourcesCleanerPollWaitSeconds = seconds;
@@ -280,10 +280,10 @@ OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVM
 OVMS_Status* OVMS_ServerSettingsSetCpuExtensionPath(OVMS_ServerSettings* settings,
     const char* cpu_extension_path) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     if (cpu_extension_path == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "cpu extension path"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->cpuExtensionLibraryPath.assign(cpu_extension_path);
@@ -293,10 +293,10 @@ OVMS_Status* OVMS_ServerSettingsSetCpuExtensionPath(OVMS_ServerSettings* setting
 OVMS_Status* OVMS_ServerSettingsSetCacheDir(OVMS_ServerSettings* settings,
     const char* cache_dir) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     if (cache_dir == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "cache dir"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->cacheDir.assign(cache_dir);
@@ -306,7 +306,7 @@ OVMS_Status* OVMS_ServerSettingsSetCacheDir(OVMS_ServerSettings* settings,
 OVMS_Status* OVMS_ServerSettingsSetLogLevel(OVMS_ServerSettings* settings,
     OVMS_LogLevel log_level) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     switch (log_level) {
@@ -334,10 +334,10 @@ OVMS_Status* OVMS_ServerSettingsSetLogLevel(OVMS_ServerSettings* settings,
 OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* settings,
     const char* log_path) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
     }
     if (log_path == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "log path"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
     serverSettings->logPath.assign(log_path);
@@ -347,10 +347,10 @@ OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* settings,
 OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
     const char* config_path) {
     if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SETTINGS));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "models settings"));
     }
     if (config_path == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "config path"));
     }
     ovms::ModelsSettingsImpl* modelsSettings = reinterpret_cast<ovms::ModelsSettingsImpl*>(settings);
     modelsSettings->configPath.assign(config_path);
@@ -359,13 +359,13 @@ OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
 // inference API
 OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, int64_t servableVersion) {
     if (request == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
     }
     if (server == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
     if (servableName == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable name"));
     }
     *request = reinterpret_cast<OVMS_InferenceRequest*>(new InferenceRequest(servableName, servableVersion));
     return nullptr;
@@ -379,13 +379,13 @@ void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* request) {
 
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const char* inputName, OVMS_DataType datatype, const int64_t* shape, size_t dimCount) {
     if (req == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
     }
     if (inputName == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
     if (shape == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "shape"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->addInput(inputName, datatype, shape, dimCount);
@@ -411,13 +411,13 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const cha
 
 OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const char* inputName, const void* data, size_t bufferSize, OVMS_BufferType bufferType, uint32_t deviceId) {
     if (req == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
     }
     if (inputName == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
     if (data == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->setInputBuffer(inputName, data, bufferSize, bufferType, deviceId);
@@ -438,13 +438,13 @@ OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const
 
 OVMS_Status* OVMS_InferenceRequestAddParameter(OVMS_InferenceRequest* req, const char* parameterName, OVMS_DataType datatype, const void* data, size_t byteSize) {
     if (req == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
     }
     if (parameterName == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "parameter name"));
     }
     if (data == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->addParameter(parameterName, datatype, data);
@@ -456,10 +456,10 @@ OVMS_Status* OVMS_InferenceRequestAddParameter(OVMS_InferenceRequest* req, const
 
 OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* req, const char* parameterName) {
     if (req == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
     }
     if (parameterName == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "parameter name"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeParameter(parameterName);
@@ -471,10 +471,10 @@ OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* req, co
 
 OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* req, const char* inputName) {
     if (req == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
     }
     if (inputName == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeInput(inputName);
@@ -486,10 +486,10 @@ OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* req, const 
 
 OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, const char* inputName) {
     if (req == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
     }
     if (inputName == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeInputBuffer(inputName);
@@ -501,31 +501,31 @@ OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, co
 
 OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const int64_t** shape, size_t* dimCount, const void** data, size_t* bytesize, OVMS_BufferType* bufferType, uint32_t* deviceId) {
     if (res == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference response"));
     }
     if (name == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "output name"));
     }
     if (datatype == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data type"));
     }
     if (shape == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "shape"));
     }
     if (dimCount == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "dimension count"));
     }
     if (data == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
     }
     if (bytesize == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "byte size"));
     }
     if (bufferType == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "buffer type"));
     }
     if (deviceId == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "device id"));
     }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     const InferenceTensor* tensor = nullptr;
@@ -573,10 +573,10 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
 
 OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* res, uint32_t* count) {
     if (res == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference response"));
     }
     if (count == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "output count"));
     }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     *count = response->getOutputCount();
@@ -585,10 +585,10 @@ OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* res, u
 
 OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* res, uint32_t* count) {
     if (res == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference response"));
     }
     if (count == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "parameter count"));
     }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     *count = response->getParameterCount();
@@ -597,13 +597,13 @@ OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* res
 
 OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* res, uint32_t id, OVMS_DataType* datatype, const void** data) {
     if (res == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference response"));
     }
     if (datatype == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data type"));
     }
     if (data == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
     }
     InferenceResponse* response = reinterpret_cast<InferenceResponse*>(res);
     const InferenceParameter* parameter = response->getParameter(id);
@@ -687,13 +687,13 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     Timer<TIMER_END> timer;
     timer.start(TOTAL);
     if (serverPtr == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
     if (request == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_REQUEST));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
     }
     if (response == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_RESPONSE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference response"));
     }
     auto req = reinterpret_cast<ovms::InferenceRequest*>(request);
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
@@ -751,13 +751,13 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
 
 OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, OVMS_ServableMetadata** servableMetadata) {
     if (serverPtr == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_SERVER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
     if (servableName == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable name"));
     }
     if (servableMetadata == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
     // TODO check inputs
     // TODO metrics
@@ -789,24 +789,24 @@ OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servab
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServableMetadataGetInputsCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
+OVMS_Status* OVMS_ServableMetadataGetInputCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
     if (servableMetadata == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
     if (count == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input count"));
     }
     ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
     *count = metadata->getInputsInfo().size();
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServableMetadataGetOutputsCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
+OVMS_Status* OVMS_ServableMetadataGetOutputCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
     if (servableMetadata == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
     if (count == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "output count"));
     }
     ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
     *count = metadata->getOutputsInfo().size();
@@ -814,22 +814,22 @@ OVMS_Status* OVMS_ServableMetadataGetOutputsCount(OVMS_ServableMetadata* servabl
 }
 OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax) {
     if (servableMetadata == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
     if (name == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
     if (datatype == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data type"));
     }
     if (dimCount == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "dimension count"));
     }
     if (shapeMin == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "shape min array"));
     }
     if (shapeMax == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "shape max array"));
     }
     ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
     if (id >= metadata->getInputsInfo().size()) {
@@ -846,22 +846,22 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetada
 
 OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax) {
     if (servableMetadata == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
     if (name == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_STRING));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "output name"));
     }
     if (datatype == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data type"));
     }
     if (dimCount == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_NUMBER));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "dimension count"));
     }
     if (shapeMin == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "shape min array"));
     }
     if (shapeMax == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TABLE));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "shape max array"));
     }
     ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
     if (id >= metadata->getOutputsInfo().size()) {
@@ -878,10 +878,10 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
 
 OVMS_Status* OVMS_ServableMetadataGetInfo(OVMS_ServableMetadata* servableMetadata, const void** info) {
     if (servableMetadata == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_METADATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
     if (info == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_DATA));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "info"));
     }
     ovms::ServableMetadata* metadata = reinterpret_cast<ovms::ServableMetadata*>(servableMetadata);
     *info = const_cast<void*>(reinterpret_cast<const void*>(&(metadata->getInfo())));

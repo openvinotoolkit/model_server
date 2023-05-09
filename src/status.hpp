@@ -304,6 +304,7 @@ enum class StatusCode {
     NONEXISTENT_TENSOR_FOR_REMOVAL,
     NONEXISTENT_STATUS,
     NONEXISTENT_LOG_LEVEL,
+    NONEXISTENT_PTR,
     SERVER_NOT_READY,
 
     // Server Start errors

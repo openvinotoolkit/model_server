@@ -161,8 +161,8 @@ void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& mod
     uint32_t inputCount = 0;
     uint32_t outputCount = 0;
     // TODO ensure Metadata object removal in all paths
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInputsCount(servableMetadata, &inputCount));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutputsCount(servableMetadata, &outputCount));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInputCount(servableMetadata, &inputCount));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutputCount(servableMetadata, &outputCount));
 
     uint32_t id = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
