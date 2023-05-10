@@ -36,6 +36,7 @@ RUN mkdir -vp /ovms_release/bin && \
 	mkdir -vp /ovms_release/lib/custom_nodes
 
 RUN if [ -d /ovms/src/custom_nodes/lib/${BASE_OS} ] ; then true ; else exit 0 ; fi ; cp /ovms/src/custom_nodes/lib/${BASE_OS}/*.so /ovms_release/lib/custom_nodes/
+RUN if [ -d /ovms/src/custom_nodes/tokenizer/lib/${BASE_OS} ] ; then true ; else exit 0 ; fi ; cp /ovms/src/custom_nodes/tokenizer/lib/${BASE_OS}/*.so /ovms_release/lib/custom_nodes/
 RUN cp /ovms/metadata.json /ovms_release/
 RUN if [ "$sentencepiece" == "1" ]; then true ; else exit 0 ; fi ; cp -v /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so /ovms_release/lib/
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /ovms_release/lib/
