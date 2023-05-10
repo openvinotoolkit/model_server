@@ -19,12 +19,12 @@
 
 namespace ovms {
 
-    void MediapipeGraphConfig::setGraphPath(const std::string& graphPath) {
-        FileSystem::setPath(this->graphPath, graphPath, this->rootDirectoryPath);
-    }
+void MediapipeGraphConfig::setGraphPath(const std::string& graphPath) {
+    FileSystem::setPath(this->graphPath, graphPath, this->rootDirectoryPath);
+}
 
-    void MediapipeGraphConfig::setSubconfigPath(const std::string& subconfigPath) {
-        FileSystem::setPath(this->subconfigPath, subconfigPath, this->rootDirectoryPath);
-    }
+void MediapipeGraphConfig::setSubconfigPath(const std::string& subconfigPath) {
+    FileSystem::setPath(this->subconfigPath, subconfigPath, this->rootDirectoryPath);
+}
 
 }  // namespace ovms
