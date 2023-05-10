@@ -73,13 +73,9 @@ git_repository(
 ########################################################### Mediapipe
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "1fbf1c2962af287607232b2eddeaec9b4f4a7a6f5934e1a9276e9af76952f7e0",
-    strip_prefix = "protobuf-3.9.2",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.9.2.tar.gz"],
-    #name = "com_google_protobuf",
-    #sha256 = "87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422",
-    #strip_prefix = "protobuf-3.19.1",
-    #urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.19.1.tar.gz"],
+    sha256 = "87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422",
+    strip_prefix = "protobuf-3.19.1",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.19.1.tar.gz"],
     #patches = [
     #    "@//third_party:com_google_protobuf_fixes.diff"
     #],
