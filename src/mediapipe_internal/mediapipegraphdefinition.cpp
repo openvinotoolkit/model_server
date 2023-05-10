@@ -33,6 +33,7 @@
 #include "../stringutils.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
+#include "../ov_utils.hpp" // TODO cleanup getTensorMapString not using TensorInfo::asString
 #include "../version.hpp"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
@@ -102,6 +103,8 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     }
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
     return StatusCode::OK;
 }
 

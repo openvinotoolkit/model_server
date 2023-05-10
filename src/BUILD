@@ -814,6 +814,7 @@ cc_test(
         "test/mediapipe/relative_paths/graph1/config.json",
         "test/mediapipe/relative_paths/graph2/graphadd.pbtxt",
         "test/mediapipe/relative_paths/graph2/config.json",
+        "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
         "test/passthrough/1/passthrough.xml",
         "test/passthrough/1/passthrough.bin",
         "test/summator/1/summator.xml",
