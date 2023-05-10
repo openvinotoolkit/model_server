@@ -24,10 +24,14 @@ BASE_OS ?= ubuntu
 default: all
 
 all:
+ifeq ($(NO_DOCKER_CACHE),true)
+	$(eval NO_CACHE_OPTION:=--no-cache)
+	@echo "Docker image will be rebuilt from scratch"
+endif
 	@cp $(HEADER_FILE_PATH) .
 	@cp -r $(COMMON_DIR) ./
 	echo "Building tokenizer"
-	docker build -f Dockerfile.$(BASE_OS) -t tokenizer_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .
+	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) -t tokenizer_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .
 	mkdir -p ./lib/$(BASE_OS)
 	docker cp $$(docker create --rm tokenizer_build_image:latest):/custom_nodes/tokenizer/build/src/libdetokenizer.so ./lib/$(BASE_OS)/
 	docker cp $$(docker create --rm tokenizer_build_image:latest):/custom_nodes/tokenizer/build/src/libtokenizer.so ./lib/$(BASE_OS)/

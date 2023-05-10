@@ -116,8 +116,19 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     //  INFERENCE
     //////////////////
     OVMS_InferenceResponse* response = nullptr;
-    if (nullptr != OVMS_Inference(cserver, request, &response)) {
-        MLOG("Inference failed!");
+    InferenceOutput output;
+    OVMS_Status* status = OVMS_Inference(cserver, request, &response);
+    if (nullptr != status) {
+        uint32_t code = 0;
+        const char* msg = nullptr;
+        OVMS_StatusGetCode(status, &code);
+        OVMS_StatusGetDetails(status, &msg);
+        std::stringstream ss;
+        ss << "Inference in OVMSAdapter failed:";
+        ss << msg << " code: " << code;
+        MLOG(ss.str());
+        OVMS_StatusDelete(status);
+        return output;
     }
     CREATE_GUARD(responseGuard, OVMS_InferenceResponse, response);
     // verify GetOutputCount
@@ -136,7 +147,6 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     OVMS_BufferType bufferType = (OVMS_BufferType)199;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
-    InferenceOutput output;
     for (size_t i = 0; i < outputCount; ++i) {
         OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
         output[outputName] = makeOvTensorO(datatype, shape, dimCount, voutputData, bytesize);  // TODO optimize FIXME

@@ -392,6 +392,20 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const cha
     if (!status.ok()) {
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API adding request input for servable: " << request->getServableName()
+           << " version: " << request->getServableVersion()
+           << " name: " << inputName
+           << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(datatype))
+           << " shape: [";
+        size_t i = 0;
+        for (i = 0; i < dimCount - 1; ++i) {
+            ss << shape[i] << ", ";
+        }
+        ss << shape[i] << "]";
+        SPDLOG_TRACE(ss.str());
+    }
     return nullptr;
 }
 
@@ -409,6 +423,15 @@ OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const
     auto status = request->setInputBuffer(inputName, data, bufferSize, bufferType, deviceId);
     if (!status.ok()) {
         return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API setting request input data for servable: " << request->getServableName()
+           << " version: " << request->getServableVersion()
+           << " name: " << inputName
+           << " bufferType: " << bufferType
+           << " deviceId: " << deviceId;
+        SPDLOG_TRACE(ss.str());
     }
     return nullptr;
 }
@@ -528,6 +551,23 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
     // possibly it is not neccessary to discriminate
     *data = buffer->data();
     *bytesize = buffer->getByteSize();
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API getting response output of servable: " << response->getServableName()
+           << " version: " << response->getServableVersion()
+           << " output id: " << id
+           << " name: " << *cppName
+           << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
+           << " shape: [";
+        size_t i = 0;
+        for (i = 0; i < *dimCount - 1; ++i) {
+            ss << (*shape)[i] << ", ";
+        }
+        ss << (*shape)[i] << "]"
+           << " bufferType: " << *bufferType
+           << " deviceId: " << *deviceId;
+        SPDLOG_TRACE(ss.str());
+    }
     return nullptr;
 }
 
