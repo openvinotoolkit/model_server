@@ -259,7 +259,6 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
-COPY MakefileCapi /ovms/
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
@@ -330,7 +329,9 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
 
 # C-api C/C++ app with gcc
-RUN make -f MakefileCapi cpp && make -f MakefileCapi c
+COPY MakefileCapi /ovms/
+RUN make -f MakefileCapi cpp BAZEL_DEBUG_FLAGS="${debug_bazel_flags}" && \
+    make -f MakefileCapi c BAZEL_DEBUG_FLAGS="${debug_bazel_flags}"
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
