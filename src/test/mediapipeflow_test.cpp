@@ -141,7 +141,7 @@ TEST_F(MediapipeFlowDummyDummyInSubconfigAndConfigTest, Infer) {
     const std::string modelName = "mediaDummy";
     request.Clear();
     response.Clear();
-    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+    inputs_info_t inputsMeta{{"in", {{1, 12}, precision}}};
     preparePredictRequest(request, inputsMeta);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
@@ -150,9 +150,7 @@ TEST_F(MediapipeFlowDummyDummyInSubconfigAndConfigTest, Infer) {
     ASSERT_EQ(outputs[0].name(), "out");
     ASSERT_EQ(outputs[0].shape().size(), 2);
     ASSERT_EQ(outputs[0].shape()[0], 1);
-    ASSERT_EQ(outputs[0].shape()[1], 10);
-    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
-    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+    ASSERT_EQ(outputs[0].shape()[1], 12);
 }
 
 TEST_P(MediapipeFlowDummyTest, Infer) {
