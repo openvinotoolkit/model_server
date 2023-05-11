@@ -788,7 +788,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
                 rapidjson::GetParseError_En(parseResult.Code()));
             return StatusCode::JSON_INVALID;
         }
-        if (validateJsonAgainstSchema(configJson, MEDIAPIPE_CONFIG_SCHEMA.c_str()) != StatusCode::OK) {
+        if (validateJsonAgainstSchema(configJson, MEDIAPIPE_SUBCONFIG_SCHEMA.c_str()) != StatusCode::OK) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe configuration file is not in valid configuration format");
             return StatusCode::JSON_INVALID;
         }
@@ -799,6 +799,9 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             return StatusCode::JSON_INVALID;
         }
         auto status = loadModels(mediapipeItr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs);
+        if (!status.ok())
+            return status;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Loading Mediapipe {} models from subconfig {} failed.", mediapipeConfig.getGraphName(), mediapipeConfig.getSubconfigPath());
     }
     this->servedModelConfigs = std::move(newModelConfigs);
     retireModelsRemovedFromConfigFile(modelsInConfigFile, modelsWithInvalidConfig);

@@ -421,7 +421,7 @@ const char* MODELS_MAPPING_SCHEMA = R"(
     "additionalProperties": false
 })";
 
-const std::string MEDIAPIPE_CONFIG_SCHEMA = R"({
+const std::string MEDIAPIPE_SUBCONFIG_SCHEMA = R"({
     "definitions": {)" + MODEL_CONFIG_DEFINITION +
                                             R"(},
 	"type": "object",

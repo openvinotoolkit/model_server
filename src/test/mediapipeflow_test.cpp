@@ -102,13 +102,13 @@ public:
     }
 };
 
-TEST_P(MediapipeFlowDummySeparateConfigTest, Infer) {
+TEST_F(MediapipeFlowDummySeparateConfigTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
 
-    const std::string modelName = GetParam();
+    const std::string modelName = "mediaDummy";
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
@@ -132,13 +132,13 @@ public:
     }
 };
 
-TEST_P(MediapipeFlowDummyDummyInSubconfigAndConfigTest, Infer) {
+TEST_F(MediapipeFlowDummyDummyInSubconfigAndConfigTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
 
-    const std::string modelName = GetParam();
+    const std::string modelName = "mediaDummy";
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
@@ -735,7 +735,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     const MediapipeFactory& factory = modelManager.getMediapipeFactory();
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
-    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getErrorCode(), ModelVersionStatusErrorCode::OK);
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -763,7 +763,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     modelManager.loadConfig(configFilePath);
     model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
-    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getErrorCode(), ModelVersionStatusErrorCode::OK);
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
     definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -787,13 +787,6 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     MediapipeFlowDummyTest,
-    ::testing::ValuesIn(mediaGraphsDummy),
-    [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
-        return info.param;
-    });
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    MediapipeFlowDummySeparateConfigTest,
     ::testing::ValuesIn(mediaGraphsDummy),
     [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
         return info.param;
