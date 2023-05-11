@@ -92,15 +92,6 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
         // TODO validate existence of tag key in map
         // or handle inference when there is no need for mapping
         const char* realInputName = name.c_str();
-
-        const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
-        std::stringstream ss;
-        ss << " Adapter received tensor: [ ";
-        for (int x = 0; x < 10; ++x) {
-            ss << input_tensor_access[x] << " ";
-        }
-        ss << " ]";
-        MLOG(ss.str());
         const auto& ovinputShape = input_tensor.get_shape();
         std::vector<int64_t> inputShape{ovinputShape.begin(), ovinputShape.end()};  // TODO error handling shape conversion
         OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
@@ -142,7 +133,6 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     // that we are not interested in all outputs from OVMS Inference
     const void* voutputData;
     size_t bytesize = 42;
-    uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
     const int64_t* shape{nullptr};
     size_t dimCount = 42;
@@ -150,7 +140,7 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
     for (size_t i = 0; i < outputCount; ++i) {
-        OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
+        OVMS_InferenceResponseGetOutput(response, i, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
         output[outputName] = makeOvTensorO(datatype, shape, dimCount, voutputData, bytesize);  // TODO optimize FIXME
     }
     return output;

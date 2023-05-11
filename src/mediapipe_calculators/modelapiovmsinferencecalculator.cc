@@ -124,7 +124,7 @@ public:
         InferenceInput input;
         InferenceOutput output;
         for (const std::string& tag : cc->Inputs().GetTags()) {
-            const char* realInputName;
+            const char* realInputName{nullptr};
             if (inputTagInputMap.size()) {
                 realInputName = inputTagInputMap.at(tag).c_str();
             } else {

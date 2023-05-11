@@ -504,12 +504,13 @@ static Status convertStringRequestFromBufferToOVTensor2D(const tensorflow::Tenso
     return StatusCode::NOT_IMPLEMENTED;
 }
 
+// done
 static Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
-    int batchSize = 0;
+    size_t batchSize = 0;
     size_t offset = 0;
     size_t maxStringLength = 0;
     while (offset + sizeof(uint32_t) <= buffer->size()) {
-        size_t inputSize = *((int32_t*)(buffer->data() + offset));
+        size_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + offset));
         offset += (sizeof(uint32_t) + inputSize);
         maxStringLength = std::max(maxStringLength, inputSize);
         batchSize++;
@@ -520,14 +521,15 @@ static Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::Inf
     }
     size_t width = maxStringLength + 1;
     offset = 0;
-    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(batchSize), width});
-    for (int i = 0; i < batchSize; i++) {
-        size_t inputSize = *((int32_t*)(buffer->data() + offset));
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{batchSize, width});
+    for (size_t i = 0; i < batchSize; i++) {
+        size_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + offset));
         offset += sizeof(uint32_t);
         auto data = tensor.data<unsigned char>() + i * width;
         std::memcpy(data, reinterpret_cast<const unsigned char*>(buffer->data() + offset), inputSize);
-        for (size_t j = inputSize; j < width; j++)
+        for (size_t j = inputSize; j < width; j++) {
             data[j] = 0;
+        }
         offset += inputSize;
     }
     return StatusCode::OK;
