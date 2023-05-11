@@ -92,6 +92,16 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
         // TODO validate existence of tag key in map
         // or handle inference when there is no need for mapping
         const char* realInputName = name.c_str();
+#ifdef 0
+        const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
+        std::stringstream ss;
+        ss << " Adapter received tensor: [ ";
+        for (int x = 0; x < 10; ++x) {
+            ss << input_tensor_access[x] << " ";
+        }
+        ss << " ]";
+        MLOG(ss.str());
+#endif
         const auto& ovinputShape = input_tensor.get_shape();
         std::vector<int64_t> inputShape{ovinputShape.begin(), ovinputShape.end()};  // TODO error handling shape conversion
         OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());

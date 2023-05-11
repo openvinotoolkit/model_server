@@ -125,10 +125,11 @@ public:
         InferenceOutput output;
         for (const std::string& tag : cc->Inputs().GetTags()) {
             const char* realInputName{nullptr};
-            if (inputTagInputMap.size()) {
-                realInputName = inputTagInputMap.at(tag).c_str();
-            } else {
+            auto it = inputTagInputMap.find(tag);
+            if (it == inputTagInputMap.end()) {
                 realInputName = tag.c_str();
+            } else {
+                realInputName = it->second.c_str();
             }
             auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
             input[realInputName] = packet;
@@ -148,29 +149,22 @@ public:
         output = session->infer(input);
         auto outputsCount = output.size();
         RET_CHECK(outputsCount == cc->Outputs().GetTags().size());
-        // TODO check for existence of each tag
-        if (outputNameToTag.size()) {
-            for (const auto& [outputName, outputTagName] : outputNameToTag) {
-                auto it = output.find(outputName);
-                if (it == output.end()) {
-                    // TODO
-                    throw 54;
-                }
-                ov::Tensor* outOvTensor = new ov::Tensor(it->second);
-                // TODO check buffer ownership
-                cc->Outputs().Tag(outputTagName).Add(outOvTensor, cc->InputTimestamp());
+        for (const auto& tag : cc->Outputs().GetTags()) {
+            std::string tensorName;
+            auto it = options.tag_to_output_tensor_names().find(tag);
+            if (it == options.tag_to_output_tensor_names().end()) {
+                tensorName = tag;
+            } else {
+                tensorName = it->second;
             }
-        } else {
-            for (const auto& name : cc->Outputs().GetTags()) {
-                auto it = output.find(name);
-                if (it == output.end()) {
-                    // TODO
-                    throw 54;
-                }
-                ov::Tensor* outOvTensor = new ov::Tensor(it->second);
-                // TODO check buffer ownership
-                cc->Outputs().Tag(name).Add(outOvTensor, cc->InputTimestamp());
+            auto tensorIt = output.find(tensorName);
+            if (tensorIt == output.end()) {
+                // TODO
+                throw 54;
             }
+            cc->Outputs().Tag(tag).Add(
+                new ov::Tensor(tensorIt->second),
+                cc->InputTimestamp());
         }
         MLOG("Main process end");
         return absl::OkStatus();
