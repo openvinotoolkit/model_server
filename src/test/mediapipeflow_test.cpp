@@ -718,7 +718,7 @@ TEST_F(MediapipeConfigChanges, AddImroperGraphThenFixWithReloadThenBreakAgain) {
     modelManager.loadConfig(configFilePath);
     definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
-    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
 }
 
@@ -751,7 +751,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
-    // now we add again
+    // now we add model to subconfig
     std::string subconfigFilePath = directoryPath + "/subconfig.json";
     configFileContent = configFileWithoutGraph;
     createConfigFileWithContent(configFileContent, subconfigFilePath);

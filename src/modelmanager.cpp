@@ -384,8 +384,6 @@ Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, con
     auto status = factory.reloadDefinition(config.getGraphName(),
         config,
         *this);
-    if (!status.ok())
-        return status;
     mediapipesInConfigFile.insert(config.getGraphName());
     return status;
 #else
@@ -922,6 +920,9 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
+    // handling mediapipe graph config is divided into two steps parsing and loading because 
+    // before loading mediapipe graph we need first to load models from it's subconfig together with
+    // models from ovms config
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
     status = parseMediapipeConfig(configJson, this->rootDirectoryPath, mediapipesInConfigFile);
     if (!status.ok()) {
