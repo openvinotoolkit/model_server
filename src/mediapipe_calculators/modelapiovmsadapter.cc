@@ -92,7 +92,7 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
         // TODO validate existence of tag key in map
         // or handle inference when there is no need for mapping
         const char* realInputName = name.c_str();
-#ifdef 0
+#if 0
         const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
         std::stringstream ss;
         ss << " Adapter received tensor: [ ";

@@ -133,6 +133,7 @@ public:
             }
             auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
             input[realInputName] = packet;
+#if 0
             ov::Tensor input_tensor(packet);
             const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
             std::stringstream ss;
@@ -142,6 +143,7 @@ public:
             }
             ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
             MLOG(ss.str());
+#endif
         }
         //////////////////
         //  INFERENCE
