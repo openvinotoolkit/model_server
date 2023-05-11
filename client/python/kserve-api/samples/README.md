@@ -329,9 +329,8 @@ Classification accuracy: 100.00
 
 ```Bash
 python3 grpc_infer_binary_resnet.py --help
-usage: grpc_infer_binary_resnet.py [-h] [--images_list IMAGES_LIST] [--labels_numpy_path LABELS_NUMPY_PATH] [--grpc_address GRPC_ADDRESS]
-                                   [--grpc_port GRPC_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--batchsize BATCHSIZE]
-                                   [--model_name MODEL_NAME] [--pipeline_name PIPELINE_NAME]
+usage: grpc_infer_binary_resnet.py [-h] [--images_list IMAGES_LIST] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--batchsize BATCHSIZE]
+                                   [--model_name MODEL_NAME] [--pipeline_name PIPELINE_NAME] [--tls]
 
 Sends requests via KServe gRPC API using images in format supported by OpenCV. It displays performance statistics and optionally the model accuracy
 
@@ -339,8 +338,6 @@ optional arguments:
   -h, --help            show this help message and exit
   --images_list IMAGES_LIST
                         path to a file with a list of labeled images
-  --labels_numpy_path LABELS_NUMPY_PATH
-                        numpy in shape [n,1] - can be used to check model accuracy
   --grpc_address GRPC_ADDRESS
                         Specify url to grpc service. default:localhost
   --grpc_port GRPC_PORT
@@ -355,6 +352,7 @@ optional arguments:
                         Define model name, must be same as is in service. default: resnet
   --pipeline_name PIPELINE_NAME
                         Define pipeline name, must be same as is in service
+  --tls                 use TLS communication with GRPC endpoint
 ```
 
 - Usage Example
@@ -794,9 +792,8 @@ Classification accuracy: 100.00
 
 ```Bash
 python3 ./http_infer_binary_resnet.py --help
-usage: http_infer_binary_resnet.py [-h] [--images_list IMAGES_LIST] [--labels_numpy_path LABELS_NUMPY_PATH] [--http_address HTTP_ADDRESS]
-                                   [--http_port HTTP_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--batchsize BATCHSIZE]
-                                   [--model_name MODEL_NAME] [--pipeline_name PIPELINE_NAME]
+usage: http_infer_binary_resnet.py [-h] [--images_list IMAGES_LIST] [--http_address HTTP_ADDRESS] [--http_port HTTP_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--batchsize BATCHSIZE]
+                                   [--model_name MODEL_NAME] [--pipeline_name PIPELINE_NAME] [--tls] [--server_cert SERVER_CERT] [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
 
 Sends requests via KServe REST API using binary encoded images. It displays performance statistics and optionally the model accuracy
 
@@ -804,8 +801,6 @@ optional arguments:
   -h, --help            show this help message and exit
   --images_list IMAGES_LIST
                         path to a file with a list of labeled images
-  --labels_numpy_path LABELS_NUMPY_PATH
-                        numpy in shape [n,1] - can be used to check model accuracy
   --http_address HTTP_ADDRESS
                         Specify url to http service. default:localhost
   --http_port HTTP_PORT
@@ -820,6 +815,13 @@ optional arguments:
                         Define model name, must be same as is in service. default: resnet
   --pipeline_name PIPELINE_NAME
                         Define pipeline name, must be same as is in service
+  --tls                 use TLS communication with HTTP endpoint
+  --server_cert SERVER_CERT
+                        Path to server certificate
+  --client_cert CLIENT_CERT
+                        Path to client certificate
+  --client_key CLIENT_KEY
+                        Path to client key
 ```
 
 - Usage Example
