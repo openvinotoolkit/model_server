@@ -920,7 +920,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
-    // handling mediapipe graph config is divided into two steps parsing and loading because 
+    // handling mediapipe graph config is divided into two steps parsing and loading because
     // before loading mediapipe graph we need first to load models from it's subconfig together with
     // models from ovms config
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
