@@ -423,7 +423,7 @@ const char* MODELS_MAPPING_SCHEMA = R"(
 
 const std::string MEDIAPIPE_SUBCONFIG_SCHEMA = R"({
     "definitions": {)" + MODEL_CONFIG_DEFINITION +
-                                            R"(},
+                                               R"(},
 	"type": "object",
 	"required": ["model_config_list"],
 	"properties": {
