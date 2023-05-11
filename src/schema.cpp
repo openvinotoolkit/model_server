@@ -189,9 +189,12 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
         },
     "mediapipe_config": {
         "type": "object",
-        "required": ["name", "graph_path"],
+        "required": ["name"],
         "properties": {
              "name": {
+                 "type": "string"
+             },
+			 "base_path": {
                  "type": "string"
              },
              "graph_path": {

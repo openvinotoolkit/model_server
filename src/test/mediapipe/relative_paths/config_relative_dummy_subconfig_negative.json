@@ -4,12 +4,12 @@
         {
             "name":"mediapipeAddADAPTFULL",
             "graph_path":"graph1/graphaddadapterfull.pbtxt",
-            "subconfig":"graph1/config.json"
+            "subconfig":"graph3/subconfig.json"
         },
         {
             "name":"mediapipeAddADAPT",
             "graph_path":"graph2/graphadd.pbtxt",
-            "subconfig":"graph2/config.json"
+            "subconfig":"graph4/subconfig.json"
         }
     ]
 }

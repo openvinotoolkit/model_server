@@ -1,0 +1,13 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+        {
+            "name":"graphaddadapterfull",
+            "base_path":"graph1"
+        },
+        {
+            "name":"graphadd",
+            "base_path":"graph2"
+        }
+    ]
+}
