@@ -427,7 +427,7 @@ void assertStringResponse(const tensorflow::serving::PredictResponse& proto, con
 void assertStringResponse(const ::KFSResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName) {
     ASSERT_EQ(proto.outputs_size(), 1);
     ASSERT_EQ(proto.outputs(0).name(), outputName);
-    ASSERT_EQ(proto.outputs(0).datatype(), "UINT8");
+    ASSERT_EQ(proto.outputs(0).datatype(), "BYTES");
     ASSERT_EQ(proto.outputs(0).shape_size(), 2);
     ASSERT_EQ(proto.outputs(0).shape(0), expectedStrings.size());
     size_t pad_size = 0;

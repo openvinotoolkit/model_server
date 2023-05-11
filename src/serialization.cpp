@@ -85,6 +85,10 @@ static Status serializePrecision(
     case ovms::Precision::U32:
     case ovms::Precision::U16:
     case ovms::Precision::U8:
+        if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+            responseOutput.set_datatype("BYTES");
+            break;
+        }
     case ovms::Precision::BOOL:
         responseOutput.set_datatype(ovmsPrecisionToKFSPrecision(servableOutput->getPrecision()));
         break;
