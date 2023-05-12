@@ -26,7 +26,7 @@
 namespace mediapipe {
 namespace ovms {
 
-AdapterWrapper::AdapterWrapper(OVMSInferenceAdapter* adapter) :
+AdapterWrapper::AdapterWrapper(::InferenceAdapter* adapter) :
     adapter(adapter) {
     LOG(ERROR) << "Wrapper constr";
 }
