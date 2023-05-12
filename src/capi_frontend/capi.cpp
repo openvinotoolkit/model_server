@@ -717,7 +717,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
         if (modelInstance) {
             //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
         }
-        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
+        SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
     // fix execution context and metrics
