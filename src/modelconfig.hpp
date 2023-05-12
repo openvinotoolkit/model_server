@@ -310,18 +310,7 @@ public:
          * @param basePath 
          */
     void setBasePath(const std::string& basePath) {
-        if (!FileSystem::isLocalFilesystem(basePath)) {
-            // Cloud filesystem
-            this->basePath = basePath;
-        } else if (basePath.at(0) == '/') {
-            // Full path case
-            this->basePath = basePath;
-        } else {
-            // Relative path case
-            if (this->rootDirectoryPath.empty())
-                throw std::logic_error("Using model relative path without setting configuration directory path.");
-            this->basePath = this->rootDirectoryPath + basePath;
-        }
+        FileSystem::setPath(this->basePath, basePath, this->rootDirectoryPath);
     }
 
     /**

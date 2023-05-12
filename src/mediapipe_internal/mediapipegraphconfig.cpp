@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,18 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include "mediapipegraphconfig.hpp"
 
-#include <string>
-
-#include <rapidjson/schema.h>
-
-#include "status.hpp"
+#include "../filesystem.hpp"
 
 namespace ovms {
-extern const std::string MODELS_CONFIG_SCHEMA;
-extern const char* MODELS_MAPPING_SCHEMA;
-extern const std::string MEDIAPIPE_SUBCONFIG_SCHEMA;
 
-StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema);
+void MediapipeGraphConfig::setGraphPath(const std::string& graphPath) {
+    FileSystem::setPath(this->graphPath, graphPath, this->rootDirectoryPath);
+}
+
+void MediapipeGraphConfig::setSubconfigPath(const std::string& subconfigPath) {
+    FileSystem::setPath(this->subconfigPath, subconfigPath, this->rootDirectoryPath);
+}
+
 }  // namespace ovms

@@ -476,7 +476,7 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMatchingSchema) {
 
     rapidjson::Document customloaderConfigMatchingSchemaParsed;
     customloaderConfigMatchingSchemaParsed.Parse(customloaderConfigMatchingSchema);
-    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMatchingSchemaParsed, ovms::MODELS_CONFIG_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMatchingSchemaParsed, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
@@ -497,7 +497,7 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMissingLoaderName) {
 
     rapidjson::Document customloaderConfigMissingLoaderNameParsed;
     customloaderConfigMissingLoaderNameParsed.Parse(customloaderConfigMissingLoaderName);
-    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderNameParsed, ovms::MODELS_CONFIG_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderNameParsed, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -518,7 +518,7 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMissingLibraryPath) {
 
     rapidjson::Document customloaderConfigMissingLibraryPathParsed;
     customloaderConfigMissingLibraryPathParsed.Parse(customloaderConfigMissingLibraryPath);
-    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLibraryPathParsed, ovms::MODELS_CONFIG_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLibraryPathParsed, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -539,7 +539,7 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMissingLoaderConfig) {
 
     rapidjson::Document customloaderConfigMissingLoaderConfigParsed;
     customloaderConfigMissingLoaderConfigParsed.Parse(customloaderConfigMissingLoaderConfig);
-    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderConfigParsed, ovms::MODELS_CONFIG_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderConfigParsed, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
@@ -560,7 +560,7 @@ TEST_F(TestCustomLoader, CustomLoaderConfigInvalidCustomLoaderConfig) {
 
     rapidjson::Document customloaderConfigInvalidCustomLoaderConfigParsed;
     customloaderConfigInvalidCustomLoaderConfigParsed.Parse(customloaderConfigInvalidCustomLoaderConfig);
-    auto result = ovms::validateJsonAgainstSchema(customloaderConfigInvalidCustomLoaderConfigParsed, ovms::MODELS_CONFIG_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigInvalidCustomLoaderConfigParsed, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -581,7 +581,7 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMissingLoaderNameInCustomLoaderOption
 
     rapidjson::Document customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed;
     customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed.Parse(customloaderConfigMissingLoaderNameInCustomLoaderOptions);
-    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed, ovms::MODELS_CONFIG_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMissingLoaderNameInCustomLoaderOptionsParsed, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
@@ -602,7 +602,7 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptio
 
     rapidjson::Document customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed;
     customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed.Parse(customloaderConfigMultiplePropertiesInCustomLoaderOptions);
-    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed, ovms::MODELS_CONFIG_SCHEMA);
+    auto result = ovms::validateJsonAgainstSchema(customloaderConfigMultiplePropertiesInCustomLoaderOptionsParsed, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 

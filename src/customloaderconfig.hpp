@@ -108,18 +108,7 @@ public:
          * @param libraryPath
          */
     void setLibraryPath(const std::string& libraryPath) {
-        if (!FileSystem::isLocalFilesystem(libraryPath)) {
-            // Cloud filesystem
-            this->libraryPath = libraryPath;
-        } else if (libraryPath.at(0) == '/') {
-            // Full path case
-            this->libraryPath = libraryPath;
-        } else {
-            // Relative path case
-            if (this->rootDirectoryPath.empty())
-                throw std::logic_error("Using library relative path without setting configuration directory path.");
-            this->libraryPath = this->rootDirectoryPath + libraryPath;
-        }
+        FileSystem::setPath(this->libraryPath, libraryPath, this->rootDirectoryPath);
     }
 
     /**

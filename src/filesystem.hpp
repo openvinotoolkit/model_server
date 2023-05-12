@@ -173,6 +173,21 @@ public:
         return true;
     }
 
+    static void setPath(std::string& path, const std::string& givenPath, const std::string& rootDirectoryPath) {
+        if (!FileSystem::isLocalFilesystem(givenPath)) {
+            // Cloud filesystem
+            path = givenPath;
+        } else if (givenPath.at(0) == '/') {
+            // Full path case
+            path = givenPath;
+        } else {
+            // Relative path case
+            if (rootDirectoryPath.empty())
+                throw std::logic_error("Using relative path without setting graph directory path.");
+            path = rootDirectoryPath + givenPath;
+        }
+    }
+
     std::string appendSlash(const std::string& name) {
         if (name.empty() || (name.back() == '/')) {
             return name;

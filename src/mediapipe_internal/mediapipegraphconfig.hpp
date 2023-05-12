@@ -23,7 +23,6 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
-#include "../filesystem.hpp"
 #include "../status.hpp"
 
 namespace ovms {
@@ -53,6 +52,11 @@ private:
          */
     std::string rootDirectoryPath;
 
+    /**
+     * @brief Json config path
+     */
+    std::string subconfigPath;
+
 public:
     /**
          * @brief Construct a new Mediapie Graph configuration object
@@ -60,13 +64,16 @@ public:
          * @param name
          * @param graphPath
          * @param graphPath
+         * @param subconfigPath
          */
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& graphPath = "",
-        const bool passKfsRequest = false) :
+        const bool passKfsRequest = false,
+        const std::string& subconfigPath = "") :
         graphName(graphName),
         graphPath(graphPath),
-        passKfsRequest(passKfsRequest) {
+        passKfsRequest(passKfsRequest),
+        subconfigPath(subconfigPath) {
     }
 
     void clear() {
@@ -107,22 +114,23 @@ public:
          *
          * @param graphPath
          */
-    void setGraphPath(const std::string& graphPath) {
-        this->graphPath = graphPath;
+    void setGraphPath(const std::string& graphPath);
 
-        if (!FileSystem::isLocalFilesystem(graphPath)) {
-            // Cloud filesystem
-            this->graphPath = graphPath;
-        } else if (graphPath.at(0) == '/') {
-            // Full path case
-            this->graphPath = graphPath;
-        } else {
-            // Relative path case
-            if (this->rootDirectoryPath.empty())
-                throw std::logic_error("Using graph relative path without setting configuration directory path.");
-            this->graphPath = this->rootDirectoryPath + graphPath;
-        }
+    /**
+         * @brief Get the ModelsConfig Path
+         *
+         * @return const std::string&
+         */
+    const std::string& getSubconfigPath() const {
+        return this->subconfigPath;
     }
+
+    /**
+         * @brief Set the Models Config Path
+         *
+         * @param subconfigPath
+         */
+    void setSubconfigPath(const std::string& subconfigPath);
 
     /**
          * @brief Set root directory path
@@ -136,16 +144,16 @@ public:
     /**
          * @brief Get the passKfsRequest
          *
-         * @return const std::string&
+         * @return const bool
          */
     const bool getPassKfsRequestFlag() const {
         return this->passKfsRequest;
     }
 
     /**
-         * @brief Set the Config Path
+         * @brief Set the PassKfsRequestFlag
          *
-         * @param configPath
+         * @param passKfsRequest
          */
     void setPassKfsRequestFlag(const bool passKfsRequest) {
         this->passKfsRequest = passKfsRequest;
@@ -164,6 +172,9 @@ public:
                 this->setPassKfsRequestFlag(v["graph_pass_kfs_request"].GetBool());
             else
                 this->setPassKfsRequestFlag(false);
+            if (v.HasMember("subconfig")) {
+                this->setSubconfigPath(v["subconfig"].GetString());
+            }
         } catch (std::logic_error& e) {
             SPDLOG_DEBUG("Relative path error: {}", e.what());
             return StatusCode::INTERNAL_ERROR;

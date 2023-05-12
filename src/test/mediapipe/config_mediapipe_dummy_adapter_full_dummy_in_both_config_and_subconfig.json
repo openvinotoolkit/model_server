@@ -1,0 +1,22 @@
+{
+    "model_config_list": [
+        {"config": {
+            "name": "dummy",
+            "base_path": "/ovms/src/test/dummy",
+            "shape": "(1, 12)"
+    }
+    }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediaDummyADAPTFULL",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull.pbtxt",
+        "subconfig":"/ovms/src/test/mediapipe/config_standard_dummy.json"
+    },
+    {
+        "name":"mediaDummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummy.pbtxt",
+        "subconfig":"/ovms/src/test/mediapipe/config_standard_dummy.json"
+    }
+    ]
+}
