@@ -188,8 +188,8 @@ StateKeeper RetiredState::handle(const RetireEvent& e) const {
     return {};
 }
 
-PipelineDefinitionStatus::PipelineDefinitionStatus(const std::string& name) :
-    MachineState(name) {}
+PipelineDefinitionStatus::PipelineDefinitionStatus(const std::string& type, const std::string& name) :
+    MachineState(type, name) {}
 bool PipelineDefinitionStatus::isAvailable() const {
     auto state = getStateCode();
     return (state == PipelineDefinitionStateCode::AVAILABLE) ||

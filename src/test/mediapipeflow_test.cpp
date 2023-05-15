@@ -652,7 +652,7 @@ node {
 }
 )";
 
-TEST_F(MediapipeConfigChanges, AddProperGraphThenRetire) {
+TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     std::string configFileContent = configFileWithGraphPathToReplace;
     std::string configFilePath = directoryPath + "/config.json";
     std::string graphFilePath = directoryPath + "/graph.pbtxt";
@@ -674,7 +674,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenRetire) {
     definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
-    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE);
     // now we add again
     configFileContent = configFileWithGraphPathToReplace;
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);

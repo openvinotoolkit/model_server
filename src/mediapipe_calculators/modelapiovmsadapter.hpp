@@ -62,7 +62,7 @@ public:
     ov::Shape getInputShape(const std::string& inputName) const override;
     std::vector<std::string> getInputNames() const override;
     std::vector<std::string> getOutputNames() const override;
-    const ov::AnyMap& getModelConfig() const override;  // TODO
+    const ov::AnyMap& getModelConfig() const override;
 };
 }  // namespace ovms
 }  // namespace mediapipe

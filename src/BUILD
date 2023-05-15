@@ -783,6 +783,7 @@ cc_test(
         "test/c_api/config_dummy_dynamic_entry_dag.json",
         "test/c_api/config_metadata_all.json",
         "test/c_api/config_standard_dummy.json",
+        "test/configs/emptyConfig.json",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
         "test/dummy_fp64/1/saved_model.xml",

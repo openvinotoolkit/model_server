@@ -17,6 +17,7 @@
 #include <sstream>
 #include <unordered_map>
 
+#include <adapters/inference_adapter.h>  // TODO fix path  model_api/model_api/cpp/adapters/include/adapters/inference_adapter.h
 #include <openvino/openvino.hpp>
 
 #include "../ovms.h"           // NOLINT

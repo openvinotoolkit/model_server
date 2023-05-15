@@ -1,6 +1,5 @@
-
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,17 +23,22 @@
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../get_model_metadata_impl.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#endif
 #include "../model_service.hpp"
 #include "../modelconfig.hpp"
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../servablemanagermodule.hpp"
+#include "../server.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
+#include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -1014,7 +1018,6 @@ const std::string basicMediapipeConfig = R"({
     ]
 })";
 
-
 const std::string basicMediapipeConfigWithAddedGraph = R"({
     "model_config_list": [
         {"config": {
@@ -1035,14 +1038,68 @@ const std::string basicMediapipeConfigWithAddedGraph = R"({
     ]
 })";
 
-template<typename Request, typename Response>
+const std::string basicMediapipeConfigWithRemovedGraph = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    ]
+})";
+
+const std::string basicMediapipeConfigWithRemovedModel = R"({
+    "model_config_list": [
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt"
+    }
+    ]
+})";
+
+const std::string basicMediapipeConfigWithReloadedModel = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "nireq": 47
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt"
+    }
+    ]
+})";
+
+const std::string basicMediapipeConfigWithNewGraphPath = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames2.pbtxt"
+    }
+    ]
+})";
+#if (MEDIAPIPE_DISABLE == 0)
+template <typename Request, typename Response>
 void mediaexec(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
-        SPDLOG_ERROR("DUPAAASD:{} {} {}", typeid(KFSRequest).name(), typeid(KFSRequest*).name(), typeid(Request).name());
     throw std::string("Unsupported");
 }
-template<>
+template <>
 void mediaexec<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
-        SPDLOG_ERROR("DUPA");
     ServableMetricReporter* ptr{nullptr};
     status = executorPtr->infer(&request,
         &response,
@@ -1051,22 +1108,22 @@ void mediaexec<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>&
             ovms::ExecutionContext::Method::Predict),
         ptr);
 }
-template<typename Request, typename Response>
+template <typename Request, typename Response>
 void mediacreate(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
-        SPDLOG_ERROR("DUPAAASD:{} {} {}", typeid(KFSRequest).name(), typeid(KFSRequest*).name(), typeid(Request).name());
     throw std::string("Unsupported");
 }
-template<>
+template <>
 void mediacreate<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
-    SPDLOG_ERROR("DUPA:{}", request.model_name());
     status = manager.createPipeline(executorPtr, request.model_name(), &request, &response);
 }
-
+#endif
 class StressPipelineConfigChanges : public TestWithTempDir {
 protected:
-    const uint loadThreadCount = 1; //XYZ
+    const uint loadThreadCount = 20;
     const uint beforeConfigChangeLoadTimeMs = 30;
     const uint afterConfigChangeLoadTimeMs = 50;
+    // need to increase StressPipelineConfigChanges.AddedNewPipelineDuringPredictLoad
+    // investigate if config reload is much slower now
     const int stressIterationsLimit = 5000;
 
     std::string configFilePath;
@@ -1080,7 +1137,7 @@ protected:
     // producess highest results
     const std::vector<float> requestData{1.1, 2., 3., 7., 5., 6., 4., 9., 10., 8.};
 
-    ConstructorEnabledModelManager manager;
+    ModelManager* manager;
 
 public:
     virtual std::string getServableName() {
@@ -1095,14 +1152,44 @@ public:
         }
         configFilePath = directoryPath + "/ovms_config.json";
     }
-    void SetUp() override {
+    // we setup the OVMS so that it does not have any models loaded but also prepare the fixture to have ovmsConfig & configFilePath set up
+    void SetUpServerInstance(const std::string& initialConfigContent) {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
-        int arg_count = 5;
-        ovms::Config::instance().parse(arg_count, n_argv);
+        std::string port = "9178";
+        std::string restPort = "9178";
         modelPath = directoryPath + "/dummy/";
-        SetUpConfig(createStressTestPipelineOneDummyConfig());
+        SetUpConfig(initialConfigContent);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+
+        OVMS_ServerSettings* serverSettings = nullptr;
+        OVMS_ModelsSettings* modelsSettings = nullptr;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+        randomizePorts(port, restPort);
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));  // required for metrics
+        // ideally we would want to have emptyConfig
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/emptyConfig.json"));  // FIXME the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(serverSettings, 0));                           // set to 0 to reload only through test and avoid races
+        OVMS_Server* cserver;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
+        ovms::Server& server = ovms::Server::instance();
+        manager = &(dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
+    }
+    void SetUp() override {
+        SetUpServerInstance(createStressTestPipelineOneDummyConfig());
+    }
+    void TearDown() override {
+        OVMS_Server* cserver;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+        ovms::Server& server = ovms::Server::instance();
+        manager->join();
+        server.setShutdownRequest(1);
+        OVMS_ServerDelete(cserver);
+        server.setShutdownRequest(0);
     }
     void defaultVersionRemove() {
         SPDLOG_INFO("{} start", __FUNCTION__);
@@ -1198,6 +1285,30 @@ public:
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
+    void removeMediapipeGraph() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeConfigWithRemovedGraph);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void removeMediapipeGraphUsedModel() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeConfigWithRemovedModel);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void reloadMediapipeGraphUsedModel() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeConfigWithReloadedModel);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void reloadMediapipeGraph() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeConfigWithNewGraphPath);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
     void checkMetricGreaterThan(const std::string& metricName, double value, std::string& metricOutput, bool& result) {
         ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric\n"
                                                                                                                      << metricOutput;
@@ -1221,7 +1332,7 @@ public:
                       << metricOutput;
     }
     void checkActiveNireqSmallerThanTotal() {
-        std::string metricOutput = manager.getMetricRegistry()->collect();
+        std::string metricOutput = manager->getMetricRegistry()->collect();
         std::regex findNireqTotalRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::regex findNireqActiveRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_ACTIVE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
@@ -1240,7 +1351,7 @@ public:
         bool current_requests_pass = false, infer_req_active_pass = false;
         int retries = 3;
         for (int i = 0; i < retries; i++) {
-            std::string metricOutput = manager.getMetricRegistry()->collect();
+            std::string metricOutput = manager->getMetricRegistry()->collect();
             checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0, metricOutput, current_requests_pass);
             checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0, metricOutput, infer_req_active_pass);
             if (current_requests_pass && infer_req_active_pass)
@@ -1264,7 +1375,7 @@ public:
         std::set<StatusCode> requiredLoadResults,
         std::set<StatusCode> allowedLoadResults) {
         createConfigFileWithContent(ovmsConfig, configFilePath);
-        auto status = manager.loadConfig(configFilePath);
+        auto status = manager->loadConfig(configFilePath);
         ASSERT_TRUE(status.ok());
 
         // setup helper variables for managing threads
@@ -1298,7 +1409,7 @@ public:
                     i]() {
                     ((*this).*triggerLoadInALoop)(futureStartSignals[i],
                         futureStopSignals[i],
-                        this->manager,
+                        *(this->manager),
                         requiredLoadResults,
                         allowedLoadResults,
                         createPipelineRetCodesCounters);
@@ -1310,9 +1421,9 @@ public:
         std::this_thread::sleep_for(std::chrono::milliseconds(beforeConfigChangeLoadTimeMs));
         ((*this).*configChangeOperation)();
         if (reloadWholeConfig) {
-            manager.loadConfig(configFilePath);
+            manager->loadConfig(configFilePath);
         } else {
-            manager.updateConfigurationWithoutConfigFile();
+            manager->updateConfigurationWithoutConfigFile();
         }
         // wait to work strictly on config operations after change
         std::this_thread::sleep_for(std::chrono::milliseconds(afterConfigChangeLoadTimeMs));
@@ -1333,7 +1444,7 @@ public:
                                                                                       << " was not allowed in test but occured during load";
         }
     }
-    bool isMetadataResponseCorrect(tensorflow::serving::GetModelMetadataResponse& response) {
+    bool isMetadataResponseCorrect(tensorflow::serving::GetModelMetadataResponse& response, bool isMediapipe) {
         tensorflow::serving::SignatureDefMap def;
         EXPECT_EQ(response.model_spec().name(), pipelineName);
         EXPECT_TRUE(response.model_spec().has_version());
@@ -1366,17 +1477,32 @@ public:
             if (!inputNameCorrect) {
                 return false;
             }
-            bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
-            EXPECT_TRUE(inputTypeCorrect);
-            if (!inputTypeCorrect) {
-                return false;
-            }
-            bool inputShapeCorrect{isShapeTheSame(
-                inputs.at(pipelineInputName.c_str()).tensor_shape(),
-                {1, 10})};
-            EXPECT_TRUE(inputShapeCorrect);
-            if (!inputShapeCorrect) {
-                return false;
+            if (!isMediapipe) {
+                bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
+                EXPECT_TRUE(inputTypeCorrect);
+                if (!inputTypeCorrect) {
+                    return false;
+                }
+                bool inputShapeCorrect{isShapeTheSame(
+                    inputs.at(pipelineInputName.c_str()).tensor_shape(),
+                    {1, 10})};
+                EXPECT_TRUE(inputShapeCorrect);
+                if (!inputShapeCorrect) {
+                    return false;
+                }
+            } else {
+                bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
+                EXPECT_TRUE(inputTypeCorrect);
+                if (!inputTypeCorrect) {
+                    return false;
+                }
+                bool inputShapeCorrect{isShapeTheSame(
+                    inputs.at(pipelineInputName.c_str()).tensor_shape(),
+                    {})};
+                EXPECT_TRUE(inputShapeCorrect);
+                if (!inputShapeCorrect) {
+                    return false;
+                }
             }
         }
         bool outputNameExist{outputs.find(pipelineOutputName.c_str()) != outputs.end()};
@@ -1403,6 +1529,10 @@ public:
         }
         return true;
     }
+    template <
+        typename RequestType = tensorflow::serving::GetModelMetadataRequest,
+        typename ResponseType = tensorflow::serving::GetModelMetadataResponse,
+        typename ServableType = ovms::Pipeline>
     void triggerGetPipelineMetadataInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
@@ -1431,7 +1561,13 @@ public:
                 continue;
             }
             // Check response if correct
-            EXPECT_TRUE(isMetadataResponseCorrect(response));
+            bool isMediapipe = false;
+#if (MEDIAPIPE_DISABLE == 0)
+            if (typeid(ServableType) == typeid(MediapipeGraphExecutor)) {
+                isMediapipe = true;
+            }
+#endif
+            EXPECT_TRUE(isMetadataResponseCorrect(response, isMediapipe));
             if (::testing::Test::HasFailure()) {
                 SPDLOG_INFO("Earlier fail detected. Stopping execution");
                 break;
@@ -1501,10 +1637,8 @@ public:
         KFSResponse& response) {
         checkDummyResponse(pipelineOutputName, requestData, request, response, 1, 1, pipelineName);
     }
-    
 
-
-    template<typename RequestType, typename ResponseType, typename ServableType = ovms::Pipeline>
+    template <typename RequestType, typename ResponseType, typename ServableType = ovms::Pipeline>
     void triggerPredictInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
@@ -1522,15 +1656,19 @@ public:
                 break;
             }
             std::unique_ptr<Pipeline> pipelinePtr;
+#if (MEDIAPIPE_DISABLE == 0)
             std::shared_ptr<MediapipeGraphExecutor> executorPtr;
+#endif
             ResponseType response;
-            RequestType request2;
-            RequestType request = preparePipelinePredictRequest(request);
+            RequestType request2;  // DIRTY HACK WARNING
+            RequestType request = preparePipelinePredictRequest(request2);
             ovms::Status createPipelineStatus = StatusCode::UNKNOWN_ERROR;
             if (typeid(ServableType) == typeid(ovms::Pipeline)) {
                 createPipelineStatus = manager.createPipeline(pipelinePtr, pipelineName, &request, &response);
-            } else if(typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
+#if (MEDIAPIPE_DISABLE == 0)
+            } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
                 mediacreate(executorPtr, manager, request, response, createPipelineStatus);
+#endif
             }
             // we need to make sure that expected status happened and still accept
             // some that could happen but we may not hit them
@@ -1547,8 +1685,10 @@ public:
                 executePipelineStatus = pipelinePtr->execute(ovms::ExecutionContext(
                     ovms::ExecutionContext::Interface::GRPC,
                     ovms::ExecutionContext::Method::Predict));
-            } else if(typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
+#if (MEDIAPIPE_DISABLE == 0)
+            } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
                 mediaexec(executorPtr, manager, request, response, executePipelineStatus);
+#endif
             }
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(executePipelineStatus.getCode()) != requiredLoadResults.end()) ||
@@ -1574,7 +1714,7 @@ public:
     }
 };
 
-static const char* initialClearConfig = R"(
+static const std::string initialClearConfig = R"(
 {
     "model_config_list": [
     ]
@@ -1590,10 +1730,7 @@ public:
         return modelName;
     }
     void SetUp() override {
-        TestWithTempDir::SetUp();
-        modelPath = directoryPath + "/dummy/";
-        SetUpConfig(initialClearConfig);
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        SetUpServerInstance(initialClearConfig);
     }
 };
 
@@ -2036,7 +2173,7 @@ TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
         allowedLoadResults);
 }
 
-
+#if (MEDIAPIPE_DISABLE == 0)
 class StressMediapipeChanges : public StressPipelineConfigChanges {
     const std::string modelName = "dummy";
     const std::string modelInputName = "b";
@@ -2047,21 +2184,12 @@ public:
         return modelName;
     }
     void SetUp() override {
-        TestWithTempDir::SetUp();
-        modelPath = directoryPath + "/dummy/";
-        SetUpConfig(basicMediapipeConfig);
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
-
-        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
-        auto it = ovmsConfig.find(modelPathToReplace);
-        if (it != std::string::npos) {
-            ovmsConfig.replace(it, modelPathToReplace.size(), modelPath);
-        }
+        SetUpServerInstance(createStressTestPipelineOneDummyConfig());
     }
 };
 TEST_F(StressMediapipeChanges, AddGraphDuringPredictLoad) {
-    // we change used PARAM during load. This change does not effect results, but should be enough to verify
-    // correctness of this operation - no segfaults etc.
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {};
@@ -2072,11 +2200,133 @@ TEST_F(StressMediapipeChanges, AddGraphDuringPredictLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
-//addNewMediapipeGraph
-// TODO
-// -> add new mediapipe
-// -> remove mediapipe
-// -> reload mediapipe
-// -> remove model used in graph
-// -> reload model used in graph
-//
+TEST_F(StressMediapipeChanges, RemoveGraphDuringPredictLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};     // we expect to stop creating pipelines
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::removeMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveModelDuringPredictLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::MEDIAPIPE_EXECUTION_ERROR};                  // we expect to stop creating pipelines
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::removeMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadModelDuringPredictLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::reloadMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringPredictLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::reloadMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+// TODO status
+// TODO metadata
+/*
+TEST_F(StressMediapipeChanges, AddGraphDuringMetadataLoad) {
+    // we add another definition during load
+    GTEST_SKIP();
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop<ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::addNewMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveGraphDuringMetadataLoad) {
+    GTEST_SKIP();
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};     // we expect to stop creating pipelines
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop<ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::removeMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveModelDuringMetadataLoad) {
+    GTEST_SKIP();
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::MEDIAPIPE_EXECUTION_ERROR};                  // we expect to stop creating pipelines
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop<ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::removeMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadModelDuringMetadataLoad) {
+    // we change nireq during load
+    GTEST_SKIP();
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop<ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::reloadMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringMetadataLoad) {
+    GTEST_SKIP();
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop<ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::reloadMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}*/
+#endif

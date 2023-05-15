@@ -42,20 +42,22 @@ const std::string& pipelineDefinitionStateCodeToString(PipelineDefinitionStateCo
 template <typename... States>
 class MachineState {
 public:
-    MachineState(const std::string& name) :
+    MachineState(const std::string& type, const std::string& name) :
+        type(type),
         name(name) {}
     template <typename Event>
     void handle(const Event& event) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} state: {} handling: {}: {}",
-            name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "{}: {} state: {} handling: {}: {}",
+            type, name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
         try {
             std::visit([this, &event](auto state) { state->handle(event).execute(*this); }, currentState);
         } catch (std::logic_error& le) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} state: {} handling: {} error: {}", name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, le.what());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}: {} state: {} handling: {} error: {}",
+                type, name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, le.what());
             throw;
         }
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} state changed to: {} after handling: {}: {}",
-            name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "{}: {} state changed to: {} after handling: {}: {}",
+            type, name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
     }
 
     template <typename State>
@@ -73,6 +75,7 @@ public:
     }
 
 private:
+    const std::string type;
     const std::string& name;
     std::tuple<States...> allPossibleStates;
     std::variant<States*...> currentState{&std::get<0>(allPossibleStates)};
@@ -216,7 +219,7 @@ struct RetiredState {
 
 class PipelineDefinitionStatus : public MachineState<BeginState, ReloadState, AvailableState, AvailableRequiredRevalidation, LoadingPreconditionFailedState, LoadingFailedLastValidationRequiredRevalidation, RetiredState> {
 public:
-    PipelineDefinitionStatus(const std::string& name);
+    PipelineDefinitionStatus(const std::string& type, const std::string& name);
     bool isAvailable() const;
     bool canEndLoaded() const;
     bool isRevalidationRequired() const;

@@ -34,6 +34,7 @@ public:
         currentOutputQueueSize(currentOutputQueueSize),
         currentInfoQueueSize(currentInfoQueueSize) {
     }
+    ~AddOneInternalManager() {}
     int getOutputSize() {
         return outputSize;
     }
