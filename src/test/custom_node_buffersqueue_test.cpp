@@ -51,10 +51,15 @@ TEST(CustomNodeBuffersQueue, GetAllBuffers) {
     }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 static void getBufferAndReturn(BuffersQueue& buffersQueue) {
     void* buffer = buffersQueue.getBuffer();
     ASSERT_NE(nullptr, buffer) << "Failed to get buffer";
 }
+
+#pragma GCC diagnostic pop
 
 TEST(CustomNodeBuffersQueue, GetAllBuffersThenNullptrForNextRequest) {
     const std::string content{"abc"};
