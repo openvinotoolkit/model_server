@@ -116,11 +116,12 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
 
-RUN apt update && apt-get install -y software-properties-common --no-install-recommends && \
+RUN apt-get update && apt-get install -y software-properties-common --no-install-recommends && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt-get  install -y python3.8 python3.8-dev python3.8-distutils python3-pip --no-install-recommends && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
-    python3 -m pip install numpy==1.21.0
+    python3 -m pip install numpy==1.21.0 --no-cache-dir
 
 ARG JOBS
 ARG ov_use_binary=1
