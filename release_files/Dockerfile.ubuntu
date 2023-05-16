@@ -142,6 +142,15 @@ RUN	apt-get update -y ; \
                         apt-get purge gpg gpg-agent --yes && apt-get --yes autoremove && \
                         apt-get clean ; \
                         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
+                ;; \                        
+                "23.05.25593") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/libigdgmm12_22.3.0_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13230.7/intel-igc-core_1.0.13230.7_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13230.7/intel-igc-opencl_1.0.13230.7_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/intel-opencl-icd_23.05.25593.11_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/intel-level-zero-gpu_1.3.25593.11_amd64.deb ; \
+                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \                
                 *) \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
