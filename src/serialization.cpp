@@ -145,6 +145,10 @@ static Status serializeShape(
             servableOutput->getName(), effectiveNetworkOutputShape.size(), actualTensorShape.size());
         return StatusCode::INTERNAL_ERROR;
     }
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+        responseOutput.add_shape(tensor.get_shape()[0]);
+        return StatusCode::OK;
+    }
     for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
         dimension_value_t dim = actualTensorShape[i];
         if (!effectiveNetworkOutputShape[i].match(dim)) {
@@ -153,10 +157,6 @@ static Status serializeShape(
             return StatusCode::INTERNAL_ERROR;
         }
         responseOutput.add_shape(dim);
-    }
-    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
-        responseOutput.clear_shape();
-        responseOutput.add_shape(tensor.get_shape()[0]);
     }
     return StatusCode::OK;
 }
