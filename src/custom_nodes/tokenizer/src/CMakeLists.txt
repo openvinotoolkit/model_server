@@ -40,12 +40,12 @@ set(UTIL_DIRS
 
 add_library(tokenizer SHARED model.cpp tokenizer.cpp)
 target_include_directories(tokenizer PRIVATE ${BLINGFIRE_INSTALL_DIR}/include ${UTIL_DIRS})
-target_link_libraries(tokenizer ${BLINGFIRE_STATIC_LIBS})
+target_link_libraries(tokenizer ${BLINGFIRE_STATIC_LIBS} stdc++fs)
 target_compile_options(tokenizer PRIVATE -fstack-protector -fno-omit-frame-pointer -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv)
 add_dependencies(tokenizer blingfire)
 
 add_library(detokenizer SHARED model.cpp detokenizer.cpp)
 target_include_directories(detokenizer PRIVATE ${BLINGFIRE_INSTALL_DIR}/include ${UTIL_DIRS})
-target_link_libraries(detokenizer ${BLINGFIRE_STATIC_LIBS})
+target_link_libraries(detokenizer ${BLINGFIRE_STATIC_LIBS} stdc++fs)
 target_compile_options(detokenizer PRIVATE -fstack-protector -fno-omit-frame-pointer -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv)
 add_dependencies(detokenizer blingfire)
