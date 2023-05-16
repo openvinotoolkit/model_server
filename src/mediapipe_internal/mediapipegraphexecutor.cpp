@@ -125,8 +125,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
-    auto outputNames = this->config.output_stream();
-    for (auto name : outputNames) {
+    for (auto& name : this->config.output_stream()) {
         auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
         if (!absStatusOrPoller.ok()) {
             const std::string absMessage = absStatusOrPoller.status().ToString();

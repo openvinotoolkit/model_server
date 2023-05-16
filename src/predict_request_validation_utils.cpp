@@ -19,6 +19,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -323,6 +324,27 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     }
     return StatusCode::OK;
 }
+
+const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;  // 1GB
+
+static Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth) {
+    if (inputBatchSize <= 0) {
+        return StatusCode::INVALID_BATCH_SIZE;
+    }
+    if (inputWidth > std::numeric_limits<size_t>::max() / inputBatchSize) {
+        return StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED;
+    }
+    size_t expectedTensorSize = inputBatchSize * inputWidth;
+    if (expectedTensorSize > MAX_2D_STRING_ARRAY_SIZE) {
+        std::stringstream ss;
+        ss << "; actual " << expectedTensorSize / (1024 * 1024) << "MB (max 1GB)";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, details);
+    }
+    return StatusCode::OK;
+}
+
 template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfBinaryInputShapeDimensions(const KFSTensorInputProto& proto) const {
     RequestShapeInfo<KFSTensorInputProto, KFSShapeType> rsi(proto);
@@ -943,6 +965,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 2D string input: name: {}; batch size: {}",
                     servableName, servableVersion, name, batchSize.toString());
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
+                RETURN_IF_ERR(validateAgainstMax2DStringArraySize(inputBatchSize, inputWidth));
                 RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode, inputBatchSize));
                 RETURN_IF_ERR(checkStringShapeMismatch(proto, *inputInfo, finalStatus, batchingMode, shapeMode, inputBatchSize, inputWidth));
                 continue;

@@ -116,16 +116,14 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
 }
 
 Status MediapipeGraphDefinition::createInputsInfo() {
-    auto outputNames = config.output_stream();
-    for (auto name : outputNames) {
+    for (auto& name : config.output_stream()) {
         outputsInfo.insert({name, TensorInfo::getUnspecifiedTensorInfo()});
     }
     return StatusCode::OK;
 }
 
 Status MediapipeGraphDefinition::createOutputsInfo() {
-    auto inputNames = this->config.input_stream();
-    for (auto name : inputNames) {
+    for (auto& name : this->config.input_stream()) {
         inputsInfo.insert({name, TensorInfo::getUnspecifiedTensorInfo()});
     }
     return StatusCode::OK;

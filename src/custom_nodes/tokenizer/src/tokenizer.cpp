@@ -48,7 +48,10 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     std::string modelPath = get_string_parameter("model_path", params, paramsCount, "");
     NODE_ASSERT(!modelPath.empty(), "model_path cannot be empty");
     try {
-        *customNodeLibraryInternalManager = new BlingFireModel(modelPath, debugMode);
+        auto cnlim = std::make_unique<BlingFireModel>(modelPath, debugMode);
+        if (!cnlim->isValid())
+            throw std::exception();
+        *customNodeLibraryInternalManager = cnlim.release();
     } catch (...) {
         std::cerr << "[tokenizer] initialize() fail: Cannot load tokenization model from path: " << modelPath << std::endl;
         return 1;
@@ -120,7 +123,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         const char* strStart = (const char*)textTensor->data + batch * textTensor->dims[1];
         std::string text(strStart, strnlen(strStart, textTensor->dims[1]));
         ids[batch] = model->tokenize(text, maxIdsArrLength);
-        DEBUG_MSG("tokenied batch " << batch << "; of string: " << text);
+        DEBUG_MSG("tokenized batch " << batch << "; of string: " << text);
     }
 
     DEBUG_MSG("getting max token size");

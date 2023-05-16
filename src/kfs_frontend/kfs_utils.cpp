@@ -182,7 +182,7 @@ Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& 
     size_t tmpBatchSize = 0;
     size_t tmpMaxStringLength = 0;
     while (offset + sizeof(uint32_t) <= buffer.size()) {
-        size_t inputSize = *(reinterpret_cast<const uint32_t*>((buffer.data() + offset)));
+        size_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer.data() + offset));
         tmpMaxStringLength = std::max(tmpMaxStringLength, inputSize);
         offset += (sizeof(uint32_t) + inputSize);
         tmpBatchSize++;

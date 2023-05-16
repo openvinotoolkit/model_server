@@ -87,20 +87,21 @@ enum class StatusCode {
     MAX_SEQUENCE_NUMBER_REACHED,     /*!< Model handles maximum number of sequences and will not accept new ones */
 
     // Predict request validation
-    INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */
-    INVALID_MISSING_INPUT,          /*!< Missing one or more of inputs */
-    INVALID_MISSING_OUTPUT,         /*!< Missing one or more of outputs */
-    INVALID_NO_OF_SHAPE_DIMENSIONS, /*!< Invalid number of shape dimensions */
-    INVALID_BATCH_SIZE,             /*!< Input batch size other than required */
-    INVALID_SHAPE,                  /*!< Invalid shape dimension number or dimension value */
-    INVALID_PRECISION,              /*!< Invalid precision */
-    INVALID_VALUE_COUNT,            /*!< Invalid value count error status for uint16 and half float data types */
-    INVALID_CONTENT_SIZE,           /*!< Invalid content size error status for types using tensor_content() */
-    INVALID_MESSAGE_STRUCTURE,      /*!< Buffers can't be both in raw_input_content & input tensor content */
-    INVALID_BUFFER_TYPE,            /*!< Invalid buffer type */
-    INVALID_DEVICE_ID,              /*!< Invalid buffer device id */
-    INVALID_STRING_INPUT,           /*!< Invalid string input */
-    INVALID_INPUT_FORMAT,           /*!< Invalid format of the input inside buffer */
+    INVALID_NO_OF_INPUTS,             /*!< Invalid number of inputs */
+    INVALID_MISSING_INPUT,            /*!< Missing one or more of inputs */
+    INVALID_MISSING_OUTPUT,           /*!< Missing one or more of outputs */
+    INVALID_NO_OF_SHAPE_DIMENSIONS,   /*!< Invalid number of shape dimensions */
+    INVALID_BATCH_SIZE,               /*!< Input batch size other than required */
+    INVALID_SHAPE,                    /*!< Invalid shape dimension number or dimension value */
+    INVALID_PRECISION,                /*!< Invalid precision */
+    INVALID_VALUE_COUNT,              /*!< Invalid value count error status for uint16 and half float data types */
+    INVALID_CONTENT_SIZE,             /*!< Invalid content size error status for types using tensor_content() */
+    INVALID_MESSAGE_STRUCTURE,        /*!< Buffers can't be both in raw_input_content & input tensor content */
+    INVALID_BUFFER_TYPE,              /*!< Invalid buffer type */
+    INVALID_DEVICE_ID,                /*!< Invalid buffer device id */
+    INVALID_STRING_INPUT,             /*!< Invalid string input */
+    INVALID_INPUT_FORMAT,             /*!< Invalid format of the input inside buffer */
+    INVALID_STRING_MAX_SIZE_EXCEEDED, /*!< Maximum 2D array after string conversion exceeded 1GB */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
