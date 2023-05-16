@@ -245,13 +245,12 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
         return grpc(status);
     }
     const std::string servableName = request->model_name();
+    double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);
+    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", requestTotal / 1000);
     if (!reporter) {
         return grpc(Status(StatusCode::OK));
         // TODO fix after Mediapipe metrics implementation
-        return grpc(Status(StatusCode::INTERNAL_ERROR));  // should not happen
     }
-    double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);
-    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", requestTotal / 1000);
     OBSERVE_IF_ENABLED(reporter->requestTimeGrpc, requestTotal);
     return grpc(status);
 }

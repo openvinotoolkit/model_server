@@ -1538,6 +1538,14 @@ TYPED_TEST(PredictValidationString2DTest, negative_no_string) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 
+TYPED_TEST(PredictValidationString2DTest, negative_over_1gb_after_expansion) {
+    std::string longString(1024 * 1024 * 512 * 1, 'a');            // 512mb
+    std::vector<std::string> inputStrings = {longString, "", ""};  // sum=1.5gb
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED);
+}
+
 TYPED_TEST(PredictValidationString2DTest, negative_no_string_in_buffer) {
     if (typeid(TypeParam) == typeid(TFSRequestType))
         GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
@@ -1618,6 +1626,14 @@ TYPED_TEST(PredictValidationString1DTest, negative_wrong_request_shape) {
     prepareInferStringInputWithTwoDimensionShapeTensor(this->request, this->tensorName);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+}
+
+TYPED_TEST(PredictValidationString1DTest, positive_over_1gb) {
+    std::string longString(1024 * 1024 * 512 * 1, 'a');            // 512mb
+    std::vector<std::string> inputStrings = {longString, "", ""};  // sum=1.5gb
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
 TYPED_TEST(PredictValidationString1DTest, negative_negative_shape) {

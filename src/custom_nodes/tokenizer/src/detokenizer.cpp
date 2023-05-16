@@ -47,7 +47,10 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     std::string modelPath = get_string_parameter("model_path", params, paramsCount, "");
     NODE_ASSERT(!modelPath.empty(), "model_path cannot be empty");
     try {
-        *customNodeLibraryInternalManager = new BlingFireModel(modelPath, debugMode);
+        auto cnlim = std::make_unique<BlingFireModel>(modelPath, debugMode);
+        if (!cnlim->isValid())
+            throw std::exception();
+        *customNodeLibraryInternalManager = cnlim.release();
     } catch (...) {
         std::cerr << "[detokenizer] initialize() fail: Cannot load tokenization model from path: " << modelPath << std::endl;
         return 1;
