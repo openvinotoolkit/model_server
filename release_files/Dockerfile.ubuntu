@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=ubuntu:22.04
-FROM ubuntu:22.04 as base_build
+ARG BASE_IMAGE=ubuntu:20.04
+FROM $BASE_IMAGE as base_build
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -69,7 +69,7 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
 RUN if [ -f /ovms/lib/libovms_shared.so ] ; then rm -rf  /ovms/lib/libovms_shared.so ; fi
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM ubuntu:22.04 as release
+FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
@@ -89,16 +89,6 @@ RUN	apt-get update -y ; \
 	if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
 	        case $INSTALL_DRIVER_VERSION in \
-                "20.35.17767") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-gmmlib_20.2.4_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-igc-core_1.0.4756_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-igc-opencl_1.0.4756_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-opencl_20.35.17767_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-ocloc_20.35.17767_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-level-zero-gpu_1.0.17767_amd64.deb ; \
-                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
                 "21.48.21782") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-gmmlib_21.3.3_amd64.deb ; \

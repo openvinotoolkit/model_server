@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-FROM ubuntu:20.04
+ARG BASE_IMAGE
+FROM $BASE_IMAGE as base_build
 
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y build-essential curl
 
