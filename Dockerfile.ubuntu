@@ -194,7 +194,7 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
     rm -rf /var/lib/apt/lists/* && \
     ln -s /opt/intel/openvino_2022 /opt/intel/openvino
 
-RUN wget https://github.com/oneapi-src/oneTBB/releases/download/v2021.2.0/oneapi-tbb-2021.2.0-lin.tgz && \
+RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.2.0/oneapi-tbb-2021.2.0-lin.tgz && \
     tar -xzf oneapi-tbb-2021.2.0-lin.tgz && \
     cp oneapi-tbb-2021.2.0/lib/intel64/gcc4.8/libtbb.so* /opt/intel/openvino/runtime/lib/intel64/
 
