@@ -268,7 +268,7 @@ public:
         uint32_t deviceId = 42;
         const char* outputName{nullptr};
         for (size_t i = 0; i < outputCount; ++i) {
-            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, i, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
             ov::Tensor* outOvTensor = makeOvTensor(datatype, shape, dimCount, voutputData, bytesize);
             cc->Outputs().Tag(outputNameToTag.at(outputName)).Add(outOvTensor, cc->InputTimestamp());
         }
