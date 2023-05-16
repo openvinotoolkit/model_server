@@ -37,3 +37,469 @@ index be571aaf1f8..a8765b08bd4 100644
          ],
      )
 
+From c29c6030c78a635541c01bb394a337f0133aa2a0 Mon Sep 17 00:00:00 2001
+From: Rafal Sapala <rafal.a.sapala@intel.com>
+Date: Fri, 5 May 2023 13:57:03 +0200
+Subject: [PATCH] tf logging macros
+
+---
+ tensorflow/core/platform/default/BUILD        |  13 ++
+ tensorflow/core/platform/default/log_macros.h | 119 ++++++++++++
+ tensorflow/core/platform/default/logging.cc   |   4 -
+ tensorflow/core/platform/default/logging.h    | 174 ++----------------
+ 4 files changed, 144 insertions(+), 166 deletions(-)
+ create mode 100644 tensorflow/core/platform/default/log_macros.h
+
+diff --git a/tensorflow/core/platform/default/BUILD b/tensorflow/core/platform/default/BUILD
+index 0856bb1edce..18f6211e11e 100644
+--- a/tensorflow/core/platform/default/BUILD
++++ b/tensorflow/core/platform/default/BUILD
+@@ -188,6 +188,18 @@ cc_library(
+     ],
+ )
+ 
++cc_library(
++    name = "log_macros",
++    hdrs = ["log_macros.h"],
++    visibility = ["//visibility:public"],
++)
++
++cc_library(
++    name = "glog",
++    visibility = ["//visibility:public"],
++    deps = ["@com_github_glog_glog//:glog",],
++)
++
+ cc_library(
+     name = "logging",
+     srcs = ["logging.cc"],
+@@ -199,6 +211,7 @@ cc_library(
+     ],
+     textual_hdrs = ["logging.h"],
+     deps = [
++        ":glog",
+         "//tensorflow/core/platform",
+         "//tensorflow/core/platform:env_time",
+         "//tensorflow/core/platform:macros",
+diff --git a/tensorflow/core/platform/default/log_macros.h b/tensorflow/core/platform/default/log_macros.h
+new file mode 100644
+index 00000000000..eee3803d12c
+--- /dev/null
++++ b/tensorflow/core/platform/default/log_macros.h
+@@ -0,0 +1,119 @@
++#pragma once
++#define LOG(severity) _TF_LOG_##severity
++
++// An instance of `LOG_EVERY_N` increments a hidden zero-initialized counter
++// every time execution passes through it and logs the specified message when
++// the counter's value is a multiple of `n`, doing nothing otherwise.  Each
++// instance has its own counter.  The counter's value can be logged by streaming
++// the symbol `COUNTER`.  `LOG_EVERY_N` is thread-safe.
++// Example:
++//
++//   for (const auto& user : all_users) {
++//     LOG_EVERY_N(INFO, 1000) << "Processing user #" << COUNTER;
++//     ProcessUser(user);
++//   }
++#define LOG_EVERY_N(severity, n)                       \
++  LOGGING_INTERNAL_STATEFUL_CONDITION(EveryN, true, n) \
++  LOG(severity)
++
++// CHECK dies with a fatal error if condition is not true.  It is *not*
++// controlled by NDEBUG, so the check will be executed regardless of
++// compilation mode.  Therefore, it is safe to do things like:
++//    CHECK(fp->Write(x) == 4)
++#define CHECK(condition)              \
++  if (TF_PREDICT_FALSE(!(condition))) \
++  LOG(FATAL) << "Check failed: " #condition " "
++// `LOG_FIRST_N` behaves like `LOG_EVERY_N` except that the specified message is
++// logged when the counter's value is less than `n`.  `LOG_FIRST_N` is
++// thread-safe.
++#define LOG_FIRST_N(severity, n)                       \
++  LOGGING_INTERNAL_STATEFUL_CONDITION(FirstN, true, n) \
++  LOG(severity)
++
++#ifdef IS_MOBILE_PLATFORM
++// Turn VLOG off when under mobile devices for considerations of binary size.
++#define VLOG_IS_ON(lvl) ((lvl) <= 0)
++
++#else
++
++// Otherwise, set TF_CPP_MAX_VLOG_LEVEL environment to update minimum log level
++// of VLOG, or TF_CPP_VMODULE to set the minimum log level for individual
++// translation units.
++#define VLOG_IS_ON(lvl)                                                     \
++  (([](int level, const char* fname) {                                      \
++    static const bool vmodule_activated =                                   \
++        ::tensorflow::internal::LogMessage::VmoduleActivated(fname, level); \
++    return vmodule_activated;                                               \
++  })(lvl, __FILE__))
++#endif
++
++#define VLOG(level)                                              \
++  TF_PREDICT_TRUE(!VLOG_IS_ON(level))                            \
++  ? (void)0                                                      \
++  : ::tensorflow::internal::Voidifier() &                        \
++          ::tensorflow::internal::LogMessage(__FILE__, __LINE__, \
++                                             tensorflow::INFO)
++
++// `DVLOG` behaves like `VLOG` in debug mode (i.e. `#ifndef NDEBUG`).
++// Otherwise, it compiles away and does nothing.
++#ifndef NDEBUG
++#define DVLOG VLOG
++#else
++#ifndef DVLOG
++#define DVLOG(verbose_level) \
++  while (false && (verbose_level) > 0) ::tensorflow::internal::LogMessageNull()
++#endif
++#endif
++
++
++// In optimized mode, use CheckOpString to hint to compiler that
++// the while condition is unlikely.
++#define CHECK_OP_LOG(name, op, val1, val2)                     \
++  while (::tensorflow::internal::CheckOpString _result{        \
++      ::tensorflow::internal::name##Impl(                      \
++          ::tensorflow::internal::GetReferenceableValue(val1), \
++          ::tensorflow::internal::GetReferenceableValue(val2), \
++          #val1 " " #op " " #val2)})                           \
++  ::tensorflow::internal::LogMessageFatal(__FILE__, __LINE__) << *(_result.str_)
++
++#define CHECK_OP(name, op, val1, val2) CHECK_OP_LOG(name, op, val1, val2)
++
++// CHECK_EQ/NE/...
++#define CHECK_EQ(val1, val2) CHECK_OP(Check_EQ, ==, val1, val2)
++#define CHECK_NE(val1, val2) CHECK_OP(Check_NE, !=, val1, val2)
++#define CHECK_LE(val1, val2) CHECK_OP(Check_LE, <=, val1, val2)
++#define CHECK_LT(val1, val2) CHECK_OP(Check_LT, <, val1, val2)
++#define CHECK_GE(val1, val2) CHECK_OP(Check_GE, >=, val1, val2)
++#define CHECK_GT(val1, val2) CHECK_OP(Check_GT, >, val1, val2)
++
++
++#ifndef NDEBUG
++// DCHECK_EQ/NE/...
++#define DCHECK(condition) CHECK(condition)
++#define DCHECK_EQ(val1, val2) CHECK_EQ(val1, val2)
++#define DCHECK_NE(val1, val2) CHECK_NE(val1, val2)
++#define DCHECK_LE(val1, val2) CHECK_LE(val1, val2)
++#define DCHECK_LT(val1, val2) CHECK_LT(val1, val2)
++#define DCHECK_GE(val1, val2) CHECK_GE(val1, val2)
++#define DCHECK_GT(val1, val2) CHECK_GT(val1, val2)
++
++#else
++
++#define DCHECK(condition) \
++  while (false && (condition)) LOG(FATAL)
++
++// NDEBUG is defined, so DCHECK_EQ(x, y) and so on do nothing.
++// However, we still want the compiler to parse x and y, because
++// we don't want to lose potentially useful errors and warnings.
++// _DCHECK_NOP is a helper, and should not be used outside of this file.
++#define _TF_DCHECK_NOP(x, y) \
++  while (false && ((void)(x), (void)(y), 0)) LOG(FATAL)
++
++#define DCHECK_EQ(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_NE(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_LE(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_LT(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_GE(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_GT(x, y) _TF_DCHECK_NOP(x, y)
++
++#endif
+\ No newline at end of file
+diff --git a/tensorflow/core/platform/default/logging.cc b/tensorflow/core/platform/default/logging.cc
+index df7734f8f35..8aa40fa6b08 100644
+--- a/tensorflow/core/platform/default/logging.cc
++++ b/tensorflow/core/platform/default/logging.cc
+@@ -380,7 +380,6 @@ void LogString(const char* fname, int line, int severity,
+   LogMessage(fname, line, severity) << message;
+ }
+ 
+-template <>
+ void MakeCheckOpValueString(std::ostream* os, const char& v) {
+   if (v >= 32 && v <= 126) {
+     (*os) << "'" << v << "'";
+@@ -389,7 +388,6 @@ void MakeCheckOpValueString(std::ostream* os, const char& v) {
+   }
+ }
+ 
+-template <>
+ void MakeCheckOpValueString(std::ostream* os, const signed char& v) {
+   if (v >= 32 && v <= 126) {
+     (*os) << "'" << v << "'";
+@@ -398,7 +396,6 @@ void MakeCheckOpValueString(std::ostream* os, const signed char& v) {
+   }
+ }
+ 
+-template <>
+ void MakeCheckOpValueString(std::ostream* os, const unsigned char& v) {
+   if (v >= 32 && v <= 126) {
+     (*os) << "'" << v << "'";
+@@ -408,7 +405,6 @@ void MakeCheckOpValueString(std::ostream* os, const unsigned char& v) {
+ }
+ 
+ #if LANG_CXX11
+-template <>
+ void MakeCheckOpValueString(std::ostream* os, const std::nullptr_t& v) {
+   (*os) << "nullptr";
+ }
+diff --git a/tensorflow/core/platform/default/logging.h b/tensorflow/core/platform/default/logging.h
+index 27331b2bcd1..c6d56ce1955 100644
+--- a/tensorflow/core/platform/default/logging.h
++++ b/tensorflow/core/platform/default/logging.h
+@@ -36,9 +36,18 @@ limitations under the License.
+ #include "tensorflow/core/platform/macros.h"
+ #include "tensorflow/core/platform/types.h"
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wsign-compare"
++
++#include "glog/logging.h"
++
++#pragma GCC diagnostic pop
++
+ // TODO(mrry): Prevent this Windows.h #define from leaking out of our headers.
+ #undef ERROR
+ 
++#define COMPACT_GOOGLE_LOG_QFATAL COMPACT_GOOGLE_LOG_ERROR
++
+ namespace tensorflow {
+ const int INFO = 0;            // base_logging::INFO;
+ const int WARNING = 1;         // base_logging::WARNING;
+@@ -114,43 +123,6 @@ class LogMessageNull : public std::basic_ostringstream<char> {
+ 
+ #define _TF_LOG_QFATAL _TF_LOG_FATAL
+ 
+-#define LOG(severity) _TF_LOG_##severity
+-
+-#ifdef IS_MOBILE_PLATFORM
+-
+-// Turn VLOG off when under mobile devices for considerations of binary size.
+-#define VLOG_IS_ON(lvl) ((lvl) <= 0)
+-
+-#else
+-
+-// Otherwise, set TF_CPP_MAX_VLOG_LEVEL environment to update minimum log level
+-// of VLOG, or TF_CPP_VMODULE to set the minimum log level for individual
+-// translation units.
+-#define VLOG_IS_ON(lvl)                                                     \
+-  (([](int level, const char* fname) {                                      \
+-    static const bool vmodule_activated =                                   \
+-        ::tensorflow::internal::LogMessage::VmoduleActivated(fname, level); \
+-    return vmodule_activated;                                               \
+-  })(lvl, __FILE__))
+-
+-#endif
+-
+-#define VLOG(level)                                              \
+-  TF_PREDICT_TRUE(!VLOG_IS_ON(level))                            \
+-  ? (void)0                                                      \
+-  : ::tensorflow::internal::Voidifier() &                        \
+-          ::tensorflow::internal::LogMessage(__FILE__, __LINE__, \
+-                                             tensorflow::INFO)
+-
+-// `DVLOG` behaves like `VLOG` in debug mode (i.e. `#ifndef NDEBUG`).
+-// Otherwise, it compiles away and does nothing.
+-#ifndef NDEBUG
+-#define DVLOG VLOG
+-#else
+-#define DVLOG(verbose_level) \
+-  while (false && (verbose_level) > 0) ::tensorflow::internal::LogMessageNull()
+-#endif
+-
+ class LogEveryNState {
+  public:
+   bool ShouldLog(int n);
+@@ -217,26 +189,6 @@ class LogEveryNSecState {
+            logging_internal_stateful_condition_do_log;              \
+            logging_internal_stateful_condition_do_log = false)
+ 
+-// An instance of `LOG_EVERY_N` increments a hidden zero-initialized counter
+-// every time execution passes through it and logs the specified message when
+-// the counter's value is a multiple of `n`, doing nothing otherwise.  Each
+-// instance has its own counter.  The counter's value can be logged by streaming
+-// the symbol `COUNTER`.  `LOG_EVERY_N` is thread-safe.
+-// Example:
+-//
+-//   for (const auto& user : all_users) {
+-//     LOG_EVERY_N(INFO, 1000) << "Processing user #" << COUNTER;
+-//     ProcessUser(user);
+-//   }
+-#define LOG_EVERY_N(severity, n)                       \
+-  LOGGING_INTERNAL_STATEFUL_CONDITION(EveryN, true, n) \
+-  LOG(severity)
+-// `LOG_FIRST_N` behaves like `LOG_EVERY_N` except that the specified message is
+-// logged when the counter's value is less than `n`.  `LOG_FIRST_N` is
+-// thread-safe.
+-#define LOG_FIRST_N(severity, n)                       \
+-  LOGGING_INTERNAL_STATEFUL_CONDITION(FirstN, true, n) \
+-  LOG(severity)
+ // `LOG_EVERY_POW_2` behaves like `LOG_EVERY_N` except that the specified
+ // message is logged when the counter's value is a power of 2.
+ // `LOG_EVERY_POW_2` is thread-safe.
+@@ -254,13 +206,6 @@ class LogEveryNSecState {
+   LOGGING_INTERNAL_STATEFUL_CONDITION(EveryNSec, true, n_seconds) \
+   LOG(severity)
+ 
+-// CHECK dies with a fatal error if condition is not true.  It is *not*
+-// controlled by NDEBUG, so the check will be executed regardless of
+-// compilation mode.  Therefore, it is safe to do things like:
+-//    CHECK(fp->Write(x) == 4)
+-#define CHECK(condition)              \
+-  if (TF_PREDICT_FALSE(!(condition))) \
+-  LOG(FATAL) << "Check failed: " #condition " "
+ 
+ // Function is overloaded for integral types to allow static const
+ // integrals declared in classes and not defined to be used as arguments to
+@@ -279,28 +224,6 @@ inline unsigned int GetReferenceableValue(unsigned int t) { return t; }
+ inline int64 GetReferenceableValue(int64 t) { return t; }
+ inline uint64 GetReferenceableValue(uint64 t) { return t; }
+ 
+-// This formats a value for a failing CHECK_XX statement.  Ordinarily,
+-// it uses the definition for operator<<, with a few special cases below.
+-template <typename T>
+-inline void MakeCheckOpValueString(std::ostream* os, const T& v) {
+-  (*os) << v;
+-}
+-
+-// Overrides for char types provide readable values for unprintable
+-// characters.
+-template <>
+-void MakeCheckOpValueString(std::ostream* os, const char& v);
+-template <>
+-void MakeCheckOpValueString(std::ostream* os, const signed char& v);
+-template <>
+-void MakeCheckOpValueString(std::ostream* os, const unsigned char& v);
+-
+-#if LANG_CXX11
+-// We need an explicit specialization for std::nullptr_t.
+-template <>
+-void MakeCheckOpValueString(std::ostream* os, const std::nullptr_t& v);
+-#endif
+-
+ // A container for a string pointer which can be evaluated to a bool -
+ // true iff the pointer is non-NULL.
+ struct CheckOpString {
+@@ -311,17 +234,6 @@ struct CheckOpString {
+   string* str_;
+ };
+ 
+-// Build the error message string. Specify no inlining for code size.
+-template <typename T1, typename T2>
+-string* MakeCheckOpString(const T1& v1, const T2& v2,
+-                          const char* exprtext) TF_ATTRIBUTE_NOINLINE;
+-
+-// A helper class for formatting "expr (V1 vs. V2)" in a CHECK_XX
+-// statement.  See MakeCheckOpString for sample usage.  Other
+-// approaches were considered: use of a template method (e.g.,
+-// base::BuildCheckOpString(exprtext, base::Print<T1>, &v1,
+-// base::Print<T2>, &v2), however this approach has complications
+-// related to volatile arguments and function-pointer arguments).
+ class CheckOpMessageBuilder {
+  public:
+   // Inserts "exprtext" and " (" to the stream.
+@@ -339,14 +251,6 @@ class CheckOpMessageBuilder {
+   std::ostringstream* stream_;
+ };
+ 
+-template <typename T1, typename T2>
+-string* MakeCheckOpString(const T1& v1, const T2& v2, const char* exprtext) {
+-  CheckOpMessageBuilder comb(exprtext);
+-  MakeCheckOpValueString(comb.ForVar1(), v1);
+-  MakeCheckOpValueString(comb.ForVar2(), v2);
+-  return comb.NewString();
+-}
+-
+ // Helper functions for CHECK_OP macro.
+ // The (int, int) specialization works around the issue that the compiler
+ // will not instantiate the template version of the function on values of
+@@ -360,7 +264,7 @@ string* MakeCheckOpString(const T1& v1, const T2& v2, const char* exprtext) {
+     if (TF_PREDICT_TRUE(v1 op v2))                                        \
+       return NULL;                                                        \
+     else                                                                  \
+-      return ::tensorflow::internal::MakeCheckOpString(v1, v2, exprtext); \
++      return google::MakeCheckOpString(v1, v2, exprtext); \
+   }                                                                       \
+   inline string* name##Impl(int v1, int v2, const char* exprtext) {       \
+     return name##Impl<int, int>(v1, v2, exprtext);                        \
+@@ -368,14 +272,14 @@ string* MakeCheckOpString(const T1& v1, const T2& v2, const char* exprtext) {
+   inline string* name##Impl(const size_t v1, const int v2,                \
+                             const char* exprtext) {                       \
+     if (TF_PREDICT_FALSE(v2 < 0)) {                                       \
+-      return ::tensorflow::internal::MakeCheckOpString(v1, v2, exprtext); \
++      return google::MakeCheckOpString(v1, v2, exprtext); \
+     }                                                                     \
+     return name##Impl<size_t, size_t>(v1, v2, exprtext);                  \
+   }                                                                       \
+   inline string* name##Impl(const int v1, const size_t v2,                \
+                             const char* exprtext) {                       \
+     if (TF_PREDICT_FALSE(v2 >= std::numeric_limits<int>::max())) {        \
+-      return ::tensorflow::internal::MakeCheckOpString(v1, v2, exprtext); \
++      return google::MakeCheckOpString(v1, v2, exprtext); \
+     }                                                                     \
+     const size_t uval = (size_t)((unsigned)v2);                           \
+     return name##Impl<size_t, size_t>(v1, uval, exprtext);                \
+@@ -394,60 +298,6 @@ TF_DEFINE_CHECK_OP_IMPL(Check_GE, >=)
+ TF_DEFINE_CHECK_OP_IMPL(Check_GT, >)
+ #undef TF_DEFINE_CHECK_OP_IMPL
+ 
+-// In optimized mode, use CheckOpString to hint to compiler that
+-// the while condition is unlikely.
+-#define CHECK_OP_LOG(name, op, val1, val2)                     \
+-  while (::tensorflow::internal::CheckOpString _result{        \
+-      ::tensorflow::internal::name##Impl(                      \
+-          ::tensorflow::internal::GetReferenceableValue(val1), \
+-          ::tensorflow::internal::GetReferenceableValue(val2), \
+-          #val1 " " #op " " #val2)})                           \
+-  ::tensorflow::internal::LogMessageFatal(__FILE__, __LINE__) << *(_result.str_)
+-
+-#define CHECK_OP(name, op, val1, val2) CHECK_OP_LOG(name, op, val1, val2)
+-
+-// CHECK_EQ/NE/...
+-#define CHECK_EQ(val1, val2) CHECK_OP(Check_EQ, ==, val1, val2)
+-#define CHECK_NE(val1, val2) CHECK_OP(Check_NE, !=, val1, val2)
+-#define CHECK_LE(val1, val2) CHECK_OP(Check_LE, <=, val1, val2)
+-#define CHECK_LT(val1, val2) CHECK_OP(Check_LT, <, val1, val2)
+-#define CHECK_GE(val1, val2) CHECK_OP(Check_GE, >=, val1, val2)
+-#define CHECK_GT(val1, val2) CHECK_OP(Check_GT, >, val1, val2)
+-#define CHECK_NOTNULL(val)                                 \
+-  ::tensorflow::internal::CheckNotNull(__FILE__, __LINE__, \
+-                                       "'" #val "' Must be non NULL", (val))
+-
+-#ifndef NDEBUG
+-// DCHECK_EQ/NE/...
+-#define DCHECK(condition) CHECK(condition)
+-#define DCHECK_EQ(val1, val2) CHECK_EQ(val1, val2)
+-#define DCHECK_NE(val1, val2) CHECK_NE(val1, val2)
+-#define DCHECK_LE(val1, val2) CHECK_LE(val1, val2)
+-#define DCHECK_LT(val1, val2) CHECK_LT(val1, val2)
+-#define DCHECK_GE(val1, val2) CHECK_GE(val1, val2)
+-#define DCHECK_GT(val1, val2) CHECK_GT(val1, val2)
+-
+-#else
+-
+-#define DCHECK(condition) \
+-  while (false && (condition)) LOG(FATAL)
+-
+-// NDEBUG is defined, so DCHECK_EQ(x, y) and so on do nothing.
+-// However, we still want the compiler to parse x and y, because
+-// we don't want to lose potentially useful errors and warnings.
+-// _DCHECK_NOP is a helper, and should not be used outside of this file.
+-#define _TF_DCHECK_NOP(x, y) \
+-  while (false && ((void)(x), (void)(y), 0)) LOG(FATAL)
+-
+-#define DCHECK_EQ(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_NE(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_LE(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_LT(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_GE(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_GT(x, y) _TF_DCHECK_NOP(x, y)
+-
+-#endif
+-
+ // These are for when you don't want a CHECK failure to print a verbose
+ // stack trace.  The implementation of CHECK* in this file already doesn't.
+ #define QCHECK(condition) CHECK(condition)
+-- 
+2.25.1
+

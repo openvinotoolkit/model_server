@@ -25,7 +25,6 @@
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "mediapipe/framework/calculator_graph.h"
-#include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/status.h"
 
 namespace ovms {

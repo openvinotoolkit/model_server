@@ -235,6 +235,9 @@ public:
 
 MockTensorProtoDeserializatorThrowingInferenceEngine* MockTensorProtoDeserializator::mock = nullptr;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException2) {
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
@@ -252,6 +255,8 @@ TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorE
         request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
 }
+
+#pragma GCC diagnostic pop
 
 TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     ov::Core ieCore;
@@ -518,6 +523,9 @@ std::string toString(const std::pair<ovms::Precision, bool>& pair) {
     return toString(pair.first) + "_" + (pair.second ? "BufferInRequestRawInputContents" : "BufferInRequestTensorInputContents");
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException2) {
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
@@ -535,6 +543,8 @@ TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetT
         request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
 }
+
+#pragma GCC diagnostic pop
 
 std::vector<std::pair<ovms::Precision, bool>> KserveGRPCPredictRequestNegativeParams = cartesianProduct(UNSUPPORTED_KFS_INPUT_PRECISIONS, {true, false});
 

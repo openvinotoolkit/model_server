@@ -35,7 +35,6 @@
 #include "../timer.hpp"
 #include "../version.hpp"
 #include "mediapipe/framework/calculator_graph.h"
-#include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphdefinition.hpp"  // for version in response
 

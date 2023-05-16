@@ -74,7 +74,6 @@ public:
             cc->Outputs().Tag(tag).Set<ov::Tensor>();
         }
         cc->InputSidePackets().Tag(SESSION_TAG.c_str()).Set<AdapterWrapper>();
-        const auto& options = cc->Options<ModelAPIInferenceCalculatorOptions>();
         MLOG("Main GetContract end");
         return absl::OkStatus();
     }

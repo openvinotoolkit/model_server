@@ -20,6 +20,7 @@
 #include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+
 using std::cout;
 using std::endl;
 

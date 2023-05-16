@@ -398,7 +398,7 @@ cc_library(
     copts = [
         #"-Wall",
         "-Wno-unknown-pragmas",
-#TODO:  "-Werror", mediapipe
+        "-Werror",
     ],
     visibility = [
         "//visibility:public",
@@ -859,7 +859,7 @@ cc_test(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        #"-Werror", TODO mediapipe temporary enablement
+        "-Werror",
     ],
 )
 

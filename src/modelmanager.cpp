@@ -368,8 +368,8 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
     return StatusCode::OK;
 }
 
-Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
 #if (MEDIAPIPE_DISABLE == 0)
+Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
     if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
         return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
@@ -386,11 +386,8 @@ Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, con
         *this);
     mediapipesInConfigFile.insert(config.getGraphName());
     return status;
-#else
-    SPDLOG_ERROR("Mediapipe support was disabled during build process...");
-    return StatusCode::INTERNAL_ERROR;
-#endif
 }
+#endif
 
 static Status parseMediapipeConfig(rapidjson::Document& configJson, std::string& rootDirectoryPath, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     const auto itrp = configJson.FindMember("mediapipe_config_list");

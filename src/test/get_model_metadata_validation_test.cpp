@@ -41,11 +41,16 @@ TEST_F(GetModelMetadataValidation, ValidRequestWithVersionSpecified) {
     EXPECT_TRUE(status.ok());
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+
 TEST_F(GetModelMetadataValidation, RequestMissingModelSpec) {
     request.release_model_spec();
     auto status = ovms::GetModelMetadataImpl::validate(&request);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_SPEC_MISSING);
 }
+
+#pragma GCC diagnostic pop
 
 TEST_F(GetModelMetadataValidation, RequestMissingMetadataField) {
     request.mutable_metadata_field()->RemoveLast();
