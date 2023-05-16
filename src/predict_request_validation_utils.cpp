@@ -332,19 +332,15 @@ static Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t
         return StatusCode::INVALID_BATCH_SIZE;
     }
     if (inputWidth > std::numeric_limits<size_t>::max() / inputBatchSize) {
-        std::stringstream ss;
-        ss << "Expected tensor after 2D conversion is too large (max 1GB)";
-        const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
-        return Status(StatusCode::INVALID_STRING_INPUT, details);
+        return StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED;
     }
     size_t expectedTensorSize = inputBatchSize * inputWidth;
     if (expectedTensorSize > MAX_2D_STRING_ARRAY_SIZE) {
         std::stringstream ss;
-        ss << "Expected tensor after 2D conversion is too large; actual " << expectedTensorSize / (1024 * 1024) << "MB (max 1GB)";
+        ss << "; actual " << expectedTensorSize / (1024 * 1024) << "MB (max 1GB)";
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
-        return Status(StatusCode::INVALID_STRING_INPUT, details);
+        return Status(StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, details);
     }
     return StatusCode::OK;
 }

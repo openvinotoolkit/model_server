@@ -97,6 +97,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_BUFFER_TYPE, "Invalid input buffer type"},
     {StatusCode::INVALID_DEVICE_ID, "Invalid input buffer device id"},
     {StatusCode::INVALID_STRING_INPUT, "Invalid string input"},
+    {StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, "Maximum 2D array after string conversion exceeded 1GB"},
     {StatusCode::INVALID_INPUT_FORMAT, "Inputs inside buffer does not match expected format."},
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
