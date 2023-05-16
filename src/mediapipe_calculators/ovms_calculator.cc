@@ -260,7 +260,6 @@ public:
         // that we are not interested in all outputs from OVMS Inference
         const void* voutputData;
         size_t bytesize = 42;
-        uint32_t outputId = 0;
         OVMS_DataType datatype = (OVMS_DataType)199;
         const int64_t* shape{nullptr};
         size_t dimCount = 42;
