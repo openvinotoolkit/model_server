@@ -428,19 +428,17 @@ void assertStringResponse(const ::KFSResponse& proto, const std::vector<std::str
     ASSERT_EQ(proto.outputs_size(), 1);
     ASSERT_EQ(proto.outputs(0).name(), outputName);
     ASSERT_EQ(proto.outputs(0).datatype(), "BYTES");
-    ASSERT_EQ(proto.outputs(0).shape_size(), 2);
+    ASSERT_EQ(proto.outputs(0).shape_size(), 1);
     ASSERT_EQ(proto.outputs(0).shape(0), expectedStrings.size());
-    size_t pad_size = 0;
+    std::string expectedString;
     for (auto str : expectedStrings) {
-        pad_size = str.size() > pad_size ? str.size() : pad_size;
+        int size = str.size();
+        for (int k = 0; k < 4; k++, size >>= 8) {
+            expectedString += static_cast<char>(size & 0xff);
+        }
+        expectedString.append(str);
     }
-    std::string expectedString(++pad_size * expectedStrings.size(), '\0');
-    int i = 0;
-    for (auto str : expectedStrings) {
-        memcpy(expectedString.data() + i, str.c_str(), str.size());
-        i += pad_size;
-    }
-    ASSERT_EQ(memcmp(proto.raw_output_contents(0).data(), expectedString.data(), pad_size * expectedStrings.size()), 0);
+    ASSERT_EQ(memcmp(proto.raw_output_contents(0).data(), expectedString.data(), expectedString.size()), 0);
 }
 void assertStringResponse(const ovms::InferenceResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName) {
     FAIL() << "not implemented";

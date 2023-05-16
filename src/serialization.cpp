@@ -17,6 +17,7 @@
 
 #include "kfs_frontend/kfs_utils.hpp"
 #include "ov_utils.hpp"
+#include "status.hpp"
 #include "tensor_conversion.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
@@ -136,6 +137,10 @@ static Status serializeShape(
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     responseOutput.clear_shape();
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+        responseOutput.add_shape(tensor.get_shape()[0]);
+        return StatusCode::OK;
+    }
     auto& effectiveNetworkOutputShape = servableOutput->getShape();
     ov::Shape actualTensorShape = tensor.get_shape();
     if (effectiveNetworkOutputShape.size() != actualTensorShape.size()) {
@@ -164,6 +169,24 @@ static void serializeContent(std::string* content, ov::Tensor& tensor) {
     }
 }
 
+static void serializeStringContent(std::string* content, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
+    // We only fill if the content is not already filled.
+    // It can be filled in gather exit node handler.
+    if (content->size() == 0) {
+        std::string data = "";
+        size_t j = 0;
+        for (size_t i = 0; i < tensor.get_shape()[0]; i++, j += tensor.get_shape()[1]) {
+            std::string tmp((char*)tensor.data() + j);
+            int size = tmp.size();
+            for (int k = 0; k < 4; k++, size >>= 8) {
+                data += static_cast<char>(size & 0xff);
+            }
+            data.append(tmp);
+        }
+        content->assign((char*)data.data(), data.size());
+    }
+}
 #define SERIALIZE_BY_DATATYPE(contents, datatype)                                  \
     for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(datatype)) {        \
         auto value = responseOutput.mutable_contents()->contents()->Add();         \
@@ -231,7 +254,11 @@ Status serializeTensorToTensorProtoRaw(
     if (!status.ok()) {
         return status;
     }
-    serializeContent(rawOutputContents, tensor);
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+        serializeStringContent(rawOutputContents, tensor);
+    } else {
+        serializeContent(rawOutputContents, tensor);
+    }
     return StatusCode::OK;
 }
 
