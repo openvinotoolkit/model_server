@@ -17,6 +17,7 @@
 
 #include "kfs_frontend/kfs_utils.hpp"
 #include "ov_utils.hpp"
+#include "precision.hpp"
 #include "status.hpp"
 #include "tensor_conversion.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
@@ -74,6 +75,10 @@ static Status serializePrecision(
             tensor.get_element_type().get_type_name());
         return StatusCode::INTERNAL_ERROR;
     }
+    if (servableOutput->getPrecision() == ovms::Precision::U8 && servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+        responseOutput.set_datatype("BYTES");
+        return StatusCode::OK;
+    }
     switch (servableOutput->getPrecision()) {
     case ovms::Precision::FP64:
     case ovms::Precision::FP32:
@@ -86,10 +91,6 @@ static Status serializePrecision(
     case ovms::Precision::U32:
     case ovms::Precision::U16:
     case ovms::Precision::U8:
-        if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
-            responseOutput.set_datatype("BYTES");
-            break;
-        }
     case ovms::Precision::BOOL:
         responseOutput.set_datatype(ovmsPrecisionToKFSPrecision(servableOutput->getPrecision()));
         break;
@@ -137,10 +138,6 @@ static Status serializeShape(
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     responseOutput.clear_shape();
-    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
-        responseOutput.add_shape(tensor.get_shape()[0]);
-        return StatusCode::OK;
-    }
     auto& effectiveNetworkOutputShape = servableOutput->getShape();
     ov::Shape actualTensorShape = tensor.get_shape();
     if (effectiveNetworkOutputShape.size() != actualTensorShape.size()) {
@@ -156,6 +153,10 @@ static Status serializeShape(
             return StatusCode::INTERNAL_ERROR;
         }
         responseOutput.add_shape(dim);
+    }
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+        responseOutput.clear_shape();
+        responseOutput.add_shape(tensor.get_shape()[0]);
     }
     return StatusCode::OK;
 }
@@ -173,18 +174,16 @@ static void serializeStringContent(std::string* content, ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     // We only fill if the content is not already filled.
     // It can be filled in gather exit node handler.
-    if (content->size() == 0) {
-        std::string data = "";
-        size_t j = 0;
-        for (size_t i = 0; i < tensor.get_shape()[0]; i++, j += tensor.get_shape()[1]) {
-            std::string tmp((char*)tensor.data() + j);
-            int size = tmp.size();
-            for (int k = 0; k < 4; k++, size >>= 8) {
-                data += static_cast<char>(size & 0xff);
-            }
-            data.append(tmp);
-        }
-        content->assign((char*)data.data(), data.size());
+    if (!content->empty()) {
+        return;
+    }
+
+    size_t batchSize = tensor.get_shape()[0];
+    size_t maxStringLen = tensor.get_shape()[1];
+    for (size_t i = 0; i < batchSize; i++) {
+        uint32_t strLen = strnlen((char*)tensor.data() + i * maxStringLen, maxStringLen);
+        content->append(reinterpret_cast<const char*>(&strLen), sizeof(strLen));
+        content->append((char*)tensor.data() + i * maxStringLen, strLen);
     }
 }
 #define SERIALIZE_BY_DATATYPE(contents, datatype)                                  \
