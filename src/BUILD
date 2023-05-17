@@ -396,7 +396,7 @@ cc_library(
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
     copts = [
-        #"-Wall",
+        "-Wall",
         "-Wno-unknown-pragmas",
 #TODO:  "-Werror", mediapipe
     ],
@@ -676,6 +676,7 @@ cc_binary(
         # "-lovms_shared",  # Use for dynamic linking when neccessary
     ],
     copts = [
+        "-Wall",
         "-Wconversion",
         "-Werror",
     ],
