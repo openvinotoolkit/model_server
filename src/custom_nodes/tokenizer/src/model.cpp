@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -33,6 +34,9 @@ static std::atomic<int> maxId{0};
 BlingFireModel::BlingFireModel(const std::string& modelPath, bool debug) :
     id(maxId++),
     debug(debug) {
+    if (!std::filesystem::exists(modelPath)) {
+        throw std::runtime_error("Model file does not exist: " + modelPath);
+    }
     handle = BlingFire::LoadModel(modelPath.c_str());
     if (debug) {
         std::cout << "[BlingFireModel] [" << id << "] Model loaded from: " << modelPath << std::endl;
