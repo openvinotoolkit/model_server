@@ -95,8 +95,13 @@ ifeq ($(BASE_OS),ubuntu)
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
-  INSTALL_DRIVER_VERSION ?= "22.43.24595"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.0.0.10908.5adf3b5ca82_x86_64.tgz
+  ifeq ($(BASE_OS_TAG_UBUNTU),20.04)
+	INSTALL_DRIVER_VERSION ?= "22.43.24595"
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.0.0.10908.5adf3b5ca82_x86_64.tgz
+  else ifeq  ($(BASE_OS_TAG_UBUNTU),22.04)
+	INSTALL_DRIVER_VERSION ?= "23.05.25593"
+	DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/releases/2023/0/commit/49b2fa2f87126965c3b3845929f7ee297a584f85/swf_drop/packages/releases/l_openvino_toolkit_ubuntu22_2023.0.0.10901.49b2fa2f871_x86_64.tgz 
+  endif
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
@@ -231,8 +236,8 @@ ifeq ($(NO_DOCKER_CACHE),true)
 endif
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
-	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS)
-	@cd src/custom_nodes/tokenizer && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS)
+	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS) BASE_IMAGE=$(BASE_IMAGE) 
+	@cd src/custom_nodes/tokenizer && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS) BASE_IMAGE=$(BASE_IMAGE) 
 endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
@@ -464,6 +469,7 @@ cpu_extension:
 		--build-arg https_proxy=${https_proxy} \
 		--build-arg no_proxy=${no_proxy} \
 		--build-arg DLDT_PACKAGE_URL=${DLDT_PACKAGE_URL} \
-		--build-arg APT_OV_PACKAGE=${APT_OV_PACKAGE} .
+		--build-arg APT_OV_PACKAGE=${APT_OV_PACKAGE} \
+		--build-arg BASE_IMAGE=${BASE_IMAGE} .
 	mkdir -p ./lib/${BASE_OS}
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${BASE_OS}
