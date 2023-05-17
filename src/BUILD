@@ -398,6 +398,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Wno-error=deprecated-declarations",
         "-Werror",
     ],
     visibility = [
@@ -848,6 +849,7 @@ cc_test(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-Wno-error=deprecated-declarations",
         "-Werror",
     ],
 )
