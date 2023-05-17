@@ -164,7 +164,6 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
-ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 ARG minitrace_flags
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
@@ -267,6 +266,8 @@ RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download
 WORKDIR /ovms
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+
+ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework

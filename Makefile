@@ -240,6 +240,8 @@ endif
 	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
 	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME})'
 	@bash -c '$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
+	# Override protobuf version for builds with mediapipe 3.19.1; for builds without mediapipe 3.9.2
+	@bash -c "if [[ \$MEDIAPIPE_DISABLE == \"1\" ]]; then sed -i -e 's|3\.19\.1|3.9.2|g' WORKSPACE ; else sed -i -e 's|3\.9\.2|3.19.1|g' WORKSPACE ; fi"
 ifneq ($(OVMS_METADATA_FILE),)
 	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
 else
