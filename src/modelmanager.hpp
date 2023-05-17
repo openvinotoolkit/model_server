@@ -52,7 +52,6 @@ class CustomNodeLibraryManager;
 class MetricRegistry;
 class ModelConfig;
 class FileSystem;
-class MediapipeFactory;
 class MediapipeGraphExecutor;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
