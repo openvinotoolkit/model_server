@@ -355,7 +355,7 @@ inline static Status getInputs(const std::string* buffer, std::vector<std::strin
     }
     size_t offset = 0;
     while (offset + sizeof(uint32_t) <= buffer->size()) {
-        uint64_t inputSize = *((int32_t*)(buffer->data() + offset));
+        uint64_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + offset));
         offset += sizeof(uint32_t);
         if (offset + inputSize > buffer->size())
             break;
@@ -505,11 +505,11 @@ static Status convertStringRequestFromBufferToOVTensor2D(const tensorflow::Tenso
 }
 
 static Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
-    int batchSize = 0;
+    size_t batchSize = 0;
     size_t offset = 0;
     size_t maxStringLength = 0;
     while (offset + sizeof(uint32_t) <= buffer->size()) {
-        size_t inputSize = *((int32_t*)(buffer->data() + offset));
+        uint64_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + offset));
         offset += (sizeof(uint32_t) + inputSize);
         maxStringLength = std::max(maxStringLength, inputSize);
         batchSize++;
@@ -520,14 +520,15 @@ static Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::Inf
     }
     size_t width = maxStringLength + 1;
     offset = 0;
-    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(batchSize), width});
-    for (int i = 0; i < batchSize; i++) {
-        size_t inputSize = *((int32_t*)(buffer->data() + offset));
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{batchSize, width});
+    for (size_t i = 0; i < batchSize; i++) {
+        uint64_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + offset));
         offset += sizeof(uint32_t);
         auto data = tensor.data<unsigned char>() + i * width;
         std::memcpy(data, reinterpret_cast<const unsigned char*>(buffer->data() + offset), inputSize);
-        for (size_t j = inputSize; j < width; j++)
+        for (size_t j = inputSize; j < width; j++) {
             data[j] = 0;
+        }
         offset += inputSize;
     }
     return StatusCode::OK;
@@ -548,7 +549,7 @@ Status convertStringRequestToOVTensor2D(
         maxStringLength = std::max(maxStringLength, getBinaryInput(src, i).size());
     }
     size_t width = maxStringLength + 1;
-    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<uint64_t>(batchSize), width});
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<size_t>(batchSize), width});
     for (int i = 0; i < batchSize; i++) {
         std::memcpy(
             tensor.data<unsigned char>() + i * width,
@@ -569,24 +570,24 @@ static Status convertStringRequestFromBufferToOVTensor1D(const ::KFSRequest::Inf
     std::vector<uint32_t> stringSizes;
     uint32_t totalStringsLength = 0;
     while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) + sizeof(uint32_t) <= buffer->size()) {
-        uint64_t inputSize = *((int32_t*)(buffer->data() + totalStringsLength + stringSizes.size() * sizeof(uint32_t)));
+        uint32_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + totalStringsLength + stringSizes.size() * sizeof(uint32_t)));
         stringSizes.push_back(inputSize);
         totalStringsLength += inputSize;
     }
-    uint64_t batchSize = stringSizes.size();
+    size_t batchSize = stringSizes.size();
     if ((totalStringsLength + batchSize * sizeof(uint32_t)) != buffer->size()) {
         SPDLOG_DEBUG("Input string format conversion failed");
         return StatusCode::INVALID_STRING_INPUT;
     }
-    int64_t metadataLength = sizeof(uint32_t) * (batchSize + 2);
-    int64_t width = totalStringsLength + metadataLength;
-    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<size_t>(width)});
+    size_t metadataLength = sizeof(uint32_t) * (batchSize + 2);
+    size_t width = totalStringsLength + metadataLength;
+    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{width});
     uint32_t* data = reinterpret_cast<uint32_t*>(tensor.data<uint8_t>());
     data[0] = static_cast<uint32_t>(batchSize);
     data[1] = 0;  // first string start offset
     unsigned char* condensedStringsStart = tensor.data<unsigned char>() + metadataLength;
-    uint32_t tensorStringsOffset = 0;
-    for (uint32_t i = 0; i < stringSizes.size(); i++) {
+    size_t tensorStringsOffset = 0;
+    for (size_t i = 0; i < stringSizes.size(); i++) {
         data[i + 2] = data[i + 1] + stringSizes[i];
         std::memcpy(condensedStringsStart + tensorStringsOffset, reinterpret_cast<const unsigned char*>(buffer->data() + (i + 1) * sizeof(uint32_t) + tensorStringsOffset), stringSizes[i]);
         tensorStringsOffset += stringSizes[i];
@@ -600,7 +601,7 @@ Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tenso
         return convertStringRequestFromBufferToOVTensor1D(src, tensor, buffer);
     }
     int batchSize = getBinaryInputsSize(src);
-    int64_t totalStringsLength = 0;
+    size_t totalStringsLength = 0;
     for (int i = 0; i < batchSize; i++) {
         totalStringsLength += getBinaryInput(src, i).size();
     }
@@ -608,14 +609,14 @@ Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tenso
     // - batch size (uint32_t) x 1
     // - first string start offset (uint32_t) x 1
     // - end offsets for each batch of string (uint32_t) x batchSize
-    int64_t metadataLength = sizeof(uint32_t) * (batchSize + 2);
-    int64_t width = totalStringsLength + metadataLength;
+    size_t metadataLength = sizeof(uint32_t) * (batchSize + 2);
+    size_t width = totalStringsLength + metadataLength;
     tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<size_t>(width)});
     uint32_t* data = reinterpret_cast<uint32_t*>(tensor.data<uint8_t>());
     data[0] = static_cast<uint32_t>(batchSize);
     data[1] = 0;  // first string start offset
     unsigned char* condensedStringsStart = tensor.data<unsigned char>() + metadataLength;
-    for (int64_t i = 0; i < batchSize; i++) {
+    for (int i = 0; i < batchSize; i++) {
         // write end offset
         data[i + 2] = data[i + 1] + getBinaryInput(src, i).size();
         // write the bytes
@@ -638,8 +639,8 @@ Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& d
     if (tensor.get_element_type() != ov::element::Type_t::u8) {
         return StatusCode::INTERNAL_ERROR;
     }
-    auto batchSize = tensor.get_shape()[0];
-    auto maxStringLen = tensor.get_shape()[1];
+    size_t batchSize = tensor.get_shape()[0];
+    size_t maxStringLen = tensor.get_shape()[1];
     setBatchSize(dst, batchSize);
     setStringPrecision(dst);
     for (size_t i = 0; i < batchSize; i++) {

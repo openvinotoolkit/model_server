@@ -425,18 +425,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "hello_world",
-    srcs = ["hello_world.cc"],
-    deps = [
-        "//src:ovms_lib",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@mediapipe//mediapipe/framework/port:logging",
-        "@mediapipe//mediapipe/framework/port:parse_text_proto",
-        "@mediapipe//mediapipe/framework/port:status",
-    ],
-)
-
-cc_binary(
     name = "lib_node_mock.so",
     srcs = [
 	    "test/custom_nodes/node_mock.c",
