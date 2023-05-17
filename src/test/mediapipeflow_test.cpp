@@ -94,6 +94,12 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json");
     }
 };
+class MediapipeFlowDummyPathsRelativeToBasePathTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_relative_to_base_path.json");
+    }
+};
 
 class MediapipeFlowDummyNoGraphPathTest : public MediapipeFlowTest {
 public:
@@ -151,6 +157,16 @@ TEST_F(MediapipeFlowDummyOnlyGraphNameSpecified, Infer) {
 }
 
 TEST_F(MediapipeFlowDummyDefaultSubconfigTest, Infer) {
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediaDummy";
+    performMediapipeInferTest(server, request, response, precision, modelName);
+
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeFlowDummyPathsRelativeToBasePathTest, Infer) {
     ::KFSRequest request;
     ::KFSResponse response;
     const std::string modelName = "mediaDummy";
@@ -664,7 +680,7 @@ TEST_F(MediapipeConfig, MediapipeFullRelativePaths) {
 
 TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy_subconfig.json");
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_add_subconfig.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
@@ -950,7 +966,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
 
 TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfigNegative) {
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy_subconfig_negative.json");
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json");
     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
     manager.join();
 }

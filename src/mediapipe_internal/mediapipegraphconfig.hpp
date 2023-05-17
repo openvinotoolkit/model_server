@@ -38,14 +38,14 @@ private:
     std::string graphName;
 
     /**
-         * @brief Mediapipe Graph Path
-         */
-    std::string graphPath;
-
-    /**
          * @brief Mediapipe Base Path
          */
     std::string basePath;
+
+    /**
+         * @brief Mediapipe Graph Path
+         */
+    std::string graphPath;
 
     /**
          * @brief Flag determing should we pass whole KFSrequest
