@@ -16,6 +16,7 @@
 HEADER_FILE_PATH ?= ../../customloaderinterface.hpp
 OUT_LIB = libsampleloader.so
 BASE_OS ?= ubuntu
+BASE_IMAGE ?= ubuntu:20.04
 LIB_INC = -Iinclude -I../../ -Irapidjson-1.1.0/include
 CFLAGS = -fPIC -Wl,-rpath,. -fpic 
 OPS = -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow
@@ -37,7 +38,7 @@ clean:
 
 docker_build:
 	cp $(HEADER_FILE_PATH) ./customloaderinterface.hpp
-	docker build -f Dockerfile.$(BASE_OS) -t custom_loader_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
+	docker build -f Dockerfile.$(BASE_OS) -t custom_loader_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg BASE_IMAGE=${BASE_IMAGE} .
 	rm -Rf lib && mkdir ./lib
 	docker cp $$(docker create --rm custom_loader_build_image:latest):/src/example/SampleCustomLoader/libsampleloader.so ./lib/
 	rm customloaderinterface.hpp
