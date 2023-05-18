@@ -39,7 +39,7 @@
 #include "pipelinedefinitionunloadguard.hpp"
 
 namespace ovms {
-const std::string PipelineDefinition::SCHEDULER_CLASS_NAME{"DAG"};
+const std::string PipelineDefinition::SCHEDULER_CLASS_NAME{"Pipeline"};
 
 Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
     if (str == DL_NODE_CONFIG_TYPE) {
