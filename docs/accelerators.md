@@ -76,7 +76,7 @@ A command example:
 
 ```bash
 
-docker run --rm -it --device=/dev/dri -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+docker run --rm -it --device=/dev/dri -group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
 ```
