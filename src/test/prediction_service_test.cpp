@@ -883,7 +883,7 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
 }
 /*
  * Scenario - perform inferences with different batch size and model reload via this->config.json change
- * 
+ *
  * 1. Load model with bs=auto, initial internal shape (1,10)
  * 2. Do the inference with (3,10) shape - expect status OK and result (3,10)
  * 3. Change model batch size to fixed=4 with this->config.json change
@@ -927,7 +927,7 @@ TYPED_TEST(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
 
 /*
  * Scenario - perform inference with NHWC input layout changed via this->config.json.
- * 
+ *
  * 1. Load model with layout=nhwc:nchw, initial internal layout: nchw, initial shape=(1,3,4,5)
  * 2. Do the inference with (1,4,5,3) shape - expect status OK and result (1,3,4,5)
  * 3. Do the inference with (1,3,4,5) shape - expect INVALID_SHAPE
@@ -980,7 +980,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelInputLayout) {
 }
 /*
  * Scenario - perform inference with NHWC input layout changed and shape changed via this->config.json.
- * 
+ *
  * 1. Load model with layout=nchw:nhwc and shape=(1,1,2,3), initial internal layout: nchw, initial shape=(1,3,4,5)
  * 2. Do the inference with (1,1,2,3) shape - expect status OK and result (1,3,1,2)
  * 3. Do the inference with (1,3,1,2) shape - expect INVALID_SHAPE
@@ -1281,7 +1281,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
  *
  * 1. Load model with input layout=nhwc, batch_size=auto, initial internal layout: nchw, batch_size=1
  * 2. Do the inference with binary image tensor with no shape set - expect status INVALID_NO_OF_SHAPE_DIMENSIONS
-*/
+ */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
         GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
@@ -1304,7 +1304,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
 
 /*
  * Scenario - perform inference with with batch size set to auto and batch size not matching on position other than first
- * 
+ *
  * 1. Load model with bs=auto, layout=b=>cn,a=>cn initial internal shape (1,10)
  * 2. Do the inference with (1,30) shape - expect status OK and result (1,30)
  * 3. Change model batch size to fixed=4 with config.json change
@@ -1360,7 +1360,7 @@ TYPED_TEST(TestPredict, ChangeBatchSizeViaRequestAndConfigChangeArbitraryPositio
  * 1. Load model with input shape (-1, -1)
  * 2. Do the inference with (3, 2) shape, expect correct output shape
  * 3. Do the inference with (1, 4) shape, expect correct output shape
-*/
+ */
 TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsAny) {
     using namespace ovms;
 
@@ -1385,7 +1385,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsAny) {
  *
  * 1. Load model with input shape (-1, 10)
  * 2. Do the X inferences with (x, 10) shape, expect correct output shapes. x=[1, 3, 5, 7, 11, 17, 21, 57, 99]
-*/
+ */
 TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
     using namespace ovms;
 
@@ -1405,7 +1405,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
  *
  * 1. Load model with input shape (-1, 10)
  * 2. Do the inferences with (3, 10) shape, expect correct output shapes and precision
-*/
+ */
 
 static ovms::Precision getPrecisionFromResponse(ovms::InferenceResponse& response, const std::string& name) {
     size_t outputCount = response.getOutputCount();
@@ -1470,7 +1470,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyFp64) {
  * 5. Do the inference with (3, 5) shape, expect success and correct output shape
  * 6. Do the inference with (3, 6) shape, expect not in range
  * 7. Do the inference with (5, 5) shape, expect not in range
-*/
+ */
 TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsHaveRange) {
     using namespace ovms;
 
@@ -1663,7 +1663,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D) {
     std::vector<uint8_t> expectedData = {
         'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
         'S', 't', 'r', 'i', 'n', 'g', 0, 0, 0, 0, 0};
-    bool checkRaw = false;
+    bool checkRaw = true;
     this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
 }
 
@@ -1715,7 +1715,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
         'a', 'l', 'a',
         'm', 'a',
         'k', 'o', 't', 'a'};
-    bool checkRaw = false;
+    bool checkRaw = true;
     this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
 }
 
@@ -1751,7 +1751,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D_data_in_buffer) {
 
 class TestPredictKFS : public TestPredict<KFSInterface> {};
 
-TEST_F(TestPredictKFS, RequestDataInFp32ContentResponseInFp32) {
+TEST_F(TestPredictKFS, RequestDataInFp32ContentResponseInRaw) {
     KFSRequest request;
     std::vector<float> data{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     bool putBufferInInputTensorContent = true;  // put in fp32_content
@@ -1769,9 +1769,8 @@ TEST_F(TestPredictKFS, RequestDataInFp32ContentResponseInFp32) {
     KFSResponse response;
     ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     ASSERT_EQ(response.outputs_size(), 1);
-    ASSERT_TRUE(response.outputs(0).has_contents());
-    ASSERT_GT(response.outputs(0).contents().fp32_contents_size(), 0);
-    ASSERT_EQ(response.raw_output_contents_size(), 0);
+    ASSERT_FALSE(response.outputs(0).has_contents());
+    ASSERT_GT(response.raw_output_contents_size(), 0);
 }
 
 TEST_F(TestPredictKFS, RequestDataInRawResponseInRaw) {
