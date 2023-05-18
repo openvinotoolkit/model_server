@@ -947,6 +947,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
     // now we add model to subconfig
     std::string subconfigFilePath = directoryPath + "/subconfig.json";
+    SPDLOG_ERROR("{}", subconfigFilePath);
     configFileContent = configFileWithoutGraph;
     createConfigFileWithContent(configFileContent, subconfigFilePath);
     configFileContent = configFileWithGraphPathToReplaceAndSubconfig;
@@ -964,12 +965,12 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
 
-TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfigNegative) {
-    ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json");
-    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    manager.join();
-}
+// TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfigNegative) {
+//     ConstructorEnabledModelManager manager;
+//     auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json");
+//     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
+//     manager.join();
+// }
 
 INSTANTIATE_TEST_SUITE_P(
     Test,

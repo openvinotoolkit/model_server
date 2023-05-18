@@ -225,8 +225,14 @@ public:
                 this->setPassKfsRequestFlag(v["graph_pass_kfs_request"].GetBool());
             else
                 this->setPassKfsRequestFlag(false);
-            if (v.HasMember("subconfig"))
+            if (v.HasMember("subconfig")) {
                 this->setSubconfigPath(v["subconfig"].GetString());
+            }
+            else {
+                std::string defaultSubconfigPath = getBasePath() + "subconfig.json";
+                SPDLOG_DEBUG("No subconfig path was provided for graph: {} so default subconfig file: {} will be loaded.", getGraphName(), defaultSubconfigPath);
+                this->setSubconfigPath(defaultSubconfigPath);
+            }
         } catch (std::logic_error& e) {
             SPDLOG_DEBUG("Relative path error: {}", e.what());
             return StatusCode::INTERNAL_ERROR;
