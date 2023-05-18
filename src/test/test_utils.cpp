@@ -430,7 +430,15 @@ void assertStringResponse(const ::KFSResponse& proto, const std::vector<std::str
     ASSERT_EQ(proto.outputs(0).datatype(), "BYTES");
     ASSERT_EQ(proto.outputs(0).shape_size(), 1);
     ASSERT_EQ(proto.outputs(0).shape(0), expectedStrings.size());
-    assertStringOutputProto(proto.outputs(0), expectedStrings);
+    std::string expectedString;
+    for (auto str : expectedStrings) {
+        int size = str.size();
+        for (int k = 0; k < 4; k++, size >>= 8) {
+            expectedString += static_cast<char>(size & 0xff);
+        }
+        expectedString.append(str);
+    }
+    ASSERT_EQ(memcmp(proto.raw_output_contents(0).data(), expectedString.data(), expectedString.size()), 0);
 }
 void assertStringResponse(const ovms::InferenceResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName) {
     FAIL() << "not implemented";

@@ -775,7 +775,7 @@ TYPED_TEST(SerializeString, Valid_2D_U8_String) {
     ovms::tensor_map_t infos;
     infos["out_string"] = std::make_shared<ovms::TensorInfo>("out", "out_string", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
 
-    bool useSharedOutputContent = false;  // TODO: support raw field
+    bool useSharedOutputContent = true;
     ASSERT_EQ(serializePredictResponse(outputGetter,
                   UNUSED_NAME,
                   UNUSED_VERSION,
