@@ -1024,7 +1024,11 @@ std::string ModelManager::getConfigFileMD5() {
     ifs.close();
 
     unsigned char result[MD5_DIGEST_LENGTH];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     MD5((unsigned char*)str.c_str(), str.size(), result);
+#pragma GCC diagnostic pop
+
     std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
     return (md5sum);
 }

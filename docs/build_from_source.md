@@ -5,7 +5,7 @@ This document gives information how to build docker images and the binary packag
 ## Prerequisites
 
 1. [Docker Engine](https://docs.docker.com/engine/)
-1. Ubuntu 20.04 or RedHat 8.7 host
+1. Ubuntu 20.04, Ubuntu 22.04 or RedHat 8.7 host
 1. make
 1. bash
 
@@ -58,6 +58,16 @@ Select base OS:
 make docker_build BASE_OS=redhat
 ```
 
+### `BASE_OS_TAG_UBUNTU`
+
+Select ubuntu base image version:
+- `20.04` ubuntu:20.04 (default value)
+- `22.04` ubuntu:22.04
+
+```bash
+make docker_build BASE_OS_TAG_UBUNTU=22.04
+```
+
 <hr />
 
 Example:
@@ -67,8 +77,8 @@ Example:
 Parameter used to control which GPU driver version will be installed. Supported versions:
 | OS | Versions |
 |---|---|
-| Ubuntu | 22.35.24055 (default), <br />22.10.22597, <br />21.48.21782, <br />20.35.17767 |
-| RedHat | 22.28.23726 (default), <br />22.10.22597, <br />21.38.21026, <br />20.35.17767 |
+| Ubuntu | 22.43.24595 (default), <br />22.35.24055, <br />22.10.22597, <br />21.48.21782 |
+| RedHat | 22.43.24595 (default), <br />22.28.23726, <br />22.10.22597, <br />21.38.21026 |
 
 Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.  
 Warning: _Maintained only for Ubuntu base OS._
