@@ -23,7 +23,7 @@ node {
   input_side_packet: "INPUT_SIDE_PACKET_INT64:int64_param"
   input_side_packet: "INPUT_SIDE_PACKET_BOOL:bool_param"
   input_stream: "INPUT_FP32:in_not_used"
-  output_stream: "OUTPUT_INT32:out_string"
+  output_stream: "OUTPUT_UINT8:out_string"
   output_stream: "OUTPUT_INT64:out_int64"
   output_stream: "OUTPUT_BOOL:out_bool"
 }

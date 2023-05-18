@@ -30,7 +30,7 @@ const std::string ISP_STRING{"INPUT_SIDE_PACKET_STRING"};
 const std::string ISP_INT64{"INPUT_SIDE_PACKET_INT64"};
 const std::string ISP_BOOL{"INPUT_SIDE_PACKET_BOOL"};
 const std::string IN_FP32_TAG{"INPUT_FP32"};
-const std::string INT32_TAG{"OUTPUT_INT32"};
+const std::string INT32_TAG{"OUTPUT_UINT8"};
 const std::string INT64_TAG{"OUTPUT_INT64"};
 const std::string BOOL_TAG{"OUTPUT_BOOL"};
 
@@ -102,8 +102,8 @@ public:
         std::cout << boolTensor->get_byte_size() << std::endl;
         cc->Outputs().Tag(BOOL_TAG).Add(boolTensor, cc->InputTimestamp());
         // there is no string to/from tensor in ovms
-        ov::Tensor* stringTensor = new ov::Tensor(ov::element::Type_t::i32, {1});
-        *((int32_t*)stringTensor->data()) = ovms::stoi32(stringParam).value();
+        ov::Tensor* stringTensor = new ov::Tensor(ov::element::Type_t::u8, {stringParam.size()});
+        std::memcpy(stringTensor->data(), stringParam.data(), stringParam.size());
         cc->Outputs().Tag(INT32_TAG).Add(stringTensor, cc->InputTimestamp());
         MLOG("InputSidePacketUserTestCalc process end");
         return absl::OkStatus();

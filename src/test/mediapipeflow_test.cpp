@@ -217,13 +217,12 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
     preparePredictRequest(request, inputsMeta, requestData);
     request.mutable_model_name()->assign(modelName);
     // here add params
-    const std::string stringParamValue = "55";
+    const std::string stringParamValue = "abecadlo";
     const bool boolParamValue = true;
     const int64_t int64ParamValue = 42;
     request.mutable_parameters()->operator[]("string_param").set_string_param(stringParamValue);
     request.mutable_parameters()->operator[]("bool_param").set_bool_param(boolParamValue);
     request.mutable_parameters()->operator[]("int64_param").set_int64_param(int64ParamValue);
-    SPDLOG_ERROR("ER");
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     auto outputs = response.outputs();
     // here check outputs
@@ -237,13 +236,12 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
             ++outputId;
             continue;
         }
-        ASSERT_EQ(it->datatype(), "INT32");
+        ASSERT_EQ(it->datatype(), "UINT8");
         ASSERT_EQ(it->shape_size(), 1);
-        ASSERT_EQ(it->shape(0), 1);
+        ASSERT_EQ(it->shape(0), stringParamValue.size());
         const std::string& content = response.raw_output_contents(outputId);
-        const int32_t castContent = *((int32_t*)content.data());
-        SPDLOG_ERROR("ER size:{} content:{}; castContent:{}", content.size(), content, castContent);
-        EXPECT_EQ(castContent, ovms::stoi32(stringParamValue).value());
+        SPDLOG_ERROR("Received output size:{} content:{}", content.size(), content);
+        EXPECT_EQ(castContent, stringParamValue);
         break;
     }
     ASSERT_NE(it, response.outputs().end());
@@ -260,7 +258,7 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
         ASSERT_EQ(it->shape(0), 1);
         const std::string& content = response.raw_output_contents(outputId);
         const bool castContent = *((bool*)content.data());
-        SPDLOG_ERROR("ER size:{} content:{}; castContent:{}", content.size(), content, castContent);
+        SPDLOG_ERROR("Received output size:{} content:{}; castContent:{}", content.size(), content, castContent);
         EXPECT_EQ(castContent, boolParamValue);
         break;
     }
@@ -278,7 +276,7 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
         ASSERT_EQ(it->shape(0), 1);
         const std::string& content = response.raw_output_contents(outputId);
         const int64_t castContent = *((int64_t*)content.data());
-        SPDLOG_ERROR("ER size:{} content:{}; castContent:{}", content.size(), content, castContent);
+        SPDLOG_ERROR("Received output size:{} content:{}; castContent:{}", content.size(), content, castContent);
         EXPECT_EQ(castContent, int64ParamValue);
         break;
     }
