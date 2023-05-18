@@ -149,6 +149,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
         SPDLOG_DEBUG("Failed to execute mediapipe graph: {} since it is not available", getName());
         return status;
     }
+    SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config);
     return status;
 }
