@@ -249,7 +249,7 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
         }
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Catched exception in InferenceServiceImpl for servable: {} exception: {}", servableName, e.what());
-        return grpc(Status(StatusCode::UNKNOWN_ERROR));
+        return grpc(Status(StatusCode::UNKNOWN_ERROR, e.what()));
     } catch (...) {
         SPDLOG_ERROR("Catched unknown exception in InferenceServiceImpl for servable: {}", servableName);
         return grpc(Status(StatusCode::UNKNOWN_ERROR));
