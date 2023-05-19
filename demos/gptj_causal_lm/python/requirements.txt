@@ -1,7 +1,7 @@
-accelerate
+accelerate==0.17.1
 numpy==1.23
-transformers
-transformers[onnx]
-onnxruntime
-torch
+transformers==4.26.1
+transformers[onnx]==4.26.1
+onnxruntime==1.14.1
+torch==1.13.1
 ovmsclient

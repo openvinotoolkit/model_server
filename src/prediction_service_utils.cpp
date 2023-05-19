@@ -121,7 +121,7 @@ bool useSharedOutputContentFn(const tensorflow::serving::PredictRequest* request
 }
 
 bool useSharedOutputContentFn(const ::KFSRequest* request) {
-    return request->raw_input_contents().size() > 0;
+    return true;
 }
 
 bool useSharedOutputContentFn(const InferenceRequest* request) {
