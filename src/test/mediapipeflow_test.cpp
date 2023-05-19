@@ -202,6 +202,89 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
+TEST_F(MediapipeFlowTest, InferWithParams) {
+    SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_graph_with_side_packets.json");
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediaWithParams";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in_not_used", {{1, 1}, ovms::Precision::I32}}};
+    std::vector<float> requestData{0.};
+    preparePredictRequest(request, inputsMeta, requestData);
+    request.mutable_model_name()->assign(modelName);
+    // here add params
+    const std::string stringParamValue = "abecadlo";
+    const bool boolParamValue = true;
+    const int64_t int64ParamValue = 42;
+    request.mutable_parameters()->operator[]("string_param").set_string_param(stringParamValue);
+    request.mutable_parameters()->operator[]("bool_param").set_bool_param(boolParamValue);
+    request.mutable_parameters()->operator[]("int64_param").set_int64_param(int64ParamValue);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    auto outputs = response.outputs();
+    // here check outputs
+    ASSERT_EQ(outputs.size(), 3);
+    // 1st string
+    auto it = response.outputs().begin();
+    size_t outputId = 0;
+    while (it != response.outputs().end()) {
+        if (it->name() != "out_string") {
+            ++it;
+            ++outputId;
+            continue;
+        }
+        ASSERT_EQ(it->datatype(), "UINT8");
+        ASSERT_EQ(it->shape_size(), 1);
+        ASSERT_EQ(it->shape(0), stringParamValue.size());
+        const std::string& content = response.raw_output_contents(outputId);
+        SPDLOG_ERROR("Received output size:{} content:{}", content.size(), content);
+        EXPECT_EQ(content, stringParamValue);
+        break;
+    }
+    ASSERT_NE(it, response.outputs().end());
+    it = response.outputs().begin();
+    outputId = 0;
+    while (it != response.outputs().end()) {
+        if (it->name() != "out_bool") {
+            ++it;
+            ++outputId;
+            continue;
+        }
+        ASSERT_EQ(it->datatype(), "BOOL");
+        ASSERT_EQ(it->shape_size(), 1);
+        ASSERT_EQ(it->shape(0), 1);
+        const std::string& content = response.raw_output_contents(outputId);
+        ASSERT_EQ(content.size(), sizeof(bool));
+        const bool castContent = *((bool*)content.data());
+        SPDLOG_ERROR("Received output size:{} content:{}; castContent:{}", content.size(), content, castContent);
+        EXPECT_EQ(castContent, boolParamValue);
+        break;
+    }
+    ASSERT_NE(it, response.outputs().end());
+    it = response.outputs().begin();
+    outputId = 0;
+    while (it != response.outputs().end()) {
+        if (it->name() != "out_int64") {
+            ++it;
+            ++outputId;
+            continue;
+        }
+        ASSERT_EQ(it->datatype(), "INT64");
+        ASSERT_EQ(it->shape_size(), 1);
+        ASSERT_EQ(it->shape(0), 1);
+        const std::string& content = response.raw_output_contents(outputId);
+        ASSERT_EQ(content.size(), sizeof(int64_t));
+        const int64_t castContent = *((int64_t*)content.data());
+        SPDLOG_ERROR("Received output size:{} content:{}; castContent:{}", content.size(), content, castContent);
+        EXPECT_EQ(castContent, int64ParamValue);
+        break;
+    }
+    ASSERT_NE(it, response.outputs().end());
+}
+
 using testing::ElementsAre;
 
 TEST_P(MediapipeFlowAddTest, AdapterMetadata) {

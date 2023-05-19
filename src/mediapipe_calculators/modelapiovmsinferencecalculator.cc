@@ -17,13 +17,13 @@
 #include <sstream>
 #include <unordered_map>
 
+#include <adapters/inference_adapter.h>  // TODO fix path  model_api/model_api/cpp/adapters/include/adapters/inference_adapter.h
 #include <openvino/openvino.hpp>
 
 #include "../ovms.h"           // NOLINT
 #include "../stringutils.hpp"  // TODO dispose
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "modelapiovmsadapter.hpp"
 #include "modelapiovmsadapterwrapper.hpp"
 #include "src/mediapipe_calculators/modelapiovmsinferencecalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
@@ -32,9 +32,6 @@ namespace mediapipe {
 #define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
 
 using ovms::AdapterWrapper;
-using ovms::InferenceInput;
-using ovms::InferenceOutput;
-using ovms::OVMSInferenceAdapter;
 using std::endl;
 
 namespace {
@@ -59,7 +56,7 @@ namespace {
 const std::string SESSION_TAG{"SESSION"};
 
 class ModelAPISideFeedCalculator : public CalculatorBase {
-    OVMSInferenceAdapter* session{nullptr};
+    ::InferenceAdapter* session{nullptr};
     std::unordered_map<std::string, std::string> outputNameToTag;  // TODO move to Open();
 
 public:
@@ -122,8 +119,8 @@ public:
 
         const auto& options = cc->Options<ModelAPIInferenceCalculatorOptions>();
         const auto& inputTagInputMap = options.tag_to_input_tensor_names();
-        InferenceInput input;
-        InferenceOutput output;
+        ::InferenceInput input;
+        ::InferenceOutput output;
         for (const std::string& tag : cc->Inputs().GetTags()) {
             const char* realInputName{nullptr};
             auto it = inputTagInputMap.find(tag);

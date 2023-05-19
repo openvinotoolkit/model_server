@@ -16,6 +16,7 @@
 #include "mediapipegraphexecutor.hpp"
 
 #include <iostream>
+#include <map>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -114,6 +115,22 @@ enum : unsigned int {
 };
 }  // namespace
 
+static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFSRequest* request) {
+    std::map<std::string, mediapipe::Packet> inputSidePackets;
+    for (const auto& [name, valueChoice] : request->parameters()) {
+        if (valueChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
+            inputSidePackets[name] = mediapipe::MakePacket<std::string>(valueChoice.string_param()).At(mediapipe::Timestamp(0));  // TODO timestamp of side packets
+        } else if (valueChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
+            inputSidePackets[name] = mediapipe::MakePacket<int64_t>(valueChoice.int64_param()).At(mediapipe::Timestamp(0));  // TODO timestamp of side packets
+        } else if (valueChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) {
+            inputSidePackets[name] = mediapipe::MakePacket<bool>(valueChoice.bool_param()).At(mediapipe::Timestamp(0));  // TODO timestamp of side packets
+        } else {
+            SPDLOG_DEBUG("Handling parameters of different types than: bool, string, int64 is not supported");
+        }
+    }
+    return inputSidePackets;
+}
+
 Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
     Timer<TIMER_END> timer;
     SPDLOG_DEBUG("Start KServe request mediapipe graph:{} execution", request->model_name());
@@ -134,7 +151,8 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         outputPollers.emplace(name, std::move(absStatusOrPoller).value());
     }
     auto inputNames = this->config.input_stream();
-    absStatus = graph.StartRun({});
+    std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(request)};
+    absStatus = graph.StartRun(inputSidePackets);
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", request->model_name(), absMessage);

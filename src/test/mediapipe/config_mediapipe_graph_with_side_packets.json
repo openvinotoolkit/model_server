@@ -1,0 +1,10 @@
+{
+    "model_config_list": [
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediaWithParams",
+        "graph_path":"/ovms/src/test/mediapipe/graphWithParams.pbtxt"
+    }
+    ]
+}
