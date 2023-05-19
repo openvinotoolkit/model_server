@@ -800,7 +800,6 @@ cc_test(
         "test/mediapipe/config_mediapipe_all_graphs_adapter_full.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dummy_in_both_config_and_subconfig.json",
-        "test/mediapipe/config_mediapipe_dummy_adapter_full_separate_config.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full.json",
         "test/mediapipe/config_mediapipe_graph_with_side_packets.json",
         "test/mediapipe/config_standard_add.json",
