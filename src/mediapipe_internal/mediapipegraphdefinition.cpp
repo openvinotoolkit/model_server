@@ -28,7 +28,7 @@
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
-#include "../ov_utils.hpp"  // TODO cleanup getTensorMapString not using TensorInfo::asString
+#include "../ov_utils.hpp"
 #include "../serialization.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -155,9 +155,11 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
 }
 
 Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGraphConfig& config) {
-    // TODO block creating new unloadGuards
-    // TODO thread safety
+    // block creating new unloadGuards
     this->status.handle(ReloadEvent());
+    while (requestsHandlesCounter > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
     this->mgconfig = config;
     return validate(manager);
 }
@@ -167,7 +169,7 @@ void MediapipeGraphDefinition::retire(ModelManager& manager) {
 }
 
 Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
-    // TODO FIXME status and log, unify with DAG
+    // TODO possibly unify with DAG to share code
     unloadGuard = std::make_unique<MediapipeGraphDefinitionUnloadGuard>(*this);
 
     const uint waitLoadedTimestepMicroseconds = 1000;
@@ -177,20 +179,20 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
     std::unique_lock<std::mutex> cvLock(cvMtx);
     while (waitCheckpointsCounter-- != 0) {
         if (status.isAvailable()) {
-            SPDLOG_DEBUG("Successfully waited for pipeline definition: {}", getName());
+            SPDLOG_DEBUG("Successfully waited for mediapipe definition: {}", getName());
             return StatusCode::OK;
         }
         unloadGuard.reset();
         if (!status.canEndLoaded()) {
             if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-                SPDLOG_DEBUG("Waiting for pipeline definition: {} ended due to timeout.", getName());
+                SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended due to timeout.", getName());
                 return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
             } else {
-                SPDLOG_DEBUG("Waiting for pipeline definition: {} ended since it failed to load.", getName());
+                SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended since it failed to load.", getName());
                 return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
             }
         }
-        SPDLOG_DEBUG("Waiting for available state for pipeline: {}, with timestep: {}us timeout: {}us check count: {}",
+        SPDLOG_DEBUG("Waiting for available state for mediapipe: {}, with timestep: {}us timeout: {}us check count: {}",
             getName(), waitLoadedTimestepMicroseconds, waitForLoadedTimeoutMicroseconds, waitCheckpointsCounter);
         loadedNotify.wait_for(cvLock,
             std::chrono::microseconds(waitLoadedTimestepMicroseconds),
@@ -202,14 +204,14 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
     }
     if (!status.isAvailable()) {
         if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-            SPDLOG_DEBUG("Waiting for pipeline definition: {} ended due to timeout.", getName());
-            return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
+            SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended due to timeout.", getName());
+            return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET;
         } else {
-            SPDLOG_DEBUG("Waiting for pipeline definition: {} ended since it failed to load.", getName());
-            return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
+            SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended since it failed to load.", getName());
+            return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
         }
     }
-    SPDLOG_DEBUG("Succesfully waited for pipeline definition: {}", getName());
+    SPDLOG_DEBUG("Succesfully waited for mediapipe definition: {}", getName());
     return StatusCode::OK;
 }
 }  // namespace ovms
