@@ -225,7 +225,9 @@ void Server::setShutdownRequest(int i) {
     shutdown_request = i;
 }
 
-Server::~Server() = default;
+Server::~Server() {
+    this->shutdownModules();
+}
 
 std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #ifdef MTR_ENABLED
