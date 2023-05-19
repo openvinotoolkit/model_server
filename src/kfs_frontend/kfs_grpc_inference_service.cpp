@@ -239,12 +239,21 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
         request->model_name(),
         request->model_version());
     ServableMetricReporter* reporter = nullptr;
-    auto status = this->ModelInferImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer}, reporter);
-    timer.stop(TOTAL);
-    if (!status.ok()) {
-        return grpc(status);
-    }
+    Status status;
     const std::string servableName = request->model_name();
+    try {
+        status = this->ModelInferImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer}, reporter);
+        timer.stop(TOTAL);
+        if (!status.ok()) {
+            return grpc(status);
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Catched exception in InferenceServiceImpl for servable: {} exception: {}", servableName, e.what());
+        return grpc(Status(StatusCode::UNKNOWN_ERROR));
+    } catch (...) {
+        SPDLOG_ERROR("Catched unknown exception in InferenceServiceImpl for servable: {}", servableName);
+        return grpc(Status(StatusCode::UNKNOWN_ERROR));
+    }
     double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total gRPC request processing time: {} ms", requestTotal / 1000);
     if (!reporter) {
