@@ -797,7 +797,6 @@ cc_test(
         "test/mediapipe/subconfig.json",
         "test/mediapipe/config_mediapipe_add_adapter_full.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_subconfig.json",
-        "test/mediapipe/config_mediapipe_dummy_adapter_full_dummy_in_both_config_and_subconfig.json",
         "test/mediapipe/config_mediapipe_all_graphs_adapter_full.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dummy_in_both_config_and_subconfig.json",
