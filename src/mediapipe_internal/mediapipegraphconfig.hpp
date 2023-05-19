@@ -38,6 +38,11 @@ private:
     std::string graphName;
 
     /**
+         * @brief Mediapipe Base Path
+         */
+    std::string basePath;
+
+    /**
          * @brief Mediapipe Graph Path
          */
     std::string graphPath;
@@ -62,15 +67,18 @@ public:
          * @brief Construct a new Mediapie Graph configuration object
          *
          * @param name
+         * @param basePath
          * @param graphPath
-         * @param graphPath
+         * @param passKfsRequest
          * @param subconfigPath
          */
     MediapipeGraphConfig(const std::string& graphName = "",
+        const std::string& basePath = "",
         const std::string& graphPath = "",
         const bool passKfsRequest = false,
         const std::string& subconfigPath = "") :
         graphName(graphName),
+        basePath(basePath),
         graphPath(graphPath),
         passKfsRequest(passKfsRequest),
         subconfigPath(subconfigPath) {
@@ -110,11 +118,27 @@ public:
     }
 
     /**
+         * @brief Get the Base Path
+         *
+         * @return const std::string&
+         */
+    const std::string& getBasePath() const {
+        return this->basePath;
+    }
+
+    /**
          * @brief Set the Graph Path
          *
          * @param graphPath
          */
     void setGraphPath(const std::string& graphPath);
+
+    /**
+         * @brief Set the Base Path
+         *
+         * @param basePath
+         */
+    void setBasePath(const std::string& basePath);
 
     /**
          * @brief Get the ModelsConfig Path
@@ -139,6 +163,15 @@ public:
          */
     void setRootDirectoryPath(const std::string& rootDirectoryPath) {
         this->rootDirectoryPath = rootDirectoryPath;
+    }
+
+    /**
+     * @brief Get the root directory path
+     *
+     * @return const std::string&
+     */
+    const std::string& getRootDirectoryPath() const {
+        return this->rootDirectoryPath;
     }
 
     /**
@@ -167,13 +200,37 @@ public:
     Status parseNode(const rapidjson::Value& v) {
         try {
             this->setGraphName(v["name"].GetString());
-            this->setGraphPath(v["graph_path"].GetString());
+            if (v.HasMember("base_path")) {
+                std::string providedBasePath(v["base_path"].GetString());
+                if (providedBasePath.back() == '/')
+                    this->setBasePath(providedBasePath);
+                else
+                    this->setBasePath(providedBasePath + "/");
+            } else {
+                if (!getRootDirectoryPath().empty()) {
+                    this->setBasePath(getRootDirectoryPath());
+                    SPDLOG_DEBUG("base_path not defined in config so it will be set to default based on main config directory: {}", this->getBasePath());
+                } else {
+                    SPDLOG_ERROR("Mediapipe {} root directory path is not set.", getGraphName());
+                    return StatusCode::INTERNAL_ERROR;
+                }
+            }
+            if (v.HasMember("graph_path")) {
+                this->setGraphPath(v["graph_path"].GetString());
+            } else {
+                this->setGraphPath(basePath + "graph.pbtxt");
+                SPDLOG_DEBUG("graph_path not defined in config so it will be set to default based on base_path and graph name: {}", this->getGraphPath());
+            }
             if (v.HasMember("graph_pass_kfs_request"))
                 this->setPassKfsRequestFlag(v["graph_pass_kfs_request"].GetBool());
             else
                 this->setPassKfsRequestFlag(false);
             if (v.HasMember("subconfig")) {
                 this->setSubconfigPath(v["subconfig"].GetString());
+            } else {
+                std::string defaultSubconfigPath = getBasePath() + "subconfig.json";
+                SPDLOG_DEBUG("No subconfig path was provided for graph: {} so default subconfig file: {} will be loaded.", getGraphName(), defaultSubconfigPath);
+                this->setSubconfigPath(defaultSubconfigPath);
             }
         } catch (std::logic_error& e) {
             SPDLOG_DEBUG("Relative path error: {}", e.what());

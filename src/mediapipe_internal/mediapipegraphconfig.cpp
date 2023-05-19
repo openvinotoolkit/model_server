@@ -18,13 +18,16 @@
 #include "../filesystem.hpp"
 
 namespace ovms {
+void MediapipeGraphConfig::setBasePath(const std::string& basePath) {
+    FileSystem::setPath(this->basePath, basePath, this->rootDirectoryPath);
+}
 
 void MediapipeGraphConfig::setGraphPath(const std::string& graphPath) {
-    FileSystem::setPath(this->graphPath, graphPath, this->rootDirectoryPath);
+    FileSystem::setPath(this->graphPath, graphPath, this->basePath);
 }
 
 void MediapipeGraphConfig::setSubconfigPath(const std::string& subconfigPath) {
-    FileSystem::setPath(this->subconfigPath, subconfigPath, this->rootDirectoryPath);
+    FileSystem::setPath(this->subconfigPath, subconfigPath, this->basePath);
 }
 
 }  // namespace ovms
