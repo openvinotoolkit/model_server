@@ -227,8 +227,7 @@ public:
                 this->setPassKfsRequestFlag(false);
             if (v.HasMember("subconfig")) {
                 this->setSubconfigPath(v["subconfig"].GetString());
-            }
-            else {
+            } else {
                 std::string defaultSubconfigPath = getBasePath() + "subconfig.json";
                 SPDLOG_DEBUG("No subconfig path was provided for graph: {} so default subconfig file: {} will be loaded.", getGraphName(), defaultSubconfigPath);
                 this->setSubconfigPath(defaultSubconfigPath);

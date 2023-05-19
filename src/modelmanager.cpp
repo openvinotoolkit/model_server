@@ -392,7 +392,6 @@ Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, con
 }
 #endif
 
-
 #if (MEDIAPIPE_DISABLE == 0)
 static Status parseMediapipeConfig(rapidjson::Document& configJson, std::string& rootDirectoryPath, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     const auto itrp = configJson.FindMember("mediapipe_config_list");
@@ -553,7 +552,6 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
     this->customNodeLibraryManager->unloadLibrariesRemovedFromConfig(librariesInConfig);
     return StatusCode::OK;
 }
-
 
 #if (MEDIAPIPE_DISABLE == 0)
 Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
@@ -754,10 +752,10 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
     return firstErrorStatus;
 }
 #if (MEDIAPIPE_DISABLE == 0)
-Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) 
+Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile)
 #else
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs)
-#endif 
+#endif
 {
     Status firstErrorStatus = StatusCode::OK;
     const auto itr = configJson.FindMember("model_config_list");

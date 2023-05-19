@@ -193,9 +193,7 @@ public:
         if (givenPath.size() > 1) {
             auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
             configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = configDirectory;
-        }
-        else
-        {
+        } else {
             rootDirectoryPath = currentWorkingDir + "/";
         }
     }
