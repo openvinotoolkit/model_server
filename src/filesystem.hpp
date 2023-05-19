@@ -190,12 +190,8 @@ public:
 
     static void setRootDirectoryPath(std::string& rootDirectoryPath, const std::string& givenPath) {
         std::string currentWorkingDir = std::filesystem::current_path();
-        if (givenPath.size() > 1) {
-            auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
-            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = configDirectory;
-        } else {
-            rootDirectoryPath = currentWorkingDir + "/";
-        }
+        auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
+        configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = configDirectory;
     }
 
     std::string appendSlash(const std::string& name) {
