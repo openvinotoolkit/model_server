@@ -735,7 +735,7 @@ node {
 }
 )";
 
-TEST_F(MediapipeConfigChanges, AddProperGraphThenRetire) {
+TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     std::string configFileContent = configFileWithGraphPathToReplace;
     std::string configFilePath = directoryPath + "/config.json";
     std::string graphFilePath = directoryPath + "/graph.pbtxt";
@@ -757,7 +757,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenRetire) {
     definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
-    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE);
     // now we add again
     configFileContent = configFileWithGraphPathToReplace;
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
@@ -782,9 +782,9 @@ TEST_F(MediapipeConfigChanges, AddImroperGraphThenFixWithReloadThenBreakAgain) {
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     ovms::Status status;
-    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET);
     // TODO check for tfs as well - now not supported
-    // checkStatus<TFSPredictRequest, TFSPredictResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    // checkStatus<TFSPredictRequest, TFSPredictResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET);
     // now we fix the config
     const std::string modelPathToReplace{"XYZ"};
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
@@ -800,7 +800,7 @@ TEST_F(MediapipeConfigChanges, AddImroperGraphThenFixWithReloadThenBreakAgain) {
     definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
-    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET);
 }
 
 TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {

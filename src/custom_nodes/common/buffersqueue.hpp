@@ -36,6 +36,7 @@ class BuffersQueue : protected Queue<char*> {
 
 public:
     BuffersQueue(size_t singleBufferSize, int streamsLength);
+    ~BuffersQueue();
     void* getBuffer();
     bool returnBuffer(void* buffer);
     const size_t getSize();

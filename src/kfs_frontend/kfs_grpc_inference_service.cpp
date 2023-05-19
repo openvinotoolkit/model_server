@@ -276,7 +276,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
             status = executor->infer(request, response, executionContext, reporterOut);
             return status;
 #else
-            SPDLOG_ERROR("Requested DAG: {} does not exist. Mediapipe support was disabled during build process...", request->model_name());
+            SPDLOG_DEBUG("Requested DAG: {} does not exist. Mediapipe support was disabled during build process...", request->model_name());
 #endif
         }
     }

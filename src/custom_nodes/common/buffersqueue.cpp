@@ -30,6 +30,8 @@ BuffersQueue::BuffersQueue(size_t singleBufferSize, int streamsLength) :
     }
 }
 
+BuffersQueue::~BuffersQueue() {}
+
 void* BuffersQueue::getBuffer() {
     // can be easily switched to async version if need arise
     auto idleId = tryToGetIdleStream();

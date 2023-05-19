@@ -644,6 +644,7 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 };
 
 void randomizePort(std::string& port);
+void randomizePorts(std::string& port1, std::string& port2);
 
 class ConstructorEnabledConfig : public ovms::Config {
 public:
