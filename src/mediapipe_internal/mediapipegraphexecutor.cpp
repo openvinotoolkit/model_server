@@ -121,13 +121,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     auto absStatus = graph.Initialize(this->config);
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
-        SPDLOG_ERROR("KServe request for mediapipe graph:{} execution failed with message: {}", request->model_name(), absMessage);
-        for (auto& name : config.input_stream()) {
-            SPDLOG_ERROR("IName:{}", name);
-        }
-        for (auto& name : config.output_stream()) {
-            SPDLOG_ERROR("OName:{}", name);
-        }
+        SPDLOG_DEBUG("KServe request for mediapipe graph:{} initialization failed with message: {}", request->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
@@ -143,14 +137,14 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     absStatus = graph.StartRun({});
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
-        SPDLOG_ERROR("Failed to start mediapipe graph: {} with error: {}", request->model_name(), absMessage);
+        SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", request->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, std::move(absMessage));
     }
     if (inputNames.size() != request->inputs().size()) {
         std::stringstream ss;
         ss << "Expected: " << inputNames.size() << "; Actual: " << request->inputs().size();
         const std::string details = ss.str();
-        SPDLOG_ERROR("[servable name: {} version: {}] Invalid number of inputs - {}", request->model_name(), version, details);
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", request->model_name(), version, details);
         return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
     }
     for (auto name : inputNames) {
@@ -158,21 +152,21 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         ov::Tensor input_tensor;
         auto status = deserializeTensor(name, version, request, input_tensor);
         if (!status.ok()) {
-            SPDLOG_ERROR("Failed to deserialize tensor: {}", name);
+            SPDLOG_DEBUG("Failed to deserialize tensor: {}", name);
             return status;
         }
         absStatus = graph.AddPacketToInputStream(
             name, ::mediapipe::MakePacket<ov::Tensor>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
         if (!absStatus.ok()) {
             const std::string absMessage = absStatus.ToString();
-            SPDLOG_ERROR("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
+            SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
                 name, request->model_name(), absStatus.message(), absStatus.raw_code());
             return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
         }
         absStatus = graph.CloseInputStream(name);
         if (!absStatus.ok()) {
             const std::string absMessage = absStatus.ToString();
-            SPDLOG_ERROR("Failed to close stream: {} of mediapipe graph: {} with error: {}",
+            SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
                 name, request->model_name(), absMessage);
             return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
         }
@@ -206,11 +200,11 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     absStatus = graph.WaitUntilDone();
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
-        SPDLOG_ERROR("Mediapipe failed to execute: {}", absMessage);
+        SPDLOG_DEBUG("Mediapipe failed to execute: {}", absMessage);
         return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, absMessage);
     }
     if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
-        SPDLOG_ERROR("Mediapipe failed to execute. Failed to receive all output packets");
+        SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
         return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unknown error during mediapipe execution");
     }
     SPDLOG_DEBUG("Received all output stream packets for graph: {}", request->model_name());
