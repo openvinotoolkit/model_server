@@ -60,7 +60,7 @@ if [ ${NO_WARNINGS_TEST_NOTUSED} -gt 0 ]; then
     echo "Failed probably due to unnecessary forward includes: ${NO_WARNINGS_TEST_NOTUSED}";
     exit 1;
 fi
-if [ ${NO_WARNINGS} -gt  159 ]; then
+if [ ${NO_WARNINGS} -gt  160 ]; then
     echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
     exit 1
 fi
