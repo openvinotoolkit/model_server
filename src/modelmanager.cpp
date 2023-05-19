@@ -149,7 +149,10 @@ void ModelManager::logPluginConfiguration() {
     }
 }
 
-ModelManager::~ModelManager() = default;
+ModelManager::~ModelManager() {
+    join();
+    models.clear();
+}
 
 Status ModelManager::start(const Config& config) {
     watcherIntervalSec = config.filesystemPollWaitSeconds();
@@ -1060,7 +1063,6 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
 
 void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
-
     while (exitSignal.wait_for(std::chrono::seconds(watcherIntervalSec)) == std::future_status::timeout) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
         std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
@@ -1072,7 +1074,6 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
             }
         }
         updateConfigurationWithoutConfigFile();
-
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
@@ -1135,10 +1136,12 @@ void ModelManager::cleanupResources() {
 }
 
 void ModelManager::join() {
-    if (watcherStarted)
+    if (watcherStarted) {
         exitTrigger.set_value();
-    if (cleanerStarted)
+    }
+    if (cleanerStarted) {
         cleanerExitTrigger.set_value();
+    }
 
     if (watcherStarted) {
         if (monitor.joinable()) {

@@ -40,6 +40,7 @@ const grpc::Status grpc(const Status& status) {
         {StatusCode::MODEL_MISSING, grpc::StatusCode::NOT_FOUND},
         {StatusCode::MODEL_NAME_MISSING, grpc::StatusCode::NOT_FOUND},
         {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, grpc::StatusCode::NOT_FOUND},
+        {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, grpc::StatusCode::NOT_FOUND},
         {StatusCode::MODEL_VERSION_MISSING, grpc::StatusCode::NOT_FOUND},
         {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
         {StatusCode::MODEL_VERSION_NOT_LOADED_YET, grpc::StatusCode::NOT_FOUND},

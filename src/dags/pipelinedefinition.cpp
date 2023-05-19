@@ -39,6 +39,7 @@
 #include "pipelinedefinitionunloadguard.hpp"
 
 namespace ovms {
+const std::string PipelineDefinition::SCHEDULER_CLASS_NAME{"Pipeline"};
 
 Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
     if (str == DL_NODE_CONFIG_TYPE) {
@@ -62,7 +63,7 @@ PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
     nodeInfos(nodeInfos),
     connections(connections),
     reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
-    status(this->pipelineName) {}
+    status(SCHEDULER_CLASS_NAME, this->pipelineName) {}
 
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());

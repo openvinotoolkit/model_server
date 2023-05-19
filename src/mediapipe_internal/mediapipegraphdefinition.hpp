@@ -16,6 +16,7 @@
 #pragma once
 #include <iostream>
 #include <memory>
+#include <shared_mutex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -41,7 +42,10 @@ class ModelManager;
 class MediapipeGraphExecutor;
 class Status;
 
+class MediapipeGraphDefinitionUnloadGuard;
+
 class MediapipeGraphDefinition {
+    friend MediapipeGraphDefinitionUnloadGuard;
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
             status(status),
@@ -84,6 +88,10 @@ public:
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
 
+    static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
+    static const std::string SCHEDULER_CLASS_NAME;
+    Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
+
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
 
@@ -94,6 +102,14 @@ protected:
 private:
     Status createInputsInfo();
     Status createOutputsInfo();
+
+    void increaseRequestsHandlesCount() {
+        ++requestsHandlesCounter;
+    }
+
+    void decreaseRequestsHandlesCount() {
+        --requestsHandlesCounter;
+    }
 
     static MediapipeGraphConfig MGC;
     const std::string name;
@@ -106,6 +122,23 @@ private:
     tensor_map_t outputsInfo;
 
     PipelineDefinitionStatus status;
+    mutable std::shared_mutex metadataMtx;
+    std::atomic<uint64_t> requestsHandlesCounter = 0;
     std::condition_variable loadedNotify;
+};
+
+class MediapipeGraphDefinitionUnloadGuard {
+public:
+    MediapipeGraphDefinitionUnloadGuard(MediapipeGraphDefinition& definition) :
+        definition(definition) {
+        definition.increaseRequestsHandlesCount();
+    }
+
+    ~MediapipeGraphDefinitionUnloadGuard() {
+        definition.decreaseRequestsHandlesCount();
+    }
+
+private:
+    MediapipeGraphDefinition& definition;
 };
 }  // namespace ovms

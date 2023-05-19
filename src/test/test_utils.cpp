@@ -722,6 +722,13 @@ void randomizePort(std::string& port) {
         *digitToRandomize = '0' + dist(eng);
     }
 }
+void randomizePorts(std::string& port1, std::string& port2) {
+    randomizePort(port1);
+    randomizePort(port2);
+    while (port2 == port1) {
+        randomizePort(port2);
+    }
+}
 
 std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const TensorInfo> src, ovms::Precision newPrecision) {
     return std::make_shared<TensorInfo>(

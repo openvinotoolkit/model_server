@@ -45,17 +45,18 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     }
     std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, manager.getMetricRegistry(), &manager.getMetricConfig());
     auto stat = graphDefinition->validate(manager);
-    auto it = definitions.insert({pipelineName, std::move(graphDefinition)});  // TODO check if inserted
+    std::unique_lock lock(definitionsMtx);
+    definitions.insert({pipelineName, std::move(graphDefinition)});  // TODO check if inserted
     return stat;
 }
 
 bool MediapipeFactory::definitionExists(const std::string& name) const {
-    // TODO thread safety
+    std::shared_lock lock(definitionsMtx);
     return this->definitions.find(name) != this->definitions.end();
 }
 
 MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::string& name) const {
-    // TODO thread safety
+    std::shared_lock lock(definitionsMtx);
     auto it = definitions.find(name);
     if (it == std::end(definitions)) {
         return nullptr;
@@ -81,12 +82,13 @@ Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipelin
     const KFSRequest* request,
     KFSResponse* response,
     ModelManager& manager) const {
-    auto it = definitions.find(name);
-    if (it == definitions.end()) {
-        SPDLOG_DEBUG("Mediapipe graph with requested name: {} does not exist", name);
-        return StatusCode::NOT_IMPLEMENTED;
+    std::shared_lock lock(definitionsMtx);
+    if (!definitionExists(name)) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Mediapipe with requested name: {} does not exist", name);
+        return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
     }
-    auto status = it->second->create(pipeline, request, response);
+    auto& definition = *definitions.at(name);
+    auto status = definition.create(pipeline, request, response);
     return status;
 }
 
