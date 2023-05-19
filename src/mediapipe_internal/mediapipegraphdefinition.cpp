@@ -46,14 +46,12 @@ const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 
 const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
     std::shared_lock lock(metadataMtx);
-    tensor_map_t copy = this->inputsInfo;
-    return copy;
+    return this->inputsInfo;
 }
 
 const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
     std::shared_lock lock(metadataMtx);
-    tensor_map_t copy = this->outputsInfo;
-    return copy;
+    return this->outputsInfo;
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
@@ -186,10 +184,10 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
         if (!status.canEndLoaded()) {
             if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
                 SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended due to timeout.", getName());
-                return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
+                return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET;
             } else {
                 SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended since it failed to load.", getName());
-                return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
+                return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
             }
         }
         SPDLOG_DEBUG("Waiting for available state for mediapipe: {}, with timestep: {}us timeout: {}us check count: {}",

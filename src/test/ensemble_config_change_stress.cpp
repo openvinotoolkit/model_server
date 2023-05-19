@@ -50,6 +50,11 @@ using testing::Return;
 
 static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
 
+enum class SERVABLE_TYPE {
+    DAG,
+    MEDIAPIPE
+};
+
 std::string createStressTestPipelineOneDummyConfig() {
     return R"(
 {
@@ -1166,9 +1171,9 @@ public:
         randomizePorts(port, restPort);
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));  // required for metrics
-        // ideally we would want to have emptyConfig
-        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/emptyConfig.json"));  // FIXME the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
-        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(serverSettings, 0));                           // set to 0 to reload only through test and avoid races
+        // ideally we would want to have emptyConfigWithMetrics
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/emptyConfigWithMetrics.json"));  // FIXME the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(serverSettings, 0));                                      // set to 0 to reload only through test and avoid races
         OVMS_Server* cserver;
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
@@ -1442,7 +1447,7 @@ public:
                                                                                       << " was not allowed in test but occured during load";
         }
     }
-    bool isMetadataResponseCorrect(tensorflow::serving::GetModelMetadataResponse& response, bool isMediapipe) {
+    bool isMetadataResponseCorrect(tensorflow::serving::GetModelMetadataResponse& response, SERVABLE_TYPE servableType) {
         tensorflow::serving::SignatureDefMap def;
         EXPECT_EQ(response.model_spec().name(), pipelineName);
         EXPECT_TRUE(response.model_spec().has_version());
@@ -1475,32 +1480,26 @@ public:
             if (!inputNameCorrect) {
                 return false;
             }
-            if (!isMediapipe) {
-                bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
-                EXPECT_TRUE(inputTypeCorrect);
-                if (!inputTypeCorrect) {
-                    return false;
-                }
-                bool inputShapeCorrect{isShapeTheSame(
-                    inputs.at(pipelineInputName.c_str()).tensor_shape(),
-                    {1, 10})};
-                EXPECT_TRUE(inputShapeCorrect);
-                if (!inputShapeCorrect) {
-                    return false;
-                }
+            bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
+            EXPECT_TRUE(inputTypeCorrect);
+            if (!inputTypeCorrect) {
+                return false;
+            }
+            bool inputShapeCorrect = false;
+            std::vector<int64_t> expectedShape;
+            if (servableType == SERVABLE_TYPE::DAG) {
+                expectedShape = std::vector<int64_t>{1, 10};
+            } else if (servableType == SERVABLE_TYPE::MEDIAPIPE) {
+                expectedShape = std::vector<int64_t>{};
             } else {
-                bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
-                EXPECT_TRUE(inputTypeCorrect);
-                if (!inputTypeCorrect) {
-                    return false;
-                }
-                bool inputShapeCorrect{isShapeTheSame(
-                    inputs.at(pipelineInputName.c_str()).tensor_shape(),
-                    {})};
-                EXPECT_TRUE(inputShapeCorrect);
-                if (!inputShapeCorrect) {
-                    return false;
-                }
+                EXPECT_TRUE(false) << "Unsupported checks";
+            }
+            inputShapeCorrect = isShapeTheSame(
+                inputs.at(pipelineInputName.c_str()).tensor_shape(),
+                std::move(expectedShape));
+            EXPECT_TRUE(inputShapeCorrect);
+            if (!inputShapeCorrect) {
+                return false;
             }
         }
         bool outputNameExist{outputs.find(pipelineOutputName.c_str()) != outputs.end()};
@@ -1559,13 +1558,13 @@ public:
                 continue;
             }
             // Check response if correct
-            bool isMediapipe = false;
+            SERVABLE_TYPE servableType = SERVABLE_TYPE::DAG;
 #if (MEDIAPIPE_DISABLE == 0)
             if (typeid(ServableType) == typeid(MediapipeGraphExecutor)) {
-                isMediapipe = true;
+                servableType = SERVABLE_TYPE::MEDIAPIPE;
             }
 #endif
-            EXPECT_TRUE(isMetadataResponseCorrect(response, isMediapipe));
+            EXPECT_TRUE(isMetadataResponseCorrect(response, servableType));
             if (::testing::Test::HasFailure()) {
                 SPDLOG_INFO("Earlier fail detected. Stopping execution");
                 break;
@@ -2208,7 +2207,7 @@ TEST_F(StressMediapipeChanges, RemoveGraphDuringPredictLoad) {
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};     // we expect to stop creating pipelines
+        StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE};    // we expect to stop creating pipelines
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
