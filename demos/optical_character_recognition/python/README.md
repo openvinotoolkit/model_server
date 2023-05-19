@@ -40,7 +40,7 @@ Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed i
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
-Inside the EAST folder add a file `freeze_east_model.py`:
+Inside the EAST folder add a file `freeze_east_model.py` by executing the following `echo` command from the commandline:
 ```bash
 echo "from tensorflow.python.framework import graph_util
 import tensorflow as tf
