@@ -1,4 +1,4 @@
-# Support for Binary Input Data {#ovms_docs_binary_input}
+# Support for Binary Encoded Image Input Data {#ovms_docs_binary_input}
 
 @sphinxdirective
 
@@ -20,4 +20,4 @@ automatically from JPEG/PNG to OpenVINO friendly format using built-in [OpenCV](
       - [TensorFlow Serving API](./binary_input_tfs.md)
       - [KServe API](./binary_input_kfs.md)
 
-      It's worth noting that with KServe API, you can also send raw data (that does not require processing by OpenCV) in binary form via REST. This makes KServe API more performant choice while working with REST interface. The guide linked above explains how to work with both regular data in binary format as well as JPEG/PNG encoded images. 
+It's worth noting that with KServe API, you can also send raw data with or without image encoding via REST API. This makes KServe REST API more performant choice comparing to json format in TFS API. The guide linked above explains how to work with both regular data in binary format as well as JPEG/PNG encoded images. 
