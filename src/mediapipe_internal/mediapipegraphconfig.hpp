@@ -218,7 +218,7 @@ public:
             if (v.HasMember("graph_path")) {
                 this->setGraphPath(v["graph_path"].GetString());
             } else {
-                this->setGraphPath(basePath + graphName + ".pbtxt");
+                this->setGraphPath(basePath + "graph.pbtxt");
                 SPDLOG_DEBUG("graph_path not defined in config so it will be set to default based on base_path and graph name: {}", this->getGraphPath());
             }
             if (v.HasMember("graph_pass_kfs_request"))
