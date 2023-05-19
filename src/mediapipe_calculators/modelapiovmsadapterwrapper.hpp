@@ -16,17 +16,14 @@
 //*****************************************************************************
 #include <memory>
 
-#include "mediapipe/framework/calculator_framework.h"
-#include "mediapipe/framework/port/canonical_errors.h"
-#include "src/mediapipe_calculators/ovmscalculator.pb.h"
+class InferenceAdapter;
+
 namespace mediapipe {
 namespace ovms {
 
-class OVMSInferenceAdapter;
-
 struct AdapterWrapper {
-    std::unique_ptr<OVMSInferenceAdapter> adapter;
-    AdapterWrapper(OVMSInferenceAdapter* adapter);
+    std::unique_ptr<::InferenceAdapter> adapter;
+    AdapterWrapper(::InferenceAdapter* adapter);
     ~AdapterWrapper();
 };
 }  // namespace ovms

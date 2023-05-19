@@ -75,7 +75,9 @@ OVMSInferenceAdapter::OVMSInferenceAdapter(const std::string& servableName, uint
         OVMS_ServerNew(&this->cserver);
     }
 }
+
 OVMSInferenceAdapter::~OVMSInferenceAdapter() {
+    LOG(ERROR) << "OVMSAdapter destr";
 }
 
 InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
