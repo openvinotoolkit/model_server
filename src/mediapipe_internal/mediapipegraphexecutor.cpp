@@ -116,12 +116,12 @@ enum : unsigned int {
 
 Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
     Timer<TIMER_END> timer;
-    SPDLOG_DEBUG("Start KServe request mediapipe graph:{} execution", request->model_name());
+    SPDLOG_DEBUG("Start KServe request mediapipe graph: {} execution", request->model_name());
     ::mediapipe::CalculatorGraph graph;
     auto absStatus = graph.Initialize(this->config);
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("KServe request for mediapipe graph:{} initialization failed with message: {}", request->model_name(), absMessage);
+        SPDLOG_DEBUG("KServe request for mediapipe graph: {} initialization failed with message: {}", request->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
