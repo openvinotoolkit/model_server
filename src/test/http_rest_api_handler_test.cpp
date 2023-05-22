@@ -17,6 +17,7 @@
 
 #include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
+#include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../modelmanager.hpp"
 #include "../servablemanagermodule.hpp"
@@ -625,6 +626,82 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToAddPipeline) {
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 
+TEST_F(ConfigReload, StartWith1DummyThenReloadToMediapipe) {
+    ovms::Server& ovmsServer = ovms::Server::instance();
+    TestHelper1 t(*this, configWith1Dummy);
+    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    RemoveConfig();
+
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    fs->readTextFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json", &contents);
+
+    SetUpConfig(contents);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJson = R"({
+"add" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "END",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"mediapipeAdd" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"mediapipeAddADAPTFULL" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    std::string response;
+    auto status = handler.processConfigReloadRequest(response, t.getManager());
+
+    EXPECT_EQ(expectedJson, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
+}
+
 static const char* configWithPipelineWithInvalidOutputs = R"(
 {
     "model_config_list": [
@@ -981,6 +1058,63 @@ TEST_F(ConfigStatus, configWithPipelines) {
  ]
 },
 "pipeline2Dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    auto status = handler.processConfigStatusRequest(response, t.getManager());
+    EXPECT_EQ(expectedJson, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
+TEST_F(ConfigStatus, configWithMediapipe) {
+    ovms::Server& ovmsServer = ovms::Server::instance();
+    
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    fs->readTextFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json", &contents);
+
+    TestHelper1 t(*this, contents.c_str());
+    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
+    std::string response;
+
+    const char* expectedJson = R"({
+"add" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"mediapipeAdd" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"mediapipeAddADAPTFULL" : 
 {
  "model_version_status": [
   {
