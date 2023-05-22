@@ -135,6 +135,10 @@ OVMS_Status* OVMS_ServerNew(OVMS_Server** server) {
     if (server == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
+    // Hack to force spdlog singleton to initialize before ovms::Server singleton
+    if (spdlog::get("notUsedLogger")) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::INTERNAL_ERROR, "unexpected error during spdlog configuration"));
+    }
     *server = reinterpret_cast<OVMS_Server*>(&ovms::Server::instance());
     return nullptr;
 }
