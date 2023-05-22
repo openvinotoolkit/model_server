@@ -188,11 +188,11 @@ TEST(FileSystem, setRootDirectoryPath) {
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     ASSERT_EQ(rootPath, "/");
 
-    std::string givenPath = "/givenpath/longer";
+    givenPath = "/givenpath/longer";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     ASSERT_EQ(rootPath, "/givenpath");
 
-    std::string givenPath = "/givenpath/longer/somefile.txt";
+    givenPath = "/givenpath/longer/somefile.txt";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     ASSERT_EQ(rootPath, "/givenpath/longer");
 
