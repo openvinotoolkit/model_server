@@ -174,7 +174,9 @@ public:
     }
 
     static void setPath(std::string& path, const std::string& givenPath, const std::string& rootDirectoryPath) {
-        if (!FileSystem::isLocalFilesystem(givenPath)) {
+        if (givenPath.size() == 0){
+            path = rootDirectoryPath;
+        } else if (!FileSystem::isLocalFilesystem(givenPath)) {
             // Cloud filesystem
             path = givenPath;
         } else if (givenPath.size() > 0 && givenPath.at(0) == '/') {
@@ -198,7 +200,7 @@ public:
         }
     }
 
-    std::string appendSlash(const std::string& name) {
+    static std::string appendSlash(const std::string& name) {
         if (name.empty() || (name.back() == '/')) {
             return name;
         }
@@ -206,11 +208,11 @@ public:
         return (name + "/");
     }
 
-    bool isAbsolutePath(const std::string& path) {
+    static bool isAbsolutePath(const std::string& path) {
         return !path.empty() && (path[0] == '/');
     }
 
-    std::string joinPath(std::initializer_list<std::string> segments) {
+    static std::string joinPath(std::initializer_list<std::string> segments) {
         std::string joined;
 
         for (const auto& seg : segments) {

@@ -168,6 +168,7 @@ TEST(FileSystem, CheckIfPathIsEscaped) {
 }
 
 TEST(FileSystem, IsLocalFilesystem) {
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem(""));
     ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("s3://"));
     ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("gs://"));
     ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("azfs://"));
@@ -181,10 +182,10 @@ TEST(FileSystem, IsLocalFilesystem) {
     ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("/long/local/filesystem"));
 }
 
-TEST(FileSystem, setRootDirectoryPath) {
+TEST(FileSystem, SetRootDirectoryPath) {
     std::string rootPath = "";
     std::string givenPath = "/givenpath";
-    auto fs = std::make_shared<ovms::LocalFileSystem>();
+
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     ASSERT_EQ(rootPath, "/");
 
@@ -199,7 +200,7 @@ TEST(FileSystem, setRootDirectoryPath) {
     givenPath = "givenpath";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     std::string currentWorkingDir = std::filesystem::current_path();
-    ASSERT_EQ(rootPath, fs->joinPath({currentWorkingDir, ""}));
+    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
 
     givenPath = "/givenpath/";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
@@ -207,9 +208,50 @@ TEST(FileSystem, setRootDirectoryPath) {
 
     givenPath = "1";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, fs->joinPath({currentWorkingDir, ""}));
+    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
 
     givenPath = "";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, fs->joinPath({currentWorkingDir, ""}));
+    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+}
+
+TEST(FileSystem, SetPath) {
+    std::string rootPath = "";
+    std::string testPath = "";
+    std::string givenPath = "";
+
+    try {
+        ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    } catch (std::logic_error& e) {}
+
+    rootPath = "/rootPath";
+    testPath = "";
+    givenPath = "";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, rootPath);
+
+    testPath = "";
+    givenPath = "/givenPath";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, "/givenPath");
+
+    testPath = "";
+    givenPath = "givenPath";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, "/rootPathgivenPath");
+
+    testPath = "";
+    givenPath = "long/givenPath";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, "/rootPathlong/givenPath");
+
+    testPath = "";
+    givenPath = "s3://long/givenPath";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, givenPath);
 }

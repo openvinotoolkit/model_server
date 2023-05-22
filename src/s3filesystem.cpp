@@ -304,7 +304,7 @@ StatusCode S3FileSystem::getDirectorySubdirs(const std::string& path, std::set<s
     // Erase non-directory entries...
     for (auto iter = subdirs->begin(); iter != subdirs->end();) {
         bool is_dir;
-        status = isDirectory(joinPath({true_path, *iter}), &is_dir);
+        status = isDirectory(FileSystem::joinPath({true_path, *iter}), &is_dir);
         if (status != StatusCode::OK) {
             return status;
         }
@@ -335,7 +335,7 @@ StatusCode S3FileSystem::getDirectoryFiles(const std::string& path, std::set<std
     // Erase directory entries...
     for (auto iter = files->begin(); iter != files->end();) {
         bool is_dir;
-        status = isDirectory(joinPath({true_path, *iter}), &is_dir);
+        status = isDirectory(FileSystem::joinPath({true_path, *iter}), &is_dir);
         if (status != StatusCode::OK) {
             return status;
         }
@@ -429,8 +429,8 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, const std::
 
         for (auto iter = contents.begin(); iter != contents.end(); ++iter) {
             bool is_subdir;
-            std::string s3_fpath = joinPath({effective_path, *iter});
-            std::string local_fpath = joinPath({local_path, *iter});
+            std::string s3_fpath = FileSystem::joinPath({effective_path, *iter});
+            std::string local_fpath = FileSystem::joinPath({local_path, *iter});
             status = isDirectory(s3_fpath, &is_subdir);
             if (status != StatusCode::OK) {
                 return status;
@@ -450,7 +450,7 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, const std::
                     return s;
                 }
                 for (auto itr = subdir_files.begin(); itr != subdir_files.end(); ++itr) {
-                    files.insert(joinPath({s3_fpath, *itr}));
+                    files.insert(FileSystem::joinPath({s3_fpath, *itr}));
                 }
             } else {
                 files.insert(s3_fpath);
@@ -477,7 +477,7 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, const std::
                     auto& retrieved_file =
                         get_object_outcome.GetResultWithOwnership().GetBody();
                     std::string s3_removed_path = (*iter).substr(effective_path.size());
-                    std::string local_file_path = joinPath({local_path, s3_removed_path});
+                    std::string local_file_path = FileSystem::joinPath({local_path, s3_removed_path});
                     std::ofstream output_file(local_file_path.c_str(), std::ios::binary);
                     output_file << retrieved_file.rdbuf();
                     output_file.close();

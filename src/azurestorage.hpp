@@ -58,7 +58,6 @@ public:
     virtual StatusCode downloadFileFolderTo(const std::string& local_path) = 0;
     virtual StatusCode checkPath(const std::string& path) = 0;
 
-    std::string joinPath(std::initializer_list<std::string> segments);
     StatusCode CreateLocalDir(const std::string& path);
     bool isAbsolutePath(const std::string& path);
     std::vector<std::string> FindSubdirectories(std::string path);
