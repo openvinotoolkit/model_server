@@ -184,19 +184,20 @@ TEST(FileSystem, IsLocalFilesystem) {
 TEST(FileSystem, setRootDirectoryPath) {
     std::string rootPath = "";
     std::string givenPath = "/givenpath";
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     ASSERT_EQ(rootPath, givenPath);
 
     givenPath = "givenpath";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     std::string currentWorkingDir = std::filesystem::current_path();
-    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, givenPath}));
+    ASSERT_EQ(rootPath, fs->joinPath({currentWorkingDir, givenPath}));
 
     givenPath = "1";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+    ASSERT_EQ(rootPath, fs->joinPath({currentWorkingDir, ""}));
 
     givenPath = "";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+    ASSERT_EQ(rootPath, fs->joinPath({currentWorkingDir, ""}));
 }
