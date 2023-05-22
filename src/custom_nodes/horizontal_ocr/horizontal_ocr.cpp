@@ -198,6 +198,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     uint64_t _numDetections = boxesTensor->dims[0];
     uint64_t _numItems = boxesTensor->dims[1];
+    NODE_ASSERT(boxesTensor->dims[0] > 0, "boxes has dim 0 not greater than 0");
     NODE_ASSERT(boxesTensor->dims[1] == 5, "boxes has dim 1 not equal to 5");
     int numDetections = static_cast<int>(_numDetections);
     int numItems = static_cast<int>(_numItems);
