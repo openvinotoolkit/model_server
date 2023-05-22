@@ -248,10 +248,10 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
             return grpc(status);
         }
     } catch (const std::exception& e) {
-        SPDLOG_ERROR("Catched exception in InferenceServiceImpl for servable: {} exception: {}", servableName, e.what());
+        SPDLOG_ERROR("Caught exception in InferenceServiceImpl for servable: {} exception: {}", servableName, e.what());
         return grpc(Status(StatusCode::UNKNOWN_ERROR, e.what()));
     } catch (...) {
-        SPDLOG_ERROR("Catched unknown exception in InferenceServiceImpl for servable: {}", servableName);
+        SPDLOG_ERROR("Caught unknown exception in InferenceServiceImpl for servable: {}", servableName);
         return grpc(Status(StatusCode::UNKNOWN_ERROR));
     }
     double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);
