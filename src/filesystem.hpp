@@ -174,10 +174,12 @@ public:
     }
 
     static void setPath(std::string& path, const std::string& givenPath, const std::string& rootDirectoryPath) {
-        if (!FileSystem::isLocalFilesystem(givenPath)) {
+        if (givenPath.size() == 0) {
+            path = rootDirectoryPath;
+        } else if (!FileSystem::isLocalFilesystem(givenPath)) {
             // Cloud filesystem
             path = givenPath;
-        } else if (givenPath.at(0) == '/') {
+        } else if (givenPath.size() > 0 && givenPath.at(0) == '/') {
             // Full path case
             path = givenPath;
         } else {
@@ -190,11 +192,15 @@ public:
 
     static void setRootDirectoryPath(std::string& rootDirectoryPath, const std::string& givenPath) {
         std::string currentWorkingDir = std::filesystem::current_path();
-        auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
-        configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = configDirectory;
+        if (givenPath.size() > 1 && givenPath.find_last_of("/\\") != std::string::npos) {
+            auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
+            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = configDirectory;
+        } else {
+            rootDirectoryPath = currentWorkingDir + "/";
+        }
     }
 
-    std::string appendSlash(const std::string& name) {
+    static std::string appendSlash(const std::string& name) {
         if (name.empty() || (name.back() == '/')) {
             return name;
         }
@@ -202,11 +208,11 @@ public:
         return (name + "/");
     }
 
-    bool isAbsolutePath(const std::string& path) {
+    static bool isAbsolutePath(const std::string& path) {
         return !path.empty() && (path[0] == '/');
     }
 
-    std::string joinPath(std::initializer_list<std::string> segments) {
+    static std::string joinPath(std::initializer_list<std::string> segments) {
         std::string joined;
 
         for (const auto& seg : segments) {
