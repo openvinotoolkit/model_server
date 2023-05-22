@@ -186,7 +186,15 @@ TEST(FileSystem, setRootDirectoryPath) {
     std::string givenPath = "/givenpath";
     auto fs = std::make_shared<ovms::LocalFileSystem>();
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, givenPath);
+    ASSERT_EQ(rootPath, "/");
+
+    std::string givenPath = "/givenpath/longer";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, "/givenpath");
+
+    std::string givenPath = "/givenpath/longer/somefile.txt";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, "/givenpath/longer");
 
     givenPath = "givenpath";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
