@@ -194,7 +194,7 @@ TEST(FileSystem, setRootDirectoryPath) {
 
     givenPath = "/givenpath/longer/somefile.txt";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, "/givenpath/longer");
+    ASSERT_EQ(rootPath, "/givenpath/longer/");
 
     givenPath = "givenpath";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
