@@ -198,7 +198,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         modelsStatusesTmp.insert({pipelineName, response});
     }
 
-    const std::vector<std::string>& mediapipeNames = manager.getMediapipeFactory().getPipelinesNames();
+    const std::vector<std::string>& mediapipeNames = manager.getMediapipeFactory().getMediapipePipelinesNames();
     for (auto const& mediapipeName : mediapipeNames) {
         std::optional<int64_t> noValueModelVersion;
         tensorflow::serving::GetModelStatusRequest request;

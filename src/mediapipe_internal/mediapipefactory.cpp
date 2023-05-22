@@ -108,7 +108,7 @@ Status MediapipeFactory::revalidatePipelines(ModelManager&) {
     return StatusCode::OK;
 }
 
-const std::vector<std::string> MediapipeFactory::getPipelinesNames() const {
+const std::vector<std::string> MediapipeFactory::getMediapipePipelinesNames() const {
     std::vector<std::string> names;
     std::shared_lock lock(definitionsMtx);
     names.reserve(definitions.size());
