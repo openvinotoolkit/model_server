@@ -187,16 +187,16 @@ TEST(FileSystem, setRootDirectoryPath) {
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     ASSERT_EQ(rootPath, givenPath);
 
-    std::string givenPath = "givenpath";
+    givenPath = "givenpath";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     std::string currentWorkingDir = std::filesystem::current_path();
     ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, givenPath}));
 
-    std::string givenPath = "1";
+    givenPath = "1";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
 
-    std::string givenPath = "";
+    givenPath = "";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
     ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
 }
