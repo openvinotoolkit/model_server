@@ -1078,7 +1078,7 @@ TEST_F(ConfigStatus, configWithPipelines) {
 
 TEST_F(ConfigStatus, configWithMediapipe) {
     ovms::Server& ovmsServer = ovms::Server::instance();
-    
+
     std::string contents;
     auto fs = std::make_shared<ovms::LocalFileSystem>();
     fs->readTextFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json", &contents);
