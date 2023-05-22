@@ -166,3 +166,37 @@ TEST(FileSystem, CheckIfPathIsEscaped) {
     ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/..resnet/"));
     ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/resnet../"));
 }
+
+TEST(FileSystem, IsLocalFilesystem) {
+    ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("s3://"));
+    ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("gs://"));
+    ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("azfs://"));
+    ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("az://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("nanas3://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("...gs://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("/azfs://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("o_O$az://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("../"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("/localfilesystem"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("/long/local/filesystem"));
+}
+
+TEST(FileSystem, setRootDirectoryPath) {
+    std::string rootPath = "";
+    std::string givenPath = "/givenpath";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, givenPath);
+
+    std::string givenPath = "givenpath";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    std::string currentWorkingDir = std::filesystem::current_path();
+    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, givenPath}));
+
+    std::string givenPath = "1";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+
+    std::string givenPath = "";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+}

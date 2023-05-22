@@ -177,7 +177,7 @@ public:
         if (!FileSystem::isLocalFilesystem(givenPath)) {
             // Cloud filesystem
             path = givenPath;
-        } else if (givenPath.at(0) == '/') {
+        } else if (givenPath.size() > 0 && givenPath.at(0) == '/') {
             // Full path case
             path = givenPath;
         } else {

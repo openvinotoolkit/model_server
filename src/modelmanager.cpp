@@ -1311,7 +1311,7 @@ const std::string ModelManager::getFullPath(const std::string& pathToCheck) cons
     if (!FileSystem::isLocalFilesystem(pathToCheck)) {
         // Cloud filesystem
         return pathToCheck;
-    } else if (pathToCheck.at(0) == '/') {
+    } else if (pathToCheck.size() > 0 && pathToCheck.at(0) == '/') {
         // Full path case
         return pathToCheck;
     } else {
