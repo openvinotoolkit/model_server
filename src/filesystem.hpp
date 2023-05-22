@@ -174,7 +174,7 @@ public:
     }
 
     static void setPath(std::string& path, const std::string& givenPath, const std::string& rootDirectoryPath) {
-        if (givenPath.size() == 0){
+        if (givenPath.size() == 0) {
             path = rootDirectoryPath;
         } else if (!FileSystem::isLocalFilesystem(givenPath)) {
             // Cloud filesystem

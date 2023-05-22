@@ -222,7 +222,8 @@ TEST(FileSystem, SetPath) {
 
     try {
         ovms::FileSystem::setPath(testPath, givenPath, rootPath);
-    } catch (std::logic_error& e) {}
+    } catch (std::logic_error& e) {
+    }
 
     rootPath = "/rootPath";
     testPath = "";
