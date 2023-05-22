@@ -130,8 +130,8 @@ To serve multiple models from the same container you will need an additional JSO
 ```
 
 Once the Docker container has the path to your config file mounted, it can be started. This simplifies the `docker run` command, as arguments are now read from the config file. 
-When the `base_path` in the config.json is without any scheme and slash character, the path will be relative to to config file location. 
-When the models are distributed together with the config file, the paths don't need to be adjusted.
+When the `base_path` in the config.json is without cloud URI prefix or `/` character, the path will be relative to the config file location. 
+This is helpful when models are distributed together with the config file, the paths do not need to be adjusted.
 
 ## Next Steps
 

@@ -161,7 +161,7 @@ Enables or disabled calculating the unit tests coverage as part of the docker im
 make docker_build RUN_TESTS=0
 ```
 
-Running the unit tests will make the building to last longer and it will consume a bit more RAM
+Running the unit tests will increase build time and consume more RAM
 
 ### `JOBS`
 
