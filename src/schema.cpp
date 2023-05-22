@@ -369,14 +369,14 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
 			}
 		},)" +
 #if (MEDIAPIPE_DISABLE == 0)
-     R"("mediapipe_config_list": {
+                                         R"("mediapipe_config_list": {
       "type": "array",
       "items": {
         "$ref": "#/definitions/mediapipe_config"
       }
     },)" +
 #endif
-		R"("custom_node_library_config_list": {
+                                         R"("custom_node_library_config_list": {
 			"type": "array",
 			"items": {
 				"$ref": "#/definitions/custom_node_library_config"
