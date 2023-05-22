@@ -108,5 +108,15 @@ Status MediapipeFactory::revalidatePipelines(ModelManager&) {
     return StatusCode::OK;
 }
 
+const std::vector<std::string> MediapipeFactory::getMediapipePipelinesNames() const {
+    std::vector<std::string> names;
+    std::shared_lock lock(definitionsMtx);
+    names.reserve(definitions.size());
+    for (auto& [name, definition] : definitions) {
+        names.push_back(definition->getName());
+    }
+    return names;
+}
+
 MediapipeFactory::~MediapipeFactory() = default;
 }  // namespace ovms
