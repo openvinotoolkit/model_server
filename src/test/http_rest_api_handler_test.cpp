@@ -1132,3 +1132,125 @@ TEST_F(ConfigStatus, configWithMediapipe) {
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
+
+TEST_F(ConfigStatus, configWithMediapipeRemoved) {
+    ovms::Server& ovmsServer = ovms::Server::instance();
+
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    fs->readTextFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json", &contents);
+
+    TestHelper1 t(*this, contents.c_str());
+    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
+    std::string response;
+
+    const char* expectedJson = R"({
+"add" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"mediapipeAdd" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"mediapipeAddADAPTFULL" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    auto status = handler.processConfigStatusRequest(response, t.getManager());
+    EXPECT_EQ(expectedJson, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    RemoveConfig();
+
+    SetUpConfig(configWith1Dummy);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const char* expectedJsonRemoved = R"({
+"add" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "END",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"mediapipeAdd" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "END",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+},
+"mediapipeAddADAPTFULL" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "END",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+
+    status = handler.processConfigReloadRequest(response, t.getManager());
+    EXPECT_EQ(expectedJsonRemoved, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
+}
