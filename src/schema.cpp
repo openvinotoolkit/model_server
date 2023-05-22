@@ -362,12 +362,12 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
 				"$ref": "#/definitions/model_config"
 			}
 		},
-		"pipeline_config_list": {
+        "pipeline_config_list": {
 			"type": "array",
 			"items": {
 				"$ref": "#/definitions/pipeline_config"
 			}
-		},)" +
+        },)" +
 #if (MEDIAPIPE_DISABLE == 0)
                                          R"("mediapipe_config_list": {
       "type": "array",
