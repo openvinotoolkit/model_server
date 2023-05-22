@@ -198,6 +198,20 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         modelsStatusesTmp.insert({pipelineName, response});
     }
 
+    const std::vector<std::string>& mediapipeNames = manager.getMediapipeFactory().getPipelinesNames();
+    for (auto const& mediapipeName : mediapipeNames) {
+        std::optional<int64_t> noValueModelVersion;
+        tensorflow::serving::GetModelStatusRequest request;
+        GetModelStatusImpl::createGrpcRequest(mediapipeName, noValueModelVersion, &request);
+        tensorflow::serving::GetModelStatusResponse response;
+        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager, context);
+        if (status != StatusCode::OK) {
+            // Same situation like with models.
+            continue;
+        }
+        modelsStatusesTmp.insert({mediapipeName, response});
+    }
+
     modelsStatuses.merge(modelsStatusesTmp);
     return StatusCode::OK;
 }

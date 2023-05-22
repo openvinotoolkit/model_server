@@ -110,6 +110,7 @@ Status PipelineFactory::revalidatePipelines(ModelManager& manager) {
     }
     return firstErrorStatus;
 }
+
 const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
     std::vector<std::string> names;
     std::shared_lock lock(definitionsMtx);
