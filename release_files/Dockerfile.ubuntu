@@ -73,7 +73,7 @@ FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
-ARG INSTALL_DRIVER_VERSION="22.43.24595"
+ARG INSTALL_DRIVER_VERSION="23.13.26032"
 ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
 ARG NVIDIA=0
@@ -133,15 +133,15 @@ RUN	apt-get update -y ; \
                         apt-get clean ; \
                         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
                 ;; \                        
-                "23.05.25593") \
+                "23.13.26032") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/libigdgmm12_22.3.0_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13230.7/intel-igc-core_1.0.13230.7_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13230.7/intel-igc-opencl_1.0.13230.7_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/intel-opencl-icd_23.05.25593.11_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/intel-level-zero-gpu_1.3.25593.11_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-core_1.0.13700.14_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-opencl_1.0.13700.14_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/intel-opencl-icd_23.13.26032.30_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/libigdgmm12_22.3.0_amd64.deb ; \
                         dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \                
+                ;; \          
                 *) \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
                         apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \

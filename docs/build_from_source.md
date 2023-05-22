@@ -77,7 +77,8 @@ Example:
 Parameter used to control which GPU driver version will be installed. Supported versions:
 | OS | Versions |
 |---|---|
-| Ubuntu | 22.43.24595 (default), <br />22.35.24055, <br />22.10.22597, <br />21.48.21782 |
+| Ubuntu22 | 23.13.26032 (default), <br />22.35.24055, <br />22.10.22597, <br />21.48.21782 |
+| Ubuntu20 | 22.43.24595 (default), <br />22.35.24055, <br />22.10.22597, <br />21.48.21782 |
 | RedHat | 22.43.24595 (default), <br />22.28.23726, <br />22.10.22597, <br />21.38.21026 |
 
 Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.  
