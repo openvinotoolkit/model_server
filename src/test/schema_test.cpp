@@ -1786,6 +1786,7 @@ TEST(SchemaTest, DemultiplexerConfigGatherFromNodeTypeInvalid) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
+#if (MEDIAPIPE_DISABLE == 0)
 TEST(SchemaTest, MediapipeConfigPositive) {
     const char* mediapipeConfigPositive = R"(
     {
@@ -1803,6 +1804,8 @@ TEST(SchemaTest, MediapipeConfigPositive) {
     auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
+#endif
+
 TEST(SchemaTest, MediapipeConfigNegativeAdditionalMediapipeConfigField) {
     const char* mediapipeConfigNegative = R"(
     {

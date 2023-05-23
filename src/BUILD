@@ -718,7 +718,6 @@ cc_test(
         "test/kfs_rest_test.cpp",
         "test/layout_test.cpp",
         "test/localfilesystem_test.cpp",
-        "test/mediapipe/inputsidepacketusertestcalc.cc",
         "test/metrics_flow_test.cpp",
         "test/metrics_test.cpp",
         "test/metric_config_test.cpp",
@@ -766,6 +765,7 @@ cc_test(
         "test/unit_tests.cpp",
         ] + select({
         "//conditions:default": [
+            "test/mediapipe/inputsidepacketusertestcalc.cc",
             "test/mediapipeflow_test.cpp",
             "test/mediapipe_validation_test.cpp",
         ],

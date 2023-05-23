@@ -158,7 +158,7 @@ TEST_F(ModelManager, ConfigParseNoModels) {
 #if (MEDIAPIPE_DISABLE == 1)
 TEST_F(ModelManager, ConfigParseDisableMediapipe) {
     auto status = fixtureManager.startFromFile("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
-    EXPECT_EQ(status, ovms::StatusCode::CONFIG_FILE_INVALID);
+    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 #endif
 
