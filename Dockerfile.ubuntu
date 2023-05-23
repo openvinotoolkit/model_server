@@ -193,20 +193,6 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
     rm -rf /var/lib/apt/lists/* && \
     ln -s /opt/intel/openvino_2022 /opt/intel/openvino
 
-RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.2.0/oneapi-tbb-2021.2.0-lin.tgz && \
-    tar -xzf oneapi-tbb-2021.2.0-lin.tgz && \
-    cp oneapi-tbb-2021.2.0/lib/intel64/gcc4.8/libtbb.so* /opt/intel/openvino/runtime/lib/intel64/
-
-# install sample apps including benchmark_app
-RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
-#################### END OF OPENVINO BINARY INSTALL
-
-# SENTENCEPIECE_EXTENSION
-ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
-
-WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
-RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="sentence_piece" && cmake --build . --parallel $JOBS
-
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
 ENV OPENVINO_HOME=/openvino
@@ -285,7 +271,19 @@ COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
 # prebuild dependencies before copying sources
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies && \
+    bazel build --jobs=$JOBS ${debug_bazel_flags}  @oneTBB//:tbb && \
+    cp $(bazel info output_path)/k8-opt/bin/external/oneTBB/libtbb.so /opt/intel/openvino/runtime/lib/intel64/libtbb.so.12
+
+# install sample apps including benchmark_app
+RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
+#################### END OF OPENVINO BINARY INSTALL
+
+# SENTENCEPIECE_EXTENSION/
+ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
+
+WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
+RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="sentence_piece" && cmake --build . --parallel $JOBS
 
 # Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client

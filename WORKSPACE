@@ -369,7 +369,7 @@ cc_library(
 
 git_repository(
     name = "oneTBB",
-    branch = "v2021.8.0",
+    branch = "v2021.9.0",
     remote = "https://github.com/oneapi-src/oneTBB/",
     patch_args = ["-p1"],
     patches = ["mwaitpkg.patch",]

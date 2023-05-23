@@ -1,14 +1,19 @@
+index 09b254e9..c7cb1311 100644
+--- a/.bazelversion
++++ b/.bazelversion
+@@ -1 +1 @@
+-6.0.0
++5.3.1
 diff --git a/BUILD.bazel b/BUILD.bazel
-index 7aecb3e0..5c81961e 100644
+index 3881d684..49175945 100644
 --- a/BUILD.bazel
 +++ b/BUILD.bazel
 @@ -37,7 +37,7 @@ cc_library(
      ]),
      copts = ["-w"] + select({
-         "@bazel_tools//platforms:windows": [""],
+         "@platforms//os:windows": [""],
 -        "//conditions:default": ["-mwaitpkg"],
 +        "//conditions:default": [""],
      }),
      defines =
          select({
-
