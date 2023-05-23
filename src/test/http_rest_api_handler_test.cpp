@@ -625,7 +625,7 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToAddPipeline) {
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
-
+#if (MEDIAPIPE_DISABLE == 0)
 TEST_F(ConfigReload, StartWith1DummyThenReloadToMediapipe) {
     ovms::Server& ovmsServer = ovms::Server::instance();
     TestHelper1 t(*this, configWith1Dummy);
@@ -701,7 +701,7 @@ TEST_F(ConfigReload, StartWith1DummyThenReloadToMediapipe) {
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
-
+#endif
 static const char* configWithPipelineWithInvalidOutputs = R"(
 {
     "model_config_list": [
@@ -1075,7 +1075,7 @@ TEST_F(ConfigStatus, configWithPipelines) {
     EXPECT_EQ(expectedJson, response);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
-
+#if (MEDIAPIPE_DISABLE == 0)
 TEST_F(ConfigStatus, configWithMediapipe) {
     ovms::Server& ovmsServer = ovms::Server::instance();
 
@@ -1254,3 +1254,4 @@ TEST_F(ConfigStatus, configWithMediapipeRemoved) {
     EXPECT_EQ(expectedJsonRemoved, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
+#endif
