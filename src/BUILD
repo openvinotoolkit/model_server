@@ -98,11 +98,11 @@ cc_shared_library(
         "@upb//:__subpackages__",
         "@zlib//:__subpackages__",
         "@oneTBB//:__subpackages__",
+        "@com_github_glog_glog//:__subpackages__",
+        "@com_github_gflags_gflags//:__subpackages__",
     ] + select({
         "//conditions:default": [
             "@mediapipe//:__subpackages__",
-            "@com_github_glog_glog//:__subpackages__",
-            "@com_github_gflags_gflags//:__subpackages__",
             "@mediapipe_calculators//:__subpackages__",
             "@model_api//:__subpackages__",
             "@arm_neon_2_x86_sse//:__subpackages__",

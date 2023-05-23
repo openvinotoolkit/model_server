@@ -197,7 +197,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         }
         modelsStatusesTmp.insert({pipelineName, response});
     }
-
+#if (MEDIAPIPE_DISABLE == 0)
     const std::vector<std::string>& mediapipePipelineNames = manager.getMediapipeFactory().getMediapipePipelinesNames();
     for (auto const& mediapipePipelineName : mediapipePipelineNames) {
         std::optional<int64_t> noValueModelVersion;
@@ -211,6 +211,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         }
         modelsStatusesTmp.insert({mediapipePipelineName, response});
     }
+#endif
 
     modelsStatuses.merge(modelsStatusesTmp);
     return StatusCode::OK;
