@@ -27,7 +27,6 @@
 
 namespace ovms {
 uint16_t getCoreCount() {
-    // return parallel_get_num_threads();
-    return std::thread::hardware_concurrency();
+    return parallel_get_num_threads();
 }
 }  // namespace ovms
