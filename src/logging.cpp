@@ -26,8 +26,9 @@ std::shared_ptr<spdlog::logger> modelmanager_logger = std::make_shared<spdlog::l
 std::shared_ptr<spdlog::logger> dag_executor_logger = std::make_shared<spdlog::logger>("dag_executor");
 std::shared_ptr<spdlog::logger> sequence_manager_logger = std::make_shared<spdlog::logger>("sequence_manager");
 std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("C-API");
+#if (MEDIAPIPE_DISABLE == 0)
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
-
+#endif
 const std::string default_pattern = "[%Y-%m-%d %T.%e][%t][%n][%l][%s:%#] %v";
 
 static void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> logger) {
@@ -59,7 +60,9 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     dag_executor_logger->set_pattern(default_pattern);
     sequence_manager_logger->set_pattern(default_pattern);
     capi_logger->set_pattern(default_pattern);
+    #if (MEDIAPIPE_DISABLE == 0)
     mediapipe_logger->set_pattern(default_pattern);
+    #endif
     for (auto& sink : sinks) {
         gcs_logger->sinks().push_back(sink);
         azurestorage_logger->sinks().push_back(sink);
@@ -68,7 +71,9 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         dag_executor_logger->sinks().push_back(sink);
         sequence_manager_logger->sinks().push_back(sink);
         capi_logger->sinks().push_back(sink);
+        #if (MEDIAPIPE_DISABLE == 0)
         mediapipe_logger->sinks().push_back(sink);
+        #endif
     }
     set_log_level(log_level, serving_logger);
     set_log_level(log_level, gcs_logger);
@@ -78,7 +83,9 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, dag_executor_logger);
     set_log_level(log_level, sequence_manager_logger);
     set_log_level(log_level, capi_logger);
+    #if (MEDIAPIPE_DISABLE == 0)
     set_log_level(log_level, mediapipe_logger);
+    #endif
     spdlog::set_default_logger(serving_logger);
 }
 
