@@ -343,7 +343,6 @@ RUN make -f MakefileCapi cpp BAZEL_DEBUG_FLAGS="${debug_bazel_flags}" && \
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
  
-RUN if [ "$build_type" == "dbg" ] ; then bash -c "cp /ovms/bazel-out/k8-dbg/bin/src/ovms /ovms/bazel-bin/src/ovms" ; else exit 0; fi ;
 RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
 
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
