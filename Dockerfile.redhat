@@ -287,7 +287,7 @@ COPY package.json /ovms/
 # prebuild dependencies before copying sources
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies && \
     bazel build --jobs=$JOBS ${debug_bazel_flags}  @oneTBB//:tbb && \
-    cp $(bazel info output_path)/k8-opt/bin/external/oneTBB/libtbb.so /opt/intel/openvino/runtime/lib/intel64/libtbb.so.12
+    cp "$(bazel info output_path)/k8-opt/bin/external/oneTBB/libtbb.so" /opt/intel/openvino/runtime/lib/intel64/libtbb.so.12
 
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
