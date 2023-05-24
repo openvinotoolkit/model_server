@@ -311,6 +311,7 @@ LABEL description=${PROJECT_NAME}
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$build_type" = "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}-debug|g' /ovms/src/version.hpp" ; else bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" ; fi ;
 RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
 
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
