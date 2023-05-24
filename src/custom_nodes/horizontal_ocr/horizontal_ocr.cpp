@@ -198,7 +198,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     uint64_t _numDetections = boxesTensor->dims[0];
     uint64_t _numItems = boxesTensor->dims[1];
-    NODE_ASSERT(boxesTensor->dims[0] > 0, "boxes has dim 0 not greater than 0");
+    NODE_ASSERT(boxesTensor->dimsCount == 2, "boxes shape needs to have 2 dimensions");
     NODE_ASSERT(boxesTensor->dims[1] == 5, "boxes has dim 1 not equal to 5");
     int numDetections = static_cast<int>(_numDetections);
     int numItems = static_cast<int>(_numItems);
@@ -300,7 +300,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)[1].dimsCount = 2;
     (*info)[1].dims = (uint64_t*)malloc((*info)[1].dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[1].dims) != nullptr, "malloc has failed");
-    (*info)[1].dims[0] = 100;
+    (*info)[1].dims[0] = 0;
     (*info)[1].dims[1] = 5;
     (*info)[1].precision = FP32;
     return 0;
