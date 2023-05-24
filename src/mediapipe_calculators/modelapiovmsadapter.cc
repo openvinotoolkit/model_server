@@ -85,9 +85,11 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     // PREPARE REQUEST
     /////////////////////
     OVMS_InferenceRequest* request{nullptr};
-    OVMS_InferenceRequestNew(&request, cserver, servableName.c_str(), servableVersion);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, servableName.c_str(), servableVersion));
     CREATE_GUARD(requestGuard, OVMS_InferenceRequest, request);
 
+    InferenceOutput output;
+    OVMS_Status* status{nullptr};
     // PREPARE EACH INPUT
     // extract single tensor
     for (const auto& [name, input_tensor] : input) {
@@ -107,29 +109,28 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
         const auto& ovinputShape = input_tensor.get_shape();
         std::vector<int64_t> inputShape{ovinputShape.begin(), ovinputShape.end()};  // TODO error handling shape conversion
         OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
-        OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size());  // TODO retcode
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size()));  // TODO retcode
         const uint32_t NOT_USED_NUM = 0;
         // TODO handle hardcoded buffertype, notUsedNum additional options? side packets?
-        OVMS_InferenceRequestInputSetData(request,
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request,
             realInputName,
             reinterpret_cast<void*>(input_tensor.data()),
             input_tensor.get_byte_size(),
             OVMS_BUFFERTYPE_CPU,
-            NOT_USED_NUM);  // TODO retcode
+            NOT_USED_NUM));  // TODO retcode
     }
     //////////////////
     //  INFERENCE
     //////////////////
     OVMS_InferenceResponse* response = nullptr;
-    InferenceOutput output;
-    OVMS_Status* status = OVMS_Inference(cserver, request, &response);
+    status = OVMS_Inference(cserver, request, &response);
     if (nullptr != status) {
         uint32_t code = 0;
         const char* msg = nullptr;
         OVMS_StatusGetCode(status, &code);
         OVMS_StatusGetDetails(status, &msg);
         std::stringstream ss;
-        ss << "Inference in OVMSAdapter failed:";
+        ss << "Inference in OVMSAdapter failed: ";
         ss << msg << " code: " << code;
         MLOG(ss.str());
         OVMS_StatusDelete(status);
@@ -138,9 +139,9 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     CREATE_GUARD(responseGuard, OVMS_InferenceResponse, response);
     // verify GetOutputCount
     uint32_t outputCount = 42;
-    OVMS_InferenceResponseGetOutputCount(response, &outputCount);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutputCount(response, &outputCount));
     uint32_t parameterCount = 42;
-    OVMS_InferenceResponseGetParameterCount(response, &parameterCount);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetParameterCount(response, &parameterCount));
     // TODO handle output filtering. Graph definition could suggest
     // that we are not interested in all outputs from OVMS Inference
     const void* voutputData;
@@ -152,7 +153,7 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
     for (size_t i = 0; i < outputCount; ++i) {
-        OVMS_InferenceResponseGetOutput(response, i, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId);
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, i, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
         output[outputName] = makeOvTensorO(datatype, shape, dimCount, voutputData, bytesize);  // TODO optimize FIXME
     }
     return output;
