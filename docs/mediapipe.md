@@ -22,13 +22,9 @@ MEDIAPIPE_DISABLE=0 make docker_build
 
 ## Node Types <a name="ovms-calculators"></a>
 
-### OVMS ADAPTER
+"Each calculator is a node of a graph. The bulk of graph execution happens inside its calculators. Ovms has its own calculators but can also use newly developed calculators or reuse the existing calculators defined in the oryginal mediapipe repository."
 
-### OVMS ADAPTER WRAPPER
-
-### OVMS INFERENCE CALCULATOR
-
-### OVMS SESSION CALCULATOR
+For more details you can visit mediapipe concept description - [Calculators Concept Page](https://developers.google.com/mediapipe/framework/framework_concepts/calculators) or Ovms specific calculators implementation - [Ovms Calculators Concept Page](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/src/mediapipe_calculators/calculators.md)
 
 ## Graph proto files <a name="graph-proto"></a>
 
