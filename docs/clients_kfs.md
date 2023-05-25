@@ -691,4 +691,46 @@ When creating a Python-based client application, you can use Triton client libra
 
 @endsphinxdirective
 
+### Request Prediction on a string
+
+@sphinxdirective
+.. tab:: python [GRPC]
+
+    .. code-block:: python
+
+        import numpy as np
+        import tritonclient.grpc as grpcclient
+
+        client = grpcclient.InferenceServerClient("localhost:9000")
+        data = ["<string>"]
+        input_sp = np.arange(start=0, stop=8, dtype=np.uint8)
+        input = np.array([str(data).encode('utf-8') for data in input_sp.reshape(input_sp.size)], dtype=np.object_)
+        infer_input = grpcclient.InferInput("input_name", input_sp.shape, "BYTES")
+        infer_input.set_data_from_numpy(input)
+        results = client.infer("model_name", [infer_input])
+
+.. tab:: python [REST]
+
+    .. code-block:: python
+
+        import numpy as np
+        import tritonclient.http as httpclient
+
+        client = httpclient.InferenceServerClient("localhost:9000")
+        data = ["<string>"]
+        input_sp = np.arange(start=0, stop=8, dtype=np.uint8)
+        input = np.array([str(data).encode('utf-8') for data in input_sp.reshape(input_sp.size)], dtype=np.object_)
+        infer_input = httpclient.InferInput("input_name", input_sp.shape, "BYTES")
+        infer_input.set_data_from_numpy(input)
+        results = client.infer("model_name", [infer_input])
+
+.. tab:: curl    
+
+    .. code-block:: sh  
+
+        curl -X POST http://localhost:9000/v2/models/model_name/infer
+        -H 'Content-Type: application/json'
+        -d '{"inputs" : [ {"name" : "input_name", "shape" : [ 1 ], "datatype"  : "BYTES", "data" : ["<string>"]} ]}'
+
+@endsphinxdirective
 For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/python/kserve-api/samples).
