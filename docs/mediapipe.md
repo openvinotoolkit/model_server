@@ -20,6 +20,8 @@ Building OVMS with mediapipe support requires passing additional flag for make c
 MEDIAPIPE_DISABLE=0 make docker_build
 ```
 
+More information about OVMS build parameters can be found here [here](build_from_source.md) 
+
 ## Node Types <a name="ovms-calculators"></a>
 
 ### OVMS ADAPTER
@@ -123,16 +125,21 @@ Subconfig file may contain only one section wich is model_config_list the same t
 MediaPipe graphs can use the same API as the models. There are exactly the same calls for running 
 the predictions. The request format must match the pipeline definition inputs.
 
-The graph configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_tfs.md) calls and
-[REST Metadata](model_server_rest_api_tfs.md).
+The graph configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_kfs.md) calls and
+[REST Metadata](model_server_rest_api_kfs.md).
 It returns the definition of the graphs inputs and outputs. 
 
-Similarly, graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_tfs.md)
-and [REST Model Status](model_server_rest_api_tfs.md)
+Similarly, graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md)
+and [REST Model Status](model_server_rest_api_kfs.md)
 
 ## MediaPipe Graps Examples <a name="graphs-examples"></a>
 
+[Image classification](../demos/mediapipe/image_classification/README.md)
 
 ## Current limitations <a name="current-limitations"></a>
 
 - Making changes in subconfig file does not trigger config reloads even if file_system_poll_wait_seconds parameter value was different than 0 during OVMS start. Only main config changes are monitored.
+
+- As it is preview version of the feature - MediaPipe graphs are supported only for GRPC KFS API. Only TFS calls supported are get model status and config reload.
+
+- Binary inputs are not supported for MediaPipe graphs

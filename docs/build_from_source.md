@@ -136,5 +136,16 @@ Example:
 ```bash
 make docker_build OV_USE_BINARY=0 OV_SOURCE_BRANCH=<commit or branch> OV_SOURCE_ORG=<fork org>
 ```
-  
+
+<hr />
+
+### `MEDIAPIPE_DISABLE`
+
+By default set to `1`. When set to `0`, OpenVINO will be built with [MediaPipe](mediapipe.md) support.  
+
+Example:
+```bash
+make docker_build MEDIAPIPE_DISABLE=0
+```
+
 Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/develop/docs/developer_guide.md).
