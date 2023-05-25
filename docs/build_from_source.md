@@ -170,6 +170,15 @@ Number of compilation jobs. By default it is set to the number of CPU cores. On 
 
 ```bash
 make docker_build JOBS=2
+<hr />
+
+### `MEDIAPIPE_DISABLE`
+
+By default set to `1`. When set to `0`, OpenVINO will be built with [MediaPipe](mediapipe.md) support.  
+
+Example:
+```bash
+make docker_build MEDIAPIPE_DISABLE=0
 ```
 
 Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/develop/docs/developer_guide.md).

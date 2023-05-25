@@ -1,0 +1,9 @@
+{
+    "model_config_list": [
+        {"config": {
+                "name": "resnet",
+                "base_path": "model"
+        	}
+	}
+    ]
+}
