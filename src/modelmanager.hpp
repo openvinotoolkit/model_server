@@ -229,9 +229,7 @@ private:
      *
      * @param configFileFullPath
      */
-    void setRootDirectoryPath(const std::string& configFileFullPath) {
-        FileSystem::setRootDirectoryPath(this->rootDirectoryPath, configFileFullPath);
-    }
+    void setRootDirectoryPath(const std::string& configFileFullPath);
 
 public:
     /**

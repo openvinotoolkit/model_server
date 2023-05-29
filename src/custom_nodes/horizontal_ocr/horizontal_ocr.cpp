@@ -23,7 +23,6 @@
 #include "opencv2/opencv.hpp"
 
 static constexpr const char* IMAGE_TENSOR_NAME = "image";
-static constexpr const char* SCORES_TENSOR_NAME = "scores";
 static constexpr const char* GEOMETRY_TENSOR_NAME = "boxes";
 static constexpr const char* TEXT_IMAGES_TENSOR_NAME = "text_images";
 static constexpr const char* COORDINATES_TENSOR_NAME = "text_coordinates";

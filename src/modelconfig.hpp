@@ -26,10 +26,7 @@
 
 #include <rapidjson/document.h>
 
-#include "filesystem.hpp"
 #include "layout_configuration.hpp"
-#include "logging.hpp"
-#include "metric_config.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
 #include "status.hpp"
@@ -309,9 +306,7 @@ public:
          * 
          * @param basePath 
          */
-    void setBasePath(const std::string& basePath) {
-        FileSystem::setPath(this->basePath, basePath, this->rootDirectoryPath);
-    }
+    void setBasePath(const std::string& basePath);
 
     /**
          * @brief Set root directory path
