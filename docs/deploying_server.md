@@ -80,7 +80,13 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
 
 .. tab:: Ubuntu 20.04  
 
-   Download [precompiled package](https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_ubuntu20.tar.gz) or build it yourself:
+   Download precompiled package:
+   
+   .. code-block:: sh
+
+      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_ubuntu22.tar.gz
+   
+   or build it yourself:
    
    .. code-block:: sh
 
@@ -96,11 +102,17 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
 
    .. code-block:: sh
 
-      apt update -y && apt install -y libpugixml1v5 libtbb2
+      sudo apt update -y && apt install -y libpugixml1v5 libtbb2
 
 .. tab:: Ubuntu 22.04  
 
-   Download [precompiled package](https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_ubuntu22.tar.gz) or build it yourself:
+   Download precompiled package:
+   
+   .. code-block:: sh
+
+      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_ubuntu22.tar.gz
+   
+   or build it yourself:
    
    .. code-block:: sh
 
@@ -116,11 +128,17 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
 
    .. code-block:: sh
 
-      apt update -y && apt install -y libpugixml1v5
+      sudo apt update -y && apt install -y libpugixml1v5
 
 .. tab:: RHEL 8.7 
 
-   Download [precompiled package](https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_redhat.tar.gz) or build it yourself:
+   Download precompiled package:
+   
+   .. code-block:: sh
+
+      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_redhat.tar.gz
+   
+   or build it yourself:
 
    .. code-block:: sh  
 
@@ -136,7 +154,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
 
    .. code-block:: sh
 
-      microdnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
+      sudo dnf install -y pkg-config && sudo rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
 
 @endsphinxdirective
 
@@ -144,6 +162,7 @@ Start the server:
 
 ```bash
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+
 ./ovms/bin/ovms --model_name resnet --model_path models/resnet50
 ```
 
