@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <unordered_map>
 
@@ -24,15 +25,12 @@
 #include "../stringutils.hpp"  // TODO dispose
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "modelapiovmsadapterwrapper.hpp"
 #include "src/mediapipe_calculators/modelapiovmsinferencecalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-#define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
-
-using ovms::AdapterWrapper;
 using std::endl;
+#define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << endl;
 
 namespace {
 #define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                  \
@@ -56,7 +54,7 @@ namespace {
 const std::string SESSION_TAG{"SESSION"};
 
 class ModelAPISideFeedCalculator : public CalculatorBase {
-    ::InferenceAdapter* session{nullptr};
+    std::shared_ptr<::InferenceAdapter> session{nullptr};
     std::unordered_map<std::string, std::string> outputNameToTag;  // TODO move to Open();
 
 public:
@@ -70,7 +68,7 @@ public:
         for (const std::string& tag : cc->Outputs().GetTags()) {
             cc->Outputs().Tag(tag).Set<ov::Tensor>();
         }
-        cc->InputSidePackets().Tag(SESSION_TAG.c_str()).Set<AdapterWrapper>();
+        cc->InputSidePackets().Tag(SESSION_TAG.c_str()).Set<std::shared_ptr<::InferenceAdapter>>();
         MLOG("Main GetContract end");
         return absl::OkStatus();
     }
@@ -83,8 +81,7 @@ public:
         MLOG("Main Open start");
         session = cc->InputSidePackets()
                       .Tag(SESSION_TAG.c_str())
-                      .Get<AdapterWrapper>()
-                      .adapter.get();
+                      .Get<std::shared_ptr<::InferenceAdapter>>();
         for (CollectionItemId id = cc->Inputs().BeginId();
              id < cc->Inputs().EndId(); ++id) {
             if (!cc->Inputs().Get(id).Header().IsEmpty()) {
