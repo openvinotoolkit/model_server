@@ -84,7 +84,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
    
    .. code-block:: sh
 
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_ubuntu22.tar.gz
+      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_ubuntu20.tar.gz
    
    or build it yourself:
    
