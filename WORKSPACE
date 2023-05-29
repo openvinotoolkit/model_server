@@ -364,7 +364,7 @@ cc_library(
     visibility = ["//visibility:public"],
 )
     """,
-    commit = "0f1d080d2d7f0ac64605b231024dd3a8105153a4"
+    commit = "7e163416c60ba9ccdf440c6c049d6c7e7137e144"
 )
 
 git_repository(
