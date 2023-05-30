@@ -17,7 +17,7 @@
 # The tf.patch "tf logging macros" part is changing the logging.h file because it has macro redefinition conflicts
 # with mediapipe logging.h on the following macros and functions connected with them.
 # We are adding glog/logging.h include and the github glog dependency in the tensorflow project
-# so that it uses the same macros from common dependency and we remove the conflicting macros from oryginal file.
+# so that it uses the same macros from common dependency and we remove the conflicting macros from original file.
 
 # define LOG(severity) _TF_LOG_##severit
 # define VLOG_IS_ON(lvl)

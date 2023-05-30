@@ -141,7 +141,7 @@ make docker_build OV_USE_BINARY=0 OV_SOURCE_BRANCH=<commit or branch> OV_SOURCE_
 
 ### `MEDIAPIPE_DISABLE`
 
-By default set to `1`. When set to `0`, OpenVINO will be built with [MediaPipe](mediapipe.md) support.  
+By default set to `1`. When set to `0`, OpenVINO&trade Model Server will be built with [MediaPipe](mediapipe.md) support.  
 
 Example:
 ```bash
