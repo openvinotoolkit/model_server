@@ -31,7 +31,7 @@ Building OVMS with mediapipe support requires passing additional flag for make c
 MEDIAPIPE_DISABLE=0 make docker_build
 ```
 
-More information about OVMS build parameters can be found here [here](build_from_source.md).
+More information about OVMS build parameters can be found here [here](https://github.com/openvinotoolkit/model_server/blob/develop/docs/build_from_source.md).
 
 ## Node Types <a name="ovms-calculators"></a>
 
