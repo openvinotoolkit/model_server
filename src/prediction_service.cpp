@@ -107,12 +107,6 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         status = getPipeline(request, response, pipelinePtr);
     }
 
-#ifdef RUN_OVMS_CALCULATOR_TEST
-    auto graph = std::make_unique<OVMSCalculatorGraph>();
-    auto graph_status = graph->execute();
-    CHECK(graph_status.ok());
-#endif
-
     if (!status.ok()) {
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);

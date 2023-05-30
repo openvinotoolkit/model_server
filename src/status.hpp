@@ -321,11 +321,12 @@ class Status {
 
     static const std::unordered_map<const StatusCode, const std::string> statusMessageMap;
 
-public:
     void appendDetails(const std::string& details) {
         ensureMessageAllocated();
         *this->message += " - " + details;
     }
+
+public:
     void ensureMessageAllocated() {
         if (nullptr == message) {
             message = std::make_unique<std::string>();

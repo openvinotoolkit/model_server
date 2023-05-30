@@ -61,8 +61,8 @@ using InferenceInput = std::map<std::string, ov::Tensor>;
 namespace ovms {
 static OVMS_DataType OVPrecision2CAPI(ov::element::Type_t datatype);
 static ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype);
-static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize);
-static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize);
+static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, size_t dimCount, const void* voutputData, size_t bytesize);
+static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, size_t dimCount, const void* voutputData, size_t bytesize);
 
 OVMSInferenceAdapter::OVMSInferenceAdapter(const std::string& servableName, uint32_t servableVersion) :
     servableName(servableName),
@@ -95,7 +95,7 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
         ss << " ]";
         MLOG(ss.str());
         const auto& ovinputShape = input_tensor.get_shape();
-        std::vector<int64_t> inputShape{ovinputShape.begin(), ovinputShape.end()}; // TODO error handling shape conversion
+        std::vector<int64_t> inputShape{ovinputShape.begin(), ovinputShape.end()};  // TODO error handling shape conversion
         OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
         OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size());  // TODO retcode
         const uint32_t NOT_USED_NUM = 0;
@@ -127,7 +127,7 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
     uint32_t outputId = 0;
     OVMS_DataType datatype = (OVMS_DataType)199;
     const int64_t* shape{nullptr};
-    uint32_t dimCount = 42;
+    size_t dimCount = 42;
     OVMS_BufferType bufferType = (OVMS_BufferType)199;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
@@ -212,7 +212,7 @@ static ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
     return it->second;
 }
 
-static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, size_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);
@@ -223,7 +223,7 @@ static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, ui
     return output;
 }
 
-static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, uint32_t dimCount, const void* voutputData, size_t bytesize) {
+static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, size_t dimCount, const void* voutputData, size_t bytesize) {
     ov::Shape ovShape;
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);

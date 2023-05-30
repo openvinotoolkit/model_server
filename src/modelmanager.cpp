@@ -357,24 +357,29 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 }
 
 static Status processMediapipeConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory, ModelManager& manager) {
-    const std::string mediapipeGraphName = pipelineConfig["name"].GetString();
-    const std::string mediapipeGraphFilePath = pipelineConfig["graph_path"].GetString();
-    if (mediapipesInConfigFile.find(mediapipeGraphName) != mediapipesInConfigFile.end()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", mediapipeGraphName);
-        return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
-    }
-    MediapipeGraphConfig config{mediapipeGraphFilePath};
-    if (!factory.definitionExists(mediapipeGraphName)) {
-        SPDLOG_DEBUG("Mediapipe graph:{} was not loaded so far. Triggering load", mediapipeGraphName);
-        auto status = factory.createDefinition(mediapipeGraphName, config, manager);
-        mediapipesInConfigFile.insert(mediapipeGraphName);
+    MediapipeGraphConfig config;
+    auto status = config.parseNode(pipelineConfig);
+    if (status != StatusCode::OK) {
+        SPDLOG_ERROR("Parsing graph config failed");
         return status;
     }
-    SPDLOG_DEBUG("Mediapipe graph:{} is already loaded. Triggering reload", mediapipeGraphName);
-    auto status = factory.reloadDefinition(mediapipeGraphName,
+
+    if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
+        return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
+    }
+
+    if (!factory.definitionExists(config.getGraphName())) {
+        SPDLOG_DEBUG("Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
+        status = factory.createDefinition(config.getGraphName(), config, manager);
+        mediapipesInConfigFile.insert(config.getGraphName());
+        return status;
+    }
+    SPDLOG_DEBUG("Mediapipe graph:{} is already loaded. Triggering reload", config.getGraphName());
+    status = factory.reloadDefinition(config.getGraphName(),
         config,
         manager);
-    mediapipesInConfigFile.insert(mediapipeGraphName);
+    mediapipesInConfigFile.insert(config.getGraphName());
     return status;
 }
 static Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {

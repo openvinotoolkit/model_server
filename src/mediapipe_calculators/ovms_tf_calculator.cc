@@ -172,7 +172,7 @@ public:
         uint32_t outputId = 0;
         OVMS_DataType datatype = (OVMS_DataType)199;
         const int64_t* shape{nullptr};
-        uint32_t dimCount = 42;
+        size_t dimCount = 42;
         OVMS_BufferType bufferType = (OVMS_BufferType)199;
         uint32_t deviceId = 42;
         const char* outputName{nullptr};

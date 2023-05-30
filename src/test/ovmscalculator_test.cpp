@@ -13,17 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-syntax = "proto3";
+#include <gtest/gtest.h>
 
-package tensorflow.serving;
-option cc_enable_arenas = true;
+#=//#include "../mediapipe_internal/mediapipedemo.hpp"
+#include "mediapipe/framework/port/status.h"
 
-import "tensorflow_serving/apis/predict.proto";
+TEST(Mediapipe, PureDummyGraph) {
+    size_t requestCount = 3;
+    size_t inputStreamDelayMs = 0;
+    auto grphExecution = ExecuteDummy(requestCount, inputStreamDelayMs);
+    CHECK(grphExecution.ok());
+}
 
-// open source marker; do not remove
-// PredictionService provides access to machine-learned models loaded by
-// model_servers.
-service PredictionServiceStream {
-  // Predict -- provides access to loaded TensorFlow model.
-  rpc Predict(stream PredictRequest) returns (stream PredictResponse);
+TEST(Mediapipe, PureAddGraph) {
+    size_t requestCount = 3;
+    size_t inputStreamDelayMs = 0;
+    auto grphExecution = ExecuteAdd(requestCount, inputStreamDelayMs);
+    CHECK(grphExecution.ok());
 }

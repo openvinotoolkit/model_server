@@ -217,6 +217,7 @@ cc_library(
         "kfs_frontend/kfs_utils.hpp",
         "mediapipe_internal/mediapipefactory.cpp",
         "mediapipe_internal/mediapipefactory.hpp",
+        "mediapipe_internal/mediapipegraphconfig.hpp",
         "mediapipe_internal/mediapipegraphdefinition.cpp",
         "mediapipe_internal/mediapipegraphdefinition.hpp",
         "mediapipe_internal/mediapipegraphexecutor.cpp",
@@ -226,6 +227,7 @@ cc_library(
         "mediapipe_calculators/modelapiovmsadapterwrapper.cc",
         "mediapipe_calculators/modelapiovmsadapterwrapper.hpp",
         "mediapipe_calculators/ovms_calculator.cc",
+        "mediapipe_calculators/ovms_kfs_calculator.cc",
         "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
         "mediapipe_calculators/modelapiovmssessioncalculator.cc",
         "metric.cpp",
@@ -295,8 +297,6 @@ cc_library(
         "dags/pipeline_factory.hpp",
         "precision.cpp",
         "precision.hpp",
-        #"stream_prediction_service.cpp",
-        #"stream_prediction_service.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
@@ -355,7 +355,6 @@ cc_library(
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
- #       "//src/tfservingstream_api:stream_prediction_service_cc_proto",
         "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
         "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
@@ -387,7 +386,6 @@ cc_library(
         "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
         "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
         "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-        #"//src/tfservingstream_api:stream_prediction_service_cpp",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
@@ -395,7 +393,6 @@ cc_library(
     copts = [
         #"-Wall",
         "-Wno-unknown-pragmas",
-        "-DRUN_OVMS_CALCULATOR_TEST2",
 #TODO:  "-Werror", mediapipe
     ],
     visibility = [
@@ -410,40 +407,6 @@ cc_library(
     alwayslink = 1,
 )
 
-#cc_proto_library(
-#    name = "stream_prediction_service_cpp",
-#    srcs = ["stream_prediction_service.proto",],
-#    deps = [
-#        "@tensorflow_serving//tensorflow_serving/apis:predict_proto",
-#        serving_tensorflow_proto_dep(
-#            "@org_tensorflow//tensorflow/core:protos_all",
-#        ),
-#                    ],
-#    cc_libs = ["@com_google_protobuf//:protobuf"],
-#    protoc = "@com_google_protobuf//:protoc",
-#    default_runtime = "@com_google_protobuf//:protobuf",
-#    use_grpc_plugin = True, # ??
-#    testonly = False, # ??
-#    visibility = [
-#        "//visibility:public",
-#    ],
-#)
-
-#OPENVINO CALCULATORS
-cc_binary(
-    name = "object_detection_openvino",
-    data = [
-        "@mediapipe//mediapipe/models:ssdlite_object_detection.xml",
-        "@mediapipe//mediapipe/models:ssdlite_object_detection.bin",
-        "@mediapipe//mediapipe/models:ssdlite_object_detection_labelmap.txt",
-    ],
-    deps = [
-        "@mediapipe//mediapipe/examples/desktop:simple_run_graph_main",
-        #TODO:enable_image_transformation_calculator++"@mediapipe_calculators//:mediapipe_calculators",
-        "@mediapipe//mediapipe/graphs/object_detection:desktop_openvino_calculators",
-    ],
-)
-
 cc_binary(
     name = "libsampleloader.so",
     srcs = [
@@ -456,52 +419,11 @@ cc_binary(
     ],
 )
 
-# Copyright 2019 The MediaPipe Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-licenses(["notice"])
-
-cc_library(
-    name = "ovms_calculator",
-    srcs = ["ovms_tf_calculator.cc"],
-    deps = [
-        "//src:ovms_lib",
-        "//src:ovmscalculatoroptions_cc_proto",
-        "@org_tensorflow//tensorflow/core:framework",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@mediapipe//mediapipe/framework/port:status",
-    ],
-    alwayslink = 1,
-)
-
 cc_binary(
     name = "hello_world",
     srcs = ["hello_world.cc"],
     deps = [
         "//src:ovms_lib",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@mediapipe//mediapipe/framework/port:logging",
-        "@mediapipe//mediapipe/framework/port:parse_text_proto",
-        "@mediapipe//mediapipe/framework/port:status",
-    ],
-)
-cc_binary(
-    name = "hello_ovms",
-    srcs = ["hello_ovms.cc"],
-    deps = [
-        "//src:ovms_lib",
-        "//src:ovms_calculator",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@mediapipe//mediapipe/framework/port:logging",
         "@mediapipe//mediapipe/framework/port:parse_text_proto",

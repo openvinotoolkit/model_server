@@ -48,6 +48,8 @@ namespace {
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static ov::element::Type_t CAPI2OVPrecision(OVMS_DataType datatype) {
     static std::unordered_map<OVMS_DataType, ov::element::Type_t> precisionMap{
         {OVMS_DATATYPE_FP64, ov::element::Type_t::f64},
@@ -230,7 +232,7 @@ public:
             ss << " ] timestamp: " << cc->InputTimestamp().DebugString();
             MLOG(ss.str());
             const auto& ovInputShape = input_tensor.get_shape();
-            std::vector<int64_t> inputShape(ovInputShape.begin(), ovInputShape.end()); // TODO ensure ov tensors shapes conversions return error in all calcs
+            std::vector<int64_t> inputShape(ovInputShape.begin(), ovInputShape.end());  // TODO ensure ov tensors shapes conversions return error in all calcs
             OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
             ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size()));
             const uint32_t notUsedNum = 0;
@@ -258,21 +260,20 @@ public:
         // that we are not interested in all outputs from OVMS Inference
         const void* voutputData;
         size_t bytesize = 42;
-        uint32_t outputId = 0;
         OVMS_DataType datatype = (OVMS_DataType)199;
         const int64_t* shape{nullptr};
-        uint32_t dimCount = 42;
+        size_t dimCount = 42;
         OVMS_BufferType bufferType = (OVMS_BufferType)199;
         uint32_t deviceId = 42;
         const char* outputName{nullptr};
         for (size_t i = 0; i < outputCount; ++i) {
-            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, i, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
             ov::Tensor* outOvTensor = makeOvTensor(datatype, shape, dimCount, voutputData, bytesize);
             cc->Outputs().Tag(outputNameToTag.at(outputName)).Add(outOvTensor, cc->InputTimestamp());
         }
         return absl::OkStatus();
     }
 };
-
+#pragma GCC diagnostic pop
 REGISTER_CALCULATOR(OVMSOVCalculator);
 }  // namespace mediapipe
