@@ -15,7 +15,7 @@ Makefile located in root directory of this repository contains all targets neede
 
 It contains `docker_build` target which by default builds multiple docker images:
 - `openvino/model_server:latest` - smallest release image containing only neccessary files to run model server on CPU
-- `openvino/model_server:latest-gpu` - release image containing support for Intel GPU
+- `openvino/model_server:latest-gpu` - release image containing support for Intel GPU and CPU
 - `openvino/model_server:latest-nginx-mtls` - release image containing examplary NGINX MTLS configuration
 - `openvino/model_server-build:latest` - image with builder environment containing all the tools to build OVMS
 
