@@ -14,19 +14,11 @@
 # limitations under the License.
 #
 
-import numpy as np
 import cv2
-import grpc
-import io
-import threading
 import time
-import sys
 import argparse
-
-from tensorflow import make_tensor_proto, make_ndarray
-from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2_grpc
-
+from functools import partial
+import tritonclient.grpc as grpcclient
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--grpc_address', required=False, default='localhost', help='Specify url to grpc service')
@@ -37,8 +29,7 @@ parser.add_argument('--use_case', required=False, default="text_spotting", type=
 args = parser.parse_args()
 
 address = "{}:{}".format(args.grpc_address, args.grpc_port)
-channel = grpc.insecure_channel(address)
-stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+triton_client = grpcclient.InferenceServerClient( url=address, verbose=False)
 
 try:
     source = int(args.video_source)
@@ -70,122 +61,36 @@ def get_text(output):
         word += alphabet[preds[i,0]]
     return decode(word)
 
-def draw_boxes_spotting(frame, result):
-    output = make_ndarray(result.outputs['boxes'])
-    for i in range(0, output.shape[0]):  # there is returned a dynamic list of boxes
-        detection = output[i,:]
-        if detection[4] > 0.3:
-            x_min = int(detection[0])
-            y_min = int(detection[1])
-            x_max = int(detection[2])
-            y_max = int(detection[3])
-            frame = cv2.rectangle(frame,(x_min,y_min),(x_max,y_max),(0,0,255),1)
-    return frame
-
-def draw_boxes_ocr(frame, result):
-    texts = make_ndarray(result.outputs['texts'])
-    text_coordinates = make_ndarray(result.outputs['text_coordinates'])
-    for i in range(len(texts)):
-        text = get_text(texts[i])
-        x_min = text_coordinates[i][0][0]
-        y_min = text_coordinates[i][0][1]
-        x_max = text_coordinates[i][0][0] + text_coordinates[i][0][2]
-        y_max = text_coordinates[i][0][1] + text_coordinates[i][0][3]
-        frame = cv2.rectangle(frame, (x_min,y_min), (x_max,y_max), (0,0,255), 1)
-        cv2.putText(frame, text, (x_min, y_min-5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
-    return frame
-
-
-class RequestingThread(threading.Thread):
-    def __init__(self, index):
-        print(f"Initializing requesting thread index: {index}")
-        super().__init__()
-        self.index = index
-        self.input_frame = None
-        self.output_frame = None
-        self.predict_durations = []
-        self.input_ready_event = threading.Event()
-        self.output_ready_event = threading.Event()
-
-    def is_initialized(self):
-        return not (self.input_frame is None and self.output_frame is None)
-
-    def wait_for_input(self):
-        self.input_ready_event.wait()
-        self.input_ready_event.clear()
-
-    def wait_for_result(self):
-        self.output_ready_event.wait()
-        self.output_ready_event.clear()
-
-    def notify_input_ready(self):
-        self.input_ready_event.set()
-
-    def notify_output_ready(self):
-        self.output_ready_event.set()
-
-    def set_input(self, frame):
-        self.input_frame = frame
-        self.notify_input_ready()
-
-    def get_output(self):
-        return self.output_frame
-
-    def get_average_latency(self):
-        return np.average(np.array(self.predict_durations))
-
-    def run(self):
-        print(f"Launching requesting thread index: {self.index}")
-        global force_exit
-        while (True):
-            self.wait_for_input()
-            if force_exit:
-                print("Detected exit signal...")
-                break
-            is_success, buffer = cv2.imencode(".jpg", self.input_frame)
-            if not is_success:
-                print("Encoding a frame as JPG failed")
-                continue
-            request = predict_pb2.PredictRequest()
-            request.model_spec.name = request.model_spec.name = 'detect_text_images' if args.use_case == 'ocr' else 'text'
-            request.inputs['image'].CopyFrom(make_tensor_proto([buffer.tobytes()], shape=[1]))
-
-            predict_start_time = time.time()
-            result = None
-            try:
-                result = stub.Predict(request, 10.0)
-            except grpc.RpcError as err:
-                print("Encountered gRPC error")
-                if err.code() == grpc.StatusCode.ABORTED:
-                    pass
-                else:
-                    raise err
-            predict_duration = time.time() - predict_start_time
-            predict_duration *= 1000
-            self.predict_durations.append(predict_duration)
-
-            if result is None:
-                self.output_frame = np.array(self.input_frame, copy=True)
-            else:
-                if args.use_case == 'ocr':
-                    self.output_frame = draw_boxes_ocr(self.input_frame, result)
-                else:
-                    self.output_frame = draw_boxes_spotting(self.input_frame, result)
-            self.notify_output_ready()
-        print(f"Stopping requesting thread index: {self.index}")
+# def draw_boxes_spotting(frame, result):
+#     output = make_ndarray(result.outputs['boxes'])
+#     for i in range(0, output.shape[0]):  # there is returned a dynamic list of boxes
+#         detection = output[i,:]
+#         if detection[4] > 0.3:
+#             x_min = int(detection[0])
+#             y_min = int(detection[1])
+#             x_max = int(detection[2])
+#             y_max = int(detection[3])
+#             frame = cv2.rectangle(frame,(x_min,y_min),(x_max,y_max),(0,0,255),1)
+#     return frame
+#
+# def draw_boxes_ocr(frame, result):
+#     texts = make_ndarray(result.outputs['texts'])
+#     text_coordinates = make_ndarray(result.outputs['text_coordinates'])
+#     for i in range(len(texts)):
+#         text = get_text(texts[i])
+#         x_min = text_coordinates[i][0][0]
+#         y_min = text_coordinates[i][0][1]
+#         x_max = text_coordinates[i][0][0] + text_coordinates[i][0][2]
+#         y_max = text_coordinates[i][0][1] + text_coordinates[i][0][3]
+#         frame = cv2.rectangle(frame, (x_min,y_min), (x_max,y_max), (0,0,255), 1)
+#         cv2.putText(frame, text, (x_min, y_min-5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
+#     return frame
 
 
-threads = [RequestingThread(i) for i in range(args.num_threads)]
-
-for thread in threads:
-    thread.start()
 
 def finish():
     global force_exit
     force_exit = True
-    for thread in threads:
-        thread.notify_input_ready()
-        thread.join()
 
 def grab_frame(cap):
     WIDTH = 704
@@ -205,6 +110,8 @@ def grab_frame(cap):
         frame = cv2.resize(frame, (HEIGHT, WIDTH), interpolation=cv2.INTER_AREA)
     return frame
 
+def callback(result, error):
+    print(result)
 
 i = 0
 frames_processed = 0
@@ -216,32 +123,17 @@ if grab_frame(cap) is None:
     force_exit = True
 
 while not force_exit:
-    if not threads[i].is_initialized():
-        threads[i].set_input(grab_frame(cap))
-        i = (i + 1) % args.num_threads
-        continue
-
-    threads[i].wait_for_result()
-    avg_latency_for_thread = threads[i].get_average_latency()
-    frame_to_display = threads[i].get_output()
-    threads[i].set_input(grab_frame(cap))
-
-    cv2.imshow('frame', frame_to_display)
-    now = time.time()
-    time_since_last_display = now - last_display_time
-    last_display_time = now
-
-    frames_processed += 1
-
-    current_fps = 1 / (time_since_last_display if time_since_last_display > 0 else 1)
-    avg_fps = 1 / ((now - app_start_time) / frames_processed)
-    
-    print(f"ThreadID: {i:3}; Current FPS: {current_fps:8.2f}; Average FPS: {avg_fps:8.2f}; Average latency: {avg_latency_for_thread:8.2f}ms")
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        finish()
-        break
-
-    i = (i + 1) % args.num_threads
+    inputs = []
+    inputs.append(grpcclient.InferInput( args.get('input_name'), [1,704,704], "FP32"))
+    outputs = []
+    frame = grab_frame(cap)
+    _, buffer = cv2.imencode(".jpg", frame)
+    inputs[0].set_data_from_numpy(buffer)
+    triton_client.async_infer(
+        model_name=args.get('model_name'),
+        callback=partial(callback),
+        inputs=inputs,
+        outputs=outputs)
 
 finish()
 # When everything done, release the capture
