@@ -42,8 +42,6 @@ In case there are valid reasons to enable the model cache also for models with a
 
 > IMPORTANT: Models imported via the custom loaders never create or use any cache.
 
-> IMPORTANT: Model cache can't be used with HDDL devices.
-
 ## Use case example
 
 ### Prepare model
