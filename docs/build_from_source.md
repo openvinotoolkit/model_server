@@ -149,7 +149,7 @@ Enables or disabled unit tests execution as part of the docker image building.
 make docker_build RUN_TESTS=0
 ```
 
-Running the unit tests will make the building to last longer and it will consume a bit more RAM
+Running the unit tests will make the building last longer and it will consume a bit more RAM
 
 ### `CHECK_COVERAGE`
 
@@ -165,7 +165,7 @@ Running the unit tests will increase build time and consume more RAM
 
 ### `JOBS`
 
-Number of compilation jobs. By default it is set to the number of CPU cores. On hosts with low RAM, this value can be reduced to avoid out of memory errors form the compilation.
+Number of compilation jobs. By default it is set to the number of CPU cores. On hosts with low RAM, this value can be reduced to avoid out of memory errors during the compilation.
 
 ```bash
 make docker_build JOBS=2
