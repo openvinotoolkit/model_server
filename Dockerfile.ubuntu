@@ -158,7 +158,7 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /openvino/inference-engine/temp/opencv_*_ubuntu20/opencv /opt/intel/openvino/extras && \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
-    ln -s /opt/intel/openvino /opt/intel/openvino_2022
+    ln -s /opt/intel/openvino /opt/intel/openvino_2023
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ARG TEMP_DIR=/tmp/openvino_installer
@@ -171,7 +171,7 @@ WORKDIR $TEMP_DIR
 #    chmod 755 l_openvino_toolkit_* && \
 #    ./l_openvino_toolkit_* -a -s --eula accept && \
 #    rm -rf /opt/intel/openvino && \
-#    ln -s /opt/intel/openvino_2022 /opt/intel/openvino
+#    ln -s /opt/intel/openvino_2023 /opt/intel/openvino
 
 # OV toolkit package
 RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
@@ -179,7 +179,7 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
-    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2022
+    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2023
 
 WORKDIR /
 # apt package
@@ -191,7 +191,7 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
     apt-get update && \
     apt-get install --no-install-recommends -y $APT_OV_PACKAGE && \
     rm -rf /var/lib/apt/lists/* && \
-    ln -s /opt/intel/openvino_2022 /opt/intel/openvino
+    ln -s /opt/intel/openvino_2023 /opt/intel/openvino
 
 RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.9.0/oneapi-tbb-2021.9.0-lin.tgz && \
     tar -xzf oneapi-tbb-2021.9.0-lin.tgz && \
@@ -242,6 +242,10 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
       -DENABLE_TESTS=ON \
       -DBUILD_arm_plugin=OFF \
       -DBUILD_java_api=OFF \
+      -DBUILD_custom_operations=OFF \
+      -DBUILD_mo_pytorch=OFF \
+      -DBUILD_optimum=OFF \
+      -DBUILD_ovms_ai_extension=OFF \
       -DOPENVINO_EXTRA_MODULES="${OPENVINO_CONTRIB}/modules" \
       -DWHEEL_VERSION=2022.1.0 \
       -DVERBOSE_BUILD=ON \
