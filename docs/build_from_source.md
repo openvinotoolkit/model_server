@@ -125,6 +125,9 @@ Example:
 make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=master OV_CONTRIB_BRANCH=master
 ```
 
+Note. In order to build the image with redhat UBI8.7 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`. 
+That is required to install several building dependencies.
+
 <hr />
 
 ### `OV_USE_BINARY`
@@ -136,5 +139,37 @@ Example:
 ```bash
 make docker_build OV_USE_BINARY=0 OV_SOURCE_BRANCH=<commit or branch> OV_SOURCE_ORG=<fork org>
 ```
-  
+
+### `RUN_TESTS`
+
+Enables or disabled unit tests execution as part of the docker image building.
+- `0` Unit tests are skipped
+- `1` Unit tests are executed (default)
+
+```bash
+make docker_build RUN_TESTS=0
+```
+
+Running the unit tests will make the building last longer and it will consume a bit more RAM
+
+### `CHECK_COVERAGE`
+
+Enables or disabled calculating the unit tests coverage as part of the docker image building.
+- `0` Checking the coverage is skipped
+- `1` Checking the coverage is included
+
+```bash
+make docker_build RUN_TESTS=0
+```
+
+Running the unit tests will increase build time and consume more RAM
+
+### `JOBS`
+
+Number of compilation jobs. By default it is set to the number of CPU cores. On hosts with low RAM, this value can be reduced to avoid out of memory errors during the compilation.
+
+```bash
+make docker_build JOBS=2
+```
+
 Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/develop/docs/developer_guide.md).
