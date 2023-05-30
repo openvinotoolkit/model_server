@@ -88,6 +88,14 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
     }
 };
+
+class MediapipeFlowKfsTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_kfs.json");
+    }
+};
+
 class MediapipeFlowDummyTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -128,6 +136,31 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_default_subconfig.json");
     }
 };
+
+TEST_P(MediapipeFlowKfsTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = GetParam();
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}
+        };
+    std::vector<float> requestData1{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
+    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    auto outputs = response.outputs();
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(outputs[0].name(), "out");
+    ASSERT_EQ(outputs[0].shape().size(), 2);
+    ASSERT_EQ(outputs[0].shape()[0], 1);
+    ASSERT_EQ(outputs[0].shape()[1], 10);
+    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
 
 static void performMediapipeInferTest(const ovms::Server& server, ::KFSRequest& request, ::KFSResponse& response, const Precision& precision, const std::string& modelName) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -536,6 +569,8 @@ const std::vector<std::string> mediaGraphsDummy{"mediaDummy",
     "mediaDummyADAPTFULL"};
 const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
     "mediapipeAddADAPTFULL"};
+
+const std::vector<std::string> mediaGraphsKfs{"mediapipeDummyKFS"};
 
 class MediapipeConfig : public MediapipeFlowTest {
 public:
@@ -983,6 +1018,13 @@ INSTANTIATE_TEST_SUITE_P(
     Test,
     MediapipeFlowDummyTest,
     ::testing::ValuesIn(mediaGraphsDummy),
+    [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
+        return info.param;
+    });
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    MediapipeFlowKfsTest,
+    ::testing::ValuesIn(mediaGraphsKfs),
     [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
         return info.param;
     });

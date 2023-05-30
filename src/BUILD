@@ -374,6 +374,7 @@ cc_library(
                 "mediapipe_calculators/modelapiovmsadapter.cc",
                 "mediapipe_calculators/modelapiovmsadapter.hpp",
                 "mediapipe_calculators/ovms_calculator.cc",
+                "mediapipe_calculators/ovms_kfs_calculator.cc",
                 "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
                 "mediapipe_calculators/modelapiovmssessioncalculator.cc",
             ],
