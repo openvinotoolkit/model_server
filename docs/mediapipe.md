@@ -1,5 +1,13 @@
 # Mediapipe {#ovms_docs_mediapipe}
 
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   ovms_docs_demo_mediapipe
+
+@endsphinxdirective
+
 ## Introduction
 MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. Using MediaPipe in the OVMS enables user to define a powerful graph from a lot of ready calculators/nodes that come with the MediaPipe which support all the needed features for running a stable graph like e.g. flow limiter node. User can also run the graph in a server or run it inside application host. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
 
@@ -66,7 +74,6 @@ MediaPipe graph configuration is to be placed in the same json file like the
 [models config file](starting_server.md).
 While models are defined in section `model_config_list`, graphs are configured in
 the `mediapipe_config_list` section. 
-Nodes in the MediaPipe graphs can reference both to the models configured in model_config_list section and in subconfig.
 
 Basic graph section template is depicted below:
 
@@ -103,7 +110,7 @@ Basic subconfig:
 
 
 ```
-
+Nodes in the MediaPipe graphs can reference both to the models configured in model_config_list section and in subconfig.
 
 ### MediaPipe configuration options explained
 
@@ -130,7 +137,7 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 
 ## Current limitations <a name="current-limitations"></a>
 
-- Making changes in subconfig file does not trigger config reloads even if file_system_poll_wait_seconds parameter value was different than 0 during OVMS start. Only main config changes are monitored.
+- Making changes in subconfig file does not trigger config reloads. Main config changes are monitored and triggers subconfig reload even if those werent changed.
 
 - As it is preview version of the feature - MediaPipe graphs are supported only for GRPC KFS API. Only TFS calls supported are get model status and config reload.
 

@@ -1,4 +1,4 @@
-# Mediapipe calculators {#ovms_docs_mediapipe}
+# Mediapipe calculators {#ovms_docs_mediapipe_calculators}
 
 ## Introduction
 
