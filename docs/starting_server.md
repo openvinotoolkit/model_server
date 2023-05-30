@@ -122,7 +122,7 @@ To serve multiple models from the same container you will need an additional JSO
              "base_path":"s3://bucket/models/model5",
              "shape": "auto",
              "nireq": 32,
-             "target_device": "HDDL"
+             "target_device": "CPU"
          }
       }
    ]

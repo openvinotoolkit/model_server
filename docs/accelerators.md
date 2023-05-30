@@ -11,54 +11,6 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_de
 mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 ```
 
-
-## Starting the server with the Intel® Neural Compute Stick 2
-
-[Intel Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS OpenVINO Model Server via 
-[the MYRIAD plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_MYRIAD.html). It must be visible and accessible on the host machine.
-
-NCS devices should be reported by the `lsusb` command, printing out `ID 03e7:2485`.
-
-To start the server with Neural Compute Stick use either of the two options:
-
-1. Recommended, without the docker privileged mode and mounting only the usb devices.
-
-@sphinxdirective
-.. code-block:: sh
-
-    docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
-    --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
-
-@endsphinxdirective
-
-2. Less securely, in the docker privileged mode and mounting all devices.
-   ```bash
-   docker run --rm -it --net=host -u root --privileged -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
-   --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
-   ```
-
-## Starting a Docker Container with HDDL
-
-To run a container that is using the HDDL accelerator, _hddldaemon_ must be running on the host machine. 
-You must set up the environment (the OpenVINO package must be pre-installed) and start _hddldaemon_ on the host before starting a container. 
-Refer to the steps from [OpenVINO installation guides](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_docker_linux.html#running-the-image-on-intel-vision-accelerator-design-with-intel-movidius-vpus).
-
-An example of a command starting a server with HDDL:
-```bash
-
-# --device=/dev/ion:/dev/ion mounts the accelerator device
-# -v /var/tmp:/var/tmp enables communication with _hddldaemon_ running on the host machine
-docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
---model_path /opt/model --model_name resnet --port 9001 --target_device HDDL
-```
-
-Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md).
-
-> **NOTE**:
-> the OpenVINO Model Server process within the container communicates with _hddldaemon_ via unix sockets in the `/var/tmp` folder. 
-> It requires RW permissions in the docker container security context. 
-> It is recommended to start the docker container in the same context as the account starting _hddldaemon_. For example, if you start the _hddldaemon_ as root, add `--user root` to the `docker run` command.
-
 ## Starting a Docker Container with Intel integrated GPU, Intel® Data Center GPU Flex Series and Intel® Arc™ GPU
 
 The [GPU plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html) uses the Intel Compute Library for 
