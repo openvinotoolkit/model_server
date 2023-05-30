@@ -80,7 +80,6 @@ public:
     const tensor_map_t getInputsInfo() const;
     const tensor_map_t getOutputsInfo() const;
 
-    // TODO simultaneous infer & reload handling
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
 
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);

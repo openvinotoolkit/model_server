@@ -630,7 +630,6 @@ Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tenso
     return StatusCode::OK;
 }
 
-// TODO: What about partial gathering?
 template <typename TensorType>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst) {
     if (tensor.get_shape().size() != 2) {
