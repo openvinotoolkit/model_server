@@ -88,7 +88,7 @@ echo '{"model_config_list": [
       "name": "resnet",
       "base_path": "/opt/model",
       "batch_size": "1",
-      "target_device": "MULTI:MYRIAD,CPU"}
+      "target_device": "MULTI:GPU,CPU"}
    }]
 }' >> models/public/resnet-50-tf/config.json
 ```
@@ -105,7 +105,7 @@ openvino/model_server:latest --config_path /opt/model/config.json --port 9001
 
 ```bash
 docker run -d --net=host -u root --privileged --name ie-serving --rm -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v \ 
-/dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/model --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
+/dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/model --model_name resnet --port 9001 --target_device 'MULTI:GPU,CPU'
 ```
  
 The deployed model will perform inference on both Intel Movidius Neural Compute Stick and CPU. 
