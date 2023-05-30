@@ -1,7 +1,7 @@
 # Mediapipe {#ovms_docs_mediapipe}
 
 ## Introduction
-MediaPipe is a production ready framework for building pipelines to perform inference over arbitrary sensory data. Using MediaPipe in the OVSM enables user to define a powerful graph from a lot of ready calculators/nodes that come with the MediaPipe which support all the needed features for running a stable graph like e.g. flow limiter node. User can also run the graph in a server or run it inside application host. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
+MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. Using MediaPipe in the OVMS enables user to define a powerful graph from a lot of ready calculators/nodes that come with the MediaPipe which support all the needed features for running a stable graph like e.g. flow limiter node. User can also run the graph in a server or run it inside application host. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
 
 This guide gives information about:
 
@@ -24,9 +24,9 @@ More information about OVMS build parameters can be found here [here](build_from
 
 ## Node Types <a name="ovms-calculators"></a>
 
-"Each calculator is a node of a graph. The bulk of graph execution happens inside its calculators. Ovms has its own calculators but can also use newly developed calculators or reuse the existing calculators defined in the oryginal mediapipe repository."
+"Each calculator is a node of a graph. The bulk of graph execution happens inside its calculators. OVMS has its own calculators but can also use newly developed calculators or reuse the existing calculators defined in the original mediapipe repository."
 
-For more details you can visit mediapipe concept description - [Calculators Concept Page](https://developers.google.com/mediapipe/framework/framework_concepts/calculators) or Ovms specific calculators implementation - [Ovms Calculators Concept Page](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/src/mediapipe_calculators/calculators.md)
+For more details you can visit mediapipe concept description - [Calculators Concept Page](https://developers.google.com/mediapipe/framework/framework_concepts/calculators) or OVMS specific calculators implementation - [Ovms Calculators Concept Page](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/src/mediapipe_calculators/calculators.md)
 
 ## Graph proto files <a name="graph-proto"></a>
 
@@ -112,20 +112,16 @@ Basic subconfig:
 |`"name"`|string|Graph identifier related to name field specified in gRPC/REST request|Yes|
 |`"base_path"`|string|Path to the which graph definition and subconfig files paths are relative. May be absolute or relative to the main config path. Default value is "{main config path}\"|No|
 |`"graph_path"`|string|Path to the graph proto file. May be absolute or relative to the base_path. Default value is "{base_path}\graph.pbtxt". File have to exist.|No|
-|`"subconfig"`|string|Path to the subconfig file. May be absolute or relative to the base_path. Default value is "{base_path}\subconfig.json". Non existence of file does not result in error.|No|
+|`"subconfig"`|string|Path to the subconfig file. May be absolute or relative to the base_path. Default value is "{base_path}\subconfig.json". Mssing  file does not result in error.|No|
 
-Subconfig file may contain only one section wich is model_config_list the same thats in [models config file](starting_server.md).
+Subconfig file may only contain *model_config_list* section  - in the same format as in [models config file](starting_server.md).
 
 ## Using Mediapipe <a name="using-mediapipe"></a>
 
-MediaPipe graphs can use the same API as the models. There are exactly the same calls for running 
+MediaPipe graphs can use the same KServe Inference API as the models. There are exactly the same calls for running
 the predictions. The request format must match the pipeline definition inputs.
 
-The graph configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_kfs.md) calls and
-[REST Metadata](model_server_rest_api_kfs.md).
-It returns the definition of the graphs inputs and outputs. 
-
-Similarly, graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md)
+Graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md)
 and [REST Model Status](model_server_rest_api_kfs.md)
 
 ## MediaPipe Graps Examples <a name="graphs-examples"></a>

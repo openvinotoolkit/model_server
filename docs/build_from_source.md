@@ -174,7 +174,7 @@ make docker_build JOBS=2
 
 ### `MEDIAPIPE_DISABLE`
 
-By default set to `1`. When set to `0`, OpenVINO will be built with [MediaPipe](mediapipe.md) support.  
+By default set to `1`. When set to `0`, OpenVINO&trade Model Server will be built with [MediaPipe](mediapipe.md) support.  
 
 Example:
 ```bash
