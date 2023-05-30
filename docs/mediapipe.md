@@ -1,5 +1,7 @@
 # Mediapipe {#ovms_docs_mediapipe}
 
+@sphinxdirective
+
 .. toctree::
    :maxdepth: 1
    :hidden:
