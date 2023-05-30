@@ -5,6 +5,7 @@
    :hidden:
 
    ovms_docs_demo_mediapipe
+   ovms_docs_mediapipe_calculators
 
 @endsphinxdirective
 
@@ -28,7 +29,7 @@ Building OVMS with mediapipe support requires passing additional flag for make c
 MEDIAPIPE_DISABLE=0 make docker_build
 ```
 
-More information about OVMS build parameters can be found here [here](build_from_source.md) 
+More information about OVMS build parameters can be found here [here](build_from_source.md).
 
 ## Node Types <a name="ovms-calculators"></a>
 
