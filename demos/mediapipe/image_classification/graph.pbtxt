@@ -16,21 +16,30 @@
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "OVMSOVCalculator"
+  calculator: "ModelAPISessionCalculator"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+      servable_name: "resnet"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "ModelAPISideFeedCalculator"
+  input_side_packet: "SESSION:session"
   input_stream: "B:in"
   output_stream: "A:out"
   node_options: {
-        [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
-          servable_name: "resnet"
-          servable_version: "1"
-          tag_to_input_tensor_names {
-            key: "B"
-            value: "0"
-          }
-          tag_to_output_tensor_names {
-            key: "A"
-            value: "1463"
-          }
+    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
+        tag_to_input_tensor_names {
+          key: "B"
+          value: "0"
         }
+        tag_to_output_tensor_names {
+          key: "A"
+          value: "1463"
+        }
+    }
   }
 }
