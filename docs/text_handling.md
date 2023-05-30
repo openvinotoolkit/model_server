@@ -1,6 +1,6 @@
 # Support for text data format {#ovms_docs_text}
 
-OpenVINO Model Server can now greatly simplify writing the applications with Natural Language Processing models. For the use cases related to text analysis or text generation, the client application can communicate with the model server using the original text format. There is no requirement to perform pre and post processing on the client side. Tokenization and detokenization can be not fully delegated to the server.
+OpenVINO Model Server can now greatly simplify writing the applications with Natural Language Processing models. For the use cases related to text analysis or text generation, the client application can communicate with the model server using the original text format. There is no requirement to perform pre and post processing on the client side. Tokenization and detokenization can be now fully delegated to the server.
 
 We addressed both the situation when the original model requires tokens on input or output and there is added support for models with embedded tokenization layer. Below are demonstrated use cases with a simple client application sending and receiving text in a string format. Whole complexity of the text conversion is fully delegated to the remote serving endpoint.
 
@@ -8,7 +8,6 @@ We addressed both the situation when the original model requires tokens on input
 ## DAG pipeline to delegate tokenization to the server
 When the model is using tokens on input or output, you can create a DAG pipeline which include custom nodes performing pre and post processing.
 OpenVINO Model Server can accept the text data format on the gRPC and REST API interface and deserializes it to the 2D array of bytes, where each row represents single, null terminated sentence, padded with `\0` aligned to longest batch.
- | `-1,-1` | U8 |
 
 Example of batch size 2 of the string input - `abcd` and `ab`:
 ```
