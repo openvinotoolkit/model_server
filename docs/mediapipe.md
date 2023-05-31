@@ -6,7 +6,6 @@
    :maxdepth: 1
    :hidden:
 
-   ovms_docs_demo_mediapipe
    ovms_docs_mediapipe_calculators
 
 @endsphinxdirective
