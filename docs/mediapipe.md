@@ -44,32 +44,75 @@ Graph proto files are used to define a graph. Example content of graph containin
 
 ```
 
-input_stream: "in"
+input_stream: "in1"
+input_stream: "in2"
 output_stream: "out"
 node {
-  calculator: "OVMSOVCalculator"
-  input_stream: "B:in"
-  output_stream: "A:out"
+  calculator: "ModelAPISessionCalculator"
+  output_side_packet: "SESSION:dummy"
   node_options: {
-        [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
-          servable_name: "dummy"
-          servable_version: "1"
-          tag_to_input_tensor_names {
-            key: "B"
-            value: "b"
-          }
-          tag_to_output_tensor_names {
-            key: "A"
-            value: "a"
-          }
+    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+      servable_name: "dummy"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "ModelAPISessionCalculator"
+  output_side_packet: "SESSION:add"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+      servable_name: "add"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "ModelAPISideFeedCalculator"
+  input_side_packet: "SESSION:dummy"
+  input_stream: "DUMMY_IN:in1"
+  output_stream: "DUMMY_OUT:dummy_output"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
+        tag_to_input_tensor_names {
+          key: "DUMMY_IN"
+          value: "b"
         }
+        tag_to_output_tensor_names {
+          key: "DUMMY_OUT"
+          value: "a"
+        }
+    }
+  }
+}
+node {
+  calculator: "ModelAPISideFeedCalculator"
+  input_side_packet: "SESSION:add"
+  input_stream: "ADD_INPUT1:dummy_output"
+  input_stream: "ADD_INPUT2:in2"
+  output_stream: "SUM:out"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
+        tag_to_input_tensor_names {
+          key: "ADD_INPUT1"
+          value: "input1"
+        }
+        tag_to_input_tensor_names {
+          key: "ADD_INPUT2"
+          value: "input2"
+        }
+        tag_to_output_tensor_names {
+          key: "SUM"
+          value: "sum"
+        }
+    }
   }
 }
 
+```
+
 
 Here can be found more information about [MediaPipe graphs proto](https://developers.google.com/mediapipe/framework/framework_concepts/graphs)
-
-```
 
 ## Configuration files <a name="configuration-files"></a>
 MediaPipe graph configuration is to be placed in the same json file like the 
@@ -136,6 +179,8 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 ## MediaPipe Graps Examples <a name="graphs-examples"></a>
 
 [Image classification](../demos/mediapipe/image_classification/README.md)
+
+[Multi model](../demos/mediapipe/multi_model_graph/README.md)
 
 ## Current limitations <a name="current-limitations"></a>
 

@@ -1,6 +1,6 @@
-# MediaPipe Demo {#ovms_docs_demo_mediapipe}
+# MediaPipe Demo {#ovms_docs_demo_mediapipe_image_classification}
 
-This guide shows how to implement graph using the [MediaPipe](../../../docs/mediapipe.md).
+This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph using OVMS.
 
 Example usage of graph that contains only one model - resnet:
 
@@ -29,7 +29,7 @@ docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --con
 ```bash
 cd model_server/client/python/kserve-api/samples
 
-python grpc_infer_resnet.py --model_name resnetMediapipe --grpc_port 9008 --images_numpy_path .
+python grpc_infer_resnet.py --model_name resnetMediapipe --grpc_port 9008 --images_numpy_path . --transpose_input False
 ./../imgs.npy --input_name in --output_name out --labels_numpy_path ../../lbs.npy
 Image data range: 0.0 : 255.0
 Start processing:
