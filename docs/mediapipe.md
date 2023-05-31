@@ -1,4 +1,4 @@
-# Mediapipe {#ovms_docs_mediapipe}
+# Integration with mediapipe (preview) {#ovms_docs_mediapipe}
 
 @sphinxdirective
 
@@ -183,9 +183,12 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 [Multi model](../demos/mediapipe/multi_model_graph/README.md)
 
 ## Current limitations <a name="current-limitations"></a>
+- It is preview version of the MediaPipe integrations which means that its not ready to be used in production and only some of the OVMS features are supported for Mediapipe graphs.
 
-- Making changes in subconfig file does not trigger config reloads. Main config changes are monitored and triggers subconfig reload even if those werent changed.
+- Mediapipe graphs are supported only for GRPC KFS API. Only TFS calls supported are get model status and config reload.
 
-- As it is preview version of the feature - MediaPipe graphs are supported only for GRPC KFS API. Only TFS calls supported are get model status and config reload.
+- Binary inputs are not supported for MediaPipe graphs.
 
-- Binary inputs are not supported for MediaPipe graphs
+- Public images do not include mediapipe feature.
+
+- Making changes in subconfig file does not trigger config reloads. Main config changes are monitored and triggers subconfig reload even if those weren't changed.
