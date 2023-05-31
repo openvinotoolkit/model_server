@@ -16,5 +16,5 @@ This [calculator](https://github.com/openvinotoolkit/model_server/blob/develop/s
 
 ### OVMS INFERENCE CALCULATOR
 
-This [calculator](https://github.com/openvinotoolkit/model_server/blob/develop/src/mediapipe_calculators/modelapiovmssessioncalculator.cc) is using OVMS Adapter received as `input_side_packet` to execute inference with OVMS. It has optional options fields `tag_to_input_tensor_names` and `tag_to_output_tensor_names` that can serve as Mediapipe packet names mapping to servable (Model/DAG) inputs and/or outputs.
+This [calculator](https://github.com/openvinotoolkit/model_server/blob/develop/src/mediapipe_calculators/modelapiovmssessioncalculator.cc) is using OVMS Adapter received as `input_side_packet` to execute inference with OVMS. It has optional options fields `tag_to_input_tensor_names` and `tag_to_output_tensor_names` that can serve as Mediapipe packet names mapping to servable (Model/DAG) inputs and/or outputs. It accepts `ov::Tensor` as input and output packet types.
 
