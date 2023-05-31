@@ -19,8 +19,8 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../ovms.h"           // NOLINT
-#include "../stringutils.hpp"  // TODO dispose
+#include "../../ovms.h"           // NOLINT
+#include "../../stringutils.hpp"  // TODO dispose
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "src/mediapipe_calculators/ovmscalculator.pb.h"
@@ -42,7 +42,7 @@ namespace {
             const char* msg = nullptr;                                                       \
             OVMS_StatusGetCode(err, &code);                                                  \
             OVMS_StatusGetDetails(err, &msg);                                                \
-            LOG(ERROR) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
+            LOG(ERROR) << "Error encountred in OVMSKFSPassCalculator:" << msg << " code: " << code; \
             OVMS_StatusDelete(err);                                                          \
             RET_CHECK(err == nullptr);                                                       \
         }                                                                                    \
@@ -99,11 +99,11 @@ public:
         //TODOASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, options.servable_name().c_str(), servableVersion));
         CREATE_GUARD(requestGuard, OVMS_InferenceRequest, request);
 
-        for (const std::string& tag : cc->Inputs().GetTags()) {
+        //for (const std::string& tag : cc->Inputs().GetTags()) {
             // TODO validate existence of tag key in map
             //const char* realInputName = inputTagInputMap.at(tag).c_str();
 
-        }
+        //}
         //////////////////
         //  INFERENCE
         //////////////////
@@ -120,7 +120,7 @@ public:
         // that we are not interested in all outputs from OVMS Inference
         const void* voutputData;
         size_t bytesize = 42;
-        uint32_t outputId = 0;
+        //uint32_t outputId = 0;
         OVMS_DataType datatype = (OVMS_DataType)199;
         const int64_t* shape{nullptr};
         size_t dimCount = 42;
@@ -128,7 +128,7 @@ public:
         uint32_t deviceId = 42;
         const char* outputName{nullptr};
         for (size_t i = 0; i < outputCount; ++i) {
-            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, i, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
             //ov::Tensor* outOvTensor = makeOvTensor(datatype, shape, dimCount, voutputData, bytesize);
             //cc->Outputs().Tag(outputNameToTag.at(outputName)).Add(outOvTensor, cc->InputTimestamp());
         }
