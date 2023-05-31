@@ -170,6 +170,7 @@ Number of compilation jobs. By default it is set to the number of CPU cores. On 
 
 ```bash
 make docker_build JOBS=2
+```
 <hr />
 
 ### `MEDIAPIPE_DISABLE`
