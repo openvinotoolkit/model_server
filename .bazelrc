@@ -61,7 +61,7 @@ build -c opt
 build --copt=-DGRPC_BAZEL_BUILD
 
 # fixing debug builds with ignore warnings
-build --copt=-O2
+build --copt=-O0
 
 # LLVM, MLIR and TF require C++14, we use C++17 in project
 build --cxxopt=-std=c++17

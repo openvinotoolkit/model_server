@@ -61,12 +61,8 @@ public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
-        for (const std::string& tag : cc->Inputs().GetTags()) {
-            cc->Inputs().Tag(tag).Set<KFSRequest>();
-        }
-        for (const std::string& tag : cc->Outputs().GetTags()) {
-            cc->Outputs().Tag(tag).Set<KFSResponse>();
-        }
+        cc->Inputs().Tag("REQUEST").Set<const KFSRequest*>();
+        cc->Outputs().Tag("RESPONSE").Set<KFSResponse*>();
 
         return absl::OkStatus();
     }
@@ -92,46 +88,17 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        /////////////////////
-        // PREPARE REQUEST
-        /////////////////////
-        OVMS_InferenceRequest* request{nullptr};
-        //TODOASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, options.servable_name().c_str(), servableVersion));
-        CREATE_GUARD(requestGuard, OVMS_InferenceRequest, request);
 
-        //for (const std::string& tag : cc->Inputs().GetTags()) {
-            // TODO validate existence of tag key in map
-            //const char* realInputName = inputTagInputMap.at(tag).c_str();
+        const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
+        KFSResponse* response = new KFSResponse();
 
-        //}
-        //////////////////
-        //  INFERENCE
-        //////////////////
-        OVMS_InferenceResponse* response = nullptr;
-        ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
-        CREATE_GUARD(responseGuard, OVMS_InferenceResponse, response);
-        // verify GetOutputCount
-        uint32_t outputCount = 42;
-        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutputCount(response, &outputCount));
-        RET_CHECK(outputCount == cc->Outputs().GetTags().size());
-        uint32_t parameterCount = 42;
-        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetParameterCount(response, &parameterCount));
-        // TODO handle output filtering. Graph definition could suggest
-        // that we are not interested in all outputs from OVMS Inference
-        const void* voutputData;
-        size_t bytesize = 42;
-        //uint32_t outputId = 0;
-        OVMS_DataType datatype = (OVMS_DataType)199;
-        const int64_t* shape{nullptr};
-        size_t dimCount = 42;
-        OVMS_BufferType bufferType = (OVMS_BufferType)199;
-        uint32_t deviceId = 42;
-        const char* outputName{nullptr};
-        for (size_t i = 0; i < outputCount; ++i) {
-            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, i, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
-            //ov::Tensor* outOvTensor = makeOvTensor(datatype, shape, dimCount, voutputData, bytesize);
-            //cc->Outputs().Tag(outputNameToTag.at(outputName)).Add(outOvTensor, cc->InputTimestamp());
-        }
+        //response->set_model_name(request->model_name());
+        //response->set_model_version(request->model_version());
+        //response->set_id(request->id());
+
+        cc->Outputs().Tag("RESPONSE").Add(response, cc->InputTimestamp());
+
+
         return absl::OkStatus();
     }
 };
