@@ -7,13 +7,33 @@ import cv2
 from scipy.special import softmax
 from PIL import Image
 
+from torchvision.transforms import Normalize, Compose, RandomResizedCrop, InterpolationMode, ToTensor, Resize, \
+    CenterCrop
+
 # TODO: CLI
 # TODO: --batch_size?
 # TODO: path to single image param?
 
+OPENAI_DATASET_MEAN = [0.48145466, 0.4578275, 0.40821073]
+OPENAI_DATASET_STD = [0.26862954, 0.26130258, 0.27577711]
+
 tokenizer = open_clip.get_tokenizer("ViT-B-16-plus-240")
 client = ovmsclient.make_grpc_client("localhost:8913")
-_, _, preprocess = open_clip.create_model_and_transforms('ViT-B-16-plus-240', pretrained='laion400m_e32')
+
+# Use preprocessing method from open_clip repo
+#_, _, preprocess = open_clip.create_model_and_transforms('ViT-B-16-plus-240', pretrained='laion400m_e32')
+
+# Or re-create preprocessing manually using torchvision
+def _convert_to_rgb(image):
+    return image.convert('RGB')
+
+preprocess = Compose([
+    Resize(240, interpolation=InterpolationMode.BICUBIC),
+    CenterCrop(240),
+    _convert_to_rgb,
+    ToTensor(),
+    Normalize(mean=OPENAI_DATASET_MEAN, std=OPENAI_DATASET_STD),
+])
 
 class_names = [
     'airplane',
@@ -70,10 +90,6 @@ def make_classifier():
 classifier = make_classifier()
 
 
-OPENAI_DATASET_MEAN = [0.48145466, 0.4578275, 0.40821073]
-OPENAI_DATASET_STD = [0.26862954, 0.26130258, 0.27577711]
-
-
 def predict(image_path, label_path=None):
     print('processing', image_path, label_path)
 
@@ -116,7 +132,7 @@ def predict(image_path, label_path=None):
     return logits.argmax() == expected
 
 
-samples = 20  # change this to 10000 to test the whole dataset
+samples = 200  # change this to 10000 to test the whole dataset
 valid = 0
 for i in range(0,samples):    
     success = predict(
