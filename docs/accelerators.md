@@ -13,13 +13,13 @@ mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 
 ## Starting a Docker Container with Intel integrated GPU, Intel® Data Center GPU Flex Series and Intel® Arc™ GPU
 
-The [GPU plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_supported_plugins_GPU.html) uses the Intel Compute Library for 
+The [GPU plugin](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_supported_plugins_GPU.html) uses the Intel Compute Library for 
 Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including 
 Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics.
 
 
 Before using GPU as OpenVINO Model Server target device, you need to:
-- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2022.2/openvino_docs_install_guides_installing_openvino_from_archive_linux.html#step-4-optional-configure-inference-on-non-cpu-devices)
+- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2023.0/openvino_docs_install_guides_installing_openvino_from_archive_linux.html#step-4-optional-configure-inference-on-non-cpu-devices)
 - start the docker container with the additional parameter of `--device /dev/dri` to pass the device context 
 - set the parameter of `--target_device` to `GPU`.
 - use the `openvino/model_server:latest-gpu` image, which contains GPU dependencies
@@ -73,7 +73,7 @@ If you need to build the OpenVINO Model Server with different driver version, re
 ## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
-It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_Running_on_multiple_devices.html) documentation.
+It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_Running_on_multiple_devices.html) documentation.
 
 To use this feature in OpenVINO Model Server, you can choose one of two ways:
 
@@ -113,7 +113,7 @@ The total throughput will be roughly equal to the sum of CPU and Intel Movidius 
  
 ## Using Heterogeneous Plugin
 
-The [HETERO plugin](https://docs.openvino.ai/2022.2/openvino_docs_OV_UG_Hetero_execution.html) makes it possible to distribute inference load of one model 
+The [HETERO plugin](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_Hetero_execution.html) makes it possible to distribute inference load of one model 
 among several computing devices. That way different parts of the deep learning network can be executed by devices best suited to their type of calculations. 
 OpenVINO automatically divides the network to optimize the process.
 

@@ -173,7 +173,7 @@ Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
 > When serving models on [AI accelerators](accelerators.md), some additional steps may be required to install device drivers and dependencies. 
-> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/latest/openvino_docs_install_guides_configurations_header.html) documentation.
+> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2023.0/openvino_docs_install_guides_configurations_header.html) documentation.
 
 
 ## Deploying Model Server in Kubernetes 

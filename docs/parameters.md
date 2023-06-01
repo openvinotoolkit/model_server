@@ -44,7 +44,7 @@ Configuration options for the server are defined only via command-line options a
 | `file_system_poll_wait_seconds` | `integer` | Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. |
 | `sequence_cleaner_poll_wait_minutes` | `integer` | Time interval (in minutes) between next sequence cleaner scans. Sequences of the models that are subjects to idle sequence cleanup that have been inactive since the last scan are removed. Zero value disables sequence cleaner. See [idle sequence cleanup](stateful_models.md). |
 | `custom_node_resources_cleaner_interval_seconds` | `integer` | Time interval (in seconds) between two consecutive resources cleanup scans. Default is 1. Must be greater than 0. See [custom node development](custom_node_development.md). |
-| `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvino.ai/2022.2/openvino_docs_Extensibility_UG_Intro.html). |
+| `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvino.ai/2023.0/openvino_docs_Extensibility_UG_Intro.html). |
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
 | `log_path` | `string` | Optional path to the log file. |
 | `cache_dir` | `string` | Path to the model cache storage. Caching will be enabled if this parameter is defined or the default path /opt/cache exists |
