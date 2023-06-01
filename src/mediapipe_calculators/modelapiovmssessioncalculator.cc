@@ -35,6 +35,7 @@ using ovms::OVMSInferenceAdapter;
 using std::endl;
 
 const std::string SESSION_TAG{"SESSION"};
+ov::Core UNUSED_OV_CORE;
 
 class ModelAPISessionCalculator : public CalculatorBase {
     std::shared_ptr<::InferenceAdapter> adapter;
@@ -82,8 +83,7 @@ public:
         // 0 means default
         uint32_t servableVersion = servableVersionOpt.value_or(0);
         auto session = std::make_shared<OVMSInferenceAdapter>(servableName, servableVersion);
-        static ov::Core core;
-        session->loadModel(nullptr, core, "UNUSED", {});
+        session->loadModel(nullptr, UNUSED_OV_CORE, "UNUSED", {});
         MLOG("Session create adapter");
         cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(MakePacket<std::shared_ptr<InferenceAdapter>>(session));
         MLOG("SessionOpen end");
