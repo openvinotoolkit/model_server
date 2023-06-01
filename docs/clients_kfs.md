@@ -553,7 +553,7 @@ When creating a Python-based client application, you can use Triton client libra
         data = np.array([1.0, 2.0, ..., 1000.0])
         infer_input = httpclient.InferInput("input_name", data.shape, "FP32")
         infer_input.set_data_from_numpy(data)
-        results = client.infer("model_name", [infer_input]
+        results = client.infer("model_name", [infer_input])
 
 .. tab:: cpp [GRPC]
 
@@ -570,7 +570,7 @@ When creating a Python-based client application, you can use Triton client libra
             tc::InferInput* input;
             tc::InferInput::Create(&input, "input_name", shape, "FP32");
             std::shared_ptr<tc::InferInput> input_ptr;
-            input_ptr.reset(input)
+            input_ptr.reset(input);
 
             std::vector<float> input_data(10);
             for (size_t i = 0; i < 10; ++i) {
@@ -599,7 +599,7 @@ When creating a Python-based client application, you can use Triton client libra
             tc::InferInput* input;
             tc::InferInput::Create(&input, "input_name", shape, "FP32");
             std::shared_ptr<tc::InferInput> input_ptr;
-            input_ptr.reset(input)
+            input_ptr.reset(input);
 
             std::vector<float> input_data(10);
             for (size_t i = 0; i < 10; ++i) {
@@ -691,4 +691,98 @@ When creating a Python-based client application, you can use Triton client libra
 
 @endsphinxdirective
 
+### Request Prediction on a string
+
+@sphinxdirective
+.. tab:: python [GRPC]
+
+    .. code-block:: python
+
+        import numpy as np
+        import tritonclient.grpc as grpcclient
+
+        client = grpcclient.InferenceServerClient("localhost:9000")
+        data = "<string>"
+        input = np.array([data.encode('utf-8')], dtype=np.object_)
+        infer_input = grpcclient.InferInput("input_name", [1], "BYTES")
+        infer_input.set_data_from_numpy(input)
+        results = client.infer("model_name", [infer_input])
+
+.. tab:: python [REST]
+
+    .. code-block:: python
+
+        import numpy as np
+        import tritonclient.http as httpclient
+
+        client = httpclient.InferenceServerClient("localhost:9000")
+        data = "<string>"
+        input = np.array([data.encode('utf-8')], dtype=np.object_)
+        infer_input = httpclient.InferInput("input_name", [1], "BYTES")
+        infer_input.set_data_from_numpy(input)
+        results = client.infer("model_name", [infer_input])
+
+.. tab:: cpp [GRPC]
+
+    .. code-block:: cpp
+    
+        #include "grpc_client.h"
+
+        namespace tc = triton::client;
+
+        int main(int argc, char** argv) {
+            std::unique_ptr<tc::InferenceServerGrpcClient> client;
+            tc::InferenceServerGrpcClient::Create(&client, "localhost:9000");
+            
+            tc::InferInput* input;
+            tc::InferInput::Create(&input, "input_name", {1}, "BYTES");
+            std::shared_ptr<tc::InferInput> input_ptr;
+            input_ptr.reset(input);
+            input_ptr->AppendFromString({std::string("<string>")});
+            std::vector<tc::InferInput*> inputs = {input_ptr.get()};
+            
+            tc::InferOptions options("model_name");
+            tc::InferResult* results;
+            client->Infer(&results, options, inputs);
+            std::shared_ptr<tc::InferResult> results_ptr;
+            results_ptr.reset(results);
+            return 0;
+        }
+        
+.. tab:: cpp [REST]
+
+    .. code-block:: cpp
+    
+        #include "http_client.h"
+
+        namespace tc = triton::client;
+
+        int main(int argc, char** argv) {
+            std::unique_ptr<tc::InferenceServerHttpClient> client;
+            tc::InferenceServerHttpClient::Create(&client, "localhost:9000");
+            
+            tc::InferInput* input;
+            tc::InferInput::Create(&input, "input_name", {1}, "BYTES");
+            std::shared_ptr<tc::InferInput> input_ptr;
+            input_ptr.reset(input);
+            input_ptr->AppendFromString({std::string("<string>")});    
+            std::vector<tc::InferInput*> inputs = {input_ptr.get()};
+            
+            tc::InferOptions options("model_name");
+            tc::InferResult* results;
+            client->Infer(&results, options, inputs);
+            std::shared_ptr<tc::InferResult> results_ptr;
+            results_ptr.reset(results);
+            return 0;
+        }
+        
+.. tab:: curl    
+
+    .. code-block:: sh  
+
+        curl -X POST http://localhost:9000/v2/models/model_name/infer
+        -H 'Content-Type: application/json'
+        -d '{"inputs" : [ {"name" : "input_name", "shape" : [ 1 ], "datatype"  : "BYTES", "data" : ["<string>"]} ]}'
+
+@endsphinxdirective
 For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/python/kserve-api/samples).
