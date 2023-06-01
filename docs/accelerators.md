@@ -135,7 +135,7 @@ echo '{"model_config_list": [
 
 ## Using AUTO Plugin
 
-[Auto Device](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_supported_plugins_AUTO.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
+[Auto Device](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_supported_plugins_AUTO.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
 AUTO solves the complexity in application required to code a logic for the HW device selection (through HW devices) and then, on the deducing the best optimization settings on that device.
 AUTO always chooses the best device, if compiling model fails on this device, AUTO will try to compile it on next best device until one of them succeeds.
 Make sure you have passed the devices and access to the devices you want to use in for the docker image. For example with:
