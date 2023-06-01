@@ -29,8 +29,8 @@ def _convert_to_rgb(image):
 
 preprocess = Compose([
     Resize(240, interpolation=InterpolationMode.BICUBIC),
-    CenterCrop(240),
-    _convert_to_rgb,
+    CenterCrop(240),  # does not affect accurracy
+    _convert_to_rgb,  # does not affect accurracy
     ToTensor(),
     Normalize(mean=OPENAI_DATASET_MEAN, std=OPENAI_DATASET_STD),
 ])
