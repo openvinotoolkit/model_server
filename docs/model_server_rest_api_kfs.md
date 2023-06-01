@@ -225,6 +225,8 @@ $request_output =
 }
 ```
 
+> Note: In `tensor_data` elements may be presented in their multi-dimensional representation, or as a flattened one-dimensional representation. Before inference execution tensor data is flattened, and only elements count in `tensor_data` is validated.
+
 Besides numerical values, it is possible to pass encoded images using Binary Data extension:
 
 As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and model or pipeline have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. Every batch the BYTES input needs to be preced by 4 bytes, litte endian, that contains its size. 
