@@ -1,4 +1,4 @@
-# MediaPipe Demo {#ovms_docs_demo_mediapipe_multi_model}
+# MediaPipe Multi Model Demo {#ovms_docs_demo_mediapipe_multi_model}
 
 This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph using OVMS.
 

@@ -1,4 +1,4 @@
-# MediaPipe Demo {#ovms_docs_demo_mediapipe_image_classification}
+# MediaPipe Image Classification Demo {#ovms_docs_demo_mediapipe_image_classification}
 
 This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph using OVMS.
 
