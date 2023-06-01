@@ -214,8 +214,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
             while (poller.Next(&packet)) {
                 SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
                 auto received = packet.Get<KFSResponse*>();
-                *response = *(std::move(received));
+                *response = *(received);
                 SPDLOG_TRACE("Received packet for: {} {}", outputStreamName, receivedOutputs);
+                outputPollersWithReceivedPacket.insert(outputStreamName);
                 ++receivedOutputs;
             }
             SPDLOG_TRACE("Received all packets for: {}", outputStreamName);
