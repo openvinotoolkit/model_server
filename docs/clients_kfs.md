@@ -722,6 +722,60 @@ When creating a Python-based client application, you can use Triton client libra
         infer_input.set_data_from_numpy(input)
         results = client.infer("model_name", [infer_input])
 
+.. tab:: cpp [GRPC]
+
+    .. code-block:: cpp
+    
+        #include "grpc_client.h"
+
+        namespace tc = triton::client;
+
+        int main(int argc, char** argv) {
+            std::unique_ptr<tc::InferenceServerGrpcClient> client;
+            tc::InferenceServerGrpcClient::Create(&client, "localhost:9000");
+            
+            tc::InferInput* input;
+            tc::InferInput::Create(&input, "input_name", {1}, "BYTES");
+            std::shared_ptr<tc::InferInput> input_ptr;
+            input_ptr.reset(input);
+            input_ptr->AppendFromString({std::string("<string>")});
+            std::vector<tc::InferInput*> inputs = {input_ptr.get()};
+            
+            tc::InferOptions options("model_name");
+            tc::InferResult* results;
+            client->Infer(&results, options, inputs);
+            std::shared_ptr<tc::InferResult> results_ptr;
+            results_ptr.reset(results);
+            return 0;
+        }
+        
+.. tab:: cpp [REST]
+
+    .. code-block:: cpp
+    
+        #include "http_client.h"
+
+        namespace tc = triton::client;
+
+        int main(int argc, char** argv) {
+            std::unique_ptr<tc::InferenceServerHttpClient> client;
+            tc::InferenceServerHttpClient::Create(&client, "localhost:9000");
+            
+            tc::InferInput* input;
+            tc::InferInput::Create(&input, "input_name", {1}, "BYTES");
+            std::shared_ptr<tc::InferInput> input_ptr;
+            input_ptr.reset(input);
+            input_ptr->AppendFromString({std::string("<string>")});    
+            std::vector<tc::InferInput*> inputs = {input_ptr.get()};
+            
+            tc::InferOptions options("model_name");
+            tc::InferResult* results;
+            client->Infer(&results, options, inputs);
+            std::shared_ptr<tc::InferResult> results_ptr;
+            results_ptr.reset(results);
+            return 0;
+        }
+        
 .. tab:: curl    
 
     .. code-block:: sh  
