@@ -154,7 +154,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid shape -"
                << " Expected: " << tensorInfo.getShape().toString()
-               << "; Actual: " << TensorInfo::shapeToString(dims);
+               << "; Actual: " << shapeToString(dims);
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
             return Status(StatusCode::INVALID_SHAPE, details);
@@ -166,7 +166,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid shape -"
            << " Expected: " << tensorInfo.getShape().toString()
-           << "; Actual: " << TensorInfo::shapeToString(dims);
+           << "; Actual: " << shapeToString(dims);
         const std::string details = ss.str();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
         return Status(StatusCode::INVALID_SHAPE, details);

@@ -15,6 +15,8 @@
    ovms_demo_single_face_analysis_pipeline
    ovms_demo_multi_faces_analysis_pipeline
    ovms_docs_demo_ensemble
+   ovms_docs_demo_mediapipe_image_classification
+   ovms_docs_demo_mediapipe_multi_model
    ovms_docs_image_classification
    ovms_demo_using_onnx_model
    ovms_demo_tf_classification
@@ -23,6 +25,7 @@
    ovms_demo_real_time_stream_analysis
    ovms_demo_bert
    ovms_demo_gptj_causal_lm
+   ovms_demo_universal-sentence-encoder
    ovms_demo_speech_recognition
    ovms_demo_benchmark_client
 
@@ -48,6 +51,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[Real Time Stream Analysis](real_time_stream_analysis/python/README.md)| Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines as well as simple results visualizer for displaying predictions in the browser. |
 |[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering use case via gRPC API. This demo uses dynamic shape feature. |
 |[GPT-J Causal Language Modeling](gptj_causal_lm/python/README.md)|Write start of the sentence and let GPT-J continue via gRPC API. This demo uses dynamic shape feature. |
+|[Using inputs data in string format with universal-sentence-encoder model](universal-sentence-encoder/README.md)| Handling AI model with text as the model input. | 
 |[Speech Recognition on Kaldi Model](speech_recognition_with_kaldi_model/python/README.md)|Run inference on a speech sample and use Kaldi model to perform speech recognition via gRPC API. This demo uses [stateful model](../docs/stateful_models.md). |
 |[Benchmark App](benchmark/python/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
 |[Face Blur Pipeline](face_blur/python/README.md)|Detect faces and blur image using a pipeline of object detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [face_blur custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/face_blur). |

@@ -36,41 +36,20 @@ namespace ovms {
 
 class TensorInfo;
 
-using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
+using tensor_map_t = std::map<std::string, std::shared_ptr<const TensorInfo>>;
 
 /**
      * @brief Class containing information about the tensor
      */
 class TensorInfo {
-protected:
-    /**
-         * @brief Input name
-         */
-    std::string name;
-
-    /**
-         * @brief Mapping name
-         */
-    std::string mapping;
-
-    Precision precision;
-
-    /**
-         * @brief Model input shape
-         */
-    Shape shape;
-
-    /**
-         * @brief Tensor layout
-         */
-    Layout layout;
-
-    /**
-         * @brief Information if influenced by demultiplexer
-         */
-    bool influencedByDemultiplexer = false;
-
 public:
+    enum class ProcessingHint {
+        IMAGE,
+        STRING_1D_U8,
+        STRING_2D_U8,
+        NO_PROCESSING
+    };
+
     /**
          * @brief Construct a new Tensor Info object
          * 
@@ -145,7 +124,6 @@ public:
          * @return const std::string& 
          */
     const std::string& getMappedName() const;
-    void setMappedName(const std::string& mappedName);
 
     /**
          * @brief Get the Precision object
@@ -153,18 +131,6 @@ public:
          * @return const InferenceEngine::Precision
          */
     const Precision getPrecision() const;
-
-    /**
-         * @brief Set the Precision object
-         * 
-         * @return const InferenceEngine::Precision
-         */
-    void setPrecision(const ovms::Precision& requestedPrecision);
-
-    /**
-         * @brief Set the Layout object
-         */
-    void setLayout(const Layout& layout);
 
     ov::element::Type getOvPrecision() const;
 
@@ -205,24 +171,57 @@ public:
          * @return shape
          */
     const Shape& getShape() const;
-    void setShape(const Shape& shape);
+
+    ProcessingHint getPreProcessingHint() const;
+    ProcessingHint getPostProcessingHint() const;
 
     bool isInfluencedByDemultiplexer() const;
 
-    std::shared_ptr<TensorInfo> createCopyWithNewShape(const Shape& shape) const;
+    std::shared_ptr<const TensorInfo> createCopyWithNewShape(const Shape& shape) const;
+    std::shared_ptr<const TensorInfo> createCopyWithNewMappedName(const std::string& mappedName) const;
 
-    std::shared_ptr<TensorInfo> createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const;
-    std::shared_ptr<TensorInfo> createIntersection(const TensorInfo& other);
+    std::shared_ptr<const TensorInfo> createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const;
+    std::shared_ptr<const TensorInfo> createIntersection(const TensorInfo& other) const;
 
     bool isTensorUnspecified() const;
 
     bool isTensorSpecEqual(const TensorInfo& other) const;
 
-    static std::string shapeToString(const shape_t& shape);
-
-    static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
+    static std::shared_ptr<const TensorInfo> getUnspecifiedTensorInfo();
 
     const std::optional<Dimension> getBatchSize() const;
+
+protected:
+    /**
+         * @brief Input name
+         */
+    std::string name;
+
+    /**
+         * @brief Mapping name
+         */
+    std::string mapping;
+
+    Precision precision;
+
+    /**
+         * @brief Model input shape
+         */
+    Shape shape;
+
+    /**
+         * @brief Tensor layout
+         */
+    Layout layout;
+
+    /**
+         * @brief Information if influenced by demultiplexer
+         */
+    bool influencedByDemultiplexer = false;
+
+    void createProcessingHints();
+    TensorInfo::ProcessingHint preProcessingHint = TensorInfo::ProcessingHint::NO_PROCESSING;
+    TensorInfo::ProcessingHint postProcessingHint = TensorInfo::ProcessingHint::NO_PROCESSING;
 };
 
 }  // namespace ovms

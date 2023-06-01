@@ -1,12 +1,12 @@
 # Quickstart Guide {#ovms_docs_quick_start_guide}
 
-OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) 
-, [ONNX](https://onnx.ai/), PaddlePaddle[https://github.com/PaddlePaddle/Paddle] or TensorFlow format [https://www.tensorflow.org/]. You can get them by:
+OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2023.0/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) 
+, [ONNX](https://onnx.ai/), [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) or [TensorFlow](https://www.tensorflow.org/) format. You can get them by:
 
 - downloading models from [Open Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/public/2022.1/)
-- converting other formats using [Model Optimizer](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html)
+- converting other formats using [Model Optimizer](https://docs.openvino.ai/2023.0/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html)
 
-This guide uses a [face detection model](https://docs.openvino.ai/latest/omz_models_model_face_detection_retail_0004.html) in IR format.
+This guide uses a [face detection model](https://docs.openvino.ai/2023.0/omz_models_model_face_detection_retail_0004.html) in IR format.
 
 To quickly start using OpenVINO™ Model Server follow these steps:
 1. Prepare Docker

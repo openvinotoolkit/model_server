@@ -44,12 +44,18 @@ CHECK_COVERAGE ?=0
 RUN_TESTS ?= 1
 NVIDIA ?=0
 BUILD_NGINX ?= 0
+MEDIAPIPE_DISABLE ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= master
-OV_CONTRIB_BRANCH ?= master
+OV_SOURCE_BRANCH ?= releases/2023/0
+OV_CONTRIB_BRANCH ?= releases/2023/0
+
+OV_SOURCE_ORG ?= openvinotoolkit
+OV_CONTRIB_ORG ?= openvinotoolkit
+
+SENTENCEPIECE ?= 1
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -58,10 +64,15 @@ BAZEL_BUILD_TYPE ?= opt
 CMAKE_BUILD_TYPE ?= Release
 MINITRACE ?= OFF
 
+DISABLE_MEDIAPIPE_PARAMS ?= ""
+ifeq ($(MEDIAPIPE_DISABLE),1)
+	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "
+endif
+
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
-  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "
+  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "$(DISABLE_MEDIAPIPE_PARAMS)
 else
-  BAZEL_DEBUG_FLAGS=" --strip=never "
+  BAZEL_DEBUG_FLAGS=" --strip=never "$(DISABLE_MEDIAPIPE_PARAMS)
 endif
 
 ifeq ($(MINITRACE),ON)
@@ -79,18 +90,31 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   ifeq ($(NVIDIA),1)
 	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04
+	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   else
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
+	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
-  INSTALL_DRIVER_VERSION ?= "22.35.24055"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.3/linux/l_openvino_toolkit_ubuntu20_2022.3.0.9052.9752fafe8eb_x86_64.tgz
+  ifeq ($(BASE_OS_TAG_UBUNTU),20.04)
+	INSTALL_DRIVER_VERSION ?= "22.43.24595"
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.0/linux/l_openvino_toolkit_ubuntu20_2023.0.0.10926.b4452d56304_x86_64.tgz
+  else ifeq  ($(BASE_OS_TAG_UBUNTU),22.04)
+	INSTALL_DRIVER_VERSION ?= "23.13.26032"
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.0/linux/l_openvino_toolkit_ubuntu22_2023.0.0.10926.b4452d56304_x86_64.tgz
+  endif
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
+  ifeq ($(NVIDIA),1)
+    BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi8
+	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
+  else
+    BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
+	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
+  endif	
   DIST_OS=redhat
-  INSTALL_DRIVER_VERSION ?= "22.28.23726"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.3/linux/l_openvino_toolkit_rhel8_2022.3.0.9052.9752fafe8eb_x86_64.tgz
+  INSTALL_DRIVER_VERSION ?= "22.43.24595"
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.0/linux/l_openvino_toolkit_rhel8_2023.0.0.10926.b4452d56304_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -104,7 +128,7 @@ ifeq ($(NVIDIA),1)
 endif
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2022.3.0.1"
+PRODUCT_VERSION ?= "2023.0.0"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
 OVMS_CPP_CONTAINTER_PORT ?= 9178
@@ -131,28 +155,22 @@ $(ACTIVATE):
 
 cppclean: venv
 	@echo "Checking cppclean..."
-	@. $(ACTIVATE); bash -c "./cppclean.sh"
+	@. $(ACTIVATE); bash -c "./ci/cppclean.sh"
 
 style: venv clang-format-check cpplint cppclean
 
-sdl-check: venv
+hadolint:
 	@echo "Checking SDL requirements..."
 	@echo "Checking docker files..."
 	@./tests/hadolint.sh
 
+bandit:
 	@echo "Checking python files..."
-	@. $(ACTIVATE); bash -c "bandit -x demos/benchmark/python -r demos/*/python > bandit.txt"
-	@if ! grep -FRq "No issues identified." bandit.txt; then\
-		error Run bandit on demos/*/python/*.py to fix issues.;\
-	fi
-	@rm bandit.txt
-	@. $(ACTIVATE); bash -c "bandit -r client/python/ > bandit2.txt"
-	@if ! grep -FRq "No issues identified." bandit2.txt; then\
-		error Run bandit on  client/python/ to fix issues.;\
-	fi
-	@rm bandit2.txt
+	@. $(ACTIVATE); bash -c "./ci/bandit.sh"
+
+license-headers:
 	@echo "Checking license headers in files..."
-	@. $(ACTIVATE); bash -c "python3 lib_search.py . > missing_headers.txt"
+	@. $(ACTIVATE); bash -c "python3 ./ci/lib_search.py . > missing_headers.txt"
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
         echo "Files with missing headers";\
         cat missing_headers.txt;\
@@ -160,10 +178,12 @@ sdl-check: venv
 	fi
 	@rm missing_headers.txt
 
+sdl-check: venv hadolint bandit license-headers
+
 	@echo "Checking forbidden functions in files..."
-	@. $(ACTIVATE); bash -c "python3 lib_search.py . functions > forbidden_functions.txt"
+	@. $(ACTIVATE); bash -c "python3 ./ci/lib_search.py . functions > forbidden_functions.txt"
 	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
-		error Run python3 lib_search.py . functions - to see forbidden functions file list.;\
+		error Run python3 ./ci/lib_search.py . functions - to see forbidden functions file list.;\
 	fi
 	@rm forbidden_functions.txt
 
@@ -192,10 +212,32 @@ ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
   endif
+  ifeq ($(BASE_OS),redhat)
+	@echo "copying RH entitlements"
+	@cp -ru /etc/pki/entitlement .
+	@mkdir rhsm-ca
+	@cp -u /etc/rhsm/ca/* rhsm-ca/
+  endif
+endif
+ifeq ($(BASE_OS),redhat)
+	@mkdir -p entitlement
+	@mkdir -p rhsm-ca
+endif
+ifeq ($(NO_DOCKER_CACHE),true)
+	$(eval NO_CACHE_OPTION:=--no-cache)
+	@echo "Docker image will be rebuilt from scratch"
+	@docker pull $(BASE_IMAGE)
+  ifeq ($(BASE_OS),redhat)
+	@docker pull registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
+    ifeq ($(NVIDIA),1)
+	@docker pull docker.io/nvidia/cuda:11.8.0-runtime-ubi8
+    endif
+  endif
 endif
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
-	@cd src/custom_nodes && make BASE_OS=$(BASE_OS)
+	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS) BASE_IMAGE=$(BASE_IMAGE) 
+	@cd src/custom_nodes/tokenizer && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS) BASE_IMAGE=$(BASE_IMAGE) 
 endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
@@ -203,14 +245,6 @@ endif
 	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
 	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME})'
 	@bash -c '$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
-ifeq ($(NO_DOCKER_CACHE),true)
-	$(eval NO_CACHE_OPTION:=--no-cache)
-	@echo "Docker image will be rebuilt from scratch"
-	@docker pull $(BASE_IMAGE)
-  ifeq ($(BASE_OS),redhat)
-	@docker pull registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
-  endif
-endif
 ifneq ($(OVMS_METADATA_FILE),)
 	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
 else
@@ -219,8 +253,9 @@ endif
 	@cat .workspace/metadata.json
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
-		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" --build-arg ov_source_org="$(OV_SOURCE_ORG)" \
+		--build-arg ov_contrib_org="$(OV_CONTRIB_ORG)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) --build-arg RUN_TESTS=$(RUN_TESTS)\
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
@@ -235,7 +270,7 @@ endif
 targz_package: ovms_builder_image
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg BASE_OS=$(BASE_OS) \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg BASE_OS=$(BASE_OS) \
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
@@ -253,7 +288,7 @@ ovms_release_image: targz_package
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg GPU=0 \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
@@ -262,7 +297,7 @@ ovms_release_image: targz_package
     	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
     	--build-arg GPU=1 \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
 		--build-arg NVIDIA=$(NVIDIA) \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
@@ -434,6 +469,7 @@ cpu_extension:
 		--build-arg https_proxy=${https_proxy} \
 		--build-arg no_proxy=${no_proxy} \
 		--build-arg DLDT_PACKAGE_URL=${DLDT_PACKAGE_URL} \
-		--build-arg APT_OV_PACKAGE=${APT_OV_PACKAGE} .
+		--build-arg APT_OV_PACKAGE=${APT_OV_PACKAGE} \
+		--build-arg BASE_IMAGE=${BASE_IMAGE} .
 	mkdir -p ./lib/${BASE_OS}
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${BASE_OS}

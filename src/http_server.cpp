@@ -39,7 +39,7 @@ namespace ovms {
 
 namespace net_http = tensorflow::serving::net_http;
 
-const net_http::HTTPStatusCode http(const ovms::Status& status) {
+static const net_http::HTTPStatusCode http(const ovms::Status& status) {
     const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
         {StatusCode::OK, net_http::HTTPStatusCode::OK},
         {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
@@ -68,6 +68,7 @@ const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
         {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
+        {StatusCode::REST_BINARY_BUFFER_EXCEEDED, net_http::HTTPStatusCode::BAD_REQUEST},
 
         {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::ERROR},
         {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
@@ -83,6 +84,7 @@ const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::MODEL_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MODEL_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MODEL_VERSION_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
@@ -112,6 +114,8 @@ const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::INVALID_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_BUFFER_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_DEVICE_ID, net_http::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_STRING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_INPUT_FORMAT, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},

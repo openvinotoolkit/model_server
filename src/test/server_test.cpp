@@ -111,14 +111,15 @@ public:
     }
 };
 
-void requestServerAlive(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
+static void requestServerAlive(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
     SPDLOG_INFO("Verifying if server is live on address: {}", address);
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
     client.verifyLive(status, expectedStatus);
 }
-void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
+
+static void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
     SPDLOG_INFO("Veryfying if server is ready on address: {}", address);
@@ -126,7 +127,7 @@ void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::St
     client.verifyReady(status, expectedStatus);
 }
 
-void requestModelReady(const char* grpcPort, const std::string& modelName, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
+static void requestModelReady(const char* grpcPort, const std::string& modelName, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
     SPDLOG_INFO("Verifying if server is ready on address: {}", address);
@@ -134,7 +135,7 @@ void requestModelReady(const char* grpcPort, const std::string& modelName, grpc:
     client.verifyModelReady(modelName, status, expectedStatus);
 }
 
-void checkServerMetadata(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK) {
+static void checkServerMetadata(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
     SPDLOG_INFO("Verifying if server responds with correct metadata on address: {}", address);
@@ -304,7 +305,7 @@ TEST(Server, ServerMetadata) {
     });
     auto start = std::chrono::high_resolution_clock::now();
     while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
     }
 
     grpc::ChannelArguments args;

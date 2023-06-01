@@ -42,4 +42,8 @@ Status prepareConsolidatedTensorImpl(TFSPredictResponse* response, const std::st
 const std::string& getRequestServableName(const TFSPredictRequest& request);
 Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::string& name, bool& isNativeFileFormatUsed);
 bool isNativeFileFormatUsed(const TFSInputTensorType& request);
+bool requiresPreProcessing(const TFSInputTensorType& proto);
+std::string& createOrGetString(TFSInputTensorType& proto, int index);
+void setBatchSize(TFSInputTensorType& proto, int64_t batch);
+void setStringPrecision(TFSInputTensorType& proto);
 }  // namespace ovms

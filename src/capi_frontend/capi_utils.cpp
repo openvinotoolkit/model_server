@@ -25,12 +25,11 @@
 #include "../logging.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"
-#include "../tensorinfo.hpp"
 
 namespace ovms {
 
-std::string tensorShapeToString(const shape_t& shape) {
-    return TensorInfo::shapeToString(shape);
+std::string tensorShapeToString(const signed_shape_t& shape) {
+    return shapeToString(shape);
 }
 
 OVMS_DataType getPrecisionAsOVMSDataType(Precision precision) {
@@ -145,7 +144,7 @@ Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::str
     Status status = response->addOutput(
         name,
         getPrecisionAsOVMSDataType(ovElementTypeToOvmsPrecision(precision)),
-        shape.data(),
+        reinterpret_cast<const int64_t*>(shape.data()),
         shape.size());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to prepare consolidated tensor, servable: {}; tensor with name: {}", response->getServableName(), name);
@@ -169,5 +168,8 @@ Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::str
     SPDLOG_LOGGER_ERROR(dag_executor_logger, "Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find output",
         name, response->getServableName(), response->getServableVersion());
     return StatusCode::INTERNAL_ERROR;
+}
+bool requiresPreProcessing(const InferenceTensor& tensor) {
+    return false;
 }
 }  // namespace ovms

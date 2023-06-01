@@ -20,7 +20,6 @@ import numpy as np
 from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRequest,
                                                  ModelStatusRequest, _check_model_spec)
 from ovmsclient.tfs_compat.grpc.tensors import (NP_TO_TENSOR_MAP, DataType,
-                                                _is_bytes_shape_valid,
                                                 _check_if_array_homogeneous)
 
 
@@ -167,6 +166,14 @@ def make_status_request(model_name, model_version=0):
     return HttpModelStatusRequest(model_name, model_version)
 
 
+# Functioned used with numpy.vectorize()
+def _decode_bytes_to_string(tensor_value, encoding="UTF-8"):
+    return tensor_value.decode(encoding)
+
+
+_decode_bytes_to_strings = np.vectorize(_decode_bytes_to_string)
+
+
 def _parse_input_data(values):
 
     # create numpy ndarray from values and find its dtype if not provided
@@ -187,14 +194,14 @@ def _parse_input_data(values):
     else:
         raise TypeError("provided values type is not valid")
 
-    if dtype == DataType.DT_STRING and _is_bytes_shape_valid(tensor_values.shape, tensor_values):
-        raise ValueError("bytes values with dtype DT_STRING must be in shape [N]")
-
-    if dtype == DataType.DT_STRING:
-        b64_values = []
-        for value in tensor_values:
-            b64_value = base64.b64encode(value).decode('utf-8')
-            b64_values.append({"b64": b64_value})
-        return b64_values
-    else:
-        return tensor_values.tolist()
+    if dtype == DataType.DT_STRING and tensor_values.dtype.type == np.bytes_:
+        if len(tensor_values.shape) != 1:
+            # Bytes in multidimensional shape will be encoded in UTF-8 as regular input
+            tensor_values = _decode_bytes_to_strings(tensor_values)
+        else:
+            b64_values = []
+            for value in tensor_values:
+                b64_value = base64.b64encode(value).decode('utf-8')
+                b64_values.append({"b64": b64_value})
+            return b64_values
+    return tensor_values.tolist()

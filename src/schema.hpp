@@ -15,13 +15,16 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
+
 #include <rapidjson/schema.h>
 
 #include "status.hpp"
 
 namespace ovms {
-extern const char* MODELS_CONFIG_SCHEMA;
+extern const std::string MODELS_CONFIG_SCHEMA;
 extern const char* MODELS_MAPPING_SCHEMA;
+extern const std::string MEDIAPIPE_SUBCONFIG_SCHEMA;
 
 StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema);
 }  // namespace ovms

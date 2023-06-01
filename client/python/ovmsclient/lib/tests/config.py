@@ -15,6 +15,7 @@
 #
 
 from enum import IntEnum
+import numpy as np
 
 
 class CallCount(IntEnum):
@@ -337,7 +338,7 @@ PREDICT_INVALID_PARAMS = [
         TypeError, "inputs keys type should be str, but found int"
     ),
     (
-        [{"input": [1, 2, "three"]}, "model_name", 1, 1],
+        [{"input": np.array(b'1', dtype=np.dtype(np.void, 10))}, "model_name", 1, 1],
         TypeError, "provided values type is not valid"
     ),
     (

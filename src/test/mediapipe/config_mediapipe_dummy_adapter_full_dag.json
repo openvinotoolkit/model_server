@@ -1,0 +1,46 @@
+{
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "shape": "(1, 10)"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediaDummyADAPTFULL",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull.pbtxt"
+    },
+    {
+        "name":"mediaDummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummy.pbtxt"
+    }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "dummyDAG",
+            "inputs": ["b"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "b"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"a": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+}

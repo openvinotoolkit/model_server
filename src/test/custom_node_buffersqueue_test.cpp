@@ -51,11 +51,6 @@ TEST(CustomNodeBuffersQueue, GetAllBuffers) {
     }
 }
 
-void getBufferAndReturn(BuffersQueue& buffersQueue) {
-    void* buffer = buffersQueue.getBuffer();
-    ASSERT_NE(nullptr, buffer) << "Failed to get buffer";
-}
-
 TEST(CustomNodeBuffersQueue, GetAllBuffersThenNullptrForNextRequest) {
     const std::string content{"abc"};
     size_t buffersCount = 1;

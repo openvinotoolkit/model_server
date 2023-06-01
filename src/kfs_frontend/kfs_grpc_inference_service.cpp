@@ -17,7 +17,10 @@
 
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
@@ -27,6 +30,10 @@
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#endif
 #include "../metric.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -108,7 +115,17 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
         SPDLOG_DEBUG("ModelReady requested model {} is missing, trying to find pipeline with such name", name);
         auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
         if (!pipelineDefinition) {
-            return Status(StatusCode::MODEL_NAME_MISSING);
+#if (MEDIAPIPE_DISABLE == 0)
+            auto mediapipeGraphDefinition = manager.getMediapipeFactory().findDefinitionByName(name);
+            if (!mediapipeGraphDefinition) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            auto status = buildResponse(*mediapipeGraphDefinition, response);
+            // INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok())); TODO metrics
+            return status;
+#else
+            return StatusCode::MODEL_NAME_MISSING;
+#endif
         }
         auto status = buildResponse(*pipelineDefinition, response);
         INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok()));
@@ -222,16 +239,27 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
         request->model_name(),
         request->model_version());
     ServableMetricReporter* reporter = nullptr;
-    auto status = this->ModelInferImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer}, reporter);
-    timer.stop(TOTAL);
-    if (!status.ok()) {
-        return grpc(status);
-    }
-    if (!reporter) {
-        return grpc(Status(StatusCode::INTERNAL_ERROR));  // should not happen
+    Status status;
+    const std::string servableName = request->model_name();
+    try {
+        status = this->ModelInferImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer}, reporter);
+        timer.stop(TOTAL);
+        if (!status.ok()) {
+            return grpc(status);
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Caught exception in InferenceServiceImpl for servable: {} exception: {}", servableName, e.what());
+        return grpc(Status(StatusCode::UNKNOWN_ERROR, e.what()));
+    } catch (...) {
+        SPDLOG_ERROR("Caught unknown exception in InferenceServiceImpl for servable: {}", servableName);
+        return grpc(Status(StatusCode::UNKNOWN_ERROR));
     }
     double requestTotal = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total gRPC request processing time: {} ms", requestTotal / 1000);
+    if (!reporter) {
+        return grpc(Status(StatusCode::OK));
+        // TODO fix after Mediapipe metrics implementation
+    }
     OBSERVE_IF_ENABLED(reporter->requestTimeGrpc, requestTotal);
     return grpc(status);
 }
@@ -246,6 +274,20 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_name());
         status = getPipeline(request, response, pipelinePtr);
+        if (status == StatusCode::PIPELINE_DEFINITION_NAME_MISSING) {
+            SPDLOG_DEBUG("Requested DAG: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
+#if (MEDIAPIPE_DISABLE == 0)
+            std::shared_ptr<MediapipeGraphExecutor> executor;
+            status = this->modelManager.createPipeline(executor, request->model_name(), request, response);
+            if (!status.ok()) {
+                return status;
+            }
+            status = executor->infer(request, response, executionContext, reporterOut);
+            return status;
+#else
+            SPDLOG_DEBUG("Requested DAG: {} does not exist. Mediapipe support was disabled during build process...", request->model_name());
+#endif
+        }
     }
     if (!status.ok()) {
         if (modelInstance) {
@@ -257,7 +299,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     if (pipelinePtr) {
         reporterOut = &pipelinePtr->getMetricReporter();
         status = pipelinePtr->execute(executionContext);
-    } else {
+    } else if (modelInstance) {
         reporterOut = &modelInstance->getMetricReporter();
         status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
     }
@@ -282,6 +324,15 @@ Status KFSInferenceServiceImpl::buildResponse(
     response->set_ready(pipelineDefinition.getStatus().isAvailable());
     return StatusCode::OK;
 }
+
+#if (MEDIAPIPE_DISABLE == 0)
+Status KFSInferenceServiceImpl::buildResponse(
+    MediapipeGraphDefinition& definition,
+    KFSGetModelStatusResponse* response) {
+    response->set_ready(definition.getStatus().isAvailable());
+    return StatusCode::OK;
+}
+#endif
 
 static void addReadyVersions(Model& model,
     KFSModelMetadataResponse* response) {
@@ -360,7 +411,7 @@ Status KFSInferenceServiceImpl::buildResponse(
 }
 
 void KFSInferenceServiceImpl::convert(
-    const std::pair<std::string, std::shared_ptr<TensorInfo>>& from,
+    const std::pair<std::string, std::shared_ptr<const TensorInfo>>& from,
     KFSModelMetadataResponse::TensorMetadata* to) {
     to->set_name(from.first);
     to->set_datatype(ovmsPrecisionToKFSPrecision(from.second->getPrecision()));

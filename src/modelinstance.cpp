@@ -25,6 +25,7 @@
 #include <utility>
 
 #include <dirent.h>
+#include <malloc.h>
 #include <spdlog/spdlog.h>
 #include <sys/types.h>
 
@@ -34,6 +35,8 @@
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
+#include "inferencerequest.hpp"
+#include "inferenceresponse.hpp"
 #include "layout.hpp"
 #include "layout_configuration.hpp"
 #include "logging.hpp"
@@ -64,9 +67,6 @@ enum : unsigned int {
 }  // namespace
 
 namespace ovms {
-
-const char* CPU_THROUGHPUT_STREAMS = "CPU_THROUGHPUT_STREAMS";
-const char* NIREQ = "NIREQ";
 
 const uint MAX_NIREQ_COUNT = 100000;
 
@@ -319,6 +319,15 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
     return StatusCode::OK;
 }
 
+const std::string RT_INFO_KEY{"model_info"};
+
+ov::AnyMap ModelInstance::getRTInfo() const {
+    if (this->model->has_rt_info(RT_INFO_KEY)) {
+        return model->get_rt_info<ov::AnyMap>(RT_INFO_KEY);
+    }
+    return ov::AnyMap();
+}
+
 Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork(config, this->model);
     if (!status.ok()) {
@@ -424,7 +433,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
             }
 
-            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+            std::shared_ptr<const TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
                 mappingName,
                 precision,
@@ -432,7 +441,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 layout);
 
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Input {}", info->asString());
-
             this->inputsInfo[info->getMappedName()] = std::move(info);
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
@@ -473,7 +481,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
                 return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
             }
 
-            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+            std::shared_ptr<const TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
                 mappingName,
                 precision,
@@ -592,7 +600,7 @@ Status ModelInstance::loadOVModel() {
     auto& modelFile = modelFiles[0];
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
     try {
-        model = loadOVModelPtr(modelFile);
+        this->model = loadOVModelPtr(modelFile);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading ov::Model model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
@@ -658,11 +666,11 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
-    // By default, set "PERFORMANCE_HINT" = "THROUGHPUT";
+    // By default, set "PERFORMANCE_HINT" = "LATENCY";
     if ((pluginConfig.count("NUM_STREAMS") == 1) || (pluginConfig.count("PERFORMANCE_HINT") == 1)) {
         return pluginConfig;
     } else {
-        pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
+        pluginConfig["PERFORMANCE_HINT"] = "LATENCY";
     }
     return pluginConfig;
 }
@@ -740,6 +748,9 @@ void ModelInstance::fetchModelFiles(bool& found, ArrayType ext) {
             auto file = findModelFilePathWithExtension(extension);
             if (file.empty()) {
                 found = false;
+            }
+            if (endsWith(file, "saved_model.pb")) {
+                file = file.substr(0, file.find("saved_model.pb"));
             }
             modelFiles.push_back(file);
         }
@@ -853,6 +864,12 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         SPDLOG_ERROR("exception occurred while loading model: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::MODEL_NOT_LOADED;
+    }
+    try {
+        bool isModelLoadedFromCache = compiledModel->get_property(ov::loaded_from_cache);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Is model loaded from cache: {}", isModelLoadedFromCache);
+    } catch (...) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
     }
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
@@ -1091,6 +1108,7 @@ void ModelInstance::unloadModelComponents() {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
+    malloc_trim(0);
 }
 
 const std::set<std::string>& ModelInstance::getOptionalInputNames() {
@@ -1207,7 +1225,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName);
+    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;

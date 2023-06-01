@@ -41,7 +41,7 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
     return status;
 }
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     for (const auto& dim : requestInput.getShape()) {
@@ -52,7 +52,7 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
 }
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
@@ -63,7 +63,7 @@ ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
 }
 
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::shared_ptr<const TensorInfo>& tensorInfo,
     const std::string& buffer) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
@@ -75,12 +75,13 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     return tensor;
 }
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     for (int i = 0; i < requestInput.shape_size(); i++) {
         shape.push_back(requestInput.shape().at(i));
     }
+
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::Tensor tensor(precision, shape);
     return tensor;

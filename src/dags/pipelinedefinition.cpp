@@ -39,6 +39,7 @@
 #include "pipelinedefinitionunloadguard.hpp"
 
 namespace ovms {
+const std::string PipelineDefinition::SCHEDULER_CLASS_NAME{"Pipeline"};
 
 Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
     if (str == DL_NODE_CONFIG_TYPE) {
@@ -62,7 +63,7 @@ PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
     nodeInfos(nodeInfos),
     connections(connections),
     reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
-    status(this->pipelineName) {}
+    status(SCHEDULER_CLASS_NAME, this->pipelineName) {}
 
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
@@ -275,7 +276,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              nodeResources.at(info.nodeName)));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode, useSharedOutputContent(request), getName());
+            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode, useSharedOutputContentFn(request), getName());
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -1063,24 +1064,22 @@ const tensor_map_t PipelineDefinition::getOutputsInfo() const {
     return copy;
 }
 
-static std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, int32_t demultiplyCount) {
+static std::shared_ptr<const TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<const TensorInfo>& tensorInfo, int32_t demultiplyCount) {
     return tensorInfo->createCopyWithDemultiplexerDimensionPrefix(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
 }
 
-static std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
-    std::shared_ptr<TensorInfo> newOwnedTensorInfo;
+static std::shared_ptr<const TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<const TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
     if (gatherShape.size() == 0) {
-        newOwnedTensorInfo = std::make_shared<TensorInfo>(*tensorInfo);
-        newOwnedTensorInfo->setMappedName(mappedName);
-        return newOwnedTensorInfo;
+        return tensorInfo->createCopyWithNewMappedName(mappedName);
     }
     Shape newShape = tensorInfo->getShape();
     if (isConnectionFromDemultiplexer) {
         newShape.erase(newShape.begin());
     }
     newShape.insert(newShape.begin(), gatherShape.begin(), gatherShape.end());
+    std::shared_ptr<const TensorInfo> newOwnedTensorInfo;
     newOwnedTensorInfo = tensorInfo->createCopyWithNewShape(newShape);
-    newOwnedTensorInfo->setMappedName(mappedName);
+    newOwnedTensorInfo = newOwnedTensorInfo->createCopyWithNewMappedName(mappedName);
     return newOwnedTensorInfo;
 }
 

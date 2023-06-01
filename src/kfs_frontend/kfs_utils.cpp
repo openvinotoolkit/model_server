@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "kfs_utils.hpp"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -24,6 +25,7 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
+#include "../tensorinfo.hpp"
 
 namespace ovms {
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
@@ -153,5 +155,44 @@ Status isNativeFileFormatUsed(const KFSRequest& request, const std::string& name
 
 bool isNativeFileFormatUsed(const KFSTensorInputProto& proto) {
     return proto.datatype() == "BYTES";
+}
+
+bool requiresPreProcessing(const KFSTensorInputProto& proto) {
+    return proto.datatype() == "BYTES";
+}
+
+std::string& createOrGetString(KFSTensorOutputProto& proto, int index) {
+    while (proto.contents().bytes_contents_size() <= index) {
+        proto.mutable_contents()->add_bytes_contents();
+    }
+    return *proto.mutable_contents()->mutable_bytes_contents(index);
+}
+void setBatchSize(KFSTensorOutputProto& proto, int64_t batch) {
+    if (proto.shape_size() == 0) {
+        proto.add_shape(batch);
+    } else {
+        proto.set_shape(0, batch);
+    }
+}
+void setStringPrecision(KFSTensorOutputProto& proto) {
+    proto.set_datatype("BYTES");
+}
+Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width) {
+    size_t offset = 0;
+    size_t tmpBatchSize = 0;
+    size_t tmpMaxStringLength = 0;
+    while (offset + sizeof(uint32_t) <= buffer.size()) {
+        size_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer.data() + offset));
+        tmpMaxStringLength = std::max(tmpMaxStringLength, inputSize);
+        offset += (sizeof(uint32_t) + inputSize);
+        tmpBatchSize++;
+    }
+    if (offset != buffer.size()) {
+        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size.");
+        return StatusCode::INVALID_INPUT_FORMAT;
+    }
+    batchSize = tmpBatchSize;
+    width = tmpMaxStringLength + 1;
+    return StatusCode::OK;
 }
 }  // namespace ovms

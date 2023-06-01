@@ -42,6 +42,7 @@ using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrItera
 
 namespace ovms {
 class ExecutionContext;
+class MediapipeGraphDefinition;
 class Model;
 class ModelInstance;
 class ModelInstanceUnloadGuard;
@@ -73,7 +74,8 @@ public:
     static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSModelMetadataResponse* response);
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, KFSGetModelStatusResponse* response);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSGetModelStatusResponse* response);
-    static void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, KFSModelMetadataResponse::TensorMetadata* to);
+    static Status buildResponse(MediapipeGraphDefinition& pipelineDefinition, KFSGetModelStatusResponse* response);
+    static void convert(const std::pair<std::string, std::shared_ptr<const TensorInfo>>& from, KFSModelMetadataResponse::TensorMetadata* to);
     static Status getModelReady(const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response, const ModelManager& manager, ExecutionContext executionContext);
 
 protected:

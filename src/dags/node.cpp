@@ -23,8 +23,8 @@
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
 #include "../profiler.hpp"
+#include "../shape.hpp"
 #include "../status.hpp"
-#include "../tensorinfo.hpp"
 #include "nodesession.hpp"
 #include "tensormap.hpp"
 
@@ -62,11 +62,11 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
     OVMS_PROFILE_FUNCTION();
     auto it = nodeSessions.find(sessionId);
 
-    auto& nodeSession = it->second;
     if (it == nodeSessions.end()) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Could not find session: {} for node: {}", sessionId, getName());
         return StatusCode::UNKNOWN_ERROR;
     }
+    auto& nodeSession = it->second;
     auto status = fetchResults(*nodeSession, nodeSessionOutputs);
     if (status.ok() && demultiplexCount) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs with demultiplyCount: {}", getName(), demultiplyCountSettingToString(demultiplexCount));
@@ -252,7 +252,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             if (dag_executor_logger->level() <= spdlog::level::debug) {
                 std::stringstream ss;
                 ss << "Node: " << getName() << " input demultiplied: " << tensorName
-                   << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
+                   << "; Actual: " << shapeToString(dividedTensor.get_shape());
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
             }
             auto sessionKey = newSessionMetadatas[i].getSessionKey();

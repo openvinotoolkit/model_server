@@ -24,14 +24,14 @@ using namespace ovms;
 
 TEST(TensorInfo, Intersection) {
     //  match
-    auto first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"});
-    auto second = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout{"NCHW"});
+    auto first = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"});
+    auto second = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout{"NCHW"});
     auto intersect = first->createIntersection(*second);
     ASSERT_NE(intersect, nullptr);
     EXPECT_TRUE(intersect->isTensorSpecEqual(TensorInfo("a", "b", Precision::FP32, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"}))) << intersect->asString();
     // precision UNDEFINED
-    first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"});
-    second = std::make_shared<TensorInfo>("a", "b", Precision::UNDEFINED, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"});
+    first = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"});
+    second = std::make_shared<const TensorInfo>("a", "b", Precision::UNDEFINED, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"});
     intersect = first->createIntersection(*second);
     ASSERT_NE(intersect, nullptr);
     EXPECT_TRUE(intersect->isTensorSpecEqual(TensorInfo("a", "b", Precision::FP32, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"}))) << intersect->asString();
@@ -43,35 +43,35 @@ TEST(TensorInfo, Intersection) {
     EXPECT_TRUE(intersect->isTensorSpecEqual(*first)) << intersect->asString();
     // uspecified should succeed with any
     first = TensorInfo::getUnspecifiedTensorInfo();
-    second = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout{"NCHW"});
+    second = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout{"NCHW"});
     intersect = first->createIntersection(*second);
     ASSERT_NE(intersect, nullptr);
     EXPECT_TRUE(intersect->isTensorSpecEqual(*second)) << intersect->asString();
     // default layout should match any
-    first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout::getDefaultLayout());
-    second = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout{"NCHW"});
+    first = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout::getDefaultLayout());
+    second = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout{"NCHW"});
     intersect = first->createIntersection(*second);
     ASSERT_NE(intersect, nullptr);
     EXPECT_TRUE(intersect->isTensorSpecEqual(*second)) << intersect->asString();
     // precision mismatch
-    first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
-    second = std::make_shared<TensorInfo>("a", "b", Precision::I32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
+    first = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
+    second = std::make_shared<const TensorInfo>("a", "b", Precision::I32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
     EXPECT_EQ(first->createIntersection(*second), nullptr);
     // layout order mismatch
-    first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
-    second = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NHWC"});
+    first = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
+    second = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NHWC"});
     EXPECT_EQ(first->createIntersection(*second), nullptr);
     // name mismatch
-    first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
-    second = std::make_shared<TensorInfo>("a2", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
+    first = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
+    second = std::make_shared<const TensorInfo>("a2", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
     EXPECT_EQ(first->createIntersection(*second), nullptr);
     // mapped name mismatch
-    first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
-    second = std::make_shared<TensorInfo>("a", "b2", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
+    first = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
+    second = std::make_shared<const TensorInfo>("a", "b2", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
     EXPECT_EQ(first->createIntersection(*second), nullptr);
     // intersect with demultiplexer
-    first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"N...H?"});
-    second = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCH..."});
+    first = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"N...H?"});
+    second = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCH..."});
     intersect = first->createIntersection(*second);
     ASSERT_NE(intersect, nullptr);
     intersect = intersect->createCopyWithDemultiplexerDimensionPrefix(Dimension::any());
@@ -79,7 +79,7 @@ TEST(TensorInfo, Intersection) {
 }
 
 TEST(TensorInfo, LayoutWithAppliedDemultiplexer) {
-    auto info = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"});
+    auto info = std::make_shared<const TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"});
     info = info->createCopyWithDemultiplexerDimensionPrefix(100);
     EXPECT_TRUE(info->isInfluencedByDemultiplexer());
     EXPECT_EQ(info->getShape(), (Shape{100, 1, 3, 224, Dimension{220, 230}})) << info->getShape().toString();

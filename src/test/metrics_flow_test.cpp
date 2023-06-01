@@ -41,7 +41,7 @@ using testing::HasSubstr;
 using testing::Not;
 
 // This checks for counter to be present with exact value and other remaining metrics of the family to be 0.
-void checkRequestsCounter(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, std::optional<model_version_t> endpointVersion, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
+static void checkRequestsCounter(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, std::optional<model_version_t> endpointVersion, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
     for (std::string _interface : std::set<std::string>{"gRPC", "REST"}) {
         for (std::string _api : std::set<std::string>{"TensorFlowServing", "KServe"}) {
             if (_api == "KServe") {
@@ -150,7 +150,6 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         preparePredictRequest(request, inputsMeta);
         ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
-
     // Failed single model calls
     for (int i = 0; i < numberOfFailedRequests; i++) {
         request.Clear();
@@ -166,7 +165,7 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         request.Clear();
         response.Clear();
         request.mutable_model_spec()->mutable_name()->assign(dagName);
-        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, correctPrecision}}};
+        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, correctPrecision}}};
         preparePredictRequest(request, inputsMeta);
         ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
@@ -176,7 +175,7 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         request.Clear();
         response.Clear();
         request.mutable_model_spec()->mutable_name()->assign(dagName);
-        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, wrongPrecision}}};
+        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, wrongPrecision}}};
         preparePredictRequest(request, inputsMeta);
         ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     }
@@ -280,7 +279,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();
         response.Clear();
-        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, correctPrecision}}};
+        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, correctPrecision}}};
         preparePredictRequest(request, inputsMeta);
         request.mutable_model_name()->assign(dagName);
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
@@ -289,7 +288,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
     for (int i = 0; i < numberOfFailedRequests; i++) {
         request.Clear();
         response.Clear();
-        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, wrongPrecision}}};
+        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, wrongPrecision}}};
         preparePredictRequest(request, inputsMeta);
         request.mutable_model_name()->assign(dagName);
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);

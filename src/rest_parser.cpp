@@ -18,6 +18,7 @@
 #include <functional>
 #include <string>
 
+#include "precision.hpp"
 #include "rest_utils.hpp"
 #include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
@@ -123,6 +124,12 @@ bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::Tenso
         }
         return true;
     }
+    if (doc.IsString() && tensorPrecisionMap[tensorName] == ovms::Precision::U8 && (proto.dtype() == tensorflow::DataType::DT_UINT8 || proto.dtype() == tensorflow::DataType::DT_STRING)) {
+        if (!addValue(proto, doc)) {
+            return false;
+        }
+        return true;
+    }
     if (!doc.IsArray()) {
         return false;
     }
@@ -205,7 +212,7 @@ Status TFSRestParser::parseRowFormat(rapidjson::Value& node) {
                 return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
             }
         }
-    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber() || isBinary(node.GetArray()[0])) {
+    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber() || isBinary(node.GetArray()[0]) || node.GetArray()[0].IsString()) {
         // no named format
         if (requestProto.inputs_size() != 1) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;
@@ -415,6 +422,11 @@ bool TFSRestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Va
             return false;
         }
     }
+    if (value.IsString() && (proto.dtype() == tensorflow::DataType::DT_UINT8 || proto.dtype() == tensorflow::DataType::DT_STRING)) {
+        proto.add_string_val(value.GetString(), strlen(value.GetString()));
+        proto.set_dtype(tensorflow::DataType::DT_STRING);
+        return true;
+    }
 
     if (!value.IsNumber()) {
         return false;
@@ -582,8 +594,21 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
     } else if (input.datatype() == "BOOL") {
         HANDLE_VALUE(mutable_bool_contents, GetBool, IsBool)
     } else if (input.datatype() == "BYTES") {
-        SPDLOG_DEBUG("For REST datatype BYTES is supported only with binary data extension");
-        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        for (auto& value : node.GetArray()) {
+            if (value.IsArray()) {
+                auto status = parseData(value, input);
+                if (!status.ok()) {
+                    return status;
+                }
+                continue;
+            }
+            if (value.IsString()) {
+                input.mutable_contents()->add_bytes_contents(value.GetString());
+            } else {
+                SPDLOG_DEBUG("BYTES datatype used in REST request, but data contains non string JSON values");
+                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+            }
+        }
     } else {
         return StatusCode::REST_UNSUPPORTED_PRECISION;
     }

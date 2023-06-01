@@ -225,7 +225,7 @@ usage: grpc_infer_resnet [OPTION]...
 - Usage Example
 
 ```Bash
-java -cp target/grpc-client.jar clients.grpc_infer_resnet -imgs ./common/resnet_input_images.txt -lbs ../../../common/resnet_labels.txt --grpc_port 9000
+java -cp target/grpc-client.jar clients.grpc_infer_resnet -imgs ./resnet_input_images.txt -lbs ../../common/resnet_labels.txt --grpc_port 9000
 ../../../demos/common/static/images/airliner.jpeg classified as 404 airliner
 ../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus
 ../../../demos/common/static/images/bee.jpeg classified as 309 bee

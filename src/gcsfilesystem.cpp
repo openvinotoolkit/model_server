@@ -39,11 +39,9 @@ namespace ovms {
 namespace fs = std::filesystem;
 namespace gcs = google::cloud::storage;
 
-const std::string GCSFileSystem::GCS_URL_PREFIX = "gs://";
-
 StatusCode GCSFileSystem::parsePath(const std::string& path,
     std::string* bucket, std::string* object) {
-    int bucket_start = path.find(GCS_URL_PREFIX) + GCS_URL_PREFIX.size();
+    int bucket_start = path.find(FileSystem::GCS_URL_PREFIX) + FileSystem::GCS_URL_PREFIX.size();
     int bucket_end = path.find("/", bucket_start);
     if (bucket_end > bucket_start) {
         *bucket = path.substr(bucket_start, bucket_end - bucket_start);
@@ -208,7 +206,7 @@ StatusCode GCSFileSystem::getDirectorySubdirs(const std::string& path,
     }
     for (auto item = subdirs->begin(); item != subdirs->end();) {
         bool is_directory;
-        auto status = this->isDirectory(joinPath({path, *item}), &is_directory);
+        auto status = this->isDirectory(FileSystem::joinPath({path, *item}), &is_directory);
         if (status != StatusCode::OK) {
             SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to list directory subdir content {} -> {}", path,
                 ovms::Status(status).string());
@@ -235,7 +233,7 @@ StatusCode GCSFileSystem::getDirectoryFiles(const std::string& path,
     }
     for (auto item = files->begin(); item != files->end();) {
         bool is_directory;
-        auto status = this->isDirectory(joinPath({path, *item}), &is_directory);
+        auto status = this->isDirectory(FileSystem::joinPath({path, *item}), &is_directory);
         if (status != StatusCode::OK) {
             SPDLOG_LOGGER_ERROR(gcs_logger, "Unable to list directory content {} -> {}", path,
                 ovms::Status(status).string());
@@ -357,8 +355,8 @@ StatusCode GCSFileSystem::downloadFileFolder(const std::string& path, const std:
     }
 
     for (auto&& d : dirs) {
-        std::string remote_dir_path = joinPath({path, d});
-        std::string local_dir_path = joinPath({local_path, d});
+        std::string remote_dir_path = FileSystem::joinPath({path, d});
+        std::string local_dir_path = FileSystem::joinPath({local_path, d});
         SPDLOG_LOGGER_TRACE(gcs_logger, "Processing directory {} from {} -> {}", d, remote_dir_path,
             local_dir_path);
         auto mkdir_status = CreateLocalDir(local_dir_path);
@@ -378,8 +376,8 @@ StatusCode GCSFileSystem::downloadFileFolder(const std::string& path, const std:
         if (std::any_of(acceptedFiles.begin(), acceptedFiles.end(), [&f](const std::string& x) {
                 return f.size() > 0 && endsWith(f, x);
             })) {
-            std::string remote_file_path = joinPath({path, f});
-            std::string local_file_path = joinPath({local_path, f});
+            std::string remote_file_path = FileSystem::joinPath({path, f});
+            std::string local_file_path = FileSystem::joinPath({local_path, f});
             SPDLOG_LOGGER_TRACE(gcs_logger, "Processing file {} from {} -> {}", f, remote_file_path,
                 local_file_path);
             auto download_status =

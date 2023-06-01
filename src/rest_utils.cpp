@@ -180,6 +180,13 @@ Status makeJsonFromPredictResponse(
                     tensor.add_uint64_val(*reinterpret_cast<uint64_t*>(tensor.mutable_tensor_content()->data() + i));
             }
             break;
+        case DataType::DT_STRING:
+            if (seekDataInValField) {
+                auto status = checkValField(tensor.string_val_size(), tensor.tensor_shape().dim(0).size());
+                if (!status.ok())
+                    return status;
+            }
+            break;
         default:
             return StatusCode::REST_UNSUPPORTED_PRECISION;
         }
@@ -288,6 +295,43 @@ static void appendBinaryOutput(std::string& bytesOutputsBuffer, char* output, si
         }                                                                                                                             \
     }
 
+#define PARSE_OUTPUT_DATA_STRING(CONTENTS_FIELD, WRITER_TYPE)                                                                                                          \
+    expectedContentSize = 0;                                                                                                                                           \
+    if (seekDataInValField) {                                                                                                                                          \
+        if (binaryOutput) {                                                                                                                                            \
+            for (auto& sentence : tensor.contents().CONTENTS_FIELD()) {                                                                                                \
+                uint32_t length = static_cast<uint32_t>(                                                                                                               \
+                    sentence.size());                                                                                                                                  \
+                expectedContentSize += length + 4;                                                                                                                     \
+                appendBinaryOutput(bytesOutputsBuffer,                                                                                                                 \
+                    (char*)&length, sizeof(length));                                                                                                                   \
+                appendBinaryOutput(                                                                                                                                    \
+                    bytesOutputsBuffer,                                                                                                                                \
+                    (char*)sentence.data(),                                                                                                                            \
+                    length);                                                                                                                                           \
+            }                                                                                                                                                          \
+        } else {                                                                                                                                                       \
+            for (auto& sentence : tensor.contents().CONTENTS_FIELD()) {                                                                                                \
+                writer.WRITER_TYPE(sentence.data(), sentence.size());                                                                                                  \
+            }                                                                                                                                                          \
+        }                                                                                                                                                              \
+    } else {                                                                                                                                                           \
+        if (binaryOutput) {                                                                                                                                            \
+            expectedContentSize += response_proto.raw_output_contents(tensor_it).size();                                                                               \
+            appendBinaryOutput(bytesOutputsBuffer, (char*)response_proto.raw_output_contents(tensor_it).data(), response_proto.raw_output_contents(tensor_it).size()); \
+        } else {                                                                                                                                                       \
+            size_t i = 0;                                                                                                                                              \
+            while (i < response_proto.raw_output_contents(tensor_it).size()) {                                                                                         \
+                uint32_t length = *(reinterpret_cast<const uint32_t*>(response_proto.raw_output_contents(tensor_it).data() + i));                                      \
+                i += sizeof(length);                                                                                                                                   \
+                if (i + length > response_proto.raw_output_contents(tensor_it).size())                                                                                 \
+                    return StatusCode::INTERNAL_ERROR;                                                                                                                 \
+                writer.WRITER_TYPE(response_proto.raw_output_contents(tensor_it).data() + i, length);                                                                  \
+                i += length;                                                                                                                                           \
+            }                                                                                                                                                          \
+        }                                                                                                                                                              \
+    }
+
 static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, std::string& bytesOutputsBuffer, const std::set<std::string>& binaryOutputsNames) {
     writer.Key("outputs");
     writer.StartArray();
@@ -298,13 +342,15 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
     int tensor_it = 0;
     for (const auto& tensor : response_proto.outputs()) {
         size_t dataTypeSize = KFSDataTypeSize(tensor.datatype());
+        // expected size calculated for static types
+        // for BYTES the calculation is dynamic inside PARSE_OUTPUT_DATA_EX since all strings can be of different length
         size_t expectedContentSize = dataTypeSize;
         for (int i = 0; i < tensor.shape().size(); i++) {
             expectedContentSize *= tensor.shape().at(i);
         }
         size_t expectedElementsNumber = dataTypeSize > 0 ? expectedContentSize / dataTypeSize : 0;
 
-        if (!seekDataInValField && (response_proto.raw_output_contents(tensor_it).size() != expectedContentSize))
+        if (!seekDataInValField && (tensor.datatype() != "BYTES" && response_proto.raw_output_contents(tensor_it).size() != expectedContentSize))
             return StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE;
         writer.StartObject();
         writer.Key("name");
@@ -317,7 +363,7 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         writer.EndArray();
         writer.Key("datatype");
         writer.String(tensor.datatype().c_str());
-        bool binaryOutput = ((binaryOutputsNames.find(tensor.name().c_str()) != binaryOutputsNames.end()) || (tensor.datatype() == "BYTES"));
+        bool binaryOutput = ((binaryOutputsNames.find(tensor.name().c_str()) != binaryOutputsNames.end()));
         if (!binaryOutput) {
             writer.Key("data");
             writer.StartArray();
@@ -343,20 +389,7 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         } else if (tensor.datatype() == "UINT64") {
             PARSE_OUTPUT_DATA(uint64_contents, uint64_t, Uint64)
         } else if (tensor.datatype() == "BYTES") {
-            if (seekDataInValField) {
-                size_t bytesContentsSize = 0;
-                for (auto& bytesStr : tensor.contents().bytes_contents()) {
-                    bytesContentsSize += bytesStr.size();
-                }
-                auto status = checkValField(bytesContentsSize, expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-                for (auto& bytesStr : tensor.contents().bytes_contents()) {
-                    bytesOutputsBuffer.append(bytesStr);
-                }
-            } else {
-                appendBinaryOutput(bytesOutputsBuffer, (char*)response_proto.raw_output_contents(tensor_it).data(), expectedContentSize);
-            }
+            PARSE_OUTPUT_DATA_STRING(bytes_contents, String)
         } else {
             return StatusCode::REST_UNSUPPORTED_PRECISION;
         }
@@ -428,10 +461,6 @@ Status makeJsonFromPredictResponse(
 }
 
 Status decodeBase64(std::string& bytes, std::string& decodedBytes) {
-    auto status = Status(absl::Base64Unescape(bytes, &decodedBytes) ? StatusCode::OK : StatusCode::REST_BASE64_DECODE_ERROR);
-    if (!status.ok()) {
-        return status;
-    }
-    return StatusCode::OK;
+    return absl::Base64Unescape(bytes, &decodedBytes) ? StatusCode::OK : StatusCode::REST_BASE64_DECODE_ERROR;
 }
 }  // namespace ovms

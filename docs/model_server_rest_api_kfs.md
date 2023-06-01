@@ -225,9 +225,11 @@ $request_output =
 }
 ```
 
-Besides numerical values, it is possible to pass binary inputs using Binary Data extension:
+> Note: In `tensor_data` elements may be presented in their multi-dimensional representation, or as a flattened one-dimensional representation. Before inference execution tensor data is flattened, and only elements count in `tensor_data` is validated.
 
-As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. For encoded inputs datatype `BYTES` is reserved.
+Besides numerical values, it is possible to pass encoded images using Binary Data extension:
+
+As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and model or pipeline have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. Every batch the BYTES input needs to be preced by 4 bytes, litte endian, that contains its size. 
 
 ```JSON
 Content-Type: application/octet-stream
@@ -243,7 +245,7 @@ Content-Length: <xx+9472>
    }
 ]
 }
-<9472 bytes of data for model_input tensor>
+<0x00250000 (9472 as four bytes little endian)><9472 bytes of data for model_input tensor>
 ```
 
 
@@ -266,6 +268,8 @@ Content-Length: <xx+(3 x 1080000)>
 }
 <3240000 bytes of the whole data batch for model_input tensor>
 ```
+
+*sending strings inside binary extension also require preceding every batch by 4 bytes, litte endian, that contains its size.
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more informations.
 

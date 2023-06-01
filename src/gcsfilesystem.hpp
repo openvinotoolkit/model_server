@@ -131,8 +131,6 @@ public:
    */
     StatusCode deleteFileFolder(const std::string& path) override;
 
-    static const std::string GCS_URL_PREFIX;
-
 private:
     /**
     * @brief

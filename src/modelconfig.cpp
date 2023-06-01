@@ -26,7 +26,6 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
-#include "logging.hpp"
 #include "model_version_policy.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
@@ -504,7 +503,12 @@ Status ModelConfig::parseModelMapping() {
 
 Status ModelConfig::parseNode(const rapidjson::Value& v) {
     this->setName(v["name"].GetString());
-    this->setBasePath(v["base_path"].GetString());
+    try {
+        this->setBasePath(v["base_path"].GetString());
+    } catch (std::logic_error& e) {
+        SPDLOG_DEBUG("Relative path error: {}", e.what());
+        return StatusCode::INTERNAL_ERROR;
+    }
     Status firstErrorStatus = StatusCode::OK;
 
     // Check for optional parameters

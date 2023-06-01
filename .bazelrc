@@ -46,6 +46,13 @@ build --spawn_strategy=standalone
 build --genrule_strategy=standalone
 
 build --define=grpc_no_ares=true
+build --define=MEDIAPIPE_DISABLE_GPU=1
+coverage --define=MEDIAPIPE_DISABLE_GPU=1
+test --define=MEDIAPIPE_DISABLE_GPU=1
+
+build --define=MEDIAPIPE_DISABLE=0
+coverage --define=MEDIAPIPE_DISABLE=0
+test --define=MEDIAPIPE_DISABLE=0
 
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
@@ -65,6 +72,10 @@ build --cxxopt=-fno-strict-overflow
 build --cxxopt=-fno-delete-null-pointer-checks
 build --cxxopt=-fwrapv
 build --cxxopt=-fstack-protector
+build --cxxopt=-fstack-clash-protection
+build --cxxopt=-Wformat
+build --cxxopt=-Wformat-security
+build --cxxopt=-Werror=format-security
 
 # Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
 # compilation options. It also addresses memory use due to
@@ -74,4 +85,6 @@ build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 build --experimental_repo_remote_exec
 build --force_pic
 build --experimental_cc_shared_library
+
+build --check_visibility=true
 

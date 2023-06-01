@@ -25,6 +25,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "tensorflow_serving/apis/get_model_status.pb.h"
 #include "tensorflow_serving/apis/model_service.grpc.pb.h"
 #include "tensorflow_serving/apis/model_service.pb.h"
@@ -33,6 +34,10 @@
 #include "dags/pipelinedefinition.hpp"
 #include "execution_context.hpp"
 #include "grpc_utils.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "mediapipe_internal/mediapipefactory.hpp"
+#include "mediapipe_internal/mediapipegraphdefinition.hpp"
+#endif
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"
 #include "servablemanagermodule.hpp"
@@ -106,7 +111,18 @@ Status GetModelStatusImpl::getModelStatus(
         SPDLOG_DEBUG("GetModelStatus: Model {} is missing, trying to find pipeline with such name", requested_model_name);
         auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(requested_model_name);
         if (!pipelineDefinition) {
+#if (MEDIAPIPE_DISABLE == 0)
+            auto mediapipeGraphDefinition = manager.getMediapipeFactory().findDefinitionByName(requested_model_name);
+            if (!mediapipeGraphDefinition) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            addStatusToResponse(response, mediapipeGraphDefinition->getVersion(), mediapipeGraphDefinition->getStatus());
+            SPDLOG_DEBUG("model_service: response: {}", response->DebugString());
+            SPDLOG_DEBUG("MODEL_STATUS created a response for {} - {}", requested_model_name, requested_version);
+            return StatusCode::OK;
+#else
             return StatusCode::MODEL_NAME_MISSING;
+#endif
         }
         INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
 
@@ -181,6 +197,21 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
         }
         modelsStatusesTmp.insert({pipelineName, response});
     }
+#if (MEDIAPIPE_DISABLE == 0)
+    const std::vector<std::string>& mediapipePipelineNames = manager.getMediapipeFactory().getMediapipePipelinesNames();
+    for (auto const& mediapipePipelineName : mediapipePipelineNames) {
+        std::optional<int64_t> noValueModelVersion;
+        tensorflow::serving::GetModelStatusRequest request;
+        GetModelStatusImpl::createGrpcRequest(mediapipePipelineName, noValueModelVersion, &request);
+        tensorflow::serving::GetModelStatusResponse response;
+        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager, context);
+        if (status != StatusCode::OK) {
+            // Same situation like with models.
+            continue;
+        }
+        modelsStatusesTmp.insert({mediapipePipelineName, response});
+    }
+#endif
 
     modelsStatuses.merge(modelsStatusesTmp);
     return StatusCode::OK;

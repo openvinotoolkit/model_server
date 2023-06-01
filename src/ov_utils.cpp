@@ -42,7 +42,7 @@ Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t pre
     return StatusCode::OK;
 }
 
-std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& inputsInfo) {
+std::string getTensorMapString(const std::map<std::string, std::shared_ptr<const TensorInfo>>& inputsInfo) {
     std::stringstream stringStream;
     for (const auto& pair : inputsInfo) {
         const auto& name = pair.first;

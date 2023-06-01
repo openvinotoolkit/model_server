@@ -40,6 +40,11 @@ TEST(ModelConfig, getters_setters) {
     auto path = config.getBasePath();
     EXPECT_EQ(path, "/path");
 
+    config.setRootDirectoryPath("/pathto/");
+    config.setBasePath("relative/path");
+    path = config.getBasePath();
+    EXPECT_EQ(path, "/pathto/relative/path");
+
     config.setTargetDevice("GPU");
     auto device = config.getTargetDevice();
     EXPECT_EQ(device, "GPU");

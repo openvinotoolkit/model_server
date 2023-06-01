@@ -21,6 +21,7 @@ FROM $BUILD_IMAGE
 ARG BASE_OS=ubuntu
 ARG ov_use_binary=1
 ARG NVIDIA=0
+ARG sentencepiece=0
 SHELL ["/bin/bash", "-c"]
 
 RUN mkdir /patchelf && cd /patchelf && \
@@ -28,28 +29,30 @@ RUN mkdir /patchelf && cd /patchelf && \
 	tar -xf 0.10.tar.gz && ls -lah && cd */ && \
 	./bootstrap.sh && ./configure && make && make install
 
-RUN mkdir -vp /ovms_release/bin
-RUN mkdir -vp /ovms_release/deps
-RUN mkdir -vp /ovms_release/lib
-RUN mkdir -vp /ovms_release/lib/hddl/config
-RUN mkdir -vp /ovms_release/lib/custom_nodes
+RUN mkdir -vp /ovms_release/bin && \
+    mkdir -vp /ovms_release/deps && \
+	mkdir -vp /ovms_release/lib && \
+	mkdir -vp /ovms_release/lib/hddl/config && \
+	mkdir -vp /ovms_release/lib/custom_nodes
 
 RUN if [ -d /ovms/src/custom_nodes/lib/${BASE_OS} ] ; then true ; else exit 0 ; fi ; cp /ovms/src/custom_nodes/lib/${BASE_OS}/*.so /ovms_release/lib/custom_nodes/
+RUN if [ -d /ovms/src/custom_nodes/tokenizer/lib/${BASE_OS} ] ; then true ; else exit 0 ; fi ; cp /ovms/src/custom_nodes/tokenizer/lib/${BASE_OS}/*.so /ovms_release/lib/custom_nodes/
 RUN cp /ovms/metadata.json /ovms_release/
+RUN if [ "$sentencepiece" == "1" ]; then true ; else exit 0 ; fi ; cp -v /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so /ovms_release/lib/
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /ovms_release/lib/
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/plugins.xml /ovms_release/lib/
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /ovms_release/lib/plugins.xml
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/runtime/3rdparty/hddl/config/* /ovms_release/lib/hddl/config/ || true
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -vr /opt/intel/openvino/runtime/3rdparty/hddl/etc/* /ovms_release/lib/hddl/etc/ || true
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ && cp /opt/intel/openvino/install_dependencies/* /ovms_release/deps/
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/intel/openvino/install_dependencies/* /ovms_release/deps/
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; rm -vrf /ovms_release/deps/*-devel-*
 
 RUN find /ovms/bazel-out/k8-*/bin -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 RUN cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 RUN cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
-RUN rm -f /ovms_release/lib/libssl.so
-RUN rm -f /ovms_release/lib/libsampleloader*
-RUN rm -f /ovms_release/lib/lib_node*
-RUN rm -f /ovms_release/lib/libcustom_node*
+RUN rm -f /ovms_release/lib/libssl.so && \
+	rm -f /ovms_release/lib/libsampleloader* && \
+	rm -f /ovms_release/lib/lib_node* && \
+	rm -f /ovms_release/lib/libcustom_node*
 
 # Remove coverage libaries
 RUN if [ -f /ovms_release/lib/libjava.so ] ; then true ; else exit 0 ; fi ;cd /ovms_release/lib/ &&\
@@ -78,21 +81,24 @@ RUN if [ "$BASE_OS" == "redhat" ] ; then true ; else exit 0 ; fi ; cp /usr/lib64
 RUN find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \;
 WORKDIR /ovms_release/bin
 RUN patchelf --remove-rpath ./ovms && patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
-RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --remove-rpath  {}  \;
-RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
+RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --remove-rpath  {}  \; && \
+	find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
 
 WORKDIR /ovms
-RUN cp -v /ovms/release_files/LICENSE /ovms_release/
-RUN cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
-RUN mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
+RUN cp -v /ovms/release_files/LICENSE /ovms_release/ && \
+	cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/ && \
+	mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include && \
+	ls -lahR /ovms_release/
 
-RUN ls -lahR /ovms_release/
-
-RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --remove-rpath  {}  \;
-RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --set-rpath '$ORIGIN/../lib' {} \;
+RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --remove-rpath  {}  \; && \
+	find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --set-rpath '$ORIGIN/../lib' {} \;
 
 WORKDIR /
-RUN tar czf ovms.tar.gz --transform 's/ovms_release/ovms/' /ovms_release/ && sha256sum ovms.tar.gz > ovms.tar.gz.sha256 && cp /ovms_release/metadata.json /ovms.tar.gz.metadata.json
-RUN tar cJf ovms.tar.xz --transform 's/ovms_release/ovms/' /ovms_release/ && sha256sum ovms.tar.xz > ovms.tar.xz.sha256 && cp /ovms_release/metadata.json /ovms.tar.xz.metadata.json
+RUN tar czf ovms.tar.gz --transform 's/ovms_release/ovms/' /ovms_release/ && \
+	sha256sum ovms.tar.gz > ovms.tar.gz.sha256 && \
+	cp /ovms_release/metadata.json /ovms.tar.gz.metadata.json && \
+	tar cJf ovms.tar.xz --transform 's/ovms_release/ovms/' /ovms_release/ && \
+	sha256sum ovms.tar.xz > ovms.tar.xz.sha256 && \
+	cp /ovms_release/metadata.json /ovms.tar.xz.metadata.json
 
 ENTRYPOINT [ ]

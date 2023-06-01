@@ -5,7 +5,7 @@
 TensorFlow Serving API allows sending the model input data in a variety of formats inside the [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) objects.
 Array data is passed inside the `tensor_content` field, which represents the input data buffer.
 
-When the data is sent in the `string_val` field, such input is interpreted as a binary encoded image. 
+When the data is sent in the `string_val` field to the model or pipeline that have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions, such input is interpreted as a binary encoded image. 
 
 Note, that while the model metadata reports the inputs shape with layout NHWC, the binary data must be sent with 
 shape: [N] with dtype: DT_STRING. Where N represents number of images converted to string bytes.
@@ -14,7 +14,7 @@ When sending data in the array format, all bytes are in the same sequence in `te
 
 ## HTTP
 
-TensorFlow Serving API also allows sending binary encoded data via HTTP interface. The binary data needs to be Base64 encoded and put into `inputs` or `instances` field as a map in form:
+TensorFlow Serving API also allows sending encoded images via HTTP interface to the model or pipeline that have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. The binary data needs to be Base64 encoded and put into `inputs` or `instances` field as a map in form:
 
 ```
 <input_name>: {"b64":<Base64 encoded data>}

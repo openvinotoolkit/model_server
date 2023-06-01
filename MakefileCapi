@@ -13,13 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 cpp:
-	bazel build //src:ovms_shared
+	bazel build ${BAZEL_DEBUG_FLAGS} //src:ovms_shared
 	g++ src/main_capi.cpp -I/ovms/src/ -L/ovms/bazel-bin/src/ -lovms_shared -fPIC --std=c++17 -o /ovms/bazel-bin/src/capi_cpp_example
 	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/ /ovms/bazel-bin/src/capi_cpp_example
 
 c:
-	bazel build //src:ovms_shared
+	bazel build ${BAZEL_DEBUG_FLAGS} //src:ovms_shared
 	gcc -c src/main_capi.c -o /ovms/bazel-bin/src/main_capi.o -std=c99
 	gcc -o /ovms/bazel-bin/src/capi_c_example /ovms/bazel-bin/src/main_capi.o -lovms_shared -L/ovms/bazel-bin/src/
 	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/ /ovms/bazel-bin/src/capi_c_example

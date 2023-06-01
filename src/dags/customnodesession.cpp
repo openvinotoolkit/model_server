@@ -211,8 +211,7 @@ Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov
             error.str());
         return StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE;
     }
-    auto allocatorImpl = std::make_shared<CustomNodeOutputAllocator>(*tensor, library, customNodeLibraryInternalManager);
-    auto allocator = ov::Allocator(allocatorImpl);
+    auto allocator = CustomNodeOutputAllocator(*tensor, library, customNodeLibraryInternalManager);
     try {
         switch (tensor->precision) {
         case CustomNodeTensorPrecision::FP32:

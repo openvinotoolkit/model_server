@@ -60,21 +60,32 @@ int NodeLibraryCheckingReleaseCalled::release(void* ptr, void* customNodeLibrary
 
 bool NodeLibraryCheckingReleaseCalled::releaseBufferCalled = false;
 
-class CustomNodeOutputAllocatorCheckingFreeCalled : public CustomNodeOutputAllocator {
-    bool freeCalled = false;
+class CustomNodeOutputAllocatorCheckingFreeCalled {
+    // Since test is copying/moving the allocator to ov::Tensor class
+    // we need to use counter to ensure how many times deallocate was called
+    std::shared_ptr<int> freeCallCount{std::make_shared<int>(0)};
+    std::shared_ptr<CustomNodeOutputAllocator> allocImpl;
 
 public:
     CustomNodeOutputAllocatorCheckingFreeCalled(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager) :
-        CustomNodeOutputAllocator(tensor, nodeLibrary, customNodeLibraryInternalManager) {
+        allocImpl(std::make_shared<CustomNodeOutputAllocator>(tensor, nodeLibrary, customNodeLibraryInternalManager)) {
     }
 
     ~CustomNodeOutputAllocatorCheckingFreeCalled() {
-        EXPECT_TRUE(freeCalled);
+        EXPECT_EQ(*freeCallCount, 1);
     }
 
-    void deallocate(void* handle, const size_t bytes, size_t alignment) override {
-        CustomNodeOutputAllocator::deallocate(handle, bytes, alignment);
-        freeCalled = true;
+    void* allocate(const size_t bytes, const size_t alignment) {
+        return allocImpl->allocate(bytes, alignment);
+    }
+
+    void deallocate(void* handle, const size_t bytes, size_t alignment) {
+        allocImpl->deallocate(handle, bytes, alignment);
+        (*freeCallCount)++;
+    }
+
+    bool is_equal(const CustomNodeOutputAllocatorCheckingFreeCalled& other) const {
+        return allocImpl->is_equal(*other.allocImpl);
     }
 };
 
@@ -96,8 +107,7 @@ TEST(CustomNodeOutputAllocator, TensorDeallocationCallsReleaseBuffer) {
         NodeLibraryCheckingReleaseCalled::getOutputsInfo,
         NodeLibraryCheckingReleaseCalled::release};
     void* customNodeLibraryInternalManager = nullptr;
-    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library, customNodeLibraryInternalManager);
-    ov::Allocator alloc(customNodeOutputAllocator);
+    CustomNodeOutputAllocatorCheckingFreeCalled alloc(tensor, library, customNodeLibraryInternalManager);
     EXPECT_FALSE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
     {
         auto elemType = ovmsPrecisionToIE2Precision(Precision::FP32);
@@ -149,8 +159,7 @@ TEST(CustomNodeOutputAllocator, TensorReturnsCorrectPointer) {
         getOutputsInfo,
         release};
     void* customNodeLibraryInternalManager = nullptr;
-    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library, customNodeLibraryInternalManager);
-    ov::Allocator alloc(customNodeOutputAllocator);
+    CustomNodeOutputAllocator alloc(tensor, library, customNodeLibraryInternalManager);
     auto elemType = ovmsPrecisionToIE2Precision(Precision::FP32);
     shape_t shape{10};
     auto tensorIE2 = std::make_shared<ov::Tensor>(elemType, shape, alloc);

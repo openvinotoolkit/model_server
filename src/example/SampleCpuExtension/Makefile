@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-OPENVINO_PATH ?= /opt/intel/openvino_2022
+OPENVINO_PATH ?= /opt/intel/openvino_2023
 
 all: $(eval SHELL:=/bin/bash)
 	/usr/bin/g++ --version

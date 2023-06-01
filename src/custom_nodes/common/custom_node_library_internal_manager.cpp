@@ -23,6 +23,12 @@
 
 namespace ovms {
 namespace custom_nodes_common {
+CustomNodeLibraryInternalManager::CustomNodeLibraryInternalManager() {
+}
+
+CustomNodeLibraryInternalManager::~CustomNodeLibraryInternalManager() {
+}
+
 bool CustomNodeLibraryInternalManager::createBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength) {
     auto it = outputBuffers.find(name);
     if (it != outputBuffers.end()) {

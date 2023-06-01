@@ -23,49 +23,68 @@
 
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
+#include "stringutils.hpp"
 
 namespace ovms {
+
+const std::string STRING_SERIALIZATION_HINT_NAME_SUFFIX = "_string";
 
 // in case we change behaviour for this constructor we may need to write additional tests for TensorInfo intersection / DAGs
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const Shape& shape) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(Layout::getDefaultLayout()) {}
+    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const shape_t& shape) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(Layout::getDefaultLayout()) {
-}
+    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const shape_t& shape,
     const Layout& layout) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(layout) {
-}
+    TensorInfo(name, "", precision, shape, layout) {}
+
+TensorInfo::TensorInfo(const std::string& name,
+    const std::string& mapping,
+    const Precision& precision,
+    const shape_t& shape) :
+    TensorInfo(name, mapping, precision, shape, Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const Shape& shape,
     const Layout& layout) :
-    name(name),
-    mapping(""),
-    precision(precision),
-    shape(shape),
-    layout(layout) {
+    TensorInfo(name, "", precision, shape, layout) {}
+
+TensorInfo::ProcessingHint TensorInfo::getPreProcessingHint() const {
+    return this->preProcessingHint;
+}
+
+TensorInfo::ProcessingHint TensorInfo::getPostProcessingHint() const {
+    return this->postProcessingHint;
+}
+
+void TensorInfo::createProcessingHints() {
+    // Pre
+    size_t expectedDimsForImage = this->influencedByDemultiplexer ? 5 : 4;
+    if (this->shape.size() == 2 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
+        this->preProcessingHint = TensorInfo::ProcessingHint::STRING_2D_U8;
+    } else if (this->shape.size() == 1 && this->precision == ovms::Precision::U8 && this->shape.at(0).isDynamic() && !this->influencedByDemultiplexer) {
+        this->preProcessingHint = TensorInfo::ProcessingHint::STRING_1D_U8;
+    } else if (this->shape.size() == expectedDimsForImage) {
+        this->preProcessingHint = TensorInfo::ProcessingHint::IMAGE;
+    } else {
+        this->preProcessingHint = TensorInfo::ProcessingHint::NO_PROCESSING;
+    }
+
+    // Post
+    if (this->precision == ovms::Precision::U8 && this->shape.size() == 2 && endsWith(this->getMappedName(), STRING_SERIALIZATION_HINT_NAME_SUFFIX)) {
+        this->postProcessingHint = TensorInfo::ProcessingHint::STRING_2D_U8;
+    } else {
+        this->postProcessingHint = TensorInfo::ProcessingHint::NO_PROCESSING;
+    }
 }
 
 TensorInfo::TensorInfo(const std::string& name,
@@ -73,12 +92,8 @@ TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const shape_t& shape,
     const Layout& layout) :
-    name(name),
-    mapping(mapping),
-    precision(precision),
-    shape(shape),
-    layout(layout) {
-}
+    TensorInfo(name, mapping, precision, Shape(shape), layout) {}
+
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const ovms::Precision& precision,
@@ -89,16 +104,7 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-}
-TensorInfo::TensorInfo(const std::string& name,
-    const std::string& mapping,
-    const Precision& precision,
-    const shape_t& shape) :
-    name(name),
-    mapping(mapping),
-    precision(precision),
-    shape(shape),
-    layout(Layout::getDefaultLayout()) {
+    createProcessingHints();
 }
 
 const std::string& TensorInfo::getName() const {
@@ -109,16 +115,8 @@ const std::string& TensorInfo::getMappedName() const {
     return mapping.size() == 0 ? name : mapping;
 }
 
-void TensorInfo::setMappedName(const std::string& mappedName) {
-    mapping = mappedName;
-}
-
 const Precision TensorInfo::getPrecision() const {
     return precision;
-}
-
-void TensorInfo::setPrecision(const ovms::Precision& requestedPrecision) {
-    precision = requestedPrecision;
 }
 
 const std::string& TensorInfo::getPrecisionAsString(Precision precision) {
@@ -145,26 +143,26 @@ bool TensorInfo::isInfluencedByDemultiplexer() const {
     return influencedByDemultiplexer;
 }
 
-void TensorInfo::setShape(const Shape& shape) {
-    this->shape = shape;
-}
-
 const Shape& TensorInfo::getShape() const {
     return this->shape;
 }
 
-void TensorInfo::setLayout(const Layout& layout) {
-    this->layout = layout;
-}
-
-std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
+std::shared_ptr<const TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape = shape;
     copy->layout = Layout::getUnspecifiedLayout();
+    copy->createProcessingHints();
     return copy;
 }
 
-std::shared_ptr<TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const {
+std::shared_ptr<const TensorInfo> TensorInfo::createCopyWithNewMappedName(const std::string& mappedName) const {
+    auto copy = std::make_shared<TensorInfo>(*this);
+    copy->mapping = mappedName;
+    copy->createProcessingHints();
+    return copy;
+}
+
+std::shared_ptr<const TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
     copy->shape.emplace(copy->shape.begin(), dim);
@@ -174,10 +172,11 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPref
         copy->layout.replace(batchPosition, 1, std::string(1, Layout::UNDEFINED_DIMENSION_CHAR));
     }
     copy->layout = std::string(1, Layout::BATCH_DIMENSION_LETTER[0]) + copy->layout;
+    copy->createProcessingHints();
     return copy;
 }
 
-std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& other) {
+std::shared_ptr<const TensorInfo> TensorInfo::createIntersection(const TensorInfo& other) const {
     if (this->isTensorUnspecified())
         return std::make_shared<TensorInfo>(other);
     if (other.isTensorUnspecified())
@@ -223,22 +222,7 @@ bool TensorInfo::isTensorUnspecified() const {
            (this->getShape() == Shape());
 }
 
-std::string TensorInfo::shapeToString(const shape_t& shape) {
-    std::ostringstream oss;
-    oss << "(";
-    size_t i = 0;
-    if (shape.size() > 0) {
-        for (; i < shape.size() - 1; i++) {
-            oss << shape[i] << ",";
-        }
-        oss << shape[i];
-    }
-    oss << ")";
-
-    return oss.str();
-}
-
-std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
+std::shared_ptr<const TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
     return std::make_shared<TensorInfo>("", Precision::UNDEFINED, Shape{});
 }
 

@@ -29,10 +29,10 @@
 #include "ovms.h"  // NOLINT
 
 const char* MODEL_NAME = "dummy";
-const uint64_t MODEL_VERSION = 1;
+const int64_t MODEL_VERSION = 1;
 const char* INPUT_NAME = "b";
 constexpr size_t DIM_COUNT = 2;
-constexpr size_t SHAPE[DIM_COUNT] = {1, 10};
+constexpr int64_t SHAPE[DIM_COUNT] = {1, 10};
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
@@ -72,6 +72,10 @@ static void installSignalHandlers() {
 
 int main(int argc, char** argv) {
     installSignalHandlers();
+
+    uint32_t major = 0, minor = 0;
+    OVMS_ApiVersion(&major, &minor);
+    std::cout << "C-API Version: " << major << "." << minor << std::endl;
 
     OVMS_ServerSettings* serverSettings = 0;
     OVMS_ModelsSettings* modelsSettings = 0;
@@ -124,6 +128,12 @@ int main(int argc, char** argv) {
         OVMS_StatusGetDetails(res, &details);
         std::cout << "Error occured during inference. Code:" << code
                   << ", details:" << details << std::endl;
+        OVMS_StatusDelete(res);
+        OVMS_InferenceRequestDelete(request);
+        OVMS_ServerDelete(srv);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
+        return 1;
     }
     // read output
     uint32_t outputCount = 0;
@@ -132,8 +142,8 @@ int main(int argc, char** argv) {
     size_t bytesize = 0;
     uint32_t outputId = outputCount - 1;
     OVMS_DataType datatype = (OVMS_DataType)42;
-    const uint64_t* shape{nullptr};
-    uint32_t dimCount = 0;
+    const int64_t* shape{nullptr};
+    size_t dimCount = 0;
     OVMS_BufferType bufferType = (OVMS_BufferType)42;
     uint32_t deviceId = 42;
     const char* outputName{nullptr};

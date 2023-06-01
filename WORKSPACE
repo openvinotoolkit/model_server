@@ -70,6 +70,109 @@ git_repository(
     #        allow all http methods
 )
 
+########################################################### Mediapipe
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422",
+    strip_prefix = "protobuf-3.19.1",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.19.1.tar.gz"],
+    #patches = [
+    #    "@//third_party:com_google_protobuf_fixes.diff"
+    #],
+    #patch_args = [
+    #    "-p1",
+    #],
+)
+
+################################### Official mediapipe repository #########
+#### Will be used on feature release
+git_repository(
+    name = "mediapipe",
+    remote = "https://github.com/google/mediapipe",
+    tag = "v0.9.1",
+)
+
+# DEV mediapipe 1 source - adjust local repository path for build
+#local_repository(
+#    name = "mediapipe",
+#    path = "/mediapipe/",
+#)
+
+# Protobuf for Node dependencies
+http_archive(
+    name = "rules_proto_grpc",
+    sha256 = "bbe4db93499f5c9414926e46f9e35016999a4e9f6e3522482d3760dc61011070",
+    strip_prefix = "rules_proto_grpc-4.2.0",
+    urls = ["https://github.com/rules-proto-grpc/rules_proto_grpc/archive/4.2.0.tar.gz"],
+)
+
+# Node dependencies
+http_archive(
+    name = "build_bazel_rules_nodejs",
+    sha256 = "5aae76dced38f784b58d9776e4ab12278bc156a9ed2b1d9fcd3e39921dc88fda",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.7.1/rules_nodejs-5.7.1.tar.gz"],
+)
+
+load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
+build_bazel_rules_nodejs_dependencies()
+
+# fetches nodejs, npm, and yarn
+load("@build_bazel_rules_nodejs//:index.bzl", "node_repositories", "yarn_install")
+node_repositories()
+yarn_install(
+    name = "npm",
+    package_json = "//:package.json",
+    yarn_lock = "//:yarn.lock",
+)
+
+http_archive(
+    name = "com_google_protobuf_javascript",
+    sha256 = "35bca1729532b0a77280bf28ab5937438e3dcccd6b31a282d9ae84c896b6f6e3",
+    strip_prefix = "protobuf-javascript-3.21.2",
+    urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.2.tar.gz"],
+)
+
+http_archive(
+   name = "rules_foreign_cc",
+   strip_prefix = "rules_foreign_cc-0.1.0",
+   url = "https://github.com/bazelbuild/rules_foreign_cc/archive/0.1.0.zip",
+)
+
+load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
+
+rules_foreign_cc_dependencies()
+
+# gflags needed by glog
+http_archive(
+    name = "com_github_gflags_gflags",
+    strip_prefix = "gflags-2.2.2",
+    sha256 = "19713a36c9f32b33df59d1c79b4958434cb005b5b47dc5400a7a4b078111d9b5",
+    url = "https://github.com/gflags/gflags/archive/v2.2.2.zip",
+)
+
+git_repository(
+    name = "com_github_glog_glog",
+    remote = "https://github.com/google/glog",
+    tag = "v0.5.0",
+)
+
+load("@mediapipe//third_party:external_files.bzl", "external_files")
+external_files()
+
+new_local_repository(
+    name = "linux_openvino",
+    build_file = "@//third_party/openvino:BUILD",
+    path = "/opt/intel/openvino/runtime",
+)
+
+new_local_repository(
+    name = "linux_opencv",
+    build_file = "@//third_party/opencv:BUILD",
+    path = "/opt/opencv/",
+)
+
+########################################################### Mediapipe end
+
 # minitrace
 new_git_repository(
     name = "minitrace",
@@ -179,7 +282,7 @@ grpc_extra_deps()
 
 # cxxopts
 http_archive(
-    name = "cxxopts",
+    name = "com_github_jarro2783_cxxopts",
     url = "https://github.com/jarro2783/cxxopts/archive/v2.2.0.zip",
     sha256 = "f9640c00d9938bedb291a21f9287902a3a8cee38db6910b905f8eba4a6416204",
     strip_prefix = "cxxopts-2.2.0",
@@ -188,7 +291,7 @@ http_archive(
 
 # RapidJSON
 http_archive(
-    name = "rapidjson",
+    name = "com_github_tencent_rapidjson",
     url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.zip",
     sha256 = "8e00c38829d6785a2dfb951bb87c6974fa07dfe488aa5b25deec4b8bc0f6a3ab",
     strip_prefix = "rapidjson-1.1.0",
@@ -197,7 +300,7 @@ http_archive(
 
 # spdlog
 http_archive(
-    name = "spdlog",
+    name = "com_github_gabime_spdlog",
     url = "https://github.com/gabime/spdlog/archive/v1.4.0.tar.gz",
     sha256 = "afd18f62d1bc466c60bef088e6b637b0284be88c515cedc59ad4554150af6043",
     strip_prefix = "spdlog-1.4.0",
@@ -248,3 +351,32 @@ new_local_repository(
     path = "/opt/opencv",
 )
 ################## END OF OPENCV DEPENDENCY ##########
+
+new_git_repository(
+    name = "model_api",
+    remote = "https:///github.com/openvinotoolkit/model_api/",
+    build_file_content = """
+cc_library(
+    name = "adapter_api",
+    hdrs = ["model_api/cpp/adapters/include/adapters/inference_adapter.h",],
+    includes = ["model_api/cpp/adapters/include"],
+    deps = ["@linux_openvino//:openvino"],
+    visibility = ["//visibility:public"],
+)
+    """,
+    commit = "7e163416c60ba9ccdf440c6c049d6c7e7137e144"
+)
+
+git_repository(
+    name = "oneTBB",
+    branch = "v2021.8.0",
+    remote = "https://github.com/oneapi-src/oneTBB/",
+    patch_args = ["-p1"],
+    patches = ["mwaitpkg.patch",]
+)
+
+new_local_repository(
+    name = "mediapipe_calculators",
+    build_file = "@//third_party/mediapipe_calculators:BUILD",
+    path = "/ovms/third_party/mediapipe_calculators",
+)

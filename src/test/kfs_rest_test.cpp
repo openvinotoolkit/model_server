@@ -94,6 +94,20 @@ public:
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
 std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 
+TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithLongVersion) {
+    std::string request = "/v1/models/dummy/versions/72487667423532349025128558057";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::MODEL_VERSION_MISSING);
+}
+
+TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithEscapedPath) {
+    std::string request = "/v1/models/..iO!.0?E*/versions/1/metadata";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
+}
+
 TEST_F(HttpRestApiHandlerTest, RegexParseReadyWithImplicitVersion) {
     std::string request = "/v2/models/dummy/ready";
     ovms::HttpRequestComponents comp;
@@ -349,7 +363,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8) {
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
     ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
-    auto params = grpc_request.parameters();
+    auto params = grpc_request.inputs()[0].parameters();
+    ASSERT_EQ(params.count("binary_data_size"), 1);
+    ASSERT_EQ(params["binary_data_size"].int64_param(), 4);
     ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT8");
 
@@ -357,7 +373,50 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT8) {
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
 
     int i = 0;
-    for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
+    for (auto content : grpc_request.raw_input_contents()[0]) {
+        ASSERT_EQ(content, i++);
+    }
+    ASSERT_EQ(i, 4);
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsINT8_twoInputs) {
+    std::string binaryData{0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"INT8\",\"parameters\":{\"binary_data_size\":4}}, {\"name\":\"c\",\"shape\":[1,4],\"datatype\":\"INT8\",\"parameters\":{\"binary_data_size\":4}}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
+
+    ASSERT_EQ(grpc_request.inputs_size(), 2);
+    ASSERT_EQ(grpc_request.raw_input_contents_size(), 2);
+    ASSERT_EQ(grpc_request.model_name(), modelName);
+    ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
+    auto params1 = grpc_request.inputs()[0].parameters();
+    ASSERT_EQ(params1.count("binary_data_size"), 1);
+    ASSERT_EQ(params1["binary_data_size"].int64_param(), 4);
+    ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
+    ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT8");
+
+    ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
+    ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
+
+    int i = 0;
+    for (auto content : grpc_request.raw_input_contents()[0]) {
+        ASSERT_EQ(content, i++);
+    }
+    ASSERT_EQ(i, 4);
+    auto params2 = grpc_request.inputs()[1].parameters();
+    ASSERT_EQ(params2.count("binary_data_size"), 1);
+    ASSERT_EQ(params2["binary_data_size"].int64_param(), 4);
+    ASSERT_EQ(grpc_request.inputs()[1].name(), "c");
+    ASSERT_EQ(grpc_request.inputs()[1].datatype(), "INT8");
+
+    ASSERT_EQ(grpc_request.inputs()[1].shape()[0], 1);
+    ASSERT_EQ(grpc_request.inputs()[1].shape()[1], 4);
+
+    i = 0;
+    for (auto content : grpc_request.raw_input_contents()[1]) {
         ASSERT_EQ(content, i++);
     }
     ASSERT_EQ(i, 4);
@@ -367,6 +426,7 @@ static void assertSingleBinaryInput(const std::string& modelName, const std::opt
     ASSERT_EQ(grpc_request.inputs_size(), 1);
     ASSERT_EQ(grpc_request.model_name(), modelName);
     ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
+    ASSERT_EQ(grpc_request.raw_input_contents().size(), 1);
 
     ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
 }
@@ -376,24 +436,41 @@ static void assertBinaryInputsBYTES(const std::string& modelName, const std::opt
 
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "BYTES");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
-    ASSERT_EQ(grpc_request.inputs()[0].contents().bytes_contents()[0], binaryData);
-    ASSERT_EQ(grpc_request.inputs()[0].contents().bytes_contents_size(), 1);
+    uint32_t dataSize = *((int32_t*)(binaryData.data()));
+    ASSERT_EQ(dataSize, binaryData.size() - sizeof(uint32_t));
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].size(), binaryData.size());
+    ASSERT_EQ(grpc_request.raw_input_contents()[0], binaryData);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES) {
-    std::string binaryData{0x00, 0x01, 0x02, 0x03};
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":4}}]}";
+    std::string binaryData{0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":8}}]}";
     request_body += binaryData;
 
     ::KFSRequest grpc_request;
     int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
     ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
-    ASSERT_EQ(grpc_request.inputs()[0].parameters().count("binary_data_size"), 1);
     assertBinaryInputsBYTES(modelName, modelVersion, grpc_request, binaryData);
 }
 
+TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_Batch2) {
+    std::string binaryData{0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x02};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[2],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":20}}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
+    assertSingleBinaryInput(modelName, modelVersion, grpc_request);
+
+    ASSERT_EQ(grpc_request.inputs()[0].datatype(), "BYTES");
+    ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 2);
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].size(), binaryData.size());
+    ASSERT_EQ(grpc_request.raw_input_contents()[0], binaryData);
+}
+
 TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_noBinaryDataSizeParameter) {
-    std::string binaryData{0x00, 0x01, 0x02, 0x03};
+    std::string binaryData{0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03};
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\"}]}";
     request_body += binaryData;
 
@@ -403,15 +480,59 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_noBinaryDataSizeParameter) {
     assertBinaryInputsBYTES(modelName, modelVersion, grpc_request, binaryData);
 }
 
+TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_noBinaryDataSizeParameter_twoInputs) {
+    // This scenario will fail because binary_data_size parameter is required for BYTES datatype when there are more than 1 inputs in request
+    std::string binaryData{0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\"}, {\"name\":\"c\",\"shape\":[1],\"datatype\":\"BYTES\"}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_dataInInvalidFormat) {
+    std::string binaryData{0x11, 0x11, 0x11, 0x11, 0x00, 0x01, 0x02, 0x03};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\"}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
+    // Data correctness will be checked at the stage of grpc input deserialization
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_sizeInBytesBiggerThanBuffer) {
+    std::string binaryData{0x16, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":8}}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
+    // Data correctness will be checked at the stage of grpc input deserialization
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsBYTES_BinaryDataSizeBiggerThanActualBuffer) {
+    std::string binaryData{0x16, 0x00};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":8}}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_BINARY_BUFFER_EXCEEDED);
+    // Data correctness will be checked at the stage of grpc input deserialization
+}
+
 static void assertBinaryInputsINT16(const std::string& modelName, const std::optional<uint64_t>& modelVersion, ::KFSRequest& grpc_request, std::string binaryData) {
     assertSingleBinaryInput(modelName, modelVersion, grpc_request);
 
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT16");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-    int i = 0;
-    for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
-        ASSERT_EQ(content, i++);
+    size_t i;
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(int16_t)); i++) {
+        ASSERT_EQ(((int16_t*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
 }
@@ -444,9 +565,9 @@ static void assertBinaryInputsINT32(const std::string& modelName, const std::opt
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT32");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-    int i = 0;
-    for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
-        ASSERT_EQ(content, i++);
+    size_t i;
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(int32_t)); i++) {
+        ASSERT_EQ(((int32_t*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
 }
@@ -479,9 +600,9 @@ static void assertBinaryInputsINT64(const std::string& modelName, const std::opt
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT64");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-    int i = 0;
-    for (auto content : grpc_request.inputs()[0].contents().int64_contents()) {
-        ASSERT_EQ(content, i++);
+    size_t i;
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(int64_t)); i++) {
+        ASSERT_EQ(((int64_t*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
 }
@@ -514,9 +635,9 @@ static void assertBinaryInputsFP32(const std::string& modelName, const std::opti
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "FP32");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-    int i = 0;
-    for (auto content : grpc_request.inputs()[0].contents().fp32_contents()) {
-        ASSERT_EQ(content, i++);
+    size_t i;
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(float)); i++) {
+        ASSERT_EQ(((float*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
 }
@@ -549,9 +670,9 @@ static void assertBinaryInputsFP64(const std::string& modelName, const std::opti
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "FP64");
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-    int i = 0;
-    for (auto content : grpc_request.inputs()[0].contents().fp64_contents()) {
-        ASSERT_EQ(content, i++);
+    size_t i;
+    for (i = 0; i < (grpc_request.raw_input_contents()[0].size() / sizeof(double)); i++) {
+        ASSERT_EQ(((double*)grpc_request.raw_input_contents()[0].data())[i], i);
     }
     ASSERT_EQ(i, 4);
 }
@@ -607,16 +728,6 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBufferSmallerThanExpected_noBinaryDat
     ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_BINARY_BUFFER_EXCEEDED);
 }
 
-TEST_F(HttpRestApiHandlerTest, binaryInputsBytes_noBinaryDataSizeParameter_twoInputs) {
-    std::string binaryData{0x00, 0x00, 0x00, 0x00};
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1],\"datatype\":\"BYTES\"}, {\"name\":\"a\",\"shape\":[1],\"datatype\":\"BYTES\"}]}";
-    request_body += binaryData;
-
-    ::KFSRequest grpc_request;
-    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
-}
-
 TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidBinaryDataSizeParameter) {
     std::string binaryData{0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00};
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"INT32\",\"parameters\":{\"binary_data_size\":true}}]}";
@@ -628,34 +739,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidBinaryDataSizeParameter) {
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsINT8BatchSize2) {
+    // Format with string binary_data_size parameter containing list of sizes is now deprecated
     std::string binaryData{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[2,4],\"datatype\":\"INT8\",\"parameters\":{\"binary_data_size\":\"4, 4\"}}]}";
-    request_body += binaryData;
-
-    ::KFSRequest grpc_request;
-    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
-
-    ASSERT_EQ(grpc_request.inputs_size(), 1);
-    ASSERT_EQ(grpc_request.model_name(), modelName);
-    ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
-    auto params = grpc_request.parameters();
-    ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
-    ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT8");
-
-    ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 2);
-    ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 4);
-
-    int i = 0;
-    for (auto content : grpc_request.inputs()[0].contents().int_contents()) {
-        ASSERT_EQ(content, i++);
-    }
-    ASSERT_EQ(i, 8);
-}
-
-TEST_F(HttpRestApiHandlerTest, binaryInputsBinaryDataSizeStringParameterInvalid) {
-    std::string binaryData{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[2,4],\"datatype\":\"INT8\",\"parameters\":{\"binary_data_size\":\"a, 4\"}}]}";
     request_body += binaryData;
 
     ::KFSRequest grpc_request;

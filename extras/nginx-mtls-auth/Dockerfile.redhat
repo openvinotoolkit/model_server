@@ -21,7 +21,8 @@ RUN set -e ; \
     set -x ; \
     mkdir /certs ; \
     unset LD_LIBRARY_PATH ; \
-    microdnf install systemd wget findutils; \
+    if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
+    $DNF_TOOL install -y systemd wget findutils; \
     rpm -Uv http://nginx.org/packages/mainline/centos/8/x86_64/RPMS/nginx-1.21.6-1.el8.ngx.x86_64.rpm ; \
     wget -O /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 ; \
     chmod +x /usr/bin/dumb-init ; \

@@ -26,7 +26,9 @@
 
 #include <rapidjson/document.h>
 
+#include "filesystem.hpp"
 #include "layout_configuration.hpp"
+#include "logging.hpp"
 #include "metric_config.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
@@ -57,6 +59,11 @@ private:
          * @brief Model uri path
          */
     std::string basePath;
+
+    /**
+         * @brief Json config directory path
+         */
+    std::string rootDirectoryPath;
 
     /**
          * @brief Model local destination path on disk after downloading from online storage
@@ -303,7 +310,16 @@ public:
          * @param basePath 
          */
     void setBasePath(const std::string& basePath) {
-        this->basePath = basePath;
+        FileSystem::setPath(this->basePath, basePath, this->rootDirectoryPath);
+    }
+
+    /**
+         * @brief Set root directory path
+         *
+         * @param rootDirectoryPath
+         */
+    void setRootDirectoryPath(const std::string& rootDirectoryPath) {
+        this->rootDirectoryPath = rootDirectoryPath;
     }
 
     /**

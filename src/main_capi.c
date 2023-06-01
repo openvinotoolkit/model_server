@@ -20,6 +20,10 @@
 #include "ovms.h"
 
 int main() {
+    uint32_t major = 0, minor = 0;
+    OVMS_ApiVersion(&major, &minor);
+    printf("C-API Version: %d.%d\n", major, minor);
+
     OVMS_ServerSettings* serverSettings = 0;
     OVMS_ModelsSettings* modelsSettings = 0;
     OVMS_Server* srv;
@@ -55,9 +59,9 @@ int main() {
 
     printf("Server ready for inference\n");
 
-    const uint64_t SHAPE_N = 30;
-    const uint64_t SHAPE_C = 20;
-    const uint64_t SHAPE[2] = {SHAPE_N, SHAPE_C};
+    const int64_t SHAPE_N = 30;
+    const int64_t SHAPE_C = 20;
+    const int64_t SHAPE[2] = {SHAPE_N, SHAPE_C};
     const size_t NUM_ELEMENTS = SHAPE_N * SHAPE_C;
     const size_t DATA_SIZE = NUM_ELEMENTS * sizeof(float);
     const float INPUT_ELEMENT_VALUE = 3.2f;
@@ -95,8 +99,8 @@ int main() {
 
     const char* oName = NULL;  // not needed
     OVMS_DataType oType;  // not needed
-    const uint64_t* oShape;  // not needed
-    uint32_t oDims;  // not needed
+    const int64_t* oShape;  // not needed
+    size_t oDims;  // not needed
     const void* oData = NULL;
     size_t oNumBytes = 0;
     OVMS_BufferType oBuffType;  // not needed

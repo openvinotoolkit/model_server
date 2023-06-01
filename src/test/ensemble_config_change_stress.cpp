@@ -1,6 +1,5 @@
-
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,14 +23,22 @@
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../get_model_metadata_impl.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#endif
 #include "../model_service.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../servablemanagermodule.hpp"
+#include "../server.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
+#include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -42,6 +49,11 @@ using testing::_;
 using testing::Return;
 
 static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
+
+enum class SERVABLE_TYPE {
+    DAG,
+    MEDIAPIPE
+};
 
 std::string createStressTestPipelineOneDummyConfig() {
     return R"(
@@ -995,6 +1007,121 @@ static const char* stressTestOneDummyConfig = R"(
     ]
 })";
 
+const std::string basicMediapipeConfig = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt"
+    }
+    ]
+})";
+
+const std::string basicMediapipeConfigWithAddedGraph = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt"
+    },
+    {
+        "name":"mediaDummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummy.pbtxt"
+    }
+    ]
+})";
+
+const std::string basicMediapipeConfigWithRemovedGraph = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    ]
+})";
+
+const std::string basicMediapipeConfigWithRemovedModel = R"({
+    "model_config_list": [
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt"
+    }
+    ]
+})";
+
+const std::string basicMediapipeConfigWithReloadedModel = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "nireq": 47
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt"
+    }
+    ]
+})";
+
+const std::string basicMediapipeConfigWithNewGraphPath = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames2.pbtxt"
+    }
+    ]
+})";
+#if (MEDIAPIPE_DISABLE == 0)
+template <typename Request, typename Response>
+void mediaexec(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
+    throw std::string("Unsupported");
+}
+template <>
+void mediaexec<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
+    ServableMetricReporter* ptr{nullptr};
+    status = executorPtr->infer(&request,
+        &response,
+        ovms::ExecutionContext(
+            ovms::ExecutionContext::Interface::GRPC,
+            ovms::ExecutionContext::Method::Predict),
+        ptr);
+}
+template <typename Request, typename Response>
+void mediacreate(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
+    throw std::string("Unsupported");
+}
+template <>
+void mediacreate<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
+    status = manager.createPipeline(executorPtr, request.model_name(), &request, &response);
+}
+#endif
 class StressPipelineConfigChanges : public TestWithTempDir {
 protected:
     const uint loadThreadCount = 20;
@@ -1013,7 +1140,7 @@ protected:
     // producess highest results
     const std::vector<float> requestData{1.1, 2., 3., 7., 5., 6., 4., 9., 10., 8.};
 
-    ConstructorEnabledModelManager manager;
+    ModelManager* manager;
 
 public:
     virtual std::string getServableName() {
@@ -1024,18 +1151,48 @@ public:
         const std::string modelPathToReplace{"/ovms/src/test/dummy"};
         auto it = ovmsConfig.find(modelPathToReplace);
         if (it != std::string::npos) {
-            ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+            ovmsConfig.replace(it, modelPathToReplace.size(), modelPath);
         }
         configFilePath = directoryPath + "/ovms_config.json";
     }
-    void SetUp() override {
+    // we setup the OVMS so that it does not have any models loaded but also prepare the fixture to have ovmsConfig & configFilePath set up
+    void SetUpServerInstance(const std::string& initialConfigContent) {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
-        int arg_count = 5;
-        ovms::Config::instance().parse(arg_count, n_argv);
+        std::string port = "9178";
+        std::string restPort = "9178";
         modelPath = directoryPath + "/dummy/";
-        SetUpConfig(createStressTestPipelineOneDummyConfig());
+        SetUpConfig(initialConfigContent);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+
+        OVMS_ServerSettings* serverSettings = nullptr;
+        OVMS_ModelsSettings* modelsSettings = nullptr;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+        randomizePorts(port, restPort);
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));  // required for metrics
+        // ideally we would want to have emptyConfigWithMetrics
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/emptyConfigWithMetrics.json"));  // FIXME the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(serverSettings, 0));                                      // set to 0 to reload only through test and avoid races
+        OVMS_Server* cserver;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
+        ovms::Server& server = ovms::Server::instance();
+        manager = &(dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
+    }
+    void SetUp() override {
+        SetUpServerInstance(createStressTestPipelineOneDummyConfig());
+    }
+    void TearDown() override {
+        OVMS_Server* cserver;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+        ovms::Server& server = ovms::Server::instance();
+        manager->join();
+        server.setShutdownRequest(1);
+        OVMS_ServerDelete(cserver);
+        server.setShutdownRequest(0);
     }
     void defaultVersionRemove() {
         SPDLOG_INFO("{} start", __FUNCTION__);
@@ -1125,6 +1282,36 @@ public:
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
+    void addNewMediapipeGraph() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeConfigWithAddedGraph);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void removeMediapipeGraph() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeConfigWithRemovedGraph);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void removeMediapipeGraphUsedModel() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeConfigWithRemovedModel);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void reloadMediapipeGraphUsedModel() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeConfigWithReloadedModel);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void reloadMediapipeGraph() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeConfigWithNewGraphPath);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
     void checkMetricGreaterThan(const std::string& metricName, double value, std::string& metricOutput, bool& result) {
         ASSERT_THAT(metricOutput, ::testing::HasSubstr(metricName + std::string{"{name=\"dummy\",version=\"1\"} "})) << "cannot find dummys " << metricName << " metric\n"
                                                                                                                      << metricOutput;
@@ -1148,7 +1335,7 @@ public:
                       << metricOutput;
     }
     void checkActiveNireqSmallerThanTotal() {
-        std::string metricOutput = manager.getMetricRegistry()->collect();
+        std::string metricOutput = manager->getMetricRegistry()->collect();
         std::regex findNireqTotalRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::regex findNireqActiveRgx(std::string{".*"} + METRIC_NAME_INFER_REQ_ACTIVE + std::string{"\\{name=\"dummy\",version=\"1\"\\} (.*)\n.*"});
         std::smatch match;
@@ -1167,7 +1354,7 @@ public:
         bool current_requests_pass = false, infer_req_active_pass = false;
         int retries = 3;
         for (int i = 0; i < retries; i++) {
-            std::string metricOutput = manager.getMetricRegistry()->collect();
+            std::string metricOutput = manager->getMetricRegistry()->collect();
             checkMetricGreaterThan(METRIC_NAME_CURRENT_REQUESTS, 0, metricOutput, current_requests_pass);
             checkMetricGreaterThan(METRIC_NAME_INFER_REQ_ACTIVE, 0, metricOutput, infer_req_active_pass);
             if (current_requests_pass && infer_req_active_pass)
@@ -1191,7 +1378,7 @@ public:
         std::set<StatusCode> requiredLoadResults,
         std::set<StatusCode> allowedLoadResults) {
         createConfigFileWithContent(ovmsConfig, configFilePath);
-        auto status = manager.loadConfig(configFilePath);
+        auto status = manager->loadConfig(configFilePath);
         ASSERT_TRUE(status.ok());
 
         // setup helper variables for managing threads
@@ -1225,7 +1412,7 @@ public:
                     i]() {
                     ((*this).*triggerLoadInALoop)(futureStartSignals[i],
                         futureStopSignals[i],
-                        this->manager,
+                        *(this->manager),
                         requiredLoadResults,
                         allowedLoadResults,
                         createPipelineRetCodesCounters);
@@ -1237,9 +1424,9 @@ public:
         std::this_thread::sleep_for(std::chrono::milliseconds(beforeConfigChangeLoadTimeMs));
         ((*this).*configChangeOperation)();
         if (reloadWholeConfig) {
-            manager.loadConfig(configFilePath);
+            manager->loadConfig(configFilePath);
         } else {
-            manager.updateConfigurationWithoutConfigFile();
+            manager->updateConfigurationWithoutConfigFile();
         }
         // wait to work strictly on config operations after change
         std::this_thread::sleep_for(std::chrono::milliseconds(afterConfigChangeLoadTimeMs));
@@ -1260,7 +1447,7 @@ public:
                                                                                       << " was not allowed in test but occured during load";
         }
     }
-    bool isMetadataResponseCorrect(tensorflow::serving::GetModelMetadataResponse& response) {
+    bool isMetadataResponseCorrect(tensorflow::serving::GetModelMetadataResponse& response, SERVABLE_TYPE servableType) {
         tensorflow::serving::SignatureDefMap def;
         EXPECT_EQ(response.model_spec().name(), pipelineName);
         EXPECT_TRUE(response.model_spec().has_version());
@@ -1298,9 +1485,18 @@ public:
             if (!inputTypeCorrect) {
                 return false;
             }
-            bool inputShapeCorrect{isShapeTheSame(
+            bool inputShapeCorrect = false;
+            std::vector<int64_t> expectedShape;
+            if (servableType == SERVABLE_TYPE::DAG) {
+                expectedShape = std::vector<int64_t>{1, 10};
+            } else if (servableType == SERVABLE_TYPE::MEDIAPIPE) {
+                expectedShape = std::vector<int64_t>{};
+            } else {
+                EXPECT_TRUE(false) << "Unsupported checks";
+            }
+            inputShapeCorrect = isShapeTheSame(
                 inputs.at(pipelineInputName.c_str()).tensor_shape(),
-                {1, 10})};
+                std::move(expectedShape));
             EXPECT_TRUE(inputShapeCorrect);
             if (!inputShapeCorrect) {
                 return false;
@@ -1330,6 +1526,10 @@ public:
         }
         return true;
     }
+    template <
+        typename RequestType = tensorflow::serving::GetModelMetadataRequest,
+        typename ResponseType = tensorflow::serving::GetModelMetadataResponse,
+        typename ServableType = ovms::Pipeline>
     void triggerGetPipelineMetadataInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
@@ -1358,7 +1558,13 @@ public:
                 continue;
             }
             // Check response if correct
-            EXPECT_TRUE(isMetadataResponseCorrect(response));
+            SERVABLE_TYPE servableType = SERVABLE_TYPE::DAG;
+#if (MEDIAPIPE_DISABLE == 0)
+            if (typeid(ServableType) == typeid(MediapipeGraphExecutor)) {
+                servableType = SERVABLE_TYPE::MEDIAPIPE;
+            }
+#endif
+            EXPECT_TRUE(isMetadataResponseCorrect(response, servableType));
             if (::testing::Test::HasFailure()) {
                 SPDLOG_INFO("Earlier fail detected. Stopping execution");
                 break;
@@ -1402,22 +1608,34 @@ public:
     }
     virtual inputs_info_t getExpectedInputsInfo() {
         return {{pipelineInputName,
-            std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
     }
 
-    virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest() {
+    virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest(tensorflow::serving::PredictRequest) {
         tensorflow::serving::PredictRequest request;
         preparePredictRequest(request, getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         return request;
     }
+    virtual KFSRequest preparePipelinePredictRequest(KFSRequest&) {
+        KFSRequest request;
+        preparePredictRequest(request, getExpectedInputsInfo(), requestData);
+        request.set_model_name(PIPELINE_1_DUMMY_NAME);
+        return request;
+    }
     virtual void checkPipelineResponse(const std::string& pipelineOutputName,
-        tensorflow::serving::PredictRequest& request,
-        tensorflow::serving::PredictResponse& response) {
+        TFSPredictRequest& request,
+        TFSPredictResponse& response) {
         checkDummyResponse(pipelineOutputName, requestData, request, response, 1);
     }
+    virtual void checkPipelineResponse(const std::string& pipelineOutputName,
+        KFSRequest& request,
+        KFSResponse& response) {
+        checkDummyResponse(pipelineOutputName, requestData, request, response, 1, 1, pipelineName);
+    }
 
+    template <typename RequestType, typename ResponseType, typename ServableType = ovms::Pipeline>
     void triggerPredictInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
@@ -1428,17 +1646,32 @@ public:
         startSignal.get();
         // stressIterationsCounter is additional safety measure
         auto stressIterationsCounter = stressIterationsLimit;
+        bool breakLoop = false;
         while (stressIterationsCounter-- > 0) {
             auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
-            if (futureWaitResult == std::future_status::ready) {
-                SPDLOG_INFO("Got stop signal. Ending Load");
+            if (true == breakLoop) {
+                SPDLOG_INFO("Ending Load");
                 break;
             }
+            if (futureWaitResult == std::future_status::ready) {
+                SPDLOG_INFO("Got stop signal. Triggering last request");
+                breakLoop = true;
+            }
             std::unique_ptr<Pipeline> pipelinePtr;
-
-            tensorflow::serving::PredictRequest request = preparePipelinePredictRequest();
-            tensorflow::serving::PredictResponse response;
-            auto createPipelineStatus = manager.createPipeline(pipelinePtr, pipelineName, &request, &response);
+#if (MEDIAPIPE_DISABLE == 0)
+            std::shared_ptr<MediapipeGraphExecutor> executorPtr;
+#endif
+            ResponseType response;
+            RequestType request2;  // DIRTY HACK WARNING
+            RequestType request = preparePipelinePredictRequest(request2);
+            ovms::Status createPipelineStatus = StatusCode::UNKNOWN_ERROR;
+            if (typeid(ServableType) == typeid(ovms::Pipeline)) {
+                createPipelineStatus = manager.createPipeline(pipelinePtr, pipelineName, &request, &response);
+#if (MEDIAPIPE_DISABLE == 0)
+            } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
+                mediacreate(executorPtr, manager, request, response, createPipelineStatus);
+#endif
+            }
             // we need to make sure that expected status happened and still accept
             // some that could happen but we may not hit them
             EXPECT_TRUE((requiredLoadResults.find(createPipelineStatus.getCode()) != requiredLoadResults.end()) ||
@@ -1450,9 +1683,15 @@ public:
             }
 
             ovms::Status executePipelineStatus = StatusCode::UNKNOWN_ERROR;
-            executePipelineStatus = pipelinePtr->execute(ovms::ExecutionContext(
-                ovms::ExecutionContext::Interface::GRPC,
-                ovms::ExecutionContext::Method::Predict));
+            if (typeid(ServableType) == typeid(ovms::Pipeline)) {
+                executePipelineStatus = pipelinePtr->execute(ovms::ExecutionContext(
+                    ovms::ExecutionContext::Interface::GRPC,
+                    ovms::ExecutionContext::Method::Predict));
+#if (MEDIAPIPE_DISABLE == 0)
+            } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
+                mediaexec(executorPtr, manager, request, response, executePipelineStatus);
+#endif
+            }
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(executePipelineStatus.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(executePipelineStatus.getCode()) != allowedLoadResults.end()))
@@ -1477,7 +1716,7 @@ public:
     }
 };
 
-static const char* initialClearConfig = R"(
+static const std::string initialClearConfig = R"(
 {
     "model_config_list": [
     ]
@@ -1493,10 +1732,7 @@ public:
         return modelName;
     }
     void SetUp() override {
-        TestWithTempDir::SetUp();
-        modelPath = directoryPath + "/dummy/";
-        SetUpConfig(initialClearConfig);
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        SetUpServerInstance(initialClearConfig);
     }
 };
 
@@ -1505,7 +1741,19 @@ TEST_F(StressPipelineConfigChanges, AddNewVersionDuringPredictLoad) {
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
+        &StressPipelineConfigChanges::defaultVersionAdd,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressPipelineConfigChanges, KFSAddNewVersionDuringPredictLoad) {
+    bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        // XYZ &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse>,
         &StressPipelineConfigChanges::defaultVersionAdd,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1516,7 +1764,7 @@ TEST_F(StressPipelineConfigChanges, GetMetricsDuringLoad) {
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::testCurrentRequestsMetric,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1532,7 +1780,7 @@ TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringPredictLoad) {
     // all model versions different than removing model from config
     bool performWholeConfigReload = true;
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::defaultVersionRemove,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1543,7 +1791,7 @@ TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringPredictLoad) {
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::changeToAutoShape,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1555,7 +1803,7 @@ TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringPredictLoad) {
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};  // we expect to stop creating pipelines
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::removePipelineDefinition,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1566,7 +1814,7 @@ TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionNameDuringPredictLo
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::changeConnectionName,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1577,7 +1825,7 @@ TEST_F(StressPipelineConfigChanges, AddedNewPipelineDuringPredictLoad) {
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::addNewPipeline,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1593,7 +1841,7 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringPredictLoad) 
         StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};           // version is retired but pipeline not invalidated yet
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::retireSpecificVersionUsed,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1703,7 +1951,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::removePreallocatedCustomLibraryUsed,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1716,7 +1964,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCust
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::renamePreallocatedCustomLibraryUsed,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1729,7 +1977,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::changeParamPreallocatedCustomLibraryUsed,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1742,7 +1990,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueu
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::reduceQueueSizePreallocatedCustomLibraryUsed,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1755,7 +2003,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQu
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::increaseQueueSizePreallocatedCustomLibraryUsed,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1834,7 +2082,7 @@ class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChange
     const std::string pipelineFactorsInputName{"pipeline_factors"};
 
 public:
-    tensorflow::serving::PredictRequest preparePipelinePredictRequest() override {
+    tensorflow::serving::PredictRequest preparePipelinePredictRequest(tensorflow::serving::PredictRequest) override {
         tensorflow::serving::PredictRequest request;
         preparePredictRequest(request, getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
@@ -1845,9 +2093,9 @@ public:
     }
     inputs_info_t getExpectedInputsInfo() override {
         return {{pipelineInputName,
-                    std::tuple<signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
+                    std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
             {pipelineFactorsInputName,
-                std::tuple<signed_shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
     }
     void checkPipelineResponse(const std::string& pipelineOutputName,
         tensorflow::serving::PredictRequest& request,
@@ -1866,7 +2114,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictL
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::removeCustomLibraryUsed,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1880,7 +2128,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPre
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
-        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &StressPipelineConfigChanges::changeCustomLibraryParam,
         performWholeConfigReload,
         requiredLoadResults,
@@ -1926,3 +2174,88 @@ TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
+
+#if (MEDIAPIPE_DISABLE == 0)
+class StressMediapipeChanges : public StressPipelineConfigChanges {
+    const std::string modelName = "dummy";
+    const std::string modelInputName = "b";
+    const std::string modelOutputName = "a";
+
+public:
+    std::string getServableName() override {
+        return modelName;
+    }
+    void SetUp() override {
+        SetUpServerInstance(createStressTestPipelineOneDummyConfig());
+    }
+};
+TEST_F(StressMediapipeChanges, AddGraphDuringPredictLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::addNewMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveGraphDuringPredictLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE};    // we expect to stop creating pipelines
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::removeMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveModelDuringPredictLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::MEDIAPIPE_EXECUTION_ERROR};                  // we expect to stop creating pipelines
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::removeMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadModelDuringPredictLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::reloadMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringPredictLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::reloadMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+// TODO status
+// TODO metadata
+#endif

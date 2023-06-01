@@ -1,0 +1,14 @@
+{
+    "model_config_list": [
+    {"config": {
+                "name": "dummy",
+                "base_path": "dummy"
+        	}
+	},
+    {"config": {
+        "name": "add",
+        "base_path": "add_two_inputs_model"
+    }
+    }
+    ]
+}
