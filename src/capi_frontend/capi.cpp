@@ -845,6 +845,26 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetada
     *dimCount = metadata->getInputDimsMin().at(*name).size();
     *shapeMin = const_cast<int64_t*>(metadata->getInputDimsMin().at(*name).data());
     *shapeMax = const_cast<int64_t*>(metadata->getInputDimsMax().at(*name).data());
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API request input metadata for servable: " << metadata->getName()
+           << " version: " << metadata->getVersion()
+           << " name: " << *name
+           << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
+           << " shape min: [";
+        size_t i = 0;
+        for (i = 0; i < *dimCount - 1; ++i) {
+            ss << (*shapeMin)[i] << ", ";
+        }
+        ss << (*shapeMin)[i] << "]"
+           << " shape max: [";
+        i = 0;
+        for (i = 0; i < *dimCount - 1; ++i) {
+            ss << (*shapeMax)[i] << ", ";
+        }
+        ss << (*shapeMax)[i] << "]";
+        SPDLOG_TRACE(ss.str());
+    }
     return nullptr;
 }
 
@@ -877,6 +897,26 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
     *dimCount = metadata->getOutputDimsMin().at(*name).size();
     *shapeMin = const_cast<int64_t*>(metadata->getOutputDimsMin().at(*name).data());
     *shapeMax = const_cast<int64_t*>(metadata->getOutputDimsMax().at(*name).data());
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API request output metadata for servable: " << metadata->getName()
+           << " version: " << metadata->getVersion()
+           << " name: " << *name
+           << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
+           << " shape min: [";
+        size_t i = 0;
+        for (i = 0; i < *dimCount - 1; ++i) {
+            ss << (*shapeMin)[i] << ", ";
+        }
+        ss << (*shapeMin)[i] << "]"
+           << " shape max: [";
+        i = 0;
+        for (i = 0; i < *dimCount - 1; ++i) {
+            ss << (*shapeMax)[i] << ", ";
+        }
+        ss << (*shapeMax)[i] << "]";
+        SPDLOG_TRACE(ss.str());
+    }
     return nullptr;
 }
 

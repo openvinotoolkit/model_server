@@ -82,6 +82,8 @@ public:
         // 0 means default
         uint32_t servableVersion = servableVersionOpt.value_or(0);
         auto session = std::make_shared<OVMSInferenceAdapter>(servableName, servableVersion);
+        static ov::Core core;
+        session->loadModel(nullptr, core, "UNUSED", {});
         MLOG("Session create adapter");
         cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(MakePacket<std::shared_ptr<InferenceAdapter>>(session));
         MLOG("SessionOpen end");
