@@ -17,6 +17,7 @@
    ovms_docs_dynamic_input
    ovms_docs_c_api
    ovms_docs_advanced
+   ovms_docs_mediapipe
 
 @endsphinxdirective
 

@@ -1,0 +1,4 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [{"name":"resnetMediapipe"}]
+}

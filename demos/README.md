@@ -15,6 +15,8 @@
    ovms_demo_single_face_analysis_pipeline
    ovms_demo_multi_faces_analysis_pipeline
    ovms_docs_demo_ensemble
+   ovms_docs_demo_mediapipe_image_classification
+   ovms_docs_demo_mediapipe_multi_model
    ovms_docs_image_classification
    ovms_demo_using_onnx_model
    ovms_demo_tf_classification
