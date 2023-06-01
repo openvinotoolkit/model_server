@@ -40,7 +40,7 @@ For more details you can visit mediapipe concept description - [Calculators Conc
 
 ## Graph proto files <a name="graph-proto"></a>
 
-Graph proto files are used to define a graph. Example content of graph containing OVMSCalculator node proto file:
+Graph proto files are used to define a graph. Example content of proto file with graph containing ModelAPICalculator nodes:
 
 ```
 
@@ -162,9 +162,9 @@ Nodes in the MediaPipe graphs can reference both to the models configured in mod
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
 |`"name"`|string|Graph identifier related to name field specified in gRPC/REST request|Yes|
-|`"base_path"`|string|Path to the which graph definition and subconfig files paths are relative. May be absolute or relative to the main config path. Default value is "{main config path}\"|No|
-|`"graph_path"`|string|Path to the graph proto file. May be absolute or relative to the base_path. Default value is "{base_path}\graph.pbtxt". File have to exist.|No|
-|`"subconfig"`|string|Path to the subconfig file. May be absolute or relative to the base_path. Default value is "{base_path}\subconfig.json". Mssing  file does not result in error.|No|
+|`"base_path"`|string|Path to the which graph definition and subconfig files paths are relative. May be absolute or relative to the main config path. Default value is "(main config path)\"|No|
+|`"graph_path"`|string|Path to the graph proto file. May be absolute or relative to the base_path. Default value is "(base_path)\graph.pbtxt". File have to exist.|No|
+|`"subconfig"`|string|Path to the subconfig file. May be absolute or relative to the base_path. Default value is "(base_path)\subconfig.json". Missing  file does not result in error.|No|
 
 Subconfig file may only contain *model_config_list* section  - in the same format as in [models config file](starting_server.md).
 
