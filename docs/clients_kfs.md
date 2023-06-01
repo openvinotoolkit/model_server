@@ -553,7 +553,7 @@ When creating a Python-based client application, you can use Triton client libra
         data = np.array([1.0, 2.0, ..., 1000.0])
         infer_input = httpclient.InferInput("input_name", data.shape, "FP32")
         infer_input.set_data_from_numpy(data)
-        results = client.infer("model_name", [infer_input]
+        results = client.infer("model_name", [infer_input])
 
 .. tab:: cpp [GRPC]
 
@@ -570,7 +570,7 @@ When creating a Python-based client application, you can use Triton client libra
             tc::InferInput* input;
             tc::InferInput::Create(&input, "input_name", shape, "FP32");
             std::shared_ptr<tc::InferInput> input_ptr;
-            input_ptr.reset(input)
+            input_ptr.reset(input);
 
             std::vector<float> input_data(10);
             for (size_t i = 0; i < 10; ++i) {
@@ -599,7 +599,7 @@ When creating a Python-based client application, you can use Triton client libra
             tc::InferInput* input;
             tc::InferInput::Create(&input, "input_name", shape, "FP32");
             std::shared_ptr<tc::InferInput> input_ptr;
-            input_ptr.reset(input)
+            input_ptr.reset(input);
 
             std::vector<float> input_data(10);
             for (size_t i = 0; i < 10; ++i) {
@@ -702,10 +702,9 @@ When creating a Python-based client application, you can use Triton client libra
         import tritonclient.grpc as grpcclient
 
         client = grpcclient.InferenceServerClient("localhost:9000")
-        data = ["<string>"]
-        input_sp = np.arange(start=0, stop=8, dtype=np.uint8)
-        input = np.array([str(data).encode('utf-8') for data in input_sp.reshape(input_sp.size)], dtype=np.object_)
-        infer_input = grpcclient.InferInput("input_name", input_sp.shape, "BYTES")
+        data = "<string>"
+        input = np.array([data.encode('utf-8')], dtype=np.object_)
+        infer_input = grpcclient.InferInput("input_name", [1], "BYTES")
         infer_input.set_data_from_numpy(input)
         results = client.infer("model_name", [infer_input])
 
@@ -717,10 +716,9 @@ When creating a Python-based client application, you can use Triton client libra
         import tritonclient.http as httpclient
 
         client = httpclient.InferenceServerClient("localhost:9000")
-        data = ["<string>"]
-        input_sp = np.arange(start=0, stop=8, dtype=np.uint8)
-        input = np.array([str(data).encode('utf-8') for data in input_sp.reshape(input_sp.size)], dtype=np.object_)
-        infer_input = httpclient.InferInput("input_name", input_sp.shape, "BYTES")
+        data = "<string>"
+        input = np.array([data.encode('utf-8')], dtype=np.object_)
+        infer_input = httpclient.InferInput("input_name", [1], "BYTES")
         infer_input.set_data_from_numpy(input)
         results = client.infer("model_name", [infer_input])
 
