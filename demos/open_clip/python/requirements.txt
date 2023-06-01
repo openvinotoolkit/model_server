@@ -1,0 +1,7 @@
+ovmsclient==2022.3.0
+numpy==1.24.2
+torch==1.13.1
+open-clip-torch==2.20.0
+scipy==1.10.1
+Pillow==9.5.0
+opencv-python==4.7.0.72
