@@ -85,10 +85,10 @@ For more information, check these links:
 
 Put the files in a separate folder to provide inference data, as inference will be performed on all the files it contains.
 
-You can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/demos/common/static/images/people). This example uses the file [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/demos/common/static/images/people/people1.jpeg). Run the following command to download the image:
+You can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/releases/2023/0/demos/common/static/images/people). This example uses the file [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/releases/2023/0/demos/common/static/images/people/people1.jpeg). Run the following command to download the image:
 
 ```bash
-curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
+curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
 ### Step 7: Run Inference

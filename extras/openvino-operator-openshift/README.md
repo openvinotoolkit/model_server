@@ -26,20 +26,20 @@ After selecting `Create ModelServer` you will see the template for creating a de
 | `batch_size` | by default, batch size is derived from the model. Leave blank unless you wish to modify the default. |
 | `file_system_poll_wait_seconds` | time interval in seconds between checking for new versions of AI models. Setting to `0` disables automatic version updates. |
 | `gcp_creds_secret_name` | optional parameter should only be configured when using [Google Cloud Storage](https://cloud.google.com/storage) as your AI model repository. The secret should be created as a [GCP credentials](https://cloud.google.com/docs/authentication/production) JSON file. |
-| `grpc_port` | required parameter defines the service port for the [gRPC interface](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/docs/api_reference_guide.md). `8080` is the default port, but it can be modified if needed. |
+| `grpc_port` | required parameter defines the service port for the [gRPC interface](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/docs/api_reference_guide.md). `8080` is the default port, but it can be modified if needed. |
 | `https_proxy` | optional parameter used only when a proxy is required to download models from a remote repository. |
 | `image_name` | required parameter defines container registry for the [OpenVINO Model Server](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de) image. By default `openvino-model-server:latest` is pulled, but `latest` can be replaced with a specific release version like `2021.3-gpu`. |
 | `log_level` | required parameter defines the [log](https://docs.openshift.com/container-platform/4.7/logging/viewing-resource-logs.html) level. By default, the level is set to `INFO` with `ERROR` (errors only) and `DEBUG` (verbose) available as alternatives. |
 | `model_name` | parameter used only when starting a `ModelServer` with a single AI model. The example provided uses `resnet` but this can be changed to describe your custom model. The parameters `config_configmap_name` and `config_path` are not used when this parameter is set. |
-| `model_path` | parameter used only when starting `ModelServer` with a single AI model. For locally accessible storage, use `models_path/model_name` and for cloud storage `s3://bucket/models/model` or `gs://bucket/models/model`. For more information, see [Cloud Storage Requirements](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/docs/docker_container.md#storage). The parameters `config_configmap_name` and `config_path` are not used when this parameter is set. |
-| `model_version_policy` | required parameter defines the version of AI models to serve. By default, the latest version is served. For other options, please see [Model Version Policy](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/docs/model_version_policy.md) documentation. |
+| `model_path` | parameter used only when starting `ModelServer` with a single AI model. For locally accessible storage, use `models_path/model_name` and for cloud storage `s3://bucket/models/model` or `gs://bucket/models/model`. For more information, see [Cloud Storage Requirements](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/docs/docker_container.md#storage). The parameters `config_configmap_name` and `config_path` are not used when this parameter is set. |
+| `model_version_policy` | required parameter defines the version of AI models to serve. By default, the latest version is served. For other options, please see [Model Version Policy](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/docs/model_version_policy.md) documentation. |
 | `models_volume_claim` | optional parameter should be defined only when using a persistent volume as your AI model repository. The [Persistent Volume Claim](https://docs.openshift.com/container-platform/4.7/storage/understanding-persistent-storage.html#using-pods_understanding-persistent-storage) (PVC) must be in the same namespace as this `ModelServer` resource. |
 | `plugin_config` | parameter defines device plugin configuration for performance tuning. For automatic tuning, set to `{"CPU_THROUGHPUT_STREAMS":"CPU_THROUGHPUT_AUTO"}`.
 | `replicas` | this required parameter defines the number of [replicas](https://docs.openshift.com/container-platform/4.7/applications/deployments/what-deployments-are.html#deployments-repliasets_what-deployments-are) for this `ModelServer` deployment. |
 | `resources`, `cpu` and `memory` | optional parameter defines compute resource limits for the [node](https://docs.openshift.com/online/pro/architecture/infrastructure_components/kubernetes_infrastructure.html#node). Limit CPU cores and memory (e.g. `250Mi` for 250MB). |
-| `rest_port` | required parameter defines the service port for the [REST interface](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/docs/api_reference_guide.md). `8081` is the default port, but it can be modified if needed. |
+| `rest_port` | required parameter defines the service port for the [REST interface](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/docs/api_reference_guide.md). `8081` is the default port, but it can be modified if needed. |
 
-Adjust the parameters according to your needs. See the [full list of parameters](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/deploy/#helm-options-references) in the documentation for more details. See a screenshot of the template below: 
+Adjust the parameters according to your needs. See the [full list of parameters](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/deploy/#helm-options-references) in the documentation for more details. See a screenshot of the template below: 
 
 ![template](images/openshift1.png)
 
@@ -48,7 +48,7 @@ Adjust the parameters according to your needs. See the [full list of parameters]
 
 Alternatively, after installing the Operator, you may deploy and manage deployments by creating `ModelServer` resources using the `oc` [OpenShift command line tool](https://docs.openshift.com/container-platform/4.7/cli_reference/openshift_cli/getting-started-cli.html).
 
-Modify the [sample resource](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/extras/openvino-operator-openshift/config/samples/intel_v1alpha1_ovms.yaml) and run the following command:
+Modify the [sample resource](https://github.com/openvinotoolkit/model_server/tree/releases/2023/0/extras/openvino-operator-openshift/config/samples/intel_v1alpha1_ovms.yaml) and run the following command:
 
 ```bash
 oc apply -f config/samples/intel_v1alpha1_ovms.yaml
