@@ -212,5 +212,3 @@ For models with layers not supported on NVIDIA plugin, you can use a vritual plu
 ```
 
 Check the supported [configuration parameters](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-configuration-parameters) and [supported layers](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/nvidia_plugin#supported-layers-and-limitations)
-
-Currently the AUTO and MULTI virual plugins do not support NVIDIA plugin as an alternative device.
