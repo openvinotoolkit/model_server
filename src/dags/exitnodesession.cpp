@@ -17,7 +17,7 @@
 
 #include <memory>
 
-#include "../inferenceresponse.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "gatherexitnodeinputhandler.hpp"
 #include "nodesessionmetadata.hpp"
 

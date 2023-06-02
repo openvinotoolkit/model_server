@@ -17,9 +17,9 @@
 
 #include <utility>
 
+#include "../ovms.h"  // NOLINT
+#include "../status.hpp"
 #include "buffer.hpp"
-#include "ovms.h"  // NOLINT
-#include "status.hpp"
 
 namespace ovms {
 InferenceTensor::~InferenceTensor() = default;

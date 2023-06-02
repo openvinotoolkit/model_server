@@ -19,7 +19,7 @@
 #include <functional>
 
 #include "../capi_frontend/capi_utils.hpp"
-#include "../inferenceparameter.hpp"
+#include "../capi_frontend/inferenceparameter.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"

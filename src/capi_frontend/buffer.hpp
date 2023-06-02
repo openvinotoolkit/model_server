@@ -14,24 +14,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <string>
-#include <unordered_map>
+#include <memory>
+#include <optional>
 
-#include "ovms.h"  // NOLINT
-
+#include "../ovms.h"  // NOLINT
 namespace ovms {
-size_t DataTypeToByteSize(OVMS_DataType datatype);
 
-class InferenceParameter {
-    const std::string name;
-    OVMS_DataType datatype;
-    const std::string data;
+class Buffer {
+    const void* ptr;
+    size_t byteSize;
+    OVMS_BufferType bufferType;
+    std::optional<uint32_t> bufferDeviceId;
+    std::unique_ptr<char[]> ownedCopy = nullptr;
 
 public:
-    InferenceParameter(const char* name, OVMS_DataType datatype, const void* data);
-    InferenceParameter(const char* name, OVMS_DataType datatype, const void* data, size_t byteSize);
-    const std::string& getName() const;
-    OVMS_DataType getDataType() const;
-    const void* getData() const;
+    Buffer(const void* ptr, size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt, bool createCopy = false);
+    Buffer(size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt);
+    ~Buffer();
+    const void* data() const;
+    void* data();
+    OVMS_BufferType getBufferType() const;
+    const std::optional<uint32_t>& getDeviceId() const;
+    size_t getByteSize() const;
 };
+
 }  // namespace ovms

@@ -20,9 +20,9 @@
 
 #include <gtest/gtest.h>
 
-#include "../buffer.hpp"
+#include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/capi_utils.hpp"
-#include "../inferenceresponse.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "../ovms.h"
 #include "c_api_test_utils.hpp"
 #include "test_utils.hpp"

@@ -15,8 +15,8 @@
 //*****************************************************************************
 #include "pipeline_factory.hpp"
 
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelmanager.hpp"
