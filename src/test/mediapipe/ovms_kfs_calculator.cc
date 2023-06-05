@@ -51,22 +51,6 @@ namespace {
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
 }  // namespace
 
-static bool getOutput(const KFSResponse& response, const std::string& name, KFSOutputTensorIteratorType& it, size_t& bufferId) {
-    it = response.outputs().begin();
-    bufferId = 0;
-    while (it != response.outputs().end()) {
-        if (it->name() == name) {
-            break;
-        }
-        ++it;
-        ++bufferId;
-    }
-    if (it != response.outputs().end()) {
-        return true;
-    }
-    return false;
-}
-
 class OVMSKFSPassCalculator : public CalculatorBase {
     OVMS_Server* cserver{nullptr};
     OVMS_ServerSettings* _serverSettings{nullptr};
@@ -108,23 +92,18 @@ public:
         const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
         KFSResponse* response = new KFSResponse();
 
-        //response->set_model_name(request->model_name());
-        //response->set_model_version(request->model_version());
-        //response->set_id(request->id());
-
-        KFSOutputTensorIteratorType it;
-        size_t bufferId;
-        std::string outputName = "out";
-
-        auto status = getOutput(*response, outputName, it, bufferId);
-        if (!status)
-            return absl::NotFoundError("output name not found");
-
         for (int i = 0; i < request->inputs().size(); i++){
-            auto& responseOutput = *it;
-            if (responseOutput.datatype() == "FP32") {
-                responseOutput.contents().fp32_contents()[i] = request->inputs(0).contents().uint_contents(i);
+            auto* output = response->add_outputs();
+            output->set_datatype(request->inputs()[i].datatype());
+            output->set_name("out");
+            for (int j = 0; j < request->inputs()[i].shape_size(); j++){
+                output->add_shape(request->inputs()[i].shape().at(j));
             }
+        }
+        
+        for (int i = 0; i < request->raw_input_contents().size(); i++){
+
+            response->add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
         }
 
         cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse*>(response).At(::mediapipe::Timestamp(0)));
