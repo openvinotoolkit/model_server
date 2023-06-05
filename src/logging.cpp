@@ -15,6 +15,9 @@
 //*****************************************************************************
 #include "logging.hpp"
 
+#if (MEDIAPIPE_DISABLE == 0)
+#include <glog/logging.h>
+#endif
 #include <vector>
 
 namespace ovms {
@@ -89,10 +92,12 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     spdlog::set_default_logger(serving_logger);
 }
 
-void configure_logger(const std::string log_level, const std::string log_path) {
+void configure_logger(const std::string& log_level, const std::string& log_path) {
     static bool wasRun = false;
-    if (wasRun)
+    if (wasRun) {
+        SPDLOG_WARN("Tried to configure loggers twice. Keeping previous settings.");
         return;
+    }
     wasRun = true;
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_sink_st>());
@@ -100,6 +105,14 @@ void configure_logger(const std::string log_level, const std::string log_path) {
         sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path));
     }
     register_loggers(log_level, sinks);
+#if (MEDIAPIPE_DISABLE == 0)
+    if (log_level == "DEBUG" || log_level == "TRACE")
+        FLAGS_minloglevel = google::INFO;
+    else if (log_level == "WARNING")
+        FLAGS_minloglevel = google::INFO;
+    else  // ERROR, WARNING, FATAL
+        FLAGS_minloglevel = google::ERROR;
+#endif
 }
 
 }  // namespace ovms
