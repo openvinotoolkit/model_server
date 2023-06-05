@@ -272,4 +272,4 @@ XI worker: warmup_fail_stdev_latency: 0.0
 XI worker: warmup_fail_cv_latency: 0.0
 ```
 Many other client options together with benchmarking examples are presented in
-[an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/docs/python-benchmarking-client-16feb.pdf). 
+[an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/docs/python-benchmarking-client-16feb.pdf). 
