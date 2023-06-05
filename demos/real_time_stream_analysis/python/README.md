@@ -22,7 +22,7 @@ In order to make this demo work you need to:
 - have access to OpenVINO Model Server with your model of choice deployed
 - have a use case implementation
 
-The stream analysis app needs to have access to RTSP stream to read from and OVMS to run inference on. Apart from that you need use case implementation that defines pre and postprocessing. Some examplary use cases are available in [use cases catalog](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/real_time_stream_analysis/python/use_cases).
+The stream analysis app needs to have access to RTSP stream to read from and OVMS to run inference on. Apart from that you need use case implementation that defines pre and postprocessing. Some exemplary use cases are available in [use cases catalog](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/real_time_stream_analysis/python/use_cases).
 
 ## Start the real time stream analysis
 
@@ -37,7 +37,7 @@ Simply change the first argument to the use case you want in the IOProcessor con
 io_processor = IOProcessor(<use_case_class>, visualizer_frames_queue)
 `
 
-The use case class must first be imported. Examplary use cases can be imported from `use_cases` module like:
+The use case class must first be imported. Exemplary use cases can be imported from `use_cases` module like:
 
 `
 from use_cases import PersonVehicleBikeDetection
@@ -81,9 +81,9 @@ optional arguments:
   --model_name MODEL_NAME
                         Name of the target model
   --model_version MODEL_VERSION
-                        Version of the taget model. Default: latest available
+                        Version of the target model. Default: latest available
   --visualizer_port VISUALIZER_PORT
-                        Port of the inferece results visualizer webservice. If
+                        Port of the inference results visualizer web service. If
                         not specified, visualizer will not be launched
   --binary_input        Convert frames to binary format before sending them to
                         OVMS. Default: False
@@ -100,7 +100,7 @@ optional arguments:
 
 ### Minimal example
 
-__Examplary command:__
+__Exemplary command:__
 
 ```bash
 python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream --ovms_url localhost:9000 --model_name person-vehicle-bike-detection
@@ -136,7 +136,7 @@ To be able to use visualizer, use case must `return True` on [supports_visualiza
 
 Enabling visualizer is done by providing `--visualizer_port` parameter that specifies on which port the HTTP Server will display inference results. If not provided or set to 0, visualizer will not start.
 
-__Examplary command:__
+__Exemplary command:__
 
 ```bash
 python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream --ovms_url localhost:9000 --model_name person-vehicle-bike-detection --visualizer_port 5000
@@ -159,7 +159,7 @@ __Console output:__
 2022-07-25 10:50:52,351 - inference_manager - INFO - Starting inference pipeline thread
 2022-07-25 10:50:52,352 - inference_manager - INFO - Starting inference executors monitoring thread
 2022-07-25 10:50:52,360 - inference_manager - INFO - Inference Manager initialized successfully
-2022-07-25 10:50:52,360 - http_visualizer - INFO - Starting Flask webserver...
+2022-07-25 10:50:52,360 - http_visualizer - INFO - Starting Flask web server...
  * Running on http://localhost:5000
 2022-07-25 10:50:55,239 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
 2022-07-25 10:50:59,413 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
@@ -172,7 +172,7 @@ __Browser preview:__
 
 ![visualizer example browser](assets/visualizer_example_browser.gif)
 
-> **NOTE**: Visualizer does not use effecient streaming techniques to display results. It's main goal is to help during development and provide simple solution for quick health/accuracy checks.
+> **NOTE**: Visualizer does not use efficient streaming techniques to display results. It's main goal is to help during development and provide simple solution for quick health/accuracy checks.
 
 ## Performance considerations
 

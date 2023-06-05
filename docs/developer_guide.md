@@ -73,7 +73,7 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 	```
 	OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make docker_build
     OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make test_functional
-    OVMS_CPP_CONTAINTER_PORT=<unique_network_port> make test_perf
+    OVMS_CPP_CONTAINER_PORT=<unique_network_port> make test_perf
 	```
 
 	* Without a Docker cache :
@@ -165,7 +165,7 @@ make test_functional
 | `TEST_DIR_CLEANUP` | Set to `True` to remove the directory under `TEST_DIR` after the tests.| 
 | `LOG_LEVEL` | The log level.|
 | `BUILD_LOGS` | Path to save artifacts.| 
-| `START_CONTAINER_COMMAND` | The command to start the OpeVINO Model Storage container.|
+| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container.|
 | `CONTAINER_LOG_LINE` | The log line in the container that confirms the container started properly.|
 
 2. Add any configuration variables to the command line in this format :

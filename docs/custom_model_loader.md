@@ -1,25 +1,25 @@
 ## Custom Model Loader {#ovms_docs_custom_loader}
 
-Before loading the models directly from files, some extra processing or checking may be required. Typical examples are loading encrypted files or checking for model license, and other. In such cases, this customloader interface allows users to write their own custom model loader based on the predefine interface and load the same as a dynamic library. 
+Before loading the models directly from files, some extra processing or checking may be required. Typical examples are loading encrypted files or checking for model license, and other. In such cases, this custom loader interface allows users to write their own custom model loader based on the predefined interface and load the same as a dynamic library. 
 
 This document gives details on adding custom loader configuration, custom loader interface, and other details. 
 
 ## Custom Loader Interface
 
 ### Model Server Config File
-A new section is added to the config file syntax to define customloader:
+A new section is added to the config file syntax to define custom loader:
 
        "custom_loader_config_list":[
         {
                 "config":{
                 "loader_name": "#custom loader name",
                 "library_path": "#Shared library path",
-                "loader_config_file": "#Seperate config file with custom loader speicific details in json format"
+                "loader_config_file": "#Separate config file with custom loader specific details in json format"
                 }
         }
         ]
 
-Using the above syntax, multiple customloaders can be defined in the model server config file.
+Using the above syntax, multiple custom loaders can be defined in the model server config file.
 
 To enable a particular model to load using custom loader, add extra parameter in the model config as shown below:
 
@@ -28,7 +28,7 @@ To enable a particular model to load using custom loader, add extra parameter in
                 "config":{
                 "name":"sampleloader-model",
                 "base_path":"model/fdsample",
-                "custom_loader_options": {"loader_name":  "#custom loader name", "#parameters for customloader including file name etc in json format"}
+                "custom_loader_options": {"loader_name":  "#custom loader name", "#parameters for custom loader including file name etc in json format"}
                 }
         }
         ]
@@ -45,11 +45,11 @@ Derive the new custom loader class from base class **CustomLoaderInterface** and
 **CustomLoaderInterface* createCustomLoader**
 which allocates the new custom loader and returns a pointer to the base class.
 
-An example customloader which reads files and returns required buffers to be loaded is implemented and provided as reference in **[src/example/SampleCustomLoader](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/src/example/SampleCustomLoader)**
+An example custom loader which reads files and returns required buffers to be loaded is implemented and provided as reference in **[src/example/SampleCustomLoader](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/src/example/SampleCustomLoader)**
 
-This customloader is built with the model server build and available in the docker *openvino/model_server-build:latest*. The shared library can be either copied from this docker or built using makefile. An example Makefile is provided as  a reference in the directory.
+This custom loader is built with the model server build and available in the docker *openvino/model_server-build:latest*. The shared library can be either copied from this docker or built using makefile. An example Makefile is provided as  a reference in the directory.
 
-## Running Example Customloader:
+## Running Example Custom Loader:
 
 An example custom loader is implemented under "src/example/SampleCustomLoader".
 
@@ -224,5 +224,5 @@ To demonstrate this capability, this sample loader allows the users to specify a
 The file needs to be present at the model version folder (base path with the version number).
 
 If you want to disable the model, create a file with the specified name and add a single line **DISABLED** to the file. 
-The customloader checks for this file periodically and, if present with required string, marks the model for unloading. 
+The custom loader checks for this file periodically and, if present with required string, marks the model for unloading. 
 To reload the model either remove the string from the file or delete the file.

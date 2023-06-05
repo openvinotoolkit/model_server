@@ -32,8 +32,8 @@ using namespace ovms;
 
 using testing::ElementsAre;
 
-static const std::string mockerDemutliplexerNodeOutputName = "mockedDemultiplexerOutputName";
-static const std::string mockerDemutliplexerNodeOutputName2 = "mockedDemultiplexerOutputName2";
+static const std::string mockerDemultiplexerNodeOutputName = "mockedDemultiplexerOutputName";
+static const std::string mockerDemultiplexerNodeOutputName2 = "mockedDemultiplexerOutputName2";
 
 class DemultiplexerDLNode : public DLNode {
 public:
@@ -81,8 +81,8 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
     std::copy(tensorsData[0].begin(), tensorsData[0].end(), tensorDataNonDemultiplexed2.begin());
     std::copy(tensorsData[1].begin(), tensorsData[1].end(), tensorDataNonDemultiplexed2.begin() + tensorsData[0].size());
     TensorWithSourceMap intermediateResultTensors{
-        {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data()))},
-        {mockerDemutliplexerNodeOutputName2, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed2.data()))}};
+        {mockerDemultiplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data()))},
+        {mockerDemultiplexerNodeOutputName2, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed2.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
@@ -102,8 +102,8 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
         ASSERT_EQ(sessionResult.first.getSessionKey(), demultiplexedMetadata[shardId].getSessionKey());
         for (auto& [tensorName, tensorWithSource] : sessionResult.second) {
             auto& tensor = tensorWithSource.getActualTensor();
-            EXPECT_THAT(tensorName, AnyOf(Eq(mockerDemutliplexerNodeOutputName),
-                                        Eq(mockerDemutliplexerNodeOutputName2)));
+            EXPECT_THAT(tensorName, AnyOf(Eq(mockerDemultiplexerNodeOutputName),
+                                        Eq(mockerDemultiplexerNodeOutputName2)));
             ASSERT_EQ(tensorsData[shardId].size(), tensor.get_size());
             ASSERT_THAT(tensor.get_shape(), ElementsAre(1, tensorsData[shardId].size()));
             EXPECT_EQ(std::memcmp(tensor.data(), tensorsData[shardId].data(), tensor.get_byte_size()), 0) << "Failed comparison for shard: " << shardId << " tensorName: " << tensorName;
@@ -120,7 +120,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     const std::vector<size_t> shape{1, demultiplyCount - 1, 3};
     const auto precision{ov::element::Type_t::f32};
     TensorWithSourceMap intermediateResultTensors{
-        {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
+        {mockerDemultiplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
@@ -141,7 +141,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
     const std::vector<size_t> shape{1, demultiplyCount};
     const auto precision{ov::element::Type_t::f32};
     TensorWithSourceMap intermediateResultTensors{
-        {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
+        {mockerDemultiplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
@@ -163,7 +163,7 @@ TEST(DemultiplexerTest, ShardsShareDataWithSourceTensor) {
     const auto precision{ov::element::Type_t::f32};
     auto intermediateTensor = createSharedTensor(precision, shape, tensorData.data());
     TensorWithSourceMap intermediateResultTensors{
-        {mockerDemutliplexerNodeOutputName, TensorWithSource(intermediateTensor)}};
+        {mockerDemultiplexerNodeOutputName, TensorWithSource(intermediateTensor)}};
     // construct demultiplexer node
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;

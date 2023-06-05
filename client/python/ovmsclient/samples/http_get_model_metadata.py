@@ -17,13 +17,13 @@
 import argparse
 from ovmsclient import make_http_client
 
-parser = argparse.ArgumentParser(description='Get information about the status of served models over HTTP interace')
+parser = argparse.ArgumentParser(description='Get information about the status of served models over HTTP interface')
 parser.add_argument('--service_url', required=False, default='localhost:8000',
                     help='Specify url to http service. default:localhost:8000', dest='service_url')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
 parser.add_argument('--model_version', default=0, type=int,
-                    help='Model version to query. If ommited or set to 0 returns result for latest version',
+                    help='Model version to query. If omitted or set to 0 returns result for latest version',
                     dest='model_version')
 parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
                     dest='timeout', type=float)

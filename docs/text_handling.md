@@ -33,7 +33,7 @@ While OpenVINO doesn't support natively string data type, it is possible to exte
 We included in the model server a built-in extension for [SentencepieceTokenizer](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations) layer from TensorFlow.
 The extension is capable of converting 1D U8 OpenVINO tensor into appropriate format for [SentencepieceTokenizer]. OVMS is able to detect such layer and create 1D U8 tensor out of KServe/TensorflowServing API strings automatically.
 
-A demonstration of such use case is in the MUSE model which can be imported directly but the models server. The client can send the text data withtout any preprocessing and take advantage of much faster execution time.
+A demonstration of such use case is in the MUSE model which can be imported directly but the models server. The client can send the text data without any preprocessing and take advantage of much faster execution time.
 Check the [MUSE demo](../demos/universal-sentence-encoder/README.md).
 
 

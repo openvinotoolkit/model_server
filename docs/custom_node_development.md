@@ -127,7 +127,7 @@ Just add include statement like:
 There are special consideration when handling in the custom nodes the input sent by the clients as string. Such data when received by the OVMS frontend, is automatically converted to a 2D array with shape [-1,-1]. Example of custom node using this feature is our [Tokenizer](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/tokenizer). 
 
 ### inputs
-When strings are send to the custom node that has 2-dimensional shape and U8 precision OVMS, after receiving request containig such inputs converts them to the 2 dimensional U8 array of  shape [number of strings, length of the longest string + 1] with padding filled with zeros. For example batch of three strings ["String_123", "", "zebra"] would be converted to:
+When strings are send to the custom node that has 2-dimensional shape and U8 precision OVMS, after receiving request containing such inputs converts them to the 2 dimensional U8 array of  shape [number of strings, length of the longest string + 1] with padding filled with zeros. For example batch of three strings ["String_123", "", "zebra"] would be converted to:
 ```
 ['S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,  // String_123
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                       // ""
@@ -162,7 +162,7 @@ For debugging steps, refer to the OVMS [developer guide](https://github.com/open
 
 ## Built-in custom nodes
 Along with the OpenVINO Model Server, there are also built-in custom nodes provided in the image.
-They reside in the `/ovms/lib/custom_nodes` directory in the container and can be reffered in the configuration file.
+They reside in the `/ovms/lib/custom_nodes` directory in the container and can be referred in the configuration file.
 Below you can see the list of fully functional custom nodes embedded in the model server docker image:
 
 | Custom Node      | Location in the container |

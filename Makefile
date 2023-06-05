@@ -130,8 +130,8 @@ endif
 PRODUCT_NAME = "OpenVINO Model Server"
 PRODUCT_VERSION ?= "2023.0.0"
 
-OVMS_CPP_CONTAINTER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
-OVMS_CPP_CONTAINTER_PORT ?= 9178
+OVMS_CPP_CONTAINER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
+OVMS_CPP_CONTAINER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
 
@@ -310,9 +310,9 @@ endif
 # Ci build expects index.html in genhtml directory
 get_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
-	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
-	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms/genhtml/ .  || true
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker create -ti --name $(OVMS_CPP_CONTAINER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms/genhtml/ .  || true
+	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
 	@if [ -d genhtml/src ]; then $(MAKE) check_coverage; \
 	else echo "ERROR: genhtml/src was not generated during build"; \
 	fi
@@ -322,11 +322,11 @@ check_coverage:
 	
 test_checksec:
 	@echo "Running checksec on libovms_shared library..."
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
-	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
-	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/lib/libovms_shared.so /tmp
-	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
+	@docker create -ti --name $(OVMS_CPP_CONTAINER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms_release/lib/libovms_shared.so /tmp
+	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms_release/bin/ovms /tmp
+	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
 	@checksec --file=/tmp/libovms_shared.so --format=csv > checksec.txt
 	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,DSO,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
  		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." && exit 1;\
@@ -343,17 +343,17 @@ test_checksec:
 
 test_perf: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
 		-v $(HOME)/resnet50-binary:/models/resnet50-binary \
-		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name resnet-binary --model_path /models/resnet50-binary --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
+		--model_name resnet-binary --model_path /models/resnet50-binary --port $(OVMS_CPP_CONTAINER_PORT); sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
-	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
+	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path tests/performance/imgs.npy \
 		--labels_numpy_path tests/performance/labels.npy \
 		--iteration 1000 \
@@ -363,20 +363,20 @@ test_perf: venv
 		--output_name 1463 \
 		--model_name resnet-binary
 	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 test_perf_dummy_model: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
 	@echo "Starting docker image"
-	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
 		-v $(PWD)/src/test/dummy/1:/dummy/1 \
-		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
+		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINER_PORT); sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
-	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
+	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path tests/performance/dummy_input.npy \
 		--labels_numpy_path tests/performance/dummy_lbs.npy \
 		--iteration 10000 \
@@ -386,25 +386,25 @@ test_perf_dummy_model: venv
 		--output_name a \
 		--model_name dummy
 	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 
 test_throughput: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
 		-v $(HOME)/resnet50-binary:/models/resnet50-binary \
-		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name resnet-binary \
 		--model_path /models/resnet50-binary \
-		--port $(OVMS_CPP_CONTAINTER_PORT); \
+		--port $(OVMS_CPP_CONTAINER_PORT); \
 		sleep 10
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
-	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
+	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path imgs.npy \
 		--labels_numpy_path labels.npy \
 		--iteration 500 \
@@ -413,23 +413,23 @@ test_throughput: venv
 		--output_name 1463 \
 		--model_name resnet-binary
 	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 test_throughput_dummy_model: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
 	@echo "Starting docker image"
-	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
 		-v $(PWD)/src/test/dummy/1:/dummy/1 \
-		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name dummy \
 		--model_path /dummy \
-		--port $(OVMS_CPP_CONTAINTER_PORT); \
+		--port $(OVMS_CPP_CONTAINER_PORT); \
 		sleep 10
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
-	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
+	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path dummy_input.npy \
 		--labels_numpy_path dummy_lbs.npy \
 		--iteration 10000 \
@@ -438,7 +438,7 @@ test_throughput_dummy_model: venv
 		--output_name a \
 		--model_name dummy
 	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 test_functional: venv
 	@. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)

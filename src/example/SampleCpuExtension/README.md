@@ -24,7 +24,7 @@ make cpu_extension BASE_OS=${BASE_OS}
 
 In order to demonstrate the usage of cpu_extension library some small modifications in resnet model are needed.
 In this sample we are going to change one of the ReLU layers type to CustomReLU.
-By doing so this layer will take adventage of cpu_extension.
+By doing so this layer will take advantage of cpu_extension.
 
 ```bash
 mkdir -p resnet50-binary-0001/1
