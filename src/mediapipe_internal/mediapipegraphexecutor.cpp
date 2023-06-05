@@ -143,14 +143,14 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
     // Passing whole KFS request and response
-    if (this->passKfsRequestFlag){
-        if ( this->config.output_stream().size() != 1) {
+    if (this->passKfsRequestFlag) {
+        if (this->config.output_stream().size() != 1) {
             SPDLOG_ERROR("KServe request for mediapipe graph output size is incorrect for passing whole KFS request and response");
             //TODO: create new error type
             return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
         }
 
-        if ( this->config.input_stream().size() != 1) {
+        if (this->config.input_stream().size() != 1) {
             SPDLOG_ERROR("KServe request for mediapipe graph input size is incorrect for passing whole KFS request and response");
             //TODO: create new error type
             return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
@@ -186,7 +186,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     std::set<std::string> outputPollersWithReceivedPacket;
 
     // Passing whole KFS request and response
-    if (this->passKfsRequestFlag){
+    if (this->passKfsRequestFlag) {
         SPDLOG_DEBUG("Passing whole KFS request and response");
         for (auto name : inputNames) {
             SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);

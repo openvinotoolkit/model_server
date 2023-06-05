@@ -146,8 +146,7 @@ TEST_P(MediapipeFlowKfsTest, Infer) {
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{
-        {"in", {DUMMY_MODEL_SHAPE, precision}}
-        };
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
     std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
     std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
     preparePredictRequest(request, inputsMeta, requestData1);

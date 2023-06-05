@@ -23,8 +23,8 @@
 #include "../../stringutils.hpp"  // TODO dispose
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "src/mediapipe_calculators/ovmscalculator.pb.h"
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/mediapipe_calculators/ovmscalculator.pb.h"
 
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
@@ -34,18 +34,18 @@ namespace mediapipe {
 using std::endl;
 
 namespace {
-#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                  \
-    {                                                                                        \
-        auto* err = C_API_CALL;                                                              \
-        if (err != nullptr) {                                                                \
-            uint32_t code = 0;                                                               \
-            const char* msg = nullptr;                                                       \
-            OVMS_StatusGetCode(err, &code);                                                  \
-            OVMS_StatusGetDetails(err, &msg);                                                \
+#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                         \
+    {                                                                                               \
+        auto* err = C_API_CALL;                                                                     \
+        if (err != nullptr) {                                                                       \
+            uint32_t code = 0;                                                                      \
+            const char* msg = nullptr;                                                              \
+            OVMS_StatusGetCode(err, &code);                                                         \
+            OVMS_StatusGetDetails(err, &msg);                                                       \
             LOG(ERROR) << "Error encountred in OVMSKFSPassCalculator:" << msg << " code: " << code; \
-            OVMS_StatusDelete(err);                                                          \
-            RET_CHECK(err == nullptr);                                                       \
-        }                                                                                    \
+            OVMS_StatusDelete(err);                                                                 \
+            RET_CHECK(err == nullptr);                                                              \
+        }                                                                                           \
     }
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
@@ -94,16 +94,16 @@ public:
         const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
         response = new KFSResponse();
 
-        for (int i = 0; i < request->inputs().size(); i++){
+        for (int i = 0; i < request->inputs().size(); i++) {
             auto* output = response->add_outputs();
             output->set_datatype(request->inputs()[i].datatype());
             output->set_name("out");
-            for (int j = 0; j < request->inputs()[i].shape_size(); j++){
+            for (int j = 0; j < request->inputs()[i].shape_size(); j++) {
                 output->add_shape(request->inputs()[i].shape().at(j));
             }
         }
-        
-        for (int i = 0; i < request->raw_input_contents().size(); i++){
+
+        for (int i = 0; i < request->raw_input_contents().size(); i++) {
 
             response->add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
         }
