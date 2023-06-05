@@ -56,7 +56,7 @@ setuptools.setup(
      description="Python client for OpenVINO Model Server",
      long_description=long_description,
      long_description_content_type="text/markdown",
-     url="https://github.com/openvinotoolkit/model_server/tree/releases/2022/3/client/python/ovmsclient/lib",
+     url="https://github.com/openvinotoolkit/model_server/tree/releases/2023/0/client/python/ovmsclient/lib",
      cmdclass={
         "build_apis": BuildApis,
      },

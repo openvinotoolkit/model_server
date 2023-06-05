@@ -73,7 +73,7 @@ During this step, the `model` folder is mounted to the Docker container.  This f
 Client scripts are available for quick access to the Model Server. Run an example command to download all required components:
 
 ```bash
-curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/3/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/3/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/3/demos/common/python/requirements.txt -o client_requirements.txt
+curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/common/python/requirements.txt -o client_requirements.txt
 ```
 
 For more information, check these links:
