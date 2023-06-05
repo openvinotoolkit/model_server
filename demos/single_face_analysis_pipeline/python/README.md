@@ -69,4 +69,4 @@ Emotion results: Natural: 0.02335789 ; Happy: 0.9449672 ; Sad: 0.001236845 ; Sur
 
 ### Next step
 
-For more advanced use case with extracting and analysing mutliple faces on the same image see [multi_faces_analysis_pipeline](../../multi_faces_analysis_pipeline/python/README.md) demo.
+For more advanced use case with extracting and analysing multiple faces on the same image see [multi_faces_analysis_pipeline](../../multi_faces_analysis_pipeline/python/README.md) demo.

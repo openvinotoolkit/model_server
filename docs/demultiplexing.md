@@ -1,4 +1,4 @@
-# Demultiplexing in DAG {#ovms_docs_demuliplexing}
+# Demultiplexing in DAG {#ovms_docs_demultiplexing}
 
 ## Pipeline Branching
 Directed Acyclic Graph (DAG) Scheduler enables creating pipelines with optional parameter `demultiply_count: N` which makes it possible for any node to slice outputs into `N` separate sub-outputs and branch pipeline execution into `N` sub-pipelines. Nodes that follow will be executed by event loop `N` times independently from each other and results gathered and packed into one output just before sending a response. Additionally, `gather_from_node: <node_name>` parameter can be used to specify gathering at any point in the Directed Acyclic Graph. The `demultiply_count` node parameter value must match the first dimension of all node outputs. All node outputs must have at least 2 dimensions.
@@ -163,9 +163,9 @@ Example configuration file for pipeline with `gather_from_node` specified before
 
 ## Dynamic batch handling with demultiplexing
 
-Demutliplexing feature enables handling requests with dynamic batch size without a model reloading.
+Demultiplexing feature enables handling requests with dynamic batch size without a model reloading.
 It is recommended for workloads with an arbitrary batch size in sequential requests.
-You can use the dynamic batching feature via requests demuliplexing by configuring a pipeline including a single model and an extra field 'demultiply_count: -1'.
+You can use the dynamic batching feature via requests demultiplexing by configuring a pipeline including a single model and an extra field 'demultiply_count: -1'.
 To leverage this feature, input data requires an additional, first dimension, representing the batch size. It should be added to the original model shape with batch size 1.
 The response will include combined predictions from the split batch. That also adds an extra first dimension to the model output.
 

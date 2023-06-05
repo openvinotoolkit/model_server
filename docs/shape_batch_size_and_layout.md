@@ -67,6 +67,6 @@ This is also possible to omit the colon (`:`) and pass single layout parameter: 
 
 ### Important
 Changing layout is not supported for models with input names the same as output names. <br>
-For model included in DAG, layouts of subsequent nodes must match, similary to network shape and precision.
+For model included in DAG, layouts of subsequent nodes must match, similarly to network shape and precision.
 
 > **WARNING**: Beginning with 2022.1 release, the `--layout` parameter has changed meaning and the setting is not back compatible. Previously to change from `NCHW` to `NHWC` it was required to pass `--layout NHWC`, now it is required to pass `--layout NHWC:NCHW`. The prior version does not add preprocessing step and just informs about incorrect layout of exported model.
