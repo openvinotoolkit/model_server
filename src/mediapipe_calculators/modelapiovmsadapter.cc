@@ -199,6 +199,8 @@ void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& mod
 ov::Shape OVMSInferenceAdapter::getInputShape(const std::string& inputName) const {
     auto it = inShapesMinMaxes.find(inputName);
     if (it == inShapesMinMaxes.end()) {
+        MLOG("Could not find input");
+        MLOG(inputName);
         throw std::runtime_error(std::string("Adapter could not find input:") + inputName);  // TODO error handling
     }
 
