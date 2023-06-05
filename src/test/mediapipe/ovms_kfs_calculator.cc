@@ -90,7 +90,6 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-
         const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
         response = new KFSResponse();
 
@@ -104,7 +103,6 @@ public:
         }
 
         for (int i = 0; i < request->raw_input_contents().size(); i++) {
-
             response->add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
         }
 

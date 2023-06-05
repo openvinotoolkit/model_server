@@ -201,6 +201,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Mediapipe execution failed. MP status"},
     {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, "Mediapipe is retired"},
     {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET, "Mediapipe is not loaded yet"},
+    {StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_SIZE, "Mediapipe unexpected input stream packets number"},
+    {StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_SIZE, "Mediapipe unexpected output stream packets number"},
+
 
     // Storage errors
     // S3

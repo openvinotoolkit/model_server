@@ -146,14 +146,12 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     if (this->passKfsRequestFlag) {
         if (this->config.output_stream().size() != 1) {
             SPDLOG_ERROR("KServe request for mediapipe graph output size is incorrect for passing whole KFS request and response");
-            //TODO: create new error type
-            return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
+            return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_SIZE;
         }
 
         if (this->config.input_stream().size() != 1) {
             SPDLOG_ERROR("KServe request for mediapipe graph input size is incorrect for passing whole KFS request and response");
-            //TODO: create new error type
-            return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
+            return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_SIZE;
         }
     }
 
