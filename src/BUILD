@@ -396,7 +396,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        #"-Werror",
+        "-Werror",
     ],
     visibility = [
         "//visibility:public",
@@ -676,7 +676,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wconversion",
-        #"-Werror",
+        "-Werror",
     ],
     deps = [
         "//src:ovms_lib",
@@ -853,7 +853,7 @@ cc_test(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-      #  "-Werror",
+        "-Werror",
     ],
 )
 
