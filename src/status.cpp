@@ -204,7 +204,6 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_SIZE, "Mediapipe unexpected input stream packets number"},
     {StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_SIZE, "Mediapipe unexpected output stream packets number"},
 
-
     // Storage errors
     // S3
     {StatusCode::S3_BUCKET_NOT_FOUND, "S3 Bucket not found"},
