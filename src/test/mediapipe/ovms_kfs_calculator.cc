@@ -56,6 +56,7 @@ class OVMSKFSPassCalculator : public CalculatorBase {
     OVMS_ServerSettings* _serverSettings{nullptr};
     OVMS_ModelsSettings* _modelsSettings{nullptr};
     std::unordered_map<std::string, std::string> outputNameToTag;
+    KFSResponse* response;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -68,6 +69,7 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
+        delete response;
         return absl::OkStatus();
     }
     absl::Status Open(CalculatorContext* cc) final {
@@ -90,7 +92,7 @@ public:
     absl::Status Process(CalculatorContext* cc) final {
 
         const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
-        KFSResponse* response = new KFSResponse();
+        response = new KFSResponse();
 
         for (int i = 0; i < request->inputs().size(); i++){
             auto* output = response->add_outputs();
