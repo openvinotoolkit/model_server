@@ -26,6 +26,8 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
+#include "filesystem.hpp"
+#include "logging.hpp"
 #include "model_version_policy.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
@@ -742,6 +744,9 @@ std::string ModelConfig::layoutConfigurationToString() const {
         ss << name << " " << layoutCfg.toString() << "; ";
     }
     return ss.str();
+}
+void ModelConfig::setBasePath(const std::string& basePath) {
+    FileSystem::setPath(this->basePath, basePath, this->rootDirectoryPath);
 }
 
 }  // namespace ovms

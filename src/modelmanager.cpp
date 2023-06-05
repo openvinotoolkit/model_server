@@ -1583,4 +1583,8 @@ Status ModelManager::createPipeline(std::shared_ptr<MediapipeGraphExecutor>& gra
     return StatusCode::INTERNAL_ERROR;
 #endif
 }
+
+void ModelManager::setRootDirectoryPath(const std::string& configFileFullPath) {
+    FileSystem::setRootDirectoryPath(this->rootDirectoryPath, configFileFullPath);
+}
 }  // namespace ovms

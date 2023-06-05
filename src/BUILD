@@ -373,8 +373,6 @@ cc_library(
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_calculators/modelapiovmsadapter.cc",
                 "mediapipe_calculators/modelapiovmsadapter.hpp",
-                "mediapipe_calculators/modelapiovmsadapterwrapper.cc",
-                "mediapipe_calculators/modelapiovmsadapterwrapper.hpp",
                 "mediapipe_calculators/ovms_calculator.cc",
                 "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
                 "mediapipe_calculators/modelapiovmssessioncalculator.cc",
