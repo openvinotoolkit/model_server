@@ -7,7 +7,7 @@ DAG pipeline.
 Additionally to the detected text boxes, in the two additional outputs are returned their coordinates with information about geometry
 and confidence levels for the filtered list of detections.  
 
-**NOTE** Examplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/optical_character_recognition/python/config.json) is available in [optical character recognition demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/optical_character_recognition/python/).
+**NOTE** Exemplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/optical_character_recognition/python/config.json) is available in [optical character recognition demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/optical_character_recognition/python/).
 
 # Building custom node library
 

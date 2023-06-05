@@ -208,5 +208,5 @@ Below is the exemplary input image.
 The custom node generates the following text images retrieved from the original input to CRNN model:
 ![image](crnn_table.png)
 
-## Accurracy
+## Accuracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.

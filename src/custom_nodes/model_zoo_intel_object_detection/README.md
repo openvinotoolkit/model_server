@@ -25,7 +25,7 @@ All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/
 Public [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public) object detection models with output tensor shape: `[1, 1, 100, 7]`:
 - ssdlite_mobilenet_v2
 
-**NOTE** Examplary configuration files are available in [vehicle analysis pipeline demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/horizontal_text_detection/python/config.json) and [multiple faces analysis demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/multi_faces_analysis_pipeline/python/config.json).
+**NOTE** Exemplary configuration files are available in [vehicle analysis pipeline demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/horizontal_text_detection/python/config.json) and [multiple faces analysis demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/multi_faces_analysis_pipeline/python/config.json).
 
 # Building custom node library
 

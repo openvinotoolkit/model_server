@@ -14,7 +14,7 @@ A new section is added to the config file syntax to define custom loader:
                 "config":{
                 "loader_name": "#custom loader name",
                 "library_path": "#Shared library path",
-                "loader_config_file": "#Seperate config file with custom loader specific details in json format"
+                "loader_config_file": "#Separate config file with custom loader specific details in json format"
                 }
         }
         ]
@@ -49,7 +49,7 @@ An example custom loader which reads files and returns required buffers to be lo
 
 This custom loader is built with the model server build and available in the docker *openvino/model_server-build:latest*. The shared library can be either copied from this docker or built using makefile. An example Makefile is provided as  a reference in the directory.
 
-## Running Example Customloader:
+## Running Example Custom Loader:
 
 An example custom loader is implemented under "src/example/SampleCustomLoader".
 

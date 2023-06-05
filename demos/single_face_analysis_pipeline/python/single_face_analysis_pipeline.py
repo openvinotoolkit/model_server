@@ -51,5 +51,5 @@ gender_results = make_ndarray(result.outputs["gender"])
 emotion_results = make_ndarray(result.outputs["emotion"])
 
 print("Age results:", age_results[0]*100)
-print("Gender results: Famale:", gender_results[0,0,0,0], "; Male:", gender_results[0,1,0,0] )
+print("Gender results: Female:", gender_results[0,0,0,0], "; Male:", gender_results[0,1,0,0] )
 print("Emotion results: Natural:", emotion_results[0,0,0,0], "; Happy:", emotion_results[0,1,0,0], "; Sad:", emotion_results[0,2,0,0], "; Surprise:", emotion_results[0,3,0,0], "; Angry:", emotion_results[0,4,0,0] )

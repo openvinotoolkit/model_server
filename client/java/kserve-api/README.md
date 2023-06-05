@@ -14,7 +14,7 @@ This guide shows how to interact with KServe API endpoints over gRPC. It covers 
 
 ## Before you run the samples
 
-### Prerequisits
+### Prerequisite
 
 [OpenJDK Runtime Environment](https://openjdk.org/) version 11 or newer
 [Apache Maven](https://maven.apache.org/) version 3.6.3 or newer

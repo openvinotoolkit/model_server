@@ -37,7 +37,7 @@ Simply change the first argument to the use case you want in the IOProcessor con
 io_processor = IOProcessor(<use_case_class>, visualizer_frames_queue)
 `
 
-The use case class must first be imported. Examplary use cases can be imported from `use_cases` module like:
+The use case class must first be imported. Exemplary use cases can be imported from `use_cases` module like:
 
 `
 from use_cases import PersonVehicleBikeDetection
@@ -100,7 +100,7 @@ optional arguments:
 
 ### Minimal example
 
-__Examplary command:__
+__Exemplary command:__
 
 ```bash
 python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream --ovms_url localhost:9000 --model_name person-vehicle-bike-detection
@@ -136,7 +136,7 @@ To be able to use visualizer, use case must `return True` on [supports_visualiza
 
 Enabling visualizer is done by providing `--visualizer_port` parameter that specifies on which port the HTTP Server will display inference results. If not provided or set to 0, visualizer will not start.
 
-__Examplary command:__
+__Exemplary command:__
 
 ```bash
 python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream --ovms_url localhost:9000 --model_name person-vehicle-bike-detection --visualizer_port 5000

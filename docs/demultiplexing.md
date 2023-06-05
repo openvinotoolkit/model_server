@@ -176,7 +176,7 @@ Output: (N,1,1001)
 
 Because of this additional dimension, demultiplexing implementation is generic and can support any input and output data layout.
 
-Examplary usage of this feature is available in [dynamic batch size guide](./dynamic_bs_demultiplexer.md).
+Exemplary usage of this feature is available in [dynamic batch size guide](./dynamic_bs_demultiplexer.md).
 
 *Note:* You can use additional parameters in model config ('nireq' and 'NUM_STREAMS') to fine-tune your performance for dynamic batch. 'NUM_STREAMS' allows for multiple parallel
 inferences processing in OpenVINO&trade; which may increase throughput at the cost of latency of predict requests. 'nireq' specifies how many inference requests can be prepared.
