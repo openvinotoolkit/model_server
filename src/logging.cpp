@@ -19,6 +19,9 @@
 #include <glog/logging.h>
 #endif
 #include <vector>
+#include <iomanip>
+#include <iostream>
+#include <type_traits>
 
 namespace ovms {
 
@@ -92,6 +95,32 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     spdlog::set_default_logger(serving_logger);
 }
 
+using std::string;
+using std::setw;
+using std::setfill;
+void PrefixAttacher(std::ostream &s, const LogMessageInfo &l, void* data) {
+  // Assert that `data` contains the expected contents before producing the
+  // prefix (otherwise causing the tests to fail):
+  if (data == nullptr || *static_cast<string*>(data) != "good data") {
+    return;
+  }
+
+  s << l.severity[0]
+    << setw(4) << 1900 + l.time.year()
+    << setw(2) << 1 + l.time.month()
+    << setw(2) << l.time.day()
+    << ' '
+    << setw(2) << l.time.hour() << ':'
+    << setw(2) << l.time.min()  << ':'
+    << setw(2) << l.time.sec() << "."
+    << setw(6) << l.time.usec()
+    << ' '
+    << setfill(' ') << setw(5)
+    << l.thread_id << setfill('0')
+    << ' '
+    << l.filename << ':' << l.line_number << "]";
+}
+
 void configure_logger(const std::string& log_level, const std::string& log_path) {
     static bool wasRun = false;
     if (wasRun) {
@@ -112,6 +141,8 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
         FLAGS_minloglevel = google::INFO;
     else  // ERROR, WARNING, FATAL
         FLAGS_minloglevel = google::ERROR;
+    google::InitGoogleLogging("OVMS", &PrefixAttacher);
+
 #endif
 }
 
