@@ -109,8 +109,8 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
     if (log_level == "DEBUG" || log_level == "TRACE")
         FLAGS_minloglevel = google::INFO;
     else if (log_level == "WARNING")
-        FLAGS_minloglevel = google::INFO;
-    else  // ERROR, WARNING, FATAL
+        FLAGS_minloglevel = google::WARNING;
+    else  // ERROR, FATAL
         FLAGS_minloglevel = google::ERROR;
 #endif
 }
