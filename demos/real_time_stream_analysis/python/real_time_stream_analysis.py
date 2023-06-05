@@ -30,8 +30,8 @@ def get_config():
 	parser.add_argument("--stream_url", required=True, type=str, help="URL to the video stream. Example: rtsp://localhost:8888/stream")
 	parser.add_argument("--ovms_url", required=True, type=str, help="Address of OVMS gRPC endpoint. Example: localhost:9000")
 	parser.add_argument("--model_name", required=True, type=str, help="Name of the target model")
-	parser.add_argument("--model_version", required=False, type=int, default=0, help="Version of the taget model. Default: latest available")
-	parser.add_argument("--visualizer_port", required=False, type=int, help="Port of the inferece results visualizer webservice. "
+	parser.add_argument("--model_version", required=False, type=int, default=0, help="Version of the target model. Default: latest available")
+	parser.add_argument("--visualizer_port", required=False, type=int, help="Port of the inference results visualizer web service. "
 																  			"If not specified, visualizer will not be launched")
 	parser.add_argument("--binary_input", required=False, action="store_true", help="Convert frames to binary format before sending them to OVMS. Default: False")
 	parser.add_argument("--inference_executors", required=False, type=int, default=4, help="Number of inference executor threads. Default: 4")

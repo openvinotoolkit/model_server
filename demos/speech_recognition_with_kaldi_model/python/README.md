@@ -25,7 +25,7 @@ To run this example you will need to download the rm_lstm4f model with input and
 - Download the model from [rm_lstm4f](https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/)
 
 
-Those commands will download nessesary files:
+Those commands will download necessary files:
 
 ```bash
 mkdir models && cd models

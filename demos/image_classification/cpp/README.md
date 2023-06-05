@@ -1,11 +1,11 @@
 # Image Classification Demo (C++) {#ovms_demo_image_classification_cpp}
 
 This demo provides 2 clients:
-- _classification_client_sync_ - simple client using synchronous gRPC API, testing accurracy of classification models
-- _classification_client_async_benchmark_ - client using asynchronous gRPC API, testing accurracy and performance with real image data
+- _classification_client_sync_ - simple client using synchronous gRPC API, testing accuracy of classification models
+- _classification_client_async_benchmark_ - client using asynchronous gRPC API, testing accuracy and performance with real image data
 
 To build the clients, run `make` command in this directory. It will build docker image named `ovms_cpp_image_classification` with all dependencies.
-The example clients image also contains test images required for accurracy measurements. It is also possible to use custom images.
+The example clients image also contains test images required for accuracy measurements. It is also possible to use custom images.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/image_classification/cpp
@@ -26,7 +26,7 @@ curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model
 The client sends requests synchronously and displays latency for each request.
 You can specify number of iterations and layout: `nchw`, `nhwc` or `binary`.
 Each request contains image in selected format.
-The client also tests server responses for accurracy.
+The client also tests server responses for accuracy.
 
 ## Prepare the server
 ```bash
@@ -71,7 +71,7 @@ There are plenty of parameters to configure those clients.
 | producers | number of threads asynchronously scheduling prediction | 1 | yes |
 | consumers | number of threads receiving responses | 8 | yes |
 | max_parallel_requests | maximum number of parallel inference requests; 0=no limit | 100 | yes |
-| benchmark_mode | 1 removes pre/post-processing and logging; 0 enables accurracy measurement | 0 | no |
+| benchmark_mode | 1 removes pre/post-processing and logging; 0 enables accuracy measurement | 0 | no |
 
 ## Async client with real image data
 

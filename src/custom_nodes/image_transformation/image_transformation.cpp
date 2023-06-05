@@ -86,7 +86,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     // Mean values.
     //
     // If not specified, the image will not be scaled.
-    // When specified, all pixel values will be substracted by this value per channel.
+    // When specified, all pixel values will be subtracted by this value per channel.
     // The exact meaning and order of channels depend on input image.
     std::vector<float> meanValues = get_float_list_parameter("mean_values", params, paramsCount);
 
@@ -180,7 +180,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     }
 
     // Perform procesesing with scale and mean values. If scale and scaleValues provided only scaleValues are used for scaling.
-    // If scale and meanValues provided mean values are substracted from pixels first then scaling is made.
+    // If scale and meanValues provided mean values are subtracted from pixels first then scaling is made.
     // Scaling will be applied before resize if target resolution is smaller.
     if ((isScaleDefined || scaleValues.size() > 0 || meanValues.size() > 0) && originalImageResolution < targetImageResolution) {
         if (debugMode) {

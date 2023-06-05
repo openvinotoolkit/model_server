@@ -17,7 +17,7 @@
 import argparse
 from ovmsclient import make_grpc_client
 
-parser = argparse.ArgumentParser(description='Get information about the status of served models over gRPC interace')
+parser = argparse.ArgumentParser(description='Get information about the status of served models over gRPC interface')
 parser.add_argument('--service_url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000', dest='service_url')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',

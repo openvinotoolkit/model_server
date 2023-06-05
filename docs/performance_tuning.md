@@ -149,7 +149,7 @@ OpenVINO Model Server in C++ implementation is using scalable multithreaded gRPC
   In case of particularly heavy load and many parallel connections, higher value might increase the transfer rate.
 
 - Another parameter impacting the performance is `nireq`. It defines the size of the model queue for inference execution.
-It should be at least as big as the number of assigned OpenVINO streams or expected parallel clients (grpc_wokers >= nireq).
+It should be at least as big as the number of assigned OpenVINO streams or expected parallel clients (grpc_workers >= nireq).
   
 - Parameter `file_system_poll_wait_seconds` defines how often the model server will be checking if new model version gets created in the model repository. 
 The default value is 1 second which ensures prompt response to creating new model version. In some cases, it might be recommended to reduce the polling frequency

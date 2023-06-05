@@ -206,7 +206,7 @@ Example command to run container with NVIDIA support:
    docker run -it --gpus all -p 9000:9000 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --port 9000 --target_device NVIDIA
 ```
 
-For models with layers not supported on NVIDIA plugin, you can use a vritual pluging `HETERO` which can use multiple devices listed after the colon:
+For models with layers not supported on NVIDIA plugin, you can use a virtual plugin `HETERO` which can use multiple devices listed after the colon:
 ```bash
    docker run -it --gpus all -p 9000:9000 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-cuda --model_path /opt/model --model_name resnet --port 9000 --target_device HETERO:NVIDIA,CPU
 ```

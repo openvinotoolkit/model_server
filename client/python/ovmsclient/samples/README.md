@@ -93,7 +93,7 @@ usage: grpc_get_model_metadata.py [-h] [--service_url SERVICE_URL]
                                   [--model_version MODEL_VERSION]
                                   [--timeout TIMEOUT]
 
-Get information about the status of served models over gRPC interace
+Get information about the status of served models over gRPC interface
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -102,7 +102,7 @@ optional arguments:
   --model_name MODEL_NAME
                         Model name to query. default: resnet
   --model_version MODEL_VERSION
-                        Model version to query. If ommited or set to 0 returns
+                        Model version to query. If omitted or set to 0 returns
                         result for latest version
   --timeout TIMEOUT     Request timeout. default: 10.0
 ```
@@ -282,7 +282,7 @@ usage: http_get_model_status.py [-h] [--service_url SERVICE_URL]
                                 [--model_version MODEL_VERSION]
                                 [--timeout TIMEOUT]
 
-Get information about the status of served models over HTTP interace
+Get information about the status of served models over HTTP interface
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -316,7 +316,7 @@ usage: http_get_model_metadata.py [-h] [--service_url SERVICE_URL]
                                   [--model_version MODEL_VERSION]
                                   [--timeout TIMEOUT]
 
-Get information about the status of served models over HTTP interace
+Get information about the status of served models over HTTP interface
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -325,7 +325,7 @@ optional arguments:
   --model_name MODEL_NAME
                         Model name to query. default: resnet
   --model_version MODEL_VERSION
-                        Model version to query. If ommited or set to 0 returns
+                        Model version to query. If omitted or set to 0 returns
                         result for latest version
   --timeout TIMEOUT     Request timeout. default: 10.0
 ```

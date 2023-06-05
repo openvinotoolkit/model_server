@@ -104,7 +104,7 @@ predicted word:  a
 
 # Pipeline mode with server side tokenization and detokenization
 
-This variant offloads tokenizaton and detokenization step from client to the server. OVMS can convert string proto to `2D U8` tensor and pass the data to tokenization custom node. This way we generate tokens for `gpt-j-6b` model automatically and get the response as text instead of probability vector.
+This variant offloads tokenization and detokenization step from client to the server. OVMS can convert string proto to `2D U8` tensor and pass the data to tokenization custom node. This way we generate tokens for `gpt-j-6b` model automatically and get the response as text instead of probability vector.
 
 ![diagram](../../../src/custom_nodes/tokenizer/diagram.svg)
 

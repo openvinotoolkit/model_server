@@ -9,7 +9,7 @@ It accepts also a value `auto` - this command makes the served model set the bat
 This feature is useful for sequential inference requests of the same batch size.
 
 *Note:* In case of frequent batch size changes in predict requests, consider using [demultiplexing feature](./demultiplexing.md) from [Directed Acyclic Graph Scheduler](./dag_scheduler.md) which is more
-performant in such situations because it is not adding an extra overhead with model reloading between requests like --batch_size auto setting. Examplary usage of this feature can be found in [dynamic_batch_size](./dynamic_bs_demultiplexer.md) document.
+performant in such situations because it is not adding an extra overhead with model reloading between requests like --batch_size auto setting. Exemplary usage of this feature can be found in [dynamic_batch_size](./dynamic_bs_demultiplexer.md) document.
 
 - OpenVINO&trade; Model Server determines the batch size based on the size of the first dimension in the first input.
 For example with the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
@@ -67,6 +67,6 @@ This is also possible to omit the colon (`:`) and pass single layout parameter: 
 
 ### Important
 Changing layout is not supported for models with input names the same as output names. <br>
-For model included in DAG, layouts of subsequent nodes must match, similary to network shape and precision.
+For model included in DAG, layouts of subsequent nodes must match, similarly to network shape and precision.
 
 > **WARNING**: Beginning with 2022.1 release, the `--layout` parameter has changed meaning and the setting is not back compatible. Previously to change from `NCHW` to `NHWC` it was required to pass `--layout NHWC`, now it is required to pass `--layout NHWC:NCHW`. The prior version does not add preprocessing step and just informs about incorrect layout of exported model.

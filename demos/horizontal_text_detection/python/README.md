@@ -70,7 +70,7 @@ ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   
 
 ## Recognize Detected Text with OCR Pipeline
 Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://docs.openvino.ai/2022.1/omz_models_model_horizontal_text_detection_0001.html) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) 
-combined with a custom node implementation can be used with the same python script used before. OCR pipeline provides location of detected text boxes on the image and additionaly recognized text for each box.
+combined with a custom node implementation can be used with the same python script used before. OCR pipeline provides location of detected text boxes on the image and additionally recognized text for each box.
 
 ![horizontal text detection using OCR pipeline](horizontal-text-detection-ocr.gif)
 
