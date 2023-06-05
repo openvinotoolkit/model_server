@@ -147,7 +147,7 @@ would be converted to ["String_123", "", "zebra"].
 ## Building
 
 Custom node library can be compiled using any tool. It is recommended to follow the example based 
-a docker container with all build dependencies included. It is described in this [Makefile](https://github.com/openvinotoolkit/model_server/tree/releases/2023/0/src/custom_nodes/east_ocr/Makefile). 
+a docker container with all build dependencies included. It is described in this [Makefile](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/east_ocr/Makefile). 
 
 ## Testing 
 The recommended method for testing the custom library is via OVMS execution:
