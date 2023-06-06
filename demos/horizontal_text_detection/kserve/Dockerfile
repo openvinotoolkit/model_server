@@ -20,24 +20,24 @@ RUN git clone https://github.com/oneapi-src/oneVPL.git onevpl && \
    make && \
    make install
 RUN cp _vplinstall/lib/libvpl.so.2.9 /lib/libvpl.so
- RUN git clone https://github.com/FFmpeg/FFmpeg.git /ffmpeg && \
-      cd ffmpeg && \
-      ./configure --enable-libvpl --toolchain=gcc-tsan && \
-      make -j60 && \
-      make install 
- RUN git clone https://github.com/opencv/opencv.git /opencv && \
-     cd /opencv && \
-     mkdir build && \
-     cd build && \
-     cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_GSTREAMER=ON -DWITH_FFMPEG=ON \
- 	  -DPYTHON_EXECUTABLE=$(which python) -DBUILD_opencv_python2=OFF \
- 	  -DCMAKE_INSTALL_PREFIX=$(python3 -c "import sys; print(sys.prefix)") \
- 	  -DPYTHON3_EXECUTABLE=$(which python3) \
- 	  -DPYTHON3_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
- 	  -DPYTHON3_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") .. && \
-    make -j $(nproc) && \
-    make install
- RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
+RUN git clone https://github.com/FFmpeg/FFmpeg.git /ffmpeg && \
+    cd ffmpeg && \
+    ./configure --enable-libvpl --toolchain=gcc-tsan && \
+    make -j60 && \
+    make install 
+RUN git clone https://github.com/opencv/opencv.git /opencv && \
+    cd /opencv && \
+    mkdir build && \
+    cd build && \
+    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_GSTREAMER=ON -DWITH_FFMPEG=ON \
+  -DPYTHON_EXECUTABLE=$(which python) -DBUILD_opencv_python2=OFF \
+  -DCMAKE_INSTALL_PREFIX=$(python3 -c "import sys; print(sys.prefix)") \
+  -DPYTHON3_EXECUTABLE=$(which python3) \
+  -DPYTHON3_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+  -DPYTHON3_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") .. && \
+  make -j $(nproc) && \
+  make install
+RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
 
-RUN pip3 install futures==3.1.1 tritonclient[all] protobuf==3.9.2
+RUN pip3 install tritonclient[all]
 COPY ./horizontal_text_detection.py ./horizontal_text_detection.py 
