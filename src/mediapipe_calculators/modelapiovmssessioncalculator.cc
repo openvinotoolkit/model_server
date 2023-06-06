@@ -29,7 +29,6 @@
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-#define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
 
 using ovms::OVMSInferenceAdapter;
 using std::endl;
@@ -43,25 +42,25 @@ class ModelAPISessionCalculator : public CalculatorBase {
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        MLOG("Session GetContract start");
+        LOG(INFO) << "Session GetContract start";
         RET_CHECK(cc->Inputs().GetTags().empty());
         RET_CHECK(cc->Outputs().GetTags().empty());
         cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set<std::shared_ptr<::InferenceAdapter>>();
         const auto& options = cc->Options<ModelAPIOVMSSessionCalculatorOptions>();
         RET_CHECK(!options.servable_name().empty());
-        MLOG("Session GetContract middle");
         // TODO validate version from string
         // TODO validate service url format
         // this is for later support for remote server inference
-        MLOG("Session GetContract end");
+        LOG(INFO) << "Session GetContract end";
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext* cc) final {
+        LOG(INFO) << "Session Close";
         return absl::OkStatus();
     }
     absl::Status Open(CalculatorContext* cc) final {
-        MLOG("Session Open start");
+        LOG(INFO) << "Session Open start";
         for (CollectionItemId id = cc->Inputs().BeginId();
              id < cc->Inputs().EndId(); ++id) {
             if (!cc->Inputs().Get(id).Header().IsEmpty()) {
@@ -86,21 +85,20 @@ public:
         try {
             session->loadModel(nullptr, UNUSED_OV_CORE, "UNUSED", {});
         } catch (const std::exception& e) {
-            MLOG("Catched exception with message:");
-            MLOG(e.what());
+            LOG(INFO) << "Catched exception with message: " << e.what();
             RET_CHECK(false);
         } catch (...) {
-            MLOG("Catched unknown exception");
+            LOG(INFO) << "Catched unknown exception";
             RET_CHECK(false);
         }
-        MLOG("Session create adapter");
+        LOG(INFO) << "Session create adapter";
         cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(MakePacket<std::shared_ptr<InferenceAdapter>>(session));
-        MLOG("SessionOpen end");
+        LOG(INFO) << "Session Open end";
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        MLOG("SessionProcess");
+        LOG(INFO) << "Session Process";
         return absl::OkStatus();
     }
 };
