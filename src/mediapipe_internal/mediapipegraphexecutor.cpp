@@ -216,7 +216,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
                         continue;
                     }
 
-                    *response = *(received);
+                    *response = std::move(*received);
                 } catch (const std::exception& e) {
                     SPDLOG_DEBUG("Mediapipe 'packet.Get' exception {}", e.what());
                     continue;

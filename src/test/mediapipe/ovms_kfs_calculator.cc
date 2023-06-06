@@ -84,14 +84,12 @@ public:
         }
         cc->SetOffset(TimestampDiff(0));
         OVMS_ServerNew(&cserver);
-
-        response = std::make_shared<KFSResponse>();
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
         const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
-
+        response = std::make_shared<KFSResponse>();
         for (int i = 0; i < request->inputs().size(); i++) {
             auto* output = response->add_outputs();
             output->set_datatype(request->inputs()[i].datatype());
