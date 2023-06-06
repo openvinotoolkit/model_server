@@ -143,14 +143,14 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
     // Passing whole KFS request and response
-    if (this->passKfsRequestFlag) {
+    if (this->passKfsRequestFlag == true) {
         if (this->config.output_stream().size() != 1) {
-            SPDLOG_ERROR("KServe request for mediapipe graph output size is incorrect for passing whole KFS request and response");
+            SPDLOG_ERROR("KServe passthrough through mediapipe graph requires having only one input (request) and one output(response)");
             return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_SIZE;
         }
 
         if (this->config.input_stream().size() != 1) {
-            SPDLOG_ERROR("KServe request for mediapipe graph input size is incorrect for passing whole KFS request and response");
+            SPDLOG_ERROR("KServe passthrough through mediapipe graph requires having only one input (request) and one output(response)");
             return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_SIZE;
         }
     }
@@ -184,28 +184,26 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     std::set<std::string> outputPollersWithReceivedPacket;
 
     // Passing whole KFS request and response
-    if (this->passKfsRequestFlag) {
+    if (this->passKfsRequestFlag == true) {
         SPDLOG_DEBUG("Passing whole KFS request and response");
-        for (auto name : inputNames) {
-            SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
-            absStatus = graph.AddPacketToInputStream(
-                name, ::mediapipe::MakePacket<const KFSRequest*>(request).At(::mediapipe::Timestamp(0)));
-            if (!absStatus.ok()) {
-                const std::string absMessage = absStatus.ToString();
-                SPDLOG_DEBUG("Failed to add KFS request packet to mediapipe graph: {} with error: {}",
-                    request->model_name(), absStatus.message(), absStatus.raw_code());
-                return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
-            }
-            absStatus = graph.CloseInputStream(name);
-            if (!absStatus.ok()) {
-                const std::string absMessage = absStatus.ToString();
-                SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
-                    name, request->model_name(), absMessage);
-                return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
-            }
+        auto name = inputNames[0];
+        absStatus = graph.AddPacketToInputStream(
+            name, ::mediapipe::MakePacket<const KFSRequest*>(request).At(::mediapipe::Timestamp(0)));
+        if (!absStatus.ok()) {
+            const std::string absMessage = absStatus.ToString();
+            SPDLOG_DEBUG("Failed to add KFS request packet to mediapipe graph: {} with error: {}",
+                request->model_name(), absStatus.message(), absStatus.raw_code());
+            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
+        }
+        absStatus = graph.CloseInputStream(name);
+        if (!absStatus.ok()) {
+            const std::string absMessage = absStatus.ToString();
+            SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
+                name, request->model_name(), absMessage);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
         }
 
-        // receive KFS response output
+        // Size checked to be equal 1 at the beggining of the function
         for (auto& [outputStreamName, poller] : outputPollers) {
             size_t receivedOutputs = 0;
             SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
@@ -231,6 +229,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
             SPDLOG_TRACE("Received all packets for: {}", outputStreamName);
         }
     } else {
+        // Processing non KFS pass through packets
         for (auto name : inputNames) {
             SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
             ov::Tensor input_tensor;

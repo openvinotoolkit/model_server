@@ -34,24 +34,24 @@ namespace mediapipe {
 using std::endl;
 
 namespace {
-#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                         \
-    {                                                                                               \
-        auto* err = C_API_CALL;                                                                     \
-        if (err != nullptr) {                                                                       \
-            uint32_t code = 0;                                                                      \
-            const char* msg = nullptr;                                                              \
-            OVMS_StatusGetCode(err, &code);                                                         \
-            OVMS_StatusGetDetails(err, &msg);                                                       \
-            LOG(ERROR) << "Error encountred in OVMSKFSPassCalculator:" << msg << " code: " << code; \
-            OVMS_StatusDelete(err);                                                                 \
-            RET_CHECK(err == nullptr);                                                              \
-        }                                                                                           \
+#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                             \
+    {                                                                                                   \
+        auto* err = C_API_CALL;                                                                         \
+        if (err != nullptr) {                                                                           \
+            uint32_t code = 0;                                                                          \
+            const char* msg = nullptr;                                                                  \
+            OVMS_StatusGetCode(err, &code);                                                             \
+            OVMS_StatusGetDetails(err, &msg);                                                           \
+            LOG(ERROR) << "Error encountred in OVMSTestKFSPassCalculator:" << msg << " code: " << code; \
+            OVMS_StatusDelete(err);                                                                     \
+            RET_CHECK(err == nullptr);                                                                  \
+        }                                                                                               \
     }
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
 }  // namespace
 
-class OVMSKFSPassCalculator : public CalculatorBase {
+class OVMSTestKFSPassCalculator : public CalculatorBase {
     OVMS_Server* cserver{nullptr};
     OVMS_ServerSettings* _serverSettings{nullptr};
     OVMS_ModelsSettings* _modelsSettings{nullptr};
@@ -111,5 +111,5 @@ public:
     }
 };
 
-REGISTER_CALCULATOR(OVMSKFSPassCalculator);
+REGISTER_CALCULATOR(OVMSTestKFSPassCalculator);
 }  // namespace mediapipe
