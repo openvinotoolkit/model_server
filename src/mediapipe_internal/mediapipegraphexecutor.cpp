@@ -211,8 +211,19 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
             SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
             while (poller.Next(&packet)) {
                 SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
-                auto received = packet.Get<KFSResponse*>();
-                *response = *(received);
+                try {
+                    auto received = packet.Get<KFSResponse*>();
+                    if (received == nullptr) {
+                        SPDLOG_DEBUG("Received nullptr KFSResponse for: {}", outputStreamName);
+                        continue;
+                    }
+
+                    *response = *(received);
+                } catch (const std::exception& e) {
+                    SPDLOG_DEBUG("Mediapipe 'packet.Get' exception {}", e.what());
+                    continue;
+                }
+
                 SPDLOG_TRACE("Received packet for: {} {}", outputStreamName, receivedOutputs);
                 outputPollersWithReceivedPacket.insert(outputStreamName);
                 ++receivedOutputs;

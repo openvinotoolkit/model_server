@@ -56,7 +56,7 @@ class OVMSKFSPassCalculator : public CalculatorBase {
     OVMS_ServerSettings* _serverSettings{nullptr};
     OVMS_ModelsSettings* _modelsSettings{nullptr};
     std::unordered_map<std::string, std::string> outputNameToTag;
-    KFSResponse* response;
+    std::shared_ptr<KFSResponse> response;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -69,7 +69,6 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        delete response;
         return absl::OkStatus();
     }
     absl::Status Open(CalculatorContext* cc) final {
@@ -86,12 +85,12 @@ public:
         cc->SetOffset(TimestampDiff(0));
         OVMS_ServerNew(&cserver);
 
+        response = std::make_shared<KFSResponse>();
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
         const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
-        response = new KFSResponse();
 
         for (int i = 0; i < request->inputs().size(); i++) {
             auto* output = response->add_outputs();
@@ -106,7 +105,7 @@ public:
             response->add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
         }
 
-        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse*>(response).At(::mediapipe::Timestamp(0)));
+        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse*>(response.get()).At(::mediapipe::Timestamp(0)));
 
         return absl::OkStatus();
     }

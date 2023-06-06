@@ -54,14 +54,16 @@ protected:
     const Precision precision = Precision::FP32;
     std::unique_ptr<std::thread> t;
     std::string port = "9178";
-    void SetUpServer(const char* configPath) {
+    void SetUpServer(const char* configPath, const char* poolWaitSeconds = "1") {
         server.setShutdownRequest(0);
         randomizePort(this->port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath,
             (char*)"--port",
-            (char*)port.c_str()};
+            (char*)port.c_str(),
+            (char*)"--file_system_poll_wait_seconds",
+            (char*)poolWaitSeconds};
         int argc = 5;
         t.reset(new std::thread([&argc, &argv, this]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
@@ -92,7 +94,7 @@ public:
 class MediapipeFlowKfsTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_kfs.json");
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_kfs.json", "0");
     }
 };
 
