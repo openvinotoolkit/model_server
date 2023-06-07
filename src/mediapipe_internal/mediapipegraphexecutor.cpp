@@ -157,12 +157,18 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
 
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
     for (auto& name : this->config.output_stream()) {
-        auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
+        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
+        if (streamName.empty()) {
+            SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
+            return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
+        }
+        auto absStatusOrPoller = graph.AddOutputStreamPoller(streamName);
         if (!absStatusOrPoller.ok()) {
             const std::string absMessage = absStatusOrPoller.status().ToString();
+            SPDLOG_DEBUG("Failed to add mediapipe graph output stream poller: {} with error: {}", request->model_name(), absMessage);
             return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, std::move(absMessage));
         }
-        outputPollers.emplace(name, std::move(absStatusOrPoller).value());
+        outputPollers.emplace(streamName, std::move(absStatusOrPoller).value());
     }
     auto inputNames = this->config.input_stream();
     std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(request)};
@@ -186,7 +192,11 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     // Passing whole KFS request and response
     if (this->passKfsRequestFlag == true) {
         SPDLOG_DEBUG("Passing whole KFS request and response");
-        auto name = inputNames[0];
+        std::string name = MediapipeGraphDefinition::getStreamName(inputNames[0]);
+        if (name.empty()) {
+            SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
+            return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
+        }
         absStatus = graph.AddPacketToInputStream(
             name, ::mediapipe::MakePacket<const KFSRequest*>(request).At(::mediapipe::Timestamp(0)));
         if (!absStatus.ok()) {
@@ -230,7 +240,12 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         }
     } else {
         // Processing non KFS pass through packets
-        for (auto name : inputNames) {
+        for (auto& name : inputNames) {
+            name = MediapipeGraphDefinition::getStreamName(name);
+            if (name.empty()) {
+                SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
+                return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
+            }
             SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
             ov::Tensor input_tensor;
             auto status = deserializeTensor(name, version, request, input_tensor);

@@ -54,16 +54,14 @@ protected:
     const Precision precision = Precision::FP32;
     std::unique_ptr<std::thread> t;
     std::string port = "9178";
-    void SetUpServer(const char* configPath, const char* poolWaitSeconds = "1") {
+    void SetUpServer(const char* configPath) {
         server.setShutdownRequest(0);
         randomizePort(this->port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath,
             (char*)"--port",
-            (char*)port.c_str(),
-            (char*)"--file_system_poll_wait_seconds",
-            (char*)poolWaitSeconds};
+            (char*)port.c_str()};
         int argc = 5;
         t.reset(new std::thread([&argc, &argv, this]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
@@ -94,7 +92,7 @@ public:
 class MediapipeFlowKfsTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_kfs.json", "0");
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_kfs.json");
     }
 };
 
@@ -566,6 +564,38 @@ TEST(Mediapipe, MetadataDummy) {
     const auto& output = outputs.at("out");
     EXPECT_EQ(output->getShape(), Shape({}));
     EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
+}
+
+
+
+TEST(Mediapipe, MetadataDummyInputTypes) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "test:in"
+    output_stream: "test2:out"
+        node {
+        calculator: "OVMSOVCalculator"
+        input_stream: "B:in"
+        output_stream: "A:out"
+        }
+    )";
+
+    /* TODO: Add tests
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", testPbtxt};
+    ovms::MediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc);
+    tensor_map_t inputs = mediapipeDummy.getInputsInfo();
+    tensor_map_t outputs = mediapipeDummy.getOutputsInfo();
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_NE(inputs.find("in"), inputs.end());
+    ASSERT_NE(outputs.find("out"), outputs.end());
+    const auto& input = inputs.at("in");
+    EXPECT_EQ(input->getShape(), Shape({}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::UNDEFINED);
+    const auto& output = outputs.at("out");
+    EXPECT_EQ(output->getShape(), Shape({}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
+    */
 }
 
 const std::vector<std::string> mediaGraphsDummy{"mediaDummy",

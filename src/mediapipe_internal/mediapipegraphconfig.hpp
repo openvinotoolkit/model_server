@@ -175,24 +175,6 @@ public:
     }
 
     /**
-         * @brief Get the passKfsRequest
-         *
-         * @return const bool
-         */
-    const bool getPassKfsRequestFlag() const {
-        return this->passKfsRequest;
-    }
-
-    /**
-         * @brief Set the PassKfsRequestFlag
-         *
-         * @param passKfsRequest
-         */
-    void setPassKfsRequestFlag(const bool passKfsRequest) {
-        this->passKfsRequest = passKfsRequest;
-    }
-
-    /**
      * @brief  Parses all settings from a JSON node
         *
         * @return Status
@@ -221,10 +203,6 @@ public:
                 this->setGraphPath(basePath + "graph.pbtxt");
                 SPDLOG_DEBUG("graph_path not defined in config so it will be set to default based on base_path and graph name: {}", this->getGraphPath());
             }
-            if (v.HasMember("graph_pass_kfs_request"))
-                this->setPassKfsRequestFlag(v["graph_pass_kfs_request"].GetBool());
-            else
-                this->setPassKfsRequestFlag(false);
             if (v.HasMember("subconfig")) {
                 this->setSubconfigPath(v["subconfig"].GetString());
             } else {

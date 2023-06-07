@@ -202,9 +202,6 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
              },
              "subconfig": {
                  "type": "string"
-             },
-             "graph_pass_kfs_request": {
-                 "type": "boolean"
              }
         },
         "additionalProperties": false

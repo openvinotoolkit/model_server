@@ -70,6 +70,16 @@ std::vector<std::string> tokenize(const std::string& str, const char delimiter);
 bool endsWith(const std::string& str, const std::string& match);
 
 /**
+ * @brief Checks if given string starts with another one
+ *
+ * @param str
+ * @param match
+ * @return true
+ * @return false
+ */
+bool startsWith(const char* str, const char* prefix);
+
+/**
  * @brief Converts string to uint32, returns 0 or specified default value if conversion failed, fails if negative number is provided
  *
  * @param string input

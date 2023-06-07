@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-input_stream: "in"
-output_stream: "out"
+input_stream: "REQUEST:in"
+output_stream: "RESPONSE:out"
 node {
   calculator: "OVMSTestKFSPassCalculator"
   input_stream: "REQUEST:in"

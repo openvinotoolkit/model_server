@@ -26,6 +26,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
+#include "../stringutils.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
@@ -82,6 +83,17 @@ public:
 
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
 
+    static std::string getStreamName(const std::string& streamFullName){
+        std::vector<std::string> tokens = tokenize(streamFullName, ':');
+        if (tokens.size() == 2){
+            return tokens[1];
+        } else if (tokens.size() == 1) {
+            return tokens[0];
+        }
+        static std::string empty = "";
+        return empty;
+    }
+
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
@@ -92,6 +104,8 @@ public:
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
+
+
 
 protected:
     Status validateForConfigFileExistence();

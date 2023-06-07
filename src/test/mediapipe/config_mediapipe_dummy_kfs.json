@@ -10,8 +10,7 @@
     "mediapipe_config_list": [
     {
         "name":"mediapipeDummyKFS",
-        "graph_path":"/ovms/src/test/mediapipe/graphkfspass.pbtxt",
-        "graph_pass_kfs_request":true
+        "graph_path":"/ovms/src/test/mediapipe/graphkfspass.pbtxt"
     }
     ]
 }

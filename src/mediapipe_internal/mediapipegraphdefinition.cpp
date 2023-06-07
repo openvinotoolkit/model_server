@@ -127,7 +127,12 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
 Status MediapipeGraphDefinition::createInputsInfo() {
     inputsInfo.clear();
     for (auto& name : config.input_stream()) {
-        inputsInfo.insert({name, TensorInfo::getUnspecifiedTensorInfo()});
+        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
+        if (streamName.empty()) {
+            SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
+            return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
+        }
+        inputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
     }
     return StatusCode::OK;
 }
@@ -135,7 +140,12 @@ Status MediapipeGraphDefinition::createInputsInfo() {
 Status MediapipeGraphDefinition::createOutputsInfo() {
     outputsInfo.clear();
     for (auto& name : this->config.output_stream()) {
-        outputsInfo.insert({name, TensorInfo::getUnspecifiedTensorInfo()});
+        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
+        if (streamName.empty()) {
+            SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
+            return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
+        }
+        outputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
     }
     return StatusCode::OK;
 }
@@ -148,7 +158,26 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
         return status;
     }
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
-    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config, this->mgconfig.getPassKfsRequestFlag());
+
+    bool passKfsRequestFlag = false;
+    // Check if we are passing whole KFS request and response
+    if (this->config.input_stream().size() > 0) {
+        std::string firstName = this->config.input_stream()[0];
+        if (startsWith(firstName.c_str(), "REQUEST:")){
+            if (this->config.output_stream().size() > 0) {
+                firstName = this->config.output_stream()[0];
+                if (startsWith(firstName.c_str(), "RESPONSE:")){
+                    SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request graph detected.");
+                    passKfsRequestFlag = true;
+                } else {
+                    SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request and response requires RESPONSE: string in the output stream name");
+                    return Status(StatusCode::MEDIAPIPE_KFS_PASS_MISSING_RESPONSE_GRAPH_OUTPUT_NAME);
+                }
+            }
+        }
+    }
+
+    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config, passKfsRequestFlag);
     return status;
 }
 
