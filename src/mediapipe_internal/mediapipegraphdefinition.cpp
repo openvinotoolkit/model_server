@@ -163,10 +163,10 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     // Check if we are passing whole KFS request and response
     if (this->config.input_stream().size() > 0) {
         std::string firstName = this->config.input_stream()[0];
-        if (startsWith(firstName.c_str(), "REQUEST:")){
+        if (startsWith(firstName.c_str(), "REQUEST:")) {
             if (this->config.output_stream().size() > 0) {
                 firstName = this->config.output_stream()[0];
-                if (startsWith(firstName.c_str(), "RESPONSE:")){
+                if (startsWith(firstName.c_str(), "RESPONSE:")) {
                     SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request graph detected.");
                     passKfsRequestFlag = true;
                 } else {

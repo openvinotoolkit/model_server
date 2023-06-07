@@ -83,9 +83,9 @@ public:
 
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
 
-    static std::string getStreamName(const std::string& streamFullName){
+    static std::string getStreamName(const std::string& streamFullName) {
         std::vector<std::string> tokens = tokenize(streamFullName, ':');
-        if (tokens.size() == 2){
+        if (tokens.size() == 2) {
             return tokens[1];
         } else if (tokens.size() == 1) {
             return tokens[0];
@@ -104,8 +104,6 @@ public:
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
-
-
 
 protected:
     Status validateForConfigFileExistence();

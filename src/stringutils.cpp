@@ -18,11 +18,11 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <locale>
 #include <sstream>
-#include <cstring>
 #include <utility>
 namespace ovms {
 

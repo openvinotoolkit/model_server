@@ -566,8 +566,6 @@ TEST(Mediapipe, MetadataDummy) {
     EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
-
-
 TEST(Mediapipe, MetadataDummyInputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
