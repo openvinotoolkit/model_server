@@ -137,7 +137,11 @@ Status MediapipeGraphDefinition::createInputsInfo() {
             SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
             return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
         }
-        inputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
+        const auto [it, success] = inputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
+        if (!success){
+            SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}. Input with the same name already exists.", name);
+            return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
+        }
     }
     return StatusCode::OK;
 }
@@ -150,7 +154,11 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
             SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
             return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
         }
-        outputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
+        const auto [it, success] = outputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
+        if (!success){
+            SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}. Output with the same name already exists.", name);
+            return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
+        }
     }
     return StatusCode::OK;
 }

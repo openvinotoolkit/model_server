@@ -46,25 +46,6 @@ class MediapipeGraphDefinitionUnloadGuard;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
-    struct ValidationResultNotifier {
-        ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
-            status(status),
-            loadedNotify(loadedNotify) {
-        }
-        ~ValidationResultNotifier() {
-            if (passed) {
-                status.handle(ValidationPassedEvent());
-                loadedNotify.notify_all();
-            } else {
-                status.handle(ValidationFailedEvent());
-            }
-        }
-        bool passed = false;
-
-    private:
-        PipelineDefinitionStatus& status;
-        std::condition_variable& loadedNotify;
-    };
 
 public:
     MediapipeGraphDefinition(const std::string name,
@@ -106,6 +87,26 @@ public:
     static constexpr model_version_t VERSION = 1;
 
 protected:
+    struct ValidationResultNotifier {
+        ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
+            status(status),
+            loadedNotify(loadedNotify) {
+        }
+        ~ValidationResultNotifier() {
+            if (passed) {
+                status.handle(ValidationPassedEvent());
+                loadedNotify.notify_all();
+            } else {
+                status.handle(ValidationFailedEvent());
+            }
+        }
+        bool passed = false;
+
+        private:
+            PipelineDefinitionStatus& status;
+            std::condition_variable& loadedNotify;
+        };
+
     Status validateForConfigFileExistence();
     Status validateForConfigLoadableness();
     
@@ -121,6 +122,9 @@ protected:
     Status createInputsInfo();
     Status createOutputsInfo();
 
+    std::condition_variable loadedNotify;
+    mutable std::shared_mutex metadataMtx;
+
 private:
     void increaseRequestsHandlesCount() {
         ++requestsHandlesCounter;
@@ -133,9 +137,7 @@ private:
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
 
-    mutable std::shared_mutex metadataMtx;
     std::atomic<uint64_t> requestsHandlesCounter = 0;
-    std::condition_variable loadedNotify;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

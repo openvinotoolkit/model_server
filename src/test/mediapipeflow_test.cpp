@@ -582,6 +582,7 @@ class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
     }
 
     Status validate(ModelManager& manager) {
+        ValidationResultNotifier notifier(this->status, this->loadedNotify);
         Status validationResult = validateForConfigFileExistence();
         if (!validationResult.ok()) {
             return validationResult;
@@ -591,6 +592,7 @@ class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
             return validationResult;
         }
 
+        std::unique_lock lock(metadataMtx);
         ::mediapipe::CalculatorGraphConfig proto;
         auto status = createInputsInfo();
         if (!status.ok()) {
@@ -603,15 +605,89 @@ class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
             return status;
         }
 
+        lock.unlock();
+        notifier.passed = true;
         return StatusCode::OK;
     }
+
 };
 
 TEST(Mediapipe, MetadataDummyInputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "test:in"
-    output_stream: "test2:out"
+    input_stream: "test33:in2"
+    output_stream: "test0:out"
+    output_stream: "test1:out2"
+    output_stream: "test3:out3"
+        node {
+        calculator: "OVMSOVCalculator"
+        input_stream: "B:in"
+        output_stream: "A:out"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    tensor_map_t inputs = mediapipeDummy.getInputsInfo();
+    tensor_map_t outputs = mediapipeDummy.getOutputsInfo();
+    ASSERT_EQ(inputs.size(), 2);
+    ASSERT_EQ(outputs.size(), 3);
+    ASSERT_NE(inputs.find("in"), inputs.end());
+    ASSERT_NE(outputs.find("out"), outputs.end());
+    const auto& input = inputs.at("in");
+    EXPECT_EQ(input->getShape(), Shape({}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::UNDEFINED);
+    const auto& output = outputs.at("out");
+    EXPECT_EQ(output->getShape(), Shape({}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
+}
+
+TEST(Mediapipe, MetadataExistingInputNames) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "test:in"
+    input_stream: "test33:in"
+    output_stream: "test0:out"
+        node {
+        calculator: "OVMSOVCalculator"
+        input_stream: "B:in"
+        output_stream: "A:out"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+}
+
+TEST(Mediapipe, MetadataExistingOutputNames) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "test:in"
+    output_stream: "test0:out"
+    output_stream: "test1:out"
+        node {
+        calculator: "OVMSOVCalculator"
+        input_stream: "B:in"
+        output_stream: "A:out"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR);
+}
+
+TEST(Mediapipe, MetadataMissingResponseInputTypes) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "test3:out"
         node {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
@@ -629,13 +705,37 @@ TEST(Mediapipe, MetadataDummyInputTypes) {
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_NE(inputs.find("in"), inputs.end());
     ASSERT_NE(outputs.find("out"), outputs.end());
-    const auto& input = inputs.at("in");
-    EXPECT_EQ(input->getShape(), Shape({}));
-    EXPECT_EQ(input->getPrecision(), ovms::Precision::UNDEFINED);
-    const auto& output = outputs.at("out");
-    EXPECT_EQ(output->getShape(), Shape({}));
-    EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
 
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::MEDIAPIPE_KFS_PASS_MISSING_RESPONSE_GRAPH_OUTPUT_NAME);
+}
+
+TEST(Mediapipe, MetadataNegativeWrongInputTypes) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "wrong:REQUEST:in"
+    output_stream: "number:test3:out"
+        node {
+        calculator: "OVMSOVCalculator"
+        input_stream: "B:in"
+        output_stream: "A:out"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+}
+
+TEST(Mediapipe, MetadataEmptyConfig) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = "";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 const std::vector<std::string> mediaGraphsDummy{"mediaDummy",
