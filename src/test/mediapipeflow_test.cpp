@@ -566,6 +566,47 @@ TEST(Mediapipe, MetadataDummy) {
     EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
+class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
+    public:
+    std::string inputConfig;
+
+    public:
+    DummyMediapipeGraphDefinition(const std::string name,
+        const MediapipeGraphConfig& config,
+        std::string inputConfig) : MediapipeGraphDefinition(name, config , nullptr, nullptr) {}
+    
+    // Do not read from path - use predefined config contents
+    Status validateForConfigFileExistence() {
+        this->chosenConfig = this->inputConfig;
+        return StatusCode::OK;
+    }
+
+    Status validate(ModelManager& manager) {
+        Status validationResult = validateForConfigFileExistence();
+        if (!validationResult.ok()) {
+            return validationResult;
+        }
+        validationResult = validateForConfigLoadableness();
+        if (!validationResult.ok()) {
+            return validationResult;
+        }
+
+        ::mediapipe::CalculatorGraphConfig proto;
+        auto status = createInputsInfo();
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create inputs info for mediapipe graph definition: {}", getName());
+            return status;
+        }
+        status = createOutputsInfo();
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
+            return status;
+        }
+
+        return StatusCode::OK;
+    }
+};
+
 TEST(Mediapipe, MetadataDummyInputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -578,9 +619,10 @@ TEST(Mediapipe, MetadataDummyInputTypes) {
         }
     )";
 
-    /* TODO: Add tests
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", testPbtxt};
-    ovms::MediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc);
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     tensor_map_t inputs = mediapipeDummy.getInputsInfo();
     tensor_map_t outputs = mediapipeDummy.getOutputsInfo();
     ASSERT_EQ(inputs.size(), 1);
@@ -593,7 +635,7 @@ TEST(Mediapipe, MetadataDummyInputTypes) {
     const auto& output = outputs.at("out");
     EXPECT_EQ(output->getShape(), Shape({}));
     EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
-    */
+
 }
 
 const std::vector<std::string> mediaGraphsDummy{"mediaDummy",

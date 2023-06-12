@@ -48,11 +48,6 @@ private:
     std::string graphPath;
 
     /**
-         * @brief Flag determing should we pass whole KFSrequest
-         */
-    bool passKfsRequest;
-
-    /**
          * @brief Json config directory path
          */
     std::string rootDirectoryPath;
@@ -69,25 +64,21 @@ public:
          * @param name
          * @param basePath
          * @param graphPath
-         * @param passKfsRequest
          * @param subconfigPath
          */
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
         const std::string& graphPath = "",
-        const bool passKfsRequest = false,
         const std::string& subconfigPath = "") :
         graphName(graphName),
         basePath(basePath),
         graphPath(graphPath),
-        passKfsRequest(passKfsRequest),
         subconfigPath(subconfigPath) {
     }
 
     void clear() {
         graphName.clear();
         graphPath.clear();
-        passKfsRequest = false;
     }
 
     /**

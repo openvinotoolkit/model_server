@@ -108,11 +108,20 @@ public:
 protected:
     Status validateForConfigFileExistence();
     Status validateForConfigLoadableness();
+    
+    std::string chosenConfig;  // TODO make const @atobiszei
+    static MediapipeGraphConfig MGC;
+    const std::string name;
 
-private:
+    PipelineDefinitionStatus status;
+
+    MediapipeGraphConfig mgconfig;
+    ::mediapipe::CalculatorGraphConfig config;
+
     Status createInputsInfo();
     Status createOutputsInfo();
 
+private:
     void increaseRequestsHandlesCount() {
         ++requestsHandlesCounter;
     }
@@ -121,17 +130,9 @@ private:
         --requestsHandlesCounter;
     }
 
-    static MediapipeGraphConfig MGC;
-    const std::string name;
-
-    std::string chosenConfig;  // TODO make const @atobiszei
-    MediapipeGraphConfig mgconfig;
-    ::mediapipe::CalculatorGraphConfig config;
-
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
 
-    PipelineDefinitionStatus status;
     mutable std::shared_mutex metadataMtx;
     std::atomic<uint64_t> requestsHandlesCounter = 0;
     std::condition_variable loadedNotify;

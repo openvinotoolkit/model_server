@@ -71,6 +71,11 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
 }
 
 Status MediapipeGraphDefinition::validateForConfigLoadableness() {
+    if (chosenConfig.empty()){
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+
     bool success = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
     if (!success) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
