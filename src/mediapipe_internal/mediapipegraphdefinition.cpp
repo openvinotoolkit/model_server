@@ -71,7 +71,7 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
 }
 
 Status MediapipeGraphDefinition::validateForConfigLoadableness() {
-    if (chosenConfig.empty()){
+    if (chosenConfig.empty()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
@@ -138,7 +138,7 @@ Status MediapipeGraphDefinition::createInputsInfo() {
             return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
         }
         const auto [it, success] = inputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
-        if (!success){
+        if (!success) {
             SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}. Input with the same name already exists.", name);
             return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
         }
@@ -155,7 +155,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
             return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
         }
         const auto [it, success] = outputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
-        if (!success){
+        if (!success) {
             SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}. Output with the same name already exists.", name);
             return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
         }

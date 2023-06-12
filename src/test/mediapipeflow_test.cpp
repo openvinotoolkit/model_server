@@ -567,14 +567,15 @@ TEST(Mediapipe, MetadataDummy) {
 }
 
 class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
-    public:
+public:
     std::string inputConfig;
 
-    public:
+public:
     DummyMediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config,
-        std::string inputConfig) : MediapipeGraphDefinition(name, config , nullptr, nullptr) {}
-    
+        std::string inputConfig) :
+        MediapipeGraphDefinition(name, config, nullptr, nullptr) {}
+
     // Do not read from path - use predefined config contents
     Status validateForConfigFileExistence() {
         this->chosenConfig = this->inputConfig;
@@ -609,7 +610,6 @@ class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
         notifier.passed = true;
         return StatusCode::OK;
     }
-
 };
 
 TEST(Mediapipe, MetadataDummyInputTypes) {

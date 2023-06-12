@@ -102,14 +102,14 @@ protected:
         }
         bool passed = false;
 
-        private:
-            PipelineDefinitionStatus& status;
-            std::condition_variable& loadedNotify;
-        };
+    private:
+        PipelineDefinitionStatus& status;
+        std::condition_variable& loadedNotify;
+    };
 
     Status validateForConfigFileExistence();
     Status validateForConfigLoadableness();
-    
+
     std::string chosenConfig;  // TODO make const @atobiszei
     static MediapipeGraphConfig MGC;
     const std::string name;
