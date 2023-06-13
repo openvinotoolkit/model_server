@@ -131,6 +131,7 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
 
 Status MediapipeGraphDefinition::createInputsInfo() {
     inputsInfo.clear();
+    inputNames.reserve(this->config.input_stream().size());
     for (auto& name : config.input_stream()) {
         std::string streamName = MediapipeGraphDefinition::getStreamName(name);
         if (streamName.empty()) {
@@ -142,12 +143,15 @@ Status MediapipeGraphDefinition::createInputsInfo() {
             SPDLOG_ERROR("Creating Mediapipe graph inputs name failed for: {}. Input with the same name already exists.", name);
             return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME;
         }
+
+        inputNames.push_back(streamName);
     }
     return StatusCode::OK;
 }
 
 Status MediapipeGraphDefinition::createOutputsInfo() {
     outputsInfo.clear();
+    inputNames.reserve(this->config.output_stream().size());
     for (auto& name : this->config.output_stream()) {
         std::string streamName = MediapipeGraphDefinition::getStreamName(name);
         if (streamName.empty()) {
@@ -159,6 +163,8 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
             SPDLOG_ERROR("Creating Mediapipe graph outputs name failed for: {}. Output with the same name already exists.", name);
             return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME;
         }
+
+        outputNames.push_back(streamName);
     }
     return StatusCode::OK;
 }
@@ -180,7 +186,8 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
         return status;
     }
 
-    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config, passKfsRequestFlag);
+    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
+        this->config, passKfsRequestFlag, this->inputNames, this->outputNames);
     return status;
 }
 

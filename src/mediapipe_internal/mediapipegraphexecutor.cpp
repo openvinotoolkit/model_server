@@ -98,11 +98,14 @@ static Status deserializeTensor(const std::string& requestedName, const std::str
     return Status(StatusCode::INTERNAL_ERROR, "Unexpected error during Tensor creation");
 }
 
-MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config, bool passKfsRequestFlag) :
+MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config, bool passKfsRequestFlag,
+    const std::vector<std::string> inputNames, const std::vector<std::string> outputNames) :
     name(name),
     version(version),
     config(config),
-    passKfsRequestFlag(passKfsRequestFlag) {}
+    passKfsRequestFlag(passKfsRequestFlag),
+    inputNames(inputNames),
+    outputNames(outputNames) {}
 
 namespace {
 enum : unsigned int {
@@ -144,21 +147,20 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     }
 
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
-    for (auto& name : this->config.output_stream()) {
-        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
-        if (streamName.empty()) {
+    for (auto& name : this->outputNames) {
+        if (name.empty()) {
             SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
             return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
         }
-        auto absStatusOrPoller = graph.AddOutputStreamPoller(streamName);
+        auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
         if (!absStatusOrPoller.ok()) {
             const std::string absMessage = absStatusOrPoller.status().ToString();
             SPDLOG_DEBUG("Failed to add mediapipe graph output stream poller: {} with error: {}", request->model_name(), absMessage);
             return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, std::move(absMessage));
         }
-        outputPollers.emplace(streamName, std::move(absStatusOrPoller).value());
+        outputPollers.emplace(name, std::move(absStatusOrPoller).value());
     }
-    auto inputNames = this->config.input_stream();
+
     std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(request)};
     absStatus = graph.StartRun(inputSidePackets);
     if (!absStatus.ok()) {
@@ -166,9 +168,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", request->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, std::move(absMessage));
     }
-    if (inputNames.size() != request->inputs().size()) {
+    if (static_cast<int>(this->inputNames.size()) != request->inputs().size()) {
         std::stringstream ss;
-        ss << "Expected: " << inputNames.size() << "; Actual: " << request->inputs().size();
+        ss << "Expected: " << this->inputNames.size() << "; Actual: " << request->inputs().size();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", request->model_name(), version, details);
         return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
@@ -180,7 +182,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     // Passing whole KFS request and response
     if (this->passKfsRequestFlag == true) {
         SPDLOG_DEBUG("Passing whole KFS request and response");
-        std::string name = MediapipeGraphDefinition::getStreamName(inputNames[0]);
+        std::string name = this->inputNames[0];
         if (name.empty()) {
             SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
             return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
@@ -228,8 +230,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         }
     } else {
         // Processing non KFS pass through packets
-        for (auto& name : inputNames) {
-            name = MediapipeGraphDefinition::getStreamName(name);
+        for (auto& name : this->inputNames) {
             if (name.empty()) {
                 SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
                 return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;

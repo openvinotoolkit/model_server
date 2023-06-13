@@ -138,6 +138,9 @@ private:
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
 
+    std::vector<std::string> inputNames;
+    std::vector<std::string> outputNames;
+
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 };
 
