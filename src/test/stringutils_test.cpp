@@ -130,7 +130,7 @@ TEST(StringUtils, endsWith) {
 TEST(StringUtils, startsWith) {
     std::string str0 = "";
     std::string str1 = "test case 1";
-    std::string str2 = "{} not really matter 1 }";
+    std::string str2 = "{ not really matter 1 }";
 
     auto b0 = ovms::startsWith(str0.c_str(), "");
     auto b1 = ovms::startsWith(str0.c_str(), "/");
