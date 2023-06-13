@@ -104,8 +104,8 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     version(version),
     config(config),
     passKfsRequestFlag(passKfsRequestFlag),
-    inputNames(inputNames),
-    outputNames(outputNames) {}
+    inputNames(std::move(inputNames)),
+    outputNames(std::move(outputNames)) {}
 
 namespace {
 enum : unsigned int {
