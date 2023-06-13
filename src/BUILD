@@ -411,7 +411,6 @@ cc_library(
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
-    ],
         ] + select({
             "//conditions:default": [
             ],
