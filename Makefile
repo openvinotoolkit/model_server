@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+# workaround for docker clipping build step logs
+BUILDKIT_STEP_LOG_MAX_SIZE=500000000
+BUILDKIT_STEP_LOG_MAX_SPEED=10000000
+
 VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
