@@ -35,6 +35,7 @@
 #include <sysexits.h>
 #include <unistd.h>
 
+#include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
@@ -48,7 +49,6 @@
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"
-#include "server_settings.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 

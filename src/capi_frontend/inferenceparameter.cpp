@@ -18,7 +18,7 @@
 
 #include <stdexcept>
 
-#include "ovms.h"  // NOLINT
+#include "../ovms.h"  // NOLINT
 namespace ovms {
 //
 size_t DataTypeToByteSize(OVMS_DataType datatype) {

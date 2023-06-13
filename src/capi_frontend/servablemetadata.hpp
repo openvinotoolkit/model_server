@@ -20,8 +20,8 @@
 #include <utility>
 #include <vector>
 
-#include "modelversion.hpp"
-#include "tensorinfo.hpp"
+#include "../modelversion.hpp"
+#include "../tensorinfo.hpp"
 
 namespace ovms {
 using capi_tensor_shapes_map_t = std::unordered_map<std::string, std::vector<dimension_value_t>>;
@@ -45,6 +45,8 @@ public:
         const tensor_map_t& inputsInfo,
         const tensor_map_t& outputsInfo,
         const ov::AnyMap& anyMap = EMPTY_RT_INFO);
+    const std::string& getName() const { return name; }
+    model_version_t getVersion() const { return version; }
     const tensor_map_t& getInputsInfo() const { return inputsInfo; }
     const tensor_map_t& getOutputsInfo() const { return outputsInfo; }
     const capi_tensor_shapes_map_t& getInputDimsMin() const { return this->inDimMin; }

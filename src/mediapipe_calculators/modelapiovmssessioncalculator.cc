@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <unordered_map>
 
@@ -24,44 +25,42 @@
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "modelapiovmsadapter.hpp"
-#include "modelapiovmsadapterwrapper.hpp"
 #include "src/mediapipe_calculators/modelapiovmssessioncalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-#define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
 
-using ovms::AdapterWrapper;
 using ovms::OVMSInferenceAdapter;
 using std::endl;
 
 const std::string SESSION_TAG{"SESSION"};
+ov::Core UNUSED_OV_CORE;
 
 class ModelAPISessionCalculator : public CalculatorBase {
-    std::unique_ptr<AdapterWrapper> adapter;
+    std::shared_ptr<::InferenceAdapter> adapter;
     std::unordered_map<std::string, std::string> outputNameToTag;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        MLOG("Session GetContract start");
+        LOG(INFO) << "Session GetContract start";
         RET_CHECK(cc->Inputs().GetTags().empty());
         RET_CHECK(cc->Outputs().GetTags().empty());
-        cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set<AdapterWrapper>();
+        cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set<std::shared_ptr<::InferenceAdapter>>();
         const auto& options = cc->Options<ModelAPIOVMSSessionCalculatorOptions>();
         RET_CHECK(!options.servable_name().empty());
-        MLOG("Session GetContract middle");
         // TODO validate version from string
         // TODO validate service url format
         // this is for later support for remote server inference
-        MLOG("Session GetContract end");
+        LOG(INFO) << "Session GetContract end";
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext* cc) final {
+        LOG(INFO) << "Session Close";
         return absl::OkStatus();
     }
     absl::Status Open(CalculatorContext* cc) final {
-        MLOG("Session Open start");
+        LOG(INFO) << "Session Open start";
         for (CollectionItemId id = cc->Inputs().BeginId();
              id < cc->Inputs().EndId(); ++id) {
             if (!cc->Inputs().Get(id).Header().IsEmpty()) {
@@ -82,15 +81,24 @@ public:
         auto servableVersionOpt = ::ovms::stou32(servableVersionStr);
         // 0 means default
         uint32_t servableVersion = servableVersionOpt.value_or(0);
-        auto session = std::make_unique<AdapterWrapper>(new OVMSInferenceAdapter(servableName, servableVersion));
-        MLOG("Session create adapter");
-        cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(Adopt(session.release()));
-        MLOG("SessionOpen end");
+        auto session = std::make_shared<OVMSInferenceAdapter>(servableName, servableVersion);
+        try {
+            session->loadModel(nullptr, UNUSED_OV_CORE, "UNUSED", {});
+        } catch (const std::exception& e) {
+            LOG(INFO) << "Catched exception with message: " << e.what();
+            RET_CHECK(false);
+        } catch (...) {
+            LOG(INFO) << "Catched unknown exception";
+            RET_CHECK(false);
+        }
+        LOG(INFO) << "Session create adapter";
+        cc->OutputSidePackets().Tag(SESSION_TAG.c_str()).Set(MakePacket<std::shared_ptr<InferenceAdapter>>(session));
+        LOG(INFO) << "Session Open end";
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        MLOG("SessionProcess");
+        LOG(INFO) << "Session Process";
         return absl::OkStatus();
     }
 };

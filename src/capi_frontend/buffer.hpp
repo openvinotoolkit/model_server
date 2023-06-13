@@ -1,6 +1,6 @@
 #pragma once
 //*****************************************************************************
-// Copyright 2023 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,16 +15,27 @@
 // limitations under the License.
 //*****************************************************************************
 #include <memory>
+#include <optional>
 
-class InferenceAdapter;
-
-namespace mediapipe {
+#include "../ovms.h"  // NOLINT
 namespace ovms {
 
-struct AdapterWrapper {
-    std::unique_ptr<::InferenceAdapter> adapter;
-    AdapterWrapper(::InferenceAdapter* adapter);
-    ~AdapterWrapper();
+class Buffer {
+    const void* ptr;
+    size_t byteSize;
+    OVMS_BufferType bufferType;
+    std::optional<uint32_t> bufferDeviceId;
+    std::unique_ptr<char[]> ownedCopy = nullptr;
+
+public:
+    Buffer(const void* ptr, size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt, bool createCopy = false);
+    Buffer(size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt);
+    ~Buffer();
+    const void* data() const;
+    void* data();
+    OVMS_BufferType getBufferType() const;
+    const std::optional<uint32_t>& getDeviceId() const;
+    size_t getByteSize() const;
 };
+
 }  // namespace ovms
-}  // namespace mediapipe

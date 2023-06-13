@@ -27,23 +27,21 @@
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-#define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
-
 using std::endl;
 
 namespace {
-#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                  \
-    {                                                                                        \
-        auto* err = C_API_CALL;                                                              \
-        if (err != nullptr) {                                                                \
-            uint32_t code = 0;                                                               \
-            const char* msg = nullptr;                                                       \
-            OVMS_StatusGetCode(err, &code);                                                  \
-            OVMS_StatusGetDetails(err, &msg);                                                \
-            LOG(ERROR) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
-            OVMS_StatusDelete(err);                                                          \
-            RET_CHECK(err == nullptr);                                                       \
-        }                                                                                    \
+#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                 \
+    {                                                                                       \
+        auto* err = C_API_CALL;                                                             \
+        if (err != nullptr) {                                                               \
+            uint32_t code = 0;                                                              \
+            const char* msg = nullptr;                                                      \
+            OVMS_StatusGetCode(err, &code);                                                 \
+            OVMS_StatusGetDetails(err, &msg);                                               \
+            LOG(INFO) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
+            OVMS_StatusDelete(err);                                                         \
+            RET_CHECK(err == nullptr);                                                      \
+        }                                                                                   \
     }
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
@@ -230,7 +228,7 @@ public:
                 ss << input_tensor_access[x] << " ";
             }
             ss << " ] timestamp: " << cc->InputTimestamp().DebugString();
-            MLOG(ss.str());
+            LOG(INFO) << ss.str();
             const auto& ovInputShape = input_tensor.get_shape();
             std::vector<int64_t> inputShape(ovInputShape.begin(), ovInputShape.end());  // TODO ensure ov tensors shapes conversions return error in all calcs
             OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());

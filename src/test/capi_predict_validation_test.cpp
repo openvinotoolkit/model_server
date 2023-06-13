@@ -19,8 +19,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../buffer.hpp"
-#include "../inferencerequest.hpp"
+#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
 #include "../modelconfig.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "test_utils.hpp"

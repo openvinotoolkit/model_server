@@ -32,23 +32,22 @@
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-#define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
 
 using std::endl;
 
-#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                  \
-    {                                                                                        \
-        auto* err = C_API_CALL;                                                              \
-        if (err != nullptr) {                                                                \
-            uint32_t code = 0;                                                               \
-            const char* msg = nullptr;                                                       \
-            OVMS_StatusGetCode(err, &code);                                                  \
-            OVMS_StatusGetDetails(err, &msg);                                                \
-            LOG(ERROR) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
-            std::runtime_error exc(msg);                                                     \
-            OVMS_StatusDelete(err);                                                          \
-            throw exc;                                                                       \
-        }                                                                                    \
+#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                 \
+    {                                                                                       \
+        auto* err = C_API_CALL;                                                             \
+        if (err != nullptr) {                                                               \
+            uint32_t code = 0;                                                              \
+            const char* msg = nullptr;                                                      \
+            OVMS_StatusGetCode(err, &code);                                                 \
+            OVMS_StatusGetDetails(err, &msg);                                               \
+            LOG(INFO) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
+            std::runtime_error exc(msg);                                                    \
+            OVMS_StatusDelete(err);                                                         \
+            throw exc;                                                                      \
+        }                                                                                   \
     }
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
@@ -77,7 +76,7 @@ OVMSInferenceAdapter::OVMSInferenceAdapter(const std::string& servableName, uint
 }
 
 OVMSInferenceAdapter::~OVMSInferenceAdapter() {
-    LOG(ERROR) << "OVMSAdapter destr";
+    LOG(INFO) << "OVMSAdapter destr";
 }
 
 InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
@@ -104,7 +103,7 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
             ss << input_tensor_access[x] << " ";
         }
         ss << " ]";
-        MLOG(ss.str());
+        LOG(INFO) << ss.str();
 #endif
         const auto& ovinputShape = input_tensor.get_shape();
         std::vector<int64_t> inputShape{ovinputShape.begin(), ovinputShape.end()};  // TODO error handling shape conversion
@@ -132,7 +131,7 @@ InferenceOutput OVMSInferenceAdapter::infer(const InferenceInput& input) {
         std::stringstream ss;
         ss << "Inference in OVMSAdapter failed: ";
         ss << msg << " code: " << code;
-        MLOG(ss.str());
+        LOG(INFO) << ss.str();
         OVMS_StatusDelete(status);
         return output;
     }
@@ -199,7 +198,8 @@ void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& mod
 ov::Shape OVMSInferenceAdapter::getInputShape(const std::string& inputName) const {
     auto it = inShapesMinMaxes.find(inputName);
     if (it == inShapesMinMaxes.end()) {
-        throw std::runtime_error(std::string("Adapter could not find input:") + inputName);  // TODO error handling
+        LOG(INFO) << "Could not find input:" << inputName;
+        throw std::runtime_error(std::string("Adapter could not find input:") + inputName);
     }
 
     ov::Shape ovShape;

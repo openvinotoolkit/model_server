@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <unordered_map>
 
@@ -24,29 +25,25 @@
 #include "../stringutils.hpp"  // TODO dispose
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "modelapiovmsadapterwrapper.hpp"
 #include "src/mediapipe_calculators/modelapiovmsinferencecalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-#define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
-
-using ovms::AdapterWrapper;
 using std::endl;
 
 namespace {
-#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                  \
-    {                                                                                        \
-        auto* err = C_API_CALL;                                                              \
-        if (err != nullptr) {                                                                \
-            uint32_t code = 0;                                                               \
-            const char* msg = nullptr;                                                       \
-            OVMS_StatusGetCode(err, &code);                                                  \
-            OVMS_StatusGetDetails(err, &msg);                                                \
-            LOG(ERROR) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
-            OVMS_StatusDelete(err);                                                          \
-            RET_CHECK(err == nullptr);                                                       \
-        }                                                                                    \
+#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                 \
+    {                                                                                       \
+        auto* err = C_API_CALL;                                                             \
+        if (err != nullptr) {                                                               \
+            uint32_t code = 0;                                                              \
+            const char* msg = nullptr;                                                      \
+            OVMS_StatusGetCode(err, &code);                                                 \
+            OVMS_StatusGetDetails(err, &msg);                                               \
+            LOG(INFO) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
+            OVMS_StatusDelete(err);                                                         \
+            RET_CHECK(err == nullptr);                                                      \
+        }                                                                                   \
     }
 #define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
     std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
@@ -56,12 +53,12 @@ namespace {
 const std::string SESSION_TAG{"SESSION"};
 
 class ModelAPISideFeedCalculator : public CalculatorBase {
-    ::InferenceAdapter* session{nullptr};
+    std::shared_ptr<::InferenceAdapter> session{nullptr};
     std::unordered_map<std::string, std::string> outputNameToTag;  // TODO move to Open();
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        MLOG("Main GetContract start");
+        LOG(INFO) << "Main GetContract start";
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         for (const std::string& tag : cc->Inputs().GetTags()) {
@@ -70,21 +67,20 @@ public:
         for (const std::string& tag : cc->Outputs().GetTags()) {
             cc->Outputs().Tag(tag).Set<ov::Tensor>();
         }
-        cc->InputSidePackets().Tag(SESSION_TAG.c_str()).Set<AdapterWrapper>();
-        MLOG("Main GetContract end");
+        cc->InputSidePackets().Tag(SESSION_TAG.c_str()).Set<std::shared_ptr<::InferenceAdapter>>();
+        LOG(INFO) << "Main GetContract end";
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        MLOG("Main Close");
+        LOG(INFO) << "Main Close";
         return absl::OkStatus();
     }
     absl::Status Open(CalculatorContext* cc) final {
-        MLOG("Main Open start");
+        LOG(INFO) << "Main Open start";
         session = cc->InputSidePackets()
                       .Tag(SESSION_TAG.c_str())
-                      .Get<AdapterWrapper>()
-                      .adapter.get();
+                      .Get<std::shared_ptr<::InferenceAdapter>>();
         for (CollectionItemId id = cc->Inputs().BeginId();
              id < cc->Inputs().EndId(); ++id) {
             if (!cc->Inputs().Get(id).Header().IsEmpty()) {
@@ -102,13 +98,12 @@ public:
             outputNameToTag[value] = key;
         }
         cc->SetOffset(TimestampDiff(0));
-
-        MLOG("Main Open end");
+        LOG(INFO) << "Main Open end";
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        MLOG("Main process start");
+        LOG(INFO) << "Main process start";
         if (cc->Inputs().NumEntries() == 0) {
             return tool::StatusStop();
         }
@@ -139,13 +134,21 @@ public:
                 ss << input_tensor_access[x] << " ";
             }
             ss << " ] timestamp: " << cc->InputTimestamp().DebugString() << endl;
-            MLOG(ss.str());
+            LOG(INFO) << ss.str();
 #endif
         }
         //////////////////
         //  INFERENCE
         //////////////////
-        output = session->infer(input);
+        try {
+            output = session->infer(input);
+        } catch (const std::exception& e) {
+            LOG(INFO) << "Catched exception from session infer():" << e.what();
+            RET_CHECK(false);
+        } catch (...) {
+            LOG(INFO) << "Catched unknown exception from session infer()";
+            RET_CHECK(false);
+        }
         auto outputsCount = output.size();
         RET_CHECK(outputsCount == cc->Outputs().GetTags().size());
         for (const auto& tag : cc->Outputs().GetTags()) {
@@ -158,14 +161,14 @@ public:
             }
             auto tensorIt = output.find(tensorName);
             if (tensorIt == output.end()) {
-                // TODO
-                throw 54;
+                LOG(INFO) << "Could not find: " << tensorName << " in inference output";
+                RET_CHECK(false);
             }
             cc->Outputs().Tag(tag).Add(
                 new ov::Tensor(tensorIt->second),
                 cc->InputTimestamp());
         }
-        MLOG("Main process end");
+        LOG(INFO) << "Main process end";
         return absl::OkStatus();
     }
 };

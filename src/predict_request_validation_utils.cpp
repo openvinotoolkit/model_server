@@ -26,10 +26,10 @@
 
 #include <spdlog/spdlog.h>
 
-#include "buffer.hpp"
+#include "capi_frontend/buffer.hpp"
 #include "capi_frontend/capi_utils.hpp"
-#include "inferencerequest.hpp"
-#include "inferencetensor.hpp"
+#include "capi_frontend/inferencerequest.hpp"
+#include "capi_frontend/inferencetensor.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "modelconfig.hpp"

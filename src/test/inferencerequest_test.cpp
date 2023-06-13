@@ -19,10 +19,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../buffer.hpp"
-#include "../inferenceparameter.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
+#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/inferenceparameter.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"

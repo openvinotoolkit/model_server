@@ -26,13 +26,13 @@
 #include <openvino/openvino.hpp>
 #include <stdlib.h>
 
-#include "../buffer.hpp"
+#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/inferenceparameter.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
+#include "../capi_frontend/inferencetensor.hpp"
 #include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
-#include "../inferenceparameter.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
-#include "../inferencetensor.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
