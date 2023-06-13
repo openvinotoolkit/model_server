@@ -131,6 +131,7 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
 
 Status MediapipeGraphDefinition::createInputsInfo() {
     inputsInfo.clear();
+    inputNames.clear();
     inputNames.reserve(this->config.input_stream().size());
     for (auto& name : config.input_stream()) {
         std::string streamName = MediapipeGraphDefinition::getStreamName(name);
@@ -151,7 +152,8 @@ Status MediapipeGraphDefinition::createInputsInfo() {
 
 Status MediapipeGraphDefinition::createOutputsInfo() {
     outputsInfo.clear();
-    inputNames.reserve(this->config.output_stream().size());
+    outputNames.clear();
+    outputNames.reserve(this->config.output_stream().size());
     for (auto& name : this->config.output_stream()) {
         std::string streamName = MediapipeGraphDefinition::getStreamName(name);
         if (streamName.empty()) {
