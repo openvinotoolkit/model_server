@@ -97,4 +97,4 @@ Additional preprocessing step applies a division and an subtraction to each pixe
   ...
 }
 ```
-For each pixel, the custom node subtractes `123.675` from blue value, `116.28` from green value and `103.53` from red value. Next, it divides in the same color order using `58.395`, `57.12`, `57.375` values. This way we match the image data to the input required by onnx model.
+For each pixel, the custom node subtracted `123.675` from blue value, `116.28` from green value and `103.53` from red value. Next, it divides in the same color order using `58.395`, `57.12`, `57.375` values. This way we match the image data to the input required by onnx model.

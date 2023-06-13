@@ -6,7 +6,7 @@
    :maxdepth: 1
    :hidden:
 
-   ovms_docs_demuliplexing
+   ovms_docs_demultiplexing
    ovms_docs_custom_node_development
 
 
@@ -63,11 +63,11 @@ divide the data, process them in parallel and combine the results.
 De-multiplication of the node output is enabled in the configuration file by adding `demultiply_count`. 
 It assumes the batches are combined on the first dimension which is dropped after splitting. For example:
 - a node returns output with shape `[8,1,3,224,224]`
-- demuliplexer creates 8 requests with shape `[1,3,224,224]`
+- demultiplexer creates 8 requests with shape `[1,3,224,224]`
 - next model processes in parallel 8 requests with output shape `[1,1001]` each.
 - results are combined into a single output with shape `[8,1,1001]`
 
-[Learn more about demuliplexing](demultiplexing.md) 
+[Learn more about demultiplexing](demultiplexing.md) 
 
 ## Configuration file <a name="configuration-file"></a>
 
@@ -108,7 +108,7 @@ Basic pipeline section template is depicted below:
                     ] 
                 },
                 {
-                    "name": "custon_node_name",
+                    "name": "custom_node_name",
                     "library_name": "custom_node_lib",
                     "type": "custom",
                     "params": {

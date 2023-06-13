@@ -40,7 +40,7 @@ make build
 This command will create pip wheel placed in `dist` directory.
 
 *Note*: For development purposes, you may want to repeatedly rebuild the package.
-Assuming you have TFS API built, you can use `make build-package` target to build only the `ovmsclient` package and ommit downloading and building the TFS API.
+Assuming you have TFS API built, you can use `make build-package` target to build only the `ovmsclient` package and omit downloading and building the TFS API.
 
 **To install the package run:**
 ```bash

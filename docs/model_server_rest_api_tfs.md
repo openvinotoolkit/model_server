@@ -164,7 +164,7 @@ POST http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VE
 ```JSON
 {
   // (Optional) Serving signature to use.
-  // If unspecifed default serving signature is used.
+  // If unspecified default serving signature is used.
   "signature_name": <string>,
 
   // Input Tensors in row ("instances") or columnar ("inputs") format.

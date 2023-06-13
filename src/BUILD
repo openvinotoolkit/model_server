@@ -627,7 +627,7 @@ cc_binary(
     linkstatic = True,
 )
 
-# Use for dynamic linking when neccessary
+# Use for dynamic linking when necessary
 cc_import(
   name = "shared_lib",
   hdrs = ["ovms.h"],
@@ -671,7 +671,7 @@ cc_binary(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-        # "-lovms_shared",  # Use for dynamic linking when neccessary
+        # "-lovms_shared",  # Use for dynamic linking when necessary
     ],
     copts = [
         "-Wall",
@@ -680,9 +680,9 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-        # "//src:cpp_headers",  # Use for dynamic linking when neccessary
+        # "//src:cpp_headers",  # Use for dynamic linking when necessary
     ],
-    # linkstatic = False,  # Use for dynamic linking when neccessary
+    # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
 cc_test(
