@@ -107,9 +107,10 @@ protected:
         std::condition_variable& loadedNotify;
     };
 
-    Status validateForConfigFileExistence();
+    virtual Status validateForConfigFileExistence();
     Status validateForConfigLoadableness();
 
+    Status setKFSPassthrough(bool& passKfsRequestFlag);
     std::string chosenConfig;  // TODO make const @atobiszei
     static MediapipeGraphConfig MGC;
     const std::string name;

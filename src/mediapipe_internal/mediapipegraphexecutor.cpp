@@ -142,18 +142,6 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         SPDLOG_DEBUG("KServe request for mediapipe graph: {} initialization failed with message: {}", request->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
-    // Passing whole KFS request and response
-    if (this->passKfsRequestFlag == true) {
-        if (this->config.output_stream().size() != 1) {
-            SPDLOG_ERROR("KServe passthrough through mediapipe graph requires having only one input (request) and one output(response)");
-            return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_SIZE;
-        }
-
-        if (this->config.input_stream().size() != 1) {
-            SPDLOG_ERROR("KServe passthrough through mediapipe graph requires having only one input (request) and one output(response)");
-            return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_SIZE;
-        }
-    }
 
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
     for (auto& name : this->config.output_stream()) {

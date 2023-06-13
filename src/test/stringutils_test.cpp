@@ -127,6 +127,28 @@ TEST(StringUtils, endsWith) {
     EXPECT_EQ(b6, false);
 }
 
+TEST(StringUtils, startsWith) {
+    std::string str0 = "";
+    std::string str1 = "test case 1";
+    std::string str2 = "{} not really matter 1 }";
+
+    auto b0 = ovms::startsWith(str0.c_str(), "");
+    auto b1 = ovms::startsWith(str0.c_str(), "/");
+    auto b2 = ovms::startsWith(str1.c_str(), "");
+    auto b3 = ovms::startsWith(str1.c_str(), "test");
+    auto b4 = ovms::startsWith(str1.c_str(), "2");
+    auto b5 = ovms::startsWith(str2.c_str(), "{ not ");
+    auto b6 = ovms::startsWith(str2.c_str(), "{ 1not");
+
+    EXPECT_EQ(b0, true);
+    EXPECT_EQ(b1, false);
+    EXPECT_EQ(b2, true);
+    EXPECT_EQ(b3, true);
+    EXPECT_EQ(b4, false);
+    EXPECT_EQ(b5, true);
+    EXPECT_EQ(b6, false);
+}
+
 TEST(StringUtils, stou32) {
     auto result = ovms::stou32("-100");
     EXPECT_FALSE(result);

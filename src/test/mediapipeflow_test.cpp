@@ -577,37 +577,8 @@ public:
         MediapipeGraphDefinition(name, config, nullptr, nullptr) {}
 
     // Do not read from path - use predefined config contents
-    Status validateForConfigFileExistence() {
+    Status validateForConfigFileExistence() override {
         this->chosenConfig = this->inputConfig;
-        return StatusCode::OK;
-    }
-
-    Status validate(ModelManager& manager) {
-        ValidationResultNotifier notifier(this->status, this->loadedNotify);
-        Status validationResult = validateForConfigFileExistence();
-        if (!validationResult.ok()) {
-            return validationResult;
-        }
-        validationResult = validateForConfigLoadableness();
-        if (!validationResult.ok()) {
-            return validationResult;
-        }
-
-        std::unique_lock lock(metadataMtx);
-        ::mediapipe::CalculatorGraphConfig proto;
-        auto status = createInputsInfo();
-        if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create inputs info for mediapipe graph definition: {}", getName());
-            return status;
-        }
-        status = createOutputsInfo();
-        if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
-            return status;
-        }
-
-        lock.unlock();
-        notifier.passed = true;
         return StatusCode::OK;
     }
 };
@@ -661,7 +632,7 @@ TEST(Mediapipe, MetadataExistingInputNames) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME);
 }
 
 TEST(Mediapipe, MetadataExistingOutputNames) {
@@ -680,7 +651,7 @@ TEST(Mediapipe, MetadataExistingOutputNames) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME);
 }
 
 TEST(Mediapipe, MetadataMissingResponseInputTypes) {
@@ -707,7 +678,7 @@ TEST(Mediapipe, MetadataMissingResponseInputTypes) {
     ASSERT_NE(outputs.find("out"), outputs.end());
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::MEDIAPIPE_KFS_PASS_MISSING_RESPONSE_GRAPH_OUTPUT_NAME);
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG);
 }
 
 TEST(Mediapipe, MetadataNegativeWrongInputTypes) {
@@ -725,7 +696,25 @@ TEST(Mediapipe, MetadataNegativeWrongInputTypes) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME);
+}
+
+TEST(Mediapipe, MetadataNegativeWrongOutputTypes) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "None:in"
+    output_stream: "number:test3:out"
+        node {
+        calculator: "OVMSOVCalculator"
+        input_stream: "B:in"
+        output_stream: "A:out"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME);
 }
 
 TEST(Mediapipe, MetadataEmptyConfig) {

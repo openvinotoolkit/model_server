@@ -134,13 +134,13 @@ Status MediapipeGraphDefinition::createInputsInfo() {
     for (auto& name : config.input_stream()) {
         std::string streamName = MediapipeGraphDefinition::getStreamName(name);
         if (streamName.empty()) {
-            SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
-            return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
+            SPDLOG_ERROR("Creating Mediapipe graph inputs name failed for: {}", name);
+            return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME;
         }
         const auto [it, success] = inputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
         if (!success) {
-            SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}. Input with the same name already exists.", name);
-            return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
+            SPDLOG_ERROR("Creating Mediapipe graph inputs name failed for: {}. Input with the same name already exists.", name);
+            return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME;
         }
     }
     return StatusCode::OK;
@@ -151,13 +151,13 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
     for (auto& name : this->config.output_stream()) {
         std::string streamName = MediapipeGraphDefinition::getStreamName(name);
         if (streamName.empty()) {
-            SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
-            return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
+            SPDLOG_ERROR("Creating Mediapipe graph outputs name failed for: {}", name);
+            return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME;
         }
         const auto [it, success] = outputsInfo.insert({streamName, TensorInfo::getUnspecifiedTensorInfo()});
         if (!success) {
-            SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}. Output with the same name already exists.", name);
-            return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
+            SPDLOG_ERROR("Creating Mediapipe graph outputs name failed for: {}. Output with the same name already exists.", name);
+            return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME;
         }
     }
     return StatusCode::OK;
@@ -174,24 +174,48 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
 
     bool passKfsRequestFlag = false;
     // Check if we are passing whole KFS request and response
-    if (this->config.input_stream().size() > 0) {
+    status = this->setKFSPassthrough(passKfsRequestFlag);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Failed to execute mediapipe graph: {} KFS passthrough mode is misconfigured.", getName());
+        return status;
+    }
+
+    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config, passKfsRequestFlag);
+    return status;
+}
+
+Status MediapipeGraphDefinition::setKFSPassthrough(bool& passKfsRequestFlag) {
+    passKfsRequestFlag = false;
+    if (this->config.input_stream().size() == 1) {
         std::string firstName = this->config.input_stream()[0];
         if (startsWith(firstName.c_str(), "REQUEST:")) {
-            if (this->config.output_stream().size() > 0) {
+            if (this->config.output_stream().size() == 1) {
                 firstName = this->config.output_stream()[0];
                 if (startsWith(firstName.c_str(), "RESPONSE:")) {
                     SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request graph detected.");
                     passKfsRequestFlag = true;
                 } else {
                     SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request and response requires RESPONSE: string in the output stream name");
-                    return Status(StatusCode::MEDIAPIPE_KFS_PASS_MISSING_RESPONSE_GRAPH_OUTPUT_NAME);
+                    return Status(StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG);
                 }
             }
         }
     }
 
-    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()), this->config, passKfsRequestFlag);
-    return status;
+    // Passing whole KFS request and response
+    if (passKfsRequestFlag == true) {
+        if (this->config.output_stream().size() != 1) {
+            SPDLOG_ERROR("KServe passthrough through mediapipe graph requires having only one input (request) and one output(response)");
+            return StatusCode::MEDIAPIPE_KFS_PASS_WRONG_OUTPUT_STREAM_COUNT;
+        }
+
+        if (this->config.input_stream().size() != 1) {
+            SPDLOG_ERROR("KServe passthrough through mediapipe graph requires having only one input (request) and one output(response)");
+            return StatusCode::MEDIAPIPE_KFS_PASS_WRONG_INPUT_STREAM_COUNT;
+        }
+    }
+
+    return StatusCode::OK;
 }
 
 Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGraphConfig& config) {
