@@ -39,6 +39,7 @@
 #include "../shape.hpp"
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
+#include "../dags/pipelinedefinition.hpp"
 #include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 
@@ -766,6 +767,24 @@ TEST_F(MediapipeConfig, MediapipeAdd) {
         EXPECT_NE(graphDefinition, nullptr);
         EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
     }
+
+    manager.join();
+}
+
+TEST_F(MediapipeConfig, MediapipeDummyWithDag) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    for (auto& graphName : mediaGraphsDummy) {
+        auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName(graphName);
+        EXPECT_NE(graphDefinition, nullptr);
+        EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
+    }
+
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName("dummyDAG");
+    EXPECT_NE(pipelineDefinition, nullptr);
+    EXPECT_EQ(pipelineDefinition->getStatus().getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 
     manager.join();
 }
