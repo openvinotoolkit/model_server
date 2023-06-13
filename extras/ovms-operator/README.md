@@ -22,7 +22,7 @@ Deploy the operator using the steps covered in [OperatorHub](https://operatorhub
 
 ### Kubectl CLI
 
-If you are using opensource Kubernetes, after installing the operator, deploy and manage OVSM deployments by creating `Ovms` Kubernetes resources.
+If you are using opensource Kubernetes, after installing the operator, deploy and manage OVMS deployments by creating `Ovms` Kubernetes resources.
 
 It can be done by editing the [sample resource](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/extras/ovms-operator/config/samples/intel_v1alpha1_ovms.yaml) and running a command:
 
