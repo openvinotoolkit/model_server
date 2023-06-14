@@ -795,12 +795,12 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         rapidjson::IStreamWrapper isw(ifs);
         rapidjson::ParseResult parseResult = subconfigJson.ParseStream(isw);
         if (!parseResult) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe: {} configuration: {} file is not a valid JSON file. Error: {}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe: {} graph subconfig: {} file is not a valid JSON file. Error: {}",
                 mediapipeConfig.getGraphName(), subconfigPath, rapidjson::GetParseError_En(parseResult.Code()));
             return StatusCode::JSON_INVALID;
         }
         if (validateJsonAgainstSchema(subconfigJson, MEDIAPIPE_SUBCONFIG_SCHEMA.c_str()) != StatusCode::OK) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe configuration file is not in valid configuration format");
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph subconfig file is not in valid configuration format");
             return StatusCode::JSON_INVALID;
         }
         const auto mediapipeItr = subconfigJson.FindMember("model_config_list");
