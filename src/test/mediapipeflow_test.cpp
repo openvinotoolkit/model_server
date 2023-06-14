@@ -786,6 +786,10 @@ TEST_F(MediapipeConfig, MediapipeDummyWithDag) {
     EXPECT_NE(pipelineDefinition, nullptr);
     EXPECT_EQ(pipelineDefinition->getStatus().getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 
+    auto model = manager.findModelByName("dummy");
+    ASSERT_NE(nullptr, model->getDefaultModelInstance());
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
+
     manager.join();
 }
 
