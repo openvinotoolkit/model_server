@@ -654,7 +654,7 @@ TEST(Mediapipe, MetadataExistingOutputNames) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME);
 }
 
-TEST(Mediapipe, MetadataMissingResponseInputTypes) {
+TEST(Mediapipe, MetadataMissingResponseOutputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
