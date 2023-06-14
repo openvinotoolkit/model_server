@@ -669,16 +669,25 @@ TEST(Mediapipe, MetadataMissingResponseOutputTypes) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-    tensor_map_t inputs = mediapipeDummy.getInputsInfo();
-    tensor_map_t outputs = mediapipeDummy.getOutputsInfo();
-    ASSERT_EQ(inputs.size(), 1);
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_NE(inputs.find("in"), inputs.end());
-    ASSERT_NE(outputs.find("out"), outputs.end());
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG);
+}
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG);
+TEST(Mediapipe, MetadataMissingRequestInputTypes) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "type:in"
+    output_stream: "RESPONSE:out"
+        node {
+        calculator: "OVMSOVCalculator"
+        input_stream: "B:in"
+        output_stream: "A:out"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG);
 }
 
 TEST(Mediapipe, MetadataNegativeWrongInputTypes) {

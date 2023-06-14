@@ -19,7 +19,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../../ovms.h"           // NOLINT
 #include "../../stringutils.hpp"  // TODO dispose
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
@@ -29,39 +28,18 @@
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
-#define MLOG(A) LOG(ERROR) << __FILE__ << ":" << __LINE__ << " " << A << std::endl;
 
 using std::endl;
 
-namespace {
-#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)                                                             \
-    {                                                                                                   \
-        auto* err = C_API_CALL;                                                                         \
-        if (err != nullptr) {                                                                           \
-            uint32_t code = 0;                                                                          \
-            const char* msg = nullptr;                                                                  \
-            OVMS_StatusGetCode(err, &code);                                                             \
-            OVMS_StatusGetDetails(err, &msg);                                                           \
-            LOG(ERROR) << "Error encountred in OVMSTestKFSPassCalculator:" << msg << " code: " << code; \
-            OVMS_StatusDelete(err);                                                                     \
-            RET_CHECK(err == nullptr);                                                                  \
-        }                                                                                               \
-    }
-#define CREATE_GUARD(GUARD_NAME, CAPI_TYPE, CAPI_PTR) \
-    std::unique_ptr<CAPI_TYPE, decltype(&(CAPI_TYPE##Delete))> GUARD_NAME(CAPI_PTR, &(CAPI_TYPE##Delete));
-}  // namespace
-
 class OVMSTestKFSPassCalculator : public CalculatorBase {
-    OVMS_Server* cserver{nullptr};
-    OVMS_ServerSettings* _serverSettings{nullptr};
-    OVMS_ModelsSettings* _modelsSettings{nullptr};
-    std::unordered_map<std::string, std::string> outputNameToTag;
     std::shared_ptr<KFSResponse> response;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
+        RET_CHECK(cc->Inputs().GetTags().size() == 1);
+        RET_CHECK(cc->Outputs().GetTags().size() == 1);
         cc->Inputs().Tag("REQUEST").Set<const KFSRequest*>();
         cc->Outputs().Tag("RESPONSE").Set<KFSResponse*>();
 
@@ -77,13 +55,7 @@ public:
                 cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
             }
         }
-        if (cc->OutputSidePackets().NumEntries() != 0) {
-            for (CollectionItemId id = cc->InputSidePackets().BeginId(); id < cc->InputSidePackets().EndId(); ++id) {
-                cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
-            }
-        }
         cc->SetOffset(TimestampDiff(0));
-        OVMS_ServerNew(&cserver);
         return absl::OkStatus();
     }
 

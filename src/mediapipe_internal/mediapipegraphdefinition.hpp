@@ -115,6 +115,7 @@ protected:
     static MediapipeGraphConfig MGC;
     const std::string name;
 
+    bool passKfsRequestFlag;
     PipelineDefinitionStatus status;
 
     MediapipeGraphConfig mgconfig;

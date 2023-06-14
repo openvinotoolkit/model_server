@@ -40,7 +40,7 @@ class MediapipeGraphExecutor {
 
 public:
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config, bool passKfsRequestFlag,
-        const std::vector<std::string> inputNames, const std::vector<std::string> outputNames);
+        std::vector<std::string> inputNames, std::vector<std::string> outputNames);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 };
 }  // namespace ovms

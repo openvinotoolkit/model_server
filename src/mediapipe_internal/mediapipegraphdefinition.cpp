@@ -111,12 +111,19 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
         return status;
     }
+    // Check if we are passing whole KFS request and response
+    status = this->setKFSPassthrough(this->passKfsRequestFlag);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Failed to prepare mediapipe graph configuration: {} KFS passthrough mode is misconfigured.", getName());
+        return status;
+    }
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} inputs: {}", getName(), outputsInfo.size());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} kfs pass through: {}", getName(), this->passKfsRequestFlag);
     return StatusCode::OK;
 }
 
@@ -127,6 +134,7 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     name(name),
     status(SCHEDULER_CLASS_NAME, this->name) {
     mgconfig = config;
+    passKfsRequestFlag = false;
 }
 
 Status MediapipeGraphDefinition::createInputsInfo() {
@@ -180,16 +188,8 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     }
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
-    bool passKfsRequestFlag = false;
-    // Check if we are passing whole KFS request and response
-    status = this->setKFSPassthrough(passKfsRequestFlag);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Failed to execute mediapipe graph: {} KFS passthrough mode is misconfigured.", getName());
-        return status;
-    }
-
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, passKfsRequestFlag, this->inputNames, this->outputNames);
+        this->config, this->passKfsRequestFlag, this->inputNames, this->outputNames);
     return status;
 }
 
@@ -206,6 +206,22 @@ Status MediapipeGraphDefinition::setKFSPassthrough(bool& passKfsRequestFlag) {
                 } else {
                     SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request and response requires RESPONSE: string in the output stream name");
                     return Status(StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG);
+                }
+            }
+        }
+    }
+
+    if (this->config.output_stream().size() == 1) {
+        std::string firstName = this->config.output_stream()[0];
+        if (startsWith(firstName.c_str(), "RESPONSE:")) {
+            if (this->config.input_stream().size() == 1) {
+                firstName = this->config.output_stream()[0];
+                if (startsWith(firstName.c_str(), "REQUEST:")) {
+                    SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request graph detected.");
+                    passKfsRequestFlag = true;
+                } else {
+                    SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request and response requires REQUEST: string in the input stream name");
+                    return Status(StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG);
                 }
             }
         }
