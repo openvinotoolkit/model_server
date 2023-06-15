@@ -112,6 +112,10 @@ This variant offloads tokenization and detokenization step from client to the se
 
 Use `make` command to prepare custom node libraries, blingfire tokenization models and configuration file.
 
+Since custom node used in this demo is included in OpenVINO Model Server image you can either use the custom node from the image, or build one.
+
+If you just want to quickly run this demo and use already compiled custom node, run:
+
 ```bash
 make
 ```
@@ -122,15 +126,18 @@ Workspace should look as follows:
 tree workspace 
 workspace
 ├── config.json
-├── lib
-│   ├── libdetokenizer.so
-│   └── libtokenizer.so
 └── tokenizers
     ├── gpt2.bin
     └── gpt2.i2w
 
-2 directories, 5 files
+1 directory, 3 files
 ```
+
+(Optional) If you modified the custom node or for some other reason, you want to have it compiled and then attached to the container, run:
+
+```
+ make BUILD_CUSTOM_NODE=true
+ ```
 
 Start OVMS with prepared workspace:
 
