@@ -586,11 +586,11 @@ public:
 TEST(Mediapipe, MetadataDummyInputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "test:in"
-    input_stream: "test33:in2"
-    output_stream: "test0:out"
-    output_stream: "test1:out2"
-    output_stream: "test3:out3"
+    input_stream: "TEST:in"
+    input_stream: "TEST33:in2"
+    output_stream: "TEST0:out"
+    output_stream: "TEST1:out2"
+    output_stream: "TEST3:out3"
         node {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
@@ -619,9 +619,9 @@ TEST(Mediapipe, MetadataDummyInputTypes) {
 TEST(Mediapipe, MetadataExistingInputNames) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "test:in"
-    input_stream: "test33:in"
-    output_stream: "test0:out"
+    input_stream: "TEST:in"
+    input_stream: "TEST33:in"
+    output_stream: "TEST0:out"
         node {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
@@ -638,9 +638,9 @@ TEST(Mediapipe, MetadataExistingInputNames) {
 TEST(Mediapipe, MetadataExistingOutputNames) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "test:in"
-    output_stream: "test0:out"
-    output_stream: "test1:out"
+    input_stream: "TEST:in"
+    output_stream: "TEST0:out"
+    output_stream: "TEST1:out"
         node {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
@@ -658,7 +658,7 @@ TEST(Mediapipe, MetadataMissingResponseOutputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
-    output_stream: "test3:out"
+    output_stream: "TEST3:out"
         node {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
@@ -675,7 +675,7 @@ TEST(Mediapipe, MetadataMissingResponseOutputTypes) {
 TEST(Mediapipe, MetadataMissingRequestInputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "type:in"
+    input_stream: "TEST:in"
     output_stream: "RESPONSE:out"
         node {
         calculator: "OVMSOVCalculator"
@@ -711,8 +711,8 @@ TEST(Mediapipe, MetadataNegativeWrongInputTypes) {
 TEST(Mediapipe, MetadataNegativeWrongOutputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "None:in"
-    output_stream: "number:test3:out"
+    input_stream: "TEST:in"
+    output_stream: "TEST:TEST:out"
         node {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
