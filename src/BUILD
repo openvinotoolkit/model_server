@@ -417,6 +417,8 @@ cc_library(
             "//src:fuzzer_build" : [
                 "-fsanitize=address,undefined,",
                 "-fprofile-generate",
+                "-ftest-coverage",
+                "-fprofile-arcs",
             ],
     })
           + select({
@@ -438,8 +440,12 @@ cc_library(
         "//conditions:default": [
         ],
         "//src:fuzzer_build" : [
-            "-fsanitize-coverage=trace-pc-guard",
             "-fprofile-generate",
+            "-fprofile-arcs",
+            "-fsanitize=address",
+            "-fsanitize-coverage=trace-pc",
+            "-fsanitize-coverage=trace-pc-guard",
+            "-static-libasan",
         ],
     }),
     alwayslink = 1,

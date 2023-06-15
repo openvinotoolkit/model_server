@@ -329,24 +329,24 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_shared
 ARG FUZZER_BUILD=0
 # C api app with bazel
 # hadolint ignore=DL3059
-RUN if [ "$FUZZER_BUILD" == "0" ]; then; bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example; fi;
 
 # C-API benchmark app
-RUN if [ "$FUZZER_BUILD" == "0" ]; then; bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"; fi;
 
 # OVMS
-RUN if [ "$FUZZER_BUILD" == "0" ]; then; bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms; fi;
 
 # hadolint ignore=DL3059
-RUN if [ "$FUZZER_BUILD" == "0" ]; then; bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
 
 # C-api C/C++ app with gcc
-RUN if [ "$FUZZER_BUILD" == "0" ]; then; make -f MakefileCapi cpp && make -f MakefileCapi c; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then make -f MakefileCapi cpp && make -f MakefileCapi c; fi;
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
  
-RUN if [ "$FUZZER_BUILD" == "0" ]; then; /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms; fi;
 
 
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/

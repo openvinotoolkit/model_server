@@ -218,7 +218,7 @@ ifeq ($(CHECK_COVERAGE),1)
 	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
   endif
 endif
-ifeq ($((FUZZER_BUILD_PARAMS),1)
+ifeq ($(FUZZER_BUILD),1)
   ifeq ($(RUN_TESTS),1)
 	@echo "Cannot run tests for now with fuzzer build"; exit 1 ;
   endif
@@ -286,6 +286,7 @@ endif
 		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
 		--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
 		--build-arg RUN_TESTS=$(RUN_TESTS)\
+		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) \
 		--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
@@ -300,11 +301,15 @@ endif
 
 targz_package: ovms_builder_image
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg BASE_OS=$(BASE_OS) \
+		--build-arg http_proxy=$(HTTP_PROXY) \
+		--build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) \
+		--build-arg sentencepiece=$(SENTENCEPIECE) \
+		--build-arg BASE_OS=$(BASE_OS) \
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
 		--build-arg NVIDIA=$(NVIDIA) \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
-		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)
 
 ovms_release_image: targz_package
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
