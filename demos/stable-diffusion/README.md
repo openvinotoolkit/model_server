@@ -20,6 +20,13 @@ Run the pipeline:
 
 ```bash
 python stable_diffusion.py
+Pipeline settings
+Input text: see shore at midnight, epic vista, beach
+Negative text: frames, borderline, text, character, duplicate, error, out of frame, watermark
+Seed: 15
+Number of steps: 30
+getting initial random noise (1, 4, 96, 96) {}
+100%|██████████████████████████████████████████████████| 30/30 [01:11<00:00,  2.39s/it]
 
 ```
 
