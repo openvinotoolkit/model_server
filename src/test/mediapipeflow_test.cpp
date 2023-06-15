@@ -163,6 +163,12 @@ TEST_P(MediapipeFlowKfsTest, Infer) {
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
+class MediapipeFlowDummyEmptySubconfigTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_empty_subconfig.json");
+    }
+};
 
 static void performMediapipeInferTest(const ovms::Server& server, ::KFSRequest& request, ::KFSResponse& response, const Precision& precision, const std::string& modelName) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -192,6 +198,16 @@ TEST_F(MediapipeFlowDummyOnlyGraphNameSpecified, Infer) {
 }
 
 TEST_F(MediapipeFlowDummyDefaultSubconfigTest, Infer) {
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediaDummy";
+    performMediapipeInferTest(server, request, response, precision, modelName);
+
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeFlowDummyEmptySubconfigTest, Infer) {
     ::KFSRequest request;
     ::KFSResponse response;
     const std::string modelName = "mediaDummy";
@@ -890,6 +906,7 @@ node {
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
 }
+
 
 TEST_F(MediapipeConfig, MediapipeFullRelativePaths) {
     ConstructorEnabledModelManager manager;
