@@ -406,7 +406,6 @@ cc_library(
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
-#TODO:  "-Werror", mediapipe
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
@@ -420,14 +419,7 @@ cc_library(
                 "-ftest-coverage",
                 "-fprofile-arcs",
             ],
-    })
-          + select({
-            "//conditions:default": [
-            ],
-            "//src:disable_mediapipe" : [
-                "-Werror",
-            ],
-    }),
+        }),
     visibility = [
         "//visibility:public",
     ],
