@@ -204,30 +204,29 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         }
 
         // Size checked to be equal 1 at the beggining of the function
-        for (auto& [outputStreamName, poller] : outputPollers) {
-            size_t receivedOutputs = 0;
-            SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
-            while (poller.Next(&packet)) {
-                SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
-                try {
-                    auto received = packet.Get<KFSResponse*>();
-                    if (received == nullptr) {
-                        SPDLOG_DEBUG("Received nullptr KFSResponse for: {}", outputStreamName);
-                        continue;
-                    }
-
-                    *response = std::move(*received);
-                } catch (const std::exception& e) {
-                    SPDLOG_DEBUG("Mediapipe 'packet.Get' exception {}", e.what());
+        auto& [outputStreamName, poller] = *(outputPollers.begin());
+        size_t receivedOutputs = 0;
+        SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
+        while (poller.Next(&packet)) {
+            SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
+            try {
+                auto received = packet.Get<KFSResponse*>();
+                if (received == nullptr) {
+                    SPDLOG_DEBUG("Received nullptr KFSResponse for: {}", outputStreamName);
                     continue;
                 }
 
-                SPDLOG_TRACE("Received packet for: {} {}", outputStreamName, receivedOutputs);
-                outputPollersWithReceivedPacket.insert(outputStreamName);
-                ++receivedOutputs;
+                *response = std::move(*received);
+            } catch (const std::exception& e) {
+                SPDLOG_DEBUG("Mediapipe 'packet.Get' exception {}", e.what());
+                continue;
             }
-            SPDLOG_TRACE("Received all packets for: {}", outputStreamName);
+
+            SPDLOG_TRACE("Received packet for: {} {}", outputStreamName, receivedOutputs);
+            outputPollersWithReceivedPacket.insert(outputStreamName);
+            ++receivedOutputs;
         }
+        SPDLOG_TRACE("Received all packets for: {}", outputStreamName);
     } else {
         // Processing non KFS pass through packets
         for (auto& name : this->inputNames) {

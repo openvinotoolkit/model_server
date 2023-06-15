@@ -211,11 +211,11 @@ Status MediapipeGraphDefinition::setKFSPassthrough(bool& passKfsRequestFlag) {
         }
     }
 
-    if (this->config.output_stream().size() == 1) {
+    if (!passKfsRequestFlag && this->config.output_stream().size() == 1) {
         std::string firstName = this->config.output_stream()[0];
         if (startsWith(firstName.c_str(), "RESPONSE:")) {
             if (this->config.input_stream().size() == 1) {
-                firstName = this->config.output_stream()[0];
+                firstName = this->config.input_stream()[0];
                 if (startsWith(firstName.c_str(), "REQUEST:")) {
                     SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request graph detected.");
                     passKfsRequestFlag = true;
