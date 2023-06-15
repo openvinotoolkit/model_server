@@ -135,7 +135,7 @@ workspace
 
 (Optional) If you modified the custom node or for some other reason, you want to have it compiled and then attached to the container, run:
 
-```bash
+```
  make BUILD_CUSTOM_NODE=true
  ```
 
