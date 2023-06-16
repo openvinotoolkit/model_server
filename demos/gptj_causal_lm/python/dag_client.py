@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import os
+import subprocess
 import time
 import argparse
 import grpc
@@ -45,9 +46,9 @@ while True:
     latency = time.time() - start_time
     results = make_ndarray(predict_response.outputs['autocompletions_string'])
     input_sentence = results[0]
-    os.system('cls' if os.name == 'nt' else 'clear')
+    print("\033c", end="")
     print(input_sentence, flush=True)
     if last == input_sentence:
         break
     last = input_sentence
-    #print(latency, input_sentence)
+    # print(latency, input_sentence)
