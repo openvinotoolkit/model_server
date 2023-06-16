@@ -54,6 +54,7 @@ const std::string sum_model_location = std::filesystem::current_path().u8string(
 const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
 const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
 const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
+const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -143,6 +144,21 @@ const ovms::ModelConfig DUMMY_SAVED_MODEL_CONFIG{
     "",                          // cache directory
     1,                           // model_version unused since version are read from path
     dummy_saved_model_location,  // local path
+};
+
+const ovms::ModelConfig DUMMY_TFLITE_CONFIG{
+    "dummy_tflite",
+    dummy_tflite_location,       // base path
+    "CPU",                       // target device
+    "1",                         // batchsize
+    1,                           // NIREQ
+    false,                       // is stateful
+    true,                        // idle sequence cleanup enabled
+    false,                       // low latency transformation enabled
+    500,                         // stateful sequence max number
+    "",                          // cache directory
+    1,                           // model_version unused since version are read from path
+    dummy_tflite_location,       // local path
 };
 
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
