@@ -153,6 +153,7 @@ Run example client:
 
 ```bash
 python3 dag_client.py --url localhost:9000 --model_name my_gpt_pipeline --input "Neurons are fascinating"
-
-0.5515012741088867 Neurons are fascinating cells that are responsible for the transmission of information from one brain region to another. They are also responsible for the production of hormones and neurotransmitters that are responsible for the regulation of mood, sleep, appetite, and sexual function.
+b'Neurons are fascinating cells that are responsible for the transmission of information from one brain region to another. They are also responsible for the production of hormones and neurotransmitters that are responsible for the regulation of mood, sleep, appetite, and sexual function.\n'
 ```
+
+![demo](./gpt-demo.gif)
