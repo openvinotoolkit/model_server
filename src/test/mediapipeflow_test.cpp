@@ -907,7 +907,6 @@ node {
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
 }
 
-
 TEST_F(MediapipeConfig, MediapipeFullRelativePaths) {
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy.json");
