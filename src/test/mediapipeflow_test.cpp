@@ -24,6 +24,7 @@
 #include <openvino/openvino.hpp>
 
 #include "../config.hpp"
+#include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -162,6 +163,12 @@ TEST_P(MediapipeFlowKfsTest, Infer) {
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
+class MediapipeFlowDummyEmptySubconfigTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_empty_subconfig.json");
+    }
+};
 
 static void performMediapipeInferTest(const ovms::Server& server, ::KFSRequest& request, ::KFSResponse& response, const Precision& precision, const std::string& modelName) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -191,6 +198,16 @@ TEST_F(MediapipeFlowDummyOnlyGraphNameSpecified, Infer) {
 }
 
 TEST_F(MediapipeFlowDummyDefaultSubconfigTest, Infer) {
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediaDummy";
+    performMediapipeInferTest(server, request, response, precision, modelName);
+
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeFlowDummyEmptySubconfigTest, Infer) {
     ::KFSRequest request;
     ::KFSResponse response;
     const std::string modelName = "mediaDummy";
@@ -766,6 +783,28 @@ TEST_F(MediapipeConfig, MediapipeAdd) {
         EXPECT_NE(graphDefinition, nullptr);
         EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
     }
+
+    manager.join();
+}
+
+TEST_F(MediapipeConfig, MediapipeDummyWithDag) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    for (auto& graphName : mediaGraphsDummy) {
+        auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName(graphName);
+        EXPECT_NE(graphDefinition, nullptr);
+        EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
+    }
+
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName("dummyDAG");
+    EXPECT_NE(pipelineDefinition, nullptr);
+    EXPECT_EQ(pipelineDefinition->getStatus().getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+
+    auto model = manager.findModelByName("dummy");
+    ASSERT_NE(nullptr, model->getDefaultModelInstance());
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
 
     manager.join();
 }
