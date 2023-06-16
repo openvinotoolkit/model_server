@@ -48,11 +48,6 @@ private:
     std::string graphPath;
 
     /**
-         * @brief Flag determing should we pass whole KFSrequest
-         */
-    bool passKfsRequest;
-
-    /**
          * @brief Json config directory path
          */
     std::string rootDirectoryPath;
@@ -69,25 +64,21 @@ public:
          * @param name
          * @param basePath
          * @param graphPath
-         * @param passKfsRequest
          * @param subconfigPath
          */
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
         const std::string& graphPath = "",
-        const bool passKfsRequest = false,
         const std::string& subconfigPath = "") :
         graphName(graphName),
         basePath(basePath),
         graphPath(graphPath),
-        passKfsRequest(passKfsRequest),
         subconfigPath(subconfigPath) {
     }
 
     void clear() {
         graphName.clear();
         graphPath.clear();
-        passKfsRequest = false;
     }
 
     /**
@@ -175,24 +166,6 @@ public:
     }
 
     /**
-         * @brief Get the passKfsRequest
-         *
-         * @return const bool
-         */
-    const bool getPassKfsRequestFlag() const {
-        return this->passKfsRequest;
-    }
-
-    /**
-         * @brief Set the PassKfsRequestFlag
-         *
-         * @param passKfsRequest
-         */
-    void setPassKfsRequestFlag(const bool passKfsRequest) {
-        this->passKfsRequest = passKfsRequest;
-    }
-
-    /**
      * @brief  Parses all settings from a JSON node
         *
         * @return Status
@@ -221,10 +194,6 @@ public:
                 this->setGraphPath(basePath + "graph.pbtxt");
                 SPDLOG_DEBUG("graph_path not defined in config so it will be set to default based on base_path and graph name: {}", this->getGraphPath());
             }
-            if (v.HasMember("graph_pass_kfs_request"))
-                this->setPassKfsRequestFlag(v["graph_pass_kfs_request"].GetBool());
-            else
-                this->setPassKfsRequestFlag(false);
             if (v.HasMember("subconfig")) {
                 this->setSubconfigPath(v["subconfig"].GetString());
             } else {

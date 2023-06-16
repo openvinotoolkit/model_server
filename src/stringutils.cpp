@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <locale>
@@ -84,6 +85,26 @@ bool endsWith(const std::string& str, const std::string& match) {
            std::all_of(std::next(str.begin(), str.size() - match.size()), str.end(), [&it](const char& c) {
                return ::tolower(c) == ::tolower(*(it++));
            });
+}
+
+bool startsWith(const char* str, const char* prefix) {
+    // Ensure null terminated
+    const int MAX = 300;
+    const char* end = str;
+    for (; *end != '\0'; ++end) {
+        if ((end - str) > MAX) {
+            return false;
+        }
+    }
+    const char* end2 = prefix;
+    for (; *end2 != '\0'; ++end2) {
+        if ((end2 - str) > MAX) {
+            return false;
+        }
+    }
+    size_t strLen = std::strlen(str);
+    size_t prefixLen = std::strlen(prefix);
+    return strLen < prefixLen ? false : std::memcmp(str, prefix, prefixLen) == 0;
 }
 
 std::optional<uint32_t> stou32(const std::string& input) {
