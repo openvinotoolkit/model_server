@@ -50,7 +50,7 @@ MEDIAPIPE_DISABLE ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= 1588a332173a8401da4e34e8f6f42c693dc4dcee
-OV_CONTRIB_BRANCH ?= master
+OV_CONTRIB_BRANCH ?= a7f969af513bf4c74966aa13877305a3c7e8b4d4
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
