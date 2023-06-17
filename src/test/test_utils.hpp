@@ -148,17 +148,17 @@ const ovms::ModelConfig DUMMY_SAVED_MODEL_CONFIG{
 
 const ovms::ModelConfig DUMMY_TFLITE_CONFIG{
     "dummy_tflite",
-    dummy_tflite_location,       // base path
-    "CPU",                       // target device
-    "1",                         // batchsize
-    1,                           // NIREQ
-    false,                       // is stateful
-    true,                        // idle sequence cleanup enabled
-    false,                       // low latency transformation enabled
-    500,                         // stateful sequence max number
-    "",                          // cache directory
-    1,                           // model_version unused since version are read from path
-    dummy_tflite_location,       // local path
+    dummy_tflite_location,  // base path
+    "CPU",                  // target device
+    "1",                    // batchsize
+    1,                      // NIREQ
+    false,                  // is stateful
+    true,                   // idle sequence cleanup enabled
+    false,                  // low latency transformation enabled
+    500,                    // stateful sequence max number
+    "",                     // cache directory
+    1,                      // model_version unused since version are read from path
+    dummy_tflite_location,  // local path
 };
 
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";

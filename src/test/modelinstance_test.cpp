@@ -77,7 +77,7 @@ TEST_F(TestUnloadModel, SuccessfulUnloadSaved_Model) {
     ASSERT_EQ(modelInstance.loadModel(DUMMY_SAVED_MODEL_CONFIG), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     EXPECT_TRUE(modelInstance.getInputsInfo().count("in") == 1);
-    EXPECT_TRUE(modelInstance.getOutputsInfo().count("out") == 1);    
+    EXPECT_TRUE(modelInstance.getOutputsInfo().count("out") == 1);
     modelInstance.retireModel();
     EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
 }
