@@ -76,6 +76,8 @@ TEST_F(TestUnloadModel, SuccessfulUnloadSaved_Model) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ASSERT_EQ(modelInstance.loadModel(DUMMY_SAVED_MODEL_CONFIG), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_TRUE(modelInstance.getInputsInfo().count("in") == 1);
+    EXPECT_TRUE(modelInstance.getOutputsInfo().count("out") == 1);    
     modelInstance.retireModel();
     EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
 }
@@ -84,7 +86,8 @@ TEST_F(TestUnloadModel, SuccessfulUnloadTFLite) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ASSERT_EQ(modelInstance.loadModel(DUMMY_TFLITE_CONFIG), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_TRUE(modelInstance.getInputsInfo().count("input:0") == 1);
+    EXPECT_TRUE(modelInstance.getOutputsInfo().count("output:0") == 1);
     modelInstance.retireModel();
     EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
 }
