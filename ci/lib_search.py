@@ -117,6 +117,7 @@ def check_dir(start_dir):
         "go.sum",
         "mwaitpkg.patch",
         'saved_model.pb',
+        'tflite',
         "yarn.lock",
         "BUILD.bazel",
         "package.json",
