@@ -109,8 +109,8 @@ make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
 
 ### `DLDT_PACKAGE_URL`
 
-Parameter used to specify URL to OpenVINO package. By default set to latest OpenVINO release.
-Use this parameter together with `OV_USE_BINARY=1` 
+Parameter used to specify URL to the OpenVINO tar.gz archive, appropriate for the target OS. Here are the [latest public packages from master branch](https://storage.openvinotoolkit.org/repositories/openvino/packages/master/).
+Use this parameter together with `OV_USE_BINARY=1`.
 
 <hr />
 
