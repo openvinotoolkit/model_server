@@ -229,6 +229,9 @@ std::shared_ptr<const TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
 const std::optional<Dimension> TensorInfo::getBatchSize() const {
     const auto batchIndex = this->layout.getBatchIndex();
     if (!batchIndex.has_value()) {
+        // Assume first dimension is batch size when layout gives no context
+        if (getShape().size() > 0)
+            return getShape()[0];
         return std::nullopt;
     }
     if (getShape().size() < batchIndex.value() + 1) {

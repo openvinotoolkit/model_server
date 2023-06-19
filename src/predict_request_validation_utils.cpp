@@ -968,13 +968,12 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
 
         // Batch and mode retrieval for given input
         auto batchIndex = inputInfo->getLayout().getBatchIndex();
-        if (batchIndex.has_value() && inputInfo->getShape().size() < batchIndex.value() + 1) {
+        if (batchIndex.has_value() && batchIndex.value() >= inputInfo->getShape().size()) {
             SPDLOG_DEBUG("[servable name: {} version: {}] Batch index out of shape range for input: {} layout: {} shape: {}",
                 servableName, servableVersion, name, inputInfo->getLayout(), inputInfo->getShape().toString());
             return StatusCode::INTERNAL_ERROR;
         }
 
-        auto batchSizeOpt = batchIndex.has_value() ? std::make_optional(inputInfo->getShape().at(batchIndex.value())) : std::nullopt;
         Mode shapeMode = getShapeMode(shapeInfo, name);
 
         if (requiresPreProcessing(proto)) {
@@ -998,14 +997,14 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                     servableName, servableVersion, name);
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
                 RETURN_IF_ERR(validateAgainstMax2DStringArraySize(inputBatchSize, inputWidth));
-                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSizeOpt, finalStatus, batchingMode, shapeMode, inputBatchSize));
+                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, inputInfo->getBatchSize(), finalStatus, batchingMode, shapeMode, inputBatchSize));  // 2 dimensions assumed
                 RETURN_IF_ERR(checkStringShapeMismatch(proto, *inputInfo, finalStatus, batchingMode, shapeMode, inputBatchSize, inputWidth));
                 continue;
             } else if (processingHint == TensorInfo::ProcessingHint::IMAGE) {
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing binary image input: name: {}",
                     servableName, servableVersion, name);
                 RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
-                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, batchSizeOpt, finalStatus, batchingMode, shapeMode, inputBatchSize));
+                RETURN_IF_ERR(checkBinaryBatchSizeMismatch(proto, inputInfo->getBatchSize(), finalStatus, batchingMode, shapeMode, inputBatchSize));  // 4/5 dimensions assumed
                 continue;
             } else {
                 SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
@@ -1017,7 +1016,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         // Data Array Proto
         RETURN_IF_ERR(validatePrecision(*inputInfo, proto));
         RETURN_IF_ERR(validateNumberOfShapeDimensions(*inputInfo, proto));
-        RETURN_IF_ERR(checkBatchSizeMismatch(proto, batchSizeOpt, batchIndex, finalStatus, batchingMode, shapeMode));
+        RETURN_IF_ERR(checkBatchSizeMismatch(proto, inputInfo->getBatchSize(), batchIndex, finalStatus, batchingMode, shapeMode));
         RETURN_IF_ERR(checkShapeMismatch(proto, *inputInfo, batchIndex, finalStatus, batchingMode, shapeMode));
         RETURN_IF_ERR(validateTensorContent(proto, inputInfo->getPrecision(), bufferId));
     }
