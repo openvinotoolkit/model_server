@@ -341,7 +341,9 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_f
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
 
 # C-api C/C++ app with gcc
-RUN if [ "$FUZZER_BUILD" == "0" ]; then make -f MakefileCapi cpp && make -f MakefileCapi c; fi;
+COPY MakefileCapi /ovms/
+RUN if [ "$FUZZER_BUILD" == "0" ]; then make -f MakefileCapi cpp && \
+                                        make -f MakefileCapi c; fi ;
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json

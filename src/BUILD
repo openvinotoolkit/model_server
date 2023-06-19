@@ -417,7 +417,6 @@ cc_library(
                 "-fsanitize=address,undefined,",
                 "-fprofile-generate",
                 "-ftest-coverage",
-                "-fprofile-arcs",
             ],
         }),
     visibility = [
@@ -433,7 +432,6 @@ cc_library(
         ],
         "//src:fuzzer_build" : [
             "-fprofile-generate",
-            "-fprofile-arcs",
             "-fsanitize=address",
             "-fsanitize-coverage=trace-pc",
             "-fsanitize-coverage=trace-pc-guard",

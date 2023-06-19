@@ -326,20 +326,20 @@ RUN bazel build --jobs $JOBS ${debug_bazel_flags} //src:ovms_shared
 
 # C api app with bazel
 # hadolint ignore=DL3059
-#RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example
 
 # C-API benchmark app
-#RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
 
 # OVMS
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
 
 # hadolint ignore=DL3059
-#RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
+RUN bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so
 
 # C-api C/C++ app with gcc
 COPY MakefileCapi .
-#RUN make -f MakefileCapi cpp && make -f MakefileCapi c
+RUN make -f MakefileCapi cpp && make -f MakefileCapi c
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
