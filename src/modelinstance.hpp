@@ -421,15 +421,6 @@ public:
         return cacheDisabled;
     }
 
-    /**
-         * @brief Gets batch size
-         *
-         * @return batch size
-         */
-    virtual Dimension getBatchSize() const {
-        return Dimension(ov::get_batch(model));
-    }
-
     const size_t getBatchSizeIndex() const;
 
     /**
