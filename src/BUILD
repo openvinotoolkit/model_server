@@ -480,6 +480,15 @@ cc_binary(
 )
 
 cc_binary(
+    name = "lib_node_scalar.so",
+    srcs = [
+	    "test/custom_nodes/node_scalar.c",
+	    "custom_node_interface.h",
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
     name = "lib_node_dynamic_image.so",
     srcs = [
 	    "test/custom_nodes/node_dynamic_image.c",

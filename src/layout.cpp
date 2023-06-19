@@ -59,10 +59,7 @@ std::optional<size_t> Layout::retrieveBatchIndex() const {
     auto batchPos = this->find(BATCH_DIMENSION_LETTER);
     auto etcPos = this->find(ETC_LAYOUT_DELIMETER);
     if (static_cast<std::string>(*this) == UNSPECIFIED_LAYOUT) {
-        // we want to treat ANY layout as having BS on 0 position
-        // otherwise in any case we extract this we have to check
-        // against layout ...
-        return 0;
+        return std::nullopt;
     }
     if (batchPos == std::string::npos) {
         return std::nullopt;
