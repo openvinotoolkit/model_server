@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "profilermodule.hpp"
+
 #include <memory>
 #include <utility>
 
@@ -20,24 +22,26 @@
 #include "logging.hpp"
 #include "module.hpp"
 #include "profiler.hpp"
+#include "server.hpp"
+#include "status.hpp"
 
 namespace ovms {
 #ifdef MTR_ENABLED
 ProfilerModule::ProfilerModule() = default;
-int ProfilerModule::start(const Config& config) {
+Status ProfilerModule::start(const Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PROFILER_MODULE_NAME);
     this->profiler = std::make_unique<Profiler>(config.tracePath());
     if (!this->profiler) {
-        return EXIT_FAILURE;
+        return StatusCode::INTERNAL_ERROR;
     }
     if (!this->profiler->isInitialized()) {
         SPDLOG_ERROR("Cannot open file for profiler, --trace_path: {}", config.tracePath());
-        return EXIT_FAILURE;
+        return StatusCode::INTERNAL_ERROR;
     }
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", PROFILER_MODULE_NAME);
-    return EXIT_SUCCESS;
+    return StatusCode::OK;
 }
 
 void ProfilerModule::shutdown() {
