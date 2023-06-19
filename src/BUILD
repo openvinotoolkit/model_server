@@ -414,7 +414,7 @@ cc_library(
             "//conditions:default": [
             ],
             "//src:fuzzer_build" : [
-                "-fsanitize=address,undefined,",
+                "-fsanitize=address",
                 "-fprofile-generate",
                 "-ftest-coverage",
             ],
@@ -434,7 +434,6 @@ cc_library(
             "-fprofile-generate",
             "-fsanitize=address",
             "-fsanitize-coverage=trace-pc",
-            "-fsanitize-coverage=trace-pc-guard",
             "-static-libasan",
         ],
     }),
