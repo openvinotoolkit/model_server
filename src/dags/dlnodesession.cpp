@@ -190,6 +190,16 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
             return Status(StatusCode::INVALID_SHAPE, details);
         }
     }
+    if (!tensorInfo.getShape().match(dims)) {
+        std::stringstream ss;
+        ss << "Node: " << getName() << " input: " << tensorInfo.getName()
+           << " Invalid shape -"
+           << " Expected: " << tensorInfo.getShape().toString()
+           << "; Actual: " << shapeToString(dims);
+        const std::string details = ss.str();
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+        return Status(StatusCode::INVALID_SHAPE, details);
+    }
     return StatusCode::OK;
 }
 

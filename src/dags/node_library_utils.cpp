@@ -128,7 +128,9 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
         }
 
         freeCallback(info[i].dims, customNodeLibraryInternalManager);
-        out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape), Layout::getUnspecifiedLayout()));
+        out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape),
+            // Keep (...) for scalars, assume batch on first position for other shapes (N...)
+            shape.size() == 0 ? Layout::getUnspecifiedLayout() : Layout::getDefaultLayout()));
     }
     freeCallback(info, customNodeLibraryInternalManager);
     return StatusCode::OK;

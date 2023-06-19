@@ -787,7 +787,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvali
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_INVALID_PRECISION);
 }
 
-struct LibraryIncorrectOutputShape {
+struct LibraryWithScalarOutput {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
@@ -799,10 +799,11 @@ struct LibraryIncorrectOutputShape {
         *outputsNum = 1;
         (*handle)->name = "output_numbers";
         (*handle)->precision = CustomNodeTensorPrecision::FP32;
-        (*handle)->dims = nullptr;
+        (*handle)->dims = (uint64_t*)malloc(0);
         (*handle)->dimsCount = 0;
-        (*handle)->data = (uint8_t*)malloc(sizeof(uint8_t));
-        (*handle)->dataBytes = 1;
+        (*handle)->data = (uint8_t*)malloc(sizeof(float));
+        *((float*)(*handle)->data) = 15.4f;
+        (*handle)->dataBytes = sizeof(float);
         return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
@@ -817,9 +818,39 @@ struct LibraryIncorrectOutputShape {
     }
 };
 
-TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidShape) {
-    auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputShape>();
-    ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_INVALID_SHAPE);
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SuccessLibraryWithScalarOutput) {
+    const std::vector<float> inputValues{3.5};
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{},
+        Layout{"..."});
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {});
+    ((*this->request.mutable_inputs())[pipelineInputName]).mutable_tensor_shape()->Clear();
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    auto outputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        ovms::Precision::FP32,
+        ovms::Shape{},
+        Layout{"..."});
+    const tensor_map_t outputsInfo{{pipelineOutputName, outputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+    auto custom_node = std::make_unique<CustomNode>(
+        customNodeName,
+        createLibraryMock<LibraryWithScalarOutput>(),
+        parameters_t{});
+
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node, *this->reporter);
+    pipeline->connect(*input_node, *custom_node, {{pipelineInputName, customNodeInputName}});
+    pipeline->connect(*custom_node, *output_node, {{customNodeOutputName, pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(custom_node));
+    pipeline->push(std::move(output_node));
+    ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    ASSERT_EQ(this->response.mutable_outputs()->count(pipelineOutputName), 1);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim_size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->size(), sizeof(float));
+    ASSERT_EQ(*(float*)(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->data()), 15.4f);
 }
 
 struct LibraryIncorrectOutputContentSize {
