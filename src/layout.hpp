@@ -51,7 +51,7 @@ public:
     const std::optional<size_t>& getBatchIndex() const;
     Status validate() const;
     std::optional<Layout> createIntersection(const Layout& other, size_t numberOfDimensions) const;
-    static const Layout& getDefaultLayout();
+    static const Layout& getDefaultLayout(size_t numOfDimensions);
     static const Layout& getUnspecifiedLayout();
 
     bool isCompatible(const Shape& shape) const;

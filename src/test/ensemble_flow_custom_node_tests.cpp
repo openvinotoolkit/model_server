@@ -3318,10 +3318,6 @@ public:
         mockedInputsInfo(inputsInfo),
         mockedOutputsInfo(outputsInfo) {}
 
-    ovms::Dimension getBatchSize() const override {
-        return 1;
-    }
-
     const ovms::ModelConfig& getModelConfig() const override {
         return DUMMY_MODEL_CONFIG;
     }

@@ -219,8 +219,8 @@ TEST_F(TestLoadModel, LoadModelWithEmptyRTMapLayoutSetsDefaultLayout) {
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(mockModelInstance.getInputsInfo().size(), 1);
     ASSERT_EQ(mockModelInstance.getOutputsInfo().size(), 1);
-    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout());
-    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout());
+    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout(DUMMY_MODEL_SHAPE.size()));
+    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout(DUMMY_MODEL_SHAPE.size()));
 }
 
 // The RTMap is populated with layout info by Model Optimizer.
