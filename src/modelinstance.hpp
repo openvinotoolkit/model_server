@@ -153,6 +153,11 @@ protected:
     static constexpr std::array<const char*, 1> TF_MODEL_FILES_EXTENSIONS{".pb"};
 
     /**
+      * @brief Stores required tensorflow lite model files extensions to be able to load model
+      */
+    static constexpr std::array<const char*, 1> TFLITE_MODEL_FILES_EXTENSIONS{".tflite"};
+
+    /**
          * @brief Notifies model instance users who wait for loading
          */
     std::condition_variable modelLoadedNotify;

@@ -76,6 +76,18 @@ TEST_F(TestUnloadModel, SuccessfulUnloadSaved_Model) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ASSERT_EQ(modelInstance.loadModel(DUMMY_SAVED_MODEL_CONFIG), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_EQ(modelInstance.getInputsInfo().count("in"), 1);
+    EXPECT_EQ(modelInstance.getOutputsInfo().count("out"), 1);
+    modelInstance.retireModel();
+    EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestUnloadModel, SuccessfulUnloadTFLite) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ASSERT_EQ(modelInstance.loadModel(DUMMY_TFLITE_CONFIG), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_EQ(modelInstance.getInputsInfo().count("input:0"), 1);
+    EXPECT_EQ(modelInstance.getOutputsInfo().count("output:0"), 1);
     modelInstance.retireModel();
     EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
 }
@@ -412,6 +424,7 @@ TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
     };
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
+    ASSERT_FALSE(model_files.empty());
     EXPECT_EQ(model_files.front(), directoryPath + "/test_multiple_models/1/model.xml");
 }
 
@@ -445,7 +458,7 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
     };
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
-
+    ASSERT_FALSE(model_files.empty());
     EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model/1/");
 }
 
@@ -464,7 +477,7 @@ TEST_F(TestLoadModel, CheckTFModelHandling) {
         savedModelFile << "NOT_NEEDED_CONTENT" << std::endl;
     }
     const ovms::ModelConfig config{
-        "saved-model",
+        "tf",
         modelPath,  // base path
         "CPU",      // target device
         "1",        // batchsize
@@ -479,12 +492,12 @@ TEST_F(TestLoadModel, CheckTFModelHandling) {
     };
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
-    ASSERT_NE(model_files.size(), 0);
+    ASSERT_FALSE(model_files.empty());
     EXPECT_EQ(model_files.front(), directoryPath + "/test_tf/1/model.pb");
 }
 
 TEST_F(TestLoadModel, CheckONNXModelHandling) {
-    ovms::ModelInstance modelInstance("tf", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("onnx", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_onnx";
     std::filesystem::create_directories(modelPath);
@@ -498,7 +511,7 @@ TEST_F(TestLoadModel, CheckONNXModelHandling) {
         savedModelFile << "NOT_NEEDED_CONTENT" << std::endl;
     }
     const ovms::ModelConfig config{
-        "saved-model",
+        "onnx",
         modelPath,  // base path
         "CPU",      // target device
         "1",        // batchsize
@@ -513,8 +526,42 @@ TEST_F(TestLoadModel, CheckONNXModelHandling) {
     };
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
-
+    ASSERT_FALSE(model_files.empty());
     EXPECT_EQ(model_files.front(), directoryPath + "/test_onnx/1/my-model.onnx");
+}
+
+TEST_F(TestLoadModel, CheckTFLiteModelHandling) {
+    GTEST_SKIP() << "Skipping invalid TFLite format test";
+    ovms::ModelInstance modelInstance("tflite", UNUSED_MODEL_VERSION, *ieCore);
+    const std::string modelPath = directoryPath + "/test_tflite";
+    std::filesystem::create_directories(modelPath);
+    ovms::model_version_t version = 1;
+    const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
+    if (!std::filesystem::exists(versionDirectoryPath)) {
+        ASSERT_TRUE(std::filesystem::create_directories(versionDirectoryPath));
+    }
+    {
+        std::ofstream savedModelFile{versionDirectoryPath + "/my-model.tflite"};
+        savedModelFile << "NOT_NEEDED_CONTENT" << std::endl;  // invalid content
+    }
+    const ovms::ModelConfig config{
+        "tflite",
+        modelPath,  // base path
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        false,      // is stateful
+        false,      // idle sequence cleanup enabled
+        false,      // low latency transformation enabled
+        500,        // stateful sequence max number,
+        "",         // cache dir
+        version,    // version
+        modelPath,  // local path
+    };
+    auto status = modelInstance.loadModel(config);
+    auto model_files = modelInstance.getModelFiles();
+    ASSERT_FALSE(model_files.empty());
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_tflite/1/my-model.tflite");
 }
 
 TEST_F(TestLoadModel, SuccessfulLoad) {
