@@ -109,7 +109,8 @@ make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
 
 ### `DLDT_PACKAGE_URL`
 
-Parameter used to specify URL to OpenVINO package. By default set to latest release.
+Parameter used to specify URL to the OpenVINO tar.gz archive, appropriate for the target OS. Here are the [latest public packages from master branch](https://storage.openvinotoolkit.org/repositories/openvino/packages/master/).
+Use this parameter together with `OV_USE_BINARY=1`.
 
 <hr />
 
@@ -132,8 +133,9 @@ That is required to install several building dependencies.
 
 ### `OV_USE_BINARY`
 
-By default set to `1`. When set to `0`, OpenVINO will be built from sources and `DLDT_PACKAGE_URL` will be omitted.  
-Use `OV_SOURCE_BRANCH` and `OV_SOURCE_ORG` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch and fork. By default `master` will be used and org `openvinotoolkit`.  
+By default set to `0`. With that setting, OpenVINO backend will be built from sources and `DLDT_PACKAGE_URL` will be omitted.  
+Use `OV_SOURCE_BRANCH` and `OV_SOURCE_ORG` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch and fork. By default the latest tested commit from `master` branch will be used and org `openvinotoolkit`.
+When `OV_USE_BINARY=1`, the OpenVINO backend will be installed from the binary archive set in `DLDT_PACKAGE_URL`.
 
 Example:
 ```bash
