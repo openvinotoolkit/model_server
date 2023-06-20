@@ -261,7 +261,6 @@ TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
     const std::string modelName = "mediapipeDummyTwoOutputs";
     performMediapipeInfer(server, request, response, precision, modelName);
 
-    //checkDummyResponse(, requestData, request, response, 1, 1, modelName);
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
     ASSERT_EQ(response.model_name(), modelName);
     ASSERT_EQ(response.outputs_size(), 2);
@@ -282,9 +281,6 @@ TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
     float* actual_output = (float*)content->data();
     float* expected_output = responseData.data();
     int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * sizeof(float);
-    for(int i = 0; i < dataLengthToCheck; i++){
-        std::cout<<actual_output[i] << " : " << expected_output[i] << "\n";
-    }
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 
