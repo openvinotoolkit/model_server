@@ -175,7 +175,9 @@ void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& mod
     size_t dimCount = 42;
     const char* tensorName{nullptr};
     for (id = 0; id < inputCount; ++id) {
+        LOG(INFO) << "Before OVMS_ServableMetadataGetInput";
         ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
+        LOG(INFO) << "After OVMS_ServableMetadataGetInput";
         inputNames.emplace_back(tensorName);
         shape_min_max_t inputMinMax;
         for (size_t i = 0; i < dimCount; ++i) {

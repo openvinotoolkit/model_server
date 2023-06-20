@@ -103,6 +103,12 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json");
     }
 };
+class MediapipeFlowScalarTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_scalar.json");
+    }
+};
 class MediapipeFlowDummyPathsRelativeToBasePathTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -310,6 +316,31 @@ TEST_P(MediapipeFlowDummyTest, Infer) {
     ASSERT_EQ(outputs[0].shape()[0], 1);
     ASSERT_EQ(outputs[0].shape()[1], 10);
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeFlowScalarTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName = "mediaScalar";
+    request.Clear();
+    response.Clear();
+    // Empty shape is used in the test framework to generate default shape (usually dummy 2d (1,10))
+    // Here we generate (1,1) tensor which has the same data size as scalar and just reshape to scalar below.
+    inputs_info_t inputsMeta{{"in", {{1,1}, precision}}};
+    preparePredictRequest(request, inputsMeta);
+    ASSERT_EQ(request.inputs_size(), 1);
+    (*request.mutable_inputs())[0].clear_shape();  // scalar
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    auto outputs = response.outputs();
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(outputs[0].name(), "out");
+    ASSERT_EQ(outputs[0].shape().size(), 0);
+    std::vector<float> requestData{0.};
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
 }
 

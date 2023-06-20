@@ -853,16 +853,22 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetada
            << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
            << " shape min: [";
         size_t i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shapeMin)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMin)[i] << ", ";
+            }
+            ss << (*shapeMin)[i];
         }
-        ss << (*shapeMin)[i] << "]"
+        ss << "]"
            << " shape max: [";
         i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shapeMax)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMax)[i] << ", ";
+            }  
+            ss << (*shapeMax)[i];          
         }
-        ss << (*shapeMax)[i] << "]";
+        ss << "]";
         SPDLOG_TRACE(ss.str());
     }
     return nullptr;
@@ -905,16 +911,22 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
            << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
            << " shape min: [";
         size_t i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shapeMin)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMin)[i] << ", ";
+            }
+            ss << (*shapeMin)[i];
         }
-        ss << (*shapeMin)[i] << "]"
+        ss << "]"
            << " shape max: [";
         i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shapeMax)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMax)[i] << ", ";
+            }
+            ss << (*shapeMax)[i];
         }
-        ss << (*shapeMax)[i] << "]";
+        ss << "]";
         SPDLOG_TRACE(ss.str());
     }
     return nullptr;
