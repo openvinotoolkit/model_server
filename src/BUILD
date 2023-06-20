@@ -24,7 +24,6 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 
-#To build without mediapipe use flags - bazel build --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 //src:ovms
 config_setting(
     name = "disable_mediapipe",
     define_values = {
@@ -163,31 +162,6 @@ mediapipe_proto_library(
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",
     ],
-)
-
-cc_library(
-    name = "upstream_calculators_src",
-    visibility = ["//visibility:public"],
-    srcs= [] + select({
-                "//conditions:default": [
-                    "mediapipe_calculators/modelapiovmsadapter.cc",
-                    "mediapipe_calculators/modelapiovmsadapter.hpp",
-                    "mediapipe_calculators/ovms_calculator.cc",
-                    "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
-                    "mediapipe_calculators/modelapiovmssessioncalculator.cc",
-                ],
-                "//:use_upastream_calculators" : [],
-            }),
-
-    deps = [] + select({
-                "//conditions:default": [
-                "//:ovms_dependencies",
-                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-                "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-                "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-                ],
-                "//:use_upastream_calculators" : [],
-            }),
 )
 
 cc_library(
@@ -415,14 +389,28 @@ cc_library(
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
             ],
             "//src:disable_mediapipe" : [],
-        }),
+        })  + select({
+                "//conditions:default": [
+                    "mediapipe_calculators/modelapiovmsadapter.cc",
+                    "mediapipe_calculators/modelapiovmsadapter.hpp",
+                    "mediapipe_calculators/ovms_calculator.cc",
+                    "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
+                    "mediapipe_calculators/modelapiovmssessioncalculator.cc",
+                ],
+                "//:use_upastream_calculators" : [],
+            }),
     deps = [
         "//:ovms_dependencies",
         "//src/kfserving_api:kfserving_api_cpp",
         ] + select({
-            "//conditions:default": ["//src:upstream_calculators_src"],
+            "//conditions:default": [
+                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                ],
             "//src:disable_mediapipe" : [],
-        }),
+            "//:use_upastream_calculators" : [],
+            }),
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
@@ -883,6 +871,7 @@ cc_test(
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
         "@com_google_googletest//:gtest",
+        "@model_api//:adapter_api",
     ],
     copts = [
         "-Wall",
