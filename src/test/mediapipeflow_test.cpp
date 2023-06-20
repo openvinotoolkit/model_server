@@ -169,6 +169,7 @@ TEST_P(MediapipeFlowKfsTest, Infer) {
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
+
 class MediapipeFlowDummyEmptySubconfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -176,7 +177,7 @@ public:
     }
 };
 
-static void performMediapipeInferTest(const ovms::Server& server, ::KFSRequest& request, ::KFSResponse& response, const Precision& precision, const std::string& modelName) {
+static void performMediapipeInfer(const ovms::Server& server, ::KFSRequest& request, ::KFSResponse& response, const Precision& precision, const std::string& modelName) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     request.Clear();
@@ -185,6 +186,10 @@ static void performMediapipeInferTest(const ovms::Server& server, ::KFSRequest& 
     preparePredictRequest(request, inputsMeta);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+}
+
+static void performMediapipeInferTest(const ovms::Server& server, ::KFSRequest& request, ::KFSResponse& response, const Precision& precision, const std::string& modelName) {
+    performMediapipeInfer(server, request, response, precision, modelName);
     auto outputs = response.outputs();
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_EQ(outputs[0].name(), "out");
@@ -241,6 +246,59 @@ TEST_F(MediapipeFlowDummySubconfigTest, Infer) {
 
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+class MediapipeFlowTwoOutputsTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_two_outputs.json");
+    }
+};
+
+TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipeDummyTwoOutputs";
+    performMediapipeInfer(server, request, response, precision, modelName);
+
+    //checkDummyResponse(, requestData, request, response, 1, 1, modelName);
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    ASSERT_EQ(response.model_name(), modelName);
+    ASSERT_EQ(response.outputs_size(), 2);
+    ASSERT_EQ(response.raw_output_contents_size(), 2);
+    ASSERT_EQ(response.outputs().begin()->name(), "out_2");
+    const auto& output_proto_1 = response.outputs().Get(0);
+    std::string* content = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(content->size(), DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+    ASSERT_EQ(output_proto_1.shape_size(), 2);
+    ASSERT_EQ(output_proto_1.shape(0), 1);
+    ASSERT_EQ(output_proto_1.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
+
+    const int seriesLength = 1;
+    std::vector<float> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) { v += 1.0 * seriesLength; });
+
+    float* actual_output = (float*)content->data();
+    float* expected_output = responseData.data();
+    int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * sizeof(float);
+    for(int i = 0; i < dataLengthToCheck; i++){
+        std::cout<<actual_output[i] << " : " << expected_output[i] << "\n";
+    }
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+
+    const auto& output_proto_2 = response.outputs().Get(1);
+    content = response.mutable_raw_output_contents(1);
+
+    ASSERT_EQ(content->size(), DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+    ASSERT_EQ(output_proto_2.shape_size(), 2);
+    ASSERT_EQ(output_proto_2.shape(0), 1);
+    ASSERT_EQ(output_proto_2.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
+
+    actual_output = (float*)content->data();
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
 class MediapipeFlowDummyDummyInSubconfigAndConfigTest : public MediapipeFlowTest {
