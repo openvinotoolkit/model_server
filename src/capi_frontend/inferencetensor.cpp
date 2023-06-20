@@ -28,8 +28,11 @@ InferenceTensor::InferenceTensor(InferenceTensor&& rhs) :
     shape(std::move(rhs.shape)),
     buffer(std::move(rhs.buffer)) {}
 InferenceTensor::InferenceTensor(OVMS_DataType datatype, const int64_t* shape, size_t dimCount) :
-    datatype(datatype),
-    shape(shape, shape + dimCount) {}
+    datatype(datatype){
+    if (dimCount > 0) {
+        this->shape = signed_shape_t(shape, shape + dimCount);
+    }
+}
 
 Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId, bool createCopy) {
     if (nullptr != this->buffer) {
