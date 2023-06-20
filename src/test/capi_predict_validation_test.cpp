@@ -83,15 +83,13 @@ TEST_F(CAPIPredictValidation, ValidRequest) {
 }
 
 TEST_F(CAPIPredictValidation, AllowScalar) {
-    servableInputs = ovms::tensor_map_t({
-            {"Input_FP32_Scalar",
-                std::make_shared<ovms::TensorInfo>("Input_FP32_Scalar", ovms::Precision::FP32, ovms::shape_t{}, ovms::Layout{"..."})}
-        });
+    servableInputs = ovms::tensor_map_t({{"Input_FP32_Scalar",
+        std::make_shared<ovms::TensorInfo>("Input_FP32_Scalar", ovms::Precision::FP32, ovms::shape_t{}, ovms::Layout{"..."})}});
     requestData = std::vector<float>{2.5f};
     preparePredictRequest(request,
-            {{"Input_FP32_Scalar",
-                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}},
-            requestData);
+        {{"Input_FP32_Scalar",
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_TRUE(status.ok()) << status.string();
 }

@@ -28,7 +28,7 @@ InferenceTensor::InferenceTensor(InferenceTensor&& rhs) :
     shape(std::move(rhs.shape)),
     buffer(std::move(rhs.buffer)) {}
 InferenceTensor::InferenceTensor(OVMS_DataType datatype, const int64_t* shape, size_t dimCount) :
-    datatype(datatype){
+    datatype(datatype) {
     if (dimCount > 0) {
         this->shape = signed_shape_t(shape, shape + dimCount);
     }

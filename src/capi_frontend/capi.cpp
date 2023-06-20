@@ -573,7 +573,7 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
             }
             ss << (*shape)[i];
         }
-        
+
         ss << "]"
            << " bufferType: " << *bufferType
            << " deviceId: " << *deviceId;
@@ -872,8 +872,8 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetada
         if (*dimCount > 0) {
             for (i = 0; i < *dimCount - 1; ++i) {
                 ss << (*shapeMax)[i] << ", ";
-            }  
-            ss << (*shapeMax)[i];          
+            }
+            ss << (*shapeMax)[i];
         }
         ss << "]";
         SPDLOG_TRACE(ss.str());

@@ -830,6 +830,16 @@ TEST_F(CAPIMetadata, BasicDummyDag) {
     checkServableAsDummy(servableName);
 }
 
+TEST_F(CAPIMetadata, BasicScalar) {
+    const std::string servableName{"scalar"};
+    model_version_t servableVersion = 1;
+    ovms::tensor_map_t inputsInfo({{"in",
+        std::make_shared<ovms::TensorInfo>("in", ovms::Precision::FP32, ovms::Shape{})}});
+    ovms::tensor_map_t outputsInfo({{"out",
+        std::make_shared<ovms::TensorInfo>("out", ovms::Precision::FP32, ovms::Shape{})}});
+    checkMetadata(servableName, servableVersion, inputsInfo, outputsInfo);
+}
+
 TEST_F(CAPIMetadata, DummyDynamicShapes) {
     const std::string servableName = "dummyDynamic";
     model_version_t servableVersion = 1;

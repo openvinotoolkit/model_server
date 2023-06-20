@@ -330,7 +330,7 @@ TEST_F(MediapipeFlowScalarTest, Infer) {
     response.Clear();
     // Empty shape is used in the test framework to generate default shape (usually dummy 2d (1,10))
     // Here we generate (1,1) tensor which has the same data size as scalar and just reshape to scalar below.
-    inputs_info_t inputsMeta{{"in", {{1,1}, precision}}};
+    inputs_info_t inputsMeta{{"in", {{1, 1}, precision}}};
     preparePredictRequest(request, inputsMeta);
     ASSERT_EQ(request.inputs_size(), 1);
     (*request.mutable_inputs())[0].clear_shape();  // scalar
