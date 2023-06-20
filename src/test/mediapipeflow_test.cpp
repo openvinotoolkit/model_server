@@ -329,19 +329,29 @@ TEST_F(MediapipeFlowScalarTest, Infer) {
     request.Clear();
     response.Clear();
     // Empty shape is used in the test framework to generate default shape (usually dummy 2d (1,10))
-    // Here we generate (1,1) tensor which has the same data size as scalar and just reshape to scalar below.
+    // Here we generate (1,1) tensor which has the same data size as scalar and just reshape to scalar () below.
     inputs_info_t inputsMeta{{"in", {{1, 1}, precision}}};
     preparePredictRequest(request, inputsMeta);
+    auto* content = request.mutable_raw_input_contents()->Mutable(0);
+    ASSERT_EQ(content->size(), sizeof(float));
+    *((float*)content->data()) = 3.8f;
     ASSERT_EQ(request.inputs_size(), 1);
     (*request.mutable_inputs())[0].clear_shape();  // scalar
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    auto outputs = response.outputs();
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(outputs[0].name(), "out");
-    ASSERT_EQ(outputs[0].shape().size(), 0);
-    std::vector<float> requestData{0.};
-    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+
+    const std::string outputName = "out";
+    ASSERT_EQ(response.model_name(), modelName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), outputName) << "Did not find:" << outputName;
+    const auto& output_proto = *response.outputs().begin();
+    std::string* outContent = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output_proto.shape_size(), 0);
+
+    ASSERT_EQ(outContent->size(), sizeof(float));
+    EXPECT_EQ(*(float*)outContent->data(), 3.8f);
 }
 
 TEST_P(MediapipeFlowAddTest, Infer) {
