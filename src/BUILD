@@ -181,6 +181,7 @@ cc_library(
 
     deps = [] + select({
                 "//conditions:default": [
+                "//:ovms_dependencies",
                 "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
                 "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
                 "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
@@ -821,6 +822,7 @@ cc_test(
         "test/dummy_fp64/1/saved_model.xml",
         "test/dummy_fp64/1/saved_model.bin",
         "test/dummy_saved_model/1/saved_model.pb",
+        "test/dummy_tflite/1/dummy.tflite",
         "test/dummyUppercase/1/dummy.xml",
         "test/dummyUppercase/1/dummy.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
