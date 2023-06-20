@@ -25,6 +25,7 @@
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../ovms.h"
 #include "c_api_test_utils.hpp"
+#include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -747,6 +748,15 @@ TEST_F(CAPIMetadata, Negative) {
 
     OVMS_ServableMetadataDelete(nullptr);
 }
+
+/* TEST_F(CAPIState, AllStates) { */
+/*     const std::string servableName = "dummy"; */
+/*     const int64_t servableVersion = 1; */
+/*     auto modelInstance = std::make_shared<MockModelInstanceChangingStates>(servableName, servableVersion); */
+/*     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver)); */
+/*     OVMS_ServableState state; */
+/*     OVMS_GetServableState(cserver, servableName, servableVersion, &state); */
+/* } */
 
 TEST_F(CAPIMetadata, BasicDummy) {
     const std::string servableName{"dummy"};

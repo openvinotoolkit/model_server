@@ -79,6 +79,14 @@ typedef enum OVMS_BufferType_enum {
     OVMS_BUFFERTYPE_HDDL,
 } OVMS_BufferType;
 
+typedef enum OVMS_ServableState_enum {
+    OVMS_BEGIN,
+    OVMS_LOADING,
+    OVMS_AVAILABLE,
+    OVMS_UNLOADING,
+    OVMS_RETIRED
+} OVMS_ServableState;
+
 typedef struct OVMS_InferenceRequest_ OVMS_InferenceRequest;
 typedef struct OVMS_InferenceResponse_ OVMS_InferenceResponse;
 
@@ -94,6 +102,7 @@ typedef enum OVMS_LogLevel_enum {
     OVMS_LOG_ERROR
 } OVMS_LogLevel;
 
+OVMS_Status* OVMS_GetServableState(OVMS_Server*, const char* servableName, int64_t servableVersion, OVMS_ServableState* state);
 ////
 //// OVMS_Status
 //// Structure for status management.
@@ -500,7 +509,6 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* metadata, uint
 // \param shapeMax The shape of the output
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
-
 
 // EXPERIMENTAL // TODO if declare specific type for underlying ov::AnyMap
 // Get the additional info about servable.

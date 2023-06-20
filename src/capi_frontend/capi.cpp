@@ -753,6 +753,65 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     return nullptr;
 }
 
+OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, OVMS_ServableState* state) {
+    if (serverPtr == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
+    }
+    if (servableName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable name"));
+    }
+    if (state == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable status"));
+    }
+    //
+    // TODO check inputs
+    // TODO metrics
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::Pipeline> pipelinePtr;
+    ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+    auto status = getModelInstance(server, servableName, servableVersion, modelInstance, modelInstanceUnloadGuard);
+
+    if (status == StatusCode::MODEL_NAME_MISSING) {
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", servableName);
+        PipelineDefinition* pipelineDefinition = nullptr;
+        std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+        status = getPipelineDefinition(server, servableName, &pipelineDefinition, unloadGuard);
+        if (!status.ok() || !pipelineDefinition) {
+            return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
+        }
+
+        switch (pipelineDefinition->getStateCode()) {
+        case ovms::PipelineDefinitionStateCode::BEGIN:
+            *state = OVMS_ServableState::OVMS_BEGIN;
+            break;
+        case ovms::PipelineDefinitionStateCode::RELOADING:
+        case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED:
+        case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION:
+            *state = OVMS_ServableState::OVMS_LOADING;
+            break;
+        case ovms::PipelineDefinitionStateCode::AVAILABLE:
+        case ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION:
+            *state = OVMS_ServableState::OVMS_AVAILABLE;
+            break;
+        case ovms::PipelineDefinitionStateCode::RETIRED:
+            *state = OVMS_ServableState::OVMS_RETIRED;
+            break;
+        }
+
+        return nullptr;
+    }
+    if (!status.ok()) {
+        if (modelInstance) {
+            //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
+        }
+        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    *state = static_cast<OVMS_ServableState>(static_cast<int>(modelInstance->getStatus().getState()) / 10);
+    return nullptr;
+}
+
 OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, OVMS_ServableMetadata** servableMetadata) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
