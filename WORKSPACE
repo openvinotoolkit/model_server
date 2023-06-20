@@ -334,24 +334,6 @@ http_archive(
 load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
 prometheus_cpp_repositories()
 
-##################### OPEN VINO ######################
-# OPENVINO DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
-new_local_repository(
-    name = "openvino",
-    build_file = "@//third_party/openvino:BUILD",
-    path = "/opt/intel/openvino/runtime",
-)
-################## END OF OPENVINO DEPENDENCY ##########
-
-##################### OPEN CV ######################
-# OPENCV DEFINITION FOR ARTIFACTS BUILT FROM SOURCE: ##########################
-new_local_repository(
-    name = "opencv",
-    build_file = "@//third_party/opencv:BUILD",
-    path = "/opt/opencv",
-)
-################## END OF OPENCV DEPENDENCY ##########
-
 new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",

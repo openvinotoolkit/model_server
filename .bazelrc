@@ -54,6 +54,10 @@ build --define=MEDIAPIPE_DISABLE=0
 coverage --define=MEDIAPIPE_DISABLE=0
 test --define=MEDIAPIPE_DISABLE=0
 
+build --define=USE_UPSTREAM_CALCULATORS=0
+coverage --define=USE_UPSTREAM_CALCULATORS=0
+test --define=USE_UPSTREAM_CALCULATORS=0
+
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
 

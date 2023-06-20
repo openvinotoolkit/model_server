@@ -32,9 +32,33 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+config_setting(
+    name = "use_upastream_calculators",
+    define_values = {
+        "USE_UPSTREAM_CALCULATORS": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_use_upastream_calculators",
+    negate = ":use_upastream_calculators",
+)
+
 more_selects.config_setting_negation(
     name = "not_disable_mediapipe",
     negate = ":disable_mediapipe",
+)
+
+cc_library(
+    name = "upstream_calculators_base_deps",
+    deps = [] + select({
+                "//conditions:default": [
+                    "@mediapipe_calculators//:mediapipe_calculators",
+                    "@model_api//:adapter_api",
+                ],
+                "//:use_upastream_calculators" : [],
+            })
 )
 
 cc_library(
@@ -69,8 +93,7 @@ cc_library(
                 "@mediapipe//mediapipe/framework/port:logging",
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework/port:status",
-                "@mediapipe_calculators//:mediapipe_calculators",
-                "@model_api//:adapter_api",
+                "upstream_calculators_base_deps",
             ],
             "//:disable_mediapipe" : [],
         }),

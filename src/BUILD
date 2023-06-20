@@ -33,6 +33,19 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+config_setting(
+    name = "use_upastream_calculators",
+    define_values = {
+        "USE_UPSTREAM_CALCULATORS": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_use_upastream_calculators",
+    negate = ":use_upastream_calculators",
+)
+
 more_selects.config_setting_negation(
     name = "not_disable_mediapipe",
     negate = ":disable_mediapipe",
@@ -103,8 +116,6 @@ cc_shared_library(
     ] + select({
         "//conditions:default": [
             "@mediapipe//:__subpackages__",
-            "@mediapipe_calculators//:__subpackages__",
-            "@model_api//:__subpackages__",
             "@arm_neon_2_x86_sse//:__subpackages__",
             "@ruy//:__subpackages__",
             "@cpuinfo//:__subpackages__",
@@ -113,7 +124,13 @@ cc_shared_library(
             "@flatbuffers//:__subpackages__",
             ],
         "//src:disable_mediapipe" : [],
-        }),
+        }) + select({
+                "//conditions:default": [
+                    "@mediapipe_calculators//:__subpackages__",
+                    "@model_api//:__subpackages__",
+                ],
+                "//:use_upastream_calculators" : [],
+            }),
     features = [],
     roots = ["//src:ovms_lib"],
 )
@@ -146,6 +163,30 @@ mediapipe_proto_library(
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",
     ],
+)
+
+cc_library(
+    name = "upstream_calculators_src",
+    visibility = ["//visibility:public"],
+    srcs= [] + select({
+                "//conditions:default": [
+                    "mediapipe_calculators/modelapiovmsadapter.cc",
+                    "mediapipe_calculators/modelapiovmsadapter.hpp",
+                    "mediapipe_calculators/ovms_calculator.cc",
+                    "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
+                    "mediapipe_calculators/modelapiovmssessioncalculator.cc",
+                ],
+                "//:use_upastream_calculators" : [],
+            }),
+
+    deps = [] + select({
+                "//conditions:default": [
+                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                ],
+                "//:use_upastream_calculators" : [],
+            }),
 )
 
 cc_library(
@@ -371,11 +412,6 @@ cc_library(
                 "mediapipe_internal/mediapipegraphdefinition.hpp",
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
-                "mediapipe_calculators/modelapiovmsadapter.cc",
-                "mediapipe_calculators/modelapiovmsadapter.hpp",
-                "mediapipe_calculators/ovms_calculator.cc",
-                "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
-                "mediapipe_calculators/modelapiovmssessioncalculator.cc",
             ],
             "//src:disable_mediapipe" : [],
         }),
@@ -383,11 +419,7 @@ cc_library(
         "//:ovms_dependencies",
         "//src/kfserving_api:kfserving_api_cpp",
         ] + select({
-            "//conditions:default": [
-                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-                "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-                "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-            ],
+            "//conditions:default": ["//src:upstream_calculators_src"],
             "//src:disable_mediapipe" : [],
         }),
     local_defines = [
@@ -789,7 +821,6 @@ cc_test(
         "test/dummy_fp64/1/saved_model.xml",
         "test/dummy_fp64/1/saved_model.bin",
         "test/dummy_saved_model/1/saved_model.pb",
-        "test/dummy_tflite/1/dummy.tflite",
         "test/dummyUppercase/1/dummy.xml",
         "test/dummyUppercase/1/dummy.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
