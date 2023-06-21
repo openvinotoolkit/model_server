@@ -4,7 +4,7 @@ This guide shows how to convert TensorFlow models and deploy them with the OpenV
 
 - In this example TensorFlow model [ResNet](https://github.com/tensorflow/models/tree/v2.2.0/official/r1/resnet) will be used.
 
-- TensorFlow model can be converted into Intermediate Representation format using model_optimizer tool. There are several formats for storing TensorFlow model. In this guide, we present conversion from SavedModel format. More information about conversion process can be found on the [model optimizer documentation](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_prepare_model_convert_model_Convert_Model_From_TensorFlow.html#savedmodel_format).
+- TensorFlow model can be converted into Intermediate Representation format using model_optimizer tool. There are several formats for storing TensorFlow model. In this guide, we present conversion from SavedModel format. More information about conversion process can be found on the [model optimizer documentation](https://docs.openvino.ai/2022.3/openvino_docs_MO_DG_prepare_model_convert_model_Convert_Model_From_TensorFlow.html#savedmodel_format).
 
 - Binary input format has several requirements for the model and ovms configuration. More information can be found in [binary inputs documentation](binary_input.md).
 ## Steps

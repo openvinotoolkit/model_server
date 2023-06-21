@@ -10,7 +10,7 @@ It allows for easy deployment and management of OVMS service in the Kubernetes c
 
 ### OpenShift
 
-OVMS operator on OpenShift infrastructure is now replaced with the [OpenVINO Operator](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/extras/openvino-operator-openshift).
+OVMS operator on OpenShift infrastructure is now replaced with the [OpenVINO Operator](https://github.com/openvinotoolkit/model_server/blob/releases/2022/3/extras/openvino-operator-openshift).
 It includes the functionality of the Model Server management with other OpenVINO related integrations.
 
 ### Kubernetes with OLM
@@ -24,7 +24,7 @@ Deploy the operator using the steps covered in [OperatorHub](https://operatorhub
 
 If you are using opensource Kubernetes, after installing the operator, deploy and manage OVSM deployments by creating `Ovms` Kubernetes resources.
 
-It can be done by editing the [sample resource](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/extras/ovms-operator/config/samples/intel_v1alpha1_ovms.yaml) and running a command:
+It can be done by editing the [sample resource](https://github.com/openvinotoolkit/model_server/blob/releases/2022/3/extras/ovms-operator/config/samples/intel_v1alpha1_ovms.yaml) and running a command:
 
 ```bash
 kubectl apply -f config/samples/intel_v1alpha1_ovms.yaml
