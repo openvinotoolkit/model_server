@@ -326,28 +326,30 @@ RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" == "1" ] ; then \
 # C api shared library
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_shared
 
+ARG FUZZER_BUILD=0
 # C api app with bazel
 # hadolint ignore=DL3059
-RUN bazel build --jobs $JOBS ${debug_bazel_flags} //src:capi_cpp_example
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs $JOBS //src:capi_cpp_example; fi;
 
 # C-API benchmark app
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"; fi;
 
 # OVMS
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms; fi;
 
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
 
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
-RUN make -f MakefileCapi cpp BAZEL_DEBUG_FLAGS="${debug_bazel_flags}" && \
-    make -f MakefileCapi c BAZEL_DEBUG_FLAGS="${debug_bazel_flags}"
+RUN if [ "$FUZZER_BUILD" == "0" ]; then make -f MakefileCapi cpp && \
+                                        make -f MakefileCapi c; fi ;
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
  
-RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
+RUN if [ "$FUZZER_BUILD" == "0" ]; then /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms; fi;
+
 
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE

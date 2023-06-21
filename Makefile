@@ -49,6 +49,7 @@ RUN_TESTS ?= 1
 NVIDIA ?=0
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
+FUZZER_BUILD ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -72,12 +73,17 @@ DISABLE_MEDIAPIPE_PARAMS ?= ""
 ifeq ($(MEDIAPIPE_DISABLE),1)
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "
 endif
-
-ifeq ($(BAZEL_BUILD_TYPE),dbg)
-  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "$(DISABLE_MEDIAPIPE_PARAMS)
-else
-  BAZEL_DEBUG_FLAGS=" --strip=never "$(DISABLE_MEDIAPIPE_PARAMS)
+FUZZER_BUILD_PARAMS ?= ""
+ifeq ($(FUZZER_BUILD),1)
+	FUZZER_BUILD_PARAMS = " --define FUZZER_BUILD=1 --cxxopt=-DFUZZER_BUILD=1 "
 endif
+
+BAZEL_DEBUG_BUILD_FLAGS ?= ""
+ifeq ($(BAZEL_BUILD_TYPE),dbg)
+    BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg "
+endif
+
+BAZEL_DEBUG_FLAGS=" --strip=never "$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(FUZZER_BUILD_PARAMS)
 
 ifeq ($(MINITRACE),ON)
   MINITRACE_FLAGS="--copt=-DMTR_ENABLED"
@@ -212,6 +218,17 @@ ifeq ($(CHECK_COVERAGE),1)
 	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
   endif
 endif
+ifeq ($(FUZZER_BUILD),1)
+  ifeq ($(RUN_TESTS),1)
+	@echo "Cannot run tests for now with fuzzer build"; exit 1 ;
+  endif
+  ifeq ($(CHECK_COVERAGE),1)
+	@echo "Cannot check coverage with fuzzer build"; exit 1 ;
+  endif
+  ifeq ($(BASE_OS),redhat)
+	@echo "Cannot run fuzzer with redhat"; exit 1 ;
+  endif
+endif
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
@@ -256,28 +273,43 @@ else
 endif
 	@cat .workspace/metadata.json
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
-		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" --build-arg ov_source_org="$(OV_SOURCE_ORG)" \
+		--build-arg http_proxy=$(HTTP_PROXY) \
+		--build-arg https_proxy=$(HTTPS_PROXY) \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg ovms_metadata_file=.workspace/metadata.json \
+		--build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
+		--build-arg ov_source_org="$(OV_SOURCE_ORG)" \
 		--build-arg ov_contrib_org="$(OV_CONTRIB_ORG)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
-		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) --build-arg RUN_TESTS=$(RUN_TESTS)\
-		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) \
+		--build-arg sentencepiece=$(SENTENCEPIECE) \
+		--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
+		--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
+		--build-arg RUN_TESTS=$(RUN_TESTS)\
+		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
+		--build-arg build_type=$(BAZEL_BUILD_TYPE) \
+		--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg NVIDIA=$(NVIDIA) --build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
+		--build-arg NVIDIA=$(NVIDIA) \
+		--build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg JOBS=$(JOBS)
 
 targz_package: ovms_builder_image
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg BASE_OS=$(BASE_OS) \
+		--build-arg http_proxy=$(HTTP_PROXY) \
+		--build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) \
+		--build-arg sentencepiece=$(SENTENCEPIECE) \
+		--build-arg BASE_OS=$(BASE_OS) \
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
 		--build-arg NVIDIA=$(NVIDIA) \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
-		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)
 
 ovms_release_image: targz_package
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
