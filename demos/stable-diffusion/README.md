@@ -48,7 +48,7 @@ getting initial random noise (1, 4, 96, 96) {}
 
 Remote execution:
 ```bash
-python generate.py --adapter openvino --seed 15
+python generate.py --adapter ovms --seed 15
 Initializing models
 Models initialized
 Pipeline settings
@@ -57,7 +57,8 @@ Negative text: frames, borderline, text, character, duplicate, error, out of fra
 Seed: None
 Number of steps: 20
 getting initial random noise (1, 4, 96, 96) {}
-100%|████████████████████████████████████████████████| 20/20 [01:15<00:00,  3.75s/it]
+100%|████████████████████████████████████████████████| 20/20 [00:53<00:00,  2.66s/it]
+
 ```
 
 In both cases the result is the same and stored in a file `result.png`.
