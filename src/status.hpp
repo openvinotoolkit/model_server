@@ -59,6 +59,7 @@ enum class StatusCode {
     INVALID_BATCH_DIMENSION, /*!< Invalid batch dimension in shape */
     ALLOW_CACHE_WITH_CUSTOM_LOADER,
     LAYOUT_INCOMPATIBLE_WITH_SHAPE,
+    MODEL_WITH_SCALAR_AUTO_UNSUPPORTED,
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */

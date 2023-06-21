@@ -635,6 +635,22 @@ TEST_F(TestLoadModel, CorrectNumberOfStreamsSet) {
     ASSERT_EQ(modelInstance.getNumOfStreams(), 6);
 }
 
+TEST_F(TestLoadModel, ScalarModelWithBatchSetToFixed) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
+    config.setBatchingParams("3");
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
+    ASSERT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestLoadModel, ScalarModelWithBatchSetToAuto) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED);
+    ASSERT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
+}
+
 class TestLoadModelWithMapping : public TestLoadModel {
 protected:
     void SetUp() override {

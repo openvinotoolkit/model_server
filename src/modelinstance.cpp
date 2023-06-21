@@ -362,12 +362,20 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     std::map<std::string, ov::PartialShape> modelShapes;
     bool reshapeRequired = false;
 
+    bool isBatchingModeAuto = config.getBatchingMode() == Mode::AUTO;
+
     // First pass, gather reshape info.
     for (const ov::Output<ov::Node>& input : this->model->inputs()) {
         std::string name;
         try {
             std::string name = input.get_any_name();
             ov::PartialShape shape = input.get_partial_shape();
+
+            if (shape.size() == 0 && isBatchingModeAuto) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load model:{}; version:{}; with batching=AUTO due to existing scalar input name:{}",
+                    getName(), getVersion(), name);
+                return StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED;
+            }
 
             Shape requestedShape;
             auto status = getRequestedShape(config, parameter, name, requestedShape);
