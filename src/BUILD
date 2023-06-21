@@ -866,6 +866,8 @@ cc_test(
         "test/passthrough/1/passthrough.bin",
         "test/summator/1/summator.xml",
         "test/summator/1/summator.bin",
+        "test/scalar/1/saved_model.xml",
+        "test/scalar/1/saved_model.bin",
     ],
     linkopts = [
         "-lxml2",

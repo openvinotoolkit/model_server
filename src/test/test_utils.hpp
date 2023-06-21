@@ -55,6 +55,7 @@ const std::string increment_1x3x4x5_model_location = std::filesystem::current_pa
 const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
 const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
 const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
+const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -161,6 +162,21 @@ const ovms::ModelConfig DUMMY_TFLITE_CONFIG{
     dummy_tflite_location,  // local path
 };
 
+const ovms::ModelConfig SCALAR_MODEL_CONFIG{
+    "scalar",
+    scalar_model_location,  // base path
+    "CPU",                  // target device
+    "1",                    // batchsize
+    1,                      // NIREQ
+    false,                  // is stateful
+    true,                   // idle sequence cleanup enabled
+    false,                  // low latency transformation enabled
+    500,                    // stateful sequence max number
+    "",                     // cache directory
+    1,                      // model_version unused since version are read from path
+    scalar_model_location,  // local path
+};
+
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
@@ -184,6 +200,9 @@ constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const char* PASSTHROUGH_MODEL_INPUT_NAME = "input";
 constexpr const char* PASSTHROUGH_MODEL_OUTPUT_NAME = "copy:0";
+
+constexpr const char* SCALAR_MODEL_INPUT_NAME = "in";
+constexpr const char* SCALAR_MODEL_OUTPUT_NAME = "out";
 
 const std::string UNUSED_SERVABLE_NAME = "UNUSED_SERVABLE_NAME";
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
