@@ -23,7 +23,7 @@ import gc
 import torch
 import numpy as np
 
-UNET_ONNX_PATH = sd2_1_model_dir / 'unet/unet.onnx'
+UNET_ONNX_PATH = sd2_1_model_dir / 'unet.onnx'
 
 
 def convert_unet_onnx(unet:torch.nn.Module, onnx_path:Path, num_channels:int = 4, width:int = 64, height:int = 64):

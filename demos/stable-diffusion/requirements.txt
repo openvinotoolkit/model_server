@@ -11,3 +11,4 @@ transformers==4.29.2
 diffusers==0.16.1
 accelerate==0.20.3
 scipy==1.10.1
+git+https://github.com/openvinotoolkit/model_api#egg=openvino_model_api&subdirectory=model_api/python

@@ -1,33 +1,69 @@
 # Demo for running stable diffusion with OpenVINO Model Server
 
 
+Build the model server from source
+```bash
+git clone https://github.com/openvinotoolkit/model_server 
+cd model_server
+make docker_build
+```
+
+
 Download the models from HuggingFaces and convert them the ONNX format:
 
 ```bash
+cd demos/stable-diffusion
+pip install -r requirements.txt
 python vae.py
 python text_encoder.py 
 python unet.py
 
 ``` 
 
-Start OVMS server with the models:
+Start OVMS with the models:
 ```bash
-docker run -p 15000:15000 -p 15001:15001 -d -v /home/dtrawins/stable-diffusion/unet/:/model stable-diffusion:latest --model_name unet --model_path /model --log_level DEBUG --layout '{"latent_model_input":"...:NCHW","t":"...:...","encoder_hidden_states":"...:CHW"}' --port 15000 --rest_port 15001
+docker run -p 9000:9000 -d -v $(pwd)/:/models openvino/model_server:latest --config_path /models/config.json --port 9000
 ```
 
-Edit in the script stable_diffusion.py the input parameters: prompt, negative prompt, seed and number_of_steps.
-Run the pipeline:
+The demo can be execute in 2 modes:
+- with local execution using OpenVINO Runtime
+- with remote execution via calls to the model server
+
+The executor is abstracted using an adapter which be be selected via `--adapter` parameter.
+
+Local execution:
 
 ```bash
-python stable_diffusion.py
+python generate.py --adapter openvino --seed 15
+Initializing models
+Models initialized
 Pipeline settings
 Input text: see shore at midnight, epic vista, beach
 Negative text: frames, borderline, text, character, duplicate, error, out of frame, watermark
-Seed: 15
-Number of steps: 30
+Seed: None
+Number of steps: 20
 getting initial random noise (1, 4, 96, 96) {}
-100%|██████████████████████████████████████████████████| 30/30 [01:11<00:00,  2.39s/it]
-
+100%|████████████████████████████████████████████████| 20/20 [01:15<00:00,  3.75s/it]
 ```
 
+Remote execution:
+```bash
+python generate.py --adapter openvino --seed 15
+Initializing models
+Models initialized
+Pipeline settings
+Input text: see shore at midnight, epic vista, beach
+Negative text: frames, borderline, text, character, duplicate, error, out of frame, watermark
+Seed: None
+Number of steps: 20
+getting initial random noise (1, 4, 96, 96) {}
+100%|████████████████████████████████████████████████| 20/20 [01:15<00:00,  3.75s/it]
+```
+
+In both cases the result is the same and stored in a file `result.png`.
 ![result](./result.png)
+
+The advantages of using the model server are:
+- the client can delegate majority of the pipeline load to a remote host
+- the loaded models can be shared with multiple clients
+

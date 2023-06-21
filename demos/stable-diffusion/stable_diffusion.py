@@ -13,8 +13,9 @@ from diffusers.schedulers import DDIMScheduler, LMSDiscreteScheduler, PNDMSchedu
 
 import numpy as np
 
-from ovmsclient import make_grpc_client
-ovmsclient = make_grpc_client("localhost:15000")
+
+
+
 
 
 def scale_fit_to_window(dst_width:int, dst_height:int, image_width:int, image_height:int):
@@ -66,18 +67,12 @@ def preprocess(image: PIL.Image.Image):
 class OVStableDiffusionPipeline(DiffusionPipeline):
     def __init__(
         self,
-        ovmsclient: ovmsclient,
-        vae_decoder: None, vae_decoder_input,
-        text_encoder: None,
-        text_enc_input: None,
-        text_enc_output: None,
+        vae_decoder_model: None,
+        text_encoder_model: None,
+        vae_encoder_model: None,
         tokenizer: CLIPTokenizer,
         unet_model: None, 
-        unet_model_in1: None, 
-        unet_model_in2: None,
-        unet_model_in3: None,
         scheduler: Union[DDIMScheduler, PNDMScheduler, LMSDiscreteScheduler],
-        vae_encoder: None, vae_encoder_input
     ):
         """
         Pipeline for text-to-image generation using Stable Diffusion.
@@ -99,18 +94,10 @@ class OVStableDiffusionPipeline(DiffusionPipeline):
         """
         super().__init__()
         self.scheduler = scheduler
-        self.ovmsclient = ovmsclient
-        self.vae_decoder = vae_decoder
-        self.vae_decoder_input = vae_decoder_input
-        self.vae_encoder = vae_encoder
-        self.vae_encoder_input = vae_encoder_input
-        self.text_encoder = text_encoder
-        self.text_enc_input = text_enc_input
-        self.text_enc_output = text_enc_output
-        self.unet_model = unet_model
-        self.unet_model_in1 = unet_model_in1
-        self.unet_model_in2 = unet_model_in2
-        self.unet_model_in3 = unet_model_in3
+        self.vae_decoder = vae_decoder_model
+        self.vae_encoder = vae_encoder_model
+        self.text_encoder = text_encoder_model
+        self.unet = unet_model
         self.height = 768
         self.width = 768
         self.tokenizer = tokenizer
@@ -197,8 +184,8 @@ class OVStableDiffusionPipeline(DiffusionPipeline):
             # predict the noise residual
             #noise_pred = self.unet([latent_model_input, np.array(t, dtype=np.float32), text_embeddings])[self._unet_output]
 
-            inputs = {self.unet_model_in1: np.array(latent_model_input), self.unet_model_in2: np.array(t, dtype=np.float32), self.unet_model_in3: text_embeddings}
-            noise_pred = self.ovmsclient.predict(inputs=inputs, model_name=self.unet_model)
+            inputs = {"latent_model_input": np.array(latent_model_input), "t": np.array(t, dtype=np.float32), "encoder_hidden_states": text_embeddings}
+            noise_pred = self.unet.infer_sync(inputs)["out_sample"]
             # perform guidance
             if do_classifier_free_guidance:
                 noise_pred_uncond, noise_pred_text = noise_pred[0], noise_pred[1]
@@ -207,8 +194,7 @@ class OVStableDiffusionPipeline(DiffusionPipeline):
             # compute the previous noisy sample x_t -> x_t-1
             latents = self.scheduler.step(torch.from_numpy(noise_pred), t, torch.from_numpy(latents), **extra_step_kwargs)["prev_sample"].numpy()
         # scale and decode the image latents with vae
-        image = self.ovmsclient.predict(inputs={"latents":latents}, model_name="vae_decoder")
-        # image = self.vae_decoder(inputs=latents)[self._vae_d_output]
+        image = self.vae_decoder.infer_sync({"latents":latents})["sample"]
 
         image = self.postprocess_image(image, meta, output_type)
         return {"sample": image}
@@ -239,7 +225,7 @@ class OVStableDiffusionPipeline(DiffusionPipeline):
 
         # text_embeddings = self.text_encoder(
         #    text_input_ids)[self._text_encoder_output]
-        text_embeddings = self.ovmsclient.predict(inputs={"tokens": text_input_ids}, model_name=self.text_encoder)["last_hidden_state"]
+        text_embeddings = self.text_encoder.infer_sync({"tokens": text_input_ids})["last_hidden_state"]
 
         # duplicate text embeddings for each generation per prompt
         if num_images_per_prompt != 1:
@@ -268,7 +254,7 @@ class OVStableDiffusionPipeline(DiffusionPipeline):
             )
 
             #uncond_embeddings = self.text_encoder(uncond_input.input_ids)[self._text_encoder_output]
-            uncond_embeddings = self.ovmsclient.predict(inputs={"tokens": uncond_input.input_ids}, model_name=self.text_encoder)["last_hidden_state"]
+            uncond_embeddings = self.text_encoder.infer_sync({"tokens": uncond_input.input_ids})["last_hidden_state"]
 
             # duplicate unconditional embeddings for each generation per prompt, using mps friendly method
             seq_len = uncond_embeddings.shape[1]
@@ -304,9 +290,8 @@ class OVStableDiffusionPipeline(DiffusionPipeline):
             return noise, {}
         input_image, meta = preprocess(image)
         print("preprocesses image", input_image.shape, meta)
-        moments = self.ovmsclient.predict(inputs={"init_image": input_image}, model_name=self.vae_encoder)
+        moments = self.vae_encoder({"init_image": input_image})["image_latent"]
         print("encoded image", moments.shape)
-        #moments = self.vae_encoder(input_image)[self._vae_e_output]
         mean, logvar = np.split(moments, 2, axis=1) 
         
         std = np.exp(logvar * 0.5)
@@ -375,64 +360,3 @@ class OVStableDiffusionPipeline(DiffusionPipeline):
 
         return timesteps, num_inference_steps - t_start 
     
-
-
-import numpy as np
-
-
-
-text_enc = "text_encoder"
-text_enc_input = "tokens"
-text_enc_output = "last_hidden_state"
-unet_model = "unet"
-unet_model_in1 = "latent_model_input"
-unet_model_in2 = "t"
-unet_model_in3 = "encoder_hidden_states"
-vae_decoder = "vae_decoder"
-vae_decoder_input = "latents"
-vae_encoder = "vae_encoder"
-vae_encoder_input = "init_image"
-
-
-from transformers import CLIPTokenizer
-
-conf = {"num_train_timesteps": 1000, "beta_start" : 0.00085, 'beta_end': 0.012, 'beta_schedule': 'scaled_linear', 'trained_betas': None, 'skip_prk_steps': True, 'set_alpha_to_one': False, 'prediction_type': 'epsilon', 'steps_offset': 1, '_class_name': 'PNDMScheduler', '_diffusers_version': '0.10.0.dev0', 'clip_sample': False}
-
-scheduler = LMSDiscreteScheduler.from_config(conf)
-tokenizer = CLIPTokenizer.from_pretrained('openai/clip-vit-large-patch14')
-
-ov_pipe = OVStableDiffusionPipeline(
-    tokenizer=tokenizer,
-    ovmsclient=ovmsclient,
-    text_encoder=text_enc,
-    text_enc_input=text_enc_input,
-    text_enc_output=text_enc_output,
-    unet_model=unet_model,
-    unet_model_in1=unet_model_in1,
-    unet_model_in2=unet_model_in2,
-    unet_model_in3=unet_model_in3,
-    vae_encoder=vae_encoder,
-    vae_decoder_input=vae_decoder_input,
-    vae_decoder=vae_decoder,
-    vae_encoder_input=vae_encoder_input,
-    scheduler=scheduler
-)
-
-prompt = "see shore at midnight, epic vista, beach"
-
-negative = "frames, borderline, text, character, duplicate, error, out of frame, watermark"
-
-seed = 15
-steps= 30
-
-print('Pipeline settings')
-print(f'Input text: {prompt}')
-print(f'Negative text: {negative}')
-print(f'Seed: {seed}')
-print(f'Number of steps: {steps}')
-
-
-result = ov_pipe(prompt, negative_prompt=negative, num_inference_steps=steps, seed=seed)
-
-final_image = result['sample'][0]
-final_image.save('result.png')
