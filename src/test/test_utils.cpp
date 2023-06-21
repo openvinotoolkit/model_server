@@ -164,6 +164,8 @@ void checkDummyResponse(const std::string outputName,
     float* actual_output = (float*)output_proto.tensor_content().data();
     float* expected_output = responseData.data();
     const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
+    SPDLOG_ERROR("ER:", (void*)actual_output);
+    SPDLOG_ERROR("ER:", (void*)expected_output);
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
@@ -184,7 +186,9 @@ void checkDummyResponse(const std::string outputName,
     ASSERT_EQ(output_proto.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
 
     std::vector<float> responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) { v += 1.0 * seriesLength; });
+    std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) {
+        v += 1.0 * seriesLength;
+    });
 
     float* actual_output = (float*)content->data();
     float* expected_output = responseData.data();

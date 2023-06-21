@@ -34,6 +34,7 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../tensorinfo.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
 #include "mediapipe/framework/calculator_graph.h"
@@ -41,24 +42,67 @@
 #include "mediapipegraphdefinition.hpp"  // for version in response
 
 namespace ovms {
-static Status deserializeTensor(const std::string& requestedName, const std::string& requestedVersion, const KFSRequest* request, ov::Tensor& outTensor) {
-    auto requestInputItr = std::find_if(request->inputs().begin(), request->inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
-    if (requestInputItr == request->inputs().end()) {
+static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
+    auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
+    if (requestInputItr == request.inputs().end()) {
         std::stringstream ss;
         ss << "Required input: " << requestedName;
         const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Missing input with specific name - {}", request->model_name(), requestedVersion, details);
+        SPDLOG_DEBUG("[servable name: {} version: {}] Missing input with specific name - {}", request.model_name(), request.model_version(), details);
         return Status(StatusCode::INVALID_MISSING_INPUT, details);
     }
-    if (request->raw_input_contents().size() == 0 || request->raw_input_contents().size() != request->inputs().size()) {
+    itr = requestInputItr;
+    return StatusCode::OK;
+}
+
+static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, tensorflow::Tensor& outTensor) {
+    auto requestInputItr = request.inputs().begin();
+    auto status = getRequestInput(requestInputItr, requestedName, request);
+    if (!status.ok()) {
+        return status;
+    }
+    auto inputIndex = requestInputItr - request.inputs().begin();
+    auto& bufferLocation = request.raw_input_contents().at(inputIndex);
+    try {
+        auto datatype = getPrecisionAsDataType(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
+        using tensorflow::Tensor;
+        using tensorflow::TensorShape;
+        using tensorflow::TensorShapeBase;
+        using tensorflow::TensorShapeUtils;
+        TensorShape tensorShape;
+        std::vector<int64_t> rawShape{1, 10};
+        int64_t dimsCount = rawShape.size();
+        TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
+        TensorShape::BuildTensorShapeBase({1, 10}, static_cast<TensorShapeBase<TensorShape>*>(&tensorShape));
+        // TODO here we allocate default TF CPU allocator
+        tensorflow::Tensor outTensor2(datatype, tensorShape);  // TODO error handling
+        void* tftensordata = outTensor2.data();
+        std::memcpy(tftensordata, bufferLocation.data(), bufferLocation.size());
+        outTensor = std::move(outTensor2);
+    } catch (const std::exception& e) {
+        SPDLOG_DEBUG("Exception: {}; caught during Mediapipe TF tensor deserialization", e.what());
+    } catch (...) {
+        SPDLOG_ERROR("Unknown exception caught during Mediapipe TF tensor deserialization");
+    }
+    return StatusCode::OK;
+}
+
+static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, ov::Tensor& outTensor) {
+    auto requestInputItr = request.inputs().begin();
+    auto status = getRequestInput(requestInputItr, requestedName, request);
+    if (!status.ok()) {
+        return status;
+    }
+    // TODO there is no sense to check this for every input
+    if (request.raw_input_contents().size() == 0 || request.raw_input_contents().size() != request.inputs().size()) {
         std::stringstream ss;
         ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
         const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request->model_name(), requestedVersion, details);
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
         return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
     }
-    auto inputIndex = requestInputItr - request->inputs().begin();
-    auto& bufferLocation = request->raw_input_contents().at(inputIndex);
+    auto inputIndex = requestInputItr - request.inputs().begin();
+    auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
         ov::Shape shape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
@@ -66,7 +110,7 @@ static Status deserializeTensor(const std::string& requestedName, const std::str
                 std::stringstream ss;
                 ss << "Negative or zero dimension size is not acceptable: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
                 const std::string details = ss.str();
-                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request->model_name(), requestedVersion, details);
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_SHAPE, details);
             }
             shape.push_back(requestInputItr->shape()[i]);
@@ -78,14 +122,14 @@ static Status deserializeTensor(const std::string& requestedName, const std::str
             std::stringstream ss;
             ss << "Invalid precision with expected bytes equal to 0: " << requestInputItr->datatype() << "; input name: " << requestedName;
             const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request->model_name(), requestedVersion, details);
+            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_PRECISION, details);
         }
         if (expectedBytes != bufferLocation.size()) {
             std::stringstream ss;
             ss << "Expected: " << expectedBytes << " bytes; Actual: " << bufferLocation.size() << " bytes; input name: " << requestedName;
             const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", request->model_name(), requestedVersion, details);
+            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
         outTensor = ov::Tensor(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
@@ -98,12 +142,15 @@ static Status deserializeTensor(const std::string& requestedName, const std::str
     return Status(StatusCode::INTERNAL_ERROR, "Unexpected error during Tensor creation");
 }
 
-MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config, bool passKfsRequestFlag,
+MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
+    stream_types_mapping_t inputTypes,
+    stream_types_mapping_t outputTypes,
     std::vector<std::string> inputNames, std::vector<std::string> outputNames) :
     name(name),
     version(version),
     config(config),
-    passKfsRequestFlag(passKfsRequestFlag),
+    inputTypes(std::move(inputTypes)),
+    outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)) {}
 
@@ -133,6 +180,147 @@ static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFS
         }
     }
     return inputSidePackets;
+}
+
+template <typename T>
+static Status createPacketAndPushIntoGraph(const std::string& name, const KFSRequest& request, ::mediapipe::CalculatorGraph& graph) {
+    if (name.empty()) {
+        SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
+        return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
+    }
+    SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
+    T input_tensor;
+    auto status = deserializeTensor(name, request, input_tensor);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Failed to deserialize tensor: {}", name);
+        return status;
+    }
+    auto absStatus = graph.AddPacketToInputStream(
+        name, ::mediapipe::MakePacket<T>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
+    if (!absStatus.ok()) {
+        const std::string absMessage = absStatus.ToString();
+        SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
+            name, request.model_name(), absStatus.message(), absStatus.raw_code());
+        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
+    }
+    absStatus = graph.CloseInputStream(name);
+    if (!absStatus.ok()) {
+        const std::string absMessage = absStatus.ToString();
+        SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
+            name, request.model_name(), absMessage);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
+    }
+    return StatusCode::OK;
+}
+
+template <>
+Status createPacketAndPushIntoGraph<KFSRequest*>(const std::string& name, const KFSRequest& request, ::mediapipe::CalculatorGraph& graph) {
+    if (name.empty()) {
+        SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
+        return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
+    }
+    SPDLOG_DEBUG("Request to passthrough:\"{}\"", name);
+    auto absStatus = graph.AddPacketToInputStream(
+        name, ::mediapipe::MakePacket<const KFSRequest*>(&request).At(::mediapipe::Timestamp(0)));
+    if (!absStatus.ok()) {
+        const std::string absMessage = absStatus.ToString();
+        SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
+            name, request.model_name(), absStatus.message(), absStatus.raw_code());
+        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
+    }
+    absStatus = graph.CloseInputStream(name);
+    if (!absStatus.ok()) {
+        const std::string absMessage = absStatus.ToString();
+        SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
+            name, request.model_name(), absMessage);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
+    }
+    return StatusCode::OK;
+}
+
+template <typename T>
+static Status receiveAndSerializePacket(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName);
+
+template <>
+Status receiveAndSerializePacket<tensorflow::Tensor>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+    try {
+        auto received = packet.Get<tensorflow::Tensor>();
+        auto* output = response.add_outputs();
+        output->set_name(outputStreamName);
+        output->set_datatype(
+            ovmsPrecisionToKFSPrecision(
+                TFSPrecisionToOvmsPrecision(
+                    received.dtype())));
+        output->clear_shape();
+        for (const auto& dim : received.shape()) {
+            output->add_shape(dim.size);
+        }
+        response.add_raw_output_contents()->assign(reinterpret_cast<char*>(received.data()), received.TotalBytes());
+        return StatusCode::OK;
+    } catch (const std::exception& e) {
+        std::stringstream ss;
+        ss << "Failed to get packet"
+           << outputStreamName
+           << " with exception: "
+           << e.what();
+        std::string details{ss.str()};
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::UNKNOWN_ERROR, std::move(details));
+    }
+}
+
+template <>
+Status receiveAndSerializePacket<ov::Tensor>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+    try {
+        auto received = packet.Get<ov::Tensor>();
+        auto* output = response.add_outputs();
+        output->set_name(outputStreamName);
+        output->set_datatype(
+            ovmsPrecisionToKFSPrecision(
+                ovElementTypeToOvmsPrecision(
+                    received.get_element_type())));
+        output->clear_shape();
+        for (const auto& dim : received.get_shape()) {
+            output->add_shape(dim);
+        }
+        response.add_raw_output_contents()->assign(reinterpret_cast<char*>(received.data()), received.get_byte_size());
+        return StatusCode::OK;
+    } catch (const std::exception& e) {
+        std::stringstream ss;
+        ss << "Failed to get packet"
+           << outputStreamName
+           << " with exception: "
+           << e.what();
+        std::string details{ss.str()};
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::UNKNOWN_ERROR, std::move(details));
+    }
+}
+
+template <>
+Status receiveAndSerializePacket<KFSResponse*>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+    try {
+        auto received = packet.Get<KFSResponse*>();
+        if (received == nullptr) {
+            std::stringstream ss;
+            ss << "Received nullptr KFSResponse for: "
+               << outputStreamName;
+            std::string details{ss.str()};
+            SPDLOG_DEBUG(details);
+            return Status(StatusCode::UNKNOWN_ERROR, std::move(details));
+        }
+        response = std::move(*received);
+    } catch (const std::exception& e) {
+        std::stringstream ss;
+        ss << "Failed to get packet"
+           << outputStreamName
+           << " with exception: "
+           << e.what();
+        std::string details{ss.str()};
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::UNKNOWN_ERROR, std::move(details));
+    }
+    return StatusCode::OK;
 }
 
 Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
@@ -180,107 +368,50 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     std::set<std::string> outputPollersWithReceivedPacket;
 
     // Passing whole KFS request and response
-    if (this->passKfsRequestFlag == true) {
-        SPDLOG_DEBUG("Passing whole KFS request and response");
-        std::string name = this->inputNames[0];
-        if (name.empty()) {
-            SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
-            return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
+    // TODO ensure in config validation that we only allow REQUEST or TENSOR or IMAGE
+    // not mix REQUEST with other types
+    ovms::Status status;
+    for (auto& name : this->inputNames) {
+        if (this->inputTypes.at(name) == mediapipe_packet_type_enum::KFS_REQUEST) {
+            SPDLOG_DEBUG("Request processing KFS passthrough: {}", name);
+            status = createPacketAndPushIntoGraph<KFSRequest*>(name, *request, graph);
+        } else if (this->inputTypes.at(name) == mediapipe_packet_type_enum::TFTENSOR) {
+            SPDLOG_DEBUG("Request processing TF tensor: {}", name);
+            status = createPacketAndPushIntoGraph<tensorflow::Tensor>(name, *request, graph);
+        } else if ((this->inputTypes.at(name) == mediapipe_packet_type_enum::OVTENSOR) ||
+                   (this->inputTypes.at(name) == mediapipe_packet_type_enum::UNKNOWN)) {
+            SPDLOG_DEBUG("Request processing OVTensor: {}", name);
+            status = createPacketAndPushIntoGraph<ov::Tensor>(name, *request, graph);
         }
-        absStatus = graph.AddPacketToInputStream(
-            name, ::mediapipe::MakePacket<const KFSRequest*>(request).At(::mediapipe::Timestamp(0)));
-        if (!absStatus.ok()) {
-            const std::string absMessage = absStatus.ToString();
-            SPDLOG_DEBUG("Failed to add KFS request packet to mediapipe graph: {} with error: {}",
-                request->model_name(), absStatus.message(), absStatus.raw_code());
-            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
+        if (!status.ok()) {
+            return status;
         }
-        absStatus = graph.CloseInputStream(name);
-        if (!absStatus.ok()) {
-            const std::string absMessage = absStatus.ToString();
-            SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
-                name, request->model_name(), absMessage);
-            return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
-        }
-
-        // Size checked to be equal 1 at the beggining of the function
-        auto& [outputStreamName, poller] = *(outputPollers.begin());
+    }
+    // receive outputs
+    for (auto& [outputStreamName, poller] : outputPollers) {
         size_t receivedOutputs = 0;
         SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
+        // Size checked to be equal 1 at the beggining of the function
         while (poller.Next(&packet)) {
             SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
-            try {
-                auto received = packet.Get<KFSResponse*>();
-                if (received == nullptr) {
-                    SPDLOG_DEBUG("Received nullptr KFSResponse for: {}", outputStreamName);
-                    continue;
-                }
-
-                *response = std::move(*received);
-            } catch (const std::exception& e) {
-                SPDLOG_DEBUG("Mediapipe 'packet.Get' exception {}", e.what());
-                continue;
+            if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::KFS_RESPONSE) {
+                SPDLOG_DEBUG("Response processing packet type KFSPass name: {}", outputStreamName);
+                status = receiveAndSerializePacket<KFSResponse*>(packet, *response, outputStreamName);
+            } else if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::TFTENSOR) {
+                SPDLOG_DEBUG("Response processing packet type TF Tensor name: {}", outputStreamName);
+                status = receiveAndSerializePacket<tensorflow::Tensor>(packet, *response, outputStreamName);
+            } else if ((this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::OVTENSOR) ||
+                       (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::UNKNOWN)) {
+                SPDLOG_DEBUG("Response processing packet type:  OVTensor name: {}", outputStreamName);
+                status = receiveAndSerializePacket<ov::Tensor>(packet, *response, outputStreamName);
             }
-
-            SPDLOG_TRACE("Received packet for: {} {}", outputStreamName, receivedOutputs);
+            if (!status.ok()) {
+                return status;
+            }
             outputPollersWithReceivedPacket.insert(outputStreamName);
             ++receivedOutputs;
         }
-        SPDLOG_TRACE("Received all packets for: {}", outputStreamName);
-    } else {
-        // Processing non KFS pass through packets
-        for (auto& name : this->inputNames) {
-            if (name.empty()) {
-                SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
-                return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
-            }
-            SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
-            ov::Tensor input_tensor;
-            auto status = deserializeTensor(name, version, request, input_tensor);
-            if (!status.ok()) {
-                SPDLOG_DEBUG("Failed to deserialize tensor: {}", name);
-                return status;
-            }
-            absStatus = graph.AddPacketToInputStream(
-                name, ::mediapipe::MakePacket<ov::Tensor>(std::move(input_tensor)).At(::mediapipe::Timestamp(0)));
-            if (!absStatus.ok()) {
-                const std::string absMessage = absStatus.ToString();
-                SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
-                    name, request->model_name(), absStatus.message(), absStatus.raw_code());
-                return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
-            }
-            absStatus = graph.CloseInputStream(name);
-            if (!absStatus.ok()) {
-                const std::string absMessage = absStatus.ToString();
-                SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
-                    name, request->model_name(), absMessage);
-                return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
-            }
-        }
-        // receive outputs
-        for (auto& [outputStreamName, poller] : outputPollers) {
-            size_t receivedOutputs = 0;
-            SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
-            while (poller.Next(&packet)) {
-                SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
-                auto received = packet.Get<ov::Tensor>();
-                auto* output = response->add_outputs();
-                output->set_name(outputStreamName);
-                output->set_datatype(
-                    ovmsPrecisionToKFSPrecision(
-                        ovElementTypeToOvmsPrecision(
-                            received.get_element_type())));
-                output->clear_shape();
-                for (const auto& dim : received.get_shape()) {
-                    output->add_shape(dim);
-                }
-                response->add_raw_output_contents()->assign(reinterpret_cast<char*>(received.data()), received.get_byte_size());
-                SPDLOG_TRACE("Received packet for: {} {}", outputStreamName, receivedOutputs);
-                outputPollersWithReceivedPacket.insert(outputStreamName);
-                ++receivedOutputs;
-            }
-            SPDLOG_TRACE("Received all packets for: {}", outputStreamName);
-        }
+        SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
     }
     absStatus = graph.WaitUntilDone();
     if (!absStatus.ok()) {
@@ -293,9 +424,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unknown error during mediapipe execution");
     }
     SPDLOG_DEBUG("Received all output stream packets for graph: {}", request->model_name());
-    response->set_model_name(name);
+    response->set_model_name(request->model_name());
     response->set_id(request->id());
-    response->set_model_version(version);
+    response->set_model_version(request->model_version());
     return StatusCode::OK;
 }
 

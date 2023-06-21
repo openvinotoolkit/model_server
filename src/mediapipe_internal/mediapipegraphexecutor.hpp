@@ -26,6 +26,7 @@
 #include "../metric.hpp"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
+#include "packettypes.hpp"
 
 namespace ovms {
 class Status;
@@ -34,12 +35,15 @@ class MediapipeGraphExecutor {
     const std::string name;
     const std::string version;
     const ::mediapipe::CalculatorGraphConfig config;
-    bool passKfsRequestFlag;
+    stream_types_mapping_t inputTypes;
+    stream_types_mapping_t outputTypes;
     const std::vector<std::string> inputNames;
     const std::vector<std::string> outputNames;
 
 public:
-    MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config, bool passKfsRequestFlag,
+    MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
+        stream_types_mapping_t inputTypes,
+        stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 };
