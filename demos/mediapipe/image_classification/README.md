@@ -33,8 +33,7 @@ virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 
-python grpc_infer_resnet.py --model_name resnetMediapipe --grpc_port 9008 --images_numpy_path . --transpose_input False
-./../imgs.npy --input_name in --output_name out --labels_numpy_path ../../lbs.npy
+python grpc_infer_resnet.py --model_name resnetMediapipe --grpc_port 9008 --images_numpy_path ../../imgs.npy --transpose_input False --input_name in --output_name out                             --labels_numpy_path ../../lbs.npy
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnetMediapipe
