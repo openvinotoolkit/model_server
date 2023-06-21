@@ -373,11 +373,9 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
 
 template <typename RequestType, typename InputTensorType, typename InputIteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, InputIteratorType, ShapeType>::checkBatchSizeMismatch(const InputTensorType& proto, const std::optional<Dimension>& servableBatchSize, const std::optional<size_t>& batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    // TODO: We need to ensure batching mode cannot be AUTO when batchSizeIndex is nullopt
     if (!servableBatchSize.has_value() || !batchSizeIndex.has_value()) {
         // Do not validate batch size in this case.
-        // Let entire shape be validated.
-        // TODO: Ensure batching mode is not AUTO.
+        // Let entire shape be validated instead.
         return StatusCode::OK;
     }
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
@@ -504,12 +502,10 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
 
 template <typename RequestType, typename InputTensorType, typename IteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::checkShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, const std::optional<size_t>& batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    // TODO: batchSizeIndex can be nullopt, we need to ensure that shape/bs=auto cannot be enabled for inputs without N (batch)
     const auto& shape = inputInfo.getShape();
     bool mismatch = false;
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
     if (batchingMode == AUTO) {  // Skip batch dimension
-        // TODO: Unit test
         if (!batchSizeIndex.has_value()) {
             SPDLOG_DEBUG("Batching AUTO enabled but batch size is missing");
             return StatusCode::INTERNAL_ERROR;
@@ -832,7 +828,6 @@ template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const KFSTensorInputProto& proto) const {
     // Network and request must have the same number of shape dimensions
     const auto& shape = inputInfo.getShape();
-    // TODO: Unit test for all frontends
     if (proto.shape().size() < 0 ||
         shape.size() != static_cast<size_t>(proto.shape().size())) {
         std::stringstream ss;

@@ -131,7 +131,6 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
     const auto& dims = tensor.get_shape();
     if (tensorInfo.getShape().size() != dims.size()) {
         // Wrong number of shape dimensions
-        // TODO: Unit test
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid shape -"
@@ -157,7 +156,6 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
         return StatusCode::OK;
     }
 
-    // TODO: Unit test
     if (batchIndex.value() >= dims.size()) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()

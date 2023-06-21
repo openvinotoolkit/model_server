@@ -181,7 +181,6 @@ Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov
         return StatusCode::NODE_LIBRARY_INVALID_PRECISION;
     }
 
-    // TODO: Unit test with tensor->dims nullptr (malloc(0))
     shape_t shape(tensor->dims, tensor->dims + tensor->dimsCount);
 
     size_t expectedElementsCount = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_t>());
