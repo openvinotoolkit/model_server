@@ -166,7 +166,7 @@ const ovms::ModelConfig SCALAR_MODEL_CONFIG{
     "scalar",
     scalar_model_location,  // base path
     "CPU",                  // target device
-    "1",                    // batchsize
+    "0",                    // batchsize needs to be 0 to emulate missing --batch_size param
     1,                      // NIREQ
     false,                  // is stateful
     true,                   // idle sequence cleanup enabled
@@ -277,6 +277,12 @@ void checkDummyResponse(const std::string outputName,
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "");
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
 
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
