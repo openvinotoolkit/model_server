@@ -265,10 +265,8 @@ TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
     ASSERT_EQ(response.model_name(), modelName);
     ASSERT_EQ(response.outputs_size(), 2);
     ASSERT_EQ(response.raw_output_contents_size(), 2);
-    ASSERT_EQ(response.outputs().begin()->name(), "out_2");
     const auto& output_proto_1 = response.outputs().Get(0);
     std::string* content = response.mutable_raw_output_contents(0);
-
     ASSERT_EQ(content->size(), DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
     ASSERT_EQ(output_proto_1.shape_size(), 2);
     ASSERT_EQ(output_proto_1.shape(0), 1);
@@ -291,6 +289,9 @@ TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
     ASSERT_EQ(output_proto_2.shape_size(), 2);
     ASSERT_EQ(output_proto_2.shape(0), 1);
     ASSERT_EQ(output_proto_2.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
+
+    ASSERT_TRUE((output_proto_1.name() == "out_1" && output_proto_2.name() == "out_2") ||
+                (output_proto_1.name() == "out_2" && output_proto_2.name() == "out_1"));
 
     actual_output = (float*)content->data();
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
