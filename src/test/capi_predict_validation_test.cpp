@@ -62,6 +62,7 @@ protected:
         });
 
         ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(servableInputs));
+        ON_CALL(*instance, getBatchSize()).WillByDefault(Return(1));
         ON_CALL(*instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
 
         preparePredictRequest(request,
@@ -625,6 +626,7 @@ TEST_P(CAPIPredictValidationInputTensorContent, RequestCorrectContentSizeInputTe
             std::make_shared<ovms::TensorInfo>(inputName, testedPrecision, ovms::shape_t{1, 224, 224, 3}, ovms::Layout{"NHWC"})},
     });
     ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(servableInputs));
+    ON_CALL(*instance, getBatchSize()).WillByDefault(Return(1));
     ON_CALL(*instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
     preparePredictRequest(request,
         {{inputName,
@@ -747,6 +749,8 @@ protected:
                                                  std::make_shared<ovms::TensorInfo>("Input_FP32_any_224:512_224:512_3_NHWC", ovms::Precision::FP32, ovms::Shape{ovms::Dimension::any(), {224, 512}, {224, 512}, 3}, ovms::Layout{"NHWC"})},
             {"Input_U8_100:200_any_CN",
                 std::make_shared<ovms::TensorInfo>("Input_U8_100:200_any_CN", ovms::Precision::U8, ovms::Shape{{100, 200}, ovms::Dimension::any()}, ovms::Layout{"CN"})}});
+
+        ON_CALL(*instance, getBatchSize()).WillByDefault(Return(ovms::Dimension::any()));
 
         const ovms::dimension_value_t requestBatchSize = 16;
         preparePredictRequest(request,

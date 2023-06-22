@@ -801,9 +801,11 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
     }
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*compiledModel, numberOfParallelInferRequests);
     SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, numberOfParallelInferRequests);
-    SPDLOG_INFO("Loaded model {}; version: {}; No of InferRequests: {}",
+    auto batchSize = getBatchSize();
+    SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
+        batchSize.has_value() ? batchSize.value().toString() : std::string{"none"},
         numberOfParallelInferRequests);
     return StatusCode::OK;
 }
