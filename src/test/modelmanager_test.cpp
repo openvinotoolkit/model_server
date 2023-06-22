@@ -519,13 +519,13 @@ TEST_F(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
             {
                 "config": {
                     "name": "alpha",
-                    "base_path": "/tmp/models/dummy1"
+                    "base_path": "/tmp/ModelManager/parseConfigWhenPipelineDefinitionMatchSchema/models/dummy1"
                 }
             },
             {
                 "config": {
                     "name": "beta",
-                    "base_path": "/tmp/models/dummy2"
+                    "base_path": "/tmp/ModelManager/parseConfigWhenPipelineDefinitionMatchSchema/models/dummy2"
                 }
             }
         ],
@@ -554,6 +554,8 @@ TEST_F(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
             }
         ]
     })";
+    std::filesystem::create_directories(this->getFilePath("/models/dummy1/1"));
+    std::filesystem::create_directories(this->getFilePath("/models/dummy2/1"));
     std::string configFile = this->getFilePath("/ovms_config_file.json");
     createConfigFileWithContent(configWithPipelineDefinitionMatchSchema, configFile);
     modelMock = std::make_shared<MockModel>();
@@ -1364,17 +1366,17 @@ TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
     {
       "config": {
         "name": "same_name",
-        "base_path": "/tmp/models/dummy1"
+        "base_path": "/tmp/ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy1"
       }
     },
     {
       "config": {
         "name": "same_name",
-        "base_path": "/tmp/models/dummy2"
+        "base_path": "/tmp/ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy2"
       }
     }]})";
-    std::filesystem::create_directories("/tmp/models/dummy1");
-    std::filesystem::create_directories("/tmp/models/dummy2");
+    std::filesystem::create_directories(this->getFilePath("/models/dummy1/1"));
+    std::filesystem::create_directories(this->getFilePath("/models/dummy2/1"));
     std::string fileToReload = this->getFilePath("/ovms_config_file2.json");
     createConfigFileWithContent(configWithTwoSameNames, fileToReload);
     modelMock = std::make_shared<MockModel>();
