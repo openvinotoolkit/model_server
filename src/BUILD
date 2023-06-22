@@ -878,7 +878,6 @@ cc_test(
         "//src:lib_node_dynamic_demultiplex.so",
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
-        "//src:lib_node_scalar.so",
         "//src:libcustom_node_east_ocr.so",
         "//src:libcustom_node_face_blur.so",
         "//src:libcustom_node_model_zoo_intel_object_detection.so",

@@ -856,20 +856,7 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
 TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalarBatchAuto) {
     ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
     config.setBatchingParams("auto");
-    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
-
-    // Prepare request with empty shape
-    Preparer<typename TypeParam::first_type> preparer;
-    typename TypeParam::first_type request;
-    preparer.preparePredictRequest(request,
-        {{SCALAR_MODEL_INPUT_NAME,
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}});
-
-    typename TypeParam::second_type response;
-
-    // Do the inference, expect abnormal endpoint
-    auto status = this->performInferenceWithRequest(request, response, "scalar");
-    ASSERT_EQ(status, StatusCode::INTERNAL_ERROR) << status.string();
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED);
 }
 
 TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalarShapeAuto) {
