@@ -201,8 +201,8 @@ constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 constexpr const char* PASSTHROUGH_MODEL_INPUT_NAME = "input";
 constexpr const char* PASSTHROUGH_MODEL_OUTPUT_NAME = "copy:0";
 
-constexpr const char* SCALAR_MODEL_INPUT_NAME = "in";
-constexpr const char* SCALAR_MODEL_OUTPUT_NAME = "out";
+constexpr const char* SCALAR_MODEL_INPUT_NAME = "model_scalar_input";
+constexpr const char* SCALAR_MODEL_OUTPUT_NAME = "model_scalar_output";
 
 const std::string UNUSED_SERVABLE_NAME = "UNUSED_SERVABLE_NAME";
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life

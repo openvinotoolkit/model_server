@@ -853,13 +853,13 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
     this->checkOutputShape(response, {}, SCALAR_MODEL_OUTPUT_NAME);
 }
 
-TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalarBatchAuto) {
+TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarBatchAuto) {
     ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
     config.setBatchingParams("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED);
 }
 
-TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalarShapeAuto) {
+TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarShapeAuto) {
     ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
     config.setBatchingParams("0");
     config.parseShapeParameter("auto");

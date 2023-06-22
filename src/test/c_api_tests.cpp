@@ -527,11 +527,11 @@ TEST_F(CAPIInference, Scalar) {
     ASSERT_NE(nullptr, request);
 
     // adding input with shape dim count=0
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "in", OVMS_DATATYPE_FP32, nullptr, 0));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, SCALAR_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, nullptr, 0));
     // setting buffer
     std::array<float, 1> data{3.1f};
     uint32_t notUsedNum = 0;
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, "in", reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, SCALAR_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
 
     //////////////////
     //  INFERENCE
@@ -554,7 +554,7 @@ TEST_F(CAPIInference, Scalar) {
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
-    ASSERT_EQ(std::string("out"), outputName);
+    ASSERT_EQ(std::string(SCALAR_MODEL_OUTPUT_NAME), outputName);
     EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
     EXPECT_EQ(dimCount, 0);
     EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
@@ -833,10 +833,10 @@ TEST_F(CAPIMetadata, BasicDummyDag) {
 TEST_F(CAPIMetadata, BasicScalar) {
     const std::string servableName{"scalar"};
     model_version_t servableVersion = 1;
-    ovms::tensor_map_t inputsInfo({{"in",
-        std::make_shared<ovms::TensorInfo>("in", ovms::Precision::FP32, ovms::Shape{})}});
-    ovms::tensor_map_t outputsInfo({{"out",
-        std::make_shared<ovms::TensorInfo>("out", ovms::Precision::FP32, ovms::Shape{})}});
+    ovms::tensor_map_t inputsInfo({{SCALAR_MODEL_INPUT_NAME,
+        std::make_shared<ovms::TensorInfo>(SCALAR_MODEL_INPUT_NAME, ovms::Precision::FP32, ovms::Shape{})}});
+    ovms::tensor_map_t outputsInfo({{SCALAR_MODEL_OUTPUT_NAME,
+        std::make_shared<ovms::TensorInfo>(SCALAR_MODEL_OUTPUT_NAME, ovms::Precision::FP32, ovms::Shape{})}});
     checkMetadata(servableName, servableVersion, inputsInfo, outputsInfo);
 }
 

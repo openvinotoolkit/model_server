@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <net name="TensorFlow_Frontend_IR" version="11">
 	<layers>
-		<layer id="0" name="in" type="Parameter" version="opset1">
+		<layer id="0" name="model_scalar_input" type="Parameter" version="opset1">
 			<data shape="" element_type="f32" />
 			<output>
-				<port id="0" precision="FP32" names="in" />
+				<port id="0" precision="FP32" names="model_scalar_input" />
 			</output>
 		</layer>
 		<layer id="1" name="const" type="Const" version="opset1">
@@ -20,10 +20,10 @@
 				<port id="1" precision="FP32" />
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="out" />
+				<port id="2" precision="FP32" names="model_scalar_output" />
 			</output>
 		</layer>
-		<layer id="3" name="out" type="Result" version="opset1">
+		<layer id="3" name="model_scalar_output" type="Result" version="opset1">
 			<input>
 				<port id="0" precision="FP32" />
 			</input>

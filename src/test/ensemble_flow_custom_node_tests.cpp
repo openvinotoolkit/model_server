@@ -3447,7 +3447,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerNodeNotEno
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY);
 }
 
-TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerNodeNotEnoughDimensionsToDemultiply_Scalar) {
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerCustomNodeNotEnoughDimensionsToDemultiply_Scalar) {
     const size_t demultiplyCount = 29;
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},

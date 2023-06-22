@@ -28,17 +28,17 @@ node {
 node {
   calculator: "ModelAPISideFeedCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "B:in"
-  output_stream: "A:out"
+  input_stream: "SCALAR:in"
+  output_stream: "SCALAR:out"
   node_options: {
     [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
       tag_to_input_tensor_names {
-        key: "B"
-        value: "in"
+        key: "SCALAR"
+        value: "model_scalar_input"
       }
       tag_to_output_tensor_names {
-        key: "A"
-        value: "out"
+        key: "SCALAR"
+        value: "model_scalar_output"
       }
     }
   }

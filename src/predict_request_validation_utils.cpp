@@ -507,7 +507,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
     if (batchingMode == AUTO) {  // Skip batch dimension
         if (!batchSizeIndex.has_value()) {
-            SPDLOG_DEBUG("Batching AUTO enabled but batch size is missing");
+            SPDLOG_ERROR("Batching AUTO enabled but batch size is missing");
             return StatusCode::INTERNAL_ERROR;
         }
         for (size_t i = 0; i < batchSizeIndex.value(); i++) {
