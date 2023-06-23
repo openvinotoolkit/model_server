@@ -388,7 +388,7 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const cha
     if (inputName == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
-    if (shape == nullptr) {
+    if (shape == nullptr && dimCount > 0) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "shape"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
@@ -404,10 +404,13 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const cha
            << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(datatype))
            << " shape: [";
         size_t i = 0;
-        for (i = 0; i < dimCount - 1; ++i) {
-            ss << shape[i] << ", ";
+        if (dimCount > 0) {
+            for (i = 0; i < dimCount - 1; ++i) {
+                ss << shape[i] << ", ";
+            }
+            ss << shape[i];
         }
-        ss << shape[i] << "]";
+        ss << "]";
         SPDLOG_TRACE(ss.str());
     }
     return nullptr;
@@ -564,10 +567,14 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
            << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
            << " shape: [";
         size_t i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shape)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shape)[i] << ", ";
+            }
+            ss << (*shape)[i];
         }
-        ss << (*shape)[i] << "]"
+
+        ss << "]"
            << " bufferType: " << *bufferType
            << " deviceId: " << *deviceId;
         SPDLOG_TRACE(ss.str());
@@ -853,16 +860,22 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetada
            << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
            << " shape min: [";
         size_t i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shapeMin)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMin)[i] << ", ";
+            }
+            ss << (*shapeMin)[i];
         }
-        ss << (*shapeMin)[i] << "]"
+        ss << "]"
            << " shape max: [";
         i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shapeMax)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMax)[i] << ", ";
+            }
+            ss << (*shapeMax)[i];
         }
-        ss << (*shapeMax)[i] << "]";
+        ss << "]";
         SPDLOG_TRACE(ss.str());
     }
     return nullptr;
@@ -905,16 +918,22 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
            << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
            << " shape min: [";
         size_t i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shapeMin)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMin)[i] << ", ";
+            }
+            ss << (*shapeMin)[i];
         }
-        ss << (*shapeMin)[i] << "]"
+        ss << "]"
            << " shape max: [";
         i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shapeMax)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMax)[i] << ", ";
+            }
+            ss << (*shapeMax)[i];
         }
-        ss << (*shapeMax)[i] << "]";
+        ss << "]";
         SPDLOG_TRACE(ss.str());
     }
     return nullptr;

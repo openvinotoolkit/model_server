@@ -219,8 +219,8 @@ TEST_F(TestLoadModel, LoadModelWithEmptyRTMapLayoutSetsDefaultLayout) {
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(mockModelInstance.getInputsInfo().size(), 1);
     ASSERT_EQ(mockModelInstance.getOutputsInfo().size(), 1);
-    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout());
-    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout());
+    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout(DUMMY_MODEL_SHAPE.size()));
+    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout(DUMMY_MODEL_SHAPE.size()));
 }
 
 // The RTMap is populated with layout info by Model Optimizer.
@@ -633,6 +633,22 @@ TEST_F(TestLoadModel, CorrectNumberOfStreamsSet) {
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     ASSERT_EQ(modelInstance.getNumOfStreams(), 6);
+}
+
+TEST_F(TestLoadModel, ScalarModelWithBatchSetToFixed) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
+    config.setBatchingParams("3");
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
+    ASSERT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestLoadModel, ScalarModelWithBatchSetToAuto) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED);
+    ASSERT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
 class TestLoadModelWithMapping : public TestLoadModel {

@@ -193,6 +193,32 @@ void checkDummyResponse(const std::string outputName,
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, PredictResponse& response, const std::string& servableName) {
+    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
+    const auto& output_proto = response.outputs().at(outputName);
+
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 0);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), sizeof(float));
+    ASSERT_EQ(*((float*)output_proto.tensor_content().data()), inputScalar);
+}
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, ::KFSResponse& response, const std::string& servableName) {
+    ASSERT_EQ(response.model_name(), servableName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), outputName) << "Did not find:" << outputName;
+    const auto& output_proto = *response.outputs().begin();
+    std::string* content = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output_proto.shape_size(), 0);
+    ASSERT_EQ(content->size(), sizeof(float));
+
+    ASSERT_EQ(*((float*)content->data()), inputScalar);
+}
+
 void checkAddResponse(const std::string outputName,
     const std::vector<float>& requestData1,
     const std::vector<float>& requestData2,

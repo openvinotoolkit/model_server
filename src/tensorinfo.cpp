@@ -33,12 +33,12 @@ const std::string STRING_SERIALIZATION_HINT_NAME_SUFFIX = "_string";
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const Shape& shape) :
-    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout()) {}
+    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout(shape.size())) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const shape_t& shape) :
-    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout()) {}
+    TensorInfo(name, "", precision, shape, Layout::getDefaultLayout(shape.size())) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
@@ -50,7 +50,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const Precision& precision,
     const shape_t& shape) :
-    TensorInfo(name, mapping, precision, shape, Layout::getDefaultLayout()) {}
+    TensorInfo(name, mapping, precision, shape, Layout::getDefaultLayout(shape.size())) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
@@ -229,6 +229,9 @@ std::shared_ptr<const TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
 const std::optional<Dimension> TensorInfo::getBatchSize() const {
     const auto batchIndex = this->layout.getBatchIndex();
     if (!batchIndex.has_value()) {
+        // Assume first dimension is batch size when layout gives no context
+        if (getShape().size() > 0)
+            return getShape()[0];
         return std::nullopt;
     }
     if (getShape().size() < batchIndex.value() + 1) {

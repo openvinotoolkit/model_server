@@ -32,9 +32,9 @@ const char Layout::UNDEFINED_DIMENSION_CHAR = '?';
 const std::string Layout::ALLOWED_DIMENSION_LETTERS_AND_CHARS = ALLOWED_DIMENSION_LETTERS + ETC_CHAR + UNDEFINED_DIMENSION_CHAR;
 const std::string Layout::ETC_LAYOUT_DELIMETER = "...";
 const std::string Layout::BATCH_DIMENSION_LETTER = "N";
-const Layout& Layout::getDefaultLayout() {
+const Layout& Layout::getDefaultLayout(size_t numOfDimensions) {
     static const Layout defaultLayout{DEFAULT_LAYOUT};
-    return defaultLayout;
+    return numOfDimensions ? defaultLayout : getUnspecifiedLayout();
 }
 
 const Layout& Layout::getUnspecifiedLayout() {
@@ -59,10 +59,7 @@ std::optional<size_t> Layout::retrieveBatchIndex() const {
     auto batchPos = this->find(BATCH_DIMENSION_LETTER);
     auto etcPos = this->find(ETC_LAYOUT_DELIMETER);
     if (static_cast<std::string>(*this) == UNSPECIFIED_LAYOUT) {
-        // we want to treat ANY layout as having BS on 0 position
-        // otherwise in any case we extract this we have to check
-        // against layout ...
-        return 0;
+        return std::nullopt;
     }
     if (batchPos == std::string::npos) {
         return std::nullopt;

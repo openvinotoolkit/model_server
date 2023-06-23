@@ -498,6 +498,78 @@ TEST_F(CAPIInference, NegativeInference) {
     OVMS_ServerDelete(nullptr);
 }
 
+TEST_F(CAPIInference, Scalar) {
+    //////////////////////
+    // start server
+    //////////////////////
+    // remove when C-API start implemented
+    std::string port = "9000";
+    randomizePort(port);
+    // prepare options
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_NE(serverSettings, nullptr);
+    ASSERT_NE(modelsSettings, nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_scalar.json"));
+
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ASSERT_NE(cserver, nullptr);
+    ///////////////////////
+    // request creation
+    ///////////////////////
+    OVMS_InferenceRequest* request{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "scalar", 1));
+    ASSERT_NE(nullptr, request);
+
+    // adding input with shape dim count=0
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, SCALAR_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, nullptr, 0));
+    // setting buffer
+    std::array<float, 1> data{3.1f};
+    uint32_t notUsedNum = 0;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, SCALAR_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
+
+    //////////////////
+    //  INFERENCE
+    //////////////////
+
+    OVMS_InferenceResponse* response = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
+    // verify GetOutputCount
+    uint32_t outputCount = 42;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutputCount(response, &outputCount));
+    ASSERT_EQ(outputCount, 1);
+    // verify GetOutput
+    const void* voutputData;
+    size_t bytesize = 42;
+    uint32_t outputId = 0;
+    OVMS_DataType datatype = (OVMS_DataType)199;
+    const int64_t* shape{nullptr};
+    size_t dimCount = 42;
+    OVMS_BufferType bufferType = (OVMS_BufferType)199;
+    uint32_t deviceId = 42;
+    const char* outputName{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+    ASSERT_EQ(std::string(SCALAR_MODEL_OUTPUT_NAME), outputName);
+    EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
+    EXPECT_EQ(dimCount, 0);
+    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
+    EXPECT_EQ(deviceId, 0);
+    EXPECT_EQ(bytesize, sizeof(float));
+    EXPECT_EQ(*((float*)voutputData), data[0]);
+
+    ///////////////
+    // CLEANUP
+    ///////////////
+    OVMS_InferenceResponseDelete(response);
+    OVMS_InferenceRequestDelete(request);
+    OVMS_ServerDelete(cserver);
+}
+
 namespace {
 const std::string MODEL_NAME{"SomeModelName"};
 const int64_t MODEL_VERSION{42};
@@ -756,6 +828,16 @@ TEST_F(CAPIMetadata, BasicDummy) {
 TEST_F(CAPIMetadata, BasicDummyDag) {
     const std::string servableName{"pipeline1Dummy"};
     checkServableAsDummy(servableName);
+}
+
+TEST_F(CAPIMetadata, BasicScalar) {
+    const std::string servableName{"scalar"};
+    model_version_t servableVersion = 1;
+    ovms::tensor_map_t inputsInfo({{SCALAR_MODEL_INPUT_NAME,
+        std::make_shared<ovms::TensorInfo>(SCALAR_MODEL_INPUT_NAME, ovms::Precision::FP32, ovms::Shape{})}});
+    ovms::tensor_map_t outputsInfo({{SCALAR_MODEL_OUTPUT_NAME,
+        std::make_shared<ovms::TensorInfo>(SCALAR_MODEL_OUTPUT_NAME, ovms::Precision::FP32, ovms::Shape{})}});
+    checkMetadata(servableName, servableVersion, inputsInfo, outputsInfo);
 }
 
 TEST_F(CAPIMetadata, DummyDynamicShapes) {

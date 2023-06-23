@@ -168,8 +168,10 @@ static Status validateConfigurationAgainstNetwork(const ModelConfig& config, std
 }
 
 const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput) {
+    Layout defaultLayout;
     if (isInput) {
         const auto& input = this->model->input(name);
+        defaultLayout = Layout::getDefaultLayout(input.get_partial_shape().size());
         auto networkSpecifiedLayout = getLayoutFromRTMap(input.get_rt_info());
         if (networkSpecifiedLayout.has_value()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting input layout from RTMap: {}; for tensor name: {}", networkSpecifiedLayout.value().to_string(), name);
@@ -177,28 +179,28 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
         }
     } else {
         const auto& output = this->model->output(name);
+        defaultLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
         auto networkSpecifiedLayout = getLayoutFromRTMap(output.get_rt_info());
         if (networkSpecifiedLayout.has_value()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting output layout from RTMap: {}; for tensor name: {}", networkSpecifiedLayout.value().to_string(), name);
             return Layout::fromOvLayout(networkSpecifiedLayout.value());
         }
     }
-    auto layout = Layout::getDefaultLayout();
     if (isInput && config.getLayout().isSet()) {
-        layout = config.getLayout().getTensorLayout();
+        auto layout = config.getLayout().getTensorLayout();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting layout from ModelConfig: {}; for tensor name: {}", layout, name);
         return layout;
     } else if (config.getLayouts().size() > 0) {
         auto mappedName = config.getMappingInputByKey(name);
         auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
         if (it != config.getLayouts().end()) {
-            layout = it->second.getTensorLayout();
+            auto layout = it->second.getTensorLayout();
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting layout from ModelConfig: {}; for tensor name: {}", layout, name);
             return layout;
         }
     }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting default layout: {}; for tensor name: {}", layout, name);
-    return layout;
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting default layout: {}; for tensor name: {}", defaultLayout, name);
+    return defaultLayout;
 }
 
 static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
@@ -232,7 +234,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
                 preproc.input(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
                 auto inheritedModelLayout = getLayoutFromRTMap(input.get_rt_info());
-                auto guessedModelLayout = Layout::getDefaultLayout();
+                auto guessedModelLayout = Layout::getDefaultLayout(input.get_partial_shape().size());
 
                 ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
 
@@ -279,7 +281,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
                 preproc.output(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
                 auto inheritedModelLayout = getLayoutFromRTMap(output.get_rt_info());
-                auto guessedModelLayout = Layout::getDefaultLayout();
+                auto guessedModelLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
 
                 ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
 
@@ -360,12 +362,20 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     std::map<std::string, ov::PartialShape> modelShapes;
     bool reshapeRequired = false;
 
+    bool isBatchingModeAuto = config.getBatchingMode() == Mode::AUTO;
+
     // First pass, gather reshape info.
     for (const ov::Output<ov::Node>& input : this->model->inputs()) {
         std::string name;
         try {
             std::string name = input.get_any_name();
             ov::PartialShape shape = input.get_partial_shape();
+
+            if (shape.size() == 0 && isBatchingModeAuto) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load model:{}; version:{}; with batching=AUTO due to existing scalar input name:{}",
+                    getName(), getVersion(), name);
+                return StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED;
+            }
 
             Shape requestedShape;
             auto status = getRequestedShape(config, parameter, name, requestedShape);
@@ -791,10 +801,11 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
     }
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*compiledModel, numberOfParallelInferRequests);
     SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, numberOfParallelInferRequests);
+    auto batchSize = getBatchSize();
     SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
-        getBatchSize().toString(),
+        batchSize.has_value() ? batchSize.value().toString() : std::string{"none"},
         numberOfParallelInferRequests);
     return StatusCode::OK;
 }

@@ -103,6 +103,12 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json");
     }
 };
+class MediapipeFlowScalarTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_scalar.json");
+    }
+};
 class MediapipeFlowDummyPathsRelativeToBasePathTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -311,6 +317,41 @@ TEST_P(MediapipeFlowDummyTest, Infer) {
     ASSERT_EQ(outputs[0].shape()[1], 10);
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeFlowScalarTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName = "mediaScalar";
+    request.Clear();
+    response.Clear();
+    // Empty shape is used in the test framework to generate default shape (usually dummy 2d (1,10))
+    // Here we generate (1,1) tensor which has the same data size as scalar and just reshape to scalar () below.
+    inputs_info_t inputsMeta{{"in", {{1, 1}, precision}}};
+    preparePredictRequest(request, inputsMeta);
+    auto* content = request.mutable_raw_input_contents()->Mutable(0);
+    ASSERT_EQ(content->size(), sizeof(float));
+    *((float*)content->data()) = 3.8f;
+    ASSERT_EQ(request.inputs_size(), 1);
+    (*request.mutable_inputs())[0].clear_shape();  // scalar
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+
+    const std::string outputName = "out";
+    ASSERT_EQ(response.model_name(), modelName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), outputName) << "Did not find:" << outputName;
+    const auto& output_proto = *response.outputs().begin();
+    std::string* outContent = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output_proto.shape_size(), 0);
+
+    ASSERT_EQ(outContent->size(), sizeof(float));
+    EXPECT_EQ(*(float*)outContent->data(), 3.8f);
 }
 
 TEST_P(MediapipeFlowAddTest, Infer) {

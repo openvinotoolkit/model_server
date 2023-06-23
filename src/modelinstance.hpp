@@ -426,8 +426,12 @@ public:
          *
          * @return batch size
          */
-    virtual Dimension getBatchSize() const {
-        return Dimension(ov::get_batch(model));
+    virtual std::optional<Dimension> getBatchSize() const {
+        try {
+            return Dimension(ov::get_batch(model));
+        } catch (...) {
+            return std::nullopt;
+        }
     }
 
     const size_t getBatchSizeIndex() const;
