@@ -492,6 +492,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
+    opts.always_print_primitive_fields = true;
     google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
     if (!status.ok()) {
         return StatusCode::JSON_SERIALIZATION_ERROR;
