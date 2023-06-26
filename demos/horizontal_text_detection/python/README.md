@@ -182,3 +182,41 @@ ThreadID:   2; Current FPS:    29.41; Average FPS:    25.70; Average latency:   
 ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   135.65ms
 ...
 ```
+
+## RTSP Client
+
+Build docker image containing rtsp client along with its dependencies
+
+```bash
+docker build . -t rtsp_client
+```
+
+### Start the client
+
+- Command
+
+```bash
+docker run rtsp_client --help
+usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
+                      [--grpc_port GRPC_PORT] [--input_stream INPUT_STREAM]
+                      [--output_stream OUTPUT_STREAM] [--fps FPS]
+
+options:
+  -h, --help            show this help message and exit
+  --grpc_address GRPC_ADDRESS
+                        Specify url to grpc service
+  --grpc_port GRPC_PORT
+                        Specify port to grpc service
+  --input_stream INPUT_STREAM
+                        Url of input rtsp stream
+  --output_stream OUTPUT_STREAM
+                        Url of output rtsp stream
+  --fps FPS             Framerate of input stream
+```
+
+- Usage example
+
+```bash
+docker run rtsp_client --grpc_port 9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+```
+

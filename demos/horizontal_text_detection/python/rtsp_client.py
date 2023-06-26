@@ -20,25 +20,24 @@ import argparse
 from functools import partial
 import tritonclient.grpc as grpcclient
 import numpy as np
+import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--grpc_address', required=False, default='localhost', help='Specify url to grpc service')
-parser.add_argument('--grpc_port', required=False, default=8080, type=int, help='Specify port to grpc service')
-parser.add_argument('--video_source', required=False, default="0", type=str, help='Camera ID number or path to a video file')
+parser.add_argument('--grpc_port', required=False, default=9000, type=int, help='Specify port to grpc service')
+parser.add_argument('--input_stream', required=False, default="rtsp://localhost:8080/channel1", type=str, help='Url of input rtsp stream')
+parser.add_argument('--output_stream', required=False, default="rtsp://localhost:8080/channel2", type=str, help='Url of output rtsp stream')
+parser.add_argument('--fps', required=False, default=30, type=int, help='Framerate of input stream')
 args = parser.parse_args()
+output_stream = args.output_stream
 
 address = "{}:{}".format(args.grpc_address, args.grpc_port)
 triton_client = grpcclient.InferenceServerClient( url=address, verbose=False)
 
-try:
-    source = int(args.video_source)
-except ValueError:
-    source = args.video_source
-
-cap = cv2.VideoCapture('tcpclientsrc port=8080 host=localhost ! tsdemux ! h264parse ! avdec_h264 ! videoconvert ! appsink')
+WIDTH = 704
+HEIGHT = 704
+cap = cv2.VideoCapture(args.input_stream, cv2.CAP_FFMPEG)
 force_exit = False
-
-out = cv2.VideoWriter("appsrc ! videoconvert ! video/x-raw,width=704,height=704 ! x264enc threads=1 ! mpegtsmux ! tcpserversink port=8088 host=0.0.0.0", 0, 30, (704, 704), True)
 
 def decode(text):
     word = ''
@@ -55,7 +54,6 @@ def decode(text):
 
 def get_text(output):
     alphabet = '#1234567890abcdefghijklmnopqrstuvwxyz'
-    #print(output)
     preds = output.argmax(2)
     word = ''
     for i in range(preds.shape[0]):
@@ -67,8 +65,6 @@ def finish():
     force_exit = True
 
 def grab_frame(cap):
-    WIDTH = 704
-    HEIGHT = 704
     success, frame = cap.read()
     if not success:
         print("[WARNING] No Input frame")
@@ -84,8 +80,7 @@ def grab_frame(cap):
         frame = cv2.resize(frame, (HEIGHT, WIDTH), interpolation=cv2.INTER_AREA)
     return frame
 
-
-def callback(frame, result, error):
+def postprocess(frame, result):
     if result is not None:
         texts = result.as_numpy("texts")
         text_coordinates = result.as_numpy('text_coordinates')
@@ -99,19 +94,33 @@ def callback(frame, result, error):
             cv2.putText(frame, text, (x_min, y_min-5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
             print(text)
             print((x_min,y_min), (x_max,y_max))
-    out.write(frame)
+    return frame
+
+
+def callback(frame, result, error):
+    frame = postprocess(frame, result)
+    ffmpeg_process.stdin.write(frame.astype(np.uint8).tobytes())
     if error is not None:
         print(error)
 
 
+def open_ffmpeg_stream_process():
+    args = (
+        "ffmpeg -re -stream_loop -1 -f rawvideo -pix_fmt "
+        f"bgr24 -s {WIDTH}x{HEIGHT} -i pipe:0 -pix_fmt yuv420p "
+        f"-f rtsp {output_stream}"
+    ).split()
+    return subprocess.Popen(args, stdin=subprocess.PIPE)
+
+ffmpeg_process = open_ffmpeg_stream_process()
+
 if grab_frame(cap) is None:
-    print("[ERROR] Check camera input...")
     force_exit = True
 
 while not force_exit:
-    time.sleep(0.3)
+    time.sleep(1/args.fps)
     frame = grab_frame(cap)
-    inputs=[grpcclient.InferInput( "image", [1,704,704,3], "FP32")]
+    inputs=[grpcclient.InferInput( "image", [1,WIDTH,HEIGHT,3], "FP32")]
     inputs[0].set_data_from_numpy(np.array([frame], dtype=np.float32))
     triton_client.async_infer(
         model_name="detect_text_images",
