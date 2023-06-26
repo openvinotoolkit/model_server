@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <cwchar>
 #include <memory>
 #include <string>
 #include <thread>
@@ -24,6 +25,8 @@
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../ovms.h"
+#include "../servablemanagermodule.hpp"
+#include "../server.hpp"
 #include "c_api_test_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
@@ -748,15 +751,61 @@ TEST_F(CAPIMetadata, Negative) {
 
     OVMS_ServableMetadataDelete(nullptr);
 }
+class CAPIState : public ::testing::Test {
+public:
+    class MockModel : public Model {
+    public:
+        MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
+            Model(name, false /*stateful*/, nullptr) {
+            modelVersions.insert({instance->getVersion(), instance});
+        }
+        void addOneVersion(model_version_t version, std::shared_ptr<ModelInstance> instance) {
+            modelVersions.emplace(version, instance);
+        }
+    };
+    class MockModelManager : public ModelManager {
+    public:
+        const std::string servableName = "dummy";
+        const int64_t servableVersion = 1;
+        std::map<std::string, std::shared_ptr<Model>>& getMutableModels() {
+            ov::Core ieCore;
+            auto modelInstance = std::make_shared<MockModelInstanceChangingStates>(servableName, 1, ieCore);
+            std::shared_ptr<MockModel> model = std::make_shared<MockModel>(servableName, modelInstance);
+            models[servableName] = model;
+            return models;
+        }
+    };
+    class MockServableManagerModule : public ServableManagerModule {
+    public:
+        MockServableManagerModule(Server& server) :
+            ServableManagerModule(server) {
+        }
+        MockModelManager mmm;
+        ModelManager& getMutableServableManager() {
+            return mmm;
+        }
+    };
+    class MockServer : public Server {
+    public:
+        MockServer() {
+            msmm = new MockServableManagerModule(*this);
+        }
+        MockServableManagerModule* msmm;
+        const Module* getModule(const std::string& name) const {
+            return msmm;
+        }
+    };
+};
 
-/* TEST_F(CAPIState, AllStates) { */
-/*     const std::string servableName = "dummy"; */
-/*     const int64_t servableVersion = 1; */
-/*     auto modelInstance = std::make_shared<MockModelInstanceChangingStates>(servableName, servableVersion); */
-/*     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver)); */
-/*     OVMS_ServableState state; */
-/*     OVMS_GetServableState(cserver, servableName, servableVersion, &state); */
-/* } */
+TEST_F(CAPIState, AllStates) {
+    const std::string servableName = "dummy";
+    const int64_t servableVersion = 1;
+    MockServer cserver;
+    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(&cserver);
+    OVMS_ServableState state;
+    /* OVMS_GetServableState(server, "dummy", servableVersion, &state); */
+    /* ASSERT_EQ(state, OVMS_ServableState::OVMS_BEGIN); */
+}
 
 TEST_F(CAPIMetadata, BasicDummy) {
     const std::string servableName{"dummy"};
