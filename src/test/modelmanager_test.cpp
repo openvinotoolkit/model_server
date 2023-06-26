@@ -42,7 +42,8 @@ static std::string getConfig1Model(std::string basePath) {
     {
       "config": {
         "name": "resnet",
-        "base_path": ")" + basePath + R"(",
+        "base_path": ")" +
+           basePath + R"(",
         "target_device": "CPU",
         "model_version_policy": {"all": {}}
       }
@@ -56,7 +57,8 @@ static std::string getConfig2Models(std::string firstBasePath = "/tmp/models/dum
     {
       "config": {
         "name": "resnet",
-        "base_path": ")" + firstBasePath + R"(",
+        "base_path": ")" +
+           firstBasePath + R"(",
         "target_device": "CPU",
         "model_version_policy": {"all": {}}
       }
@@ -64,7 +66,8 @@ static std::string getConfig2Models(std::string firstBasePath = "/tmp/models/dum
     {
       "config": {
         "name": "alpha",
-        "base_path": ")" + secondBasePath + R"(",
+        "base_path": ")" +
+           secondBasePath + R"(",
         "target_device": "CPU",
         "model_version_policy": {"all": {}}
       }
