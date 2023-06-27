@@ -655,6 +655,7 @@ static Status getModelInstance(ovms::Server& server, const std::string& modelNam
     if (!status.ok()) {
         return status;
     }
+    SPDLOG_ERROR("OOOO");
     return modelManager->getModelInstance(modelName, modelVersion, modelInstance, modelInstanceUnloadGuardPtr);
 }
 
@@ -767,16 +768,21 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
     // TODO check inputs
     // TODO metrics
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::Pipeline> pipelinePtr;
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
-    auto status = getModelInstance(server, servableName, servableVersion, modelInstance, modelInstanceUnloadGuard);
+    ModelManager* modelManager{nullptr};
+    auto status = getModelManager(server, &modelManager);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    SPDLOG_ERROR(status.string());
+    std::shared_ptr<ovms::ModelInstance> modelInstance = modelManager->findModelInstance(servableName, servableVersion);
 
-    if (status == StatusCode::MODEL_NAME_MISSING) {
+    if (modelInstance == nullptr) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", servableName);
         PipelineDefinition* pipelineDefinition = nullptr;
         std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
-        status = getPipelineDefinition(server, servableName, &pipelineDefinition, unloadGuard);
+        pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
         if (!status.ok() || !pipelineDefinition) {
             return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
         }
@@ -808,7 +814,7 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
-    *state = static_cast<OVMS_ServableState>(static_cast<int>(modelInstance->getStatus().getState()) / 10);
+    *state = static_cast<OVMS_ServableState>(static_cast<int>(modelInstance->getStatus().getState()) / 10 - 1);
     return nullptr;
 }
 

@@ -24,6 +24,8 @@
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
+#include "../grpcservermodule.hpp"
+#include "../metric_module.hpp"
 #include "../ovms.h"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -753,6 +755,7 @@ TEST_F(CAPIMetadata, Negative) {
 }
 class CAPIState : public ::testing::Test {
 public:
+    static std::shared_ptr<MockModelInstanceChangingStates> modelInstance;
     class MockModel : public Model {
     public:
         MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
@@ -766,45 +769,102 @@ public:
     class MockModelManager : public ModelManager {
     public:
         const std::string servableName = "dummy";
-        const int64_t servableVersion = 1;
-        std::map<std::string, std::shared_ptr<Model>>& getMutableModels() {
+        Status getModelInstance(const std::string& modelName,
+            ovms::model_version_t modelVersionId,
+            std::shared_ptr<ovms::ModelInstance>& modelInstance,
+            std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+            modelInstance.reset(CAPIState::modelInstance.get());
+            return StatusCode::OK;
+        }
+        MockModelManager() {
             ov::Core ieCore;
-            auto modelInstance = std::make_shared<MockModelInstanceChangingStates>(servableName, 1, ieCore);
+            CAPIState::modelInstance = std::make_shared<MockModelInstanceChangingStates>(servableName, 1, ieCore);
             std::shared_ptr<MockModel> model = std::make_shared<MockModel>(servableName, modelInstance);
             models[servableName] = model;
+        }
+        std::map<std::string, std::shared_ptr<Model>>& getModels() {
             return models;
         }
+    };
+    class MockGrpcServerModule : public Module {
+    public:
+        MockGrpcServerModule() {
+            state = ModuleState::INITIALIZED;
+        }
+        Status start(const ovms::Config& config) {
+            return StatusCode::OK;
+        }
+        void shutdown() {}
     };
     class MockServableManagerModule : public ServableManagerModule {
     public:
         MockServableManagerModule(Server& server) :
             ServableManagerModule(server) {
+            state = ModuleState::INITIALIZED;
+            servableManager.reset(&mmm);
         }
         MockModelManager mmm;
-        ModelManager& getMutableServableManager() {
-            return mmm;
-        }
     };
     class MockServer : public Server {
     public:
         MockServer() {
+            Module* grpc = new MockGrpcServerModule();
+            modules.insert({GRPC_SERVER_MODULE_NAME, std::unique_ptr<Module>(grpc)});
+            MetricModule* mm = new MetricModule();
+            modules.insert({METRICS_MODULE_NAME, std::unique_ptr<Module>(mm)});
             msmm = new MockServableManagerModule(*this);
+            modules.insert({SERVABLE_MANAGER_MODULE_NAME, std::unique_ptr<Module>(msmm)});
         }
         MockServableManagerModule* msmm;
         const Module* getModule(const std::string& name) const {
-            return msmm;
+            if (name == SERVABLE_MANAGER_MODULE_NAME) {
+                return msmm;
+            } else {
+                return Server::getModule(name);
+            }
         }
     };
 };
 
+std::shared_ptr<MockModelInstanceChangingStates> CAPIState::modelInstance = nullptr;
+TEST_F(CAPIState, ServerNull) {
+    MockServer* cserver = new MockServer;
+    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
+    OVMS_ServableState state;
+    const std::string servableName = "dummy";
+    const int64_t servableVersion = 1;
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(nullptr, servableName.c_str(), servableVersion, &state), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(server, nullptr, servableVersion, &state), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(server, servableName.c_str(), servableVersion, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(server, servableName.c_str(), -1, &state), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(server, "", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
+}
 TEST_F(CAPIState, AllStates) {
     const std::string servableName = "dummy";
     const int64_t servableVersion = 1;
-    MockServer cserver;
-    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(&cserver);
+    MockServer* cserver = new MockServer;
+    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
     OVMS_ServableState state;
-    /* OVMS_GetServableState(server, "dummy", servableVersion, &state); */
-    /* ASSERT_EQ(state, OVMS_ServableState::OVMS_BEGIN); */
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::START);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_EQ(state, OVMS_ServableState::OVMS_BEGIN);
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::AVAILABLE);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    EXPECT_EQ(state, OVMS_ServableState::OVMS_AVAILABLE);
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::UNLOADING);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    EXPECT_EQ(state, OVMS_ServableState::OVMS_UNLOADING);
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::END);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    EXPECT_EQ(state, OVMS_ServableState::OVMS_RETIRED);
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::LOADING);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_EQ(state, OVMS_ServableState::OVMS_LOADING);
 }
 
 TEST_F(CAPIMetadata, BasicDummy) {
