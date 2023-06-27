@@ -354,8 +354,7 @@ static bool addNumber(tensorflow::TensorProto& proto, const rapidjson::Value& va
 Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
     order = Order::COLUMN;
     // no named scalar
-    if (node.IsNumber() && requestProto.inputs_size() == 1)
-    {
+    if (node.IsNumber() && requestProto.inputs_size() == 1) {
         addNumber(requestProto.mutable_inputs()->begin()->second, node);
         format = Format::NONAMED;
         return StatusCode::OK;
@@ -390,8 +389,7 @@ Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
         // scalar
         if (kv.value.IsNumber()) {
             addNumber(proto, kv.value);
-        }
-        else if (!parseArray(kv.value, 0, proto, tensorName)) {
+        } else if (!parseArray(kv.value, 0, proto, tensorName)) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
     }

@@ -390,7 +390,7 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
 
 TEST_F(HttpRestApiHandlerWithScalarModelTest, inferRequestScalar) {
     std::string request = "/v2/models/scalar/versions/1/infer";
-    std::string request_body = "{\"inputs\":[{\"name\":\"scalar_model_input\",\"shape\":[],\"datatype\":\"FP32\",\"data\":[4.1]}], \"id\":\"1\"}";
+    std::string request_body = "{\"inputs\":[{\"name\":\"model_scalar_input\",\"shape\":[],\"datatype\":\"FP32\",\"data\":[4.1]}], \"id\":\"1\"}";
     ovms::HttpRequestComponents comp;
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
@@ -402,9 +402,12 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, inferRequestScalar) {
     doc.Parse(response.c_str());
     ASSERT_EQ(doc["model_name"].GetString(), std::string("scalar"));
     ASSERT_EQ(doc["id"].GetString(), std::string("1"));
-    auto output = doc["outputs"].GetArray()[0].GetObject()["scalar_model_output"].GetArray();
+    ASSERT_TRUE(doc["outputs"].GetArray()[0].GetObject().HasMember("data"));
+    ASSERT_TRUE(doc["outputs"].GetArray()[0].GetObject().HasMember("shape"));
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
     ASSERT_EQ(output.Size(), 1);
     ASSERT_EQ(output[0].GetFloat(), 4.1f);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 0);
 }
 
 TEST_F(HttpRestApiHandlerTest, inferPreprocess) {

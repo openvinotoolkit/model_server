@@ -628,7 +628,7 @@ TEST(TFSRestParserColumn, InstancesShapeDiffer_3) {
 }
 
 TEST(TFSRestParserColumn, RemoveUnnecessaryInputs) {
-    TFSRestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}}, ovms::Precision::FP16));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}, {"m", {}}}, ovms::Precision::FP16));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
         "k":[[155.0]], "l": [[1.0]]
@@ -636,9 +636,44 @@ TEST(TFSRestParserColumn, RemoveUnnecessaryInputs) {
         StatusCode::OK);
     EXPECT_EQ(parser.getOrder(), Order::COLUMN);
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
-    ASSERT_EQ(parser.getProto().inputs().size(), 2);
     ASSERT_EQ(parser.getProto().inputs().count("i"), 0);
     ASSERT_EQ(parser.getProto().inputs().count("j"), 0);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
     ASSERT_EQ(parser.getProto().inputs().count("l"), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("m"), 0);  // missing in request, expect missing after conversion
+    ASSERT_EQ(parser.getProto().inputs().size(), 2);
+}
+
+TEST(TFSRestParserColumn, A1) {
+    TFSRestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}, {"m", {}}}, ovms::Precision::FP16));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "k":[[155.0]], "l": [[1.0]], "m": 3
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 0);
+    ASSERT_EQ(parser.getProto().inputs().count("j"), 0);
+    ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("l"), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("m"), 1);  // exists in request and endpoint metadata, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().size(), 3);
+}
+
+TEST(TFSRestParserColumn, A2) {
+    TFSRestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, /*{"k", {1, 1}},*/ {"l", {1, 1}}}, ovms::Precision::FP16));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "k":[[155.0]], "l": [[1.0]], "m": 4
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 0);
+    ASSERT_EQ(parser.getProto().inputs().count("j"), 0);
+    ASSERT_EQ(parser.getProto().inputs().count("k"), 1);  // missing in endpoint metadata but exists in request, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("l"), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("m"), 1);  // missing in endpoint metadata but exists in request, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().size(), 3);
 }
