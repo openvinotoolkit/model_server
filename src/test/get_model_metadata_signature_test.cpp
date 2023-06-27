@@ -45,6 +45,10 @@ protected:
                                              ovms::Precision::I64,
                                              {1, 6, 128, 128, 16},
                                          }},
+            {"Input_U8_Scalar", {
+                                    ovms::Precision::U8,
+                                    {},
+                                }},
         };
 
         for (const auto& pair : tensors) {
@@ -58,25 +62,28 @@ protected:
 
 TEST_F(GetModelMetadataSignature, ConvertCorrectNumberOfInputs) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
-    EXPECT_EQ(signature.size(), 2);
+    EXPECT_EQ(signature.size(), 3);
 }
 
 TEST_F(GetModelMetadataSignature, ConvertInputsExist) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
     EXPECT_NE(signature.find("Input_FP32_1_3_224_224"), signature.end());
     EXPECT_NE(signature.find("Input_I64_1_6_128_128_16"), signature.end());
+    EXPECT_NE(signature.find("Input_U8_Scalar"), signature.end());
 }
 
 TEST_F(GetModelMetadataSignature, ConvertCorrectInputNames) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
     EXPECT_EQ(signature["Input_FP32_1_3_224_224"].name(), "Input_FP32_1_3_224_224");
     EXPECT_EQ(signature["Input_I64_1_6_128_128_16"].name(), "Input_I64_1_6_128_128_16");
+    EXPECT_EQ(signature["Input_U8_Scalar"].name(), "Input_U8_Scalar");
 }
 
 TEST_F(GetModelMetadataSignature, ConvertCorrectPrecision) {
     ovms::GetModelMetadataImpl::convert(inputs, &signature);
     EXPECT_EQ(signature["Input_FP32_1_3_224_224"].dtype(), tensorflow::DT_FLOAT);
     EXPECT_EQ(signature["Input_I64_1_6_128_128_16"].dtype(), tensorflow::DT_INT64);
+    EXPECT_EQ(signature["Input_U8_Scalar"].dtype(), tensorflow::DT_UINT8);
 }
 
 TEST_F(GetModelMetadataSignature, ConvertCorrectTensorShape) {
@@ -89,4 +96,8 @@ TEST_F(GetModelMetadataSignature, ConvertCorrectTensorShape) {
     EXPECT_TRUE(isShapeTheSame(
         signature["Input_I64_1_6_128_128_16"].tensor_shape(),
         {1, 6, 128, 128, 16}));
+
+    EXPECT_TRUE(isShapeTheSame(
+        signature["Input_U8_Scalar"].tensor_shape(),
+        {}));
 }
