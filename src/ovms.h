@@ -102,7 +102,6 @@ typedef enum OVMS_LogLevel_enum {
     OVMS_LOG_ERROR
 } OVMS_LogLevel;
 
-OVMS_Status* OVMS_GetServableState(OVMS_Server*, const char* servableName, int64_t servableVersion, OVMS_ServableState* state);
 ////
 //// OVMS_Status
 //// Structure for status management.
@@ -332,6 +331,15 @@ void OVMS_ServerDelete(OVMS_Server* server);
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerSettings* server_settings,
     OVMS_ModelsSettings* models_settings);
+
+// Get the state of a servable
+//
+// \param server The server object
+// \param servableName The name of the servable to be used
+// \param servableVersion The version of the servable to be used
+// \param state The state object to be created
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_GetServableState(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableState* state);
 
 // OVMS_InferenceRequest
 //

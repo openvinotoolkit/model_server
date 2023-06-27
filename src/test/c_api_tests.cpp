@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <cwchar>
 #include <memory>
 #include <string>
 #include <thread>
@@ -24,7 +23,6 @@
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
-#include "../grpcservermodule.hpp"
 #include "../metric_module.hpp"
 #include "../ovms.h"
 #include "../servablemanagermodule.hpp"
