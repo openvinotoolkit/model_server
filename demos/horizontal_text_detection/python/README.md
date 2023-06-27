@@ -186,6 +186,7 @@ ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   
 ## RTSP Client
 
 Build docker image containing rtsp client along with its dependencies
+The rtsp client app needs to have access to RTSP stream to read from and write to.
 
 ```bash
 docker build . -t rtsp_client
