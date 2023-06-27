@@ -59,7 +59,7 @@ void TFSRestParser::removeUnusedInputs() {
     auto& inputs = (*requestProto.mutable_inputs());
     auto it = inputs.begin();
     while (it != inputs.end()) {
-        if (!it->second.tensor_shape().dim_size()) {
+        if (!inputsFoundInRequest.count(it->first)) {
             SPDLOG_DEBUG("Removing {} input from proto since it's not included in the request", it->first);
             it = inputs.erase(it);
         } else {
@@ -174,6 +174,7 @@ bool TFSRestParser::parseInstance(rapidjson::Value& doc) {
     }
     for (auto& itr : doc.GetObject()) {
         std::string tensorName = itr.name.GetString();
+        inputsFoundInRequest.insert(tensorName);
         auto& proto = (*requestProto.mutable_inputs())[tensorName];
         increaseBatchSize(proto);
         if (!parseArray(itr.value, 1, proto, tensorName)) {
@@ -385,9 +386,11 @@ Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
     }
     for (auto& kv : node.GetObject()) {
         std::string tensorName = kv.name.GetString();
+        inputsFoundInRequest.insert(tensorName);
         auto& proto = (*requestProto.mutable_inputs())[tensorName];
         // scalar
         if (kv.value.IsNumber()) {
+            setDTypeIfNotSet(kv.value, proto, tensorName);
             addNumber(proto, kv.value);
         } else if (!parseArray(kv.value, 0, proto, tensorName)) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
