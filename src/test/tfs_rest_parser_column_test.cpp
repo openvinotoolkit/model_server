@@ -257,7 +257,9 @@ TEST(TFSRestParserColumn, ValidScalar) {
         StatusCode::OK);
     EXPECT_EQ(parser.getOrder(), Order::COLUMN);
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
     EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre());
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DT_FLOAT);
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0));
 }
 
@@ -417,7 +419,6 @@ TEST(TFSRestParserColumn, NoInputsFound) {
 TEST(TFSRestParserColumn, CannotParseInput) {
     TFSRestParser parser(prepareTensors({{"i", {2, 1}}}));
 
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":2}})"), StatusCode::REST_COULD_NOT_PARSE_INPUT);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":null}})"), StatusCode::REST_COULD_NOT_PARSE_INPUT);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[1,null]}})"), StatusCode::REST_COULD_NOT_PARSE_INPUT);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[1,2],[3,"str"]]}})"), StatusCode::REST_COULD_NOT_PARSE_INPUT);

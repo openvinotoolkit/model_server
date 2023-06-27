@@ -115,6 +115,7 @@ TEST(TFSRestParserNoNamed, ColumnOrder_1d_5elements) {
     EXPECT_EQ(parser.getFormat(), Format::NONAMED);
     ASSERT_EQ(parser.getProto().inputs().count("my_input"), 1);
     const auto& my_input = parser.getProto().inputs().at("my_input");
+    EXPECT_THAT(my_input.dtype(), tensorflow::DT_FLOAT);
     EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre(5));
     EXPECT_THAT(asVector<float>(my_input.tensor_content()), ElementsAre(1, 2, 3, 4, 5));
 }
@@ -128,6 +129,7 @@ TEST(TFSRestParserNoNamed, ColumnOrder_Scalar) {
     EXPECT_EQ(parser.getFormat(), Format::NONAMED);
     ASSERT_EQ(parser.getProto().inputs().count("my_input"), 1);
     const auto& my_input = parser.getProto().inputs().at("my_input");
+    EXPECT_THAT(my_input.dtype(), tensorflow::DT_FLOAT);
     EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre());
     EXPECT_THAT(asVector<float>(my_input.tensor_content()), ElementsAre(5));
 }
