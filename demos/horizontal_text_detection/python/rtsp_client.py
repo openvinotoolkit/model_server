@@ -20,7 +20,7 @@ import argparse
 from functools import partial
 import tritonclient.grpc as grpcclient
 import numpy as np
-import subprocess
+import subprocess #nosec
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--grpc_address', required=False, default='localhost:9000', help='Specify url to grpc service')
@@ -112,7 +112,7 @@ def open_ffmpeg_stream_process():
         f"bgr24 -s {WIDTH}x{HEIGHT} -i pipe:0 -pix_fmt yuv420p "
         f"-f rtsp {output_stream}"
     ).split()
-    return subprocess.Popen(args, stdin=subprocess.PIPE)
+    return subprocess.Popen(args, stdin=subprocess.PIPE) #nosec
 
 ffmpeg_process = open_ffmpeg_stream_process()
 
