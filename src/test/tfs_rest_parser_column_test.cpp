@@ -109,6 +109,19 @@ TEST(TFSRestParserColumn, ParseValid2Inputs) {
                                                               14.0, 15.0, 16.0));
 }
 
+TEST(TFSRestParserColumn, ValidShape_1d_vector_1elem) {
+    TFSRestParser parser(prepareTensors({{"i", {1}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":[155.0]
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0));
+}
+
 TEST(TFSRestParserColumn, ValidShape_1x1) {
     TFSRestParser parser(prepareTensors({{"i", {1, 1}}}));
 
@@ -233,6 +246,19 @@ TEST(TFSRestParserColumn, ValidShape_2x1x3x1x5) {
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9));
+}
+
+TEST(TFSRestParserColumn, ValidScalar) {
+    TFSRestParser parser(prepareTensors({{"i", {}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":155.0
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre());
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0));
 }
 
 TEST(TFSRestParserColumn, AllowsDifferent0thDimension) {

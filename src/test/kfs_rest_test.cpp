@@ -359,6 +359,7 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(output.Size(), 20);
     int i = 1;
     for (auto& data : output) {
         ASSERT_EQ(data.GetFloat(), i++);
@@ -380,10 +381,30 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
     ASSERT_EQ(doc["id"].GetString(), std::string("1"));
     auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(output.Size(), 10);
     int i = 1;
     for (auto& data : output) {
         ASSERT_EQ(data.GetFloat(), i++);
     }
+}
+
+TEST_F(HttpRestApiHandlerWithScalarModelTest, inferRequestScalar) {
+    std::string request = "/v2/models/scalar/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"scalar_model_input\",\"shape\":[],\"datatype\":\"FP32\",\"data\":[4.1]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(doc["model_name"].GetString(), std::string("scalar"));
+    ASSERT_EQ(doc["id"].GetString(), std::string("1"));
+    auto output = doc["outputs"].GetArray()[0].GetObject()["scalar_model_output"].GetArray();
+    ASSERT_EQ(output.Size(), 1);
+    ASSERT_EQ(output[0].GetFloat(), 4.1f);
 }
 
 TEST_F(HttpRestApiHandlerTest, inferPreprocess) {
