@@ -81,23 +81,6 @@ def grab_frame(cap):
     return frame
 
 def postprocess(frame, result):
-    #result: 
-        #name: "texts"
-        #datatype: "FP32"
-        #shape: <number_of_detections> <output_sequence_length> 1 <confidence_distribution_across_alphanumeric_symbols>
- 
-        #name: "confidence_levels"
-        #datatype: "FP32"
-        #shape: <number_of_detections> 1 1
-
-        #name: "text_coordinates"
-        #datatype: "INT32"
-        #shape: <number_of_detections> 1 4
-
-        #name: "text_images"
-        #datatype: "FP32"
-        #shape: <number_of_detections> 1 32 128 1
-    print(result.__dict__)
     if result is not None:
         texts = result.as_numpy("texts")
         text_coordinates = result.as_numpy('text_coordinates')
