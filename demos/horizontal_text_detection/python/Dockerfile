@@ -13,16 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-FROM ubuntu:latest
+FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -qq && apt-get install -y build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev python3 python3-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libdc1394-dev yasm
-RUN apt-get install -y libva-dev libdrm-dev wayland-protocols libx11-dev libx11-xcb-dev libxcb-present-dev libxcb-dri3-dev libvpl-dev
-RUN apt-get -y install \
+ARG JOBS=$nproc
+RUN apt-get update -qq && apt-get -y install \
   autoconf \
   automake \
   build-essential \
   cmake \
+  python3 \
   git-core \
+  pkg-config \
   libass-dev \
   libfreetype6-dev \
   libgnutls28-dev \
@@ -47,8 +48,12 @@ RUN apt-get -y install \
   libx265-dev \
   libnuma-dev \
   libvpx-dev \
+  libvpl-dev \
   libfdk-aac-dev \
   libopus-dev \
+  libswscale-dev \
+  libavcodec-dev \
+  libavformat-dev \
   libswresample-dev \
   libdav1d-dev
 RUN apt-get install -y python3-pip && pip3 install tritonclient[all] numpy==1.24.3
@@ -65,14 +70,14 @@ RUN git clone https://github.com/oneapi-src/oneVPL.git onevpl && \
    cd onevpl-gpu  && \
    mkdir build && cd build && \
    cmake .. && \
-   make -j $(nproc) && \
+   make -j $JOBS && \
    make install
 RUN cp _vplinstall/lib/libvpl.so.2.9 /lib/libvpl.so
 RUN ln -s /lib/libvpl.so /lib/libvpl.so.2
 RUN git clone https://github.com/FFmpeg/FFmpeg.git /ffmpeg && \
     cd ffmpeg && \
     ./configure --enable-libvpl --toolchain=gcc-tsan --enable-gpl --enable-libx264 --enable-libx265 --enable-libvpx --enable-zlib  --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/lib64/pkgconfig --incdir=/usr/include && \
-    make -j $(nproc) && \
+    make -j $JOBS && \
     make install
 RUN git clone https://github.com/opencv/opencv.git /opencv && \
     cd /opencv && \
@@ -84,7 +89,7 @@ RUN git clone https://github.com/opencv/opencv.git /opencv && \
   -DPYTHON3_EXECUTABLE=$(which python3) \
   -DPYTHON3_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
   -DPYTHON3_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") .. && \
-  make -j $(nproc) && \
+  make -j $JOBS && \
   make install
 RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
 
