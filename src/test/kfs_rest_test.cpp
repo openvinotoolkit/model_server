@@ -26,6 +26,7 @@
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../version.hpp"
+#include "test_utils.hpp"
 
 using ovms::Config;
 using ovms::HttpRestApiHandler;
@@ -53,6 +54,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
+        randomizePort(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -89,6 +91,34 @@ public:
     static std::unique_ptr<MockedServer> server;
     static std::unique_ptr<std::thread> thread;
     std::unique_ptr<HttpRestApiHandler> handler;
+};
+
+class HttpRestApiHandlerWithScalarModelTest : public HttpRestApiHandlerTest {
+public:
+    static void SetUpTestSuite() {
+        HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
+        std::string port = "9000";
+        randomizePort(port);
+        char* argv[] = {
+            (char*)"OpenVINO Model Server",
+            (char*)"--model_name",
+            (char*)"scalar",
+            (char*)"--model_path",
+            (char*)"/ovms/src/test/scalar",
+            (char*)"--log_level",
+            (char*)"DEBUG",
+            (char*)"--port",
+            (char*)port.c_str(),
+            nullptr};
+        thread = std::make_unique<std::thread>(
+            [&argv]() {
+                ASSERT_EQ(EXIT_SUCCESS, server->start(9, argv));
+            });
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
+    }
 };
 
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
@@ -269,7 +299,7 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     handler->parseRequestComponents(comp, "GET", request);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    handler->dispatchToProcessor(std::string(), &response, comp, responseComponents);
+    ASSERT_EQ(handler->dispatchToProcessor(std::string(), &response, comp, responseComponents), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -277,15 +307,43 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     ASSERT_EQ(std::string(doc["versions"].GetArray()[0].GetString()), "1");
     ASSERT_EQ(std::string(doc["platform"].GetString()), "OpenVINO");
 
+    ASSERT_EQ(doc["inputs"].GetArray().Size(), 1);
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["name"].GetString()), "b");
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 2);
     ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
     ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
 
+    ASSERT_EQ(doc["outputs"].GetArray().Size(), 1);
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["name"].GetString()), "a");
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 2);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
+}
+
+TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {
+    std::string request = "/v2/models/scalar/versions/1";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "GET", request);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(std::string(), &response, comp, responseComponents), ovms::StatusCode::OK);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(std::string(doc["name"].GetString()), "scalar");
+    ASSERT_EQ(std::string(doc["versions"].GetArray()[0].GetString()), "1");
+    ASSERT_EQ(std::string(doc["platform"].GetString()), "OpenVINO");
+
+    ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["name"].GetString()), SCALAR_MODEL_INPUT_NAME);
+    ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 0);
+
+    ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["name"].GetString()), SCALAR_MODEL_OUTPUT_NAME);
+    ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 0);
 }
 
 TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
