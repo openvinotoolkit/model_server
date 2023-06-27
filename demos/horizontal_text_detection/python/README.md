@@ -197,27 +197,34 @@ docker build . -t rtsp_client
 - Command
 
 ```bash
-docker run rtsp_client --help
+docker run --network="host" rtsp_client --help
 usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
-                      [--grpc_port GRPC_PORT] [--input_stream INPUT_STREAM]
-                      [--output_stream OUTPUT_STREAM] [--fps FPS]
+                      [--input_stream INPUT_STREAM]
+                      [--output_stream OUTPUT_STREAM]
+                      [--model_name MODEL_NAME] [--width WIDTH]
+                      [--height HEIGHT] [--verbose VERBOSE]
+                      [--input_name INPUT_NAME]
 
 options:
   -h, --help            show this help message and exit
   --grpc_address GRPC_ADDRESS
                         Specify url to grpc service
-  --grpc_port GRPC_PORT
-                        Specify port to grpc service
   --input_stream INPUT_STREAM
                         Url of input rtsp stream
   --output_stream OUTPUT_STREAM
                         Url of output rtsp stream
-  --fps FPS             Framerate of input stream
+  --model_name MODEL_NAME
+                        Name of the model
+  --width WIDTH         Width of model's input image
+  --height HEIGHT       Height of model's input image
+  --verbose VERBOSE     Height of model's input image
+  --input_name INPUT_NAME
+                        Name of the model's input
 ```
 
 - Usage example
 
 ```bash
-docker run rtsp_client --grpc_port 9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+docker run rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
 
