@@ -655,7 +655,6 @@ static Status getModelInstance(ovms::Server& server, const std::string& modelNam
     if (!status.ok()) {
         return status;
     }
-    SPDLOG_ERROR("OOOO");
     return modelManager->getModelInstance(modelName, modelVersion, modelInstance, modelInstanceUnloadGuardPtr);
 }
 
@@ -775,7 +774,6 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
     if (!status.ok()) {
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
-    SPDLOG_ERROR(status.string());
     std::shared_ptr<ovms::ModelInstance> modelInstance = modelManager->findModelInstance(servableName, servableVersion);
 
     if (modelInstance == nullptr) {
