@@ -298,6 +298,83 @@ TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
+class MediapipeFlowTwoOutputsDagTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_two_outputs_dag.json");
+    }
+};
+
+TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};
+
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipeTwoOutputsDag";
+    request.mutable_inputs()->Clear();
+    request.mutable_raw_input_contents()->Clear();
+    prepareKFSInferInputTensor(request, "in_1", {{1, 10}, ovms::Precision::FP32}, input, false);
+    prepareKFSInferInputTensor(request, "in_2", {{1, 4}, ovms::Precision::FP32}, factors, false);
+    ASSERT_EQ(request.inputs_size(), 2);
+    request.mutable_model_name()->assign(modelName);
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+
+    ASSERT_EQ(response.model_name(), modelName);
+    ASSERT_EQ(response.outputs_size(), 2);
+    ASSERT_EQ(response.raw_output_contents_size(), 2);
+    
+    ASSERT_TRUE((response.outputs().Get(0).name() == "out_1" && response.outputs().Get(1).name() == "out_2") ||
+                (response.outputs().Get(0).name() == "out_2" && response.outputs().Get(1).name() == "out_1"));
+    
+    std::string* content1;
+    std::string* content2;
+    KFSTensorOutputProto outputProto1, outputProto2;
+    if(response.outputs().Get(0).name() == "out_1") {
+        outputProto1 = response.outputs().Get(0);
+        content1 = response.mutable_raw_output_contents(0);
+        outputProto2 = response.outputs().Get(1);
+        content2 = response.mutable_raw_output_contents(1);
+    }
+    else {
+        outputProto1 = response.outputs().Get(1);
+        content1 = response.mutable_raw_output_contents(1);
+        outputProto2 = response.outputs().Get(0);
+        content2 = response.mutable_raw_output_contents(0);
+    }
+
+    int out1DataSize = 40;
+    int out2DataSize = 16;
+    std::vector<float> out1Data{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5};
+    std::vector<float> out2Data{1, 3, 2, 2, 1, 3, 2, 2, 1, 3, 2, 2, 1, 3, 2, 2};
+
+    ASSERT_EQ(content1->size(), out1DataSize * sizeof(float));
+    ASSERT_EQ(outputProto1.shape_size(), 3);
+    ASSERT_EQ(outputProto1.shape(0), 4);
+    ASSERT_EQ(outputProto1.shape(1), 1);
+    ASSERT_EQ(outputProto1.shape(2), 10);
+
+    float* actual_output = (float*)content1->data();
+    float* expected_output = out1Data.data();
+    int dataLengthToCheck = out1DataSize * sizeof(float);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+
+    ASSERT_EQ(content2->size(), out2DataSize * sizeof(float));
+    ASSERT_EQ(outputProto2.shape_size(), 3);
+    ASSERT_EQ(outputProto2.shape(0), 4);
+    ASSERT_EQ(outputProto2.shape(1), 1);
+    ASSERT_EQ(outputProto2.shape(2), 4);
+
+    actual_output = (float*)content2->data();
+    expected_output = out2Data.data();
+    dataLengthToCheck = out2DataSize * sizeof(float);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+}
+
 class MediapipeFlowDummyDummyInSubconfigAndConfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
