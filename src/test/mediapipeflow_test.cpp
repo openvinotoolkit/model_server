@@ -325,20 +325,19 @@ TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
     ASSERT_EQ(response.model_name(), modelName);
     ASSERT_EQ(response.outputs_size(), 2);
     ASSERT_EQ(response.raw_output_contents_size(), 2);
-    
+
     ASSERT_TRUE((response.outputs().Get(0).name() == "out_1" && response.outputs().Get(1).name() == "out_2") ||
                 (response.outputs().Get(0).name() == "out_2" && response.outputs().Get(1).name() == "out_1"));
-    
+
     std::string* content1;
     std::string* content2;
     KFSTensorOutputProto outputProto1, outputProto2;
-    if(response.outputs().Get(0).name() == "out_1") {
+    if (response.outputs().Get(0).name() == "out_1") {
         outputProto1 = response.outputs().Get(0);
         content1 = response.mutable_raw_output_contents(0);
         outputProto2 = response.outputs().Get(1);
         content2 = response.mutable_raw_output_contents(1);
-    }
-    else {
+    } else {
         outputProto1 = response.outputs().Get(1);
         content1 = response.mutable_raw_output_contents(1);
         outputProto2 = response.outputs().Get(0);
