@@ -19,6 +19,7 @@
 default: setup_repository
 
 BUILD_CUSTOM_NODE=false
+BASE_OS=ubuntu
 
 setup_repository:
 # Download horizontal text detection model
@@ -32,9 +33,9 @@ setup_repository:
 ifeq ($(BUILD_CUSTOM_NODE),true)
 # Build custom node
 	cd ../../../src/custom_nodes && \
-	make BASE_OS=ubuntu NODES=horizontal_ocr && \
+	make BASE_OS=$(BASE_OS) NODES=horizontal_ocr && \
 	mkdir -p ../../demos/horizontal_text_detection/python/workspace/lib && \
-	mv lib/ubuntu/libcustom_node_horizontal_ocr.so ../../demos/horizontal_text_detection/python/workspace/lib/libcustom_node_horizontal_ocr.so
+	mv lib/$(BASE_OS)/libcustom_node_horizontal_ocr.so ../../demos/horizontal_text_detection/python/workspace/lib/libcustom_node_horizontal_ocr.so
 endif
 # Copy configuration file to workspace directory
 	cp config.json workspace/.

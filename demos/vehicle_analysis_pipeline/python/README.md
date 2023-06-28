@@ -33,13 +33,40 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/vehicle_analysis_pipeline/python
 ```
 
-You can prepare the workspace that contains all the above by just running
+You can prepare the workspace that contains all the above by just running `make` command.
+Since custom node used in this demo is included in OpenVINO Model Server image you can either use the custom node from the image, or build one.
+
+If you just want to quickly run this demo and use already compiled custom node, run: 
 
 ```bash
 make
 ```
 
-### Final directory structure
+#### Directory structure (without custom node)
+
+Once the `make` procedure is finished, you should have `workspace` directory ready with the following content.
+
+```bash
+workspace
+├── config.json
+├── vehicle-attributes-recognition-barrier-0042
+│   └── 1
+│       ├── vehicle-attributes-recognition-barrier-0042.bin
+│       └── vehicle-attributes-recognition-barrier-0042.xml
+└── vehicle-detection-0202
+    └── 1
+        ├── vehicle-detection-0202.bin
+        └── vehicle-detection-0202.xml
+
+```
+
+If you modified the custom node or for some other reason, you want to have it compiled and then attached to the container, run:
+
+```bash
+make BUILD_CUSTOM_NODE=true BASE_OS=ubuntu
+```
+
+#### Directory structure (with custom node)
 
 Once the `make` procedure is finished, you should have `workspace` directory ready with the following content.
 ```bash

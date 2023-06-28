@@ -117,8 +117,8 @@ workspace/
 If you modified the custom node or for some other reason, you want to have it compiled and then attached to the container, run:
 
 ```bash
- make BUILD_CUSTOM_NODE=true
- ```
+make BUILD_CUSTOM_NODE=true BASE_OS=ubuntu
+```
 
 #### Directory structure (with custom node)
 
