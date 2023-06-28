@@ -186,13 +186,8 @@ void OVMSInferenceAdapter::loadModel(const std::shared_ptr<const ov::Model>& mod
         this->inShapesMinMaxes.insert({tensorName, std::move(inputMinMax)});
     }
     for (id = 0; id < outputCount; ++id) {
-        std::stringstream ss;
-        ss << servableName.c_str() << " : OUTPUT: ";
-        LOG(INFO) << ss.str();
         ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
         outputNames.emplace_back(tensorName);
-        ss << "END";
-        LOG(INFO) << ss.str();
     }
     const ov::AnyMap* servableMetadataRtInfo;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
