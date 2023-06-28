@@ -20,6 +20,8 @@ HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
 BASE_OS_TAG_UBUNTU ?= 20.04
 BASE_OS_TAG_REDHAT ?= 8.7
+REDHAT_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_redhat.tar.gz"
+UBUNTU_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_ubuntu20.tar.gz"
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
@@ -27,17 +29,13 @@ BASE_OS ?= ubuntu
 DIST_OS ?= $(BASE_OS)
 
 ifeq ($(BASE_OS),ubuntu)
-  ifeq ($(BASE_OS_TAG_UBUNTU),20.04)
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.1.0.11298.1588a332173_x86_64.tgz
-  else ifeq  ($(BASE_OS_TAG_UBUNTU),22.04)
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2023.1.0.11298.1588a332173_x86_64.tgz
-  endif
+  PACKAGE_URL = ${UBUNTU_PACKAGE_URL}
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
 endif
 ifeq ($(BASE_OS),redhat)
+  PACKAGE_URL = ${REDHAT_PACKAGE_URL}
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.1.0.11298.1588a332173_x86_64.tgz
 endif
 
 clean:
@@ -50,7 +48,7 @@ from_docker:
 	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG))
 
 from_web:
-	wget -P capi/$(DIST_OS) ${DLDT_PACKAGE_URL}
+	wget -P capi/$(DIST_OS) ${PACKAGE_URL}
 	mv capi/$(DIST_OS)/*.tar.gz capi/$(DIST_OS)/ovms.tar.gz
 
 build_image:
