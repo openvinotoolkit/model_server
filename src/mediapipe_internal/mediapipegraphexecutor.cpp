@@ -56,29 +56,45 @@ static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<co
 }
 
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, tensorflow::Tensor& outTensor) {
+    using tensorflow::Tensor;
+    using tensorflow::TensorShape;
     auto requestInputItr = request.inputs().begin();
     auto status = getRequestInput(requestInputItr, requestedName, request);
     if (!status.ok()) {
         return status;
     }
+    // TODO there is no sense to check this for every input
+    if (request.raw_input_contents().size() == 0 || request.raw_input_contents().size() != request.inputs().size()) {
+        std::stringstream ss;
+        ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
+        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
+    }
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
         auto datatype = getPrecisionAsDataType(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
-        using tensorflow::Tensor;
-        using tensorflow::TensorShape;
-        using tensorflow::TensorShapeBase;
-        using tensorflow::TensorShapeUtils;
         TensorShape tensorShape;
-        std::vector<int64_t> rawShape{1, 10};
+        std::vector<int64_t> rawShape;
+        for (int i = 0; i < requestInputItr->shape().size(); i++) {
+            if (requestInputItr->shape()[i] <= 0) {
+                std::stringstream ss;
+                ss << "Negative or zero dimension size is not acceptable: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_SHAPE, details);
+            }
+            rawShape.emplace_back(requestInputItr->shape()[i]);
+        }
         int64_t dimsCount = rawShape.size();
-        TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
-        TensorShape::BuildTensorShapeBase({1, 10}, static_cast<TensorShapeBase<TensorShape>*>(&tensorShape));
+        tensorflow::TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
+        TensorShape::BuildTensorShapeBase(rawShape, static_cast<tensorflow::TensorShapeBase<TensorShape>*>(&tensorShape));
         // TODO here we allocate default TF CPU allocator
-        tensorflow::Tensor outTensor2(datatype, tensorShape);  // TODO error handling
-        void* tftensordata = outTensor2.data();
+        tensorflow::Tensor localTensor(datatype, tensorShape);  // TODO error handling
+        void* tftensordata = localTensor.data();
         std::memcpy(tftensordata, bufferLocation.data(), bufferLocation.size());
-        outTensor = std::move(outTensor2);
+        outTensor = std::move(localTensor);
     } catch (const std::exception& e) {
         SPDLOG_DEBUG("Exception: {}; caught during Mediapipe TF tensor deserialization", e.what());
     } catch (...) {
