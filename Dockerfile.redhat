@@ -211,7 +211,7 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
 # install sample apps including benchmark_app
 RUN yum install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
     http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-2.2.2-1.el8.x86_64.rpm \
-    https://download-ib01.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/j/json-devel-3.6.1-2.el8.x86_64.rpm && \
+    https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/j/json-devel-3.6.1-2.el8.x86_64.rpm && \
     rm -rf /var/cache/yum
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
