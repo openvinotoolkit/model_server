@@ -737,7 +737,6 @@ cc_test(
         "test/gather_node_test.cpp",
         "test/gcsfilesystem_test.cpp",
         "test/get_model_metadata_response_test.cpp",
-        "test/get_mediapipe_graph_metadata_response_test.cpp",
         "test/get_pipeline_metadata_response_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
@@ -794,6 +793,7 @@ cc_test(
         "test/unit_tests.cpp",
         ] + select({
         "//conditions:default": [
+            "test/get_mediapipe_graph_metadata_response_test.cpp",
             "test/mediapipe/inputsidepacketusertestcalc.cc",
             "test/mediapipeflow_test.cpp",
             "test/mediapipe_validation_test.cpp",
