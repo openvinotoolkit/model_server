@@ -424,9 +424,7 @@ Status KFSInferenceServiceImpl::buildResponse(
 Status KFSInferenceServiceImpl::buildResponse(
     MediapipeGraphDefinition& mediapipeGraphDefinition,
     KFSModelMetadataResponse* response) {
-
     std::unique_ptr<MediapipeGraphDefinitionUnloadGuard> unloadGuard;
-
     // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
     auto status = mediapipeGraphDefinition.waitForLoaded(unloadGuard, 0);
     if (!status.ok()) {

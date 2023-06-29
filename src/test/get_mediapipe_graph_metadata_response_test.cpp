@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -86,19 +86,24 @@ TEST_F(GetMediapipeGraphMetadataResponse, BasicResponseMetadata) {
     auto firstInput = response.inputs().at(0);
     EXPECT_EQ(firstInput.name(), "in");
     EXPECT_EQ(firstInput.datatype(), "INVALID");
+    EXPECT_EQ(firstInput.shape_size(), 0);
     auto secondInput = response.inputs().at(1);
     EXPECT_EQ(secondInput.name(), "in2");
     EXPECT_EQ(secondInput.datatype(), "INVALID");
+    EXPECT_EQ(secondInput.shape_size(), 0);
 
     EXPECT_EQ(response.outputs_size(), 3);
     auto firstOutput = response.outputs().at(0);
     EXPECT_EQ(firstOutput.name(), "out");
     EXPECT_EQ(firstOutput.datatype(), "INVALID");
+    EXPECT_EQ(firstOutput.shape_size(), 0);
     auto secondOutput = response.outputs().at(1);
     EXPECT_EQ(secondOutput.name(), "out2");
     EXPECT_EQ(secondOutput.datatype(), "INVALID");
+    EXPECT_EQ(secondOutput.shape_size(), 0);
 
     auto thirdOutput = response.outputs().at(2);
     EXPECT_EQ(thirdOutput.name(), "out3");
     EXPECT_EQ(thirdOutput.datatype(), "INVALID");
+    EXPECT_EQ(thirdOutput.shape_size(), 0);
 }
