@@ -75,6 +75,7 @@ public:
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, KFSGetModelStatusResponse* response);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSGetModelStatusResponse* response);
     static Status buildResponse(MediapipeGraphDefinition& pipelineDefinition, KFSGetModelStatusResponse* response);
+    static Status buildResponse(MediapipeGraphDefinition& mediapipeGraphDefinition, KFSModelMetadataResponse* response);
     static void convert(const std::pair<std::string, std::shared_ptr<const TensorInfo>>& from, KFSModelMetadataResponse::TensorMetadata* to);
     static Status getModelReady(const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response, const ModelManager& manager, ExecutionContext executionContext);
 
