@@ -1,0 +1,48 @@
+{
+    "model_config_list": [],
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"},
+                        {"data_item": "different_ops_factors",
+                         "alias": "custom_node_factors"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "custom_node",
+                                     "data_item": "custom_node_output"}
+                },
+                {"pipeline_output_factors": {"node_name": "custom_node",
+                                     "data_item": "custom_node_factors"}
+                }
+            ]
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeTwoOutputsDag",
+        "graph_path":"/ovms/src/test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt"
+    }
+    ]
+}

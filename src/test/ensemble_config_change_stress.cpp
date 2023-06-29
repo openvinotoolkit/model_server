@@ -1094,7 +1094,7 @@ const std::string basicMediapipeConfigWithNewGraphPath = R"({
     "mediapipe_config_list": [
     {
         "name":"pipeline1Dummy",
-        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames2.pbtxt"
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt"
     }
     ]
 })";

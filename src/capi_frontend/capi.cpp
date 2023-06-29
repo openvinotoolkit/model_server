@@ -847,7 +847,7 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetada
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TENSOR));
     }
     auto it = std::next(metadata->getInputsInfo().begin(), id);
-    *name = it->second->getName().c_str();
+    *name = it->first.c_str();
     *datatype = getPrecisionAsOVMSDataType(it->second->getPrecision());
     *dimCount = metadata->getInputDimsMin().at(*name).size();
     *shapeMin = const_cast<int64_t*>(metadata->getInputDimsMin().at(*name).data());
@@ -905,7 +905,7 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TENSOR));
     }
     auto it = std::next(metadata->getOutputsInfo().begin(), id);
-    *name = it->second->getName().c_str();
+    *name = it->first.c_str();
     *datatype = getPrecisionAsOVMSDataType(it->second->getPrecision());
     *dimCount = metadata->getOutputDimsMin().at(*name).size();
     *shapeMin = const_cast<int64_t*>(metadata->getOutputDimsMin().at(*name).data());
