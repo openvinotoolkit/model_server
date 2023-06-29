@@ -759,6 +759,16 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsEmptyRequest) {
     ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
 }
 
+TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidJson) {
+    std::string binaryData{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+    std::string request_body = R"({"inputs": notValid})";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
+}
+
 TEST_F(HttpRestApiHandlerTest, serverReady) {
     ovms::HttpRequestComponents comp;
     comp.type = ovms::KFS_GetServerReady;
