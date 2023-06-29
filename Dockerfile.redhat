@@ -339,8 +339,8 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
 
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
-RUN make -f MakefileCapi cpp BAZEL_DEBUG_FLAGS="${debug_bazel_flags}" && \
-    make -f MakefileCapi c BAZEL_DEBUG_FLAGS="${debug_bazel_flags}"
+RUN make -f MakefileCapi cpp debug_bazel_flags="${debug_bazel_flags}" && \
+    make -f MakefileCapi c debug_bazel_flags="${debug_bazel_flags}"
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
