@@ -366,7 +366,7 @@ TEST(TFSRestParserRow, InvalidJson) {
     checkParseStatusAndMessage(parser, "{{}", StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a name for object member. Offset: 1");
     checkParseStatusAndMessage(parser, R"({"signature_name:"","instances":[{"i":[1]}]})",
         StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a colon after a name of object member. Offset: 18");
-    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{i":[1]}]})",
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{i":[1]}]})",  // missing "
         StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a name for object member. Offset: 35");
     checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{"i":[1}]})",  // missing ]
         StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a comma or ']' after an array element. Offset: 41");
