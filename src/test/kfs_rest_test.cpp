@@ -756,7 +756,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsEmptyRequest) {
 
     ::KFSRequest grpc_request;
     int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
+    auto status = HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - Error: The document is empty. Offset: 0");
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidJson) {
@@ -766,7 +768,9 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidJson) {
 
     ::KFSRequest grpc_request;
     int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
+    auto status = HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - Error: Invalid value. Offset: 12");
 }
 
 TEST_F(HttpRestApiHandlerTest, serverReady) {
