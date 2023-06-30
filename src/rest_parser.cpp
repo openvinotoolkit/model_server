@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <string>
+
 #include <rapidjson/error/en.h>
 
 #include "precision.hpp"

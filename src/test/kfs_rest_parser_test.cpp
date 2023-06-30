@@ -343,7 +343,6 @@ TEST_F(KFSRestParserTest, parseValidRequestStringInputNested) {
     ASSERT_THAT(proto.inputs()[0].contents().bytes_contents(), ElementsAre("zebra", "openvino", "123"));
 }
 
-
 TEST_F(KFSRestParserTest, InvalidJson) {
     std::string request = R"({
     "inputs" : [ INVALID)";
