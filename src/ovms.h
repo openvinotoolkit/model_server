@@ -336,8 +336,8 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
 //
 // \param server The server object
 // \param servableName The name of the servable to be used
-// \param servableVersion The version of the servable to be used
-// \param state The state object to be created
+// \param servableVersion The version of the servable to be used. In case of servable version set to 0 server will choose the default servable version.
+// \param state The servable state
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_GetServableState(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableState* state);
 
