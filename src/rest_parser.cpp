@@ -284,7 +284,7 @@ Status TFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
     if (doc.Parse(json).HasParseError()) {
         std::stringstream ss;
-        ss << "Reason: " << rapidjson::GetParseError_En(doc.GetParseError())
+        ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
            << " Offset: " << doc.GetErrorOffset();
         const std::string details = ss.str();
         SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
@@ -707,7 +707,7 @@ Status KFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
     if (doc.Parse(json).HasParseError()) {
         std::stringstream ss;
-        ss << "Reason: " << rapidjson::GetParseError_En(doc.GetParseError())
+        ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
            << " Offset: " << doc.GetErrorOffset();
         const std::string details = ss.str();
         SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
