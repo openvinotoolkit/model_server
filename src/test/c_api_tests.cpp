@@ -794,12 +794,16 @@ public:
     class MockServer : public Server {
     public:
         MockServer() {
-            Module* grpc = new MockGrpcServerModule();
-            modules.insert({GRPC_SERVER_MODULE_NAME, std::unique_ptr<Module>(grpc)});
             MetricModule* mm = new MetricModule();
             modules.insert({METRICS_MODULE_NAME, std::unique_ptr<Module>(mm)});
-            MockServableManagerModule* msmm = new MockServableManagerModule(*this);
+        }
+        void setReady() {
+            Module* msmm = new MockServableManagerModule(*this);
             modules.insert({SERVABLE_MANAGER_MODULE_NAME, std::unique_ptr<Module>(msmm)});
+        }
+        void setLive() {
+            Module* grpc = new MockGrpcServerModule();
+            modules.insert({GRPC_SERVER_MODULE_NAME, std::unique_ptr<Module>(grpc)});
         }
     };
 };
@@ -812,6 +816,59 @@ protected:
         configFilePath = directoryPath + "/ovms_config.json";
     }
 };
+
+TEST_F(CAPIStateIntegration, LiveReadyFromMalformedConfig) {
+    OVMS_Server* server = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&server));
+    OVMS_ServerSettings* serverSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    bool isReady;
+    bool isLive;
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(!isLive);
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(!isReady);
+    createConfigFileWithContent("{", configFilePath);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(server, serverSettings, modelsSettings), StatusCode::JSON_INVALID);
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(isLive);
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(!isReady);
+    OVMS_ServerDelete(server);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
+}
+
+TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
+    OVMS_Server* server = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&server));
+    OVMS_ServerSettings* serverSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    bool isReady;
+    bool isLive;
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(!isLive);
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(!isReady);
+    std::filesystem::copy("/ovms/src/test/configs/emptyConfigWithMetrics.json", configFilePath, std::filesystem::copy_options::recursive);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(server, serverSettings, modelsSettings));
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(isLive);
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(isReady);
+    OVMS_ServerDelete(server);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
+}
+
 TEST_F(CAPIStateIntegration, Config) {
     OVMS_Server* cserver = nullptr;
     OVMS_ServableState state;
@@ -857,9 +914,36 @@ TEST_F(CAPIState, PipelineStates) {
     ASSERT_EQ(OVMS_ServableState::OVMS_STATE_AVAILABLE, convertToServableState(ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION));
     ASSERT_EQ(OVMS_ServableState::OVMS_STATE_RETIRED, convertToServableState(ovms::PipelineDefinitionStateCode::RETIRED));
 }
+
+TEST_F(CAPIState, ServerLive) {
+    MockServer* cserver = new MockServer;
+    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
+    bool isLive;
+
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(!isLive);
+    cserver->setLive();
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(isLive);
+}
+
+TEST_F(CAPIState, ServerReady) {
+    MockServer* cserver = new MockServer;
+    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
+    bool isReady;
+
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(!isReady);
+    cserver->setReady();
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(isReady);
+}
+
 std::shared_ptr<MockModelInstanceChangingStates> CAPIState::modelInstance = nullptr;
 TEST_F(CAPIState, ServerNull) {
     MockServer* cserver = new MockServer;
+    cserver->setReady();
+    cserver->setLive();
     OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
     OVMS_ServableState state;
     const std::string servableName = "dummy";
@@ -875,6 +959,8 @@ TEST_F(CAPIState, AllStates) {
     const std::string servableName = "dummy";
     const int64_t servableVersion = 1;
     MockServer* cserver = new MockServer;
+    cserver->setReady();
+    cserver->setLive();
     OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
     OVMS_ServableState state;
 

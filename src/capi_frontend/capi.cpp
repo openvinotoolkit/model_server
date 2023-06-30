@@ -83,6 +83,22 @@ void OVMS_StatusDelete(OVMS_Status* status) {
     delete reinterpret_cast<ovms::Status*>(status);
 }
 
+OVMS_Status* OVMS_ServerLive(OVMS_Server* serverPtr, bool* isLive) {
+    if (serverPtr == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
+    }
+    ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+    *isLive = server.isLive();
+    return nullptr;
+}
+OVMS_Status* OVMS_ServerReady(OVMS_Server* serverPtr, bool* isReady) {
+    if (serverPtr == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
+    }
+    ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+    *isReady = server.isReady();
+    return nullptr;
+}
 OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
     uint32_t* code) {
     if (status == nullptr)

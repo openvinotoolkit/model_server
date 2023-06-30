@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <cstdint>
+
 #include <stddef.h>
 #include <stdint.h>  //  For precise data types
 
@@ -315,6 +317,20 @@ OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
 // \param server The server object to be created and set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerNew(OVMS_Server** server);
+
+// Get the liveliness of the server
+//
+// \param server The server object
+// \param liveliness of the server
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerLive(OVMS_Server* server, bool* isLive);
+//
+// Get the readiness of the server
+//
+// \param server The server object
+// \param readiness of the server
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerReady(OVMS_Server* server, bool* isReady);
 
 // Deallocates server memory for given ptr.
 //
