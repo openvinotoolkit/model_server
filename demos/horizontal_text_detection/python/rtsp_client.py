@@ -75,9 +75,9 @@ def grab_frame(cap):
         return None
 
     if frame.shape[0] > HEIGHT and frame.shape[1] > WIDTH:
-        frame = cv2.resize(frame, (HEIGHT, WIDTH), interpolation=cv2.INTER_LINEAR)
-    else:
         frame = cv2.resize(frame, (HEIGHT, WIDTH), interpolation=cv2.INTER_AREA)
+    else:
+        frame = cv2.resize(frame, (HEIGHT, WIDTH), interpolation=cv2.INTER_LINEAR)
     return frame
 
 def postprocess(frame, result):

@@ -16,12 +16,12 @@
 FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG JOBS=$nproc
-RUN apt-get update -qq && apt-get -y install \
+RUN apt-get update -qq && apt-get --no-install-recommends -y install \
   autoconf \
   automake \
   build-essential \
   cmake \
-  python3 \
+  python3-dev \
   git-core \
   pkg-config \
   libass-dev \
@@ -55,8 +55,10 @@ RUN apt-get update -qq && apt-get -y install \
   libavcodec-dev \
   libavformat-dev \
   libswresample-dev \
-  libdav1d-dev
-RUN apt-get install -y python3-pip && pip3 install tritonclient[all] numpy==1.24.3
+  libdav1d-dev \
+  python3-pip \ 
+  && rm -rf /var/lib/apt/lists/*
+RUN pip3 install tritonclient[all] numpy==1.24.3
 RUN git clone https://github.com/oneapi-src/oneVPL.git onevpl && \
   cd onevpl && \
   export VPL_INSTALL_DIR=`pwd`/../_vplinstall && \
