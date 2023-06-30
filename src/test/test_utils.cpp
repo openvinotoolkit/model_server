@@ -113,13 +113,13 @@ void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalMillisec() * 1000;
     bool reloadIsNeeded = true;
     int timestepMs = 10;
-    
+
     auto start = std::chrono::high_resolution_clock::now();
-     while (reloadIsNeeded &&
-            (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() < waitTime)) {
-         std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
-         manager.configFileReloadNeeded(reloadIsNeeded);
-     }
+    while (reloadIsNeeded &&
+           (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() < waitTime)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
+        manager.configFileReloadNeeded(reloadIsNeeded);
+    }
 }
 
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {

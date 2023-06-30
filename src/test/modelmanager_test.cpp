@@ -147,7 +147,8 @@ std::shared_ptr<MockModel> modelMock;
 
 class MockModelManager : public ovms::ModelManager {
 public:
-    MockModelManager() : ModelManager() {
+    MockModelManager() :
+        ModelManager() {
         this->watcherIntervalMillisec = 100;
     }
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
