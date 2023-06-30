@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -51,6 +52,8 @@ using ovms::Buffer;
 using ovms::InferenceResponse;
 using ovms::InferenceTensor;
 using ovms::StatusCode;
+
+const int SLEEP_TIME_AFTER_THREAD_STARTED_MS = 1;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
@@ -143,19 +146,22 @@ public:
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(waitingBeforeGettingModelCount);
         std::vector<std::promise<void>> releaseWaitBeforePerformInference(waitingBeforePerformInferenceCount);
+        std::vector<std::promise<void>> threadsWaitingBeforeGettingModelInstanceStarted(waitingBeforeGettingModelCount);
+        std::vector<std::promise<void>> threadsWaitingBeforePerformInferenceStarted(waitingBeforePerformInferenceCount);
+        std::promise<void> thread1Started, thread2Started;
 
         std::vector<std::thread> predictsWaitingBeforeGettingModelInstance;
         std::vector<std::thread> predictsWaitingBeforeInference;
         for (auto i = 0u; i < waitingBeforeGettingModelCount; ++i) {
             predictsWaitingBeforeGettingModelInstance.emplace_back(
                 std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i]() {
+                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, &threadsWaitingBeforeGettingModelInstanceStarted, i]() {
                         RequestType request;
                         Preparer<RequestType> preparer;
                         preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
                                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{(initialBatchSize + (i % 3)), 10}, ovms::Precision::FP32}}});
-
+                        threadsWaitingBeforeGettingModelInstanceStarted[i].set_value();
                         performPredict(config.getName(), config.getVersion(), request,
                             std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
                     }));
@@ -163,19 +169,25 @@ public:
         for (auto i = 0u; i < waitingBeforePerformInferenceCount; ++i) {
             predictsWaitingBeforeInference.emplace_back(
                 std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforePerformInference, i]() {
+                    [this, initialBatchSize, &releaseWaitBeforePerformInference, &threadsWaitingBeforePerformInferenceStarted, i]() {
                         RequestType request;
                         Preparer<RequestType> preparer;
                         preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
                                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{initialBatchSize, 10}, ovms::Precision::FP32}}});
-
+                        threadsWaitingBeforePerformInferenceStarted[i].set_value();
                         performPredict(config.getName(), config.getVersion(), request, nullptr,
                             std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInference[i].get_future())));
                     }));
         }
         // sleep to allow all threads to initialize
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        for (auto& p : threadsWaitingBeforeGettingModelInstanceStarted) {
+            p.get_future().get();
+        }
+        for (auto& p : threadsWaitingBeforePerformInferenceStarted) {
+            p.get_future().get();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME_AFTER_THREAD_STARTED_MS));
         for (auto& promise : releaseWaitBeforeGettingModelInstance) {
             promise.set_value();
         }
@@ -196,22 +208,27 @@ public:
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(numberOfThreads);
+        std::vector<std::promise<void>> threadsWaitingBeforeGettingModelInstanceStarted(numberOfThreads);
         std::vector<std::thread> predictThreads;
         for (auto i = 0u; i < numberOfThreads; ++i) {
             predictThreads.emplace_back(
                 std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i]() {
+                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, &threadsWaitingBeforeGettingModelInstanceStarted, i]() {
                         RequestType request;
                         Preparer<RequestType> preparer;
                         preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
                                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{(initialBatchSize + i), 10}, ovms::Precision::FP32}}});
+                        threadsWaitingBeforeGettingModelInstanceStarted[i].set_value();
                         performPredict(config.getName(), config.getVersion(), request,
                             std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
                     }));
         }
         // sleep to allow all threads to initialize
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        for (auto& p : threadsWaitingBeforeGettingModelInstanceStarted) {
+            p.get_future().get();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME_AFTER_THREAD_STARTED_MS));
         for (auto& promise : releaseWaitBeforeGettingModelInstance) {
             promise.set_value();
         }
@@ -723,18 +740,23 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceInProgress) {
     ASSERT_EQ(this->manager.reloadModelWithVersions(this->config), ovms::StatusCode::OK_RELOADED);
 
     std::promise<void> releaseWaitBeforePerformInferenceBs1, releaseWaitBeforeGetModelInstanceBs2;
+    std::promise<void> thread1Started, thread2Started;
     std::thread t1(
-        [this, &requestBs1, &releaseWaitBeforePerformInferenceBs1]() {
+        [this, &requestBs1, &releaseWaitBeforePerformInferenceBs1, &thread1Started]() {
+            thread1Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs1, nullptr,
                 std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInferenceBs1.get_future())));
         });
     std::thread t2(
-        [this, &requestBs2, &releaseWaitBeforeGetModelInstanceBs2]() {
+        [this, &requestBs2, &releaseWaitBeforeGetModelInstanceBs2, &thread2Started]() {
+            thread2Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs2,
                 std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGetModelInstanceBs2.get_future())),
                 nullptr);
         });
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    thread1Started.get_future().get();
+    thread2Started.get_future().get();
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME_AFTER_THREAD_STARTED_MS));
     releaseWaitBeforePerformInferenceBs1.set_value();
     releaseWaitBeforeGetModelInstanceBs2.set_value();
     t1.join();
@@ -758,18 +780,23 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceAboutToStart) {
     ASSERT_EQ(this->manager.reloadModelWithVersions(this->config), ovms::StatusCode::OK_RELOADED);
 
     std::promise<void> releaseWaitBeforeGetModelInstanceBs1, releaseWaitBeforePerformInferenceBs2;
+    std::promise<void> thread1Started, thread2Started;
     std::thread t1(
-        [this, &requestBs1, &releaseWaitBeforeGetModelInstanceBs1]() {
+        [this, &requestBs1, &releaseWaitBeforeGetModelInstanceBs1, &thread1Started]() {
+            thread1Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs1,
                 std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGetModelInstanceBs1.get_future())),
                 nullptr);
         });
     std::thread t2(
-        [this, &requestBs2, &releaseWaitBeforePerformInferenceBs2]() {
+        [this, &requestBs2, &releaseWaitBeforePerformInferenceBs2, &thread2Started]() {
+            thread2Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs2, nullptr,
                 std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInferenceBs2.get_future())));
         });
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    thread1Started.get_future().get();
+    thread2Started.get_future().get();
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME_AFTER_THREAD_STARTED_MS));
     releaseWaitBeforePerformInferenceBs2.set_value();
     releaseWaitBeforeGetModelInstanceBs1.set_value();
     t1.join();
