@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "mediapipegraphdefinition.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -98,7 +99,7 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     // TODO
     // 3 validate 1<= outputs
     // 4 validate 1<= inputs
-    // 5 validate no side_packets?
+    // 5 validate no side_packets? push into executor check params vs expected side packets
     ::mediapipe::CalculatorGraphConfig proto;
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
@@ -111,17 +112,15 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
         return status;
     }
-    // Check if we are passing whole KFS request and response
-    status = this->setKFSPassthrough(this->passKfsRequestFlag);
+    // Detect what deserialization needs to be performed
+    status = this->setStreamTypes();
     if (!status.ok()) {
-        SPDLOG_DEBUG("Failed to prepare mediapipe graph configuration: {} KFS passthrough mode is misconfigured.", getName());
         return status;
     }
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} inputs: {}", getName(), outputsInfo.size());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} kfs pass through: {}", getName(), this->passKfsRequestFlag);
     return StatusCode::OK;
@@ -189,57 +188,63 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->passKfsRequestFlag, this->inputNames, this->outputNames);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames);
     return status;
 }
 
-Status MediapipeGraphDefinition::setKFSPassthrough(bool& passKfsRequestFlag) {
-    passKfsRequestFlag = false;
-    if (this->config.input_stream().size() == 1) {
-        std::string firstName = this->config.input_stream()[0];
-        if (startsWith(firstName.c_str(), "REQUEST:")) {
-            if (this->config.output_stream().size() == 1) {
-                firstName = this->config.output_stream()[0];
-                if (startsWith(firstName.c_str(), "RESPONSE:")) {
-                    SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request graph detected.");
-                    passKfsRequestFlag = true;
-                } else {
-                    SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request and response requires RESPONSE: string in the output stream name");
-                    return Status(StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG);
-                }
-            }
+const std::string KFS_REQUEST_PREFIX{"REQUEST"};
+const std::string KFS_RESPONSE_PREFIX{"RESPONSE"};
+const std::string TF_TENSOR_PREFIX{"TENSOR"};
+const std::string OV_TENSOR_PREFIX{"OVTENSOR"};
+
+Status MediapipeGraphDefinition::setStreamTypes() {
+    this->inputTypes.clear();
+    this->outputTypes.clear();
+    this->passKfsRequestFlag = false;
+    if (!this->config.input_stream().size() ||
+        !this->config.output_stream().size()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to prepare mediapipe graph: {}; having less than one input or output is disallowed", getName());
+        // validation is incomplete in case this error is triggered
+        return StatusCode::INTERNAL_ERROR;
+    }
+    for (auto& inputStreamName : this->config.input_stream()) {
+        inputTypes.emplace(getStreamNamePair(inputStreamName));
+    }
+    for (auto& outputStreamName : this->config.output_stream()) {
+        outputTypes.emplace(getStreamNamePair(outputStreamName));
+    }
+    bool kfsRequestPass = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
+        const auto& [k, v] = p;
+        return v == mediapipe_packet_type_enum::KFS_REQUEST;
+    });
+    bool kfsResponsePass = std::any_of(outputTypes.begin(), outputTypes.end(), [](const auto& p) {
+        const auto& [k, v] = p;
+        return v == mediapipe_packet_type_enum::KFS_RESPONSE;
+    });
+    if (kfsRequestPass) {
+        if (!kfsResponsePass) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to prepare mediapipe graph configuration: {}; KFS passthrough mode is misconfigured. KServe for mediapipe graph passing whole KFS request and response requires: {} tag in the output stream name", getName(), KFS_RESPONSE_PREFIX);
+            return Status(StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG);
+
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "KServe for mediapipe graph: {}; passing whole KFS request graph detected.", getName());
+        }
+    } else if (kfsResponsePass) {
+        if (!kfsRequestPass) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to prepare mediapipe graph configuration: {}; KServe for mediapipe graph passing whole KFS request and response requires: {} tag in the input stream name", getName(), KFS_REQUEST_PREFIX);
+            return Status(StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG);
         }
     }
-
-    if (!passKfsRequestFlag && this->config.output_stream().size() == 1) {
-        std::string firstName = this->config.output_stream()[0];
-        if (startsWith(firstName.c_str(), "RESPONSE:")) {
-            if (this->config.input_stream().size() == 1) {
-                firstName = this->config.input_stream()[0];
-                if (startsWith(firstName.c_str(), "REQUEST:")) {
-                    SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request graph detected.");
-                    passKfsRequestFlag = true;
-                } else {
-                    SPDLOG_DEBUG("KServe for mediapipe graph passing whole KFS request and response requires REQUEST: string in the input stream name");
-                    return Status(StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG);
-                }
-            }
-        }
-    }
-
-    // Passing whole KFS request and response
-    if (passKfsRequestFlag == true) {
+    if (kfsRequestPass == true) {
         if (this->config.output_stream().size() != 1) {
-            SPDLOG_ERROR("KServe passthrough through mediapipe graph requires having only one input (request) and one output(response)");
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "KServe passthrough through mediapipe graph requires having only one output(response)");
             return StatusCode::MEDIAPIPE_KFS_PASS_WRONG_OUTPUT_STREAM_COUNT;
         }
-
         if (this->config.input_stream().size() != 1) {
-            SPDLOG_ERROR("KServe passthrough through mediapipe graph requires having only one input (request) and one output(response)");
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "KServe passthrough through mediapipe graph requires having only one input (request)");
             return StatusCode::MEDIAPIPE_KFS_PASS_WRONG_INPUT_STREAM_COUNT;
         }
     }
-
     return StatusCode::OK;
 }
 
@@ -302,5 +307,33 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
     }
     SPDLOG_DEBUG("Succesfully waited for mediapipe definition: {}", getName());
     return StatusCode::OK;
+}
+
+std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFullName) {
+    std::vector<std::string> tokens = tokenize(streamFullName, ':');
+    if (tokens.size() == 2) {
+        return tokens[1];
+    } else if (tokens.size() == 1) {
+        return tokens[0];
+    }
+    static std::string empty = "";
+    return empty;
+}
+std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::getStreamNamePair(const std::string& streamFullName) {
+    static std::unordered_map<std::string, mediapipe_packet_type_enum> prefix2enum{
+        {KFS_REQUEST_PREFIX, mediapipe_packet_type_enum::KFS_REQUEST},
+        {KFS_RESPONSE_PREFIX, mediapipe_packet_type_enum::KFS_RESPONSE},
+        {TF_TENSOR_PREFIX, mediapipe_packet_type_enum::TFTENSOR},
+        {OV_TENSOR_PREFIX, mediapipe_packet_type_enum::OVTENSOR}};
+    std::vector<std::string> tokens = tokenize(streamFullName, ':');
+    if (tokens.size() == 2) {
+        auto it = prefix2enum.find(tokens[0]);
+        if (it != prefix2enum.end()) {
+            return {tokens[1], it->second};
+        }
+    } else if (tokens.size() == 1) {
+        return {tokens[0], mediapipe_packet_type_enum::UNKNOWN};
+    }
+    return {"", mediapipe_packet_type_enum::UNKNOWN};
 }
 }  // namespace ovms

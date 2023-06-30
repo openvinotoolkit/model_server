@@ -20,13 +20,13 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
-#include "../stringutils.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
@@ -34,15 +34,15 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphconfig.hpp"
+#include "packettypes.hpp"
 
 namespace ovms {
+class MediapipeGraphDefinitionUnloadGuard;
 class MetricConfig;
 class MetricRegistry;
 class ModelManager;
 class MediapipeGraphExecutor;
 class Status;
-
-class MediapipeGraphDefinitionUnloadGuard;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -64,16 +64,8 @@ public:
 
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
 
-    static std::string getStreamName(const std::string& streamFullName) {
-        std::vector<std::string> tokens = tokenize(streamFullName, ':');
-        if (tokens.size() == 2) {
-            return tokens[1];
-        } else if (tokens.size() == 1) {
-            return tokens[0];
-        }
-        static std::string empty = "";
-        return empty;
-    }
+    static std::string getStreamName(const std::string& streamFullName);
+    static std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName);
 
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
@@ -110,12 +102,14 @@ protected:
     virtual Status validateForConfigFileExistence();
     Status validateForConfigLoadableness();
 
-    Status setKFSPassthrough(bool& passKfsRequestFlag);
-    std::string chosenConfig;  // TODO make const @atobiszei
+    Status setStreamTypes();
+    std::string chosenConfig;
     static MediapipeGraphConfig MGC;
     const std::string name;
 
     bool passKfsRequestFlag;
+    std::unordered_map<std::string, mediapipe_packet_type_enum> inputTypes;
+    std::unordered_map<std::string, mediapipe_packet_type_enum> outputTypes;
     PipelineDefinitionStatus status;
 
     MediapipeGraphConfig mgconfig;
