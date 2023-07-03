@@ -22,9 +22,9 @@
 #include <openvino/core/shape.hpp>
 #include <openvino/openvino.hpp>
 
-#include "../ovms.h"                      // NOLINT
-#include "../stringutils.hpp"             // TODO dispose
-#include "../tfs_frontend/tfs_utils.hpp"  // TODO dispose
+#include "../ovms.h"  // NOLINT
+#include "../stringutils.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "src/mediapipe_calculators/modelapiovmsinferencecalculator.pb.h"
@@ -68,8 +68,8 @@ static tensorflow::Tensor convertOVTensor2TFTensor(const ov::Tensor& t) {
     int64_t dimsCount = rawShape.size();
     tensorflow::TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
     TensorShape::BuildTensorShapeBase(rawShape, static_cast<tensorflow::TensorShapeBase<TensorShape>*>(&tensorShape));
-    // TODO here we allocate default TF CPU allocator
-    tensorflow::Tensor result(datatype, tensorShape);  // TODO error handling
+    // here we allocate default TF CPU allocator
+    tensorflow::Tensor result(datatype, tensorShape);
     void* tftensordata = result.data();
     std::memcpy(tftensordata, t.data(), t.get_byte_size());
     return result;
@@ -87,7 +87,7 @@ static ov::Tensor convertTFTensor2OVTensor(const tensorflow::Tensor& t) {
 
 class ModelAPISideFeedCalculator : public CalculatorBase {
     std::shared_ptr<::InferenceAdapter> session{nullptr};
-    std::unordered_map<std::string, std::string> outputNameToTag;  // TODO move to Open();
+    std::unordered_map<std::string, std::string> outputNameToTag;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -95,7 +95,7 @@ public:
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         for (const std::string& tag : cc->Inputs().GetTags()) {
-            // TODO replace with absl::StartsWith when migrated to MP
+            // could be replaced with absl::StartsWith when migrated to MP
             if (ovms::startsWith(tag, OVTENSOR_TAG)) {
                 LOG(INFO) << "setting input tag:" << tag << " to OVTensor";
                 cc->Inputs().Tag(tag).Set<ov::Tensor>();
@@ -191,7 +191,7 @@ public:
                 auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
                 input[realInputName] = packet;
 #if 0
-               ov::Tensor input_tensor(packet);
+                ov::Tensor input_tensor(packet);
                 const float* input_tensor_access = reinterpret_cast<float*>(input_tensor.data());
                 std::stringstream ss;
                 ss << "ModelAPICalculator received tensor: [ ";
