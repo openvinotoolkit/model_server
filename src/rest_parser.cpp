@@ -18,6 +18,8 @@
 #include <functional>
 #include <string>
 
+#include <rapidjson/error/en.h>
+
 #include "precision.hpp"
 #include "rest_utils.hpp"
 #include "status.hpp"
@@ -281,7 +283,12 @@ Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
 Status TFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
     if (doc.Parse(json).HasParseError()) {
-        return StatusCode::JSON_INVALID;
+        std::stringstream ss;
+        ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
+           << " Offset: " << doc.GetErrorOffset();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
+        return Status(StatusCode::JSON_INVALID, details);
     }
     if (!doc.IsObject()) {
         return StatusCode::REST_BODY_IS_NOT_AN_OBJECT;
@@ -699,8 +706,12 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
 Status KFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
     if (doc.Parse(json).HasParseError()) {
-        SPDLOG_DEBUG("Request parsing is not a valid JSON");
-        return StatusCode::JSON_INVALID;
+        std::stringstream ss;
+        ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
+           << " Offset: " << doc.GetErrorOffset();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
+        return Status(StatusCode::JSON_INVALID, details);
     }
     if (!doc.IsObject()) {
         SPDLOG_DEBUG("Request body is not an object");
