@@ -1095,7 +1095,6 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
             }
         }
         updateConfigurationWithoutConfigFile();
-        // FIXME CHECK
         loadingLock.unlock();
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
