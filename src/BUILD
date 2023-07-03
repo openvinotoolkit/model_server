@@ -377,7 +377,6 @@ cc_library(
         ] + select({
             "//conditions:default": [
                 "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-                "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
             ],
             "//src:disable_mediapipe" : [],
         }),
@@ -870,11 +869,13 @@ cc_test(
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
         "@com_google_googletest//:gtest",
+        "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
     ],
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
+        "-Isrc",
     ],
 )
 

@@ -28,7 +28,7 @@
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../mediapipe_calculators/modelapiovmsadapter.hpp"
+#include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../metric_config.hpp"
