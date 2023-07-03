@@ -492,6 +492,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
+    // This parameter forces JSON writer to not omit empty shape in case of scalar tensor
     opts.always_print_primitive_fields = true;
     google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
     if (!status.ok()) {
