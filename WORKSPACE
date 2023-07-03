@@ -88,8 +88,8 @@ http_archive(
 #### Will be used on feature release
 git_repository(
     name = "mediapipe",
-    remote = "https://github.com/google/mediapipe",
-    tag = "v0.9.1",
+    remote = "https://github.com/openvinotoolkit/mediapipe",
+    branch = "v0.9.1",
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
