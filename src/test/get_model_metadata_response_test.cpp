@@ -30,13 +30,6 @@ using ::testing::ReturnRef;
 using namespace rapidjson;
 
 class GetModelMetadataResponse : public ::testing::Test {
-    struct Info {
-        ovms::Precision precision;
-        ovms::shape_t shape;
-    };
-
-    using tensor_desc_map_t = std::unordered_map<std::string, Info>;
-
     class MockModelInstance : public MockModelInstanceChangingStates {
     public:
         MockModelInstance(ov::Core& ieCore) :
@@ -56,12 +49,19 @@ class GetModelMetadataResponse : public ::testing::Test {
         MOCK_METHOD(ovms::model_version_t, getVersion, (), (const, override));
     };
 
+protected:
+    struct Info {
+        ovms::Precision precision;
+        ovms::shape_t shape;
+    };
+
+    using tensor_desc_map_t = std::unordered_map<std::string, Info>;
+
     tensor_desc_map_t inputTensors;
     tensor_desc_map_t outputTensors;
     ovms::tensor_map_t servableInputs;
     ovms::tensor_map_t servableOutputs;
 
-protected:
     std::string modelName = "resnet";
     ovms::model_version_t modelVersion = 23;
 
@@ -81,18 +81,24 @@ protected:
                                        ovms::Precision::U8,
                                        {1, 3, 62, 62},
                                    }},
+            {"Input_I64_Scalar", {
+                                     ovms::Precision::I64,
+                                     {},
+                                 }},
         });
 
-        outputTensors = tensor_desc_map_t({
-            {"Output_I32_1_2000", {
-                                      ovms::Precision::I32,
-                                      {1, 2000},
-                                  }},
+        outputTensors = tensor_desc_map_t({{"Output_I32_1_2000", {
+                                                                     ovms::Precision::I32,
+                                                                     {1, 2000},
+                                                                 }},
             {"Output_FP32_2_20_3", {
                                        ovms::Precision::FP32,
                                        {2, 20, 3},
                                    }},
-        });
+            {"Output_I64_Scalar", {
+                                      ovms::Precision::I64,
+                                      {},
+                                  }}});
 
         auto prepare = [](const tensor_desc_map_t& desc,
                            ovms::tensor_map_t& tensors) {
@@ -183,8 +189,8 @@ TEST_F(GetModelMetadataResponseBuild, HasCorrectTensorNames) {
     const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
     const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
 
-    EXPECT_EQ(inputs.size(), 2);
-    EXPECT_EQ(outputs.size(), 2);
+    EXPECT_EQ(inputs.size(), 3);
+    EXPECT_EQ(outputs.size(), 3);
 
     EXPECT_EQ(
         inputs.at("Input_FP32_1_3_224_224").name(),
@@ -193,11 +199,17 @@ TEST_F(GetModelMetadataResponseBuild, HasCorrectTensorNames) {
         inputs.at("Input_U8_1_3_62_62").name(),
         "Input_U8_1_3_62_62");
     EXPECT_EQ(
+        inputs.at("Input_I64_Scalar").name(),
+        "Input_I64_Scalar");
+    EXPECT_EQ(
         outputs.at("Output_I32_1_2000").name(),
         "Output_I32_1_2000");
     EXPECT_EQ(
         outputs.at("Output_FP32_2_20_3").name(),
         "Output_FP32_2_20_3");
+    EXPECT_EQ(
+        outputs.at("Output_I64_Scalar").name(),
+        "Output_I64_Scalar");
 }
 
 TEST_F(GetModelMetadataResponseBuild, HasCorrectPrecision) {
@@ -214,11 +226,17 @@ TEST_F(GetModelMetadataResponseBuild, HasCorrectPrecision) {
         inputs.at("Input_U8_1_3_62_62").dtype(),
         tensorflow::DT_UINT8);
     EXPECT_EQ(
+        inputs.at("Input_I64_Scalar").dtype(),
+        tensorflow::DT_INT64);
+    EXPECT_EQ(
         outputs.at("Output_I32_1_2000").dtype(),
         tensorflow::DT_INT32);
     EXPECT_EQ(
         outputs.at("Output_FP32_2_20_3").dtype(),
         tensorflow::DT_FLOAT);
+    EXPECT_EQ(
+        outputs.at("Output_I64_Scalar").dtype(),
+        tensorflow::DT_INT64);
 }
 
 TEST_F(GetModelMetadataResponseBuild, HasCorrectShape) {
@@ -235,11 +253,17 @@ TEST_F(GetModelMetadataResponseBuild, HasCorrectShape) {
         inputs.at("Input_U8_1_3_62_62").tensor_shape(),
         {1, 3, 62, 62}));
     EXPECT_TRUE(isShapeTheSame(
+        inputs.at("Input_I64_Scalar").tensor_shape(),
+        {}));
+    EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_I32_1_2000").tensor_shape(),
         {1, 2000}));
     EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_FP32_2_20_3").tensor_shape(),
         {2, 20, 3}));
+    EXPECT_TRUE(isShapeTheSame(
+        outputs.at("Output_I64_Scalar").tensor_shape(),
+        {}));
 }
 
 TEST_F(GetModelMetadataResponse, ModelVersionNotLoadedAnymore) {
@@ -262,6 +286,82 @@ TEST_F(GetModelMetadataResponseBuild, serialize2Json) {
     EXPECT_TRUE(received_doc.IsObject());
     EXPECT_TRUE(received_doc.HasMember("modelSpec"));
     EXPECT_TRUE(received_doc.HasMember("metadata"));
+}
+
+class GetModelMetadataScalarResponseBuild : public GetModelMetadataResponseBuild {
+protected:
+    void prepare() override {
+        GetModelMetadataResponse::prepare();
+        inputTensors = tensor_desc_map_t({{"Input_Scalar", {
+                                                               ovms::Precision::FP32,
+                                                               {},
+                                                           }}});
+
+        outputTensors = tensor_desc_map_t({{"Output_Scalar", {
+                                                                 ovms::Precision::I32,
+                                                                 {},
+                                                             }}});
+
+        auto prepare = [](const tensor_desc_map_t& desc,
+                           ovms::tensor_map_t& tensors) {
+            tensors.clear();
+            for (const auto& pair : desc) {
+                tensors[pair.first] = std::make_shared<ovms::TensorInfo>(
+                    pair.first,
+                    pair.second.precision,
+                    pair.second.shape);
+            }
+        };
+
+        prepare(inputTensors, servableInputs);
+        prepare(outputTensors, servableOutputs);
+        ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+    }
+};
+
+TEST_F(GetModelMetadataScalarResponseBuild, serializeScalarToJson) {
+    std::string json_output;
+    const tensorflow::serving::GetModelMetadataResponse* response_p = &response;
+    ovms::Status error_status = ovms::GetModelMetadataImpl::serializeResponse2Json(response_p, &json_output);
+    EXPECT_EQ(error_status, ovms::StatusCode::OK);
+    EXPECT_EQ(json_output, R"({
+ "modelSpec": {
+  "name": "resnet",
+  "signatureName": "",
+  "version": "23"
+ },
+ "metadata": {
+  "signature_def": {
+   "@type": "type.googleapis.com/tensorflow.serving.SignatureDefMap",
+   "signatureDef": {
+    "serving_default": {
+     "inputs": {
+      "Input_Scalar": {
+       "dtype": "DT_FLOAT",
+       "tensorShape": {
+        "dim": [],
+        "unknownRank": false
+       },
+       "name": "Input_Scalar"
+      }
+     },
+     "outputs": {
+      "Output_Scalar": {
+       "dtype": "DT_INT32",
+       "tensorShape": {
+        "dim": [],
+        "unknownRank": false
+       },
+       "name": "Output_Scalar"
+      }
+     },
+     "methodName": ""
+    }
+   }
+  }
+ }
+}
+)");
 }
 
 TEST(RESTGetModelMetadataResponse, createGrpcRequestVersionSet) {
