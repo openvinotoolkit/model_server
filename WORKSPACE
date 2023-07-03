@@ -86,19 +86,19 @@ http_archive(
 
 ################################### Official mediapipe repository #########
 #### Will be used on feature release
-#git_repository(
-#    name = "mediapipe",
-#    remote = "https://github.com/openvinotoolkit/mediapipe",
-#    branch = "v0.9.1",
-#    repo_mapping = {"@intel_ovms" : "@ovms"}
-#)
-
-# DEV mediapipe 1 source - adjust local repository path for build
-local_repository(
+git_repository(
     name = "mediapipe",
-    path = "/mediapipe/",
+    remote = "https://github.com/openvinotoolkit/mediapipe",
+    branch = "build_from_ovms",
     repo_mapping = {"@intel_ovms" : "@ovms"}
 )
+
+# DEV mediapipe 1 source - adjust local repository path for build
+#local_repository(
+#    name = "mediapipe",
+#    path = "/mediapipe/",
+#    repo_mapping = {"@intel_ovms" : "@ovms"}
+#)
 
 # Protobuf for Node dependencies
 http_archive(
