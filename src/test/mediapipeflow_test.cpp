@@ -28,7 +28,6 @@
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../metric_config.hpp"
@@ -41,6 +40,7 @@
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
+#include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
