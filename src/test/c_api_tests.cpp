@@ -865,6 +865,9 @@ TEST_F(CAPIStateIntegration, Config) {
     waitForOVMSConfigReload(*modelManager);
     ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_AVAILABLE);
+    OVMS_ServerDelete(cserver);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
 }
 
 TEST_F(CAPIState, PipelineStates) {
