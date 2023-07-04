@@ -14,14 +14,17 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdint>
+#include <exception>
 #include <iterator>
 #include <memory>
 #include <string>
 
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
+#include "../dags/pipelinedefinitionstatus.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
+#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -781,27 +784,15 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
         PipelineDefinition* pipelineDefinition = nullptr;
         std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
         pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
-        if (!status.ok() || !pipelineDefinition) {
+        if (!pipelineDefinition) {
+            ovms::MediapipeGraphDefinition* mediapipeDefinition = modelManager->getMediapipeFactory().findDefinitionByName(servableName);
+            if (mediapipeDefinition) {
+                *state = convertToServableState(mediapipeDefinition->getStateCode());
+                return nullptr;
+            }
             return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
         }
-
-        switch (pipelineDefinition->getStateCode()) {
-        case ovms::PipelineDefinitionStateCode::BEGIN:
-            *state = OVMS_ServableState::OVMS_BEGIN;
-            break;
-        case ovms::PipelineDefinitionStateCode::RELOADING:
-        case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED:
-        case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION:
-            *state = OVMS_ServableState::OVMS_LOADING;
-            break;
-        case ovms::PipelineDefinitionStateCode::AVAILABLE:
-        case ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION:
-            *state = OVMS_ServableState::OVMS_AVAILABLE;
-            break;
-        case ovms::PipelineDefinitionStateCode::RETIRED:
-            *state = OVMS_ServableState::OVMS_RETIRED;
-            break;
-        }
+        *state = convertToServableState(pipelineDefinition->getStateCode());
 
         return nullptr;
     }
