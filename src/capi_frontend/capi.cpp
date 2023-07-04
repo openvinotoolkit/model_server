@@ -766,7 +766,6 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
     if (state == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable status"));
     }
-    //
     // TODO metrics
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     std::unique_ptr<ovms::Pipeline> pipelinePtr;
