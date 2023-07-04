@@ -4,6 +4,10 @@
     {
         "name":"mpTfsPassthrough",
         "graph_path":"/ovms/src/test/mediapipe/graphtfpassthrough.pbtxt"
+    },
+    {
+        "name":"mpTFDummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummy_tf.pbtxt"
     }
     ]
 }

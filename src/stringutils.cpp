@@ -24,6 +24,8 @@
 #include <locale>
 #include <sstream>
 #include <utility>
+
+#include "logging.hpp"
 namespace ovms {
 
 std::string joins(const std::vector<std::string>& listOfStrings, const std::string delimiter) {
@@ -87,24 +89,18 @@ bool endsWith(const std::string& str, const std::string& match) {
            });
 }
 
-bool startsWith(const char* str, const char* prefix) {
-    // Ensure null terminated
-    const int MAX = 300;
-    const char* end = str;
-    for (; *end != '\0'; ++end) {
-        if ((end - str) > MAX) {
-            return false;
-        }
+bool startsWith(const std::string& str, const std::string& prefix) {
+    auto it = prefix.begin();
+    bool sizeCheck = (str.size() >= prefix.size());
+    if (!sizeCheck) {
+        return false;
     }
-    const char* end2 = prefix;
-    for (; *end2 != '\0'; ++end2) {
-        if ((end2 - str) > MAX) {
-            return false;
-        }
-    }
-    size_t strLen = std::strlen(str);
-    size_t prefixLen = std::strlen(prefix);
-    return strLen < prefixLen ? false : std::memcmp(str, prefix, prefixLen) == 0;
+    bool allOf = std::all_of(str.begin(),
+        std::next(str.begin(), prefix.size()),
+        [&it](const char& c) {
+            return c == *(it++);
+        });
+    return allOf;
 }
 
 std::optional<uint32_t> stou32(const std::string& input) {

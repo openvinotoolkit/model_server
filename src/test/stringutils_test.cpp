@@ -128,17 +128,28 @@ TEST(StringUtils, endsWith) {
 }
 
 TEST(StringUtils, startsWith) {
-    std::string str0 = "";
-    std::string str1 = "test case 1";
-    std::string str2 = "{ not really matter 1 }";
+    using ovms::startsWith;
+    using std::string;
+    string str0 = "";
+    string str1 = "test case 1";
+    string str2 = "{ not really matter 1 }";
 
-    EXPECT_EQ(ovms::startsWith(str0.c_str(), ""), true);
-    EXPECT_EQ(ovms::startsWith(str0.c_str(), "/"), false);
-    EXPECT_EQ(ovms::startsWith(str1.c_str(), ""), true);
-    EXPECT_EQ(ovms::startsWith(str1.c_str(), "test"), true);
-    EXPECT_EQ(ovms::startsWith(str1.c_str(), "2"), false);
-    EXPECT_EQ(ovms::startsWith(str2.c_str(), "{ not "), true);
-    EXPECT_EQ(ovms::startsWith(str2.c_str(), "{ 1not"), false);
+    EXPECT_EQ(startsWith(str0.c_str(), ""), true);
+    EXPECT_EQ(startsWith(str0.c_str(), "/"), false);
+    EXPECT_EQ(startsWith(str1.c_str(), ""), true);
+    EXPECT_EQ(startsWith(str1.c_str(), "test"), true);
+    EXPECT_EQ(startsWith(str1.c_str(), "2"), false);
+    EXPECT_EQ(startsWith(str2.c_str(), "{ not "), true);
+    EXPECT_EQ(startsWith(str2.c_str(), "{ 1not"), false);
+    EXPECT_EQ(startsWith(str2.c_str(), "{ 1not"), false);
+    EXPECT_EQ(startsWith(string("TENSOR"), string("TENSOR")), true);
+    EXPECT_EQ(startsWith(string("TENSOR").c_str(), string("TENSOR")), true);
+    EXPECT_EQ(startsWith("TENSOR", string("TENSOR")), true);
+    EXPECT_EQ(startsWith(string("TENSOR").c_str(), "TENSOR"), true);
+    EXPECT_EQ(startsWith("TENSOR1", "TENSOR"), true);
+    EXPECT_EQ(startsWith("TENSOR_1", "TENSOR"), true);
+    EXPECT_EQ(startsWith("TENSORA", "TENSOR"), true);
+    EXPECT_EQ(startsWith("TENSO", "TENSOR"), false);
 }
 
 TEST(StringUtils, stou32) {
