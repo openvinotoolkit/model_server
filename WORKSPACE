@@ -89,7 +89,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    branch = "v0.9.1",
+    branch = "main",
     repo_mapping = {"@intel_ovms" : "@ovms"}
 )
 
