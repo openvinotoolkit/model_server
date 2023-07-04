@@ -28,7 +28,6 @@ tree models/public/resnet-50-tf
 models/public/resnet-50-tf
 ├── 1
 │   ├── resnet-50-tf.bin
-│   ├── resnet-50-tf.mapping
 │   └── resnet-50-tf.xml
 └── resnet_v1-50.pb
 ```
