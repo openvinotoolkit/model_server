@@ -870,8 +870,12 @@ cc_test(
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
         "@com_google_googletest//:gtest",
-        "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
-    ],
+        ] + select({
+        "//conditions:default": [
+            "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
