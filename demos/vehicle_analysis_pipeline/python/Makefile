@@ -40,7 +40,7 @@ endif
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
 ifeq ($(BUILD_CUSTOM_NODE),false)
-	sed -i 's:\/workspace\/lib\/libcustom_node_horizontal_ocr.so:\/ovms\/lib\/custom_nodes\/libcustom_node_horizontal_ocr.so:g' workspace/config.json
+	sed -i 's:\/workspace\/lib\/libcustom_node_model_zoo_intel_object_detection.so:\/ovms\/lib\/custom_nodes\/libcustom_node_model_zoo_intel_object_detection.so:g' workspace/config.json
 endif
 clean:
 	@rm -rf workspace

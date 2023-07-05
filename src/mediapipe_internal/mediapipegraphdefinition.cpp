@@ -196,6 +196,7 @@ const std::string KFS_REQUEST_PREFIX{"REQUEST"};
 const std::string KFS_RESPONSE_PREFIX{"RESPONSE"};
 const std::string TF_TENSOR_PREFIX{"TENSOR"};
 const std::string OV_TENSOR_PREFIX{"OVTENSOR"};
+const std::string MP_IMAGE_PREFIX{"IMAGE"};
 
 Status MediapipeGraphDefinition::setStreamTypes() {
     this->inputTypes.clear();
@@ -319,21 +320,33 @@ std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFul
     static std::string empty = "";
     return empty;
 }
+
 std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::getStreamNamePair(const std::string& streamFullName) {
     static std::unordered_map<std::string, mediapipe_packet_type_enum> prefix2enum{
         {KFS_REQUEST_PREFIX, mediapipe_packet_type_enum::KFS_REQUEST},
         {KFS_RESPONSE_PREFIX, mediapipe_packet_type_enum::KFS_RESPONSE},
         {TF_TENSOR_PREFIX, mediapipe_packet_type_enum::TFTENSOR},
-        {OV_TENSOR_PREFIX, mediapipe_packet_type_enum::OVTENSOR}};
+        {OV_TENSOR_PREFIX, mediapipe_packet_type_enum::OVTENSOR},
+        {MP_IMAGE_PREFIX, mediapipe_packet_type_enum::MEDIAPIPE_IMAGE}};
     std::vector<std::string> tokens = tokenize(streamFullName, ':');
     if (tokens.size() == 2) {
-        auto it = prefix2enum.find(tokens[0]);
+        auto it = std::find_if(prefix2enum.begin(), prefix2enum.end(), [tokens](const auto& p) {
+            const auto& [k, v] = p;
+            bool b = startsWith(tokens[0], k);
+            return b;
+        });
         if (it != prefix2enum.end()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[1], it->first, streamFullName);
             return {tokens[1], it->second};
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[1], "UNKNOWN", streamFullName);
+            return {tokens[1], mediapipe_packet_type_enum::UNKNOWN};
         }
     } else if (tokens.size() == 1) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[0], "UNKNOWN", streamFullName);
         return {tokens[0], mediapipe_packet_type_enum::UNKNOWN};
     }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", "", "UNKNOWN", streamFullName);
     return {"", mediapipe_packet_type_enum::UNKNOWN};
 }
 }  // namespace ovms
