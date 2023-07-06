@@ -142,24 +142,6 @@ mediapipe_proto_library(
         "@mediapipe//mediapipe/framework:calculator_proto",
     ],
 )
-mediapipe_proto_library(
-    name = "modelapiovmsinferencecalculator_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["mediapipe_calculators/modelapiovmsinferencecalculator.proto"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@mediapipe//mediapipe/framework:calculator_options_proto",
-        "@mediapipe//mediapipe/framework:calculator_proto",
-    ],
-)
-mediapipe_proto_library(
-    name = "modelapiovmssessioncalculator_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["mediapipe_calculators/modelapiovmssessioncalculator.proto"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@mediapipe//mediapipe/framework:calculator_options_proto",
-        "@mediapipe//mediapipe/framework:calculator_proto",
-    ],
-)
 
 cc_library(
     name = "ovms_lib",
@@ -385,11 +367,7 @@ cc_library(
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
-                "mediapipe_calculators/modelapiovmsadapter.cc",
-                "mediapipe_calculators/modelapiovmsadapter.hpp",
                 "mediapipe_calculators/ovms_calculator.cc",
-                "mediapipe_calculators/modelapiovmsinferencecalculator.cc",
-                "mediapipe_calculators/modelapiovmssessioncalculator.cc",
             ],
             "//src:disable_mediapipe" : [],
         }),
@@ -399,8 +377,6 @@ cc_library(
         ] + select({
             "//conditions:default": [
                 "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-                "//src:modelapiovmsinferencecalculator_cc_proto", # modelapiovmsinferencecalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-                "//src:modelapiovmssessioncalculator_cc_proto", # modelapiovmssessioncalculator_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
             ],
             "//src:disable_mediapipe" : [],
         }),
@@ -895,11 +871,17 @@ cc_test(
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
         "@com_google_googletest//:gtest",
-    ],
+        ] + select({
+        "//conditions:default": [
+            "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
+        "-Isrc",
     ],
 )
 
