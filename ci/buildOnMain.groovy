@@ -16,7 +16,6 @@ pipeline {
         stage('Print last commit details') {
           steps {
             script {
-              checkout scm
               sh "git log -n 1"
             }
           }
