@@ -13,13 +13,6 @@ pipeline {
           }
         }
 
-        stage('Print last commit details') {
-          steps {
-            script {
-              sh "git log -n 1"
-            }
-          }
-        }
 
         stage("Run rebuild ubuntu image on main branch") {
           steps {
