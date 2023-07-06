@@ -13,13 +13,32 @@ pipeline {
           }
         }
 
-        stage("Run rebuild on main branch") {
+        stage('Print last commit details') {
+          steps {
+            script {
+              checkout scm
+              sh "git log -n 1"
+            }
+          }
+        }
+
+        stage("Run rebuild ubuntu image on main branch") {
           steps {
               sh """
               env
               """
               echo shortCommit
               build job: "ovmsc/ubuntu/ubuntu-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
+          }
+        }
+
+        stage("Run rebuild redhat image on main branch") {
+          steps {
+              sh """
+              env
+              """
+              echo shortCommit
+              build job: "ovmsc/redhat/redhat-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
           }    
         }
     }
