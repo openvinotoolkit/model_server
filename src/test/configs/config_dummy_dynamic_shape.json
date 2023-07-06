@@ -1,0 +1,11 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "shape": {"b":"(1,1:10)"}
+            }
+        }
+    ]
+}

@@ -436,6 +436,8 @@ OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const
         ss << "C-API setting request input data for servable: " << request->getServableName()
            << " version: " << request->getServableVersion()
            << " name: " << inputName
+           << " data: " << data
+           << " bufferSize: " << bufferSize
            << " bufferType: " << bufferType
            << " deviceId: " << deviceId;
         SPDLOG_TRACE(ss.str());
