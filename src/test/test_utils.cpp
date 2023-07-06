@@ -16,6 +16,7 @@
 #include "test_utils.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
 
 #include "../capi_frontend/capi_utils.hpp"
@@ -106,11 +107,19 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
 }
 
 void waitForOVMSConfigReload(ovms::ModelManager& manager) {
-    // This is effectively multiplying by 1.8 to have 1 config reload in between
-    // two test steps
-    const float WAIT_MULTIPLIER_FACTOR = 1.8;
-    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalSec() * 1000;
-    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+    // This is effectively multiplying by 5 to have at least 1 config reload in between
+    // two test steps, but we check if config files changed to exit earlier if changes are already applied
+    const float WAIT_MULTIPLIER_FACTOR = 5;
+    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalMillisec() * 1000;
+    bool reloadIsNeeded = true;
+    int timestepMs = 10;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    while (reloadIsNeeded &&
+           (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() < waitTime)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
+        manager.configFileReloadNeeded(reloadIsNeeded);
+    }
 }
 
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
@@ -123,13 +132,13 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
 
 std::string createConfigFileWithContent(const std::string& content, std::string filename) {
     std::ofstream configFile{filename};
-    spdlog::info("Creating config file: {}\n with content:\n{}", filename, content);
+    SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filename, content);
     configFile << content << std::endl;
     configFile.close();
     if (configFile.fail()) {
-        spdlog::info("Closing configFile failed");
+        SPDLOG_INFO("Closing configFile failed");
     } else {
-        spdlog::info("Closing configFile succeed");
+        SPDLOG_INFO("Closing configFile succeed");
     }
     return filename;
 }

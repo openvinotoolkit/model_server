@@ -420,6 +420,9 @@ public:
     void updateConfigurationWithoutConfigFile() {
         ModelManager::updateConfigurationWithoutConfigFile();
     }
+    void setWaitForModelLoadedTimeoutMs(int value) {
+        this->waitForModelLoadedTimeoutMs = value;
+    }
 };
 
 class MockedMetadataModelIns : public ovms::ModelInstance {
@@ -469,6 +472,9 @@ protected:
     std::string directoryPath;
 };
 
+/**
+ * Wait until ModelManager::configFileReloadNeeded returns false or timeout is reached
+ */
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager);
 

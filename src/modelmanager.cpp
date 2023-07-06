@@ -16,6 +16,7 @@
 #include "modelmanager.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -67,7 +68,7 @@
 
 namespace ovms {
 
-static constexpr uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
+static constexpr uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 3;
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry) :
@@ -155,7 +156,7 @@ ModelManager::~ModelManager() {
 }
 
 Status ModelManager::start(const Config& config) {
-    watcherIntervalSec = config.filesystemPollWaitSeconds();
+    this->watcherIntervalMillisec = config.filesystemPollWaitSeconds() * 1000;
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
     if (resourcesCleanupIntervalSec < 1) {
@@ -179,7 +180,7 @@ Status ModelManager::start(const Config& config) {
 }
 
 void ModelManager::startWatcher(bool watchConfigFile) {
-    if ((!watcherStarted) && (watcherIntervalSec > 0)) {
+    if ((!watcherStarted) && (this->watcherIntervalMillisec > 0)) {
         std::future<void> exitSignal = exitTrigger.get_future();
         std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal), watchConfigFile));
         watcherStarted = true;
@@ -888,7 +889,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
             intermediateStatus = StatusCode::CONFIG_FILE_INVALID;
             loud.log();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(WRONG_CONFIG_FILE_RETRY_DELAY_MS));
             continue;
         }
         rapidjson::IStreamWrapper isw(ifs);
@@ -898,21 +899,21 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
                 rapidjson::GetParseError_En(parseResult.Code()));
             intermediateStatus = StatusCode::JSON_INVALID;
             loud.log();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(WRONG_CONFIG_FILE_RETRY_DELAY_MS));
             continue;
         }
         intermediateStatus = StatusCode::OK;
         break;
     } while (++counter < MAX_CONFIG_JSON_READ_RETRY_COUNT && !intermediateStatus.ok());
     if (!intermediateStatus.ok()) {
-        lastLoadConfigStatus = intermediateStatus;
-        return lastLoadConfigStatus;
+        this->lastLoadConfigStatus = intermediateStatus;
+        return this->lastLoadConfigStatus;
     }
 
     if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA.c_str()) != StatusCode::OK) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not in valid configuration format");
-        lastLoadConfigStatus = StatusCode::JSON_INVALID;
-        return lastLoadConfigStatus;
+        this->lastLoadConfigStatus = StatusCode::JSON_INVALID;
+        return this->lastLoadConfigStatus;
     }
     Status status;
 
@@ -975,7 +976,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 
-    lastLoadConfigStatus = firstErrorStatus;
+    this->lastLoadConfigStatus = firstErrorStatus;
     return firstErrorStatus;
 }
 
@@ -1071,10 +1072,9 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     if (lastConfigFileMD5 != newmd5) {
         configFileModified = true;
     }
-
     if (configFilename == "" || !configFileModified) {
         isNeeded = false;
-        return lastLoadConfigStatus;
+        return this->lastLoadConfigStatus;
     } else {
         isNeeded = true;
     }
@@ -1084,9 +1084,9 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
 
 void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
-    while (exitSignal.wait_for(std::chrono::seconds(watcherIntervalSec)) == std::future_status::timeout) {
+    while (exitSignal.wait_for(std::chrono::milliseconds(this->watcherIntervalMillisec)) == std::future_status::timeout) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
-        std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+        std::unique_lock<std::recursive_mutex> loadingLock(configMtx);
         if (watchConfigFile) {
             bool isNeeded;
             configFileReloadNeeded(isNeeded);
@@ -1095,6 +1095,7 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
             }
         }
         updateConfigurationWithoutConfigFile();
+        loadingLock.unlock();
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");

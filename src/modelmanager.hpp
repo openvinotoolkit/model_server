@@ -88,11 +88,13 @@ protected:
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
 
     GlobalSequencesViewer globalSequencesViewer;
+
     uint32_t waitForModelLoadedTimeoutMs;
+
+private:
     bool watcherStarted = false;
     bool cleanerStarted = false;
 
-private:
     /**
      * @brief 
      * 
@@ -191,11 +193,14 @@ private:
      */
     mutable std::recursive_mutex configMtx;
 
+protected:
     /**
      * Time interval between each config file check
      */
-    uint watcherIntervalSec = 1;
+    uint watcherIntervalMillisec = 1000;
+    const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
 
+private:
     /**
      * Time interval between two consecutive sequence cleanup scans (in minutes)
      */
@@ -256,8 +261,8 @@ public:
     /**
      *  @brief Gets the watcher interval timestep in seconds
      */
-    uint getWatcherIntervalSec() {
-        return watcherIntervalSec;
+    uint getWatcherIntervalMillisec() {
+        return watcherIntervalMillisec;
     }
 
     /**

@@ -147,6 +147,10 @@ std::shared_ptr<MockModel> modelMock;
 
 class MockModelManager : public ovms::ModelManager {
 public:
+    MockModelManager() :
+        ModelManager() {
+        this->watcherIntervalMillisec = 100;
+    }
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return modelMock;
     }
@@ -629,7 +633,7 @@ TEST_P(ModelManagerWatcher2Models, configRelodNotNeededManyThreads) {
     modelMock.reset();
 }
 
-TEST_P(ModelManagerWatcher2Models, configRelodNeededManyThreads) {
+TEST_P(ModelManagerWatcher2Models, configReloadNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
     modelMock = std::make_shared<MockModel>();
@@ -980,7 +984,6 @@ TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
     auto models = manager.getModels().size();
     EXPECT_EQ(models, 1);
     EXPECT_EQ(status, ovms::StatusCode::OK);
-
     createConfigFileWithContent(getConfig2Models(this->getFilePath("/models/dummy1"), this->getFilePath("/models/dummy2")), fileToReload);
     bool isNeeded = false;
     manager.configFileReloadNeeded(isNeeded);
@@ -1300,6 +1303,7 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
+    manager.setWaitForModelLoadedTimeoutMs(50);
     manager.reloadModelWithVersions(config);
     std::shared_ptr<ovms::ModelInstance> modelInstance1;
     std::shared_ptr<ovms::ModelInstance> modelInstance2;
