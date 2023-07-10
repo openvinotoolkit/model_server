@@ -41,6 +41,7 @@ triton_client = grpcclient.InferenceServerClient( url=args.grpc_address, verbose
 WIDTH = args.width
 HEIGHT = args.height
 cap = cv2.VideoCapture(args.input_stream, cv2.CAP_FFMPEG)
+cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
 fps = cap.get(cv2.CAP_PROP_FPS)
 force_exit = False
 
@@ -69,6 +70,8 @@ def finish():
     global force_exit
     force_exit = True
 
+raw_frame = np.empty((HEIGHT, WIDTH, 3), np.uint8) 
+frame_bytes = memoryview(raw_frame).cast("B")
 def grab_frame(cap):
     success, frame = cap.read()
     if not success:
@@ -114,7 +117,7 @@ def open_ffmpeg_stream_process():
     args = (
         "ffmpeg -re -stream_loop -1 -f rawvideo -pix_fmt "
         f"bgr24 -r {fps} -s {WIDTH}x{HEIGHT} -i pipe:0 -pix_fmt yuv420p "
-        f"-f rtsp {output_stream}"
+        f"-tune zerolatency  -fflags nobuffer -b:v 1000k -preset ultrafast -f rtsp {output_stream}"
     ).split()
     return subprocess.Popen(args, stdin=subprocess.PIPE) #nosec
 
@@ -123,6 +126,8 @@ ffmpeg_process = open_ffmpeg_stream_process()
 def display():
     i = 0 
     while True:
+        if pq.qsize() > 0:
+            print(pq.qsize())
         if pq.empty():
             continue
         if pq.queue[0][0] == i:
@@ -132,7 +137,6 @@ def display():
 
 display_th = threading.Thread(target=display)
 display_th.start()
-
 if grab_frame(cap) is None:
     force_exit = True
 i = 0
