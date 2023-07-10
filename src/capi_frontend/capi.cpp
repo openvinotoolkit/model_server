@@ -767,8 +767,6 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable status"));
     }
     // TODO metrics
-    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    std::unique_ptr<ovms::Pipeline> pipelinePtr;
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     ModelManager* modelManager{nullptr};
     auto status = getModelManager(server, &modelManager);
@@ -780,7 +778,6 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
     if (modelInstance == nullptr) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", servableName);
         PipelineDefinition* pipelineDefinition = nullptr;
-        std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
         pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
         if (!pipelineDefinition) {
             ovms::MediapipeGraphDefinition* mediapipeDefinition = modelManager->getMediapipeFactory().findDefinitionByName(servableName);
@@ -801,7 +798,7 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
-    *state = static_cast<OVMS_ServableState>(static_cast<int>(modelInstance->getStatus().getState()) / 10 - 1);
+    *state = modelInstance->getStatus().isFailedLoading() ? OVMS_STATE_LOADING_FAILED : static_cast<OVMS_ServableState>(static_cast<int>(modelInstance->getStatus().getState()) / 10 - 1);
     return nullptr;
 }
 

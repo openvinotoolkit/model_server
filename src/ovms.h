@@ -80,11 +80,12 @@ typedef enum OVMS_BufferType_enum {
 } OVMS_BufferType;
 
 typedef enum OVMS_ServableState_enum {
-    OVMS_BEGIN,
-    OVMS_LOADING,
-    OVMS_AVAILABLE,
-    OVMS_UNLOADING,
-    OVMS_RETIRED
+    OVMS_STATE_BEGIN,
+    OVMS_STATE_LOADING,
+    OVMS_STATE_AVAILABLE,
+    OVMS_STATE_UNLOADING,
+    OVMS_STATE_RETIRED,
+    OVMS_STATE_LOADING_FAILED
 } OVMS_ServableState;
 
 typedef struct OVMS_InferenceRequest_ OVMS_InferenceRequest;

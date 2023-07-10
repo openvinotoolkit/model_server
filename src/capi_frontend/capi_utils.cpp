@@ -31,16 +31,17 @@ namespace ovms {
 OVMS_ServableState convertToServableState(ovms::PipelineDefinitionStateCode code) {
     switch (code) {
     case ovms::PipelineDefinitionStateCode::BEGIN:
-        return OVMS_ServableState::OVMS_BEGIN;
+        return OVMS_ServableState::OVMS_STATE_BEGIN;
     case ovms::PipelineDefinitionStateCode::RELOADING:
-    case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED:
-    case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION:
-        return OVMS_ServableState::OVMS_LOADING;
+        return OVMS_ServableState::OVMS_STATE_LOADING;
     case ovms::PipelineDefinitionStateCode::AVAILABLE:
     case ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION:
-        return OVMS_ServableState::OVMS_AVAILABLE;
+        return OVMS_ServableState::OVMS_STATE_AVAILABLE;
     case ovms::PipelineDefinitionStateCode::RETIRED:
-        return OVMS_ServableState::OVMS_RETIRED;
+        return OVMS_ServableState::OVMS_STATE_RETIRED;
+    case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED:
+    case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION:
+        return OVMS_ServableState::OVMS_STATE_LOADING_FAILED;
     }
     throw new std::exception();
 }
