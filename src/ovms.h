@@ -15,6 +15,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>  //  For precise data types
 
