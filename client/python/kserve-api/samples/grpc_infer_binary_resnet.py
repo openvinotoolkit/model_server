@@ -23,7 +23,7 @@ import datetime
 import argparse
 from client_utils import print_statistics
 
-import tritonclient.grpc as grpclient
+import tritonclient.grpc as grpcclient
 
 
 if __name__ == '__main__':
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     model_name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
 
     try:
-        triton_client = grpclient.InferenceServerClient(
+        triton_client = grpcclient.InferenceServerClient(
             url=address,
             ssl=args['tls'],
             verbose=False)
@@ -96,9 +96,9 @@ if __name__ == '__main__':
         labels.append(int(label))
         if batch_i < batch_size:
             continue
-        inputs.append(grpclient.InferInput(args['input_name'], [batch_i], "BYTES"))
+        inputs.append(grpcclient.InferInput(args['input_name'], [batch_i], "BYTES"))
         outputs = []
-        outputs.append(grpclient.InferRequestedOutput(output_name))
+        outputs.append(grpcclient.InferRequestedOutput(output_name))
         
         nmpy = np.array(image_data , dtype=np.object_)
         inputs[0].set_data_from_numpy(nmpy)

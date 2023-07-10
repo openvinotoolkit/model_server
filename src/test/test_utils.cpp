@@ -16,10 +16,11 @@
 #include "test_utils.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
 
 #include "../capi_frontend/capi_utils.hpp"
-#include "../inferenceparameter.hpp"
+#include "../capi_frontend/inferenceparameter.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"
@@ -106,11 +107,19 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
 }
 
 void waitForOVMSConfigReload(ovms::ModelManager& manager) {
-    // This is effectively multiplying by 1.8 to have 1 config reload in between
-    // two test steps
-    const float WAIT_MULTIPLIER_FACTOR = 1.8;
-    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalSec() * 1000;
-    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+    // This is effectively multiplying by 5 to have at least 1 config reload in between
+    // two test steps, but we check if config files changed to exit earlier if changes are already applied
+    const float WAIT_MULTIPLIER_FACTOR = 5;
+    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalMillisec() * 1000;
+    bool reloadIsNeeded = true;
+    int timestepMs = 10;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    while (reloadIsNeeded &&
+           (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() < waitTime)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
+        manager.configFileReloadNeeded(reloadIsNeeded);
+    }
 }
 
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
@@ -123,13 +132,13 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
 
 std::string createConfigFileWithContent(const std::string& content, std::string filename) {
     std::ofstream configFile{filename};
-    spdlog::info("Creating config file: {}\n with content:\n{}", filename, content);
+    SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filename, content);
     configFile << content << std::endl;
     configFile.close();
     if (configFile.fail()) {
-        spdlog::info("Closing configFile failed");
+        SPDLOG_INFO("Closing configFile failed");
     } else {
-        spdlog::info("Closing configFile succeed");
+        SPDLOG_INFO("Closing configFile succeed");
     }
     return filename;
 }
@@ -184,13 +193,41 @@ void checkDummyResponse(const std::string outputName,
     ASSERT_EQ(output_proto.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
 
     std::vector<float> responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) { v += 1.0 * seriesLength; });
+    std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) {
+        v += 1.0 * seriesLength;
+    });
 
     float* actual_output = (float*)content->data();
     float* expected_output = responseData.data();
     const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+}
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, PredictResponse& response, const std::string& servableName) {
+    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
+    const auto& output_proto = response.outputs().at(outputName);
+
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 0);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), sizeof(float));
+    ASSERT_EQ(*((float*)output_proto.tensor_content().data()), inputScalar);
+}
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, ::KFSResponse& response, const std::string& servableName) {
+    ASSERT_EQ(response.model_name(), servableName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), outputName) << "Did not find:" << outputName;
+    const auto& output_proto = *response.outputs().begin();
+    std::string* content = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output_proto.shape_size(), 0);
+    ASSERT_EQ(content->size(), sizeof(float));
+
+    ASSERT_EQ(*((float*)content->data()), inputScalar);
 }
 
 void checkAddResponse(const std::string outputName,

@@ -194,7 +194,7 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
              "name": {
                  "type": "string"
              },
-			 "base_path": {
+             "base_path": {
                  "type": "string"
              },
              "graph_path": {

@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+# workaround for docker clipping build step logs
+BUILDKIT_STEP_LOG_MAX_SIZE=500000000
+BUILDKIT_STEP_LOG_MAX_SPEED=10000000
+
 VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
@@ -45,19 +49,20 @@ RUN_TESTS ?= 1
 NVIDIA ?=0
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
+FUZZER_BUILD ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= releases/2023/0
-OV_CONTRIB_BRANCH ?= releases/2023/0
+OV_SOURCE_BRANCH ?= 1588a332173a8401da4e34e8f6f42c693dc4dcee
+OV_CONTRIB_BRANCH ?= a7f969af513bf4c74966aa13877305a3c7e8b4d4
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
 SENTENCEPIECE ?= 1
 
-OV_USE_BINARY ?= 1
+OV_USE_BINARY ?= 0
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
@@ -68,12 +73,17 @@ DISABLE_MEDIAPIPE_PARAMS ?= ""
 ifeq ($(MEDIAPIPE_DISABLE),1)
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "
 endif
-
-ifeq ($(BAZEL_BUILD_TYPE),dbg)
-  BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "$(DISABLE_MEDIAPIPE_PARAMS)
-else
-  BAZEL_DEBUG_FLAGS=" --strip=never "$(DISABLE_MEDIAPIPE_PARAMS)
+FUZZER_BUILD_PARAMS ?= ""
+ifeq ($(FUZZER_BUILD),1)
+	FUZZER_BUILD_PARAMS = " --define FUZZER_BUILD=1 --cxxopt=-DFUZZER_BUILD=1 "
 endif
+
+BAZEL_DEBUG_BUILD_FLAGS ?= ""
+ifeq ($(BAZEL_BUILD_TYPE),dbg)
+    BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg "
+endif
+
+BAZEL_DEBUG_FLAGS=" --strip=never "$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(FUZZER_BUILD_PARAMS)
 
 ifeq ($(MINITRACE),ON)
   MINITRACE_FLAGS="--copt=-DMTR_ENABLED"
@@ -97,10 +107,10 @@ ifeq ($(BASE_OS),ubuntu)
   endif
   ifeq ($(BASE_OS_TAG_UBUNTU),20.04)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.0/linux/l_openvino_toolkit_ubuntu20_2023.0.0.10926.b4452d56304_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.1.0.11298.1588a332173_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG_UBUNTU),22.04)
 	INSTALL_DRIVER_VERSION ?= "23.13.26032"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.0/linux/l_openvino_toolkit_ubuntu22_2023.0.0.10926.b4452d56304_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2023.1.0.11298.1588a332173_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -114,7 +124,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "22.43.24595"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.0/linux/l_openvino_toolkit_rhel8_2023.0.0.10926.b4452d56304_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.1.0.11298.1588a332173_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -130,8 +140,8 @@ endif
 PRODUCT_NAME = "OpenVINO Model Server"
 PRODUCT_VERSION ?= "2023.0.0"
 
-OVMS_CPP_CONTAINTER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
-OVMS_CPP_CONTAINTER_PORT ?= 9178
+OVMS_CPP_CONTAINER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
+OVMS_CPP_CONTAINER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
 
@@ -208,6 +218,17 @@ ifeq ($(CHECK_COVERAGE),1)
 	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
   endif
 endif
+ifeq ($(FUZZER_BUILD),1)
+  ifeq ($(RUN_TESTS),1)
+	@echo "Cannot run tests for now with fuzzer build"; exit 1 ;
+  endif
+  ifeq ($(CHECK_COVERAGE),1)
+	@echo "Cannot check coverage with fuzzer build"; exit 1 ;
+  endif
+  ifeq ($(BASE_OS),redhat)
+	@echo "Cannot run fuzzer with redhat"; exit 1 ;
+  endif
+endif
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
@@ -252,28 +273,43 @@ else
 endif
 	@cat .workspace/metadata.json
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
-		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" --build-arg ov_source_org="$(OV_SOURCE_ORG)" \
+		--build-arg http_proxy=$(HTTP_PROXY) \
+		--build-arg https_proxy=$(HTTPS_PROXY) \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg ovms_metadata_file=.workspace/metadata.json \
+		--build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
+		--build-arg ov_source_org="$(OV_SOURCE_ORG)" \
 		--build-arg ov_contrib_org="$(OV_CONTRIB_ORG)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
-		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) --build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) --build-arg RUN_TESTS=$(RUN_TESTS)\
-		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) \
+		--build-arg sentencepiece=$(SENTENCEPIECE) \
+		--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
+		--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
+		--build-arg RUN_TESTS=$(RUN_TESTS)\
+		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
+		--build-arg build_type=$(BAZEL_BUILD_TYPE) \
+		--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg NVIDIA=$(NVIDIA) --build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
+		--build-arg NVIDIA=$(NVIDIA) \
+		--build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg JOBS=$(JOBS)
 
 targz_package: ovms_builder_image
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg sentencepiece=$(SENTENCEPIECE) --build-arg BASE_OS=$(BASE_OS) \
+		--build-arg http_proxy=$(HTTP_PROXY) \
+		--build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) \
+		--build-arg sentencepiece=$(SENTENCEPIECE) \
+		--build-arg BASE_OS=$(BASE_OS) \
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
 		--build-arg NVIDIA=$(NVIDIA) \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
-		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)
 
 ovms_release_image: targz_package
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
@@ -310,9 +346,9 @@ endif
 # Ci build expects index.html in genhtml directory
 get_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
-	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
-	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms/genhtml/ .  || true
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker create -ti --name $(OVMS_CPP_CONTAINER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms/genhtml/ .  || true
+	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
 	@if [ -d genhtml/src ]; then $(MAKE) check_coverage; \
 	else echo "ERROR: genhtml/src was not generated during build"; \
 	fi
@@ -322,11 +358,11 @@ check_coverage:
 	
 test_checksec:
 	@echo "Running checksec on libovms_shared library..."
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
-	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
-	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/lib/libovms_shared.so /tmp
-	@docker cp $(OVMS_CPP_CONTAINTER_NAME):/ovms_release/bin/ovms /tmp
-	@docker rm -f $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
+	@docker create -ti --name $(OVMS_CPP_CONTAINER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
+	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms_release/lib/libovms_shared.so /tmp
+	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms_release/bin/ovms /tmp
+	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
 	@checksec --file=/tmp/libovms_shared.so --format=csv > checksec.txt
 	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,DSO,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
  		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." && exit 1;\
@@ -343,17 +379,17 @@ test_checksec:
 
 test_perf: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
 		-v $(HOME)/resnet50-binary:/models/resnet50-binary \
-		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name resnet-binary --model_path /models/resnet50-binary --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
+		--model_name resnet-binary --model_path /models/resnet50-binary --port $(OVMS_CPP_CONTAINER_PORT); sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
-	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
+	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path tests/performance/imgs.npy \
 		--labels_numpy_path tests/performance/labels.npy \
 		--iteration 1000 \
@@ -363,20 +399,20 @@ test_perf: venv
 		--output_name 1463 \
 		--model_name resnet-binary
 	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 test_perf_dummy_model: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
 	@echo "Starting docker image"
-	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
 		-v $(PWD)/src/test/dummy/1:/dummy/1 \
-		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
+		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINER_PORT); sleep 5
 	@echo "Running latency test"
 	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
-	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
+	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path tests/performance/dummy_input.npy \
 		--labels_numpy_path tests/performance/dummy_lbs.npy \
 		--iteration 10000 \
@@ -386,25 +422,25 @@ test_perf_dummy_model: venv
 		--output_name a \
 		--model_name dummy
 	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 
 test_throughput: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
 	@echo "Starting docker image"
 	@./tests/performance/download_model.sh
-	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
 		-v $(HOME)/resnet50-binary:/models/resnet50-binary \
-		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name resnet-binary \
 		--model_path /models/resnet50-binary \
-		--port $(OVMS_CPP_CONTAINTER_PORT); \
+		--port $(OVMS_CPP_CONTAINER_PORT); \
 		sleep 10
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
-	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
+	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path imgs.npy \
 		--labels_numpy_path labels.npy \
 		--iteration 500 \
@@ -413,23 +449,23 @@ test_throughput: venv
 		--output_name 1463 \
 		--model_name resnet-binary
 	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 test_throughput_dummy_model: venv
 	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
 	@echo "Starting docker image"
-	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
+	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
 		-v $(PWD)/src/test/dummy/1:/dummy/1 \
-		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
+		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name dummy \
 		--model_path /dummy \
-		--port $(OVMS_CPP_CONTAINTER_PORT); \
+		--port $(OVMS_CPP_CONTAINER_PORT); \
 		sleep 10
 	@echo "Running throughput test"
 	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
-	  --grpc_port $(OVMS_CPP_CONTAINTER_PORT) \
+	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path dummy_input.npy \
 		--labels_numpy_path dummy_lbs.npy \
 		--iteration 10000 \
@@ -438,7 +474,7 @@ test_throughput_dummy_model: venv
 		--output_name a \
 		--model_name dummy
 	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME)
+	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 test_functional: venv
 	@. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)

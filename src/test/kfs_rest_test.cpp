@@ -26,6 +26,7 @@
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../version.hpp"
+#include "test_utils.hpp"
 
 using ovms::Config;
 using ovms::HttpRestApiHandler;
@@ -53,6 +54,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
+        randomizePort(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -89,6 +91,34 @@ public:
     static std::unique_ptr<MockedServer> server;
     static std::unique_ptr<std::thread> thread;
     std::unique_ptr<HttpRestApiHandler> handler;
+};
+
+class HttpRestApiHandlerWithScalarModelTest : public HttpRestApiHandlerTest {
+public:
+    static void SetUpTestSuite() {
+        HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
+        std::string port = "9000";
+        randomizePort(port);
+        char* argv[] = {
+            (char*)"OpenVINO Model Server",
+            (char*)"--model_name",
+            (char*)"scalar",
+            (char*)"--model_path",
+            (char*)"/ovms/src/test/scalar",
+            (char*)"--log_level",
+            (char*)"DEBUG",
+            (char*)"--port",
+            (char*)port.c_str(),
+            nullptr};
+        thread = std::make_unique<std::thread>(
+            [&argv]() {
+                ASSERT_EQ(EXIT_SUCCESS, server->start(9, argv));
+            });
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
+    }
 };
 
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
@@ -269,7 +299,7 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     handler->parseRequestComponents(comp, "GET", request);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    handler->dispatchToProcessor(std::string(), &response, comp, responseComponents);
+    ASSERT_EQ(handler->dispatchToProcessor(std::string(), &response, comp, responseComponents), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -277,15 +307,43 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     ASSERT_EQ(std::string(doc["versions"].GetArray()[0].GetString()), "1");
     ASSERT_EQ(std::string(doc["platform"].GetString()), "OpenVINO");
 
+    ASSERT_EQ(doc["inputs"].GetArray().Size(), 1);
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["name"].GetString()), "b");
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 2);
     ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
     ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
 
+    ASSERT_EQ(doc["outputs"].GetArray().Size(), 1);
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["name"].GetString()), "a");
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 2);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
+}
+
+TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {
+    std::string request = "/v2/models/scalar/versions/1";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "GET", request);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(std::string(), &response, comp, responseComponents), ovms::StatusCode::OK);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(std::string(doc["name"].GetString()), "scalar");
+    ASSERT_EQ(std::string(doc["versions"].GetArray()[0].GetString()), "1");
+    ASSERT_EQ(std::string(doc["platform"].GetString()), "OpenVINO");
+
+    ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["name"].GetString()), SCALAR_MODEL_INPUT_NAME);
+    ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 0);
+
+    ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["name"].GetString()), SCALAR_MODEL_OUTPUT_NAME);
+    ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 0);
 }
 
 TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
@@ -301,6 +359,7 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(output.Size(), 20);
     int i = 1;
     for (auto& data : output) {
         ASSERT_EQ(data.GetFloat(), i++);
@@ -322,10 +381,33 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
     ASSERT_EQ(doc["id"].GetString(), std::string("1"));
     auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(output.Size(), 10);
     int i = 1;
     for (auto& data : output) {
         ASSERT_EQ(data.GetFloat(), i++);
     }
+}
+
+TEST_F(HttpRestApiHandlerWithScalarModelTest, inferRequestScalar) {
+    std::string request = "/v2/models/scalar/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"model_scalar_input\",\"shape\":[],\"datatype\":\"FP32\",\"data\":[4.1]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(doc["model_name"].GetString(), std::string("scalar"));
+    ASSERT_EQ(doc["id"].GetString(), std::string("1"));
+    ASSERT_TRUE(doc["outputs"].GetArray()[0].GetObject().HasMember("data"));
+    ASSERT_TRUE(doc["outputs"].GetArray()[0].GetObject().HasMember("shape"));
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(output.Size(), 1);
+    ASSERT_EQ(output[0].GetFloat(), 4.1f);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 0);
 }
 
 TEST_F(HttpRestApiHandlerTest, inferPreprocess) {
@@ -756,7 +838,21 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsEmptyRequest) {
 
     ::KFSRequest grpc_request;
     int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
-    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
+    auto status = HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - Error: The document is empty. Offset: 0");
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidJson) {
+    std::string binaryData{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+    std::string request_body = R"({"inputs": notValid})";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    auto status = HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - Error: Invalid value. Offset: 12");
 }
 
 TEST_F(HttpRestApiHandlerTest, serverReady) {

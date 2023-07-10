@@ -13,20 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
+#include <string>
+#include <unordered_map>
 
-syntax = "proto2";
-package mediapipe;
+namespace ovms {
+enum class mediapipe_packet_type_enum {
+    KFS_REQUEST,
+    KFS_RESPONSE,
+    OVTENSOR,
+    TFTENSOR,
+    MEDIAPIPE_IMAGE,
+    MEDIAPIPE_IMAGE_FRAME,
+    UNKNOWN
+};
 
-import "mediapipe/framework/calculator.proto";
-
-message ModelAPIOVMSSessionCalculatorOptions {
-  extend mediapipe.CalculatorOptions {
-    // https://github.com/google/mediapipe/issues/634 have to be unique in app
-    // no rule to obtain this
-    optional ModelAPIOVMSSessionCalculatorOptions ext = 113473744;
-    }
-    required string servable_name = 1;
-    required string servable_version = 2;
-    // service_url: "13.21.212.171:9718"
-    optional string service_url = 3;
-}
+using stream_types_mapping_t = std::unordered_map<std::string, mediapipe_packet_type_enum>;
+}  // namespace ovms

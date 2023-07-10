@@ -20,6 +20,12 @@
                 "shape": {"input1":"(1, 3)",
                           "input2":"(1, 3)"}
             }
+        },
+        {
+            "config": {
+                "name": "scalar",
+                "base_path": "/ovms/src/test/scalar"
+            }
         }
     ],
     "pipeline_config_list": [

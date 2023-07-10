@@ -38,7 +38,7 @@ models/
 ```
 - In the above example, the server will detect only Directory `1` of `model1`. It will not detect Directory `2` as a valid model version because it does not contain valid OpenVINO model files.
 
-- The server will not detect any version in `model2`because, although the files in `model2` are correct, they are not in a numerical directory.
+- The server will not detect any version in `model2` because, although the files in `model2` are correct, they are not in a numerical directory.
 
 - The root cause is reported in the server logs or the response from a call to GetModelStatus function. 
 

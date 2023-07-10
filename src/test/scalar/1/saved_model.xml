@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<net name="TensorFlow_Frontend_IR" version="11">
+	<layers>
+		<layer id="0" name="model_scalar_input" type="Parameter" version="opset1">
+			<data shape="" element_type="f32" />
+			<output>
+				<port id="0" precision="FP32" names="model_scalar_input" />
+			</output>
+		</layer>
+		<layer id="1" name="const" type="Const" version="opset1">
+			<data element_type="f32" shape="" offset="0" size="4" />
+			<output>
+				<port id="0" precision="FP32" names="const,const:0" />
+			</output>
+		</layer>
+		<layer id="2" name="copy" type="Add" version="opset1">
+			<data auto_broadcast="numpy" />
+			<input>
+				<port id="0" precision="FP32" />
+				<port id="1" precision="FP32" />
+			</input>
+			<output>
+				<port id="2" precision="FP32" names="model_scalar_output" />
+			</output>
+		</layer>
+		<layer id="3" name="model_scalar_output" type="Result" version="opset1">
+			<input>
+				<port id="0" precision="FP32" />
+			</input>
+		</layer>
+	</layers>
+	<edges>
+		<edge from-layer="0" from-port="0" to-layer="2" to-port="0" />
+		<edge from-layer="1" from-port="0" to-layer="2" to-port="1" />
+		<edge from-layer="2" from-port="2" to-layer="3" to-port="0" />
+	</edges>
+	<rt_info>
+		<MO_version value="2023.0.0-10926-b4452d56304-releases/2023/0" />
+		<Runtime_version value="2023.0.0-10926-b4452d56304-releases/2023/0" />
+		<conversion_parameters>
+			<is_python_api_used value="False" />
+			<saved_model_dir value="DIR" />
+			<layout value="..." />
+		</conversion_parameters>
+		<legacy_frontend value="False" />
+	</rt_info>
+</net>

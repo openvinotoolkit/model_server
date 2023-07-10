@@ -112,7 +112,11 @@ public:
                     {"Input_U8_1_3_62_62", {
                                                ovms::Precision::U8,
                                                {1, 3, 62, 62},
-                                           }}}),
+                                           }},
+                    {"Input_I64_Scalar", {
+                                             ovms::Precision::I64,
+                                             {},
+                                         }}}),
             tensor_desc_map_t({{"Output_I32_1_2000", {
                                                          ovms::Precision::I32,
                                                          {1, 2000},
@@ -120,7 +124,11 @@ public:
                 {"Output_FP32_2_20_3", {
                                            ovms::Precision::FP32,
                                            {2, 20, 3},
-                                       }}}));
+                                       }},
+                {"Output_I64_Scalar", {
+                                          ovms::Precision::I64,
+                                          {},
+                                      }}}));
     }
 
 protected:
@@ -246,6 +254,28 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
     EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {1, 3, 400, 400}));
+}
+
+TEST_F(ModelMetadataResponseBuild, ScalarsValidResponse) {
+    tensor_desc_map_t inputs = tensor_desc_map_t({{"SingleInput", {ovms::Precision::FP32, {}}}});
+    tensor_desc_map_t outputs = tensor_desc_map_t({{"SingleOutput", {ovms::Precision::I32, {}}}});
+    prepare(inputs, outputs);
+
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
+
+    EXPECT_EQ(response.inputs_size(), 1);
+    auto input = response.inputs().at(0);
+    EXPECT_EQ(input.name(), "SingleInput");
+    EXPECT_EQ(input.datatype(), "FP32");
+    EXPECT_EQ(input.shape_size(), 0);
+    EXPECT_TRUE(isShapeTheSame(input.shape(), {}));
+
+    EXPECT_EQ(response.outputs_size(), 1);
+    auto output = response.outputs().at(0);
+    EXPECT_EQ(output.name(), "SingleOutput");
+    EXPECT_EQ(output.datatype(), "INT32");
+    EXPECT_EQ(output.shape_size(), 0);
+    EXPECT_TRUE(isShapeTheSame(output.shape(), {}));
 }
 
 class PipelineMetadataResponseBuild : public ::testing::Test {

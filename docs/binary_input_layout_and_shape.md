@@ -14,7 +14,7 @@ To fully utilize binary input utility, automatic image size alignment will be do
 
 Processing the binary image requests requires the model or the custom nodes to accept BGR color 
 format with data with the data range from 0-255. Original layout of the input data can be changed in the 
-OVMS configuration in runtime. For example when the orignal model has input shape [1,3,224,224] add a parameter
+OVMS configuration in runtime. For example when the original model has input shape [1,3,224,224] add a parameter
 in the OVMS configuration "layout": "NHWC:NCHW" or the command line parameter `--layout NHWC:NCHW`. In result, the model will
 have effective shape [1,224,224,3] and layout `NHWC`.
 

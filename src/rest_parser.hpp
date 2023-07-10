@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <set>
 #include <string>
 #include <unordered_map>
 
@@ -71,6 +72,8 @@ class TFSRestParser : RestParser {
      * @brief Request proto
      */
     tensorflow::serving::PredictRequest requestProto;
+
+    std::set<std::string> inputsFoundInRequest;
 
     /**
      * @brief Request content precision

@@ -342,7 +342,7 @@ void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 // \param request The request object
 // \param inputName The name of the input
 // \param datatype The data type of the input
-// \param shape The shape of the input
+// \param shape The shape of the input (ignored for scalars)
 // \param dimCount The number of dimensions of the shape
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);

@@ -1,6 +1,6 @@
 # Speech recognition with ASpIRE Chain Time Delay Neural Network
 
-In this demo you will use OpenVINO Model Server to serve [ASpIRE Chain TDNN](https://kaldi-asr.org/models/m1) model and do speech recognition starting with audio wave file and eding up with text file containing recognized speech. Presented steps serve as a demonstration of inference on stateful model and should not be considered as production setup.
+In this demo you will use OpenVINO Model Server to serve [ASpIRE Chain TDNN](https://kaldi-asr.org/models/m1) model and do speech recognition starting with audio wave file and ending up with text file containing recognized speech. Presented steps serve as a demonstration of inference on stateful model and should not be considered as production setup.
 
 ### 1. Prepare working directories
 
@@ -112,14 +112,14 @@ Start kaldi container built in the step 2 in interactive mode:
 docker run --rm -it --network="host" kaldi:latest bash
 ```
 
-The container constains everything required for data processing and communication with the model server.
+The container contains everything required for data processing and communication with the model server.
 It runs with `host` network parameter to make it easy to access model server container running on the same host.
 As you start the container, the working directory is `/opt/workspace`
 
 Download the sample audio file for speech recognition:
 
 ```bash
-wget https://github.com/openvinotoolkit/model_server/raw/releases/2022/1/demos/speech_recognition_with_kaldi_model/python/asr_demo/sample.wav
+wget https://github.com/openvinotoolkit/model_server/raw/releases/2023/0/demos/speech_recognition_with_kaldi_model/python/asr_demo/sample.wav
 ```
 
 Run speech recognition:

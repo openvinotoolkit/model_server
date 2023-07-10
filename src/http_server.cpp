@@ -70,7 +70,7 @@ static const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
         {StatusCode::REST_BINARY_BUFFER_EXCEEDED, net_http::HTTPStatusCode::BAD_REQUEST},
 
-        {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::ERROR},
+        {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
         {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
         {StatusCode::MODEL_NOT_LOADED, net_http::HTTPStatusCode::ERROR},

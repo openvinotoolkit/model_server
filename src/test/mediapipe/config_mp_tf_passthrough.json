@@ -1,0 +1,13 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":"mpTfsPassthrough",
+        "graph_path":"/ovms/src/test/mediapipe/graphtfpassthrough.pbtxt"
+    },
+    {
+        "name":"mpTFDummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummy_tf.pbtxt"
+    }
+    ]
+}

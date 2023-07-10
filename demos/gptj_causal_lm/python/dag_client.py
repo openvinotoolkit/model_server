@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os
 import time
 import argparse
 import grpc
@@ -37,12 +36,17 @@ input_sentence = args['input']
 predict_request = predict_pb2.PredictRequest()
 predict_request.model_spec.name = args['model_name']
 
-
+last = ""
 while True:
     predict_request.inputs['texts'].CopyFrom(make_tensor_proto(np.array([input_sentence])))
     start_time = time.time()
     predict_response = stub.Predict(predict_request, 10.0)
     latency = time.time() - start_time
     results = make_ndarray(predict_response.outputs['autocompletions_string'])
-    input_sentence = results[0].decode('utf-8')
-    print(latency, input_sentence)
+    input_sentence = results[0]
+    print("\033c", end="")
+    print(input_sentence, flush=True)
+    if last == input_sentence:
+        break
+    last = input_sentence
+    # print(latency, input_sentence)

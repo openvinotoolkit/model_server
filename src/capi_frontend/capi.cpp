@@ -18,15 +18,10 @@
 #include <memory>
 #include <string>
 
-#include "../buffer.hpp"
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
-#include "../inferenceparameter.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
-#include "../inferencetensor.hpp"
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -35,12 +30,17 @@
 #include "../prediction_service.hpp"
 #include "../profiler.hpp"
 #include "../servablemanagermodule.hpp"
-#include "../servablemetadata.hpp"
 #include "../server.hpp"
-#include "../server_settings.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
+#include "buffer.hpp"
 #include "capi_utils.hpp"
+#include "inferenceparameter.hpp"
+#include "inferencerequest.hpp"
+#include "inferenceresponse.hpp"
+#include "inferencetensor.hpp"
+#include "servablemetadata.hpp"
+#include "server_settings.hpp"
 
 using ovms::Buffer;
 using ovms::ExecutionContext;
@@ -388,7 +388,7 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const cha
     if (inputName == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
-    if (shape == nullptr) {
+    if (shape == nullptr && dimCount > 0) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "shape"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
@@ -404,10 +404,13 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const cha
            << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(datatype))
            << " shape: [";
         size_t i = 0;
-        for (i = 0; i < dimCount - 1; ++i) {
-            ss << shape[i] << ", ";
+        if (dimCount > 0) {
+            for (i = 0; i < dimCount - 1; ++i) {
+                ss << shape[i] << ", ";
+            }
+            ss << shape[i];
         }
-        ss << shape[i] << "]";
+        ss << "]";
         SPDLOG_TRACE(ss.str());
     }
     return nullptr;
@@ -433,6 +436,8 @@ OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* req, const
         ss << "C-API setting request input data for servable: " << request->getServableName()
            << " version: " << request->getServableVersion()
            << " name: " << inputName
+           << " data: " << data
+           << " bufferSize: " << bufferSize
            << " bufferType: " << bufferType
            << " deviceId: " << deviceId;
         SPDLOG_TRACE(ss.str());
@@ -564,10 +569,14 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
            << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
            << " shape: [";
         size_t i = 0;
-        for (i = 0; i < *dimCount - 1; ++i) {
-            ss << (*shape)[i] << ", ";
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shape)[i] << ", ";
+            }
+            ss << (*shape)[i];
         }
-        ss << (*shape)[i] << "]"
+
+        ss << "]"
            << " bufferType: " << *bufferType
            << " deviceId: " << *deviceId;
         SPDLOG_TRACE(ss.str());
@@ -840,11 +849,37 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetada
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TENSOR));
     }
     auto it = std::next(metadata->getInputsInfo().begin(), id);
-    *name = it->second->getName().c_str();
+    *name = it->first.c_str();
     *datatype = getPrecisionAsOVMSDataType(it->second->getPrecision());
     *dimCount = metadata->getInputDimsMin().at(*name).size();
     *shapeMin = const_cast<int64_t*>(metadata->getInputDimsMin().at(*name).data());
     *shapeMax = const_cast<int64_t*>(metadata->getInputDimsMax().at(*name).data());
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API request input metadata for servable: " << metadata->getName()
+           << " version: " << metadata->getVersion()
+           << " name: " << *name
+           << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
+           << " shape min: [";
+        size_t i = 0;
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMin)[i] << ", ";
+            }
+            ss << (*shapeMin)[i];
+        }
+        ss << "]"
+           << " shape max: [";
+        i = 0;
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMax)[i] << ", ";
+            }
+            ss << (*shapeMax)[i];
+        }
+        ss << "]";
+        SPDLOG_TRACE(ss.str());
+    }
     return nullptr;
 }
 
@@ -872,11 +907,37 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_TENSOR));
     }
     auto it = std::next(metadata->getOutputsInfo().begin(), id);
-    *name = it->second->getName().c_str();
+    *name = it->first.c_str();
     *datatype = getPrecisionAsOVMSDataType(it->second->getPrecision());
     *dimCount = metadata->getOutputDimsMin().at(*name).size();
     *shapeMin = const_cast<int64_t*>(metadata->getOutputDimsMin().at(*name).data());
     *shapeMax = const_cast<int64_t*>(metadata->getOutputDimsMax().at(*name).data());
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API request output metadata for servable: " << metadata->getName()
+           << " version: " << metadata->getVersion()
+           << " name: " << *name
+           << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(*datatype))
+           << " shape min: [";
+        size_t i = 0;
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMin)[i] << ", ";
+            }
+            ss << (*shapeMin)[i];
+        }
+        ss << "]"
+           << " shape max: [";
+        i = 0;
+        if (*dimCount > 0) {
+            for (i = 0; i < *dimCount - 1; ++i) {
+                ss << (*shapeMax)[i] << ", ";
+            }
+            ss << (*shapeMax)[i];
+        }
+        ss << "]";
+        SPDLOG_TRACE(ss.str());
+    }
     return nullptr;
 }
 

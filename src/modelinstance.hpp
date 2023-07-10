@@ -153,6 +153,11 @@ protected:
     static constexpr std::array<const char*, 1> TF_MODEL_FILES_EXTENSIONS{".pb"};
 
     /**
+      * @brief Stores required tensorflow lite model files extensions to be able to load model
+      */
+    static constexpr std::array<const char*, 1> TFLITE_MODEL_FILES_EXTENSIONS{".tflite"};
+
+    /**
          * @brief Notifies model instance users who wait for loading
          */
     std::condition_variable modelLoadedNotify;
@@ -421,8 +426,12 @@ public:
          *
          * @return batch size
          */
-    virtual Dimension getBatchSize() const {
-        return Dimension(ov::get_batch(model));
+    virtual std::optional<Dimension> getBatchSize() const {
+        try {
+            return Dimension(ov::get_batch(model));
+        } catch (...) {
+            return std::nullopt;
+        }
     }
 
     const size_t getBatchSizeIndex() const;

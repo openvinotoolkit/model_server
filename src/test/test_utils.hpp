@@ -34,11 +34,11 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "../config.hpp"
 #include "../dags/node_library.hpp"
 #include "../execution_context.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric_registry.hpp"
 #include "../modelinstance.hpp"
@@ -54,6 +54,8 @@ const std::string sum_model_location = std::filesystem::current_path().u8string(
 const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
 const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
 const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
+const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
+const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -145,6 +147,36 @@ const ovms::ModelConfig DUMMY_SAVED_MODEL_CONFIG{
     dummy_saved_model_location,  // local path
 };
 
+const ovms::ModelConfig DUMMY_TFLITE_CONFIG{
+    "dummy_tflite",
+    dummy_tflite_location,  // base path
+    "CPU",                  // target device
+    "1",                    // batchsize
+    1,                      // NIREQ
+    false,                  // is stateful
+    true,                   // idle sequence cleanup enabled
+    false,                  // low latency transformation enabled
+    500,                    // stateful sequence max number
+    "",                     // cache directory
+    1,                      // model_version unused since version are read from path
+    dummy_tflite_location,  // local path
+};
+
+const ovms::ModelConfig SCALAR_MODEL_CONFIG{
+    "scalar",
+    scalar_model_location,  // base path
+    "CPU",                  // target device
+    "0",                    // batchsize needs to be 0 to emulate missing --batch_size param
+    1,                      // NIREQ
+    false,                  // is stateful
+    true,                   // idle sequence cleanup enabled
+    false,                  // low latency transformation enabled
+    500,                    // stateful sequence max number
+    "",                     // cache directory
+    1,                      // model_version unused since version are read from path
+    scalar_model_location,  // local path
+};
+
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
@@ -168,6 +200,9 @@ constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const char* PASSTHROUGH_MODEL_INPUT_NAME = "input";
 constexpr const char* PASSTHROUGH_MODEL_OUTPUT_NAME = "copy:0";
+
+constexpr const char* SCALAR_MODEL_INPUT_NAME = "model_scalar_input";
+constexpr const char* SCALAR_MODEL_OUTPUT_NAME = "model_scalar_output";
 
 const std::string UNUSED_SERVABLE_NAME = "UNUSED_SERVABLE_NAME";
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
@@ -242,6 +277,12 @@ void checkDummyResponse(const std::string outputName,
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "");
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
 
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
@@ -379,6 +420,9 @@ public:
     void updateConfigurationWithoutConfigFile() {
         ModelManager::updateConfigurationWithoutConfigFile();
     }
+    void setWaitForModelLoadedTimeoutMs(int value) {
+        this->waitForModelLoadedTimeoutMs = value;
+    }
 };
 
 class MockedMetadataModelIns : public ovms::ModelInstance {
@@ -386,7 +430,7 @@ public:
     MockedMetadataModelIns(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", 42, ieCore) {}
     MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
-    MOCK_METHOD(ovms::Dimension, getBatchSize, (), (const, override));
+    MOCK_METHOD(std::optional<ovms::Dimension>, getBatchSize, (), (const, override));
     MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
@@ -428,6 +472,9 @@ protected:
     std::string directoryPath;
 };
 
+/**
+ * Wait until ModelManager::configFileReloadNeeded returns false or timeout is reached
+ */
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager);
 

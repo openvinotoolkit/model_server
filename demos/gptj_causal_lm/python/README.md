@@ -104,13 +104,17 @@ predicted word:  a
 
 # Pipeline mode with server side tokenization and detokenization
 
-This variant offloads tokenizaton and detokenization step from client to the server. OVMS can convert string proto to `2D U8` tensor and pass the data to tokenization custom node. This way we generate tokens for `gpt-j-6b` model automatically and get the response as text instead of probability vector.
+This variant offloads tokenization and detokenization step from client to the server. OVMS can convert string proto to `2D U8` tensor and pass the data to tokenization custom node. This way we generate tokens for `gpt-j-6b` model automatically and get the response as text instead of probability vector.
 
 ![diagram](../../../src/custom_nodes/tokenizer/diagram.svg)
 
 ## Prepare environment
 
 Use `make` command to prepare custom node libraries, blingfire tokenization models and configuration file.
+
+Since custom node used in this demo is included in OpenVINO Model Server image you can either use the custom node from the image, or build one.
+
+If you just want to quickly run this demo and use already compiled custom node, run:
 
 ```bash
 make
@@ -122,14 +126,30 @@ Workspace should look as follows:
 tree workspace 
 workspace
 ├── config.json
+└── tokenizers
+    ├── gpt2.bin
+    └── gpt2.i2w
+
+1 directory, 3 files
+```
+
+(Optional) If you modified the custom node or for some other reason, you want to have it compiled and then attached to the container, run:
+
+```bash
+make BUILD_CUSTOM_NODE=true BASE_OS=ubuntu
+```
+
+Workspace will look as follows:
+
+```bash
+workspace
+├── config.json
 ├── lib
 │   ├── libdetokenizer.so
 │   └── libtokenizer.so
 └── tokenizers
     ├── gpt2.bin
     └── gpt2.i2w
-
-2 directories, 5 files
 ```
 
 Start OVMS with prepared workspace:
@@ -153,6 +173,7 @@ Run example client:
 
 ```bash
 python3 dag_client.py --url localhost:9000 --model_name my_gpt_pipeline --input "Neurons are fascinating"
-
-0.5515012741088867 Neurons are fascinating cells that are responsible for the transmission of information from one brain region to another. They are also responsible for the production of hormones and neurotransmitters that are responsible for the regulation of mood, sleep, appetite, and sexual function.
+b'Neurons are fascinating cells that are responsible for the transmission of information from one brain region to another. They are also responsible for the production of hormones and neurotransmitters that are responsible for the regulation of mood, sleep, appetite, and sexual function.\n'
 ```
+
+![demo](./gpt-demo.gif)

@@ -14,9 +14,9 @@ This document gives information how to build docker images and the binary packag
 Makefile located in root directory of this repository contains all targets needed to build docker images and binary packages.
 
 It contains `docker_build` target which by default builds multiple docker images:
-- `openvino/model_server:latest` - smallest release image containing only neccessary files to run model server on CPU
+- `openvino/model_server:latest` - smallest release image containing only necessary files to run model server on CPU
 - `openvino/model_server:latest-gpu` - release image containing support for Intel GPU and CPU
-- `openvino/model_server:latest-nginx-mtls` - release image containing examplary NGINX MTLS configuration
+- `openvino/model_server:latest-nginx-mtls` - release image containing exemplary NGINX MTLS configuration
 - `openvino/model_server-build:latest` - image with builder environment containing all the tools to build OVMS
 
 The `docker_build` target also prepares binary package to run OVMS as standalone application and shared library to link against user written C/C++ applications.
@@ -109,7 +109,8 @@ make docker_build BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
 
 ### `DLDT_PACKAGE_URL`
 
-Parameter used to specify URL to OpenVINO package. By default set to latest release.
+Parameter used to specify URL to the OpenVINO tar.gz archive, appropriate for the target OS. Here are the [latest public packages from master branch](https://storage.openvinotoolkit.org/repositories/openvino/packages/master/).
+Use this parameter together with `OV_USE_BINARY=1`.
 
 <hr />
 
@@ -132,8 +133,9 @@ That is required to install several building dependencies.
 
 ### `OV_USE_BINARY`
 
-By default set to `1`. When set to `0`, OpenVINO will be built from sources and `DLDT_PACKAGE_URL` will be omitted.  
-Use `OV_SOURCE_BRANCH` and `OV_SOURCE_ORG` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch and fork. By default `master` will be used and org `openvinotoolkit`.  
+By default set to `0`. With that setting, OpenVINO backend will be built from sources and `DLDT_PACKAGE_URL` will be omitted.  
+Use `OV_SOURCE_BRANCH` and `OV_SOURCE_ORG` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch and fork. By default the latest tested commit from `master` branch will be used and org `openvinotoolkit`.
+When `OV_USE_BINARY=1`, the OpenVINO backend will be installed from the binary archive set in `DLDT_PACKAGE_URL`.
 
 Example:
 ```bash

@@ -129,11 +129,39 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
 
     // If batch size differs, check if remaining dimensions are equal
     const auto& dims = tensor.get_shape();
-    const auto batchIndex = tensorInfo.getLayout().getBatchIndex();
-    if (!batchIndex.has_value() || batchIndex.value() >= tensorInfo.getShape().size() || batchIndex.value() >= dims.size()) {
+    if (tensorInfo.getShape().size() != dims.size()) {
+        // Wrong number of shape dimensions
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
-           << " Invalid batch size index";
+           << " Invalid shape -"
+           << " Expected: " << tensorInfo.getShape().toString()
+           << "; Actual: " << shapeToString(dims);
+        const std::string details = ss.str();
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
+    }
+    const auto batchIndex = tensorInfo.getLayout().getBatchIndex();
+    if (!batchIndex.has_value()) {
+        // We do not need to distinguish between batch/entire shape validation.
+        if (!tensorInfo.getShape().match(dims)) {
+            std::stringstream ss;
+            ss << "Node: " << getName() << " input: " << tensorInfo.getName()
+               << " Invalid shape -"
+               << " Expected: " << tensorInfo.getShape().toString()
+               << "; Actual: " << shapeToString(dims);
+            const std::string details = ss.str();
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+            return Status(StatusCode::INVALID_SHAPE, details);
+        }
+        return StatusCode::OK;
+    }
+
+    if (batchIndex.value() >= dims.size()) {
+        std::stringstream ss;
+        ss << "Node: " << getName() << " input: " << tensorInfo.getName()
+           << " Invalid connection -"
+           << " Batch position outside of shape dimensions: " << tensorInfo.getShape().toString()
+           << "; layout: " << tensorInfo.getLayout();
         const std::string details = ss.str();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
         return Status(StatusCode::INVALID_BATCH_DIMENSION, details);
@@ -160,7 +188,6 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
             return Status(StatusCode::INVALID_SHAPE, details);
         }
     }
-
     if (!tensorInfo.getShape().match(dims)) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
@@ -171,7 +198,6 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
-
     return StatusCode::OK;
 }
 

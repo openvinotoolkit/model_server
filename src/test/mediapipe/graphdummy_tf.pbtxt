@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-input_stream: "custom_dummy_input"
-output_stream: "custom_dummy_output"
+input_stream: "TENSOR_1:in"
+output_stream: "TENSOR:out"
 node {
   calculator: "ModelAPISessionCalculator"
   output_side_packet: "SESSION:session"
@@ -28,19 +28,18 @@ node {
 node {
   calculator: "ModelAPISideFeedCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "B:custom_dummy_input"
-  output_stream: "A:custom_dummy_output"
+  input_stream: "TENSOR_B:in"
+  output_stream: "TENSORA:out"
   node_options: {
     [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
-      tag_to_input_tensor_names {
-        key: "B"
-        value: "b"
-      }
-      tag_to_output_tensor_names {
-        key: "A"
-        value: "a"
-      }
-    }
+          tag_to_input_tensor_names {
+            key: "TENSOR_B"
+            value: "b"
+          }
+          tag_to_output_tensor_names {
+            key: "TENSORA"
+            value: "a"
+          }
+        }
   }
 }
-

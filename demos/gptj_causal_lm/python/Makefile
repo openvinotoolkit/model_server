@@ -20,19 +20,28 @@ BLINGFIRE_SHA=5089d31914cbed7a24589e753bd6cd362a377fbb
 
 default: setup
 
+BUILD_CUSTOM_NODE=false
+BASE_OS=ubuntu
+
 setup:
+ifeq ($(BUILD_CUSTOM_NODE),true)
 # Build custom node
 	cd ../../../src/custom_nodes/tokenizer && \
-	make BASE_OS=ubuntu
+	make BASE_OS=$(BASE_OS)
 	mkdir -p workspace/lib && \
-	cp ../../../src/custom_nodes/tokenizer/lib/ubuntu/libdetokenizer.so workspace/lib/libdetokenizer.so && \
-	cp ../../../src/custom_nodes/tokenizer/lib/ubuntu/libtokenizer.so workspace/lib/libtokenizer.so
+	cp ../../../src/custom_nodes/tokenizer/lib/$(BASE_OS)/libdetokenizer.so workspace/lib/libdetokenizer.so && \
+	cp ../../../src/custom_nodes/tokenizer/lib/$(BASE_OS)/libtokenizer.so workspace/lib/libtokenizer.so
+endif
 # Prepare tokenization models
 	mkdir -p workspace/tokenizers
 	wget https://github.com/microsoft/BlingFire/raw/${BLINGFIRE_SHA}/ldbsrc/ldb/gpt2.bin -O workspace/tokenizers/gpt2.bin
 	wget https://github.com/microsoft/BlingFire/raw/${BLINGFIRE_SHA}/ldbsrc/ldb/gpt2.i2w -O workspace/tokenizers/gpt2.i2w
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
+ifeq ($(BUILD_CUSTOM_NODE),false)
+	sed -i 's:\/workspace\/lib\/libtokenizer.so:\/ovms\/lib\/custom_nodes\/libtokenizer.so:g' workspace/config.json
+	sed -i 's:\/workspace\/lib\/libdetokenizer.so:\/ovms\/lib\/custom_nodes\/libdetokenizer.so:g' workspace/config.json
+endif
 
 clean:
 	@rm -rf workspace

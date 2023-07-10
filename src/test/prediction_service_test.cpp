@@ -26,13 +26,13 @@
 #include <openvino/openvino.hpp>
 #include <stdlib.h>
 
-#include "../buffer.hpp"
+#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/inferenceparameter.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
+#include "../capi_frontend/inferencetensor.hpp"
 #include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
-#include "../inferenceparameter.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
-#include "../inferencetensor.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -831,6 +831,52 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     // Expect reshape to 1x5
     this->checkOutputShape(response, {1, 5}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
+    ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{SCALAR_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "scalar");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {}, SCALAR_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarBatchAuto) {
+    ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED);
+}
+
+TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarShapeAuto) {
+    ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    config.parseShapeParameter("auto");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with 1-dim shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{SCALAR_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference, expect wrong number of dimensions
+    auto status = this->performInferenceWithRequest(request, response, "scalar");
+    ASSERT_EQ(status, StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS) << status.string();
 }
 
 /*

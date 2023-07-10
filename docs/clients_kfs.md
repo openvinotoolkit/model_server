@@ -331,9 +331,9 @@ When creating a Python-based client application, you can use Triton client libra
 
     .. code-block:: python
 
-        import tritonclient.grpc as grpclient
+        import tritonclient.grpc as grpcclient
 
-        triton_client = grpclient.InferenceServerClient(
+        triton_client = grpcclient.InferenceServerClient(
             url="address",
             ssl=False,
             verbose=False)
@@ -342,12 +342,12 @@ When creating a Python-based client application, you can use Triton client libra
         with open("image_path", 'rb') as f:
             image_data.append(f.read())
         inputs = []
-        inputs.append(grpclient.InferInput('input_name', 1, "BYTES"))
+        inputs.append(grpcclient.InferInput('input_name', 1, "BYTES"))
         nmpy = np.array(image_data , dtype=np.object_)
         inputs[0].set_data_from_numpy(nmpy)
 
         outputs = []
-        outputs.append(grpclient.InferRequestedOutput("output_name"))
+        outputs.append(grpcclient.InferRequestedOutput("output_name"))
 
         results = triton_client.infer(model_name="model_name",
                                   inputs=inputs,

@@ -28,8 +28,8 @@
 #pragma GCC diagnostic pop
 
 #include "capi_frontend/capi_utils.hpp"
-#include "inferenceresponse.hpp"
-#include "inferencetensor.hpp"
+#include "capi_frontend/inferenceresponse.hpp"
+#include "capi_frontend/inferencetensor.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "profiler.hpp"
 #include "status.hpp"

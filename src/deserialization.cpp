@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include "deserialization.hpp"
 
-#include "buffer.hpp"
+#include "capi_frontend/buffer.hpp"
 
 namespace ovms {
 

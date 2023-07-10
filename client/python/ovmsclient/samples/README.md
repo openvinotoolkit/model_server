@@ -31,7 +31,7 @@ Install samples dependencies:
 pip3 install -r requirements.txt
 ```
 
-Download [Resnet50-tf Model](https://docs.openvino.ai/2022.2/omz_models_model_resnet_50_tf.html) and convert it into Intermediate Representation format:
+Download [Resnet50-tf Model](https://docs.openvino.ai/2023.0/omz_models_model_resnet_50_tf.html) and convert it into Intermediate Representation format:
 ```bash
 mkdir models
 docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
@@ -93,7 +93,7 @@ usage: grpc_get_model_metadata.py [-h] [--service_url SERVICE_URL]
                                   [--model_version MODEL_VERSION]
                                   [--timeout TIMEOUT]
 
-Get information about the status of served models over gRPC interace
+Get information about the status of served models over gRPC interface
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -102,7 +102,7 @@ optional arguments:
   --model_name MODEL_NAME
                         Model name to query. default: resnet
   --model_version MODEL_VERSION
-                        Model version to query. If ommited or set to 0 returns
+                        Model version to query. If omitted or set to 0 returns
                         result for latest version
   --timeout TIMEOUT     Request timeout. default: 10.0
 ```
@@ -282,7 +282,7 @@ usage: http_get_model_status.py [-h] [--service_url SERVICE_URL]
                                 [--model_version MODEL_VERSION]
                                 [--timeout TIMEOUT]
 
-Get information about the status of served models over HTTP interace
+Get information about the status of served models over HTTP interface
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -316,7 +316,7 @@ usage: http_get_model_metadata.py [-h] [--service_url SERVICE_URL]
                                   [--model_version MODEL_VERSION]
                                   [--timeout TIMEOUT]
 
-Get information about the status of served models over HTTP interace
+Get information about the status of served models over HTTP interface
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -325,7 +325,7 @@ optional arguments:
   --model_name MODEL_NAME
                         Model name to query. default: resnet
   --model_version MODEL_VERSION
-                        Model version to query. If ommited or set to 0 returns
+                        Model version to query. If omitted or set to 0 returns
                         result for latest version
   --timeout TIMEOUT     Request timeout. default: 10.0
 ```

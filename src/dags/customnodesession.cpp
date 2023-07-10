@@ -181,19 +181,6 @@ Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov
         return StatusCode::NODE_LIBRARY_INVALID_PRECISION;
     }
 
-    if (tensor->dims == nullptr || tensor->dimsCount == 0) {
-        std::string error;
-        if (tensor->dims == nullptr) {
-            error = "shape handle is null";
-        } else if (tensor->dimsCount == 0) {
-            error = "shape dimensions number is equal to 0";
-        }
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; error: {}",
-            this->getName(),
-            this->getSessionKey(),
-            error);
-        return StatusCode::NODE_LIBRARY_INVALID_SHAPE;
-    }
     shape_t shape(tensor->dims, tensor->dims + tensor->dimsCount);
 
     size_t expectedElementsCount = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_t>());

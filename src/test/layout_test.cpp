@@ -34,7 +34,7 @@ TEST(Layout, BatchPositionValid) {
     EXPECT_EQ(Layout{"??N..."}.getBatchIndex(), 2);
     EXPECT_EQ(Layout{"?C???N..."}.getBatchIndex(), 5);
     EXPECT_EQ(Layout{"...NC"}.getBatchIndex(), std::nullopt);
-    EXPECT_EQ(Layout{"..."}.getBatchIndex(), 0);
+    EXPECT_EQ(Layout{"..."}.getBatchIndex(), std::nullopt);
 }
 
 TEST(Layout, BatchPositionInvalid) {

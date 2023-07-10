@@ -202,11 +202,11 @@ sequence_id = response.outputs['sequence_id'].uint64_val[0]
 
 ```
 
-See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/speech_recognition_with_kaldi_model/python/grpc_stateful_client.py) example client for reference.
+See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/demos/speech_recognition_with_kaldi_model/python/grpc_stateful_client.py) example client for reference.
 
 ### Inference via HTTP <a name="stateful_http"></a>
 
-Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api_tfs.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api_tfs.md) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
 
 `sequence_id` and `sequence_control_input` must be added to HTTP request by adding new `key:value` pair in `inputs` field of JSON body. 
 
@@ -272,7 +272,7 @@ response_body = json.loads(response.text)
 sequence_id = response_body["outputs"]["sequence_id"]
 
 ```
-See [rest_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/speech_recognition_with_kaldi_model/python/rest_stateful_client.py) example client for reference.
+See [rest_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/demos/speech_recognition_with_kaldi_model/python/rest_stateful_client.py) example client for reference.
 
 ### Error Codes <a name="stateful_errors"></a>
 
@@ -292,7 +292,7 @@ When a request is invalid or could not be processed, you can expect following er
 
 ## Idle Sequence Cleanup <a name="stateful_cleanup"></a>
 
-Once started sequence might get dropped for some reason like lost connection etc. In this case model server will not receive SEQUENCE_END signal and will not free sequence resources. To prevent keeping idle sequences indefinitely, mthe Model Server launches a sequence cleaner thread that periodically scans stateful models and checks if their sequences received any valid inference request recently. If not, such sequences are removed, their resources are freed and their ids can be reused.
+Once started sequence might get dropped for some reason like lost connection etc. In this case model server will not receive SEQUENCE_END signal and will not free sequence resources. To prevent keeping idle sequences indefinitely, the Model Server launches a sequence cleaner thread that periodically scans stateful models and checks if their sequences received any valid inference request recently. If not, such sequences are removed, their resources are freed and their ids can be reused.
 
 Two parameters regulate sequence cleanup. 
 One is `sequence_cleaner_poll_wait_minutes` which holds the value of the time interval between the next scans. If there has been not a single valid request with a particular sequence id between two consecutive checks, the sequence is considered idle and gets deleted. 

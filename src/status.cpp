@@ -73,6 +73,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::CANNOT_CONVERT_FLAT_SHAPE, "Cannot convert flat shape to Shape object"},
     {StatusCode::INVALID_BATCH_DIMENSION, "Invalid batch dimension in shape"},
     {StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE, "Layout incompatible with given shape"},
+    {StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED, "Batching set to AUTO but model contains scalar tensor"},
     {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, "allow_cache is set to true with custom loader usage"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 
@@ -201,6 +202,12 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Mediapipe execution failed. MP status"},
     {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, "Mediapipe is retired"},
     {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET, "Mediapipe is not loaded yet"},
+    {StatusCode::MEDIAPIPE_KFS_PASS_WRONG_INPUT_STREAM_COUNT, "Mediapipe unexpected input stream packets count"},
+    {StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME, "Mediapipe unexpected input stream packets name"},
+    {StatusCode::MEDIAPIPE_KFS_PASS_WRONG_OUTPUT_STREAM_COUNT, "Mediapipe unexpected output stream packets count"},
+    {StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME, "Mediapipe unexpected output stream packets name"},
+    {StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG, "Mediapipe KFS pass through graph is missing RESPONSE: string in the output name"},
+    {StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG, "Mediapipe KFS pass through graph is missing REQUEST: string in the input name"},
 
     // Storage errors
     // S3

@@ -195,7 +195,17 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
         SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
         auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(name);
         if (!pipelineDefinition) {
+#if (MEDIAPIPE_DISABLE == 0)
+            auto mediapipeGraphDefinition = this->modelManager.getMediapipeFactory().findDefinitionByName(name);
+            if (!mediapipeGraphDefinition) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            auto status = buildResponse(*mediapipeGraphDefinition, response);
+            // INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok())); TODO metrics
+            return status;
+#else
             return Status(StatusCode::MODEL_NAME_MISSING);
+#endif
         }
         auto status = buildResponse(*pipelineDefinition, response);
         INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
@@ -409,6 +419,34 @@ Status KFSInferenceServiceImpl::buildResponse(
 
     return StatusCode::OK;
 }
+
+#if (MEDIAPIPE_DISABLE == 0)
+Status KFSInferenceServiceImpl::buildResponse(
+    MediapipeGraphDefinition& mediapipeGraphDefinition,
+    KFSModelMetadataResponse* response) {
+    std::unique_ptr<MediapipeGraphDefinitionUnloadGuard> unloadGuard;
+    // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
+    auto status = mediapipeGraphDefinition.waitForLoaded(unloadGuard, 0);
+    if (!status.ok()) {
+        return status;
+    }
+
+    response->Clear();
+    response->set_name(mediapipeGraphDefinition.getName());
+    response->add_versions("1");
+    response->set_platform(PLATFORM);
+
+    for (const auto& input : mediapipeGraphDefinition.getInputsInfo()) {
+        convert(input, response->add_inputs());
+    }
+
+    for (const auto& output : mediapipeGraphDefinition.getOutputsInfo()) {
+        convert(output, response->add_outputs());
+    }
+
+    return StatusCode::OK;
+}
+#endif
 
 void KFSInferenceServiceImpl::convert(
     const std::pair<std::string, std::shared_ptr<const TensorInfo>>& from,

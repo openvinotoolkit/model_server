@@ -1,4 +1,4 @@
-# ovmsclient - a lighweight client for OpenVINO Model Server and TensorFlow Serving
+# ovmsclient - a lightweight client for OpenVINO Model Server and TensorFlow Serving
 
 The [ovmsclient](https://pypi.org/project/ovmsclient/) package is a lightweight alternative for [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/). Contrary to `tensorflow-serving-api`, `ovmsclient` does not come with `tensorflow` as a dependency. This way the package is way smaller, but still capable of interacting with the serving. 
 

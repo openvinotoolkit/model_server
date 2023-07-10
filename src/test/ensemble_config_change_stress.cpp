@@ -1094,7 +1094,7 @@ const std::string basicMediapipeConfigWithNewGraphPath = R"({
     "mediapipe_config_list": [
     {
         "name":"pipeline1Dummy",
-        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames2.pbtxt"
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt"
     }
     ]
 })";
@@ -2222,7 +2222,9 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringPredictLoad) {
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
         StatusCode::MEDIAPIPE_EXECUTION_ERROR};                  // we expect to stop creating pipelines
-    std::set<StatusCode> allowedLoadResults = {};
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM,  // Can happen when OVMSSessionCalculator fails to create side input packet
+    };
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
         &StressPipelineConfigChanges::removeMediapipeGraphUsedModel,

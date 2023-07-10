@@ -19,8 +19,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../buffer.hpp"
-#include "../inferencerequest.hpp"
+#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
 #include "../modelconfig.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "test_utils.hpp"
@@ -79,6 +79,18 @@ protected:
 };
 
 TEST_F(CAPIPredictValidation, ValidRequest) {
+    auto status = instance->mockValidate(&request);
+    EXPECT_TRUE(status.ok()) << status.string();
+}
+
+TEST_F(CAPIPredictValidation, AllowScalar) {
+    servableInputs = ovms::tensor_map_t({{"Input_FP32_Scalar",
+        std::make_shared<ovms::TensorInfo>("Input_FP32_Scalar", ovms::Precision::FP32, ovms::shape_t{}, ovms::Layout{"..."})}});
+    requestData = std::vector<float>{2.5f};
+    preparePredictRequest(request,
+        {{"Input_FP32_Scalar",
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}},
+        requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_TRUE(status.ok()) << status.string();
 }
