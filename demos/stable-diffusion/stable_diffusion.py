@@ -26,6 +26,9 @@ from transformers import CLIPTokenizer
 from diffusers.pipeline_utils import DiffusionPipeline
 from diffusers.schedulers import DDIMScheduler, LMSDiscreteScheduler, PNDMScheduler
 
+from diffusers.utils import randn_tensor
+from torch import Generator
+
 import numpy as np
 
 
@@ -35,7 +38,7 @@ import numpy as np
 
 def scale_fit_to_window(dst_width:int, dst_height:int, image_width:int, image_height:int):
     """
-    Preprocessing helper function for calculating image size for resize with peserving original aspect ratio 
+    Preprocessing helper function for calculating image size for resize with preserving original aspect ratio 
     and fitting image to specific window size
     
     Parameters:
@@ -240,8 +243,7 @@ class OVStableDiffusionPipeline(DiffusionPipeline):
 
         # text_embeddings = self.text_encoder(
         #    text_input_ids)[self._text_encoder_output]
-        text_embeddings = self.text_encoder.infer_sync({"tokens": text_input_ids})["last_hidden_state"]
-
+        text_embeddings = np.copy(self.text_encoder.infer_sync({"tokens": text_input_ids})["last_hidden_state"])
         # duplicate text embeddings for each generation per prompt
         if num_images_per_prompt != 1:
             bs_embed, seq_len, _ = text_embeddings.shape
@@ -298,6 +300,11 @@ class OVStableDiffusionPipeline(DiffusionPipeline):
         """
         latents_shape = (1, 4, self.height // 8, self.width // 8)
         noise = np.random.randn(*latents_shape).astype(np.float32)
+        # alternative generator from pytorch
+        #generator = Generator().manual_seed(10)
+        #print(type(generator))
+        #noise = randn_tensor(latents_shape, generator=generator, device=torch.device("cpu"), dtype=torch.float32).numpy()
+
         if image is None:
             # if we use LMSDiscreteScheduler, let's make sure latents are multiplied by sigmas
             if isinstance(self.scheduler, LMSDiscreteScheduler):

@@ -39,7 +39,7 @@ tokenizer = CLIPTokenizer.from_pretrained('openai/clip-vit-large-patch14')
 
 print("Initializing models")
 if args["adapter"] == "openvino":
-    unet_model =  OpenvinoAdapter(create_core(), "unet/1/unet.onnx", device="CPU")
+    unet_model =  OpenvinoAdapter(create_core(), "unet/1/unet.onnx", device="CPU", plugin_config={"NUM_STREAMS":1})
     unet_model.load_model()
     vae_decoder_model = OpenvinoAdapter(create_core(), "vae_decoder/1/vae_decoder.onnx", device="CPU", plugin_config={"NUM_STREAMS":1})
     vae_decoder_model.load_model()
@@ -68,6 +68,8 @@ prompt = args["prompt"]
 negative = args["negative"]
 
 seed = args["seed"]
+if seed is not None:
+    seed = int(seed)
 steps= args["steps"]
 
 print('Pipeline settings')
