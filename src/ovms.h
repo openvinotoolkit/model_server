@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>  //  For precise data types
 
@@ -78,6 +80,15 @@ typedef enum OVMS_BufferType_enum {
     OVMS_BUFFERTYPE_GPU,
     OVMS_BUFFERTYPE_HDDL,
 } OVMS_BufferType;
+
+typedef enum OVMS_ServableState_enum {
+    OVMS_STATE_BEGIN,
+    OVMS_STATE_LOADING,
+    OVMS_STATE_AVAILABLE,
+    OVMS_STATE_UNLOADING,
+    OVMS_STATE_RETIRED,
+    OVMS_STATE_LOADING_FAILED
+} OVMS_ServableState;
 
 typedef struct OVMS_InferenceRequest_ OVMS_InferenceRequest;
 typedef struct OVMS_InferenceResponse_ OVMS_InferenceResponse;
@@ -307,6 +318,20 @@ OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerNew(OVMS_Server** server);
 
+// Get the liveliness of the server
+//
+// \param server The server object
+// \param liveliness of the server
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerLive(OVMS_Server* server, bool* isLive);
+//
+// Get the readiness of the server
+//
+// \param server The server object
+// \param readiness of the server
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerReady(OVMS_Server* server, bool* isReady);
+
 // Deallocates server memory for given ptr.
 //
 // \param server The server object to be removed
@@ -323,6 +348,15 @@ void OVMS_ServerDelete(OVMS_Server* server);
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerSettings* server_settings,
     OVMS_ModelsSettings* models_settings);
+
+// Get the state of a servable
+//
+// \param server The server object
+// \param servableName The name of the servable to be used
+// \param servableVersion The version of the servable to be used. In case of servable version set to 0 server will choose the default servable version.
+// \param state The servable state
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_GetServableState(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableState* state);
 
 // OVMS_InferenceRequest
 //
@@ -500,7 +534,6 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* metadata, uint
 // \param shapeMax The shape of the output
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
-
 
 // EXPERIMENTAL // TODO if declare specific type for underlying ov::AnyMap
 // Get the additional info about servable.

@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "../dags/pipelinedefinitionstatus.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../precision.hpp"
 #include "../shape.hpp"
@@ -27,6 +28,7 @@ class InferenceResponse;
 class InferenceTensor;
 class Status;
 
+OVMS_ServableState convertToServableState(PipelineDefinitionStateCode code);
 std::string tensorShapeToString(const signed_shape_t& tensorShape);
 OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
 Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype);

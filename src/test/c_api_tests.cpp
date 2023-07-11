@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <thread>
@@ -23,8 +24,13 @@
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
+#include "../dags/pipelinedefinitionstatus.hpp"
+#include "../metric_module.hpp"
 #include "../ovms.h"
+#include "../servablemanagermodule.hpp"
+#include "../server.hpp"
 #include "c_api_test_utils.hpp"
+#include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -1024,6 +1030,238 @@ TEST_F(CAPIMetadata, Negative) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServableMetadataGetInfo(servableMetadata, nullptr), StatusCode::NONEXISTENT_PTR);
 
     OVMS_ServableMetadataDelete(nullptr);
+}
+class CAPIState : public ::testing::Test {
+public:
+    static std::shared_ptr<MockModelInstanceChangingStates> modelInstance;
+    class MockModel : public Model {
+    public:
+        MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
+            Model(name, false /*stateful*/, nullptr) {
+            modelVersions.insert({instance->getVersion(), instance});
+        }
+    };
+    class MockModelManager : public ModelManager {
+    public:
+        const std::string servableName = "dummy";
+        MockModelManager() {
+            ov::Core ieCore;
+            CAPIState::modelInstance = std::make_shared<MockModelInstanceChangingStates>(servableName, 1, ieCore);
+            std::shared_ptr<MockModel> model = std::make_shared<MockModel>(servableName, modelInstance);
+            models[servableName] = model;
+        }
+    };
+    class MockGrpcServerModule : public Module {
+    public:
+        MockGrpcServerModule() {
+            state = ModuleState::INITIALIZED;
+        }
+        Status start(const ovms::Config& config) {
+            return StatusCode::OK;
+        }
+        void shutdown() {}
+    };
+    class MockServableManagerModule : public ServableManagerModule {
+    public:
+        MockServableManagerModule(Server& server) :
+            ServableManagerModule(server) {
+            state = ModuleState::INITIALIZED;
+            servableManager = std::make_unique<MockModelManager>();
+        }
+    };
+    class MockServer : public Server {
+    public:
+        MockServer() {
+            MetricModule* mm = new MetricModule();
+            modules.insert({METRICS_MODULE_NAME, std::unique_ptr<Module>(mm)});
+        }
+        void setReady() {
+            Module* msmm = new MockServableManagerModule(*this);
+            modules.insert({SERVABLE_MANAGER_MODULE_NAME, std::unique_ptr<Module>(msmm)});
+        }
+        void setLive() {
+            Module* grpc = new MockGrpcServerModule();
+            modules.insert({GRPC_SERVER_MODULE_NAME, std::unique_ptr<Module>(grpc)});
+        }
+    };
+};
+
+class CAPIStateIntegration : public TestWithTempDir {
+protected:
+    std::string configFilePath;
+    void SetUp() {
+        TestWithTempDir::SetUp();
+        configFilePath = directoryPath + "/ovms_config.json";
+    }
+};
+
+TEST_F(CAPIStateIntegration, LiveReadyFromMalformedConfig) {
+    OVMS_Server* server = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&server));
+    OVMS_ServerSettings* serverSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    bool isReady;
+    bool isLive;
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(!isLive);
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(!isReady);
+    createConfigFileWithContent("{", configFilePath);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(server, serverSettings, modelsSettings), StatusCode::JSON_INVALID);
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(isLive);
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(!isReady);
+    OVMS_ServerDelete(server);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
+}
+
+TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
+    OVMS_Server* server = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&server));
+    OVMS_ServerSettings* serverSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    bool isReady;
+    bool isLive;
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(!isLive);
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(!isReady);
+    std::filesystem::copy("/ovms/src/test/configs/emptyConfigWithMetrics.json", configFilePath, std::filesystem::copy_options::recursive);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(server, serverSettings, modelsSettings));
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(isLive);
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(isReady);
+    OVMS_ServerDelete(server);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
+}
+
+TEST_F(CAPIStateIntegration, Config) {
+    OVMS_Server* cserver = nullptr;
+    OVMS_ServableState state;
+    const std::string servableName = "dummy";
+    const int64_t servableVersion = 1;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(cserver, nullptr, servableVersion, &state), StatusCode::NONEXISTENT_PTR);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    std::filesystem::copy("/ovms/src/test/configs/emptyConfigWithMetrics.json", configFilePath, std::filesystem::copy_options::recursive);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(cserver, servableName.c_str(), servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
+    std::filesystem::copy("/ovms/src/test/c_api/config_metadata_all.json", configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+    Server* server = reinterpret_cast<Server*>(cserver);
+    const ovms::Module* servableModule = server->getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+    ModelManager* modelManager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+    waitForOVMSConfigReload(*modelManager);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(cserver, servableName.c_str(), servableVersion, &state));
+    EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state));
+    EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
+    std::filesystem::copy("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json", configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+    waitForOVMSConfigReload(*modelManager);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state));
+    EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
+    OVMS_ServerDelete(cserver);
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
+}
+
+TEST_F(CAPIState, PipelineStates) {
+    ASSERT_EQ(OVMS_ServableState::OVMS_STATE_BEGIN, convertToServableState(ovms::PipelineDefinitionStateCode::BEGIN));
+    ASSERT_EQ(OVMS_ServableState::OVMS_STATE_LOADING, convertToServableState(ovms::PipelineDefinitionStateCode::RELOADING));
+    ASSERT_EQ(OVMS_ServableState::OVMS_STATE_LOADING_FAILED, convertToServableState(ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED));
+    ASSERT_EQ(OVMS_ServableState::OVMS_STATE_LOADING_FAILED, convertToServableState(ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION));
+    ASSERT_EQ(OVMS_ServableState::OVMS_STATE_AVAILABLE, convertToServableState(ovms::PipelineDefinitionStateCode::AVAILABLE));
+    ASSERT_EQ(OVMS_ServableState::OVMS_STATE_AVAILABLE, convertToServableState(ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION));
+    ASSERT_EQ(OVMS_ServableState::OVMS_STATE_RETIRED, convertToServableState(ovms::PipelineDefinitionStateCode::RETIRED));
+}
+
+TEST_F(CAPIState, ServerLive) {
+    MockServer* cserver = new MockServer;
+    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
+    bool isLive;
+
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(!isLive);
+    cserver->setLive();
+    OVMS_ServerLive(server, &isLive);
+    ASSERT_TRUE(isLive);
+}
+
+TEST_F(CAPIState, ServerReady) {
+    MockServer* cserver = new MockServer;
+    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
+    bool isReady;
+
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(!isReady);
+    cserver->setReady();
+    OVMS_ServerReady(server, &isReady);
+    ASSERT_TRUE(isReady);
+}
+
+std::shared_ptr<MockModelInstanceChangingStates> CAPIState::modelInstance = nullptr;
+TEST_F(CAPIState, ServerNull) {
+    MockServer* cserver = new MockServer;
+    cserver->setReady();
+    cserver->setLive();
+    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
+    OVMS_ServableState state;
+    const std::string servableName = "dummy";
+    const int64_t servableVersion = 1;
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(nullptr, servableName.c_str(), servableVersion, &state), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(server, nullptr, servableVersion, &state), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(server, servableName.c_str(), servableVersion, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(server, servableName.c_str(), -1, &state), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(server, "", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
+    delete cserver;
+}
+TEST_F(CAPIState, AllStates) {
+    const std::string servableName = "dummy";
+    const int64_t servableVersion = 1;
+    MockServer* cserver = new MockServer;
+    cserver->setReady();
+    cserver->setLive();
+    OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
+    OVMS_ServableState state;
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::START);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_EQ(state, OVMS_ServableState::OVMS_STATE_BEGIN);
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::AVAILABLE);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::UNLOADING);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_UNLOADING);
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::END);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_RETIRED);
+
+    CAPIState::modelInstance->setState(ovms::ModelVersionState::LOADING);
+    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_EQ(state, OVMS_ServableState::OVMS_STATE_LOADING);
+    delete cserver;
 }
 
 TEST_F(CAPIMetadata, BasicDummy) {
