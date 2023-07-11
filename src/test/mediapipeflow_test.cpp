@@ -104,7 +104,7 @@ public:
     }
 };
 
-TEST_F(MediapipeTFTest, DISABLED_Passthrough) {
+TEST_F(MediapipeTFTest, Passthrough) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -121,7 +121,7 @@ TEST_F(MediapipeTFTest, DISABLED_Passthrough) {
     size_t dummysInTheGraph = 0;
     checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, modelName);
 }
-TEST_F(MediapipeTFTest, DISABLED_DummyInfer) {
+TEST_F(MediapipeTFTest, DummyInfer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
