@@ -630,12 +630,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-    ] + select({
-            "//conditions:default": [
-                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-            ],
-            "//src:disable_mediapipe" : [],
-    }),
+    ],
     linkstatic = True,
 )
 
