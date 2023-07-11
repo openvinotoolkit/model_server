@@ -29,6 +29,7 @@
 namespace ovms {
 
 extern const std::string EXIT_NODE_NAME;
+extern const std::string DEFAULT_PIPELINE_NAME;
 
 template <typename ResponseType>
 class ExitNode : public Node {
@@ -38,7 +39,7 @@ class ExitNode : public Node {
     const std::string& pipelineName;
 
 public:
-    ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool useSharedOutputContent = true, const std::string& pipelineName = "") :
+    ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool useSharedOutputContent = true, const std::string& pipelineName = DEFAULT_PIPELINE_NAME) :
         Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode),
         response(response),
         outputsInfo(outputsInfo),

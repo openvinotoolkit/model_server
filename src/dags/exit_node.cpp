@@ -33,6 +33,7 @@
 namespace ovms {
 
 const std::string EXIT_NODE_NAME = "response";
+const std::string DEFAULT_PIPELINE_NAME = "";
 
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
