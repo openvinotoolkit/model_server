@@ -368,7 +368,6 @@ cc_library(
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
                 "mediapipe_calculators/ovms_calculator.cc",
-		"@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
             ],
             "//src:disable_mediapipe" : [],
         }),
@@ -631,7 +630,12 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-    ],
+    ] + select({
+            "//conditions:default": [
+                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+            ],
+            "//src:disable_mediapipe" : [],
+    }),
     linkstatic = True,
 )
 
