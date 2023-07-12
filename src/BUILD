@@ -687,8 +687,13 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+	] + select({
+        "//conditions:default": [
+            "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
         # "//src:cpp_headers",  # Use for dynamic linking when necessary
-    ],
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
