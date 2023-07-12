@@ -60,6 +60,7 @@ usage: grpc_get_model_status.py [-h] [--service_url SERVICE_URL]
                                 [--model_version MODEL_VERSION]
                                 [--timeout TIMEOUT]
 
+Get information about the status of served models over gRPC interface
 
 optional arguments:
   -h, --help            show this help message and exit
