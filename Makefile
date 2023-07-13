@@ -145,7 +145,7 @@ OVMS_CPP_CONTAINER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
 
-BUILD_CUSTOM_NODES ?= true
+BUILD_CUSTOM_NODES ?= false
 
 .PHONY: default docker_build \
 
@@ -306,7 +306,7 @@ targz_package: ovms_builder_image
 		--build-arg ov_use_binary=$(OV_USE_BINARY) \
 		--build-arg sentencepiece=$(SENTENCEPIECE) \
 		--build-arg BASE_OS=$(BASE_OS) \
-		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		dock=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)
@@ -325,6 +325,7 @@ ovms_release_image: targz_package
 		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg GPU=0 \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
+		--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
@@ -334,6 +335,7 @@ ovms_release_image: targz_package
 		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
     	--build-arg GPU=1 \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
+		--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg NVIDIA=$(NVIDIA) \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)

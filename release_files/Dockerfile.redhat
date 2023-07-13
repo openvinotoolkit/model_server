@@ -13,12 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi-minimal:8.7
+ARG PKG_IMAGE=
+FROM ${PKG_IMAGE} as pkg-image
+
 FROM registry.access.redhat.com/ubi8/ubi:8.7 as base_build
+
 RUN yum install -y xz && yum clean all
 WORKDIR /
-COPY ovms.tar.xz /
+COPY --from=pkg-image /ovms.tar.xz /
 RUN env
 RUN tar -xf ovms.tar.xz && groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
@@ -27,6 +30,8 @@ RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-l
 # Remove capi library
 RUN if [ -f /ovms/lib/libovms_shared.so ] ; then rm -rf  /ovms/lib/libovms_shared.so ; else exit 0 ; fi ;
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
 
 FROM $BASE_IMAGE as release
 LABEL "name"="OVMS"

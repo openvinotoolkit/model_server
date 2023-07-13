@@ -19,7 +19,7 @@ ARG BUILD_IMAGE=ovms-redhat:latest
 FROM $BUILD_IMAGE
 
 ARG BASE_OS=ubuntu
-ARG ov_use_binary=1
+ARG ov_use_binary=0
 ARG NVIDIA=0
 ARG sentencepiece=0
 SHELL ["/bin/bash", "-c"]
@@ -37,7 +37,6 @@ RUN mkdir -vp /ovms_release/bin && \
 
 RUN if [ -d /ovms/src/custom_nodes/lib/${BASE_OS} ] ; then true ; else exit 0 ; fi ; cp /ovms/src/custom_nodes/lib/${BASE_OS}/*.so /ovms_release/lib/custom_nodes/
 RUN if [ -d /ovms/src/custom_nodes/tokenizer/lib/${BASE_OS} ] ; then true ; else exit 0 ; fi ; cp /ovms/src/custom_nodes/tokenizer/lib/${BASE_OS}/*.so /ovms_release/lib/custom_nodes/
-RUN cp /ovms/metadata.json /ovms_release/
 RUN if [ "$sentencepiece" == "1" ]; then true ; else exit 0 ; fi ; cp -v /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so /ovms_release/lib/
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /ovms_release/lib/
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /ovms_release/lib/plugins.xml
@@ -97,9 +96,7 @@ RUN find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --remove-rpath
 WORKDIR /
 RUN tar czf ovms.tar.gz --transform 's/ovms_release/ovms/' /ovms_release/ && \
 	sha256sum ovms.tar.gz > ovms.tar.gz.sha256 && \
-	cp /ovms_release/metadata.json /ovms.tar.gz.metadata.json && \
 	tar cJf ovms.tar.xz --transform 's/ovms_release/ovms/' /ovms_release/ && \
-	sha256sum ovms.tar.xz > ovms.tar.xz.sha256 && \
-	cp /ovms_release/metadata.json /ovms.tar.xz.metadata.json
+	sha256sum ovms.tar.xz > ovms.tar.xz.sha256
 
 ENTRYPOINT [ ]
