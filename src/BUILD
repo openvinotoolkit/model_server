@@ -693,8 +693,14 @@ cc_binary(
         "//src:libcustom_node_horizontal_ocr.so",
         "//src:libcustom_node_model_zoo_intel_object_detection.so",
         "//src:libcustom_node_image_transformation.so",
+	    ] + select({
+        "//conditions:default": [
+            "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
+
         # "//src:cpp_headers",  # Use for dynamic linking when necessary
-    ],
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
