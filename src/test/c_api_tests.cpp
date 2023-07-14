@@ -1174,10 +1174,12 @@ TEST_F(CAPIStateIntegration, Config) {
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
     ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
+#if (MEDIAPIPE_DISABLE == 0)
     std::filesystem::copy("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json", configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
     waitForOVMSConfigReload(*modelManager);
     ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
+#endif
     OVMS_ServerDelete(cserver);
     OVMS_ModelsSettingsDelete(modelsSettings);
     OVMS_ServerSettingsDelete(serverSettings);
