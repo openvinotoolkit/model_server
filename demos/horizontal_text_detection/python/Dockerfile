@@ -96,4 +96,5 @@ RUN git clone https://github.com/opencv/opencv.git /opencv && \
 RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
 
 COPY ./rtsp_client.py ./rtsp_client.py 
+COPY ./stream_client.py ./stream_client.py 
 ENTRYPOINT ["python3", "rtsp_client.py"]
