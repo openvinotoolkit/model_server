@@ -15,14 +15,8 @@
 #
 
 import cv2
-import time
 import argparse
-from functools import partial
-import queue
-import threading
-import tritonclient.grpc as grpcclient
-import numpy as np
-import subprocess #nosec
+from stream_client import StreamClient
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--grpc_address', required=False, default='localhost:9000', help='Specify url to grpc service')
@@ -31,19 +25,14 @@ parser.add_argument('--output_stream', required=False, default="rtsp://localhost
 parser.add_argument('--model_name', required=False, default="detect_text_images", type=str, help='Name of the model')
 parser.add_argument('--width', required=False, default=704, type=int, help='Width of model\'s input image')
 parser.add_argument('--height', required=False, default=704, type=int, help='Height of model\'s input image')
-parser.add_argument('--verbose', required=False, default=False, type=bool, help='Height of model\'s input image')
+parser.add_argument('--verbose', required=False, default=False, type=bool, help='Should client dump debug information')
 parser.add_argument('--input_name', required=False, default="image", type=str, help='Name of the model\'s input')
 args = parser.parse_args()
-output_stream = args.output_stream
-
-triton_client = grpcclient.InferenceServerClient( url=args.grpc_address, verbose=False)
 
 WIDTH = args.width
 HEIGHT = args.height
-cap = cv2.VideoCapture(args.input_stream, cv2.CAP_FFMPEG)
-cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
-fps = cap.get(cv2.CAP_PROP_FPS)
-force_exit = False
+
+
 
 def decode(text):
     word = ''
@@ -66,19 +55,7 @@ def get_text(output):
         word += alphabet[pred[0]]
     return decode(word)
 
-def finish():
-    global force_exit
-    force_exit = True
-
-raw_frame = np.empty((HEIGHT, WIDTH, 3), np.uint8) 
-frame_bytes = memoryview(raw_frame).cast("B")
-def grab_frame(cap):
-    success, frame = cap.read()
-    if not success:
-        print("[WARNING] No Input frame")
-        finish()
-        return None
-
+def preprocess(frame):
     if frame.shape[0] > HEIGHT and frame.shape[1] > WIDTH:
         frame = cv2.resize(frame, (HEIGHT, WIDTH), interpolation=cv2.INTER_AREA)
     else:
@@ -103,56 +80,6 @@ def postprocess(frame, result):
                 print((x_min,y_min), (x_max,y_max))
     return frame
 
-pq = queue.PriorityQueue()
+client = StreamClient(postprocess_callback = postprocess, preprocess_callback=preprocess, source=args.input_stream, sink=args.output_stream)
+client.start(ovms_address=args.grpc_address, input_name=args.input_name, model_name=args.model_name)
 
-def callback(frame, i, result, error):
-    frame = postprocess(frame, result)
-    # ffmpeg_process.stdin.write(frame.astype(np.uint8).tobytes())
-    pq.put((i, frame))
-    if error is not None:
-        print(error)
-
-
-def open_ffmpeg_stream_process():
-    args = (
-        "ffmpeg -re -stream_loop -1 -f rawvideo -pix_fmt "
-        f"bgr24 -r {fps} -s {WIDTH}x{HEIGHT} -i pipe:0 -pix_fmt yuv420p "
-        f"-tune zerolatency  -fflags nobuffer -b:v 1000k -preset ultrafast -f rtsp {output_stream}"
-    ).split()
-    return subprocess.Popen(args, stdin=subprocess.PIPE) #nosec
-
-ffmpeg_process = open_ffmpeg_stream_process()
-
-def display():
-    i = 0 
-    while True:
-        if pq.qsize() > 0:
-            print(pq.qsize())
-        if pq.empty():
-            continue
-        if pq.queue[0][0] == i:
-            frame = pq.get()[1]
-            ffmpeg_process.stdin.write(frame.astype(np.uint8).tobytes())
-            i += 1
-
-display_th = threading.Thread(target=display)
-display_th.start()
-if grab_frame(cap) is None:
-    force_exit = True
-i = 0
-while not force_exit:
-    frame = grab_frame(cap)
-    if frame is not None:
-        inputs=[grpcclient.InferInput( args.input_name, [1,WIDTH,HEIGHT,3], "FP32")]
-        inputs[0].set_data_from_numpy(np.array([frame], dtype=np.float32))
-        triton_client.async_infer(
-            model_name=args.model_name,
-            callback=partial(callback, frame, i),
-            inputs=inputs)
-        i += 1
-
-finish()
-# When everything done, release the capture
-cap.release()
-ffmpeg_process.kill()
-print(f"Finished.")
