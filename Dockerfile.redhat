@@ -160,7 +160,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 && \
     curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv && \
     mkdir -p ccache-4.3/build && cd ccache-4.3/build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DZSTD_FROM_INTERNET=ON -G Ninja .. && \
     ninja -v install && \
     rm -rf /var/cache/yum
 
