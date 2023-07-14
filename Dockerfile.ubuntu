@@ -362,8 +362,9 @@ FROM $BUILD_IMAGE as pkg
 
 RUN mkdir /patchelf 
 WORKDIR /patchelf
-RUN wget https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
-    tar -xf 0.10.tar.gz && ls -lah && cd */ && \
+# hadolint ignore=DL3003
+RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
     ./bootstrap.sh && ./configure && make && make install
 
 WORKDIR /

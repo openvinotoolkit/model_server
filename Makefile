@@ -47,6 +47,7 @@ INSTALL_RPMS_FROM_URL ?=
 CHECK_COVERAGE ?=0
 RUN_TESTS ?= 1
 NVIDIA ?=0
+GPU ?= 0
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
 FUZZER_BUILD ?= 0
@@ -211,7 +212,7 @@ clang-format-check: clang-format
 	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
 
 .PHONY: docker_build
-docker_build: ovms_builder_image targz_package ovms_release_image
+docker_build: ovms_builder_image targz_package ovms_release_images
 ovms_builder_image:
 ifeq ($(CHECK_COVERAGE),1)
   ifeq ($(RUN_TESTS),0)
@@ -272,18 +273,16 @@ else
 	@touch .workspace/metadata.json
 endif
 	@cat .workspace/metadata.json
-	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+	DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
-		--build-arg ovms_metadata_file=.workspace/metadata.json \
 		--build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_source_org="$(OV_SOURCE_ORG)" \
 		--build-arg ov_contrib_org="$(OV_CONTRIB_ORG)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) \
 		--build-arg sentencepiece=$(SENTENCEPIECE) \
 		--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
-		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
 		--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
 		--build-arg RUN_TESTS=$(RUN_TESTS)\
 		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
@@ -297,52 +296,94 @@ endif
 		--build-arg NVIDIA=$(NVIDIA) \
 		--build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		--build-arg JOBS=$(JOBS)
+		--build-arg JOBS=$(JOBS) \
+		--target=build
 
-targz_package: ovms_builder_image
-	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
+targz_package:
+	DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) \
 		--build-arg sentencepiece=$(SENTENCEPIECE) \
 		--build-arg BASE_OS=$(BASE_OS) \
-		dock=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		--build-arg FUZZER_BUILD=$(FUZZER_BUILD) \
 		--build-arg NVIDIA=$(NVIDIA) \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)
-
-ovms_release_image: targz_package
-	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
-		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
-			"tar -c -C / ovms.tar* ; sleep 2" | tar -x
-	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX))
+		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
+		--target=pkg && \
+	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && \
+	docker run --rm $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
+			"tar -c -C / ovms.tar* ; sleep 2" | tar -x -C dist/$(DIST_OS)
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
-	cp -vR release_files/* dist/$(DIST_OS)/
-	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+
+ovms_release_images:
+	DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg GPU=0 \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
+		--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
 		--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg NVIDIA=$(NVIDIA) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
-	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+		--target=release && \
+	DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
     	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
     	--build-arg no_proxy=$(NO_PROXY) \
     	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
 		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
     	--build-arg GPU=1 \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
 		--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg NVIDIA=$(NVIDIA) \
-    	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) && \
+    	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		--target=release && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
 ifeq ($(BUILD_NGINX), 1)
 	cd extras/nginx-mtls-auth && \
 	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
+endif
+
+release_image:
+	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
+	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME})'
+	@bash -c '$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
+	DOCKER_BUILDKIT=1 docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
+		--build-arg ov_source_org="$(OV_SOURCE_ORG)" \
+		--build-arg ov_contrib_org="$(OV_CONTRIB_ORG)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) \
+		--build-arg sentencepiece=$(SENTENCEPIECE) \
+		--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
+		--build-arg RUN_TESTS=$(RUN_TESTS)\
+		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
+		--build-arg build_type=$(BAZEL_BUILD_TYPE) \
+		--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
+		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
+		--build-arg PROJECT_NAME=${PROJECT_NAME} \
+		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BASE_OS=$(BASE_OS) \
+		--build-arg NVIDIA=$(NVIDIA) \
+		--build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
+		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
+		--build-arg GPU=${GPU} \
+		--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
+		--build-arg NVIDIA=$(NVIDIA) \
+		--build-arg JOBS=$(JOBS) \
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
+		--target=release
+ifeq ($(BUILD_NGINX), 1)
+	cd extras/nginx-mtls-auth && \
+	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
+	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
 endif
 
 # Ci build expects index.html in genhtml directory
