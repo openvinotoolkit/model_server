@@ -15,6 +15,8 @@
 #
 
 ARG BASE_IMAGE
+ARG BUILD_IMAGE=build
+
 FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
@@ -90,7 +92,7 @@ RUN ./install_opencv.sh
 ####### End of OpenCV
 
 ################### BASE BUILD ##########################
-FROM base_build as final_build
+FROM base_build as build
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -124,8 +126,8 @@ RUN apt-get update && apt-get install -y software-properties-common gpg gpg-agen
     python3 -m pip install numpy==1.21.0 --no-cache-dir
 
 ARG JOBS
-ARG ov_use_binary=1
-ARG sentencepiece=0
+ARG ov_use_binary=0
+ARG sentencepiece=1
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
 ARG DLDT_PACKAGE_URL
@@ -304,7 +306,7 @@ RUN make
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2022.3"
+ARG PROJECT_VERSION="2023.1"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 
@@ -355,3 +357,135 @@ COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+FROM $BUILD_IMAGE as pkg
+
+RUN mkdir /patchelf 
+WORKDIR /patchelf
+RUN wget https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    tar -xf 0.10.tar.gz && ls -lah && cd */ && \
+    ./bootstrap.sh && ./configure && make && make install
+
+WORKDIR /
+ARG BASE_OS=ubuntu
+ARG ov_use_binary=0
+ARG FUZZER_BUILD=0
+COPY create_package.sh /
+RUN ./create_package.sh
+
+RUN tar -xf ovms.tar.xz && groupadd --gid 5000 ovms && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
+    chown -R ovms:ovms /ovms
+RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
+# Remove capi library
+RUN if [ -f /ovms/lib/libovms_shared.so ] ; then rm -rf  /ovms/lib/libovms_shared.so ; else exit 0 ; fi ;
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+FROM $BASE_IMAGE as release
+ARG INSTALL_RPMS_FROM_URL=
+ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
+ARG INSTALL_DRIVER_VERSION="23.13.26032"
+ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
+ARG GPU=0
+ARG NVIDIA=0
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-c"]
+WORKDIR /
+
+COPY release_files/drivers /drivers
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# hadolint ignore=DL3003,SC2164
+RUN	apt-get update -y ; \
+    apt-get install -y curl ca-certificates libpugixml1v5 libtbb2 --no-install-recommends && \
+	if [ "$GPU" == "1" ] ; then \
+            apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
+	        case $INSTALL_DRIVER_VERSION in \
+                "21.48.21782") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-gmmlib_21.3.3_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-core_1.0.9441_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-opencl_1.0.9441_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-opencl-icd_21.48.21782_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-level-zero-gpu_1.2.21782_amd64.deb ; \
+                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
+                ;; \
+                "22.10.22597") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-gmmlib_22.0.2_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-core_1.0.10409_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-opencl_1.0.10409_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-opencl-icd_22.10.22597_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-level-zero-gpu_1.3.22597_amd64.deb ; \
+                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
+                ;; \
+                "22.35.24055") \
+                        apt-get update && apt-get install -y --no-install-recommends gpg gpg-agent && \
+                        curl https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+                        echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
+                        apt-get update && \
+                        apt-get install -y --no-install-recommends \
+                        intel-opencl-icd=22.35.24055+i815~u20.04 \
+                        intel-level-zero-gpu=1.3.24055+i815~u20.04 \
+                        level-zero=1.8.5+i815~u20.04 && \
+                        apt-get purge gpg gpg-agent --yes && apt-get --yes autoremove && \
+                        apt-get clean ; \
+                        rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
+                ;; \
+                "22.43.24595") \
+                        apt-get update && apt-get install -y --no-install-recommends gpg gpg-agent && \
+                        curl https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+                        echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
+                        apt-get update && \
+                        apt-get install -y --no-install-recommends \
+                        intel-opencl-icd=22.43.24595.35+i538~20.04 \
+                        intel-level-zero-gpu=1.3.24595.35+i538~20.04 \
+                        level-zero=1.8.8+i524~u20.04 && \
+                        apt-get purge gpg gpg-agent --yes && apt-get --yes autoremove && \
+                        apt-get clean ; \
+                        rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
+                ;; \                        
+                "23.13.26032") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/libigdgmm12_22.3.0_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-core_1.0.13700.14_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-opencl_1.0.13700.14_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/intel-opencl-icd_23.13.26032.30_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/libigdgmm12_22.3.0_amd64.deb ; \
+                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
+                ;; \          
+                *) \
+                        dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
+                        apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
+                        cd /drivers/${INSTALL_DRIVER_VERSION} && \
+                            dpkg-scanpackages .  > Packages && \
+                            cd - ; \
+                        echo "deb [trusted=yes arch=amd64] file:/drivers/${INSTALL_DRIVER_VERSION} ./" > /etc/apt/sources.list.d/intel-graphics-${INSTALL_DRIVER_VERSION}.list ; \
+                        apt-get update && \
+                        apt-get install -y --no-install-recommends \
+                            intel-opencl-icd \
+                            intel-level-zero-gpu level-zero \
+                            intel-media-va-driver-non-free libmfx1 && \
+                            rm -rf /var/lib/apt/lists/* ; \
+                esac ; \
+	fi ; \
+	apt-get clean ; \
+        rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
+        groupadd --gid 5000 ovms ; \
+        useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+
+RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
+# for NVIDIA
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
+    apt-get update -y && \
+    apt-get install -y --no-install-recommends curl && \
+    curl -o /etc/apt/preferences.d/cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin ; \
+    apt-get update && apt-get install -y --no-install-recommends libcudnn8=8.8.0.121-1+cuda11.8 libcutensor1=1.6.1.5-1 libpng16-16 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
+COPY --from=pkg /ovms /ovms
+
+RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
+USER ovms
+ENTRYPOINT ["/ovms/bin/ovms"]
