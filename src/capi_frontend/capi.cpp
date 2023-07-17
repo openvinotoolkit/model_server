@@ -24,7 +24,9 @@
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#endif
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -805,11 +807,13 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
         PipelineDefinition* pipelineDefinition = nullptr;
         pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
         if (!pipelineDefinition) {
+#if (MEDIAPIPE_DISABLE == 0)
             ovms::MediapipeGraphDefinition* mediapipeDefinition = modelManager->getMediapipeFactory().findDefinitionByName(servableName);
             if (mediapipeDefinition) {
                 *state = convertToServableState(mediapipeDefinition->getStateCode());
                 return nullptr;
             }
+#endif
             return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
         }
         *state = convertToServableState(pipelineDefinition->getStateCode());
