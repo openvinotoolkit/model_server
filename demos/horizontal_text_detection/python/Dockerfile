@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-FROM ubuntu:22.04
+FROM ubuntu:22.04 as BASE
 ARG DEBIAN_FRONTEND=noninteractive
 ARG JOBS=$nproc
 RUN apt-get update -qq && apt-get --no-install-recommends -y install \
@@ -44,8 +44,6 @@ RUN apt-get update -qq && apt-get --no-install-recommends -y install \
   yasm \
   zlib1g-dev \
   nasm \
-  libx264-dev \
-  libx265-dev \
   libnuma-dev \
   libvpx-dev \
   libvpl-dev \
@@ -78,14 +76,14 @@ RUN cp _vplinstall/lib/libvpl.so.2.9 /lib/libvpl.so
 RUN ln -s /lib/libvpl.so /lib/libvpl.so.2
 RUN git clone https://github.com/FFmpeg/FFmpeg.git /ffmpeg && \
     cd ffmpeg && \
-    ./configure --enable-libvpl --toolchain=gcc-tsan --enable-gpl --enable-libx264 --enable-libx265 --enable-libvpx --enable-zlib  --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/lib64/pkgconfig --incdir=/usr/include && \
+    ./configure --enable-libvpl --toolchain=gcc-tsan --enable-gpl --enable-libvpx --enable-zlib  --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/lib64/pkgconfig --incdir=/usr/include && \
     make -j $JOBS && \
     make install
 RUN git clone https://github.com/opencv/opencv.git /opencv && \
     cd /opencv && \
     mkdir build && \
     cd build && \
-    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_FFMPEG=ON \
+    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_FFMPEG=ON -D BUILD_SHARED_LIBS=OFF \
   -DPYTHON_EXECUTABLE=$(which python) -DBUILD_opencv_python2=OFF \
   -DCMAKE_INSTALL_PREFIX=$(python3 -c "import sys; print(sys.prefix)") \
   -DPYTHON3_EXECUTABLE=$(which python3) \
@@ -93,8 +91,22 @@ RUN git clone https://github.com/opencv/opencv.git /opencv && \
   -DPYTHON3_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") .. && \
   make -j $JOBS && \
   make install
-RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
 
+
+RUN mkdir /cvlib && find /lib/x86_64-linux-gnu/ -name 'libopencv*' -print | xargs -I % cp % /cvlib
+RUN mkdir /fflib && ldd /bin/ffmpeg | awk '{print $3}' | sed '/^\s*$/d' | xargs -I % cp % /fflib
+FROM ubuntu:22.04
+ARG DEBIAN_FRONTEND=noninteractive
+COPY --from=BASE /lib/python3/dist-packages/cv2 /lib/python3/dist-packages/cv2
+COPY --from=BASE /bin/ffmpeg /bin/ffmpeg
+COPY --from=BASE _vplinstall/lib/libvpl.so.2.9 /lib/libvpl.so
+RUN ln -s /lib/libvpl.so /lib/libvpl.so.2
+COPY --from=BASE /lib64 /lib64
+COPY --from=BASE /cvlib /lib/x86_64-linux-gnu/
+COPY --from=BASE /fflib /lib/x86_64-linux-gnu/
+RUN apt-get update -qq && apt-get --no-install-recommends -y install python3 python3-pip libavcodec58 libavformat58 libswscale5 && rm -rf /var/lib/apt/lists/*
+RUN pip3 install tritonclient[grpc] numpy==1.24.3
+RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
 COPY ./rtsp_client.py ./rtsp_client.py 
 COPY ./stream_client.py ./stream_client.py 
 ENTRYPOINT ["python3", "rtsp_client.py"]
