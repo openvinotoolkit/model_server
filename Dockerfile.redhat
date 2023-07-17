@@ -472,7 +472,7 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 && \
         dnf clean all
-        
+# hadolint ignore=DL3022
 COPY --from=$PKG_IMAGE /ovms /ovms
 
 COPY --from=pkg /licenses /licenses
