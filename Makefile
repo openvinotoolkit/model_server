@@ -273,7 +273,7 @@ else
 	@touch .workspace/metadata.json
 endif
 	@cat .workspace/metadata.json
-	DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
@@ -300,7 +300,7 @@ endif
 		--target=build
 
 targz_package:
-	DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build -f Dockerfile.$(BASE_OS) . \
+	docker build -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) \
@@ -318,7 +318,7 @@ targz_package:
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
 
 ovms_release_images:
-	DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
@@ -326,7 +326,7 @@ ovms_release_images:
 		--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
 		--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg NVIDIA=$(NVIDIA) \
-		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
 	DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
     	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
@@ -351,7 +351,7 @@ release_image:
 	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
 	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME})'
 	@bash -c '$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
-	DOCKER_BUILDKIT=1 docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \

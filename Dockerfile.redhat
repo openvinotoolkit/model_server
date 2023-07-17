@@ -362,7 +362,6 @@ WORKDIR /patchelf
 RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
     tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
     ./bootstrap.sh && ./configure && make && make install
-RUN yum install -y xz && yum clean all
 
 WORKDIR /
 ARG BASE_OS=redhat
@@ -474,7 +473,7 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
         libcutensor1-1.6.1.5-1 && \
         dnf clean all
         
-COPY --from=pkg /ovms /ovms
+COPY --from=$PKG_IMAGE /ovms /ovms
 
 COPY --from=pkg /licenses /licenses
 USER ovms
