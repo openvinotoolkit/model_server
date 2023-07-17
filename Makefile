@@ -161,7 +161,7 @@ $(ACTIVATE):
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@. $(ACTIVATE); pip3 install --upgrade pip
 	@. $(ACTIVATE); pip3 install -vUqq setuptools
-	@. $(ACTIVATE); pip3 install -qq -r tests/requirements.txt --use-deprecated=legacy-resolver
+	@. $(ACTIVATE); pip3 install -qq -r tests/requirements.txt
 	@touch $(ACTIVATE)
 
 cppclean: venv
