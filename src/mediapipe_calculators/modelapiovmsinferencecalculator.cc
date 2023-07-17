@@ -226,7 +226,9 @@ public:
             RET_CHECK(false);
         }
         auto outputsCount = output.size();
-        RET_CHECK(outputsCount == cc->Outputs().GetTags().size());
+        LOG(INFO) << "Received outputs: " << outputsCount;
+        LOG(INFO) << "Expected outputs: " << cc->Outputs().GetTags().size();
+        RET_CHECK(outputsCount >= cc->Outputs().GetTags().size());
         for (const auto& tag : cc->Outputs().GetTags()) {
             std::string tensorName;
             auto it = options.tag_to_output_tensor_names().find(tag);

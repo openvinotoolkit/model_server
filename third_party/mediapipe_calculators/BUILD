@@ -109,6 +109,15 @@ cc_library(
         "@mediapipe//mediapipe/calculators/video:box_detector_calculator",
         "@mediapipe//mediapipe/calculators/video:tracked_detection_manager_calculator",
         "@mediapipe//mediapipe/calculators/video:video_pre_stream_calculator",
+        # face detection
+        "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+        "@mediapipe//mediapipe/calculators/tensor:tensors_to_detections_calculator",
+
+        "@mediapipe//mediapipe/modules/face_detection:face_detection_full_range_sparse.tflite",
+ #       "@mediapipe//mediapipe/calculators/tensorflow:image_to_tensor_calculator",
+#        "@mediapipe//mediapipe/calculators/tensorflow:tensor_to_image_frame_calculator",
+#        "@mediapipe//mediapipe/calculators/tensorflow:object_detection_tensors_to_detections_calculator",
+  #      "@mediapipe//mediapipe/calculators/tensorflow:tensors_to_detections_calculator",
     ],
     linkstatic=1,
 )
