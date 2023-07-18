@@ -310,14 +310,15 @@ endif
 		--target=build
 
 targz_package:
-	DOCKER_BUILDKIT=1 docker build -f Dockerfile.$(BASE_OS) . \
+	docker build -f Dockerfile.$(BASE_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && \
-	docker run --rm $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
-			"tar -c -C / ovms.tar* ; sleep 2" | tar -x -C dist/$(DIST_OS)
+	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
+	docker cp $$ID:/ovms_pkg/$(DIST_OS) dist/ && \
+	docker rm $$ID
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
 

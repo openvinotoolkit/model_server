@@ -79,7 +79,9 @@ ls -lahR /ovms_release/
 find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --remove-rpath  {}  \;
 find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --set-rpath '$ORIGIN/../lib' {} \;
 
-cd /
+
+mkdir -p /ovms_pkg/${BASE_OS}
+cd /ovms_pkg/${BASE_OS}
 tar czf ovms.tar.gz --transform 's/ovms_release/ovms/' /ovms_release/
 sha256sum ovms.tar.gz > ovms.tar.gz.sha256 && \
 tar cJf ovms.tar.xz --transform 's/ovms_release/ovms/' /ovms_release/

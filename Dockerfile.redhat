@@ -370,7 +370,7 @@ ARG FUZZER_BUILD=0
 COPY create_package.sh /
 RUN ./create_package.sh
 
-RUN tar -xf ovms.tar.xz && groupadd --gid 5000 ovms && \
+RUN tar -xf /ovms_pkg/$BASE_OS/ovms.tar.xz && groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
     chown -R ovms:ovms /ovms
 RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
