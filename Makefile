@@ -32,6 +32,7 @@ HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
 JOBS ?= $(shell python3 -c 'import multiprocessing as mp; print(mp.cpu_count())')
 
+
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu redhat
 BASE_OS ?= ubuntu
@@ -139,7 +140,12 @@ ifeq ($(NVIDIA),1)
 endif
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2023.0.0"
+PRODUCT_VERSION ?= "2023.1.0"
+PROJECT_VER_PATCH =
+
+$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
+$(eval PROJECT_NAME:=${PRODUCT_NAME})
+$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})
 
 OVMS_CPP_CONTAINER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
 OVMS_CPP_CONTAINER_PORT ?= 9178
@@ -148,11 +154,38 @@ TEST_PATH ?= tests/functional/
 
 BUILD_CUSTOM_NODES ?= false
 
+BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
+	--build-arg https_proxy=$(HTTPS_PROXY)\
+	--build-arg no_proxy=$(NO_PROXY)\
+	--build-arg ov_source_branch=$(OV_SOURCE_BRANCH)\
+	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
+	--build-arg ov_contrib_org=$(OV_CONTRIB_ORG)\
+	--build-arg ov_use_binary=$(OV_USE_BINARY)\
+	--build-arg sentencepiece=$(SENTENCEPIECE)\
+	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
+	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
+	--build-arg RUN_TESTS=$(RUN_TESTS)\
+	--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
+	--build-arg build_type=$(BAZEL_BUILD_TYPE)\
+	--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS)\
+	--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)\
+	--build-arg minitrace_flags=$(MINITRACE_FLAGS)\
+	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
+	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
+	--build-arg NVIDIA=$(NVIDIA)\
+	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
+	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
+	--build-arg GPU=$(GPU)\
+	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
+	--build-arg JOBS=$(JOBS)
+
+
 .PHONY: default docker_build \
 
 default: docker_build
 
 venv:$(ACTIVATE)
+	@echo $(BUILD_ARGS)
 	@echo -n "Using venv "
 	@. $(ACTIVATE); python3 --version
 
@@ -237,7 +270,7 @@ ifeq ($(NVIDIA),1)
   ifeq ($(BASE_OS),redhat)
 	@echo "copying RH entitlements"
 	@cp -ru /etc/pki/entitlement .
-	@mkdir rhsm-ca
+	@mkdir -p rhsm-ca
 	@cp -u /etc/rhsm/ca/* rhsm-ca/
   endif
 endif
@@ -264,9 +297,6 @@ endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
-	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
-	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME})'
-	@bash -c '$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
 ifneq ($(OVMS_METADATA_FILE),)
 	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
 else
@@ -274,41 +304,15 @@ else
 endif
 	@cat .workspace/metadata.json
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
-		--build-arg http_proxy=$(HTTP_PROXY) \
-		--build-arg https_proxy=$(HTTPS_PROXY) \
-		--build-arg no_proxy=$(NO_PROXY) \
-		--build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
-		--build-arg ov_source_org="$(OV_SOURCE_ORG)" \
-		--build-arg ov_contrib_org="$(OV_CONTRIB_ORG)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) \
-		--build-arg sentencepiece=$(SENTENCEPIECE) \
-		--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
-		--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
-		--build-arg RUN_TESTS=$(RUN_TESTS)\
-		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
-		--build-arg build_type=$(BAZEL_BUILD_TYPE) \
-		--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
-		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
-		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
-		--build-arg PROJECT_NAME=${PROJECT_NAME} \
-		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg NVIDIA=$(NVIDIA) \
-		--build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
+		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--build-arg JOBS=$(JOBS) \
 		--target=build
 
 targz_package:
-	docker build -f Dockerfile.$(BASE_OS) . \
-		--build-arg http_proxy=$(HTTP_PROXY) \
-		--build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) \
-		--build-arg sentencepiece=$(SENTENCEPIECE) \
-		--build-arg BASE_OS=$(BASE_OS) \
-		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		--build-arg FUZZER_BUILD=$(FUZZER_BUILD) \
-		--build-arg NVIDIA=$(NVIDIA) \
+	DOCKER_BUILDKIT=1 docker build -f Dockerfile.$(BASE_OS) . \
+		$(BUILD_ARGS) \
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && \
@@ -319,26 +323,13 @@ targz_package:
 
 ovms_release_images:
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg no_proxy=$(NO_PROXY) \
-		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
-		--build-arg GPU=0 \
-		--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
-		--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
-		--build-arg NVIDIA=$(NVIDIA) \
+		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
-	DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
-    	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-    	--build-arg no_proxy=$(NO_PROXY) \
-    	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
-		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
-    	--build-arg GPU=1 \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
-		--build-arg PKG_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
-		--build-arg NVIDIA=$(NVIDIA) \
-    	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+		$(BUILD_ARGS) \
+		--build-arg GPU=1 \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
 ifeq ($(BUILD_NGINX), 1)
@@ -348,36 +339,8 @@ ifeq ($(BUILD_NGINX), 1)
 endif
 
 release_image:
-	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
-	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME})'
-	@bash -c '$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
-		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg no_proxy=$(NO_PROXY) \
-		--build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
-		--build-arg ov_source_org="$(OV_SOURCE_ORG)" \
-		--build-arg ov_contrib_org="$(OV_CONTRIB_ORG)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) \
-		--build-arg sentencepiece=$(SENTENCEPIECE) \
-		--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
-		--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE) \
-		--build-arg RUN_TESTS=$(RUN_TESTS)\
-		--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
-		--build-arg build_type=$(BAZEL_BUILD_TYPE) \
-		--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
-		--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
-		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
-		--build-arg PROJECT_NAME=${PROJECT_NAME} \
-		--build-arg PROJECT_VERSION=${PROJECT_VERSION} \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg BASE_OS=$(BASE_OS) \
-		--build-arg NVIDIA=$(NVIDIA) \
-		--build-arg ov_contrib_branch="$(OV_CONTRIB_BRANCH)" \
-		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
-		--build-arg GPU=${GPU} \
-		--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE) \
-		--build-arg NVIDIA=$(NVIDIA) \
-		--build-arg JOBS=$(JOBS) \
+		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 		--target=release
 ifeq ($(BUILD_NGINX), 1)
