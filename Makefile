@@ -312,7 +312,7 @@ endif
 targz_package:
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile.$(BASE_OS) . \
 		$(BUILD_ARGS) \
-		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && \
