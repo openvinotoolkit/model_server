@@ -80,6 +80,14 @@ TEST(TFSRestParserNoNamed, Parse2InputsRow) {
         StatusCode::INVALID_INPUT_FORMAT);
 }
 
+TEST(TFSRestParserNoNamed, Parse0InputsRow) {
+    TFSRestParser parser(prepareTensors({}));
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[1]})"), StatusCode::REST_INPUT_NOT_PREALLOCATED);
+}
+TEST(TFSRestParserNoNamed, Parse0InputsColumn) {
+    TFSRestParser parser(prepareTensors({}));
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[1]})"), StatusCode::REST_INPUT_NOT_PREALLOCATED);
+}
 TEST(TFSRestParserNoNamed, Parse2InputsColumn) {
     TFSRestParser parser(prepareTensors({{"first", {2}}, {"second", {3}}}));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[
