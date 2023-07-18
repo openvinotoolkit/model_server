@@ -15,7 +15,7 @@
 #
 FROM ubuntu:22.04 as BASE
 ARG DEBIAN_FRONTEND=noninteractive
-ARG JOBS=$nproc
+ARG JOBS
 RUN apt-get update -qq && apt-get --no-install-recommends -y install \
   autoconf \
   automake \

@@ -64,8 +64,8 @@ class StreamClient:
     def open_ffmpeg_stream_process(self, fps):
         args = (
             "ffmpeg -re -stream_loop -1 -f rawvideo -err_detect aggressive -fflags discardcorrupt -pix_fmt "
-                f"bgr24 -r {fps} -s {self.width}x{self.height} -i pipe:0 -cpu-used 6 -avioflags direct -deadline realtime -pix_fmt yuv420p -c:v libvpx "
-            f"-fflags nobuffer -b:v 1000k -f rtsp {self.sink}"
+                f"bgr24 -r {fps} -s {self.width}x{self.height} -i pipe:0 -cpu-used 6 -avioflags direct -deadline realtime -pix_fmt yuv420p -c:v libvpx -muxdelay 0.1 "
+            f"-b:v 90k -f rtsp {self.sink}"
         ).split()
         return subprocess.Popen(args, stdin=subprocess.PIPE) #nosec
 
