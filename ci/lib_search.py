@@ -123,7 +123,7 @@ def check_dir(start_dir):
         "package.json",
         ]
 
-    exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift', 'release_files/thirdparty-licenses']
+    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
 
     for (d_path, _, file_set) in os.walk(start_dir):
         for f_name in file_set:
@@ -202,7 +202,7 @@ def check_func(start_dir):
         'package.json',
     ]
 
-    exclude_directories = ['/dist/', 'extras/ovms-operator']
+    exclude_directories = ['/dist/']
 
     for (d_path, _, file_set) in os.walk(start_dir):
         for f_name in file_set:

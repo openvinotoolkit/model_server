@@ -1,8 +1,0 @@
-domain: com
-layout: helm.sdk.operatorframework.io/v1
-projectName: ovms-operator
-resources:
-- group: intel
-  kind: Ovms
-  version: v1alpha1
-version: 3-alpha
