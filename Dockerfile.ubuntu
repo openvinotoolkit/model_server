@@ -19,7 +19,6 @@ ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
 
 FROM $BASE_IMAGE as base_build
-ARG BASE_IMAGE
 LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
@@ -94,6 +93,7 @@ RUN ./install_opencv.sh
 
 ################### BASE BUILD ##########################
 FROM base_build as build
+ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 

@@ -353,7 +353,7 @@ COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
 RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO':'`/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3`', \
-    'BAZEL_FLAGS':'$debug_bazel_flags','FUZZER_BUILD':'$FUZZER_BUILD','BASE_IMAGE':'$BASE_IMAGE' }; \
+    'BAZEL_FLAGS':'$debug_bazel_flags','BASE_IMAGE':'$BASE_IMAGE' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
 RUN rm -Rf /etc/entitlement /etc/rhsm/ca
@@ -398,7 +398,8 @@ ARG GPU=0
 ARG debug_bazel_flags=
 LABEL bazel_params=${debug_bazel_flags}
 LABEL supported_devices="CPU=1 GNA=1 GPU=${GPU} NVIDIA=${NVIDIA}"
-LABEL base_image=${$RELEASE_BASE_IMAGE}
+ARG RELEASE_BASE_IMAGE
+LABEL base_image=${RELEASE_BASE_IMAGE}
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
