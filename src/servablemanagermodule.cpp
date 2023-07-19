@@ -27,8 +27,9 @@
 namespace ovms {
 
 ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
-    this->servableManager = std::make_unique<ModelManager>("", &dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))->getRegistry());
-    if (nullptr == ovmsServer.getModule(METRICS_MODULE_NAME)) {
+    if (auto metricsModule = dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))) {
+        this->servableManager = std::make_unique<ModelManager>("", &metricsModule->getRegistry());
+    } else {
         const char* message = "Tried to create servable manager module without metrics module";
         SPDLOG_ERROR(message);
         throw std::logic_error(message);

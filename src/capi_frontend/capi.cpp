@@ -14,14 +14,19 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdint>
+#include <exception>
 #include <iterator>
 #include <memory>
 #include <string>
 
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
+#include "../dags/pipelinedefinitionstatus.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#endif
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -80,6 +85,22 @@ void OVMS_StatusDelete(OVMS_Status* status) {
     delete reinterpret_cast<ovms::Status*>(status);
 }
 
+OVMS_Status* OVMS_ServerLive(OVMS_Server* serverPtr, bool* isLive) {
+    if (serverPtr == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
+    }
+    ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+    *isLive = server.isLive();
+    return nullptr;
+}
+OVMS_Status* OVMS_ServerReady(OVMS_Server* serverPtr, bool* isReady) {
+    if (serverPtr == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
+    }
+    ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+    *isReady = server.isReady();
+    return nullptr;
+}
 OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
     uint32_t* code) {
     if (status == nullptr)
@@ -759,6 +780,54 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     }
     SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
     *response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
+    return nullptr;
+}
+
+OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, OVMS_ServableState* state) {
+    if (serverPtr == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
+    }
+    if (servableName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable name"));
+    }
+    if (state == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable status"));
+    }
+    // TODO metrics
+    ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+    ModelManager* modelManager{nullptr};
+    auto status = getModelManager(server, &modelManager);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    std::shared_ptr<ovms::ModelInstance> modelInstance = modelManager->findModelInstance(servableName, servableVersion);
+
+    if (modelInstance == nullptr) {
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", servableName);
+        PipelineDefinition* pipelineDefinition = nullptr;
+        pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
+        if (!pipelineDefinition) {
+#if (MEDIAPIPE_DISABLE == 0)
+            ovms::MediapipeGraphDefinition* mediapipeDefinition = modelManager->getMediapipeFactory().findDefinitionByName(servableName);
+            if (mediapipeDefinition) {
+                *state = convertToServableState(mediapipeDefinition->getStateCode());
+                return nullptr;
+            }
+#endif
+            return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
+        }
+        *state = convertToServableState(pipelineDefinition->getStateCode());
+
+        return nullptr;
+    }
+    if (!status.ok()) {
+        if (modelInstance) {
+            //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
+        }
+        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    *state = modelInstance->getStatus().isFailedLoading() ? OVMS_STATE_LOADING_FAILED : static_cast<OVMS_ServableState>(static_cast<int>(modelInstance->getStatus().getState()) / 10 - 1);
     return nullptr;
 }
 
