@@ -1526,6 +1526,22 @@ public:
         }
         return true;
     }
+#if (MEDIAPIPE_DISABLE == 0)
+    void isKFSMetadataResponseCorrect(KFSModelMetadataResponse& response, SERVABLE_TYPE servableType) {
+        EXPECT_EQ(response.name(), pipelineName);
+        EXPECT_EQ(response.versions().size(), 1);
+        EXPECT_EQ(response.versions()[0], "1");
+        EXPECT_EQ(response.platform(), "OpenVINO");
+        EXPECT_EQ(response.inputs().size(), 1);
+        EXPECT_EQ(response.inputs()[0].name(), "custom_dummy_input");
+        EXPECT_EQ(response.inputs()[0].datatype(), "INVALID");
+        EXPECT_TRUE(isShapeTheSame(response.inputs()[0].shape(), std::move(std::vector<int64_t>{})));
+        EXPECT_EQ(response.outputs().size(), 1);
+        EXPECT_EQ(response.outputs()[0].name(), "custom_dummy_output");
+        EXPECT_EQ(response.outputs()[0].datatype(), "INVALID");
+        EXPECT_TRUE(isShapeTheSame(response.outputs()[0].shape(), std::move(std::vector<int64_t>{})));
+    }
+#endif
     template <
         typename RequestType = tensorflow::serving::GetModelMetadataRequest,
         typename ResponseType = tensorflow::serving::GetModelMetadataResponse,
@@ -1571,6 +1587,53 @@ public:
             }
         }
     }
+#if (MEDIAPIPE_DISABLE == 0)
+    template <
+        typename RequestType = KFSModelMetadataRequest,
+        typename ResponseType = KFSModelMetadataResponse,
+        typename ServableType = MediapipeGraphExecutor>
+    void triggerKFSGetPipelineMetadataInALoop(
+        std::future<void>& startSignal,
+        std::future<void>& stopSignal,
+        ModelManager& manager,
+        const std::set<StatusCode>& requiredLoadResults,
+        const std::set<StatusCode>& allowedLoadResults,
+        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
+        KFSModelMetadataRequest request;
+        request.set_name(getServableName());
+        startSignal.get();
+        // stressIterationsCounter is additional safety measure
+        auto stressIterationsCounter = stressIterationsLimit;
+        while (stressIterationsCounter-- > 0) {
+            auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
+            if (futureWaitResult == std::future_status::ready) {
+                SPDLOG_INFO("Got stop signal. Ending Load");
+                break;
+            }
+            KFSModelMetadataResponse response;
+            ovms::Server& server = ovms::Server::instance();
+            KFSInferenceServiceImpl impl(server);
+            auto status = impl.ModelMetadataImpl(nullptr, &request, &response, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata));
+            createPipelineRetCodesCounters[status.getCode()]++;
+            EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
+                        (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
+                << status.string() << "\n";
+            if (!status.ok()) {
+                continue;
+            }
+
+            SERVABLE_TYPE servableType = SERVABLE_TYPE::DAG;
+            if (typeid(ServableType) == typeid(MediapipeGraphExecutor)) {
+                servableType = SERVABLE_TYPE::MEDIAPIPE;
+            }
+            isKFSMetadataResponseCorrect(response, servableType);
+            if (::testing::Test::HasFailure()) {
+                SPDLOG_INFO("Earlier fail detected. Stopping execution");
+                break;
+            }
+        }
+    }
+#endif
     void triggerGetPipelineStatusInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
@@ -2177,7 +2240,7 @@ TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
 
 #if (MEDIAPIPE_DISABLE == 0)
 class StressMediapipeChanges : public StressPipelineConfigChanges {
-    const std::string modelName = "dummy";
+    const std::string modelName = PIPELINE_1_DUMMY_NAME;
     const std::string modelInputName = "b";
     const std::string modelOutputName = "a";
 
@@ -2253,6 +2316,139 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringPredictLoad) {
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &StressPipelineConfigChanges::reloadMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(StressMediapipeChanges, AddGraphDuringStatusLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::addNewMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveGraphDuringStatusLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::removeMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveModelDuringStatusLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM,  // Can happen when OVMSSessionCalculator fails to create side input packet
+    };
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::removeMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadModelDuringStatusLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::reloadMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringStatusLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::reloadMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, AddGraphDuringMetadataLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::addNewMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveGraphDuringMetadataLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::removeMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveModelDuringMetadataLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::removeMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadModelDuringMetadataLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::reloadMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringMetadataLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
         &StressPipelineConfigChanges::reloadMediapipeGraph,
         performWholeConfigReload,
         requiredLoadResults,
