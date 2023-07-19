@@ -80,12 +80,14 @@ ifeq ($(FUZZER_BUILD),1)
 	FUZZER_BUILD_PARAMS = " --define FUZZER_BUILD=1 --cxxopt=-DFUZZER_BUILD=1 "
 endif
 
+STRIP = "always"
 BAZEL_DEBUG_BUILD_FLAGS ?= ""
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
     BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg "
+	STRIP = "never"
 endif
 
-BAZEL_DEBUG_FLAGS=" --strip=never "$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(FUZZER_BUILD_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP) "$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(FUZZER_BUILD_PARAMS)
 
 ifeq ($(MINITRACE),ON)
   MINITRACE_FLAGS="--copt=-DMTR_ENABLED"
@@ -306,7 +308,6 @@ endif
 	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		--build-arg JOBS=$(JOBS) \
 		--target=build
 
 targz_package:

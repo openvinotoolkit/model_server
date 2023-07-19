@@ -72,6 +72,7 @@ find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIG
 
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/
+cp -v /ovms/release_files/metadata.json /ovms_release/
 cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
 mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
 ls -lahR /ovms_release/
