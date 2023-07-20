@@ -316,11 +316,11 @@ ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 
 # Set OVMS version strings
-RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
-RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp"
-RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
-RUN bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}|g' /ovms/src/version.hpp"
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp" && \
+    bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
+    if [ "$ov_use_binary" = "1" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp ; fi && \
+    if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
+    bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}|g' /ovms/src/version.hpp"
 
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
@@ -358,8 +358,8 @@ RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
-RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'`/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3`', \
-    'BAZEL_BUILD_FLAGS':'$debug_bazel_flags','BASE_IMAGE':'$BASE_IMAGE' }; \
+RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
+    'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
 RUN rm -Rf /etc/entitlement /etc/rhsm/ca
@@ -401,10 +401,10 @@ ARG INSTALL_DRIVER_VERSION="22.43.24595"
 ARG NVIDIA=0
 ARG GPU=0
 ARG debug_bazel_flags=
-LABEL bazel_params=${debug_bazel_flags}
-LABEL supported_devices="CPU=1 GNA=1 GPU=${GPU} NVIDIA=${NVIDIA}"
+LABEL bazel-build-flags=${debug_bazel_flags}
+LABEL supported-devices="CPU=1 GNA=1 GPU=${GPU} NVIDIA=${NVIDIA}"
 ARG RELEASE_BASE_IMAGE
-LABEL base_image=${RELEASE_BASE_IMAGE}
+LABEL base-image=${RELEASE_BASE_IMAGE}
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
