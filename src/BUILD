@@ -687,7 +687,6 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-        "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_east_ocr.so",
         "//src:libcustom_node_face_blur.so",
         "//src:libcustom_node_horizontal_ocr.so",

@@ -73,27 +73,29 @@ MINITRACE ?= OFF
 
 DISABLE_MEDIAPIPE_PARAMS ?= ""
 ifeq ($(MEDIAPIPE_DISABLE),1)
-	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 "
+	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1"
 endif
 FUZZER_BUILD_PARAMS ?= ""
 ifeq ($(FUZZER_BUILD),1)
-	FUZZER_BUILD_PARAMS = " --define FUZZER_BUILD=1 --cxxopt=-DFUZZER_BUILD=1 "
+	FUZZER_BUILD_PARAMS = " --define FUZZER_BUILD=1 --cxxopt=-DFUZZER_BUILD=1"
 endif
 
 STRIP = "always"
 BAZEL_DEBUG_BUILD_FLAGS ?= ""
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
-    BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg "
+    BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg"
 	STRIP = "never"
 endif
 
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP) "$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(FUZZER_BUILD_PARAMS)
-
 ifeq ($(MINITRACE),ON)
-  MINITRACE_FLAGS="--copt=-DMTR_ENABLED"
+  MINITRACE_FLAGS=" --copt=-DMTR_ENABLED"
 else
   MINITRACE_FLAGS=""
 endif
+
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(FUZZER_BUILD_PARAMS)$(MINITRACE_FLAGS)
+
+
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -168,10 +170,8 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
 	--build-arg RUN_TESTS=$(RUN_TESTS)\
 	--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
-	--build-arg build_type=$(BAZEL_BUILD_TYPE)\
 	--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS)\
 	--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)\
-	--build-arg minitrace_flags=$(MINITRACE_FLAGS)\
 	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg NVIDIA=$(NVIDIA)\

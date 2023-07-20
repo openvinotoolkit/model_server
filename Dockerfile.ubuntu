@@ -23,7 +23,7 @@ LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG JOBS
+ARG JOBS=8
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install --no-install-recommends -y \
             build-essential \
@@ -137,9 +137,6 @@ ARG ov_contrib_branch=master
 ARG APT_OV_PACKAGE=openvino-2022.1.0
 ARG CMAKE_BUILD_TYPE=Release
 
-# build_type=[ opt, dbg ]
-ARG build_type=opt
-ARG minitrace_flags
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
@@ -301,6 +298,15 @@ COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classi
 
 COPY src/ /ovms/src/
 
+# Compile tokenizer custom node
+WORKDIR /ovms/src/custom_nodes/tokenizer/build
+RUN cp /ovms/src/custom_node_interface.h /ovms/src/custom_nodes/tokenizer/ && \
+    cp -r /ovms/src/custom_nodes/common /ovms/src/custom_nodes/tokenizer/ && \
+    cmake -DWITH_TESTS=1 .. && \
+    make -j${JOBS} && \
+    ./test/detokenization_test && \
+    ./test/tokenization_test 
+
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
@@ -313,10 +319,10 @@ LABEL description=${PROJECT_NAME}
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
-RUN if [ "$build_type" == "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}-debug|g' /ovms/src/version.hpp" ; else bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" ; fi ;
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp"
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
-RUN bash -c "sed -i -e 's|REPLACE_BUILD_PARAMS|${debug_bazel_flags}|g' /ovms/src/version.hpp"
+RUN bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}|g' /ovms/src/version.hpp"
 
 
 # Test Coverage
@@ -340,7 +346,7 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs 
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"; fi;
 
 # OVMS
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms; fi;
 
 # hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
@@ -357,8 +363,8 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then /ovms/bazel-bin/src/ovms --version && /o
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
-RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO':'`/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3`', \
-    'BAZEL_FLAGS':'$debug_bazel_flags','FUZZER_BUILD':'$FUZZER_BUILD','BASE_IMAGE':'$BASE_IMAGE' }; \
+RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'`/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3`', \
+    'BAZEL_BUILD_FLAGS':'$debug_bazel_flags','BASE_IMAGE':'$BASE_IMAGE' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -378,12 +384,11 @@ ARG FUZZER_BUILD=0
 COPY create_package.sh /
 RUN ./create_package.sh
 
-RUN tar -xf /ovms_pkg/$BASE_OS/ovms.tar.xz && groupadd --gid 5000 ovms && \
-    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
-    chown -R ovms:ovms /ovms
-RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
+RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
+    chown -R ovms:ovms /ovms_release
+RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
 # Remove capi library
-RUN if [ -f /ovms/lib/libovms_shared.so ] ; then rm -rf  /ovms/lib/libovms_shared.so ; else exit 0 ; fi ;
+RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then rm -rf  /ovms_release/lib/libovms_shared.so ; fi ;
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
@@ -492,7 +497,7 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
     apt-get update && apt-get install -y --no-install-recommends libcudnn8=8.8.0.121-1+cuda11.8 libcutensor1=1.6.1.5-1 libpng16-16 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
-COPY --from=pkg /ovms /ovms
+COPY --from=pkg /ovms_release /ovms
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
