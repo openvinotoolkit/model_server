@@ -59,6 +59,55 @@ TEST(TFSRestParserNoNamed, RowOrder_2x1x3x1x5) {
                                                                 1, 2, 3, 4, 5));
 }
 
+TEST(TFSRestParserNoNamed, Parse2InputsRow) {
+    TFSRestParser parser(prepareTensors({{"first", {2}}, {"second", {3}}}));
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        [
+            [
+                [[1, 2, 3, 4, 5]],
+                [[1, 2, 3, 4, 5]],
+                [[1, 2, 3, 4, 5]]
+            ]
+        ],
+        [
+            [
+                [[1, 2, 3, 4, 5]],
+                [[1, 2, 3, 4, 5]],
+                [[1, 2, 3, 4, 5]]
+            ]
+        ]
+    ]})"),
+        StatusCode::INVALID_INPUT_FORMAT);
+}
+
+TEST(TFSRestParserNoNamed, Parse0InputsRow) {
+    TFSRestParser parser(prepareTensors({}));
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[1]})"), StatusCode::REST_INPUT_NOT_PREALLOCATED);
+}
+TEST(TFSRestParserNoNamed, Parse0InputsColumn) {
+    TFSRestParser parser(prepareTensors({}));
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[1]})"), StatusCode::REST_INPUT_NOT_PREALLOCATED);
+}
+TEST(TFSRestParserNoNamed, Parse2InputsColumn) {
+    TFSRestParser parser(prepareTensors({{"first", {2}}, {"second", {3}}}));
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[
+        [
+            [
+                [[1, 2, 3, 4, 5]],
+                [[1, 2, 3, 4, 5]],
+                [[1, 2, 3, 4, 5]]
+            ]
+        ],
+        [
+            [
+                [[1, 2, 3, 4, 5]],
+                [[1, 2, 3, 4, 5]],
+                [[1, 2, 3, 4, 5]]
+            ]
+        ]
+    ]})"),
+        StatusCode::INVALID_INPUT_FORMAT);
+}
 TEST(TFSRestParserNoNamed, RowOrder_5) {
     TFSRestParser parser(prepareTensors({{"my_input", {5}}}));
 
