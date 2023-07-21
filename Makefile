@@ -369,7 +369,7 @@ test_checksec:
 	@echo "Running checksec on libovms_shared library..."
 	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
 	@docker create -ti --name $(OVMS_CPP_CONTAINER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
-	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms_release/lib/libovms_shared.so /tmp
+	@docker cp $(OVMS_CPP_CONTAINER_NAME):/libovms_shared.so /tmp
 	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms_release/bin/ovms /tmp
 	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
 	@checksec --file=/tmp/libovms_shared.so --format=csv > checksec.txt

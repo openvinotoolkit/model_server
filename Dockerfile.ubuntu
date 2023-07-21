@@ -388,7 +388,7 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
     chown -R ovms:ovms /ovms_release
 RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
 # Remove capi library
-RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then rm -rf  /ovms_release/lib/libovms_shared.so ; fi ;
+RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; fi ;
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
