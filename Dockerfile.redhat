@@ -117,6 +117,7 @@ ARG JOBS=40
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             gdb \
             java-11-openjdk-devel \
+            tzdata-java \
             libgusb.x86_64 \
             libusbx \
             libtool \
