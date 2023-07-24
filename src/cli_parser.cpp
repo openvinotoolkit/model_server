@@ -169,6 +169,7 @@ void CLIParser::parse(int argc, char** argv) {
             std::string project_version(PROJECT_VERSION);
             std::cout << project_name + " " + project_version << std::endl;
             std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
+            std::cout << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
             exit(EX_OK);
         }
 
