@@ -23,13 +23,41 @@ import subprocess #nosec
 from enum import Enum
 import numpy as np
 
+class OutputBackend:
+    def init(self, sink, fps, width, height):
+        pass
+    def write(self, frame):
+        pass
+    def release(self):
+        pass
+
+class FfmpegOutputBackend(OutputBackend):
+    def init(self, sink, fps, width, height):
+        args = (
+            "ffmpeg -re -stream_loop -1 -f rawvideo -err_detect aggressive -fflags discardcorrupt -pix_fmt "
+                f"bgr24 -r {fps} -s {width}x{height} -i pipe:0 -cpu-used 6 -avioflags direct -deadline realtime -pix_fmt yuv420p -c:v libvpx -muxdelay 0.1 "
+            f"-b:v 90k -f rtsp {sink}"
+        ).split()
+        self.process = subprocess.Popen(args, stdin=subprocess.PIPE) #nosec
+    def write(self, frame):
+        self.process.stdin.write(frame.astype(np.uint8).tobytes())
+    def release(self):
+        self.process.kill()
+
+class CvOutputBackend(OutputBackend):
+    def init(self, sink, fps, width, height):
+        self.cv_sink = cv2.VideoWriter(sink, cv2.VideoWriter_fourcc(*'avc1'), fps, (width,height))
+    def write(self, frame):
+        self.cv_sink.write(frame)
+    def release(self):
+        self.cv_sink.release()
+
 class StreamClient:
-    class OutputBackend(Enum):
-        ffmpeg = 1
-        cv2 = 2
-        other = 3
-        none = 0
-    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend = OutputBackend.ffmpeg, other_stream_sink = None, verbose = False):
+    class OutputBackends():
+        ffmpeg = FfmpegOutputBackend()
+        cv2 = CvOutputBackend()
+        none = OutputBackend()
+    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend :OutputBackend = OutputBackends.ffmpeg, other_stream_sink = None, verbose = False, exact = True):
         self.preprocess_callback = preprocess_callback
         self.postprocess_callback = postprocess_callback
         self.force_exit = False
@@ -40,6 +68,7 @@ class StreamClient:
         self.output_backend = output_backend
         self.stream_sink = other_stream_sink
         self.verbose = verbose
+        self.exact = exact
 
         self.pq = queue.PriorityQueue()
 
@@ -61,33 +90,26 @@ class StreamClient:
         if error is not None and self.verbose == True:
             print(error)
 
-    def open_ffmpeg_stream_process(self, fps):
-        args = (
-            "ffmpeg -re -stream_loop -1 -f rawvideo -err_detect aggressive -fflags discardcorrupt -pix_fmt "
-                f"bgr24 -r {fps} -s {self.width}x{self.height} -i pipe:0 -cpu-used 6 -avioflags direct -deadline realtime -pix_fmt yuv420p -c:v libvpx -muxdelay 0.1 "
-            f"-b:v 90k -f rtsp {self.sink}"
-        ).split()
-        return subprocess.Popen(args, stdin=subprocess.PIPE) #nosec
-
     def display(self):
         i = 0 
         while True:
             if self.pq.empty():
                 continue
             entry = self.pq.get()
-            if entry[0] > i:
+            if (entry[0] == i and self.exact) or (entry[0] > i and self.exact is not True):
+                if isinstance(entry[1], str) and entry[1] == "EOS":
+                    break
                 frame = entry[1]
-                if self.output_backend.value == self.OutputBackend.ffmpeg.value:
-                    self.ffmpeg_process.stdin.write(frame.astype(np.uint8).tobytes())
-                elif self.output_backend.value == self.OutputBackend.cv2.value:
-                    self.cv_sink.write(frame)
-                elif self.output_backend.value == self.OutputBackend.other.value:
-                    self.stream_sink(frame)
-
-                i = entry[0]
+                self.output_backend.write(frame)
+                if self.exact:
+                    i += 1
+                else:
+                    i = entry[0]
+            elif self.exact:
+                self.pq.put(entry)
 
     def start(self, *, ovms_address, input_name, model_name):
-        self.cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG)
+        self.cap = cv2.VideoCapture(self.source, cv2.CAP_ANY)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
         fps = self.cap.get(cv2.CAP_PROP_FPS)
         triton_client = grpcclient.InferenceServerClient(url=ovms_address, verbose=False)
@@ -103,27 +125,23 @@ class StreamClient:
                 self.width = np_test_frame.shape[0]
             if self.height is None:
                 self.height = np_test_frame.shape[1]
-        if self.output_backend.value == self.OutputBackend.ffmpeg.value:
-            self.ffmpeg_process = self.open_ffmpeg_stream_process(fps)
-        elif self.output_backend.value == self.OutputBackend.cv2.value:
-            self.cv_sink = cv2.VideoWriter(self.sink)
+        self.output_backend.init(self.sink, fps, self.width, self.height)
             
         i = 0
         while not self.force_exit:
             frame = self.grab_frame()
             if frame is not None:
                 np_frame = np.array([frame], dtype=np.float32)
-                inputs=[grpcclient.InferInput( input_name, np_frame.shape, "FP32")]
+                inputs=[grpcclient.InferInput(input_name, np_frame.shape, "FP32")]
                 inputs[0].set_data_from_numpy(np_frame)
                 triton_client.async_infer(
                     model_name=model_name,
                     callback=partial(self.callback, frame, i),
                     inputs=inputs)
                 i += 1
+        self.pq.put((i, "EOS"))
 
         self.cap.release()
-        if self.output_backend.value == self.OutputBackend.ffmpeg.value:
-            self.ffmpeg_process.kill()
-        elif self.output_backend.value == self.OutputBackend.cv2.value:
-            self.cv_sink.release()
+        display_th.join()
+        self.output_backend.release()
         print(f"Finished.")

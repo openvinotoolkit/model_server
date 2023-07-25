@@ -80,6 +80,12 @@ def postprocess(frame, result):
                 print((x_min,y_min), (x_max,y_max))
     return frame
 
-client = StreamClient(postprocess_callback = postprocess, preprocess_callback=preprocess, source=args.input_stream, sink=args.output_stream)
+if args.output_stream[:4] == "rtsp":
+    backend = StreamClient.OutputBackends.ffmpeg
+    exact = False
+else:
+    backend = StreamClient.OutputBackends.cv2
+    exact = True
+client = StreamClient(postprocess_callback = postprocess, preprocess_callback=preprocess, output_backend=backend, source=args.input_stream, sink=args.output_stream, exact=exact)
 client.start(ovms_address=args.grpc_address, input_name=args.input_name, model_name=args.model_name)
 

@@ -197,7 +197,7 @@ docker build . -t rtsp_client
 - Command
 
 ```bash
-docker run --network="host" rtsp_client --help
+docker run rtsp_client --help
 usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
                       [--input_stream INPUT_STREAM]
                       [--output_stream OUTPUT_STREAM]
@@ -217,7 +217,7 @@ options:
                         Name of the model
   --width WIDTH         Width of model's input image
   --height HEIGHT       Height of model's input image
-  --verbose VERBOSE     Height of model's input image
+  --verbose VERBOSE     Should client dump debug information
   --input_name INPUT_NAME
                         Name of the model's input
 ```
@@ -228,3 +228,8 @@ options:
 docker run rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
 
+One might as well use prerecorded video and schedule it for inference.
+
+```bash
+docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/horizontal_text.mp4' --output_stream 'workspace/output.mp4'
+```

@@ -55,8 +55,13 @@ RUN apt-get update -qq && apt-get --no-install-recommends -y install \
   libswresample-dev \
   libdav1d-dev \
   python3-pip \ 
+  gstreamer1.0* \
+  libx264-dev \ 
+  libx265-dev \
+  libgstreamer1.0-dev \
+  libgstreamer-plugins-base1.0-dev \
   && rm -rf /var/lib/apt/lists/*
-RUN pip3 install tritonclient[all] numpy==1.24.3
+RUN pip3 install numpy==1.24.3
 RUN git clone https://github.com/oneapi-src/oneVPL.git onevpl && \
   cd onevpl && \
   export VPL_INSTALL_DIR=`pwd`/../_vplinstall && \
@@ -76,14 +81,14 @@ RUN cp _vplinstall/lib/libvpl.so.2.9 /lib/libvpl.so
 RUN ln -s /lib/libvpl.so /lib/libvpl.so.2
 RUN git clone https://github.com/FFmpeg/FFmpeg.git /ffmpeg && \
     cd ffmpeg && \
-    ./configure --enable-libvpl --toolchain=gcc-tsan --enable-gpl --enable-libvpx --enable-zlib  --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/lib64/pkgconfig --incdir=/usr/include && \
+    ./configure --enable-libvpl --toolchain=gcc-tsan --enable-gpl --enable-libvpx --enable-zlib  --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/lib64/pkgconfig --enable-libx264 --enable-libx265 --incdir=/usr/include && \
     make -j $JOBS && \
     make install
 RUN git clone https://github.com/opencv/opencv.git /opencv && \
     cd /opencv && \
     mkdir build && \
     cd build && \
-    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_FFMPEG=ON -D BUILD_SHARED_LIBS=OFF \
+    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_FFMPEG=ON -D BUILD_SHARED_LIBS=OFF -D WITH_GSTREAMER=ON \
   -DPYTHON_EXECUTABLE=$(which python) -DBUILD_opencv_python2=OFF \
   -DCMAKE_INSTALL_PREFIX=$(python3 -c "import sys; print(sys.prefix)") \
   -DPYTHON3_EXECUTABLE=$(which python3) \
@@ -104,7 +109,7 @@ RUN ln -s /lib/libvpl.so /lib/libvpl.so.2
 COPY --from=BASE /lib64 /lib64
 COPY --from=BASE /cvlib /lib/x86_64-linux-gnu/
 COPY --from=BASE /fflib /lib/x86_64-linux-gnu/
-RUN apt-get update -qq && apt-get --no-install-recommends -y install python3 python3-pip libavcodec58 libavformat58 libswscale5 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -qq && apt-get --no-install-recommends -y install python3 python3-pip libavcodec58 libavformat58 libswscale5 libgstreamer-opencv1.0-0 gstreamer1.0* && rm -rf /var/lib/apt/lists/*
 RUN pip3 install tritonclient[grpc] numpy==1.24.3
 RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
 COPY ./rtsp_client.py ./rtsp_client.py 
