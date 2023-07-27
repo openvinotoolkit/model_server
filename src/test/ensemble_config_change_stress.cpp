@@ -2439,7 +2439,6 @@ TEST_F(StressMediapipeChanges, ReloadModelDuringMetadataLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringMetadataLoad) {
-    // we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
