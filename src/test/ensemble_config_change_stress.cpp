@@ -1526,6 +1526,22 @@ public:
         }
         return true;
     }
+#if (MEDIAPIPE_DISABLE == 0)
+    void isKFSMetadataResponseCorrect(KFSModelMetadataResponse& response, SERVABLE_TYPE servableType) {
+        EXPECT_EQ(response.name(), pipelineName);
+        EXPECT_EQ(response.versions().size(), 1);
+        EXPECT_EQ(response.versions()[0], "1");
+        EXPECT_EQ(response.platform(), "OpenVINO");
+        EXPECT_EQ(response.inputs().size(), 1);
+        EXPECT_EQ(response.inputs()[0].name(), "custom_dummy_input");
+        EXPECT_EQ(response.inputs()[0].datatype(), "INVALID");
+        EXPECT_TRUE(isShapeTheSame(response.inputs()[0].shape(), std::move(std::vector<int64_t>{})));
+        EXPECT_EQ(response.outputs().size(), 1);
+        EXPECT_EQ(response.outputs()[0].name(), "custom_dummy_output");
+        EXPECT_EQ(response.outputs()[0].datatype(), "INVALID");
+        EXPECT_TRUE(isShapeTheSame(response.outputs()[0].shape(), std::move(std::vector<int64_t>{})));
+    }
+#endif
     template <
         typename RequestType = tensorflow::serving::GetModelMetadataRequest,
         typename ResponseType = tensorflow::serving::GetModelMetadataResponse,
@@ -1571,6 +1587,53 @@ public:
             }
         }
     }
+#if (MEDIAPIPE_DISABLE == 0)
+    template <
+        typename RequestType = KFSModelMetadataRequest,
+        typename ResponseType = KFSModelMetadataResponse,
+        typename ServableType = MediapipeGraphExecutor>
+    void triggerKFSGetPipelineMetadataInALoop(
+        std::future<void>& startSignal,
+        std::future<void>& stopSignal,
+        ModelManager& manager,
+        const std::set<StatusCode>& requiredLoadResults,
+        const std::set<StatusCode>& allowedLoadResults,
+        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
+        KFSModelMetadataRequest request;
+        request.set_name(getServableName());
+        startSignal.get();
+        // stressIterationsCounter is additional safety measure
+        auto stressIterationsCounter = stressIterationsLimit;
+        while (stressIterationsCounter-- > 0) {
+            auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
+            if (futureWaitResult == std::future_status::ready) {
+                SPDLOG_INFO("Got stop signal. Ending Load");
+                break;
+            }
+            KFSModelMetadataResponse response;
+            ovms::Server& server = ovms::Server::instance();
+            KFSInferenceServiceImpl impl(server);
+            auto status = impl.ModelMetadataImpl(nullptr, &request, &response, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata));
+            createPipelineRetCodesCounters[status.getCode()]++;
+            EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
+                        (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
+                << status.string() << "\n";
+            if (!status.ok()) {
+                continue;
+            }
+
+            SERVABLE_TYPE servableType = SERVABLE_TYPE::DAG;
+            if (typeid(ServableType) == typeid(MediapipeGraphExecutor)) {
+                servableType = SERVABLE_TYPE::MEDIAPIPE;
+            }
+            isKFSMetadataResponseCorrect(response, servableType);
+            if (::testing::Test::HasFailure()) {
+                SPDLOG_INFO("Earlier fail detected. Stopping execution");
+                break;
+            }
+        }
+    }
+#endif
     void triggerGetPipelineStatusInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
@@ -1738,7 +1801,7 @@ public:
 
 TEST_F(StressPipelineConfigChanges, AddNewVersionDuringPredictLoad) {
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -1749,7 +1812,7 @@ TEST_F(StressPipelineConfigChanges, AddNewVersionDuringPredictLoad) {
 }
 TEST_F(StressPipelineConfigChanges, KFSAddNewVersionDuringPredictLoad) {
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         // XYZ &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -1761,7 +1824,7 @@ TEST_F(StressPipelineConfigChanges, KFSAddNewVersionDuringPredictLoad) {
 }
 TEST_F(StressPipelineConfigChanges, GetMetricsDuringLoad) {
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -1788,7 +1851,7 @@ TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringPredictLoad) {
 }
 TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringPredictLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -1811,7 +1874,7 @@ TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringPredictLoad) {
 }
 TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionNameDuringPredictLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -1822,7 +1885,7 @@ TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionNameDuringPredictLo
 }
 TEST_F(StressPipelineConfigChanges, AddedNewPipelineDuringPredictLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -1836,7 +1899,7 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringPredictLoad) 
     // then we add version 2 causing previous default to be retired
     SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
     bool performWholeConfigReload = false;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,          // we hit when all config changes finish to propagate
         StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};           // version is retired but pipeline not invalidated yet
     std::set<StatusCode> allowedLoadResults = {};
@@ -1849,7 +1912,7 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringPredictLoad) 
 }
 TEST_F(StressPipelineConfigChanges, AddNewVersionDuringGetMetadataLoad) {
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -1874,7 +1937,7 @@ TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringGetMetadataLoad) {
 }
 TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringGetMetadataLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -1897,7 +1960,7 @@ TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringGetMetadataLoa
 }
 TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionNameDuringGetMetadataLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -1908,7 +1971,7 @@ TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionNameDuringGetMetada
 }
 TEST_F(StressPipelineConfigChanges, AddedNewPipelineDuringGetMetadataLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -1922,7 +1985,7 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLo
     // then we add version 2 causing previous default to be retired
     SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
     bool performWholeConfigReload = false;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
@@ -1947,7 +2010,7 @@ public:
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
@@ -1961,7 +2024,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -1974,7 +2037,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCust
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -1987,7 +2050,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueueSizeCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -2000,7 +2063,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueu
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQueueSizeCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -2013,7 +2076,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQu
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
@@ -2027,7 +2090,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -2040,7 +2103,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCust
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -2053,7 +2116,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueueSizeCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -2066,7 +2129,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueu
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQueueSizeCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -2110,7 +2173,7 @@ public:
 TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
@@ -2125,7 +2188,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPre
     // correctness of this operation - no segfaults etc.
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
@@ -2137,7 +2200,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPre
 TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
@@ -2150,7 +2213,7 @@ TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringGetMetad
 TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation most of the time
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation most of the time
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -2163,7 +2226,7 @@ TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
         StatusCode::MODEL_NAME_MISSING,  // until first model is loaded
-        StatusCode::OK};                 // we expect full continuouity of operation
+        StatusCode::OK};                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {
         StatusCode::MODEL_VERSION_MISSING  // this should be hit if test is stressing enough, sporadically does not happen
     };
@@ -2177,7 +2240,7 @@ TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
 
 #if (MEDIAPIPE_DISABLE == 0)
 class StressMediapipeChanges : public StressPipelineConfigChanges {
-    const std::string modelName = "dummy";
+    const std::string modelName = PIPELINE_1_DUMMY_NAME;
     const std::string modelInputName = "b";
     const std::string modelOutputName = "a";
 
@@ -2193,7 +2256,7 @@ TEST_F(StressMediapipeChanges, AddGraphDuringPredictLoad) {
     // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
@@ -2206,7 +2269,7 @@ TEST_F(StressMediapipeChanges, RemoveGraphDuringPredictLoad) {
     // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
         StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE};    // we expect to stop creating pipelines
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
@@ -2220,7 +2283,7 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringPredictLoad) {
     // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
         StatusCode::MEDIAPIPE_EXECUTION_ERROR};                  // we expect to stop creating pipelines
     std::set<StatusCode> allowedLoadResults = {
         StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM,  // Can happen when OVMSSessionCalculator fails to create side input packet
@@ -2236,7 +2299,7 @@ TEST_F(StressMediapipeChanges, ReloadModelDuringPredictLoad) {
     // we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
@@ -2249,7 +2312,7 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringPredictLoad) {
     // we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
@@ -2258,6 +2321,133 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringPredictLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
-// TODO status
-// TODO metadata
+
+TEST_F(StressMediapipeChanges, AddGraphDuringStatusLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::addNewMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveGraphDuringStatusLoad) {
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::removeMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveModelDuringStatusLoad) {
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::removeMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadModelDuringStatusLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::reloadMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringStatusLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::reloadMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, AddGraphDuringMetadataLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::addNewMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveGraphDuringMetadataLoad) {
+    // we add another definition during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE};
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::removeMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, RemoveModelDuringMetadataLoad) {
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET};
+    // TODO remove MEDIAPIPE_DEFINITION_NOT_LOADED_YET from allowed list
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::removeMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadModelDuringMetadataLoad) {
+    // we change nireq during load
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET};
+    // TODO remove MEDIAPIPE_DEFINITION_NOT_LOADED_YET from allowed list
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::reloadMediapipeGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringMetadataLoad) {
+    SetUpConfig(basicMediapipeConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerKFSGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::reloadMediapipeGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
 #endif
