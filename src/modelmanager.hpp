@@ -84,21 +84,14 @@ protected:
     MediapipeFactory mediapipeFactory;
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
-
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
-
     GlobalSequencesViewer globalSequencesViewer;
-
     uint32_t waitForModelLoadedTimeoutMs;
 
 private:
     bool watcherStarted = false;
     bool cleanerStarted = false;
 
-    /**
-     * @brief 
-     * 
-     */
     ModelManager(const ModelManager&) = delete;
 
     Status lastLoadConfigStatus = StatusCode::OK;
