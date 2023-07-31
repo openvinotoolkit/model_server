@@ -41,6 +41,7 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
 #include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
+#include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -185,6 +186,127 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_default_subconfig.json");
     }
 };
+
+class MediapipeFlowImageInput : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_image_input.json");
+    }
+
+    void PerformTestWithGivenDatatype(KFSDataType datatype) {
+        const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+        KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+        ::KFSRequest request;
+        ::KFSResponse response;
+        const std::string modelName = "mediapipeImageInput";
+        request.Clear();
+        response.Clear();
+        cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+        ASSERT_TRUE(!imageRaw.empty());
+        cv::Mat image;
+        size_t matFormat = 0;
+        ASSERT_EQ(convertKFSDataTypeToMatFormat(datatype, matFormat), StatusCode::OK);
+        size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 3);
+        imageRaw.convertTo(image, matFormatWithChannels);
+
+        KFSTensorInputProto* input = request.add_inputs();
+        input->set_name("in");
+        input->set_datatype(datatype);
+        input->mutable_shape()->Clear();
+        input->add_shape(image.rows);
+        input->add_shape(image.cols);
+        input->add_shape(image.channels());
+
+        std::string* content = request.add_raw_input_contents();
+        size_t elementSize = image.elemSize1();
+        content->resize(image.cols * image.rows * image.channels() * elementSize);
+        std::memcpy(content->data(), image.data, image.cols * image.rows * image.channels() * elementSize);
+        request.mutable_model_name()->assign(modelName);
+        ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+        ASSERT_EQ(response.model_name(), modelName);
+        ASSERT_EQ(response.outputs_size(), 1);
+        ASSERT_EQ(response.outputs()[0].shape().size(), 3);
+        ASSERT_EQ(response.outputs()[0].shape()[0], image.cols);
+        ASSERT_EQ(response.outputs()[0].shape()[1], image.rows);
+        ASSERT_EQ(response.outputs()[0].shape()[2], image.channels());
+        ASSERT_EQ(response.raw_output_contents_size(), 1);
+        ASSERT_EQ(response.raw_output_contents()[0].size(), image.cols * image.rows * image.channels() * elementSize);
+        ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
+    }
+
+    void PerformTestWithGivenDatatypeOneChannel(KFSDataType datatype) {
+        const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+        KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+        ::KFSRequest request;
+        ::KFSResponse response;
+        const std::string modelName = "mediapipeImageInput";
+        request.Clear();
+        response.Clear();
+        cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/grayscale.jpg", cv::IMREAD_UNCHANGED);
+        ASSERT_TRUE(!imageRaw.empty());
+        cv::Mat grayscaled;
+        size_t matFormat = 0;
+        ASSERT_EQ(convertKFSDataTypeToMatFormat(datatype, matFormat), StatusCode::OK);
+        size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 1);
+        imageRaw.convertTo(grayscaled, matFormatWithChannels);
+
+        KFSTensorInputProto* input = request.add_inputs();
+        input->set_name("in");
+        input->set_datatype(datatype);
+        input->mutable_shape()->Clear();
+        input->add_shape(grayscaled.rows);
+        input->add_shape(grayscaled.cols);
+        input->add_shape(grayscaled.channels());
+
+        std::string* content = request.add_raw_input_contents();
+        size_t elementSize = grayscaled.elemSize1();
+        content->resize(grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize);
+        std::memcpy(content->data(), grayscaled.data, grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize);
+        request.mutable_model_name()->assign(modelName);
+        ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+        ASSERT_EQ(response.model_name(), modelName);
+        ASSERT_EQ(response.outputs_size(), 1);
+        ASSERT_EQ(response.raw_output_contents_size(), 1);
+        ASSERT_EQ(response.raw_output_contents()[0].size(), grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize);
+        ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), grayscaled.data, grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize));
+    }
+};
+
+TEST_F(MediapipeFlowImageInput, UINT8) {
+    PerformTestWithGivenDatatype("UINT8");
+}
+
+TEST_F(MediapipeFlowImageInput, UINT16) {
+    PerformTestWithGivenDatatype("UINT16");
+}
+
+TEST_F(MediapipeFlowImageInput, INT8) {
+    PerformTestWithGivenDatatype("INT8");
+}
+
+TEST_F(MediapipeFlowImageInput, INT16) {
+    PerformTestWithGivenDatatype("INT16");
+}
+
+TEST_F(MediapipeFlowImageInput, UINT8OneChannel) {
+    PerformTestWithGivenDatatypeOneChannel("UINT8");
+}
+
+TEST_F(MediapipeFlowImageInput, UINT16OneChannel) {
+    PerformTestWithGivenDatatypeOneChannel("UINT16");
+}
+
+TEST_F(MediapipeFlowImageInput, INT8OneChannel) {
+    PerformTestWithGivenDatatypeOneChannel("INT8");
+}
+
+TEST_F(MediapipeFlowImageInput, INT16OneChannel) {
+    PerformTestWithGivenDatatypeOneChannel("INT16");
+}
+
+TEST_F(MediapipeFlowImageInput, FP32OneChannel) {
+    PerformTestWithGivenDatatypeOneChannel("FP32");
+}
 
 TEST_P(MediapipeFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);

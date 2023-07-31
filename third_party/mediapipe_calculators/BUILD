@@ -73,6 +73,9 @@ cc_library(
         "@mediapipe//mediapipe/calculators/core:merge_to_vector_calculator",
         #TENSORFLOW LITE BELOW
         "@mediapipe//mediapipe/calculators/tflite:ssd_anchors_calculator",
+        "@mediapipe//mediapipe/calculators/tflite:tflite_converter_calculator",
+        "@mediapipe//mediapipe/calculators/tflite:tflite_tensors_to_detections_calculator",
+        
         "@mediapipe//mediapipe/calculators/util:annotation_overlay_calculator",
         "@mediapipe//mediapipe/calculators/util:detection_label_id_to_text_calculator",
         "@mediapipe//mediapipe/calculators/util:detections_to_render_data_calculator",
@@ -85,7 +88,7 @@ cc_library(
         "@mediapipe//mediapipe/calculators/image:opencv_put_text_calculator",
         #GPU"@mediapipe//mediapipe/calculators/image:set_alpha_calculator",
         #GPU"@mediapipe//mediapipe/calculators/image:bilateral_filter_calculator",
-        #GPU"@mediapipe//mediapipe/calculators/image:image_transformation_calculator",
+        "@mediapipe//mediapipe/calculators/image:image_transformation_calculator",
         "@mediapipe//mediapipe/calculators/image:image_cropping_calculator",
         #GPU"@mediapipe//mediapipe/calculators/image:luminance_calculator",
         #GPU"@mediapipe//mediapipe/calculators/image:sobel_edges_calculator",
