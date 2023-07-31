@@ -73,6 +73,24 @@ size_t KFSDataTypeSize(const KFSDataType& datatype) {
     return it->second;
 }
 
+Status convertKFSDataTypeToMatFormat(const KFSDataType& datatype, size_t& matFormat) {
+    static std::unordered_map<KFSDataType, size_t> datatypeFormatMap{
+        {"UINT8", CV_8U},
+        {"UINT16", CV_16U},
+        {"INT8", CV_8U},
+        {"INT16", CV_16U},
+        {"INT32", CV_16U},
+        {"FP16", CV_16F},
+        {"FP32", CV_32F},
+        {"FP64", CV_64F}};
+    auto it = datatypeFormatMap.find(datatype);
+    if (it == datatypeFormatMap.end()) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+    matFormat = it->second;
+    return StatusCode::OK;
+}
+
 const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision) {
     static std::unordered_map<Precision, KFSDataType> precisionMap{
         {Precision::FP64, "FP64"},
