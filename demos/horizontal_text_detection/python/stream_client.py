@@ -20,7 +20,6 @@ import queue
 import threading
 import tritonclient.grpc as grpcclient
 import subprocess #nosec
-from enum import Enum
 import numpy as np
 
 class OutputBackend:
@@ -57,7 +56,26 @@ class StreamClient:
         ffmpeg = FfmpegOutputBackend()
         cv2 = CvOutputBackend()
         none = OutputBackend()
-    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend :OutputBackend = OutputBackends.ffmpeg, other_stream_sink = None, verbose = False, exact = True):
+    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink : str, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend :OutputBackend = OutputBackends.ffmpeg, verbose = False, exact = True):
+        """
+        Parameters
+        ----------
+        preprocess_callback
+            Function used to prepare input image for inference.
+        postprocess_callback
+            Function used to merge inference results with original image. For mediapipe use only inference output.
+        source : any
+            RTSP address, filepath or camera id used as framesource for inference.
+        sink : str
+            RTSP address in case of ffmpeg backend, filepath in case of cv2 backend.
+        output_backend : OutputBackend
+            Backed used for presenting postprocessed frames.
+        verbose : Bool
+            Should client output debug information.
+        exact : Bool
+            Should client push every frame into output backwend.
+        """
+
         self.preprocess_callback = preprocess_callback
         self.postprocess_callback = postprocess_callback
         self.force_exit = False
@@ -66,7 +84,6 @@ class StreamClient:
         self.width = ffmpeg_output_width
         self.height = ffmpeg_output_height
         self.output_backend = output_backend
-        self.stream_sink = other_stream_sink
         self.verbose = verbose
         self.exact = exact
 
@@ -108,7 +125,18 @@ class StreamClient:
             elif self.exact:
                 self.pq.put(entry)
 
-    def start(self, *, ovms_address, input_name, model_name):
+    def start(self, *, ovms_address : str, input_name : str, model_name : str):
+        """
+        Parameters
+        ----------
+        ovms_address : str
+            Address for inference
+        input_name : str
+            Name of the model's input
+        model_name : str
+            Namoe of the model
+        """
+
         self.cap = cv2.VideoCapture(self.source, cv2.CAP_ANY)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
         fps = self.cap.get(cv2.CAP_PROP_FPS)
