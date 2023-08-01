@@ -293,10 +293,20 @@ TEST_F(CAPIInference, NoInputs) {
     [[maybe_unused]] ovms::ServableMetadata sm("dummy", 1, m, m);
     OVMS_ServableMetadata* osm = reinterpret_cast<OVMS_ServableMetadata*>(&sm);
     uint32_t count;
+    ASSERT_EQ(sm.getVersion(), 1);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInputCount(osm, &count));
     ASSERT_EQ(count, 0);
 }
 
+TEST_F(CAPIInference, InferenceRequest) {
+    InferenceRequest* r = new InferenceRequest("dummy", 1);
+    size_t batchSize;
+    ASSERT_EQ(r->getBatchSize(batchSize, 1), StatusCode::INTERNAL_ERROR);
+    ASSERT_EQ(r->removeInputBuffer("dummy"), StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestInputRemoveData(nullptr, "dummy"), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestInputRemoveData(reinterpret_cast<OVMS_InferenceRequest*>(r), nullptr), StatusCode::NONEXISTENT_PTR);
+    delete r;
+}
 TEST_F(CAPIInference, InferenceResponse) {
     InferenceResponse* r = new InferenceResponse("dummy", 1);
     int64_t a = 1;
@@ -1201,6 +1211,8 @@ TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
     bool isReady;
     bool isLive;
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerReady(nullptr, &isReady), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerLive(nullptr, &isLive), StatusCode::NONEXISTENT_PTR);
     OVMS_ServerLive(server, &isLive);
     ASSERT_TRUE(!isLive);
     OVMS_ServerReady(server, &isReady);
