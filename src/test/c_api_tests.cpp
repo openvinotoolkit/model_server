@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <string>
