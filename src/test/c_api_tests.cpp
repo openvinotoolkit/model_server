@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -273,6 +274,50 @@ TEST(CAPIStatusTest, GetCodeAndDetails) {
 }
 
 class CAPIInference : public ::testing::Test {};
+
+TEST(CAPIServerMetadata, Basic) {
+    OVMS_ServerMetadata* metadata = nullptr;
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServerMetadata(nullptr, &metadata), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServerMetadata(cserver, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServerMetadata(cserver, &metadata));
+    const char* json;
+    size_t size;
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToJson(nullptr, &json, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToJson(metadata, nullptr, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToJson(metadata, &json, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NULL(OVMS_SerializeMetadataToJson(metadata, &json, &size));
+    ASSERT_EQ(std::strcmp(json, "{\"name\":\"REPLACE_PROJECT_NAME\",\"version\":\"REPLACE_PROJECT_VERSION\"}"), 0);
+    ASSERT_EQ(size, std::strlen(json));
+    OVMS_Free(json);
+    const char* pointer = "/name";
+    const char* value;
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(nullptr, pointer, &value, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(metadata, nullptr, &value, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(metadata, pointer, nullptr, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(metadata, pointer, &value, nullptr), StatusCode::NONEXISTENT_PTR);
+
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetMetadataByPointer(metadata, pointer, &value, &size));
+    SPDLOG_ERROR(value);
+    ASSERT_EQ(std::strcmp(value, "REPLACE_PROJECT_NAME"), 0);
+    ASSERT_EQ(size, std::strlen(value));
+    OVMS_Free(value);
+
+    pointer = "/version";
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetMetadataByPointer(metadata, pointer, &value, &size));
+    SPDLOG_ERROR(value);
+    ASSERT_EQ(std::strcmp(value, "REPLACE_PROJECT_VERSION"), 0);
+    ASSERT_EQ(size, std::strlen(value));
+    OVMS_Free(value);
+
+    pointer = "/dummy";
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(metadata, pointer, &value, &size), StatusCode::NONEXISTENT_PTR);
+
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerMetadataDelete(nullptr), StatusCode::NONEXISTENT_PTR);
+    OVMS_ServerMetadataDelete(metadata);
+    OVMS_ServerDelete(cserver);
+}
 
 TEST_F(CAPIInference, TensorSetMovedBuffer) {
     constexpr size_t elementsCount = 2;

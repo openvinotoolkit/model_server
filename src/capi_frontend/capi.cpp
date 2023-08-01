@@ -19,6 +19,9 @@
 #include <memory>
 #include <string>
 
+#include <rapidjson/pointer.h>
+#include <rapidjson/rapidjson.h>
+
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
@@ -170,6 +173,79 @@ void OVMS_ServerDelete(OVMS_Server* server) {
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     srv->shutdownModules();
     // delete passed in ptr once multi server configuration is done
+}
+
+OVMS_Status* OVMS_GetMetadataByPointer(OVMS_ServerMetadata* metadata, const char* pointer, const char** value, size_t* size) {
+    if (metadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
+    }
+    if (pointer == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "pointer"));
+    }
+    if (value == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "base"));
+    }
+    if (size == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "byte_size"));
+    }
+    rapidjson::Document* doc = reinterpret_cast<rapidjson::Document*>(metadata);
+    rapidjson::Value* val = rapidjson::Pointer(pointer).Get(*doc);
+    if (!val) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "value not found"));
+    }
+    *value = strdup(val->GetString());
+    SPDLOG_ERROR(val->GetString());
+    *size = val->GetStringLength();
+    return nullptr;
+}
+
+OVMS_Status* OVMS_SerializeMetadataToJson(OVMS_ServerMetadata* metadata, const char** json, size_t* size) {
+    if (metadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
+    }
+    if (json == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "base"));
+    }
+    if (size == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "byte_size"));
+    }
+    rapidjson::Document* doc = reinterpret_cast<rapidjson::Document*>(metadata);
+    rapidjson::StringBuffer strbuf;
+    strbuf.Clear();
+
+    rapidjson::Writer<rapidjson::StringBuffer> writer(strbuf);
+    doc->Accept(writer);
+    *json = strdup(strbuf.GetString());
+    *size = strbuf.GetSize();
+
+    return nullptr;
+}
+
+OVMS_Status* OVMS_GetServerMetadata(OVMS_Server* server, OVMS_ServerMetadata** metadata) {
+    if (server == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
+    }
+    if (metadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
+    }
+    rapidjson::Document* doc = new rapidjson::Document;
+    doc->SetObject();
+    doc->AddMember("name", PROJECT_NAME, doc->GetAllocator());
+    doc->AddMember("version", PROJECT_VERSION, doc->GetAllocator());
+    *metadata = reinterpret_cast<OVMS_ServerMetadata*>(doc);
+    return nullptr;
+}
+OVMS_Status* OVMS_ServerMetadataDelete(OVMS_ServerMetadata* metadata) {
+    if (metadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
+    }
+    rapidjson::Document* doc = reinterpret_cast<rapidjson::Document*>(metadata);
+    delete doc;
+    return nullptr;
+}
+
+void OVMS_Free(const void* ptr) {
+    free((void*)ptr);
 }
 
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
