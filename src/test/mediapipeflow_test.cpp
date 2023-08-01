@@ -438,7 +438,6 @@ TEST_F(MediapipeFlowImageInput, FP32OneChannel) {
 //     PerformTestWithGivenDatatypeOneChannel("FP64");
 // }
 
-
 TEST_P(MediapipeFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
