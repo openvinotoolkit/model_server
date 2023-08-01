@@ -398,7 +398,7 @@ class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};
 
 TEST_P(MediapipeFlowImageInputThreeChannels, Infer) {
     std::string datatype = GetParam();
-    if(datatype == "FP32") {
+    if (datatype == "FP32") {
         GTEST_SKIP_("Unsupported precision?");
     }
     PerformTestWithGivenDatatype(datatype);
