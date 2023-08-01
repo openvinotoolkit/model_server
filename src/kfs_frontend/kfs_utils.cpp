@@ -73,7 +73,7 @@ size_t KFSDataTypeSize(const KFSDataType& datatype) {
     return it->second;
 }
 
-Status convertKFSDataTypeToMatFormat(const KFSDataType& datatype, size_t& matFormat) {
+size_t convertKFSDataTypeToMatFormat(const KFSDataType& datatype) {
     static std::unordered_map<KFSDataType, size_t> datatypeFormatMap{
         {"UINT8", CV_8U},
         {"UINT16", CV_16U},
@@ -85,11 +85,10 @@ Status convertKFSDataTypeToMatFormat(const KFSDataType& datatype, size_t& matFor
         {"FP64", CV_64F}};
     auto it = datatypeFormatMap.find(datatype);
     if (it == datatypeFormatMap.end()) {
-        SPDLOG_DEBUG("Converting KFS datatype to mat format failed.");
-        return Status(StatusCode::INTERNAL_ERROR, "Received KFS datatype is invalid and couldn't be converted to mat format.");
+        SPDLOG_DEBUG("Converting KFS datatype to mat format failed. Mat format will be set to default - CV_8U");
+        return CV_8U;
     }
-    matFormat = it->second;
-    return StatusCode::OK;
+    return it->second;
 }
 
 const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision) {
