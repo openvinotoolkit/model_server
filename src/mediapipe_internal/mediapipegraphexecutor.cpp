@@ -209,7 +209,8 @@ static Status matFormatToImageFormat(const size_t& matFormat, mediapipe::ImageFo
     //     imageFormat = mediapipe::ImageFormat::VEC32F4;
     //     break;
     default:
-        return StatusCode::INTERNAL_ERROR;
+        SPDLOG_DEBUG("Converting mat format to Mediapipe::ImageFrame format failed.");
+        return Status(StatusCode::INTERNAL_ERROR, "Converting mat format to Mediapipe::ImageFrame format failed.");
         break;
     }
     return StatusCode::OK;
@@ -234,7 +235,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 
     if (requestInputItr->shape().size() != 3) {
         SPDLOG_ERROR("Invalid Mediapipe Image input shape size. Expected: 3 Actual: {}", requestInputItr->shape().size());
-        return Status(StatusCode::INTERNAL_ERROR, "Unexpected error during Tensor creation");
+        return Status(StatusCode::INVALID_SHAPE, "Invalid Mediapipe Image input shape size.");
     }
     size_t matFormat = 0;
     status = convertKFSDataTypeToMatFormat(requestInputItr->datatype(), matFormat);
@@ -245,11 +246,8 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     size_t numberOfPixels = requestInputItr->shape()[0] * requestInputItr->shape()[1];
     size_t numberOfChannels = requestInputItr->shape()[2];
     if (numberOfChannels == 0) {
-        SPDLOG_ERROR("Invalid Mediapipe Image input. Cannot calculate number of channels from input shape.");
-        return Status(StatusCode::INTERNAL_ERROR, "Unexpected error during Tensor creation");
-    }
-    for (size_t i = 0; i < (numberOfPixels * numberOfChannels); i++) {
-        SPDLOG_DEBUG("RECEIVED: {}", ((uint8_t*)(bufferLocation.data()))[i]);
+        SPDLOG_ERROR("Invalid Mediapipe Image input number of channels. Number of channels should be greater than 0.");
+        return Status(StatusCode::INVALID_SHAPE, "Invalid Mediapipe Image input number of channels.");
     }
     auto matFormatWithChannels = CV_MAKETYPE(matFormat, numberOfChannels);
     cv::Mat camera_frame(requestInputItr->shape()[0], requestInputItr->shape()[1], matFormatWithChannels);
@@ -565,7 +563,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
             SPDLOG_DEBUG("Request processing TF tensor: {}", name);
             status = createPacketAndPushIntoGraph<tensorflow::Tensor>(name, *request, graph);
         } else if (this->inputTypes.at(name) == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
-            SPDLOG_DEBUG("Request processing  : {}", name);
+            SPDLOG_DEBUG("Request processing Mediapipe ImageFrame: {}", name);
             status = createPacketAndPushIntoGraph<mediapipe::ImageFrame>(name, *request, graph);
         } else if ((this->inputTypes.at(name) == mediapipe_packet_type_enum::OVTENSOR) ||
                    (this->inputTypes.at(name) == mediapipe_packet_type_enum::UNKNOWN)) {
