@@ -85,7 +85,8 @@ Status convertKFSDataTypeToMatFormat(const KFSDataType& datatype, size_t& matFor
         {"FP64", CV_64F}};
     auto it = datatypeFormatMap.find(datatype);
     if (it == datatypeFormatMap.end()) {
-        return StatusCode::INTERNAL_ERROR;
+        SPDLOG_DEBUG("Converting KFS datatype to mat format failed.");
+        return Status(StatusCode::INTERNAL_ERROR, "Received KFS datatype is invalid and couldn't be converted to mat format.");
     }
     matFormat = it->second;
     return StatusCode::OK;
