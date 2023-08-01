@@ -26,7 +26,7 @@ from openvino.model_api.adapters import OVMSAdapter, OpenvinoAdapter, create_cor
 
 parser = argparse.ArgumentParser(description='Client for single face analysis pipeline')
 parser.add_argument('--adapter', required=False, default='openvino', choices=['openvino', 'ovms'], help='Specify inference executor adapter type')
-parser.add_argument('--prompt', required=False, type=str, default="see shore at midnight, epic vista, beach", help='Text prompt')
+parser.add_argument('--prompt', required=False, type=str, default="sea shore at midnight, epic vista, beach", help='Text prompt')
 parser.add_argument('--negative', required=False, type=str, default='frames, borderline, text, character, duplicate, error, out of frame, watermark', help='Negative prompt')
 parser.add_argument('--steps', required=False, default=20, type=int, help='Number of steps')
 parser.add_argument('--seed', required=False, default=None, help='Seed')

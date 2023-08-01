@@ -34,11 +34,11 @@ The executor is abstracted using an adapter which be be selected via `--adapter`
 Local execution:
 
 ```bash
-python generate.py --adapter openvino --seed 15
+python generate.py --adapter openvino --seed 10
 Initializing models
 Models initialized
 Pipeline settings
-Input text: see shore at midnight, epic vista, beach
+Input text: sea shore at midnight, epic vista, beach
 Negative text: frames, borderline, text, character, duplicate, error, out of frame, watermark
 Seed: None
 Number of steps: 20
@@ -48,11 +48,11 @@ getting initial random noise (1, 4, 96, 96) {}
 
 Remote execution:
 ```bash
-python generate.py --adapter ovms --seed 15
+python generate.py --adapter ovms --seed 10
 Initializing models
 Models initialized
 Pipeline settings
-Input text: see shore at midnight, epic vista, beach
+Input text: sea shore at midnight, epic vista, beach
 Negative text: frames, borderline, text, character, duplicate, error, out of frame, watermark
 Seed: None
 Number of steps: 20
