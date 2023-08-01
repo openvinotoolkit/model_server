@@ -369,9 +369,9 @@ TEST_P(MediapipeFlowImageInputThreeChannels, Infer) {
 }
 
 static const std::vector<std::string> PRECISIONS{
-    //"FP64",
+    // "FP64",
     "FP32",
-    //"FP16",
+    // "FP16",
     "UINT8",
     "UINT16",
     "INT8",
