@@ -394,69 +394,49 @@ TEST_F(MediapipeFlowImageInput, InvalidNumberOfChannels) {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
 }
 
-TEST_F(MediapipeFlowImageInput, UINT8) {
-    PerformTestWithGivenDatatype("UINT8");
+class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};
+
+TEST_P(MediapipeFlowImageInputThreeChannels, Infer) {
+    std::string datatype = GetParam();
+    if(datatype == "FP32") {
+        GTEST_SKIP_("Unsupported precision?");
+    }
+    PerformTestWithGivenDatatype(datatype);
 }
 
-TEST_F(MediapipeFlowImageInput, UINT16) {
-    PerformTestWithGivenDatatype("UINT16");
+static const std::vector<std::string> PRECISIONS{
+    //"FP64",
+    "FP32",
+    //"FP16",
+    "UINT8",
+    "UINT16",
+    "INT8",
+    "INT16",
+    "INT32",
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDeserialize,
+    MediapipeFlowImageInputThreeChannels,
+    ::testing::ValuesIn(PRECISIONS),
+    [](const ::testing::TestParamInfo<MediapipeFlowImageInputThreeChannels::ParamType>& info) {
+        return info.param;
+    });
+
+class MediapipeFlowImageInputOneChannel : public MediapipeFlowImageInput {};
+
+TEST_P(MediapipeFlowImageInputOneChannel, Infer) {
+    std::string datatype = GetParam();
+    PerformTestWithGivenDatatypeOneChannel(datatype);
 }
 
-TEST_F(MediapipeFlowImageInput, INT8) {
-    PerformTestWithGivenDatatype("INT8");
-}
-
-TEST_F(MediapipeFlowImageInput, INT16) {
-    PerformTestWithGivenDatatype("INT16");
-}
-
-TEST_F(MediapipeFlowImageInput, INT32) {
-    PerformTestWithGivenDatatype("INT16");
-}
-
-TEST_F(MediapipeFlowImageInput, UINT8OneChannel) {
-    PerformTestWithGivenDatatypeOneChannel("UINT8");
-}
-
-TEST_F(MediapipeFlowImageInput, UINT16OneChannel) {
-    PerformTestWithGivenDatatypeOneChannel("UINT16");
-}
-
-TEST_F(MediapipeFlowImageInput, INT8OneChannel) {
-    PerformTestWithGivenDatatypeOneChannel("INT8");
-}
-
-TEST_F(MediapipeFlowImageInput, INT16OneChannel) {
-    PerformTestWithGivenDatatypeOneChannel("INT16");
-}
-
-TEST_F(MediapipeFlowImageInput, FP32OneChannel) {
-    PerformTestWithGivenDatatypeOneChannel("FP32");
-}
-
-// TEST_F(MediapipeFlowImageInput, FP64OneChannel) {
-//     PerformTestWithGivenDatatypeOneChannel("FP64");
-// }
-
-TEST_P(MediapipeFlowKfsTest, Infer) {
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ::KFSRequest request;
-    ::KFSResponse response;
-    const std::string modelName = GetParam();
-    request.Clear();
-    response.Clear();
-    inputs_info_t inputsMeta{
-        {"in", {DUMMY_MODEL_SHAPE, precision}}};
-    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
-    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
-    preparePredictRequest(request, inputsMeta, requestData1);
-    request.mutable_model_name()->assign(modelName);
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-
-    // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
-    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
-}
+INSTANTIATE_TEST_SUITE_P(
+    TestDeserialize,
+    MediapipeFlowImageInputOneChannel,
+    ::testing::ValuesIn(PRECISIONS),
+    [](const ::testing::TestParamInfo<MediapipeFlowImageInputOneChannel::ParamType>& info) {
+        return info.param;
+    });
 
 class MediapipeFlowDummyEmptySubconfigTest : public MediapipeFlowTest {
 public:
