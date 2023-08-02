@@ -255,7 +255,7 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
             SPDLOG_WARN("Model policy is invalid. 'specific' policy should include 'versions' item with a list of number as a value");
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
-        if ( ! m->value.IsArray()) {
+        if (!m->value.IsArray()) {
             SPDLOG_WARN("Model policy is invalid. 'versions' item should have a list of numbers as a value, for example [1,2]");
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
