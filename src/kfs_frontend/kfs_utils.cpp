@@ -80,9 +80,8 @@ size_t convertKFSDataTypeToMatFormat(const KFSDataType& datatype) {
         {"INT8", CV_8U},
         {"INT16", CV_16U},
         {"INT32", CV_16U},
-        {"FP16", CV_16F},
-        {"FP32", CV_32F},
-        {"FP64", CV_64F}};
+        {"FP32", CV_32F}};
+        // CV_16F and CV_64F are not supported in Mediapipe::ImageFrame
     auto it = datatypeFormatMap.find(datatype);
     if (it == datatypeFormatMap.end()) {
         SPDLOG_DEBUG("Converting KFS datatype to mat format failed. Mat format will be set to default - CV_8U");
