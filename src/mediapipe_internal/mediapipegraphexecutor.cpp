@@ -218,8 +218,9 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     size_t expectedSize = numberOfPixels * numberOfChannels * camera_frame.elemSize1();
     std::memcpy(camera_frame.data, bufferLocation.data(), expectedSize);
     mediapipe::ImageFormat::Format imageFormat = matFormatToImageFormat(matFormatWithChannels);
+    size_t alignment = 1;
     auto outTensorFrame = std::make_shared<mediapipe::ImageFrame>(
-        imageFormat, camera_frame.cols, camera_frame.rows, 1);
+        imageFormat, camera_frame.cols, camera_frame.rows, alignment);
     cv::Mat input_frame_mat = mediapipe::formats::MatView(outTensorFrame.get());
     camera_frame.copyTo(input_frame_mat);
 
