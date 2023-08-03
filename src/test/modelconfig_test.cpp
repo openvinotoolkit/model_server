@@ -885,7 +885,6 @@ TEST(ModelConfig, modelVersionPolicyIncorrect) {
     command = "{\"specific\": {\"incorrect\":[1,2]}}";
     result = config.parseModelVersionPolicy(command);
     EXPECT_EQ(result, ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
-
 }
 
 TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
