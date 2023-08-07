@@ -244,6 +244,7 @@ ffplay -pix_fmt yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost
 
 
 One might as well use prerecorded video and schedule it for inference.
+Replace horizontal_text.mp4 with your video file.
 
 ```bash
 docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/horizontal_text.mp4' --output_stream 'workspace/output.mp4'
