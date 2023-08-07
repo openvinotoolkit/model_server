@@ -354,10 +354,13 @@ make docker_build MINITRACE=ON
 
 2. Run OVMS with minitrace enabled and `--trace_path` to specify where to save trace JSON file. Since the file is flushed and saved at container shutdown, mount the host directory with write access to persist the file after container stops.
 ```bash
-docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/trace.json 
+mkdir traces
+chmod -R 777 traces
+
+docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json 
 ```
 
-3. During app exit, the trace info will be saved into `${PWD}/trace.json`.
+3. During app exit, the trace info will be saved into `${PWD}/traces/trace.json`.
 
 4. Use Chrome web browser `chrome://tracing` tool to display the graph, similarly to Option 1.
 
