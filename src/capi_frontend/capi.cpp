@@ -175,7 +175,7 @@ void OVMS_ServerDelete(OVMS_Server* server) {
     // delete passed in ptr once multi server configuration is done
 }
 
-OVMS_Status* OVMS_GetMetadataByPointer(OVMS_ServerMetadata* metadata, const char* pointer, const char** value, size_t* size) {
+OVMS_Status* OVMS_GetMetadataByPointer(OVMS_Metadata* metadata, const char* pointer, const char** value, size_t* size) {
     if (metadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
     }
@@ -199,7 +199,7 @@ OVMS_Status* OVMS_GetMetadataByPointer(OVMS_ServerMetadata* metadata, const char
     return nullptr;
 }
 
-OVMS_Status* OVMS_SerializeMetadataToJson(OVMS_ServerMetadata* metadata, const char** json, size_t* size) {
+OVMS_Status* OVMS_SerializeMetadataToJson(OVMS_Metadata* metadata, const char** json, size_t* size) {
     if (metadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
     }
@@ -221,7 +221,7 @@ OVMS_Status* OVMS_SerializeMetadataToJson(OVMS_ServerMetadata* metadata, const c
     return nullptr;
 }
 
-OVMS_Status* OVMS_GetServerMetadata(OVMS_Server* server, OVMS_ServerMetadata** metadata) {
+OVMS_Status* OVMS_GetServerMetadata(OVMS_Server* server, OVMS_Metadata** metadata) {
     if (server == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
@@ -232,10 +232,10 @@ OVMS_Status* OVMS_GetServerMetadata(OVMS_Server* server, OVMS_ServerMetadata** m
     doc->SetObject();
     doc->AddMember("name", PROJECT_NAME, doc->GetAllocator());
     doc->AddMember("version", PROJECT_VERSION, doc->GetAllocator());
-    *metadata = reinterpret_cast<OVMS_ServerMetadata*>(doc);
+    *metadata = reinterpret_cast<OVMS_Metadata*>(doc);
     return nullptr;
 }
-OVMS_Status* OVMS_ServerMetadataDelete(OVMS_ServerMetadata* metadata) {
+OVMS_Status* OVMS_ServerMetadataDelete(OVMS_Metadata* metadata) {
     if (metadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
     }
@@ -244,7 +244,7 @@ OVMS_Status* OVMS_ServerMetadataDelete(OVMS_ServerMetadata* metadata) {
     return nullptr;
 }
 
-void OVMS_Free(const void* ptr) {
+void OVMS_StringFree(const void* ptr) {
     free((void*)ptr);
 }
 
