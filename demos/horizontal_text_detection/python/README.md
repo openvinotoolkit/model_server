@@ -188,6 +188,14 @@ ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   
 Build docker image containing rtsp client along with its dependencies
 The rtsp client app needs to have access to RTSP stream to read from and write to.
 
+Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
+
+Then write to the server using ffmpeg
+
+```bash
+ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
+
 ```bash
 docker build . -t rtsp_client
 ```
@@ -228,8 +236,20 @@ options:
 docker run rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
 
+Then read rtsp stream using ffplay
+
+```bash
+ffplay -pix_fmt yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+```
+
+
 One might as well use prerecorded video and schedule it for inference.
 
 ```bash
 docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/horizontal_text.mp4' --output_stream 'workspace/output.mp4'
+```
+
+then preview video using ffplay 
+```bash
+ffplay output.mp4
 ```
