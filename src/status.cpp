@@ -303,6 +303,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::FAILED_TO_START_GRPC_SERVER, "Failed to start gRPC server"},
     {StatusCode::FAILED_TO_START_REST_SERVER, "Failed to start REST server"},
     {StatusCode::SERVER_ALREADY_STARTED, "Server has already started"},
+    {StatusCode::SERVER_ALREADY_STARTING, "Server is already starting"},
     {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
 };
 }  // namespace ovms
