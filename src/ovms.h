@@ -128,16 +128,16 @@ OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
 // Get value of metadata field by json pointer
 //
 // \param metadata The metadata object
-// \param pointer Json pointer
+// \param pointer Json pointer (https://datatracker.ietf.org/doc/html/rfc6901)
 // \param value Buffer that will contain fetched value
 // \param size Lenght of fetched value
-OVMS_Status* OVMS_GetMetadataByPointer(OVMS_Metadata* metadata, const char* pointer, const char** value, size_t* size);
+OVMS_Status* OVMS_GetMetadataFieldByPointer(OVMS_Metadata* metadata, const char* pointer, const char** value, size_t* size);
 // Serialize metadata object into json
 //
 // \param metadata The metadata object
 // \param json Buffer that will contain generated json
 // \param size Lenght of generated string
-OVMS_Status* OVMS_SerializeMetadataToJson(OVMS_Metadata* metadata, const char** json, size_t* size);
+OVMS_Status* OVMS_SerializeMetadataToString(OVMS_Metadata* metadata, const char** json, size_t* size);
 
 // Get the server metadata
 //
@@ -153,7 +153,7 @@ OVMS_Status* OVMS_ServerMetadataDelete(OVMS_Metadata* metadata);
 // Release memory used for strings genereted by ovms
 //
 // \param metadata The pointer that points at memeory that will be released
-void OVMS_StringFree(const void* ptr);
+void OVMS_StringFree(const char* ptr);
 
 // Get the status details from a status.
 //

@@ -175,7 +175,7 @@ void OVMS_ServerDelete(OVMS_Server* server) {
     // delete passed in ptr once multi server configuration is done
 }
 
-OVMS_Status* OVMS_GetMetadataByPointer(OVMS_Metadata* metadata, const char* pointer, const char** value, size_t* size) {
+OVMS_Status* OVMS_GetMetadataFieldByPointer(OVMS_Metadata* metadata, const char* pointer, const char** value, size_t* size) {
     if (metadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
     }
@@ -191,15 +191,14 @@ OVMS_Status* OVMS_GetMetadataByPointer(OVMS_Metadata* metadata, const char* poin
     rapidjson::Document* doc = reinterpret_cast<rapidjson::Document*>(metadata);
     rapidjson::Value* val = rapidjson::Pointer(pointer).Get(*doc);
     if (!val) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "value not found"));
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::JSON_SERIALIZATION_ERROR, "value not found"));
     }
     *value = strdup(val->GetString());
-    SPDLOG_ERROR(val->GetString());
     *size = val->GetStringLength();
     return nullptr;
 }
 
-OVMS_Status* OVMS_SerializeMetadataToJson(OVMS_Metadata* metadata, const char** json, size_t* size) {
+OVMS_Status* OVMS_SerializeMetadataToString(OVMS_Metadata* metadata, const char** json, size_t* size) {
     if (metadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
     }
@@ -244,7 +243,7 @@ OVMS_Status* OVMS_ServerMetadataDelete(OVMS_Metadata* metadata) {
     return nullptr;
 }
 
-void OVMS_StringFree(const void* ptr) {
+void OVMS_StringFree(const char* ptr) {
     free((void*)ptr);
 }
 

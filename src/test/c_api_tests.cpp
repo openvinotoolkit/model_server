@@ -29,6 +29,7 @@
 #include "../ovms.h"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
+#include "../version.hpp"
 #include "c_api_test_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
@@ -283,33 +284,33 @@ TEST(CAPIServerMetadata, Basic) {
     ASSERT_CAPI_STATUS_NULL(OVMS_GetServerMetadata(cserver, &metadata));
     const char* json;
     size_t size;
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToJson(nullptr, &json, &size), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToJson(metadata, nullptr, &size), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToJson(metadata, &json, nullptr), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NULL(OVMS_SerializeMetadataToJson(metadata, &json, &size));
-    ASSERT_EQ(std::string(json), std::string("{\"name\":\"REPLACE_PROJECT_NAME\",\"version\":\"REPLACE_PROJECT_VERSION\"}"));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToString(nullptr, &json, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToString(metadata, nullptr, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToString(metadata, &json, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NULL(OVMS_SerializeMetadataToString(metadata, &json, &size));
+    ASSERT_EQ(std::string(json), std::string("{\"name\":\"" + std::string(PROJECT_NAME) + "\",\"version\":\"" + std::string(PROJECT_VERSION) + "\"}"));
     ASSERT_EQ(size, std::strlen(json));
     OVMS_StringFree(json);
     const char* pointer = "/name";
     const char* value;
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(nullptr, pointer, &value, &size), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(metadata, nullptr, &value, &size), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(metadata, pointer, nullptr, &size), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(metadata, pointer, &value, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataFieldByPointer(nullptr, pointer, &value, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataFieldByPointer(metadata, nullptr, &value, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataFieldByPointer(metadata, pointer, nullptr, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataFieldByPointer(metadata, pointer, &value, nullptr), StatusCode::NONEXISTENT_PTR);
 
-    ASSERT_CAPI_STATUS_NULL(OVMS_GetMetadataByPointer(metadata, pointer, &value, &size));
-    ASSERT_EQ(std::string(value), std::string("REPLACE_PROJECT_NAME"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetMetadataFieldByPointer(metadata, pointer, &value, &size));
+    ASSERT_EQ(std::string(value), std::string(PROJECT_NAME));
     ASSERT_EQ(size, std::strlen(value));
     OVMS_StringFree(value);
 
     pointer = "/version";
-    ASSERT_CAPI_STATUS_NULL(OVMS_GetMetadataByPointer(metadata, pointer, &value, &size));
-    ASSERT_EQ(std::string(value), std::string("REPLACE_PROJECT_VERSION"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetMetadataFieldByPointer(metadata, pointer, &value, &size));
+    ASSERT_EQ(std::string(value), std::string(PROJECT_VERSION));
     ASSERT_EQ(size, std::strlen(value));
     OVMS_StringFree(value);
 
     pointer = "/dummy";
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataByPointer(metadata, pointer, &value, &size), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetMetadataFieldByPointer(metadata, pointer, &value, &size), StatusCode::JSON_SERIALIZATION_ERROR);
 
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerMetadataDelete(nullptr), StatusCode::NONEXISTENT_PTR);
     OVMS_ServerMetadataDelete(metadata);
