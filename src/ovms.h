@@ -129,7 +129,7 @@ OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
 //
 // \param metadata The metadata object
 // \param pointer Json pointer
-// \param value Nuffer that will contain fetched value
+// \param value Buffer that will contain fetched value
 // \param size Lenght of fetched value
 OVMS_Status* OVMS_GetMetadataByPointer(OVMS_ServerMetadata* metadata, const char* pointer, const char** value, size_t* size);
 // Serialize metadata object into json
