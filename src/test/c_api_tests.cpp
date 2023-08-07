@@ -288,7 +288,7 @@ TEST_F(CAPIInference, TensorSetMovedBuffer) {
     ASSERT_EQ(tensor.setBuffer(std::move(buffer)), ovms::StatusCode::DOUBLE_BUFFER_SET);
 }
 
-TEST(CAPIServableMetadata, NoInputs) {
+TEST(CAPIServableMetadata, NoInputsAndOutputs) {
     tensor_map_t m;
     ovms::ServableMetadata sm("dummy", 1, m, m);
     OVMS_ServableMetadata* osm = reinterpret_cast<OVMS_ServableMetadata*>(&sm);
