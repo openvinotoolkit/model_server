@@ -249,7 +249,13 @@ One might as well use prerecorded video and schedule it for inference.
 docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/horizontal_text.mp4' --output_stream 'workspace/output.mp4'
 ```
 
-then preview video using ffplay 
+Validate inference output
+```bash
+cat output.mp4 | sha256 -x
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+```
+
+Preview video using ffplay 
 ```bash
 ffplay output.mp4
 ```
