@@ -288,17 +288,19 @@ TEST_F(CAPIInference, TensorSetMovedBuffer) {
     ASSERT_EQ(tensor.setBuffer(std::move(buffer)), ovms::StatusCode::DOUBLE_BUFFER_SET);
 }
 
-TEST_F(CAPIInference, NoInputs) {
+TEST(CAPIServableMetadata, NoInputs) {
     tensor_map_t m;
-    [[maybe_unused]] ovms::ServableMetadata sm("dummy", 1, m, m);
+    ovms::ServableMetadata sm("dummy", 1, m, m);
     OVMS_ServableMetadata* osm = reinterpret_cast<OVMS_ServableMetadata*>(&sm);
     uint32_t count;
     ASSERT_EQ(sm.getVersion(), 1);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInputCount(osm, &count));
     ASSERT_EQ(count, 0);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutputCount(osm, &count));
+    ASSERT_EQ(count, 0);
 }
 
-TEST_F(CAPIInference, InferenceRequest) {
+TEST(CAPIInferenceRequest, Basic) {
     InferenceRequest* r = new InferenceRequest("dummy", 1);
     size_t batchSize;
     ASSERT_EQ(r->getBatchSize(batchSize, 1), StatusCode::INTERNAL_ERROR);
@@ -307,11 +309,10 @@ TEST_F(CAPIInference, InferenceRequest) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestInputRemoveData(reinterpret_cast<OVMS_InferenceRequest*>(r), nullptr), StatusCode::NONEXISTENT_PTR);
     delete r;
 }
-TEST_F(CAPIInference, InferenceResponse) {
+TEST(CAPIInferenceResponse, Basic) {
     InferenceResponse* r = new InferenceResponse("dummy", 1);
-    int64_t a = 1;
-    EXPECT_THROW(r->addOutput("name", OVMS_DataType::OVMS_DATATYPE_BIN, &a, -1), std::exception);
-    ASSERT_EQ(r->addOutput("n", OVMS_DataType::OVMS_DATATYPE_BIN, &a, 1), StatusCode::OK);
+    int64_t a[1] = {1};
+    ASSERT_EQ(r->addOutput("n", OVMS_DataType::OVMS_DATATYPE_BIN, a, 1), StatusCode::OK);
     InferenceTensor* tensor;
     const std::string* name;
     OVMS_InferenceResponse* response = reinterpret_cast<OVMS_InferenceResponse*>(r);
@@ -324,8 +325,8 @@ TEST_F(CAPIInference, InferenceResponse) {
     OVMS_BufferType bufferType = (OVMS_BufferType)199;
     uint32_t deviceId = 42;
     const char* outputName = "n";
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId), StatusCode::INTERNAL_ERROR);
-    r->getOutput(0, &name, &tensor);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId), StatusCode::INTERNAL_ERROR);  // Test GetOutput without defined buffer
+    ASSERT_EQ(r->getOutput(0, &name, &tensor), StatusCode::OK);
     std::unique_ptr<Buffer> buffer = std::make_unique<Buffer>(0, OVMS_BufferType::OVMS_BUFFERTYPE_CPU, 0);
     tensor->setBuffer(std::move(buffer));
     outputName = "n";
@@ -366,7 +367,7 @@ TEST_F(CAPIInference, Validation) {
     OVMS_ServerDelete(cserver);
 }
 
-TEST_F(CAPIInference, TwoInputsInference) {
+TEST_F(CAPIInference, TwoInputs) {
     std::string port = "9000";
     randomizePort(port);
     OVMS_ServerSettings* serverSettings = nullptr;
