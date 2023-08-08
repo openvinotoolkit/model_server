@@ -231,6 +231,7 @@ OVMS_Status* OVMS_GetServerMetadata(OVMS_Server* server, OVMS_Metadata** metadat
     doc->SetObject();
     doc->AddMember("name", PROJECT_NAME, doc->GetAllocator());
     doc->AddMember("version", PROJECT_VERSION, doc->GetAllocator());
+    doc->AddMember("ov_version", OPENVINO_NAME, doc->GetAllocator());
     *metadata = reinterpret_cast<OVMS_Metadata*>(doc);
     return nullptr;
 }

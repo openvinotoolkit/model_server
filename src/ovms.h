@@ -129,13 +129,13 @@ OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
 //
 // \param metadata The metadata object
 // \param pointer Json pointer (https://datatracker.ietf.org/doc/html/rfc6901)
-// \param value Buffer that will contain fetched value
+// \param value Buffer that will contain fetched value, should be freed by user using OVMS_StringFree call
 // \param size Lenght of fetched value
 OVMS_Status* OVMS_GetMetadataFieldByPointer(OVMS_Metadata* metadata, const char* pointer, const char** value, size_t* size);
 // Serialize metadata object into json
 //
 // \param metadata The metadata object
-// \param json Buffer that will contain generated json
+// \param json Buffer that will contain generated json, should be freed by user using OVMS_StringFree call
 // \param size Lenght of generated string
 OVMS_Status* OVMS_SerializeMetadataToString(OVMS_Metadata* metadata, const char** json, size_t* size);
 
