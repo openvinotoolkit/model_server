@@ -30,6 +30,7 @@ typedef struct OVMS_ServerSettings_ OVMS_ServerSettings;
 typedef struct OVMS_ModelsSettings_ OVMS_ModelsSettings;
 
 typedef struct OVMS_ServableMetadata_ OVMS_ServableMetadata;
+typedef struct OVMS_Metadata_ OVMS_Metadata;
 
 #define OVMS_API_VERSION_MAJOR 0
 #define OVMS_API_VERSION_MINOR 3
@@ -123,6 +124,36 @@ void OVMS_StatusDelete(OVMS_Status* status);
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
     uint32_t* code);
+
+// Get value of metadata field by json pointer
+//
+// \param metadata The metadata object
+// \param pointer Json pointer (https://datatracker.ietf.org/doc/html/rfc6901)
+// \param value Buffer that will contain fetched value, should be freed by user using OVMS_StringFree call
+// \param size Lenght of fetched value
+OVMS_Status* OVMS_GetMetadataFieldByPointer(OVMS_Metadata* metadata, const char* pointer, const char** value, size_t* size);
+// Serialize metadata object into json
+//
+// \param metadata The metadata object
+// \param json Buffer that will contain generated json, should be freed by user using OVMS_StringFree call
+// \param size Lenght of generated string
+OVMS_Status* OVMS_SerializeMetadataToString(OVMS_Metadata* metadata, const char** json, size_t* size);
+
+// Get the server metadata
+//
+// \param server The server object (reserved for future use)
+// \param metadata The metadata object
+OVMS_Status* OVMS_GetServerMetadata(OVMS_Server* server, OVMS_Metadata** metadata);
+
+// Release memory used for holding metadata object
+//
+// \param metadata The metadata object
+OVMS_Status* OVMS_ServerMetadataDelete(OVMS_Metadata* metadata);
+
+// Release memory used for strings genereted by ovms
+//
+// \param metadata The pointer that points at memeory that will be released
+void OVMS_StringFree(const char* ptr);
 
 // Get the status details from a status.
 //

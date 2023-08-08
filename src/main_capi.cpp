@@ -85,6 +85,14 @@ int main(int argc, char** argv) {
     OVMS_ModelsSettingsNew(&modelsSettings);
     OVMS_ServerNew(&srv);
 
+    OVMS_Metadata* metadata = 0;
+    OVMS_GetServerMetadata(srv, &metadata);
+    const char* version = 0;
+    size_t size;
+    OVMS_GetMetadataFieldByPointer(metadata, "/version", &version, &size);
+    std::cout << "OVMS Version: " << version << std::endl;
+    OVMS_StringFree(version);
+
     OVMS_ServerSettingsSetGrpcPort(serverSettings, 9178);
     OVMS_ServerSettingsSetRestPort(serverSettings, 11338);
 
