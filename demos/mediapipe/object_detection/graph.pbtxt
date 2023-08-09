@@ -61,8 +61,6 @@ node {
   output_stream: "OVTENSORS2:detection_tensors"
   node_options: {
     [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
-          input_order_list :["normalized_input_image_tensor"]
-          output_order_list :["raw_outputs/box_encodings","raw_outputs/class_predictions"]
           tag_to_input_tensor_names {
             key: "OVTENSORS"
             value: "normalized_input_image_tensor"
@@ -156,7 +154,7 @@ node {
   output_stream: "output_detections"
   node_options: {
     [type.googleapis.com/mediapipe.DetectionLabelIdToTextCalculatorOptions] {
-      label_map_path: "/demo/ssdlite_object_detection_labelmap.txt"
+      label_map_path: "/demo/mediapipe/ssdlite_object_detection_labelmap.txt"
     }
   }
 }
@@ -177,7 +175,7 @@ node {
 # Draws annotations and overlays them on top of the input images.
 node {
   calculator: "AnnotationOverlayCalculator"
-  input_stream: "IMAGE:transformed_input"
+  input_stream: "IMAGE:input"
   input_stream: "render_data"
   output_stream: "IMAGE:output"
 }
