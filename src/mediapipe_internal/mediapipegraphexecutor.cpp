@@ -252,7 +252,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         SPDLOG_DEBUG("Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
         return Status(StatusCode::INVALID_INPUT_FORMAT, "Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
     }
-    size_t alignment = 1;
+    size_t alignment = 1; // TODO check impact of used alignment on performance
     auto outTensorFrame = mediapipe::ImageFrame(imageFormat, numberOfCols, numberOfRows, alignment);
     std::memcpy(const_cast<uint8_t*>(outTensorFrame.PixelData()), bufferLocation.data(), expectedSize);
 
