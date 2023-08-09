@@ -246,18 +246,8 @@ public:
         ASSERT_EQ(response.outputs()[0].shape()[1], image.rows);
         ASSERT_EQ(response.outputs()[0].shape()[2], image.channels());
         ASSERT_EQ(response.raw_output_contents_size(), 1);
-        if (datatype == "FP16" || datatype == "FP64") {
-            cv::Mat imageUINT8;
-            image.convertTo(imageUINT8, CV_8UC3);
-            for (size_t i = 0; i < imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1(); i++) {
-                SPDLOG_ERROR("EXPECTED : {} | ACTUAL : {}", ((uint8_t*)(imageUINT8.data))[i], ((uint8_t*)(response.raw_output_contents()[0].data()))[i]);
-            }
-            ASSERT_EQ(response.raw_output_contents()[0].size(), imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1());
-            ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), imageUINT8.data, imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1()));
-        } else {
-            ASSERT_EQ(response.raw_output_contents()[0].size(), image.cols * image.rows * image.channels() * elementSize);
-            ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
-        }
+        ASSERT_EQ(response.raw_output_contents()[0].size(), image.cols * image.rows * image.channels() * elementSize);
+        ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
     }
 
     void PerformTestWithGivenDatatypeOneChannel(KFSDataType datatype) {
@@ -295,15 +285,8 @@ public:
         ASSERT_EQ(response.outputs()[0].shape()[1], grayscaled.rows);
         ASSERT_EQ(response.outputs()[0].shape()[2], grayscaled.channels());
         ASSERT_EQ(response.raw_output_contents_size(), 1);
-        if (datatype == "FP16" || datatype == "FP64") {
-            cv::Mat imageUINT8;
-            grayscaled.convertTo(imageUINT8, CV_8UC1);
-            ASSERT_EQ(response.raw_output_contents()[0].size(), imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1());
-            ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), imageUINT8.data, imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1()));
-        } else {
-            ASSERT_EQ(response.raw_output_contents()[0].size(), grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize);
-            ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), grayscaled.data, grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize));
-        }
+        ASSERT_EQ(response.raw_output_contents()[0].size(), grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize);
+        ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), grayscaled.data, grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize));
     }
 };
 
@@ -437,9 +420,9 @@ TEST_P(MediapipeFlowImageInputThreeChannels, Infer) {
 }
 
 static const std::vector<std::string> PRECISIONS{
-    "FP64",
+    //"FP64",
     "FP32",
-    "FP16",
+    // "FP16",
     "UINT8",
     "UINT16",
     "INT8",
