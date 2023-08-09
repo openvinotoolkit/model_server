@@ -161,35 +161,63 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     return Status(StatusCode::INTERNAL_ERROR, "Unexpected error during Tensor creation");
 }
 
-static mediapipe::ImageFormat::Format matFormatToImageFormat(const size_t& matFormat) {
-    static std::unordered_map<size_t, mediapipe::ImageFormat::Format> matImageFormatMap{
-        {CV_8UC1, mediapipe::ImageFormat::GRAY8},
-        {CV_8UC3, mediapipe::ImageFormat::SRGB},
-        {CV_8UC4, mediapipe::ImageFormat::SRGBA},
-        {CV_16UC1, mediapipe::ImageFormat::GRAY16},
-        {CV_16UC3, mediapipe::ImageFormat::SRGB48},
-        {CV_16UC4, mediapipe::ImageFormat::SRGBA64},
-        {CV_8SC1, mediapipe::ImageFormat::GRAY8},
-        {CV_8SC3, mediapipe::ImageFormat::SRGB},
-        {CV_8SC4, mediapipe::ImageFormat::SRGBA},
-        {CV_16SC1, mediapipe::ImageFormat::GRAY16},
-        {CV_16SC3, mediapipe::ImageFormat::SRGB48},
-        {CV_16SC4, mediapipe::ImageFormat::SRGBA64},
-        {CV_32FC1, mediapipe::ImageFormat::VEC32F1},
-        {CV_32FC2, mediapipe::ImageFormat::VEC32F2}};
-    auto it = matImageFormatMap.find(matFormat);
-    if (it == matImageFormatMap.end()) {
-        SPDLOG_DEBUG("Converting mat format to Mediapipe::ImageFrame format failed. Mat format will be set to default - ImageFormat::SRGB");
-        return mediapipe::ImageFormat::SRGB;
+static mediapipe::ImageFormat::Format KFSDatatypeToImageFormat(const std::string& datatype, const size_t& numberOfChannels) {
+    if(datatype == "UINT8" || datatype == "INT8")
+    {
+        if(numberOfChannels == 1){
+            return mediapipe::ImageFormat::GRAY8;
+        }
+        if(numberOfChannels == 3){
+            return mediapipe::ImageFormat::SRGB;
+        }
+        if(numberOfChannels == 4){
+            return mediapipe::ImageFormat::SRGBA;
+        }
     }
-    return it->second;
+    if(datatype == "UINT16" || datatype == "INT16")
+    {
+        if(numberOfChannels == 1){
+            return mediapipe::ImageFormat::GRAY16;
+        }
+        if(numberOfChannels == 3){
+            return mediapipe::ImageFormat::SRGB48;
+        }
+        if(numberOfChannels == 4){
+            return mediapipe::ImageFormat::SRGBA64;
+        }
+    }
+    if(datatype == "FP16")
+    {
+        if(numberOfChannels == 1){
+            return mediapipe::ImageFormat::GRAY16;
+        }
+        if(numberOfChannels == 3){
+            return mediapipe::ImageFormat::SRGB48;
+        }
+        if(numberOfChannels == 4){
+            return mediapipe::ImageFormat::SRGBA64;
+        }
+    }
+    if(datatype == "FP32")
+    {
+        if(numberOfChannels == 1){
+            return mediapipe::ImageFormat::VEC32F1;
+        }
+        if(numberOfChannels == 2){
+            return mediapipe::ImageFormat::VEC32F2;
+        }
+        // if(numberOfChannels == 4){
+        //     return mediapipe::ImageFormat::VEC32F4;
+        // }
+    }
+    return mediapipe::ImageFormat::UNKNOWN;
 }
 
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, mediapipe::ImageFrame& outTensor) {
     auto requestInputItr = request.inputs().begin();
     auto status = getRequestInput(requestInputItr, requestedName, request);
     if (!status.ok()) {
-        SPDLOG_ERROR("Getting Input failed");
+        SPDLOG_DEBUG("Getting Input failed");
         return status;
     }
     if (request.raw_input_contents().size() == 0 || request.raw_input_contents().size() != request.inputs().size()) {
@@ -203,28 +231,32 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
 
     if (requestInputItr->shape().size() != 3) {
-        SPDLOG_ERROR("Invalid Mediapipe Image input shape size. Expected: 3 Actual: {}", requestInputItr->shape().size());
+        SPDLOG_DEBUG("Invalid Mediapipe Image input shape size. Expected: 3 Actual: {}", requestInputItr->shape().size());
         return Status(StatusCode::INVALID_SHAPE, "Invalid Mediapipe Image input shape size.");
     }
-    size_t matFormat = convertKFSDataTypeToMatFormat(requestInputItr->datatype());
-    size_t numberOfPixels = requestInputItr->shape()[0] * requestInputItr->shape()[1];
     size_t numberOfChannels = requestInputItr->shape()[2];
     if (numberOfChannels == 0) {
-        SPDLOG_ERROR("Invalid Mediapipe Image input number of channels. Number of channels should be greater than 0.");
+        SPDLOG_DEBUG("Invalid Mediapipe Image input number of channels. Number of channels should be greater than 0.");
         return Status(StatusCode::INVALID_SHAPE, "Invalid Mediapipe Image input number of channels.");
     }
-    auto matFormatWithChannels = CV_MAKETYPE(matFormat, numberOfChannels);
-    cv::Mat camera_frame(requestInputItr->shape()[0], requestInputItr->shape()[1], matFormatWithChannels);
-    size_t expectedSize = numberOfPixels * numberOfChannels * camera_frame.elemSize1();
-    std::memcpy(camera_frame.data, bufferLocation.data(), expectedSize);
-    mediapipe::ImageFormat::Format imageFormat = matFormatToImageFormat(matFormatWithChannels);
+    size_t numberOfCols = requestInputItr->shape()[0];
+    size_t numberOfRows = requestInputItr->shape()[1];
+    size_t elementSize = KFSDataTypeSize(requestInputItr->datatype());
+    size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
+    if (bufferLocation.size() != expectedSize) {
+        SPDLOG_DEBUG("Invalid Mediapipe Image input buffer size. Actual: {} Expected: {}", bufferLocation.size(), expectedSize);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Invalid Mediapipe Image input buffer size.");
+    }
+    auto imageFormat = KFSDatatypeToImageFormat(requestInputItr->datatype(), numberOfChannels);
+    if(imageFormat == mediapipe::ImageFormat::UNKNOWN){
+        SPDLOG_DEBUG("Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
+        return Status(StatusCode::INVALID_INPUT_FORMAT, "Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
+    }
     size_t alignment = 1;
-    auto outTensorFrame = std::make_shared<mediapipe::ImageFrame>(
-        imageFormat, camera_frame.cols, camera_frame.rows, alignment);
-    cv::Mat input_frame_mat = mediapipe::formats::MatView(outTensorFrame.get());
-    camera_frame.copyTo(input_frame_mat);
+    auto outTensorFrame = mediapipe::ImageFrame(imageFormat, numberOfCols, numberOfRows, alignment);
+    std::memcpy(const_cast<uint8_t*>(outTensorFrame.PixelData()), bufferLocation.data(), expectedSize);
 
-    outTensor = std::move(*(outTensorFrame.get()));
+    outTensor = std::move(outTensorFrame);
     return StatusCode::OK;
 }
 
@@ -525,7 +557,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
                 SPDLOG_DEBUG("Response processing packet type TF Tensor name: {}", outputStreamName);
                 status = receiveAndSerializePacket<tensorflow::Tensor>(packet, *response, outputStreamName);
             } else if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
-                SPDLOG_DEBUG("Response processing Mediapipe Image: {}", outputStreamName);
+                SPDLOG_DEBUG("Response processing Mediapipe Image Frame: {}", outputStreamName);
                 status = receiveAndSerializePacket<mediapipe::ImageFrame>(packet, *response, outputStreamName);
             } else if ((this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::OVTENSOR) ||
                        (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::UNKNOWN)) {

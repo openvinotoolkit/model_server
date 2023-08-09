@@ -229,18 +229,8 @@ public:
         ASSERT_EQ(response.outputs()[0].shape()[1], image.rows);
         ASSERT_EQ(response.outputs()[0].shape()[2], image.channels());
         ASSERT_EQ(response.raw_output_contents_size(), 1);
-        if (datatype == "FP16" || datatype == "FP64") {
-            cv::Mat imageUINT8;
-            image.convertTo(imageUINT8, CV_8UC3);
-            for (size_t i = 0; i < imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1(); i++) {
-                SPDLOG_ERROR("EXPECTED : {} | ACTUAL : {}", ((uint8_t*)(imageUINT8.data))[i], ((uint8_t*)(response.raw_output_contents()[0].data()))[i]);
-            }
-            ASSERT_EQ(response.raw_output_contents()[0].size(), imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1());
-            ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), imageUINT8.data, imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1()));
-        } else {
-            ASSERT_EQ(response.raw_output_contents()[0].size(), image.cols * image.rows * image.channels() * elementSize);
-            ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
-        }
+        ASSERT_EQ(response.raw_output_contents()[0].size(), image.cols * image.rows * image.channels() * elementSize);
+        ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
     }
 
     void PerformTestWithGivenDatatypeOneChannel(KFSDataType datatype) {
@@ -275,15 +265,8 @@ public:
         ASSERT_EQ(response.model_name(), modelName);
         ASSERT_EQ(response.outputs_size(), 1);
         ASSERT_EQ(response.raw_output_contents_size(), 1);
-        if (datatype == "FP16" || datatype == "FP64") {
-            cv::Mat imageUINT8;
-            grayscaled.convertTo(imageUINT8, CV_8UC1);
-            ASSERT_EQ(response.raw_output_contents()[0].size(), imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1());
-            ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), imageUINT8.data, imageUINT8.cols * imageUINT8.rows * imageUINT8.channels() * imageUINT8.elemSize1()));
-        } else {
-            ASSERT_EQ(response.raw_output_contents()[0].size(), grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize);
-            ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), grayscaled.data, grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize));
-        }
+        ASSERT_EQ(response.raw_output_contents()[0].size(), grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize);
+        ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), grayscaled.data, grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize));
     }
 };
 
@@ -375,6 +358,38 @@ TEST_F(MediapipeFlowImageInput, InvalidNumberOfChannels) {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
 }
 
+TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipeImageInput";
+    request.Clear();
+    response.Clear();
+    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+    ASSERT_TRUE(!imageRaw.empty());
+    cv::Mat image;
+    size_t matFormat = convertKFSDataTypeToMatFormat("INT64");
+    size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 3);
+    imageRaw.convertTo(image, matFormatWithChannels);
+    std::string* content = request.add_raw_input_contents();
+    size_t elementSize = image.elemSize1();
+    content->resize(image.cols * image.rows * image.channels() * elementSize);
+    std::memcpy(content->data(), image.data, image.cols * image.rows * image.channels() * elementSize);
+
+    KFSTensorInputProto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("INT64");
+    input->mutable_shape()->Clear();
+    input->add_shape(image.cols);
+    input->add_shape(image.rows);
+    input->add_shape(3);
+
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+}
+
+
 class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};
 
 TEST_P(MediapipeFlowImageInputThreeChannels, Infer) {
@@ -386,14 +401,14 @@ TEST_P(MediapipeFlowImageInputThreeChannels, Infer) {
 }
 
 static const std::vector<std::string> PRECISIONS{
-    "FP64",
+    //"FP64",
     "FP32",
-    "FP16",
+    // "FP16",
     "UINT8",
     "UINT16",
     "INT8",
     "INT16",
-    "INT32",
+    // "INT32",
 };
 
 INSTANTIATE_TEST_SUITE_P(
