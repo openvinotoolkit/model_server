@@ -146,51 +146,47 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 }
 
 static mediapipe::ImageFormat::Format KFSDatatypeToImageFormat(const std::string& datatype, const size_t numberOfChannels) {
-    if(datatype == "FP32")
-    {
-        if(numberOfChannels == 1){
+    if (datatype == "FP32") {
+        if (numberOfChannels == 1) {
             return mediapipe::ImageFormat::VEC32F1;
         }
-        if(numberOfChannels == 2){
+        if (numberOfChannels == 2) {
             return mediapipe::ImageFormat::VEC32F2;
         }
         // if(numberOfChannels == 4){
         //     return mediapipe::ImageFormat::VEC32F4;
         // }
     }
-    if(datatype == "UINT8" || datatype == "INT8")
-    {
-        if(numberOfChannels == 1){
+    if (datatype == "UINT8" || datatype == "INT8") {
+        if (numberOfChannels == 1) {
             return mediapipe::ImageFormat::GRAY8;
         }
-        if(numberOfChannels == 3){
+        if (numberOfChannels == 3) {
             return mediapipe::ImageFormat::SRGB;
         }
-        if(numberOfChannels == 4){
+        if (numberOfChannels == 4) {
             return mediapipe::ImageFormat::SRGBA;
         }
     }
-    if(datatype == "UINT16" || datatype == "INT16")
-    {
-        if(numberOfChannels == 1){
+    if (datatype == "UINT16" || datatype == "INT16") {
+        if (numberOfChannels == 1) {
             return mediapipe::ImageFormat::GRAY16;
         }
-        if(numberOfChannels == 3){
+        if (numberOfChannels == 3) {
             return mediapipe::ImageFormat::SRGB48;
         }
-        if(numberOfChannels == 4){
+        if (numberOfChannels == 4) {
             return mediapipe::ImageFormat::SRGBA64;
         }
     }
-    if(datatype == "FP16")
-    {
-        if(numberOfChannels == 1){
+    if (datatype == "FP16") {
+        if (numberOfChannels == 1) {
             return mediapipe::ImageFormat::GRAY16;
         }
-        if(numberOfChannels == 3){
+        if (numberOfChannels == 3) {
             return mediapipe::ImageFormat::SRGB48;
         }
-        if(numberOfChannels == 4){
+        if (numberOfChannels == 4) {
             return mediapipe::ImageFormat::SRGBA64;
         }
     }
@@ -234,7 +230,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
     auto imageFormat = KFSDatatypeToImageFormat(requestInputItr->datatype(), numberOfChannels);
-    if(imageFormat == mediapipe::ImageFormat::UNKNOWN){
+    if (imageFormat == mediapipe::ImageFormat::UNKNOWN) {
         SPDLOG_DEBUG("Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
         return Status(StatusCode::INVALID_INPUT_FORMAT, "Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
     }

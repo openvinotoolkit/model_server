@@ -392,7 +392,6 @@ TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
 }
 
-
 class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};
 
 TEST_P(MediapipeFlowImageInputThreeChannels, Infer) {
