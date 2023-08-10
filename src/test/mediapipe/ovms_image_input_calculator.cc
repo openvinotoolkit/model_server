@@ -13,15 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "../../stringutils.hpp"  // TODO dispose
 #include "mediapipe/framework/calculator_framework.h"
-#include "mediapipe/framework/formats/image.h"
+#include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/mediapipe_calculators/ovmscalculator.pb.h"
 
-// here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
-// for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
 
 using std::endl;

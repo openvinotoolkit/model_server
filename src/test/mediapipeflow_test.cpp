@@ -264,6 +264,9 @@ public:
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
         ASSERT_EQ(response.model_name(), modelName);
         ASSERT_EQ(response.outputs_size(), 1);
+        ASSERT_EQ(response.outputs()[0].shape()[0], grayscaled.cols);
+        ASSERT_EQ(response.outputs()[0].shape()[1], grayscaled.rows);
+        ASSERT_EQ(response.outputs()[0].shape()[2], grayscaled.channels());
         ASSERT_EQ(response.raw_output_contents_size(), 1);
         ASSERT_EQ(response.raw_output_contents()[0].size(), grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize);
         ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), grayscaled.data, grayscaled.cols * grayscaled.rows * grayscaled.channels() * elementSize));

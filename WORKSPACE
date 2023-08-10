@@ -89,7 +89,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "6b281ab4cd0c8110d55e0073de518f2b6842bc8f", # Update calculators from ovms repo
+    commit = "f60c6432636d42e100c7d7bbcb6bdd7b57ebe6c8", # Update calculators from ovms repo
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build

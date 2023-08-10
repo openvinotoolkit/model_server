@@ -161,7 +161,19 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     return Status(StatusCode::INTERNAL_ERROR, "Unexpected error during Tensor creation");
 }
 
-static mediapipe::ImageFormat::Format KFSDatatypeToImageFormat(const std::string& datatype, const size_t& numberOfChannels) {
+static mediapipe::ImageFormat::Format KFSDatatypeToImageFormat(const std::string& datatype, const size_t numberOfChannels) {
+    if(datatype == "FP32")
+    {
+        if(numberOfChannels == 1){
+            return mediapipe::ImageFormat::VEC32F1;
+        }
+        if(numberOfChannels == 2){
+            return mediapipe::ImageFormat::VEC32F2;
+        }
+        // if(numberOfChannels == 4){
+        //     return mediapipe::ImageFormat::VEC32F4;
+        // }
+    }
     if(datatype == "UINT8" || datatype == "INT8")
     {
         if(numberOfChannels == 1){
@@ -198,18 +210,6 @@ static mediapipe::ImageFormat::Format KFSDatatypeToImageFormat(const std::string
             return mediapipe::ImageFormat::SRGBA64;
         }
     }
-    if(datatype == "FP32")
-    {
-        if(numberOfChannels == 1){
-            return mediapipe::ImageFormat::VEC32F1;
-        }
-        if(numberOfChannels == 2){
-            return mediapipe::ImageFormat::VEC32F2;
-        }
-        // if(numberOfChannels == 4){
-        //     return mediapipe::ImageFormat::VEC32F4;
-        // }
-    }
     return mediapipe::ImageFormat::UNKNOWN;
 }
 
@@ -231,30 +231,37 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
 
     if (requestInputItr->shape().size() != 3) {
-        SPDLOG_DEBUG("Invalid Mediapipe Image input shape size. Expected: 3 Actual: {}", requestInputItr->shape().size());
-        return Status(StatusCode::INVALID_SHAPE, "Invalid Mediapipe Image input shape size.");
+        std::stringstream ss;
+        ss << "Invalid Mediapipe Image input shape size. Expected: 3 Actual: " << requestInputItr->shape().size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_SHAPE, details);
     }
     size_t numberOfChannels = requestInputItr->shape()[2];
     if (numberOfChannels == 0) {
-        SPDLOG_DEBUG("Invalid Mediapipe Image input number of channels. Number of channels should be greater than 0.");
-        return Status(StatusCode::INVALID_SHAPE, "Invalid Mediapipe Image input number of channels.");
+        std::stringstream ss;
+        ss << "Invalid Mediapipe Image input number of channels. Expected: 3 Actual: " << numberOfChannels << "Expected layout - HWC.";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_SHAPE, details);
     }
-    size_t numberOfCols = requestInputItr->shape()[0];
-    size_t numberOfRows = requestInputItr->shape()[1];
+    size_t numberOfRows = requestInputItr->shape()[0];
+    size_t numberOfCols = requestInputItr->shape()[1];
     size_t elementSize = KFSDataTypeSize(requestInputItr->datatype());
     size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
     if (bufferLocation.size() != expectedSize) {
-        SPDLOG_DEBUG("Invalid Mediapipe Image input buffer size. Actual: {} Expected: {}", bufferLocation.size(), expectedSize);
-        return Status(StatusCode::INVALID_CONTENT_SIZE, "Invalid Mediapipe Image input buffer size.");
+        std::stringstream ss;
+        ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "Expected: " << expectedSize;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
     auto imageFormat = KFSDatatypeToImageFormat(requestInputItr->datatype(), numberOfChannels);
     if(imageFormat == mediapipe::ImageFormat::UNKNOWN){
         SPDLOG_DEBUG("Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
         return Status(StatusCode::INVALID_INPUT_FORMAT, "Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
     }
-    size_t alignment = 1; // TODO check impact of used alignment on performance
-    auto outTensorFrame = mediapipe::ImageFrame(imageFormat, numberOfCols, numberOfRows, alignment);
-    std::memcpy(const_cast<uint8_t*>(outTensorFrame.PixelData()), bufferLocation.data(), expectedSize);
+    auto outTensorFrame = mediapipe::ImageFrame(imageFormat, numberOfCols, numberOfRows, numberOfCols * numberOfChannels * elementSize, reinterpret_cast<uint8_t*>((const_cast<char*>(bufferLocation.data()))), mediapipe::ImageFrame::PixelDataDeleter::kNone);
 
     outTensor = std::move(outTensorFrame);
     return StatusCode::OK;
