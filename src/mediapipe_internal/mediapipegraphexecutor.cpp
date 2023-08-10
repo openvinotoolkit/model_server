@@ -204,20 +204,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         SPDLOG_DEBUG("Getting Input failed");
         return status;
     }
-    if (request.raw_input_contents().size() == 0) {
-        std::stringstream ss;
-        ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
-    }
-    if (request.raw_input_contents().size() != request.inputs().size()) {
-        std::stringstream ss;
-        ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
-    }
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
 
