@@ -66,14 +66,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     if (!status.ok()) {
         return status;
     }
-    // TODO there is no sense to check this for every input
-    if (request.raw_input_contents().size() == 0 || request.raw_input_contents().size() != request.inputs().size()) {
-        std::stringstream ss;
-        ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
-    }
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
@@ -111,14 +103,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto status = getRequestInput(requestInputItr, requestedName, request);
     if (!status.ok()) {
         return status;
-    }
-    // TODO there is no sense to check this for every input
-    if (request.raw_input_contents().size() == 0 || request.raw_input_contents().size() != request.inputs().size()) {
-        std::stringstream ss;
-        ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
     }
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
@@ -220,7 +204,14 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         SPDLOG_DEBUG("Getting Input failed");
         return status;
     }
-    if (request.raw_input_contents().size() == 0 || request.raw_input_contents().size() != request.inputs().size()) {
+    if (request.raw_input_contents().size() == 0) {
+        std::stringstream ss;
+        ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
+        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
+    }
+    if (request.raw_input_contents().size() != request.inputs().size()) {
         std::stringstream ss;
         ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
         const std::string details = ss.str();
@@ -314,6 +305,18 @@ static Status createPacketAndPushIntoGraph(const std::string& name, const KFSReq
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
     }
     SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
+    if (request.raw_input_contents().size() == 0) {
+        const std::string details = "Invalid message structure - raw_input_content is empty";
+        SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
+    }
+    if (request.raw_input_contents().size() != request.inputs().size()) {
+        std::stringstream ss;
+        ss << "Size of raw_input_contents: " << request.raw_input_contents().size() << " is different than number of inputs: " << request.inputs().size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
+        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
+    }
     T input_tensor;
     auto status = deserializeTensor(name, request, input_tensor);
     if (!status.ok()) {
