@@ -19,14 +19,17 @@
 #include <memory>
 #include <string>
 
+#include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
-#include <rapidjson/rapidjson.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
+#include "../version.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
