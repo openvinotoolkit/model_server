@@ -38,8 +38,11 @@
 #include "../timer.hpp"
 #include "../version.hpp"
 #include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/formats/image_frame.h"
+#include "mediapipe/framework/formats/image_frame_opencv.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphdefinition.hpp"  // for version in response
+#include "opencv2/opencv.hpp"
 
 namespace ovms {
 static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
@@ -62,14 +65,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto status = getRequestInput(requestInputItr, requestedName, request);
     if (!status.ok()) {
         return status;
-    }
-    // TODO there is no sense to check this for every input
-    if (request.raw_input_contents().size() == 0 || request.raw_input_contents().size() != request.inputs().size()) {
-        std::stringstream ss;
-        ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
     }
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
@@ -108,14 +103,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto status = getRequestInput(requestInputItr, requestedName, request);
     if (!status.ok()) {
         return status;
-    }
-    // TODO there is no sense to check this for every input
-    if (request.raw_input_contents().size() == 0 || request.raw_input_contents().size() != request.inputs().size()) {
-        std::stringstream ss;
-        ss << "Cannot find data in raw_input_content for input with name: " << requestedName;
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
     }
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
@@ -156,6 +143,101 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         SPDLOG_DEBUG("KServe mediapipe request deserialization failed");
     }
     return Status(StatusCode::INTERNAL_ERROR, "Unexpected error during Tensor creation");
+}
+
+static mediapipe::ImageFormat::Format KFSDatatypeToImageFormat(const std::string& datatype, const size_t numberOfChannels) {
+    if (datatype == "FP32") {
+        if (numberOfChannels == 1) {
+            return mediapipe::ImageFormat::VEC32F1;
+        }
+        if (numberOfChannels == 2) {
+            return mediapipe::ImageFormat::VEC32F2;
+        }
+        // if(numberOfChannels == 4){
+        //     return mediapipe::ImageFormat::VEC32F4;
+        // }
+    }
+    if (datatype == "UINT8" || datatype == "INT8") {
+        if (numberOfChannels == 1) {
+            return mediapipe::ImageFormat::GRAY8;
+        }
+        if (numberOfChannels == 3) {
+            return mediapipe::ImageFormat::SRGB;
+        }
+        if (numberOfChannels == 4) {
+            return mediapipe::ImageFormat::SRGBA;
+        }
+    }
+    if (datatype == "UINT16" || datatype == "INT16") {
+        if (numberOfChannels == 1) {
+            return mediapipe::ImageFormat::GRAY16;
+        }
+        if (numberOfChannels == 3) {
+            return mediapipe::ImageFormat::SRGB48;
+        }
+        if (numberOfChannels == 4) {
+            return mediapipe::ImageFormat::SRGBA64;
+        }
+    }
+    if (datatype == "FP16") {
+        if (numberOfChannels == 1) {
+            return mediapipe::ImageFormat::GRAY16;
+        }
+        if (numberOfChannels == 3) {
+            return mediapipe::ImageFormat::SRGB48;
+        }
+        if (numberOfChannels == 4) {
+            return mediapipe::ImageFormat::SRGBA64;
+        }
+    }
+    return mediapipe::ImageFormat::UNKNOWN;
+}
+
+static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, mediapipe::ImageFrame& outTensor) {
+    auto requestInputItr = request.inputs().begin();
+    auto status = getRequestInput(requestInputItr, requestedName, request);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Getting Input failed");
+        return status;
+    }
+    auto inputIndex = requestInputItr - request.inputs().begin();
+    auto& bufferLocation = request.raw_input_contents().at(inputIndex);
+
+    if (requestInputItr->shape().size() != 3) {
+        std::stringstream ss;
+        ss << "Invalid Mediapipe Image input shape size. Expected: 3 Actual: " << requestInputItr->shape().size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_SHAPE, details);
+    }
+    size_t numberOfChannels = requestInputItr->shape()[2];
+    if (numberOfChannels == 0) {
+        std::stringstream ss;
+        ss << "Invalid Mediapipe Image input number of channels. Expected: 3 Actual: " << numberOfChannels << "Expected layout - HWC.";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_SHAPE, details);
+    }
+    size_t numberOfRows = requestInputItr->shape()[0];
+    size_t numberOfCols = requestInputItr->shape()[1];
+    size_t elementSize = KFSDataTypeSize(requestInputItr->datatype());
+    size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
+    if (bufferLocation.size() != expectedSize) {
+        std::stringstream ss;
+        ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "Expected: " << expectedSize;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+    }
+    auto imageFormat = KFSDatatypeToImageFormat(requestInputItr->datatype(), numberOfChannels);
+    if (imageFormat == mediapipe::ImageFormat::UNKNOWN) {
+        SPDLOG_DEBUG("Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
+        return Status(StatusCode::INVALID_INPUT_FORMAT, "Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
+    }
+    auto outTensorFrame = mediapipe::ImageFrame(imageFormat, numberOfCols, numberOfRows, numberOfCols * numberOfChannels * elementSize, reinterpret_cast<uint8_t*>((const_cast<char*>(bufferLocation.data()))), mediapipe::ImageFrame::PixelDataDeleter::kNone);
+
+    outTensor = std::move(outTensorFrame);
+    return StatusCode::OK;
 }
 
 MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
@@ -205,6 +287,18 @@ static Status createPacketAndPushIntoGraph(const std::string& name, const KFSReq
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
     }
     SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
+    if (request.raw_input_contents().size() == 0) {
+        const std::string details = "Invalid message structure - raw_input_content is empty";
+        SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
+    }
+    if (request.raw_input_contents().size() != request.inputs().size()) {
+        std::stringstream ss;
+        ss << "Size of raw_input_contents: " << request.raw_input_contents().size() << " is different than number of inputs: " << request.inputs().size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
+        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
+    }
     T input_tensor;
     auto status = deserializeTensor(name, request, input_tensor);
     if (!status.ok()) {
@@ -313,6 +407,41 @@ Status receiveAndSerializePacket<ov::Tensor>(::mediapipe::Packet& packet, KFSRes
     }
 }
 
+static KFSDataType convertImageFormatToKFSDataType(const mediapipe::ImageFormat::Format& imageFormat) {
+    static std::unordered_map<mediapipe::ImageFormat::Format, KFSDataType> ImageFormatKFSDatatypeMap{
+        {mediapipe::ImageFormat::GRAY8, "UINT8"},
+        {mediapipe::ImageFormat::SRGB, "UINT8"},
+        {mediapipe::ImageFormat::SRGBA, "UINT8"},
+        {mediapipe::ImageFormat::GRAY16, "UINT16"},
+        {mediapipe::ImageFormat::SRGB48, "UINT16"},
+        {mediapipe::ImageFormat::SRGBA64, "UINT16"},
+        {mediapipe::ImageFormat::VEC32F1, "FP32"},
+        {mediapipe::ImageFormat::VEC32F2, "FP32"}};
+    auto it = ImageFormatKFSDatatypeMap.find(imageFormat);
+    if (it == ImageFormatKFSDatatypeMap.end()) {
+        SPDLOG_DEBUG("Converting Mediapipe::ImageFrame format to KFS datatype failed. Datatype will be set to default - UINT8");
+        return "UINT8";
+    }
+    return it->second;
+}
+
+template <>
+Status receiveAndSerializePacket<mediapipe::ImageFrame>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+    const auto& received = packet.Get<mediapipe::ImageFrame>();
+    auto* output = response.add_outputs();
+    output->set_name(outputStreamName);
+    KFSDataType datatype = convertImageFormatToKFSDataType(received.Format());
+    output->set_datatype(datatype);
+    output->clear_shape();
+    output->add_shape(received.Height());
+    output->add_shape(received.Width());
+    output->add_shape(received.NumberOfChannels());
+    cv::Mat image = mediapipe::formats::MatView(&received);
+
+    response.add_raw_output_contents()->assign(reinterpret_cast<char*>(image.data), image.cols * image.rows * image.channels() * image.elemSize1());
+    return StatusCode::OK;
+}
+
 template <>
 Status receiveAndSerializePacket<KFSResponse*>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
@@ -394,6 +523,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         } else if (this->inputTypes.at(name) == mediapipe_packet_type_enum::TFTENSOR) {
             SPDLOG_DEBUG("Request processing TF tensor: {}", name);
             status = createPacketAndPushIntoGraph<tensorflow::Tensor>(name, *request, graph);
+        } else if (this->inputTypes.at(name) == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
+            SPDLOG_DEBUG("Request processing Mediapipe ImageFrame: {}", name);
+            status = createPacketAndPushIntoGraph<mediapipe::ImageFrame>(name, *request, graph);
         } else if ((this->inputTypes.at(name) == mediapipe_packet_type_enum::OVTENSOR) ||
                    (this->inputTypes.at(name) == mediapipe_packet_type_enum::UNKNOWN)) {
             SPDLOG_DEBUG("Request processing OVTensor: {}", name);
@@ -416,6 +548,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
             } else if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::TFTENSOR) {
                 SPDLOG_DEBUG("Response processing packet type TF Tensor name: {}", outputStreamName);
                 status = receiveAndSerializePacket<tensorflow::Tensor>(packet, *response, outputStreamName);
+            } else if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
+                SPDLOG_DEBUG("Response processing Mediapipe Image Frame: {}", outputStreamName);
+                status = receiveAndSerializePacket<mediapipe::ImageFrame>(packet, *response, outputStreamName);
             } else if ((this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::OVTENSOR) ||
                        (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::UNKNOWN)) {
                 SPDLOG_DEBUG("Response processing packet type:  OVTensor name: {}", outputStreamName);

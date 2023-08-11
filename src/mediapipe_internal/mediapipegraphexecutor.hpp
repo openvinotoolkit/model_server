@@ -21,8 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "..//kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric.hpp"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
