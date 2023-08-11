@@ -350,6 +350,20 @@ TEST_F(TfsPredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
 }
 
+TEST_F(TfsPredictValidation, RequestZeroDimBatchAuto) {
+    modelConfig.setBatchingParams("auto");
+
+    preparePredictRequest(request, {{"im_data", {{0, 3, 800, 1344}, ovms::Precision::FP32}}});
+
+    servableInputs.clear();
+    servableInputs = ovms::tensor_map_t{
+        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, ovms::Layout{"NCHW"})},
+    };
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
+}
+
 TEST_F(TfsPredictValidation, RequestWrongAndCorrectShapeAuto) {
     modelConfig.parseShapeParameter("auto");
     preparePredictRequest(request, {{"im_data", {{1, 3, 900, 1344}, ovms::Precision::FP32}},
@@ -370,6 +384,20 @@ TEST_F(TfsPredictValidation, RequestWrongAndCorrectShapeAuto) {
                                        {"im_info", {{1, 6}, ovms::Precision::FP32}}});
 
     status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
+}
+
+TEST_F(TfsPredictValidation, RequestZeroDimShapeAuto) {
+    modelConfig.parseShapeParameter("auto");
+    preparePredictRequest(request, {{"im_data", {{1, 3, 0, 1344}, ovms::Precision::FP32}}});
+
+    // First is incorrect, second is correct
+    servableInputs.clear();
+    servableInputs = ovms::tensor_map_t{
+        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, ovms::Layout{"NCHW"})},
+    };
+
+    auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
 }
 
