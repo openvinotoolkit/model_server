@@ -107,14 +107,45 @@ TEST_F(TfsPredictValidation, RequestWithScalar) {
     EXPECT_TRUE(status.ok());
 }
 
-TEST_F(TfsPredictValidation, RequestWithZeroDimEndpointDynamic) {
-    servableInputs = ovms::tensor_map_t({{"Input_FP32_200_-1_99",
-        std::make_shared<ovms::TensorInfo>("Input_FP32_200_-1_99", ovms::Precision::FP32, ovms::Shape{200, ovms::Dimension::any(), 99}, ovms::Layout{"N..."})}});
-    preparePredictRequest(request,
-        {{"Input_FP32_200_-1_99",
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{200, 0, 99}, ovms::Precision::FP32}}});
-    auto status = instance->mockValidate(&request);
-    EXPECT_TRUE(status.ok());
+
+TEST_F(TfsPredictValidation, RequestWithZeroBatch) {
+    std::vector<ovms::Shape> shapes{
+        ovms::Shape{ovms::Dimension::any(), 400, 99},   // dynamic
+        ovms::Shape{ovms::Dimension{0, 100}, 400, 99},  // range
+        ovms::Shape{0, 400, 99}                         // static
+    };
+
+    ovms::signed_shape_t actualRequestShape{0, 400, 99};
+
+    for (const auto& shape : shapes) {
+        servableInputs = ovms::tensor_map_t({{"Input",
+            std::make_shared<ovms::TensorInfo>("Input", ovms::Precision::FP32, shape, ovms::Layout{"N..."})}});
+        preparePredictRequest(request,
+            {{"Input",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{actualRequestShape, ovms::Precision::FP32}}});
+        auto status = instance->mockValidate(&request);
+        EXPECT_TRUE(status.ok());
+    }
+}
+
+TEST_F(TfsPredictValidation, RequestWithZeroDim) {
+    std::vector<ovms::Shape> shapes{
+        ovms::Shape{200, ovms::Dimension::any(), 99},   // dynamic
+        ovms::Shape{200, ovms::Dimension{0, 100}, 99},  // range
+        ovms::Shape{200, 0, 99}                         // static
+    };
+
+    ovms::signed_shape_t actualRequestShape{200, 0, 99};
+
+    for (const auto& shape : shapes) {
+        servableInputs = ovms::tensor_map_t({{"Input",
+            std::make_shared<ovms::TensorInfo>("Input", ovms::Precision::FP32, shape, ovms::Layout{"N..."})}});
+        preparePredictRequest(request,
+            {{"Input",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{actualRequestShape, ovms::Precision::FP32}}});
+        auto status = instance->mockValidate(&request);
+        EXPECT_TRUE(status.ok());
+    }
 }
 
 TEST_F(TfsPredictValidation, RequestNotEnoughInputs) {
