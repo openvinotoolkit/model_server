@@ -1,0 +1,5 @@
+../../common/static/images/people/people1.jpeg
+../../common/static/images/people/people2.jpeg
+../../common/static/images/people/people3.jpeg
+../../common/static/images/people/people4.jpeg
+../../common/static/images/people/people5.jpeg

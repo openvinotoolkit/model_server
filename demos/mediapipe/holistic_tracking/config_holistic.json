@@ -1,0 +1,71 @@
+{
+    "model_config_list" : [
+        { "config": {
+                "name":"face_landmark",
+                "base_path":"/models/face_landmark",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"hand_landmark_full",
+                "base_path":"/models/hand_landmark_full",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"hand_recrop",
+                "base_path":"/models/hand_recrop",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"pose_detection",
+                "base_path":"/models/pose_detection",
+                "layout": "NHWC:NCHW",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"face_detection",
+                "base_path":"/models/face_detection_short_range",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"pose_landmark_full",
+                "base_path":"/models/pose_landmark_full",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+        {
+            "name":"holisticTracking",
+            "graph_path":"holistic_tracking.pbtxt"
+        },
+        {
+            "name":"faceDetection",
+            "graph_path":"face_detection_short_range/face_detection.pbtxt"
+        },
+        {
+            "name":"FaceLandmarkCpu",
+            "graph_path":"face_landmark/face_landmark_cpu.pbtxt"
+        },
+        {
+            "name":"HandLandmarkCpu",
+            "graph_path":"hand_landmark_full/hand_landmark_cpu.pbtxt"
+        },
+        {
+            "name":"PoseDetectionCpu",
+            "graph_path":"pose_detection/pose_detection_cpu.pbtxt"
+        },
+        {
+            "name":"PoseLandmarkByRoiCpu",
+            "graph_path":"pose_landmark_full/pose_landmark_by_roi_cpu.pbtxt"
+        }
+        // Ned compile as calculator not graph only{
+        //    "name":"HolisticLandmarkCpu",
+        //    "graph_path":"holistic_landmark/holistic_landmark_cpu.pbtxt"
+        //}
+    ]
+}

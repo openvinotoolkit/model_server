@@ -89,7 +89,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "7e87234cc8ddec5430d16eb0ea50fa3dc6c216ec", # Add support for dynamic shapes in OVMS Adapter (#14)
+    commit = "c0e32e0ea439c9b40f5b85f3c6a3f5f68872a42e", # Holistic tracking branch
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build

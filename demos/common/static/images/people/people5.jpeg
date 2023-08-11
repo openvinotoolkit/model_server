@@ -1,0 +1,622 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Page Restricted</title>
+	
+	<script type="text/javascript" src="translationFile.js"></script>
+	<script language="JavaScript">	
+		var params = {ldu:{'loginDifferentUser':'<a id="lduBtn" href="javascript:openSessionInNewWindow();" onClick="openSessionInNewWindow();this.blur();return false;" class="submit-btn login"><span id="loginButton">Login</span></a>'},
+					  re:{'exception1':'Request An Exception','exception2':'Reason:','exception3':'<textarea id="rem2" name="rem2" rows="3" cols="40"></textarea>','exception4':'<a id="roBtn" href="javascript:requestOverride();" class="submit-btn exception" onClick="this.blur();"><span id="exceptionButton">Request Exception</span></a>','exception5':'Email:','exception6':'<input type="text" id="rem3" name="rem3">'},
+					  ov:{'ov':'<a href=\"javascript:overrideSite();\" id="ovBtn" class=\"submit-btn login\" onClick=\"this.blur();\">Override Site</a><span id=\"ovError\"></span>'}},
+			general = {'url':'<a id="link" href="' + decode(fixProtocol(getParameter('bu'))) + '">' + decode(getParameter('bu')) + '</a>','description':decode(getParameter('bc')),'groupNumber':decode(getParameter('fp')),'groupName':decode(getParameter('fn')),'ipAddress':decode(getParameter('ip')),'clia': decode(getParameter('ip')),'customText':decode(getParameter('ct')), 'user':decode(getParameter('user')), 'cn': decode(getParameter('cn')), 'cliaText': 'Currently logged into IP Address '};
+		var error = decode(getParameter('er'));
+
+        var overrideJustificationError = false;
+
+        // See equivalent in iboss directives
+        var Base64 = {
+            // private property
+            _keyStr: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
+
+            // public method for encoding
+            encode: function (input) {
+                var output = '';
+                var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+                var i = 0;
+
+                input = Base64._utf8_encode(input);
+
+                while (i < input.length) {
+                    chr1 = input.charCodeAt(i++);
+                    chr2 = input.charCodeAt(i++);
+                    chr3 = input.charCodeAt(i++);
+
+                    enc1 = chr1 >> 2;
+                    enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+                    enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+                    enc4 = chr3 & 63;
+
+                    if (isNaN(chr2)) {
+                        enc3 = enc4 = 64;
+                    } else if (isNaN(chr3)) {
+                        enc4 = 64;
+                    }
+
+                    output = output +
+                        this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+                        this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+                }
+                return output;
+            },
+
+            // private method for UTF-8 encoding
+            _utf8_encode: function (string) {
+                string = string.replace(/\r\n/g, '\n');
+                var utftext = '';
+
+                for (var n = 0; n < string.length; n++) {
+
+                    var c = string.charCodeAt(n);
+
+                    if (c < 128) {
+                        utftext += String.fromCharCode(c);
+                    }
+                    else if ((c > 127) && (c < 2048)) {
+                        utftext += String.fromCharCode((c >> 6) | 192);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    }
+                    else {
+                        utftext += String.fromCharCode((c >> 12) | 224);
+                        utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    }
+                }
+
+                return utftext;
+            }
+        };
+
+		function sanitizeString(str) {
+			str = str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;').replace(/\(/g, '&#40;').replace(/\)/g, '&#41;').replace(/<[^>]*>/g, '');
+			return str;
+		}
+
+		function getParameter(name) {
+			name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+			var regexS = "[\\?&]"+name+"=([^&#]*)",
+					regex = new RegExp( regexS ),
+					results = regex.exec( window.location.href );
+			return results == null ? "" : results[1];
+		}
+		
+		function fixProtocol(val) {
+			val = val.replace(/^https?:\/\//i, '');
+			var linkPc = (getParameter('pc') == 1) ? 'https://' : 'http://';
+			return linkPc + val;
+		}
+		
+		function decode(encodedItem) {
+			return sanitizeString(decodeURIComponent(encodedItem.replace(/\+/g,  " ")).replace(/(<([^>]+)>)/ig, ""));
+		}
+		
+		function populateDom(obj) {
+			for (i in obj) {
+				if(obj[i] === undefined || obj[i] === null || obj[i] === '') {
+					if(document.getElementById(i + 'Label') !== null) {
+						document.getElementById(i + 'Label').className = "hidden";
+					}
+				}
+				else {
+					if(document.getElementById(i) !== null) {
+						if (i === 'description' && error !== undefined && error !== null && error !=='') {
+							document.getElementById(i).innerHTML += translate(error);
+						}
+						else 
+						{
+							document.getElementById(i).innerHTML += obj[i];	
+						}
+					}
+				}
+			}
+		}
+
+		function createOverrideReasonParam(text){
+		    if(text === ''){
+		        return '';
+		    } else {
+		        return '&ovReason=' + Base64.encode(text);
+		    }
+		}
+
+		function checkHost() {
+			var name = 'ibip'.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+			var buttonId = document.getElementById("loginDifferentUser");
+			var regexS = "[\\?&]"+name+"=([^&#]*)",
+					regex = new RegExp( regexS ),
+					results = regex.exec( window.location.href );
+			var swgHost = results[1];
+			if (swgHost.search('ibosscloud.com') > -1 || swgHost.search('ibosstest.com') > -1 || swgHost.search('boss.cloud') > -1 || swgHost.search('ibosscloud-staging.com') > -1 || swgHost.search('ibossgov.com') > -1 || swgHost.search('iboss.com') > -1) {
+				buttonId.style.display = 'none';
+			}
+		}
+
+		function displaySections() {
+		
+		
+			for (var item in params) {
+				if (getParameter(item) == '1') {
+					populateDom(params[item]);
+					if(item == 'ldu'){
+						document.getElementById('ov').className = "hidden";
+					}
+					if(item == 'ov'){
+					    if(false == true){
+                            validateOverrideJustification(document.getElementById('ovReasonText'), false);
+                        }
+					}
+				} else {
+					if (item == 're') {
+						document.getElementById('exception').className = "hidden";
+					}
+					if (item == 'ov') {
+						document.getElementById('ov').className = "hidden";
+					}
+				}
+			}
+			populateDom(general);
+			invokeRules();
+			checkHost();
+		}
+
+
+		function overrideSite() {
+            // Encode override justification reason if any
+            var reason = '';
+            var overrideReasonParam = '';
+
+            if((false == true)){
+            	if ((false == true)) {
+            		var reasonDropDown = document.getElementById('overrideDropDown');
+            		if (reasonDropDown) {
+            			reason = reasonDropDown.value;
+            		}
+            		overrideReasonParam = createOverrideReasonParam(reason);
+            	
+            	} else 
+            	{
+	                var reasonTextArea = document.getElementById('ovReasonText');
+	                if(reasonTextArea){
+	                    reason = reasonTextArea.value;
+	            	}
+	                overrideReasonParam = createOverrideReasonParam(reason);
+                }
+            }
+
+            // If there is currently an error, do not allow override
+            if (overrideJustificationError === true || ((false == true) && overrideReasonParam == '')) {
+                return;
+            }
+
+			var orRequest = new XMLHttpRequest(),
+				pc = /\b(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b/.test(getParameter('ibip')) ? 'http:' : window.location.protocol;
+			orRequest.onreadystatechange = function() {
+				document.getElementById('ovError').innerHTML = '';
+				if(orRequest.readyState === 4) {
+					if(orRequest.status === 200) {
+						window.location = ((getParameter('pc') == 1) ? 'https://' : 'http://') + decode(getParameter('bu'));
+					}
+					else {
+						document.getElementById('ovError').innerHTML = 'Failed to Override Site. Contact your system administrator.';
+					}
+				}
+			};
+
+			if (getParameter('sck') != '') {
+				orRequest.open('GET', pc + '//' + decode(getParameter('ibip')) + '/json/requestOverrideSite?domain=' + decode(getParameter('bu')) + '&rt=sco&ip='+ decode(getParameter('ip')) + overrideReasonParam +'&sck=' + decode(getParameter('sck')) + '&user=' + decode(getParameter('user')), 1);
+			}
+			else if (getParameter('sckuc') != '') {
+				orRequest.open('GET', pc + '//' + decode(getParameter('ibip')) + '/json/requestOverrideSite?domain=' + decode(getParameter('bu')) + '&rt=uc&ip='+ decode(getParameter('ip')) + overrideReasonParam +'&sck=' + decode(getParameter('sckuc')) + '&user=' + decode(getParameter('user')), 1);
+			}
+			else {
+				orRequest.open('GET', pc + '//' + decode(getParameter('ibip')) + '/json/requestOverrideSite?domain=' + decode(getParameter('bu')) + '&rt=uc&ip='+ decode(getParameter('ip')) + overrideReasonParam +'&user=' + decode(getParameter('user')), 1);
+			}
+			orRequest.setRequestHeader("Content-Type", "application/json");
+			orRequest.send();
+		}
+		
+		function validateInput (el, isRequired, isEmail) {
+			el.addEventListener('input', validate);
+			function validate () {
+				var ec = 0,
+					es = '';
+				if (el.nextElementSibling) {
+					el.nextElementSibling.remove();
+				}
+				if (isEmail) {
+					if (/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(el.value) == false) {
+						ec++;
+						es = 'Please enter a valid email';
+					}
+				}
+				if (isRequired) {
+					if (el.value == '') {
+						ec++;
+						es = 'This Field is required.';
+					}
+				}
+				if (ec > 0) {
+					var en = document.createElement('div');
+					en.style.color = '#ff0000';
+					en.className = 'en';
+					en.innerHTML = es;
+					el.parentNode.insertBefore(en, el.nextSibling);
+					el.style.borderColor = "#ff0000";
+				} else {
+					el.style.borderColor = "#ccc";
+				}
+			}
+			validate();
+		}
+
+		function validateOverrideJustification(el, isRequired){
+		    el.addEventListener('input', validate);
+        	function validate () {
+        		var currentError = document.getElementById('overrideJustificationErr');
+        		if (!checkAlphanumeric(el.value)){
+        		    createOverrideJustificationError(el, "Only alphanumeric and punctuation (,.!?) are allowed");
+        		    return;
+        		}
+        		if (el.value == '') {
+        		    if(isRequired == true){
+                        createOverrideJustificationError(el, "Override reason is required");
+        		    } else {
+        		        removeOverrideJustificationError(el);
+        		    }
+        		} else {
+        		    removeOverrideJustificationError(el);
+        		}
+        	}
+        	validate();
+		}
+
+		function createOverrideJustificationError(el, errorText){
+		    overrideJustificationError = true;
+		    var err = document.getElementById('overrideJustificationErr');
+		    if(err){
+		         err.innerHTML = errorText;
+		    } else {
+		        err = document.createElement('div');
+                err.id = 'overrideJustificationErr';
+                err.style.color = '#ff0000';
+                err.innerHTML = errorText;
+                el.style.borderColor = '#ff0000';
+                el.parentNode.insertBefore(err, el.nextSibling);
+            }
+		}
+
+		function removeOverrideJustificationError(el){
+		    overrideJustificationError = false;
+		    var currentError = document.getElementById('overrideJustificationErr');
+		    if(currentError){
+                currentError.remove();
+            }
+            el.style.borderColor = '#ccc';
+		}
+
+		function checkAlphanumeric(str){
+		    return /^[\w ,.!?]*$/gi.test(str);
+		}
+
+		function requestOverride() {
+			validateInput(document.getElementById('rem3'), true, true);
+			validateInput(document.getElementById('rem2'), true);
+			if (document.getElementsByClassName('en').length) {
+				return;
+			}
+			var form = document.forms[0],
+				submitIp = decode(getParameter('ipm')) ? decode(getParameter('ipm')) : decode(getParameter('ibip'));
+			form.fullUrl.value = decode(getParameter('bu'));
+			if (getParameter('sck') != '') {
+				form.sck.value = decode(getParameter('sck'));
+			}
+			else if (getParameter('sckuc') != '') {
+				form.sck.value = decode(getParameter('sckuc'));
+			}
+			form.button.value = 'requestException';
+			if(document.getElementById("rem2")) {
+				form.rem.value = document.getElementById("rem2").value;
+			}
+			if(document.getElementById("rem3")) {
+				form.contactEmail.value = document.getElementById("rem3").value;
+			}
+			form.gn.value = decode(getParameter('fp'));
+			form.un.value = decode(getParameter('user'));
+			var pc = /\b(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b/.test(submitIp) ? 'http:' : window.location.protocol;
+			form.action = pc + '//' + submitIp + '/page_block_submit';
+			form.submit();
+		}
+
+		function openSessionInNewWindow() {
+			var pc = /\b(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b/.test(getParameter('ibip')) ? 'http:' : window.location.protocol;
+			var newWindow = window.open(pc + '//' + getParameter('ibip') + '/user_login_small.html','iBossSessionWindow','toolbar=no, location=no, directories=no, status=no, menubar=no, resizable=yes, scrollbars=yes, width=625, height=650');
+			newWindow.focus();
+			return false;
+		}
+		function openRBI(rbiDomain, urlParam, appendToUrl) {
+
+			var urlToOpen = decode(getParameter('bu'));
+			var newWindow;
+			if (decode(getParameter('bc')) === 'Not Rated Site')
+			{
+				urlToOpen = '';
+			}
+
+			if (appendToUrl) {
+				newWindow = window.open(rbiDomain + "/" + urlToOpen, 'width=625, height=650');
+			} else {
+				newWindow = window.open(rbiDomain + '?' + urlParam + '=' + urlToOpen, 'width=625, height=650');
+			}
+			newWindow.focus();
+			return false;
+		}
+		
+		function translate(translateKey) {
+			return translations[translateKey];
+		}
+		
+	</script>
+	<script>
+		function invokeRules() {
+  				if (true && (general.description.toLowerCase().indexOf('The requested URL cannot be accessed.'.toLowerCase()) > -1 || general.url.toLowerCase().indexOf('The requested URL cannot be accessed.'.toLowerCase()) > -1)) { if (document.getElementById('message')) { document.getElementById('message').innerHTML = 'The connection to this site was not able to be completed.  This could indicate an issue with DNS resolution or ISP connectivity issues. '; } }
+  				if (true && (general.description.toLowerCase().indexOf('Failed to retrieve requested URL'.toLowerCase()) > -1 || general.url.toLowerCase().indexOf('Failed to retrieve requested URL'.toLowerCase()) > -1)) { if (document.getElementById('message')) { document.getElementById('message').innerHTML = 'The DNS resolution for this site failed.  Either the site name has been mistyped or there is an issue with resolving the DNS name. '; } }
+  				if (true && ( [4].indexOf(parseInt(general.groupNumber)) !== -1)) { if (document.getElementById('message')) { document.getElementById('message').innerHTML = 'You attempted to visit a site that has not been approved through Rabbinical review bodies (RRB).<br><br> <br><br>This Intel IT solution for Kosher filtering is based on iboss content categorization of websites and content categories that have been reviewed and approved by a Rabbinical body.<br>If you think you have received this message by mistake or have a business reason to visit this website, submit a kosher proxy whitelist update request using the links below.<br><a href="https://intel.service-now.com/com.glideapp.servicecatalog_cat_item_view.do?sysparm_id=cf52b02791d598105c3cf1dbcddaec2f">Kosher Ticket Submission</a> '; } }
+  				if (true && ( [5].indexOf(parseInt(general.groupNumber)) !== -1)) { if (document.getElementById('message')) { document.getElementById('message').innerHTML = 'Intel Datacenter Allow-list Policy<br><br>You attempted to visit a site that has not been approved through IT governing bodies for the datacenter environment.<br><br>Intel IT flags and blocks sites that have not been specifically approved for enclaved systems. (e.g. Core A, Secure Core B, Utility-DMZ)<br><br><br><br>Need to access a blocked site?<br><br>If you think you have received this message by mistake or have a business reason to visit this website, submit a proxy whitelist update request using the links below.<br><br><br><a href="https://intel.service-now.com/com.glideapp.servicecatalog_cat_item_view.do?sysparm_id=460300063091010078ab334116e40b96">Submit Proxy Request</a><br><br><br>Additional Information: To learn more about website filtering visit <a href="https://employeecontent.intel.com/content/corp/infosec/home.html">Secure Intel</a> '; } }
+  				if (true && ( [7].indexOf(parseInt(general.groupNumber)) !== -1)) { if (document.getElementById('message')) { document.getElementById('message').innerHTML = 'HRZ Labs Policy<br><br>You attempted to visit a site that has not been approved through IT governing bodies for the HRZ Lab environment.<br><br>Intel IT flags and blocks sites that have not been specifically approved for enclaved systems.<br><br><br><br>Need to access a blocked site?<br><br>If you think you have received this message by mistake or have a business reason to visit this website, submit a proxy allow-list update request using the links below.<br><br><br><a href="https://intel.service-now.com/com.glideapp.servicecatalog_cat_item_view.do?sysparm_id=eccb6adedb7cc91832bd60ecd3961910">Submit Proxy Request</a><br><br><br>Additional Information:  To learn more about website filtering visit <a href="https://employeecontent.intel.com/content/corp/infosec/home.html">Secure Intel</a><br> '; } }
+  				if (true && ( [8].indexOf(parseInt(general.groupNumber)) !== -1)) { if (document.getElementById('message')) { document.getElementById('message').innerHTML = 'Restricted Labs Policy<br><br>You attempted to visit a site that has not been approved through IT governing bodies for the Restricted Lab environment.<br><br>Intel IT flags and blocks sites that have not been specifically approved for enclaved systems.<br><br><br><br>Need to access a blocked site?<br><br>If you think you have received this message by mistake or have a business reason to visit this website, submit a proxy allow-list update request using the links below.<br><br><br><a href="https://intel.service-now.com/com.glideapp.servicecatalog_cat_item_view.do?sysparm_id=eccb6adedb7cc91832bd60ecd3961910">Submit Proxy Request</a><br><br><br>Additional Information:   To learn more about website filtering visit <a href="https://employeecontent.intel.com/content/corp/infosec/home.html">Secure Intel</a><br> '; } }
+  				if (true && ( [9].indexOf(parseInt(general.groupNumber)) !== -1)) { if (document.getElementById('message')) { document.getElementById('message').innerHTML = 'You attempted to visit a site that has not been approved by the governing bodies for the Factory environment.<br><br>Intel IT flags and blocks sites that have not been specifically approved for enclaved systems.<br><br><br><br>Need to access a blocked site?<br><br><br><br>If you have a critical business reason to visit this website, submit a request <a href="https://jakarta.rf3prod.mfg.intel.com/$pa_dashboard.do?sysparm_dashboard=a2cf87e38f607300774160737a09fe10&sysparm_tab=6eaf526093bc7b04f7aaddae2d8ed32f&sysparm_cancelable=true&sysparm_editable=undefined&sysparm_active_panel=false">here</a> '; } }
+  				if (true && ( [29].indexOf(parseInt(general.groupNumber)) !== -1)) { if (document.getElementById('message')) { document.getElementById('message').innerHTML = 'You are using a proxy  port (TCP 929) that is configured to only allow access to windows updates for PRC employees. <br>If you are seeing this block page, please update your proxy configuration to use the standard proxy port of 912 for general purpose internet access. '; } }
+  				if (true && ( [30].indexOf(parseInt(general.groupNumber)) !== -1)) { if (document.getElementById('message')) { document.getElementById('message').innerHTML = 'Access to the requested resource has been blocked due to the RESTRICTED security classification of your network. '; } }
+		}
+		invokeRules();
+	</script>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			font-family: "Trebuchet MS", Helvetica, sans-serif;
+		}
+		h1,
+		h2,
+		h3 {
+			font-weight: normal;
+		}
+		.hidden {
+			display: none;
+		}
+		.show-element {
+			display: block;
+		}
+		.clearfix:after {
+			content: ".";
+			visibility: hidden;
+			display: block;
+			height: 0;
+			clear: both;
+		}
+		.center-text {
+			text-align: center;
+		}
+		#header {
+			color: rgb(255, 255, 255);
+			background: rgb(0, 113, 197);
+		}
+		.header-text {
+			padding: 0;
+			margin: 0;
+			font-size: 12px;
+			font-weight: bold;
+		}
+		#rem2 {
+			resize:none;
+			overflow:auto;
+			width: 100%;
+			border: 1px solid #ccc;
+			padding: 10px;
+			margin: 10px 0;
+			box-sizing: border-box;
+		}
+		#rem3 {
+			width: 100%;
+			padding: 10px;
+			border: 1px solid #ccc;
+			margin: 10px 0;
+			box-sizing: border-box;
+		}
+		#mainContent {
+			background: rgb(243, 243, 243);
+			color: rgb(0, 0, 0);
+		}
+		.center-content {
+			max-width: 1000px;
+			display: block;
+			margin: 0 auto;
+			padding: 15px;
+		}
+		.logo-img {
+			display: block;
+			margin: 20px auto;
+			max-width: 100%;
+		}
+		.restrict-content,
+		.exception-content {
+			padding: 15px;
+			box-sizing: border-box;
+		}
+		.restrict-content {
+			max-width: 1000px;
+		}
+		.exception-content {
+			max-width: 400px;
+			margin: 0 auto;
+		}
+		.submit-btn {
+			background: #333333;
+			color: #ffffff;
+			border-radius: 20px;
+			padding: 5px 15px;
+			margin: 10px 0;
+			display: inline-block;
+			text-decoration: none;
+		}
+		.submit-btn.login {
+			background: rgb(51, 51, 51);
+			color: rgb(255, 255, 255);
+			border-radius: 20px;
+		}
+		.submit-btn.exception {
+			background: rgb(51, 51, 51);
+			color: rgb(255, 255, 255);
+			border-radius: 20px;
+		}
+		.left-content {
+			width: 50%;
+			float: left;
+			box-sizing: border-box;
+			padding: 0 20px;
+		}
+		.right-content {
+			width: 50%;
+			float: right;
+			box-sizing: border-box;
+			padding: 0 20px;
+		}
+		.right-content h2 {
+			color: rgb(253, 2, 2);
+		}
+		.warning-icon {
+			margin: 0 auto;
+			display: block;
+			max-width: 100%;
+		}
+		@media (max-width:768px) {
+			.left-content,
+			.right-content {
+				width: 100%;
+				float: none;
+			}
+			.warning-icon {
+				margin: 0 auto 40px auto;
+				max-width: 150px;
+			}
+			.restrict-content {
+				max-width: 400px;
+				margin: 0 auto;
+			}
+		}
+		#logoContainer {
+			background: rgb(255, 255, 255);
+		}
+		#link {
+			color: rgb(0, 113, 197);
+		}
+		#exceptionContent {
+			background: rgb(255, 255, 255);
+			color: rgb(0, 0, 0)
+		}
+		#ovError {
+			color: #ad1818;
+			font-size: 16px;
+			margin-left: 20px;
+		}
+		.secured-by-iboss {
+			background-color: #e6e6e6;
+			background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjIiIGhlaWdodD0iMTciPjxzdHlsZT4uc3Qxe2ZpbGw6IzIzMWYyMH08L3N0eWxlPjxwYXRoIGQ9Ik0xMC41NC4xNGExMC41NCAxMC41NCAwIDAwLTMuNDEgMFY5LjRoMy40MVYuMTR6bTEuNTcuNzl2My43NGMxLjM0LjkxIDIuMjEgMi4zNSAyLjIxIDMuOTkgMCAyLjc1LTIuNDYgNC45OC01LjQ5IDQuOTgtMy4wMyAwLTUuNDktMi4yMy01LjQ5LTQuOTggMC0xLjY0Ljg4LTMuMDkgMi4yMi00Vi45M0MyLjMgMi4xNiAwIDUuMTYgMCA4LjY3IDAgMTMuMjcgMy45NSAxNyA4LjgzIDE3YzQuODcgMCA4LjgzLTMuNzMgOC44My04LjMzLS4wMS0zLjUxLTIuMy02LjUxLTUuNTUtNy43NHoiIGZpbGw9IiMyNGFlNWYiLz48cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjYuODYgMTAuMzVjMC0uNC0uMTYtLjcyLS40OC0uOTZzLS44LS40My0xLjQ1LS41N2MtLjY1LS4xNC0xLjE1LS4yOS0xLjUtLjQ3LS4zNi0uMTgtLjYyLS4zOS0uNzktLjY1LS4xNy0uMjYtLjI2LS41Ny0uMjYtLjkzIDAtLjU3LjI0LTEuMDUuNzItMS40Mi40OC0uMzcgMS4xLS41NiAxLjg0LS41Ni44MSAwIDEuNDYuMiAxLjk2LjYuNDkuNC43NC45My43NCAxLjU3aC0uODFjMC0uNDMtLjE4LS43OC0uNTQtMS4wNi0uMzYtLjI4LS44MS0uNDItMS4zNS0uNDItLjUzIDAtLjk1LjEyLTEuMjguMzUtLjMyLjI0LS40OC41NC0uNDguOTIgMCAuMzYuMTMuNjUuNC44NC4yNy4yLjc1LjM4IDEuNDYuNTUuNzEuMTcgMS4yNC4zNCAxLjU5LjUzLjM1LjE5LjYxLjQyLjc4LjY4cy4yNi41OS4yNi45NmMwIC42MS0uMjUgMS4xMS0uNzQgMS40Ny0uNS4zNy0xLjE0LjU1LTEuOTQuNTUtLjg1IDAtMS41NC0uMjEtMi4wNi0uNjItLjUzLS40MS0uNzktLjkzLS43OS0xLjU2aC44MWMuMDMuNDcuMjMuODQuNiAxLjEuMzcuMjYuODUuMzkgMS40NS4zOS41NiAwIDEuMDEtLjEyIDEuMzYtLjM3LjMzLS4yMy41LS41NS41LS45MnpNMzIuMyAxMi4zM2MtLjYyIDAtMS4xOC0uMTUtMS42OC0uNDYtLjUtLjMxLS44OS0uNzMtMS4xNy0xLjI4LS4yOC0uNTUtLjQyLTEuMTYtLjQyLTEuODN2LS4yOGMwLS43LjE0LTEuMzMuNDEtMS44OXMuNjUtMSAxLjEzLTEuMzJjLjQ4LS4zMiAxLjAxLS40OCAxLjU4LS40OC44OCAwIDEuNTkuMyAyLjEuOTEuNTIuNi43OCAxLjQzLjc4IDIuNDd2LjQ1aC01LjJ2LjE1YzAgLjgzLjI0IDEuNTEuNzEgMi4wNnMxLjA3LjgyIDEuNzkuODJjLjQzIDAgLjgxLS4wOCAxLjE0LS4yNC4zMy0uMTYuNjMtLjQxLjktLjc1bC41LjM4Yy0uNTguODctMS40NCAxLjI5LTIuNTcgMS4yOXptLS4xNS02Ljg2Yy0uNjEgMC0xLjEyLjIyLTEuNTMuNjctLjQyLjQ0LS42NyAxLjA0LS43NiAxLjc5aDQuMzd2LS4wOWMtLjAyLS43LS4yMi0xLjI3LS42LTEuNzEtLjM3LS40NC0uODctLjY2LTEuNDgtLjY2ek0zOS4yOSAxMS42NWMuNTYgMCAxLjAzLS4xNiAxLjQxLS40Ny4zOC0uMzIuNTgtLjczLjYyLTEuMjNoLjc3Yy0uMDIuNDQtLjE2Ljg1LS40MiAxLjIycy0uNi42NS0xLjAyLjg2Yy0uNDIuMjEtLjg4LjMxLTEuMzYuMzEtLjk2IDAtMS43MS0uMzMtMi4yNy0xLS41Ni0uNjYtLjg0LTEuNTYtLjg0LTIuNjh2LS4yNGMwLS43Mi4xMy0xLjM1LjM4LTEuOTFzLjYxLS45OCAxLjA4LTEuMjggMS4wMi0uNDUgMS42NS0uNDVjLjggMCAxLjQ2LjI0IDEuOTguNzFzLjggMS4xLjgzIDEuODhoLS43N2MtLjA0LS41Ny0uMjQtMS4wMy0uNjItMS4zOC0uMzctLjM1LS44NS0uNTMtMS40Mi0uNTMtLjczIDAtMS4yOS4yNi0xLjY5Ljc5LS40LjUzLS42IDEuMjYtLjYgMi4yMXYuMjRjMCAuOTMuMiAxLjY1LjYgMi4xNy40LjUyLjk2Ljc4IDEuNjkuNzh6TTQ4LjM5IDExLjI4Yy0uNDguNy0xLjI2IDEuMDYtMi4zMiAxLjA2LS43OCAwLTEuMzctLjIzLTEuNzctLjY4LS40LS40NS0uNjEtMS4xMi0uNjItMlY0LjkyaC44djQuNjRjMCAxLjM5LjU2IDIuMDggMS42OCAyLjA4IDEuMTcgMCAxLjkxLS40OCAyLjIxLTEuNDVWNC45MmguODF2Ny4yOGgtLjc4bC0uMDEtLjkyek01NC42NCA1LjZjLS4xNy0uMDMtLjM1LS4wNS0uNTUtLjA1LS41IDAtLjkzLjE0LTEuMjguNDItLjM1LjI4LS42LjY5LS43NCAxLjIydjVoLS44VjQuOTJoLjc5bC4wMSAxLjE2Yy40My0uODYgMS4xMS0xLjI5IDIuMDUtMS4yOS4yMiAwIC40LjAzLjUzLjA5bC0uMDEuNzJ6TTU4LjYxIDEyLjMzYy0uNjIgMC0xLjE4LS4xNS0xLjY4LS40Ni0uNS0uMzEtLjg5LS43My0xLjE3LTEuMjgtLjI4LS41NS0uNDItMS4xNi0uNDItMS44M3YtLjI4YzAtLjcuMTQtMS4zMy40MS0xLjg5LjI3LS41Ni42NS0xIDEuMTMtMS4zMi40OC0uMzIgMS4wMS0uNDggMS41OC0uNDguODggMCAxLjU5LjMgMi4xLjkxcy43OCAxLjQzLjc4IDIuNDd2LjQ1aC01LjJ2LjE1YzAgLjgzLjI0IDEuNTEuNzEgMi4wNnMxLjA3LjgyIDEuNzkuODJjLjQzIDAgLjgxLS4wOCAxLjE0LS4yNC4zMy0uMTYuNjMtLjQxLjktLjc1bC41LjM4Yy0uNTguODctMS40NCAxLjI5LTIuNTcgMS4yOXptLS4xNS02Ljg2Yy0uNjEgMC0xLjEyLjIyLTEuNTMuNjctLjQyLjQ0LS42NyAxLjA0LS43NiAxLjc5aDQuMzd2LS4wOWMtLjAyLS43LS4yMi0xLjI3LS42LTEuNzEtLjM3LS40NC0uODctLjY2LTEuNDgtLjY2ek02Mi41OSA4LjQ5YzAtMS4xMy4yNS0yLjAzLjc2LTIuNy41LS42NyAxLjE5LTEuMDEgMi4wNi0xLjAxLjk4IDAgMS43My4zOSAyLjI1IDEuMTZWMS44NmguOFYxMi4yaC0uNzZsLS4wMy0uOTdjLS41Mi43NC0xLjI3IDEuMS0yLjI4IDEuMS0uODQgMC0xLjUyLS4zNC0yLjAzLTEuMDEtLjUxLS42OC0uNzctMS41OS0uNzctMi43NHYtLjA5em0uODEuMTRjMCAuOTMuMTkgMS42Ni41NiAyLjIuMzcuNTQuOS44IDEuNTguOC45OSAwIDEuNy0uNDQgMi4xMS0xLjMxVjYuOWMtLjQyLS45NS0xLjEyLTEuNDItMi4xLTEuNDItLjY4IDAtMS4yMS4yNy0xLjU4LjhzLS41NyAxLjMxLS41NyAyLjM1ek03OS43OSA4LjYzYzAgMS4xNC0uMjUgMi4wNC0uNzUgMi43cy0xLjE4IDEtMi4wMyAxYy0xLjAxIDAtMS43OC0uMzgtMi4zLTEuMTNsLS4wMyAxaC0uNzVWMS44NmguOHY0LjExYy41MS0uNzkgMS4yNy0xLjE5IDIuMjgtMS4xOS44NiAwIDEuNTQuMzMgMi4wNC45OXMuNzUgMS41Ny43NSAyLjc0di4xMnptLS44MS0uMTRjMC0uOTYtLjE5LTEuNy0uNTYtMi4yMi0uMzctLjUyLS45LS43OC0xLjU4LS43OC0uNTIgMC0uOTUuMTMtMS4zMS4zOC0uMzYuMjUtLjYzLjYyLS44MSAxLjExdjMuMjljLjQuOTIgMS4xMiAxLjM3IDIuMTQgMS4zNy42NiAwIDEuMTgtLjI2IDEuNTYtLjc5LjM3LS41My41Ni0xLjMxLjU2LTIuMzZ6TTgzLjggMTEuMDRsMi4xMy02LjEzaC44N2wtMy4xMSA4LjUyLS4xNi4zOGMtLjQuODgtMS4wMiAxLjMzLTEuODUgMS4zMy0uMTkgMC0uNC0uMDMtLjYyLS4wOWwtLjAxLS42Ny40Mi4wNGMuMzkgMCAuNzEtLjEuOTYtLjI5LjI0LS4yLjQ1LS41My42Mi0xLjAxbC4zNi0uOTgtMi43NS03LjIyaC44OGwyLjI2IDYuMTJ6TTkxLjM1IDIuODFjMC0uMTUuMDUtLjI4LjE1LS4zOC4xLS4xLjIzLS4xNi40LS4xNmEuNTI4LjUyOCAwIDAxLjU2LjU0YzAgLjE1LS4wNS4yOC0uMTUuMzgtLjEuMS0uMjQuMTUtLjQxLjE1LS4xNyAwLS4zMS0uMDUtLjQtLjE1YS41Mi41MiAwIDAxLS4xNS0uMzh6bS45NSA5LjM5aC0uODFWNC45MmguODF2Ny4yOHpNMTAwLjM1IDguNjNjMCAxLjE0LS4yNSAyLjA0LS43NSAyLjdzLTEuMTggMS0yLjAzIDFjLTEuMDEgMC0xLjc4LS4zOC0yLjMtMS4xM2wtLjAzIDFoLS43NVYxLjg2aC44djQuMTFjLjUxLS43OSAxLjI3LTEuMTkgMi4yOC0xLjE5Ljg2IDAgMS41NC4zMyAyLjA0Ljk5cy43NSAxLjU3Ljc1IDIuNzR2LjEyem0tLjgxLS4xNGMwLS45Ni0uMTktMS43LS41Ni0yLjIyLS4zNy0uNTItLjktLjc4LTEuNTgtLjc4LS41MiAwLS45NS4xMy0xLjMxLjM4LS4zNi4yNS0uNjMuNjItLjgxIDEuMTF2My4yOWMuNC45MiAxLjEyIDEuMzcgMi4xNCAxLjM3LjY2IDAgMS4xOC0uMjYgMS41Ni0uNzkuMzctLjUzLjU2LTEuMzEuNTYtMi4zNnpNMTAxLjY4IDguNDVjMC0uNy4xNC0xLjMzLjQxLTEuODkuMjctLjU2LjY2LTEgMS4xNS0xLjMxLjUtLjMxIDEuMDYtLjQ3IDEuNjktLjQ3Ljk3IDAgMS43NS4zNCAyLjM2IDEuMDJzLjkgMS41OC45IDIuN3YuMTdjMCAuNy0uMTQgMS4zNC0uNDEgMS45LS4yNy41Ni0uNjUgMS0xLjE1IDEuMy0uNDkuMzEtMS4wNi40Ni0xLjY5LjQ2LS45NiAwLTEuNzUtLjM0LTIuMzUtMS4wMi0uNi0uNjgtLjkxLTEuNTgtLjkxLTIuN3YtLjE2em0uODEuMjJjMCAuODcuMjMgMS41OS42OCAyLjE0LjQ1LjU2IDEuMDQuODQgMS43Ny44NHMxLjMyLS4yOCAxLjc3LS44NGMuNDUtLjU2LjY4LTEuMy42OC0yLjIxdi0uMTVjMC0uNTYtLjEtMS4wNy0uMzEtMS41My0uMjEtLjQ2LS41LS44Mi0uODctMS4wN3MtLjgtLjM4LTEuMjgtLjM4Yy0uNzIgMC0xLjMuMjgtMS43Ni44NHMtLjY4IDEuMy0uNjggMi4yMXYuMTV6TTExNC4yMSAxMC4zNWMwLS40LS4xNi0uNzItLjQ4LS45Ni0uMzItLjI0LS44LS40My0xLjQ1LS41Ny0uNjUtLjE0LTEuMTUtLjI5LTEuNS0uNDctLjM2LS4xOC0uNjItLjM5LS43OS0uNjVzLS4yNi0uNTctLjI2LS45M2MwLS41Ny4yNC0xLjA1LjcyLTEuNDIuNDgtLjM3IDEuMS0uNTYgMS44NC0uNTYuODEgMCAxLjQ2LjIgMS45Ni42LjQ5LjQuNzQuOTMuNzQgMS41N2gtLjgxYzAtLjQzLS4xOC0uNzgtLjU0LTEuMDZzLS44MS0uNDItMS4zNS0uNDJjLS41MyAwLS45NS4xMi0xLjI4LjM1LS4zMi4yNC0uNDguNTQtLjQ4LjkyIDAgLjM2LjEzLjY1LjQuODQuMjcuMi43NS4zOCAxLjQ2LjU1LjcxLjE3IDEuMjQuMzQgMS41OS41M3MuNjEuNDIuNzguNjhjLjE3LjI2LjI2LjU5LjI2Ljk2IDAgLjYxLS4yNSAxLjExLS43NCAxLjQ3LS41LjM3LTEuMTQuNTUtMS45NC41NS0uODUgMC0xLjU0LS4yMS0yLjA2LS42Mi0uNTMtLjQxLS43OS0uOTMtLjc5LTEuNTZoLjgxYy4wMy40Ny4yMy44NC42IDEuMS4zNy4yNi44NS4zOSAxLjQ1LjM5LjU2IDAgMS4wMS0uMTIgMS4zNi0uMzcuMzMtLjIzLjUtLjU1LjUtLjkyek0xMjEuMTkgMTAuMzVjMC0uNC0uMTYtLjcyLS40OC0uOTZzLS44LS40My0xLjQ1LS41N2MtLjY1LS4xNC0xLjE1LS4yOS0xLjUtLjQ3LS4zNi0uMTgtLjYyLS4zOS0uNzktLjY1LS4xNy0uMjYtLjI2LS41Ny0uMjYtLjkzIDAtLjU3LjI0LTEuMDUuNzItMS40Mi40OC0uMzcgMS4xLS41NiAxLjg0LS41Ni44MSAwIDEuNDYuMiAxLjk2LjYuNDkuNC43NC45My43NCAxLjU3aC0uODFjMC0uNDMtLjE4LS43OC0uNTQtMS4wNi0uMzYtLjI4LS44MS0uNDItMS4zNS0uNDItLjUzIDAtLjk1LjEyLTEuMjguMzUtLjMyLjI0LS40OC41NC0uNDguOTIgMCAuMzYuMTMuNjUuNC44NC4yNy4yLjc1LjM4IDEuNDYuNTUuNzEuMTcgMS4yNC4zNCAxLjU5LjUzcy42MS40Mi43OC42OGMuMTcuMjYuMjYuNTkuMjYuOTYgMCAuNjEtLjI1IDEuMTEtLjc0IDEuNDctLjUuMzctMS4xNC41NS0xLjk0LjU1LS44NSAwLTEuNTQtLjIxLTIuMDYtLjYyLS41My0uNDEtLjc5LS45My0uNzktMS41NmguODFjLjAzLjQ3LjIzLjg0LjYgMS4xLjM3LjI2Ljg1LjM5IDEuNDUuMzkuNTYgMCAxLjAxLS4xMiAxLjM2LS4zNy4zMy0uMjMuNS0uNTUuNS0uOTJ6Ii8+PC9zdmc+');
+			background-position: center;
+			background-repeat: no-repeat;
+			border-left: 1px solid #fff;
+			border-radius: 5px 0 0 0;
+			border-top: 1px solid #fff;
+			bottom: 0;
+			height: 37px;
+			position: fixed;
+			right: 0;
+			width: 142px;
+		}
+	</style>
+</head>
+<body onLoad="javascript:displaySections();">
+<div id="header">
+	<div class="center-content">
+		<p class="header-text"><span id="cliaText"></span><span id="clia"></span></p>
+	</div>
+</div>
+<div id="logoContainer">
+	<div class="center-content">
+		<img class="logo-img" src="1968-block_page-logo.png"/>
+	</div>
+</div>
+<div id="mainContent">
+	<div class="center-content">
+		<div class="restrict-content clearfix">
+			<div class="left-content" id="mainImage">
+				<img class="warning-icon" src="1968-block_page-mainContent.png" />
+			</div>
+			<div class="right-content">
+				<h2 id="headerText">Access Failure</h2>
+				<h3 id="url"></h3>
+				<p id="message">You attempted to visit a site that is in violation of Intel acceptable use guidelines or may pose an Information Security threat to you and Intel assets.
+Intel IT flags and blocks sites that are known to threaten Intel systems, networks and information or contains material that is offensive or illegal, or sites suspected of malware.
+<br>
+<br>
+<u>Need to access a blocked site?</u><br>
+If you have a critical business reason to visit this website, submit a <a href=" http://goto.intel.com/blockorunblock">Unblock-Request</a>.
+<br>
+<br>
+<u>Additional Information:</u><br>
+To learn more about website filtering visit the <a href="  http://goto.intel.com/secure">Secure Intel website.</a>
+<br></p>
+				<p>
+					<span id="customText"></span><br>
+
+						<span id="descriptionLabel"><b id="descriptionName">Description: </b><span id="description"></span><br></span>
+						<span id="groupNumberLabel"><b id="groupNumberName">Group Number: </b><span id="groupNumber"></span><br></span>
+						<span id="groupNameLabel"><b id="grupNameName">Group Name: </b><span id="groupName"></span><br></span>
+						<span id="ipAddressLabel"><b id="ipAddressName">Ip Address: </b><span id="ipAddress"></span><br></span>
+						<span id="userLabel"><b id="usernameName">Username: </b><span id="user"></span><br></span>
+						<span id="cnLabel"><b id="computerNameName">Computer Name: </b><span id="cn"></span></span>
+				</p>
+				<div id="loginDifferentUser"></div>
+				<div id="useRemoteIso" class=" hidden"></div>
+				<div id="ov">
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div id="exceptionContent">
+	<div class="center-content">
+		<div id="exception" class="exception-content">
+			<form action="" method="POST" >
+				<input type="hidden" name="button">
+				<input type="hidden" name="fullUrl">
+				<input type="hidden" name="rem">
+				<input type="hidden" name="contactEmail">
+				<input type="hidden" name="gn">
+				<input type="hidden" name="sck">
+				<input type="hidden" name="un">
+				<h2><span id="exception1"></span></h2>
+				<p>
+					<span id="exception5"></span><br>
+					<span id="exception6"></span><br>
+					<span id="exception2"></span><br>
+					<span id="exception3"></span><br>
+					<span id="exception4"></span><br>
+				</p>
+			</form>
+		</div>
+	</div>
+</div>
+</body>
+</html>
