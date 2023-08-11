@@ -107,6 +107,16 @@ TEST_F(TfsPredictValidation, RequestWithScalar) {
     EXPECT_TRUE(status.ok());
 }
 
+TEST_F(TfsPredictValidation, RequestWithZeroDimEndpointDynamic) {
+    servableInputs = ovms::tensor_map_t({{"Input_FP32_200_-1_99",
+        std::make_shared<ovms::TensorInfo>("Input_FP32_200_-1_99", ovms::Precision::FP32, ovms::Shape{200, ovms::Dimension::any(), 99}, ovms::Layout{"N..."})}});
+    preparePredictRequest(request,
+        {{"Input_FP32_200_-1_99",
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{200, 0, 99}, ovms::Precision::FP32}}});
+    auto status = instance->mockValidate(&request);
+    EXPECT_TRUE(status.ok());
+}
+
 TEST_F(TfsPredictValidation, RequestNotEnoughInputs) {
     request.mutable_inputs()->erase("Input_U8_1_3_62_62_NCHW");
 

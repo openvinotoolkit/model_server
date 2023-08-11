@@ -302,7 +302,7 @@ template <typename RequestType, typename InputTensorType, typename InputTensorIt
 Status RequestValidator<RequestType, InputTensorType, InputTensorIteratorType, ShapeType>::checkIfShapeValuesNegative(const InputTensorType& proto) const {
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
     for (size_t i = 0; i < rsi.getShapeSize(); i++) {
-        if (rsi.getDim(i) <= 0) {
+        if (rsi.getDim(i) < 0) {
             std::stringstream ss;
             ss << "Negative or zero dimension size is not acceptable: " << tensorShapeToString(rsi.getShape()) << "; input name: " << getCurrentlyValidatedInputName();
             const std::string details = ss.str();
