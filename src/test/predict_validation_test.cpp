@@ -1796,6 +1796,21 @@ static void prepareInferStringInputWithNegativeShape(tensorflow::serving::Predic
     input.mutable_tensor_shape()->add_dim()->set_size(-5);
 }
 
+static void prepareInferStringInputWithZeroDimShape(::KFSRequest& request, const std::string& name) {
+    KFSTensorInputProto* tensor = request.add_inputs();
+    tensor->set_name(name);
+    tensor->set_datatype("BYTES");
+    tensor->mutable_shape()->Clear();
+    tensor->add_shape(0);
+}
+
+static void prepareInferStringInputWithZeroDimShape(tensorflow::serving::PredictRequest& request, const std::string& name) {
+    request.mutable_inputs()->clear();
+    auto& input = (*request.mutable_inputs())[name];
+    input.set_dtype(tensorflow::DataType::DT_STRING);
+    input.mutable_tensor_shape()->add_dim()->set_size(0);
+}
+
 template <typename TensorType>
 class PredictValidationString2DTest : public ::testing::Test {
 protected:
@@ -1877,6 +1892,12 @@ TYPED_TEST(PredictValidationString2DTest, negative_shape_has_negative_shape_valu
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 
+TYPED_TEST(PredictValidationString2DTest, zero_dim_request_to_dynamic_2d_u8_endpoint) {
+    prepareInferStringInputWithZeroDimShape(this->request, this->tensorName);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();  // TODO: test proper status
+}
+
 TYPED_TEST(PredictValidationString2DTest, batchsize_change_required) {
     this->mockedInputsInfo[this->tensorName] = std::make_shared<ovms::TensorInfo>(this->tensorName, ovms::Precision::U8, ovms::Shape{3, -1}, ovms::Layout{"NC"});
     std::vector<std::string> inputStrings = {"String_123"};
@@ -1950,6 +1971,12 @@ TYPED_TEST(PredictValidationString1DTest, negative_negative_shape) {
     prepareInferStringInputWithNegativeShape(this->request, this->tensorName);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TYPED_TEST(PredictValidationString1DTest, zero_dim_request_to_dynamic_1d_u8_endpoint) {
+    prepareInferStringInputWithZeroDimShape(this->request, this->tensorName);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();  // TODO: test proper status
 }
 
 TYPED_TEST(PredictValidationString1DTest, string_not_allowed_with_demultiplexer) {

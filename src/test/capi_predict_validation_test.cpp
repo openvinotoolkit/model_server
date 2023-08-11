@@ -95,6 +95,46 @@ TEST_F(CAPIPredictValidation, AllowScalar) {
     EXPECT_TRUE(status.ok()) << status.string();
 }
 
+TEST_F(CAPIPredictValidation, Allow0DimInBatch) {
+    std::vector<ovms::Shape> shapes{
+        ovms::Shape{ovms::Dimension::any(), 400, 99},   // dynamic
+        ovms::Shape{ovms::Dimension{0, 100}, 400, 99},  // range
+        ovms::Shape{0, 400, 99}                         // static
+    };
+
+    for (const auto& shape : shapes) {
+        servableInputs = ovms::tensor_map_t({{"Input",
+            std::make_shared<ovms::TensorInfo>("Input", ovms::Precision::FP32, shape, ovms::Layout{"N..."})}});
+        requestData = std::vector<float>{};
+        preparePredictRequest(request,
+            {{"Input",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{0, 400, 99}, ovms::Precision::FP32}}},
+            requestData);
+        auto status = instance->mockValidate(&request);
+        EXPECT_TRUE(status.ok()) << status.string();
+    }
+}
+
+TEST_F(CAPIPredictValidation, Allow0DimInShape) {
+    std::vector<ovms::Shape> shapes{
+        ovms::Shape{20, ovms::Dimension::any(), 400, 99},   // dynamic
+        ovms::Shape{20, ovms::Dimension{0, 100}, 400, 99},  // range
+        ovms::Shape{20, 0, 400, 99}                         // static
+    };
+
+    for (const auto& shape : shapes) {
+        servableInputs = ovms::tensor_map_t({{"Input",
+            std::make_shared<ovms::TensorInfo>("Input", ovms::Precision::FP32, shape, ovms::Layout{"N..."})}});
+        requestData = std::vector<float>{};
+        preparePredictRequest(request,
+            {{"Input",
+                std::tuple<ovms::signed_shape_t, ovms::Precision>{{20, 0, 400, 99}, ovms::Precision::FP32}}},
+            requestData);
+        auto status = instance->mockValidate(&request);
+        EXPECT_TRUE(status.ok()) << status.string();
+    }
+}
+
 TEST_F(CAPIPredictValidation, InvalidPrecision) {
     preparePredictRequest(request,
         {{"Input_FP32_1_224_224_3_NHWC",
