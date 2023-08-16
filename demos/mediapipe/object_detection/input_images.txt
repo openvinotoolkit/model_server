@@ -1,10 +1,10 @@
-    ../../common/static/images/airliner.jpeg 404
-    ../../common/static/images/arctic-fox.jpeg 279
-    ../../common/static/images/bee.jpeg 309
-    ../../common/static/images/golden_retriever.jpeg 207
-    ../../common/static/images/gorilla.jpeg 366
-    ../../common/static/images/magnetic_compass.jpeg 635
-    ../../common/static/images/peacock.jpeg 84
-    ../../common/static/images/pelican.jpeg 144
-    ../../common/static/images/snail.jpeg 113
-    ../../common/static/images/zebra.jpeg 340
+    ../../common/static/images/airliner.jpeg
+    ../../common/static/images/arctic-fox.jpeg
+    ../../common/static/images/bee.jpeg
+    ../../common/static/images/golden_retriever.jpeg
+    ../../common/static/images/gorilla.jpeg
+    ../../common/static/images/magnetic_compass.jpeg
+    ../../common/static/images/peacock.jpeg
+    ../../common/static/images/pelican.jpeg
+    ../../common/static/images/snail.jpeg
+    ../../common/static/images/zebra.jpeg

@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
     for line in lines:
         inputs = []
-        path, label = line.strip().split(" ")
+        path = line.strip()
         im_cv = cv2.imread(path, cv2.IMREAD_UNCHANGED) 
         img = cv2.resize(im_cv, [320, 320])
         print(os.path.basename(path))
