@@ -38,7 +38,7 @@ virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 
-python mediapipe_object_detection.py --grpc_port 9008 --images ./input_images.txt
+python mediapipe_object_detection.py --grpc_port 9000 --images ./input_images.txt
 Start processing:
         Graph name: objectDetection
 airliner.jpeg
