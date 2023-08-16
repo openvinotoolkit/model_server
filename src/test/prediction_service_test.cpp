@@ -880,6 +880,68 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
     this->checkOutputShape(response, {}, SCALAR_MODEL_OUTPUT_NAME);
 }
 
+TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithZeroDim) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    config.parseShapeParameter("(1,-1)");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1,0}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {1,0}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, SuccesfullInferenceOnBatchAutoModelWithZeroDim) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{0,10}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {0,10}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, SuccesfullInferenceOnShapeAutoModelWithZeroDim) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    config.parseShapeParameter("auto");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1,0}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {1,0}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
 TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarBatchAuto) {
     ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
     config.setBatchingParams("auto");
