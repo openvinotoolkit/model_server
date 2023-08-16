@@ -880,7 +880,7 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
     this->checkOutputShape(response, {}, SCALAR_MODEL_OUTPUT_NAME);
 }
 
-TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithZeroDim) {
+TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithDynamicDim) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
     config.parseShapeParameter("(1,-1)");
@@ -901,7 +901,28 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithZeroDim) {
     this->checkOutputShape(response, {1,0}, DUMMY_MODEL_OUTPUT_NAME);
 }
 
-TYPED_TEST(TestPredict, SuccesfullInferenceOnBatchAutoModelWithZeroDim) {
+TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithStaticZeroDim) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    config.parseShapeParameter("(1,0)");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1,0}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {1,0}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, Succesfull0DimInferenceOnBatchAutoModel) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -921,7 +942,7 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnBatchAutoModelWithZeroDim) {
     this->checkOutputShape(response, {0,10}, DUMMY_MODEL_OUTPUT_NAME);
 }
 
-TYPED_TEST(TestPredict, SuccesfullInferenceOnShapeAutoModelWithZeroDim) {
+TYPED_TEST(TestPredict, Succesfull0DimInferenceOnShapeAutoModel) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
     config.parseShapeParameter("auto");

@@ -95,6 +95,8 @@ TEST_F(CAPIPredictValidation, AllowScalar) {
     EXPECT_TRUE(status.ok()) << status.string();
 }
 
+// Requesting 0 batch via C-API
+// C-API mocked endpoints tested: dynamic batch (-1), range (0-100) and static 0.
 TEST_F(CAPIPredictValidation, Allow0DimInBatch) {
     std::vector<ovms::Shape> shapes{
         ovms::Shape{ovms::Dimension::any(), 400, 99},   // dynamic
@@ -115,6 +117,8 @@ TEST_F(CAPIPredictValidation, Allow0DimInBatch) {
     }
 }
 
+// Requesting 0 dimension in position other than batch via C-API
+// C-API mocked endpoints tested: dynamic shape (-1), range (0-100) and static 0.
 TEST_F(CAPIPredictValidation, Allow0DimInShape) {
     std::vector<ovms::Shape> shapes{
         ovms::Shape{20, ovms::Dimension::any(), 400, 99},   // dynamic

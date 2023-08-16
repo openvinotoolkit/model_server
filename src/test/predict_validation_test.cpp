@@ -107,7 +107,8 @@ TEST_F(TfsPredictValidation, RequestWithScalar) {
     EXPECT_TRUE(status.ok());
 }
 
-
+// Requesting 0 batch via TFS API
+// Mocked endpoints tested: dynamic batch (-1), range (0-100) and static 0.
 TEST_F(TfsPredictValidation, RequestWithZeroBatch) {
     std::vector<ovms::Shape> shapes{
         ovms::Shape{ovms::Dimension::any(), 400, 99},   // dynamic
@@ -128,6 +129,8 @@ TEST_F(TfsPredictValidation, RequestWithZeroBatch) {
     }
 }
 
+// Requesting 0 dimension in position other than batch via TFS API
+// Mocked endpoints tested: dynamic shape (-1), range (0-100) and static 0.
 TEST_F(TfsPredictValidation, RequestWithZeroDim) {
     std::vector<ovms::Shape> shapes{
         ovms::Shape{200, ovms::Dimension::any(), 99},   // dynamic
@@ -350,6 +353,9 @@ TEST_F(TfsPredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
 }
 
+// Requesting 0 batch via TFS API
+// Mocked endpoints tested: static shape with option batch=auto
+// Expect force model batch change status.
 TEST_F(TfsPredictValidation, RequestZeroDimBatchAuto) {
     modelConfig.setBatchingParams("auto");
 
@@ -387,6 +393,9 @@ TEST_F(TfsPredictValidation, RequestWrongAndCorrectShapeAuto) {
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
 }
 
+// Requesting with shape containing 0-value dim via TFS API
+// Mocked endpoints tested: static shape with option shape=auto
+// Expect force model reshape status.
 TEST_F(TfsPredictValidation, RequestZeroDimShapeAuto) {
     modelConfig.parseShapeParameter("auto");
     preparePredictRequest(request, {{"im_data", {{1, 3, 0, 1344}, ovms::Precision::FP32}}});
@@ -879,6 +888,8 @@ TEST_F(KFSPredictValidation, RequestWithScalar) {
     EXPECT_TRUE(status.ok());
 }
 
+// Requesting 0 batch via KServe API
+// Mocked endpoints tested: dynamic batch (-1), range (0-100) and static 0.
 TEST_F(KFSPredictValidation, RequestWithZeroBatch) {
     std::vector<ovms::Shape> shapes{
         ovms::Shape{ovms::Dimension::any(), 400, 99},   // dynamic
@@ -1082,6 +1093,9 @@ TEST_F(KFSPredictValidation, RequestWithScalarBatchSizeAuto) {
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
 }
 
+// Requesting 0 batch via KServe API
+// Mocked endpoints tested: static shape with batch=auto
+// Expect force batch change status
 TEST_F(KFSPredictValidation, RequestWithZeroDimBatchSizeAuto) {
     modelConfig.setBatchingParams("auto");
 
@@ -1142,6 +1156,9 @@ TEST_F(KFSPredictValidation, RequestWrongAndCorrectShapeAuto) {
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
 }
 
+// Requesting with shape containing 0-value dim via KServe API
+// Mocked endpoints tested: static shape with shape=auto
+// Expect force reshape status
 TEST_F(KFSPredictValidation, RequestWithZeroDimShapeAuto) {
     modelConfig.parseShapeParameter("auto");
     preparePredictRequest(request, {{"im_data", {{1, 3, 0, 1344}, ovms::Precision::FP32}}});

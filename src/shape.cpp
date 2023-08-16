@@ -359,6 +359,9 @@ bool Shape::operator!=(const Shape& rhs) const {
 }
 
 bool Shape::match(const ov::Shape& ovShape) const {
+    if (this->size() != ovShape.size()) {
+        return false;
+    }
     for (size_t i = 0; i < this->size(); i++) {
         if (!(*this)[i].match(ovShape[i])) {
             return false;
