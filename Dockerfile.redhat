@@ -163,7 +163,9 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     mkdir -p ccache-4.3/build && cd ccache-4.3/build && \
     cmake -DCMAKE_BUILD_TYPE=Release -DZSTD_FROM_INTERNET=ON -G Ninja .. && \
     ninja -v install && \
-    rm -rf /var/cache/yum
+    rm -rf /var/cache/yum && \
+    cp /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /opt/intel/openvino/runtime/lib/intel64 && \
+    echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /openvino/bin/intel64/Release/plugins.xml
 
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"

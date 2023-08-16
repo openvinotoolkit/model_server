@@ -24,7 +24,6 @@ mkdir -vp /ovms_release/lib/custom_nodes
 
 cp /ovms/src/custom_nodes/tokenizer/build/src/lib*tokenizer.so /ovms_release/lib/custom_nodes/
 if [ -f /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so ]; then cp -v /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so /ovms_release/lib/ ; fi
-if [ -f /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so ]; then cp -v /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /ovms_release/lib/ ; fi
 
 find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "*params" ! -name "lib_node_*" -exec cp -v {} /ovms_release/lib/ \;
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
@@ -50,6 +49,7 @@ if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then \
 fi
 
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
 if [ -d /opt/intel/openvino/runtime/3rdparty ] ; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;; fi
 find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
@@ -82,3 +82,4 @@ tar cJf ovms.tar.xz --transform 's/ovms_release/ovms/' /ovms_release/
 sha256sum ovms.tar.xz > ovms.tar.xz.sha256
 cd /ovms_release
 ls -l
+
