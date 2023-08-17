@@ -250,7 +250,9 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
       -DWHEEL_VERSION=2022.1.0 \
       -DVERBOSE_BUILD=ON \
       -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && \
-      cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS
+      cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS && \
+    cp /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /opt/intel/openvino/runtime/lib/intel64 && \
+    echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
 
 # Set up Bazel
 ENV BAZEL_VERSION 5.3.1
