@@ -48,6 +48,9 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
         shape.push_back(dim);
     }
     ov::element::Type_t precision = tensorInfo->getOvPrecision();
+    if (!requestInput.getBuffer()->getByteSize()) {
+        return ov::Tensor(precision, shape);
+    }
     return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
 }
 
@@ -59,6 +62,9 @@ ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
         shape.push_back(requestInput.tensor_shape().dim(i).size());
     }
     ov::element::Type_t precision = tensorInfo->getOvPrecision();
+    if (!requestInput.tensor_content().size()) {
+        return ov::Tensor(precision, shape);
+    }
     return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.tensor_content().data())));
 }
 
@@ -71,8 +77,10 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
         shape.push_back(requestInput.shape().at(i));
     }
     ov::element::Type precision = tensorInfo->getOvPrecision();
-    ov::Tensor tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(buffer.data())));
-    return tensor;
+    if (!buffer.size()) {
+        return ov::Tensor(precision, shape);
+    }
+    return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(buffer.data())));
 }
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo) {
