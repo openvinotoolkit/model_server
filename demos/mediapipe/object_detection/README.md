@@ -22,14 +22,14 @@ make docker_build
 docker run -it -v `pwd`:/models mediapipe_ovms:latest bash
 python setup_ovms.py
 cp -rf /mediapipe/mediapipe/models/ssdlite_object_detection_openvino /models
-find / -iname "ssdlite_object_detection_labelmap.txt" -exec cp -rf {} /models \; -quit
+cp -rf /mediapipe/mediapipe/examples/coral/models/object_detection_labelmap.txt /models/ssdlite_object_detection_labelmap.txt
 exit
 cd ..
 ```
 
 ## Run OpenVINO Model Server
 ```bash
-docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
+docker run -d -v $PWD:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
 ```
 
 ## Run the client:
