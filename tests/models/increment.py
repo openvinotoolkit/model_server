@@ -27,9 +27,10 @@ sigs = {}
 
 with tf.Session(graph=tf.Graph()) as sess:
     tf.import_graph_def(graph_def, name="")
-    input = tf.placeholder(tf.float32, [None, 10], name='input') # defines input shape
-    const = tf.constant(1.0, name="const")
-    output = tf.add(input, const, name='output')  # defines network operation
+    input = tf.placeholder(tf.float32, shape=[1, 0], name='input') # defines input shape
+    output = tf.constant(-1.0, dtype=tf.float32, shape=[1, 10], name='output') # defines input shape
+    #const = tf.constant(1.0, name="const")
+    #output = tf.add(input, const, name='output')  # defines network operation
 #    print(sess.graph.get_operations())
     g = tf.get_default_graph()
     inp = g.get_tensor_by_name("input:0")
@@ -50,7 +51,7 @@ with tf.Session(graph=tf.Graph()) as sess:
     input = graph.get_tensor_by_name("input:0")
     preds = graph.get_tensor_by_name("output:0")
 
-    data = np.ones((1,10),np.float32)
+    data = np.ones((1,0),np.float32)
     feed_dict = {input: data}
 
     results = sess.run([preds], feed_dict=feed_dict)

@@ -938,8 +938,19 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnBatchAutoModel) {
 
     // Do the inference
     auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
+
+    // TODO: Re-enable positive check when models with static 0 dimension become available in OpenVINO
+    //ASSERT_EQ(status, StatusCode::OK) << status.string();
+    //this->checkOutputShape(response, {0,10}, DUMMY_MODEL_OUTPUT_NAME);
+
+    // Prepare non 0-dim request, test recovery
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1,10}, ovms::Precision::FP32}}});
+    status = this->performInferenceWithRequest(request, response, "dummy");
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    this->checkOutputShape(response, {0,10}, DUMMY_MODEL_OUTPUT_NAME);
+    this->checkOutputShape(response, {1,10}, DUMMY_MODEL_OUTPUT_NAME);
 }
 
 TYPED_TEST(TestPredict, Succesfull0DimInferenceOnShapeAutoModel) {
