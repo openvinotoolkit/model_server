@@ -184,7 +184,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
 
     EXPECT_EQ(cfg.modelName(), "");
     EXPECT_EQ(cfg.modelPath(), "");
-    EXPECT_EQ(cfg.batchSize(), "0");
+    EXPECT_EQ(cfg.batchSize(), "");
     EXPECT_EQ(cfg.shape(), "");
     EXPECT_EQ(cfg.layout(), "");
     EXPECT_EQ(cfg.modelVersionPolicy(), "");
