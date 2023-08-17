@@ -166,7 +166,8 @@ const ovms::ModelConfig SCALAR_MODEL_CONFIG{
     "scalar",
     scalar_model_location,  // base path
     "CPU",                  // target device
-    "0",                    // batchsize needs to be 0 to emulate missing --batch_size param
+    //"0",                    // batchsize needs to be 0 to emulate missing --batch_size param
+    "",                    // batchsize needs to be empty to emulate missing --batch_size param
     1,                      // NIREQ
     false,                  // is stateful
     true,                   // idle sequence cleanup enabled

@@ -840,7 +840,7 @@ TYPED_TEST(TestPredict, SuccesfullReloadForMultipleThreadsDifferentBS) {
 TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     // Prepare model this->manager with dynamic shaped dummy model, originally loaded with 1x10 shape
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -862,7 +862,7 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
 
 TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
     ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Prepare request with empty shape
@@ -882,7 +882,7 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
 
 TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithDynamicDim) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("(1,-1)");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -903,7 +903,7 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithDynamicDim) {
 
 TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithStaticZeroDim) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("(1,0)");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -944,7 +944,7 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnBatchAutoModel) {
 
 TYPED_TEST(TestPredict, Succesfull0DimInferenceOnShapeAutoModel) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -971,7 +971,7 @@ TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarBatchAuto) {
 
 TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarShapeAuto) {
     ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1006,7 +1006,7 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
 
     // Prepare model with shape=auto (initially (1,10) shape)
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1017,7 +1017,7 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
     this->checkOutputShape(response, {1, 12});
 
     // Reshape with model reload to Fixed=(1,11)
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("(1,11)");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1029,7 +1029,7 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
     this->checkOutputShape(response, {1, 11});
 
     // Reshape back to AUTO, internal shape is (1,10)
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1099,7 +1099,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelInputLayout) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1152,7 +1152,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelInputLayoutAndShape) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1209,7 +1209,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayout) {
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nhwc:nchw\"}")), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1250,7 +1250,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayoutAndShape) {
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nhwc:nchw\"}")), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1293,7 +1293,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelLayoutAndKeepChangingBatchSiz
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1350,7 +1350,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1393,7 +1393,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     // binary input shape is [1,1,1,3] so it should be resized to the nearest border which is in this case [1,1,2,3]
     ASSERT_EQ(config.parseShapeParameter("(1,1,2:5,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
@@ -1521,7 +1521,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsAny) {
     using namespace ovms;
 
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(-1,-1)"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1631,7 +1631,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsHaveRange) {
     using namespace ovms;
 
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(2:4,1:5)"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1664,7 +1664,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionNot
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(-1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1688,7 +1688,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionMat
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(-1,1,1,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1714,7 +1714,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionAny) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,-1,-1,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1740,7 +1740,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionRange) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1:2,1:2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1852,7 +1852,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
     std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
     prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings);
     ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("(-1)");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
@@ -1882,7 +1882,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D_data_in_buffer) {
     std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
     prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings, false);
     ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("(-1)");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::ModelInstance> modelInstance;

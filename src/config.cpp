@@ -179,7 +179,8 @@ uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.v
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
 const std::string& Config::batchSize() const {
-    static const std::string defaultBatch = "0";
+    //static const std::string defaultBatch = "0";
+    static const std::string defaultBatch = "";
     return this->modelsSettings.batchSize.empty() ? defaultBatch : this->modelsSettings.batchSize;
 }
 const std::string& Config::Config::shape() const { return this->modelsSettings.shape; }

@@ -5030,7 +5030,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     // Prepare model
     ConstructorEnabledModelManager manager;
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -5136,7 +5136,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     // Prepare model
     ConstructorEnabledModelManager manager;
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -5199,7 +5199,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     // Prepare model
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -5262,7 +5262,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     // Prepare model
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,2,1,2)"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 

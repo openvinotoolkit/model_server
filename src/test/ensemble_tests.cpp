@@ -646,7 +646,7 @@ protected:
             Layout{"NC"});
 
         config = DUMMY_MODEL_CONFIG;
-        config.setBatchingParams("0");
+        config.setBatchingParams("");
         config.parseShapeParameter("(1:10,2:11)");
     }
 };
@@ -702,7 +702,7 @@ protected:
             Layout{"NC"});
 
         config = DUMMY_MODEL_CONFIG;
-        config.setBatchingParams("0");
+        config.setBatchingParams("");
         config.parseShapeParameter("(-1,-1)");
     }
 };
@@ -3396,14 +3396,14 @@ TEST_F(EnsembleFlowTest, RuntimeWrongBatchSizeArbitraryPosition) {
 
     ModelConfig configCN = DUMMY_MODEL_CONFIG;
     configCN.setName("dummy_C1_N10");
-    configCN.setBatchingParams("0");
+    configCN.setBatchingParams("");
     configCN.parseShapeParameter("(1,10)");
     ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
     managerWithDummyModel.reloadModelWithVersions(configCN);
 
     configCN = DUMMY_MODEL_CONFIG;
     configCN.setName("dummy_C1_N15");
-    configCN.setBatchingParams("0");
+    configCN.setBatchingParams("");
     configCN.parseShapeParameter("(1,15)");
     ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
     managerWithDummyModel.reloadModelWithVersions(configCN);
@@ -3442,14 +3442,14 @@ TEST_F(EnsembleFlowTest, RuntimeWrongShapeArbitraryBatchPosition) {
 
     ModelConfig configCN = DUMMY_MODEL_CONFIG;
     configCN.setName("dummy_C1_N10");
-    configCN.setBatchingParams("0");
+    configCN.setBatchingParams("");
     configCN.parseShapeParameter("(1,10)");
     ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
     managerWithDummyModel.reloadModelWithVersions(configCN);
 
     configCN = DUMMY_MODEL_CONFIG;
     configCN.setName("dummy_C2_N10");
-    configCN.setBatchingParams("0");
+    configCN.setBatchingParams("");
     configCN.parseShapeParameter("(2,10)");
     ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
     managerWithDummyModel.reloadModelWithVersions(configCN);
