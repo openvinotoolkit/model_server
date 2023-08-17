@@ -1877,7 +1877,7 @@ TYPED_TEST(PredictValidationString2DTest, negative_no_string) {
     std::vector<std::string> inputStrings = {};
     prepareInferStringRequest(this->request, this->tensorName, inputStrings);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
 TYPED_TEST(PredictValidationString2DTest, negative_over_1gb_after_expansion) {
@@ -1894,7 +1894,7 @@ TYPED_TEST(PredictValidationString2DTest, negative_no_string_in_buffer) {
     std::vector<std::string> inputStrings = {};
     prepareInferStringRequest(this->request, this->tensorName, inputStrings, false);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
 TYPED_TEST(PredictValidationString2DTest, negative_shape_has_more_dimensions_than_1) {
@@ -1912,7 +1912,7 @@ TYPED_TEST(PredictValidationString2DTest, negative_shape_has_negative_shape_valu
 TYPED_TEST(PredictValidationString2DTest, zero_dim_request_to_dynamic_2d_u8_endpoint) {
     prepareInferStringInputWithZeroDimShape(this->request, this->tensorName);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
-    EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();  // TODO: test proper status
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
 
 TYPED_TEST(PredictValidationString2DTest, batchsize_change_required) {
@@ -1993,7 +1993,7 @@ TYPED_TEST(PredictValidationString1DTest, negative_negative_shape) {
 TYPED_TEST(PredictValidationString1DTest, zero_dim_request_to_dynamic_1d_u8_endpoint) {
     prepareInferStringInputWithZeroDimShape(this->request, this->tensorName);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
-    EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();  // TODO: test proper status
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();  // Validated at deserialization stage
 }
 
 TYPED_TEST(PredictValidationString1DTest, string_not_allowed_with_demultiplexer) {
