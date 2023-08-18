@@ -53,6 +53,12 @@
 #include "stringutils.hpp"
 #include "version.hpp"
 
+#if (PYTHON_DISABLE == 0)
+#include <pybind11/embed.h>
+namespace py = pybind11;
+using namespace py::literals;
+#endif
+
 using grpc::ServerBuilder;
 
 namespace ovms {
@@ -299,6 +305,17 @@ static int statusToExitCode(const Status& status) {
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
+#if (PYTHON_DISABLE == 0)
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::exec(R"(
+        import sys
+        print("Python version")
+        print (sys.version)
+    )");
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+#endif
+
     installSignalHandlers();
     CLIParser parser;
     ServerSettingsImpl serverSettings;

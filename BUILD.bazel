@@ -37,6 +37,20 @@ more_selects.config_setting_negation(
     negate = ":disable_mediapipe",
 )
 
+#To build without python use flags - bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
+config_setting(
+    name = "disable_python",
+    define_values = {
+        "PYTHON_DISABLE": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_disable_python",
+    negate = ":disable_python",
+)
+
 cc_library(
   name = "ovms_dependencies",
   deps = [
@@ -65,14 +79,20 @@ cc_library(
         "@com_github_jupp0r_prometheus_cpp//core",
         "@oneTBB//:tbb",
         ] + select({
-            "//conditions:default": [
+            "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework:calculator_framework",
                 "@mediapipe//mediapipe/framework/port:logging",
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework/port:status",
-                "@model_api//:adapter_api",
-            ],
-            "//:disable_mediapipe" : [],
-        }),
+                "@model_api//:adapter_api",],
+            "//:disable_mediapipe": []
+            })
+         + select({
+            "//:not_disable_python": [
+                "@python3_linux//:python3-lib",
+                "@pybind11//:pybind11_embed",
+                ],
+            "//:disable_python": []
+            }),
   visibility = ["//visibility:public"],
 )

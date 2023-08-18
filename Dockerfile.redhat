@@ -122,22 +122,19 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             libusbx \
             libtool \
             openssl-devel \
-            python3 \
-            python3-pip \
-            python3-devel \
-            python3-setuptools \
-            python3-virtualenv \
-            python3-numpy \
             which \
             yum-utils \
             unzip \
             vim \
             xz \
+            python39-devel \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm \
             http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/libusb-devel-0.1.5-12.el8.x86_64.rpm \
             http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/libusb-0.1.5-12.el8.x86_64.rpm \
             http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/libusbx-devel-1.0.23-4.el8.x86_64.rpm && \
             yum clean all
+
+RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
 
 ARG NVIDIA=0
 # Add Nvidia dev tool if needed
@@ -251,8 +248,6 @@ COPY .bazelrc WORKSPACE /ovms/
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
-
-RUN alternatives --set python /usr/bin/python3
 
 # Set up Bazel
 ENV BAZEL_VERSION 5.3.1
@@ -484,6 +479,10 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
                 rm -rf /tmp_ovms ; \
                 $DNF_TOOL remove -y tar gzip; \
         fi ; \
+        # For image with Python enabled install Python library
+        if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
+            $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0; \
+        fi ; \
         $DNF_TOOL install -y shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
@@ -497,7 +496,6 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
         dnf clean all
 
 COPY --from=pkg /ovms_release /ovms
-
 COPY --from=pkg /licenses /licenses
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
