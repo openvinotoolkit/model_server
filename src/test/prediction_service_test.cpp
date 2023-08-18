@@ -1846,6 +1846,27 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D) {
     this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
 }
 
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_2D) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {};
+    prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings);
+    ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    auto status = modelInstance->infer(&request, &response, modelInstanceUnloadGuard);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {0, 10}, PASSTHROUGH_MODEL_OUTPUT_NAME);
+    std::vector<uint8_t> expectedData = {};
+    bool checkRaw = true;
+    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+}
+
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D_data_in_buffer) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest) || typeid(typename TypeParam::first_type) == typeid(TFSRequestType))
         GTEST_SKIP() << "String inputs in buffer not supported for C-API and TFS api";
@@ -1894,6 +1915,29 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
         'a', 'l', 'a',
         'm', 'a',
         'k', 'o', 't', 'a'};
+    bool checkRaw = true;
+    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+}
+
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_1D) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {};
+    prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings);
+    ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(-1)");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    this->checkOutputShape(response, {1, 8}, PASSTHROUGH_MODEL_OUTPUT_NAME);
+    std::vector<uint8_t> expectedData = {
+        0, 0, 0, 0,
+        0, 0, 0, 0};
     bool checkRaw = true;
     this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
 }

@@ -233,6 +233,28 @@ TEST_F(TfsPredictValidation, ValidRequestBinaryInputs) {
     EXPECT_TRUE(status.ok());
 }
 
+TEST_F(TfsPredictValidation, Batch0RequestBinaryInputs) {
+    modelConfig.setBatchingParams("0");
+    std::string inputName = "Binary_Input";
+    tensorflow::serving::PredictRequest binaryInputRequest;
+
+    auto& input = (*binaryInputRequest.mutable_inputs())[inputName];
+    input.set_dtype(tensorflow::DataType::DT_STRING);
+    const int requestBatchSize = 0;
+    input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {0, 3, 224, 224};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::FP32,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_TRUE(status.ok());
+}
+
 TEST_F(TfsPredictValidation, RequestWrongBatchSizeBinaryInputs) {
     std::string inputName = "Binary_Input";
     tensorflow::serving::PredictRequest binaryInputRequest;
@@ -980,6 +1002,28 @@ TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
 
     servableInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::FP32,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST_F(KFSPredictValidation, Batch0RequestBinaryInputs) {
+    std::string inputName = "Binary_Input";
+    ::KFSRequest binaryInputRequest;
+
+    auto input = binaryInputRequest.add_inputs();
+    input->set_name(inputName);
+    input->set_datatype("BYTES");
+    const int requestBatchSize = 0;
+    input->mutable_shape()->Add(requestBatchSize);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {0, 3, 224, 224};
     servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
         ovms::Precision::FP32,
