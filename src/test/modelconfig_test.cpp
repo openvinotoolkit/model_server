@@ -422,7 +422,7 @@ TEST(ModelConfig, parseShapeDynamicParam) {
 
 TEST(ModelConfig, dynamicShapeToString) {
     using namespace ovms;
-    Shape shape{1, {0,3}, 5, {10, 20}, Dimension::any(), 3, {1, 290}};
+    Shape shape{1, {0, 3}, 5, {10, 20}, Dimension::any(), 3, {1, 290}};
     EXPECT_EQ(shape.toString(), "(1,[0~3],5,[10~20],-1,3,[1~290])");
 }
 

@@ -891,14 +891,14 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithDynamicDim) {
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1,0}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 0}, ovms::Precision::FP32}}});
 
     typename TypeParam::second_type response;
 
     // Do the inference
     auto status = this->performInferenceWithRequest(request, response, "dummy");
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    this->checkOutputShape(response, {1,0}, DUMMY_MODEL_OUTPUT_NAME);
+    this->checkOutputShape(response, {1, 0}, DUMMY_MODEL_OUTPUT_NAME);
 }
 
 // TODO: Re-enable positive check when models with static 0 dimension become available in OpenVINO
@@ -913,14 +913,14 @@ TYPED_TEST(TestPredict, DISABLED_Succesfull0DimInferenceOnModelWithStaticZeroDim
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1,0}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 0}, ovms::Precision::FP32}}});
 
     typename TypeParam::second_type response;
 
     // Do the inference
     auto status = this->performInferenceWithRequest(request, response, "dummy");
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    this->checkOutputShape(response, {1,0}, DUMMY_MODEL_OUTPUT_NAME);
+    this->checkOutputShape(response, {1, 0}, DUMMY_MODEL_OUTPUT_NAME);
 }
 
 TYPED_TEST(TestPredict, Succesfull0DimInferenceOnBatchAutoModel) {
@@ -933,7 +933,7 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnBatchAutoModel) {
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{0,10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{0, 10}, ovms::Precision::FP32}}});
 
     typename TypeParam::second_type response;
 
@@ -942,16 +942,16 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnBatchAutoModel) {
     ASSERT_EQ(status, StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE) << status.string();
 
     // TODO: Re-enable positive check when models with static 0 dimension become available in OpenVINO
-    //ASSERT_EQ(status, StatusCode::OK) << status.string();
-    //this->checkOutputShape(response, {0,10}, DUMMY_MODEL_OUTPUT_NAME);
+    // ASSERT_EQ(status, StatusCode::OK) << status.string();
+    // this->checkOutputShape(response, {0,10}, DUMMY_MODEL_OUTPUT_NAME);
 
     // Prepare non 0-dim request, test recovery
     preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1,10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     status = this->performInferenceWithRequest(request, response, "dummy");
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    this->checkOutputShape(response, {1,10}, DUMMY_MODEL_OUTPUT_NAME);
+    this->checkOutputShape(response, {1, 10}, DUMMY_MODEL_OUTPUT_NAME);
 }
 
 TYPED_TEST(TestPredict, Succesfull0DimInferenceOnShapeAutoModel) {
@@ -965,7 +965,7 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnShapeAutoModel) {
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1,0}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 0}, ovms::Precision::FP32}}});
 
     typename TypeParam::second_type response;
 
@@ -980,10 +980,10 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnShapeAutoModel) {
     // Prepare non 0-dim request, test recovery
     preparer.preparePredictRequest(request,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1,10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     status = this->performInferenceWithRequest(request, response, "dummy");
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    this->checkOutputShape(response, {1,10}, DUMMY_MODEL_OUTPUT_NAME);
+    this->checkOutputShape(response, {1, 10}, DUMMY_MODEL_OUTPUT_NAME);
 }
 
 TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarBatchAuto) {
@@ -1429,6 +1429,32 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
     this->checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     this->checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
+
+/* Scenario - perform inference with binary input of batch 0 when model shape is dynamic. Check results.
+ *
+ * 1. Load model with dynamic shape and input layout=nhwc, initial internal layout: nchw
+ * 2. Do the inference with 0 binary image tensors with witdth exceeding shape range - expect status OK and reshaped output tensor
+ */
+TYPED_TEST(TestPredict, PerformInferenceWithZeroBinaryInputsAndShapeDynamic) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
+    using namespace ovms;
+
+    // Prepare model with changed layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("");
+    // binary input shape is [0] so it should not proceed to inference anyway
+    ASSERT_EQ(config.parseShapeParameter("(-1,1,2:5,3)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    typename TypeParam::second_type response;
+
+    // Perform inference with 0 binary inputs, ensure status INVALID_BATCH_SIZE
+    const int batchSize = 0;
+    ASSERT_EQ(this->performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "increment_1x3x4x5", batchSize), ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
 /*
  * Scenario - send binary input request to model accepting auto batch size.
  *
@@ -1860,11 +1886,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_2D) {
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
     auto status = modelInstance->infer(&request, &response, modelInstanceUnloadGuard);
-    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
-    this->checkOutputShape(response, {0, 10}, PASSTHROUGH_MODEL_OUTPUT_NAME);
-    std::vector<uint8_t> expectedData = {};
-    bool checkRaw = true;
-    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+    ASSERT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
 
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D_data_in_buffer) {
