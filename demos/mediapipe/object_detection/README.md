@@ -13,18 +13,10 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/object_detection
 ```
 
-## Prepare model
+## Prepare repository that conatains the object detection model
 
 ```bash
 git clone https://github.com/openvinotoolkit/mediapipe.git
-cd mediapipe
-make docker_build
-docker run -it -v `pwd`:/models mediapipe_ovms:latest bash
-python setup_ovms.py
-cp -rf /mediapipe/mediapipe/models/ssdlite_object_detection_openvino /models
-cp -rf /mediapipe/mediapipe/examples/coral/models/object_detection_labelmap.txt /models/ssdlite_object_detection_labelmap.txt
-exit
-cd ..
 ```
 
 ## Run OpenVINO Model Server
