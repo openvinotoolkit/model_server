@@ -21,7 +21,11 @@ def _python_repository_impl(repository_ctx):
 
     if "ubuntu" in base_os_image:
         lib_path = "lib/x86_64-linux-gnu"
+<<<<<<< HEAD
         if base_os_image == "ubuntu:20.04" or base_os_image == "docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04":
+=======
+        if base_os_image == "ubuntu:20.04":
+>>>>>>> init
             version = "3.8"
         else:
             version = "3.10"
