@@ -22,6 +22,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <openvino/openvino.hpp>
@@ -49,23 +50,23 @@ struct RequestProcessor;
 class DynamicModelParameter {
 public:
     DynamicModelParameter() :
-        batchSize(0),
+        batchSize(std::nullopt),
         shapes({}) {}
     DynamicModelParameter(int batchSize) :
         batchSize(batchSize),
         shapes({}) {}
     DynamicModelParameter(const std::map<std::string, shape_t>& shapes) :
-        batchSize(0),
+        batchSize(std::nullopt),
         shapes(shapes) {}
 
-    bool isBatchSizeRequested() const { return batchSize > 0; }
+    bool isBatchSizeRequested() const { return batchSize.has_value(); }
     bool isShapeRequested(const std::string& name) const { return shapes.count(name) && shapes.at(name).size() > 0; }
 
-    int getBatchSize() const { return batchSize; }
+    int getBatchSize() const { return batchSize.value_or(1); }
     const shape_t& getShape(const std::string& name) const { return shapes.at(name); }
 
 private:
-    int batchSize;
+    std::optional<int> batchSize;
     std::map<std::string, shape_t> shapes;
 };
 

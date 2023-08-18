@@ -176,7 +176,7 @@ Status Dimension::fromString(const std::string& str, Dimension& dimOut) {
             int dimNumber = std::stoi(strCopy);
             if (dimNumber == DYNAMIC_DIMENSION) {
                 dim = Dimension::any();
-            } else if (dimNumber > 0) {
+            } else if (dimNumber >= 0) {
                 dim = Dimension(dimNumber);
             } else {
                 SPDLOG_ERROR("Parsing dimension string out of range: {}", strCopy);
@@ -359,6 +359,9 @@ bool Shape::operator!=(const Shape& rhs) const {
 }
 
 bool Shape::match(const ov::Shape& ovShape) const {
+    if (this->size() != ovShape.size()) {
+        return false;
+    }
     for (size_t i = 0; i < this->size(); i++) {
         if (!(*this)[i].match(ovShape[i])) {
             return false;
@@ -460,10 +463,10 @@ Status Shape::fromString(const std::string& strIn, Shape& shapeOut) {
         try {
             if (count == 0) {
                 int dimValue = std::stoi(token);
-                if (dimValue == DYNAMIC_DIMENSION || dimValue > 0) {
+                if (dimValue == DYNAMIC_DIMENSION || dimValue >= 0) {
                     shape.add(Dimension(dimValue));
                 } else {
-                    SPDLOG_ERROR("Parsing model shape string: {}; must be {} (any) or higher than 0", token, DYNAMIC_DIMENSION);
+                    SPDLOG_ERROR("Parsing model shape string: {}; must be {} (any) or >= 0", token, DYNAMIC_DIMENSION);
                     return StatusCode::SHAPE_WRONG_FORMAT;
                 }
             } else {
@@ -474,8 +477,8 @@ Status Shape::fromString(const std::string& strIn, Shape& shapeOut) {
                 }
                 int dimMin = std::stoi(subTokens[0]);
                 int dimMax = std::stoi(subTokens[1]);
-                if (dimMin <= 0 || dimMax <= 0) {
-                    SPDLOG_ERROR("Parsing model shape string: {}; range must be higher than 0", token);
+                if (dimMin < 0 || dimMax < 0) {
+                    SPDLOG_ERROR("Parsing model shape string: {}; range must be higher than or equal 0", token);
                     return StatusCode::SHAPE_WRONG_FORMAT;
                 }
                 if (dimMin >= dimMax) {
