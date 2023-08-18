@@ -206,7 +206,6 @@ std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(st
     std::optional<Dimension> effectiveBatchSize = std::nullopt;
     if (configBatchSize == "auto") {
         batchingMode = AUTO;
-        //} else if (configBatchSize == "0") {
     } else if (configBatchSize == "") {
         // do nothing
     } else {
