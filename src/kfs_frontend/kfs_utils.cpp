@@ -73,23 +73,6 @@ size_t KFSDataTypeSize(const KFSDataType& datatype) {
     return it->second;
 }
 
-size_t convertKFSDataTypeToMatFormat(const KFSDataType& datatype) {
-    static std::unordered_map<KFSDataType, size_t> datatypeFormatMap{
-        {"UINT8", CV_8U},
-        {"UINT16", CV_16U},
-        {"INT8", CV_8U},
-        {"INT16", CV_16U},
-        {"INT32", CV_16U},
-        {"FP32", CV_32F}};
-    // CV_16F and CV_64F are not supported in Mediapipe::ImageFrame
-    auto it = datatypeFormatMap.find(datatype);
-    if (it == datatypeFormatMap.end()) {
-        SPDLOG_DEBUG("Converting KFS datatype to mat format failed. Mat format will be set to default - CV_8U");
-        return CV_8U;
-    }
-    return it->second;
-}
-
 const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision) {
     static std::unordered_map<Precision, KFSDataType> precisionMap{
         {Precision::FP64, "FP64"},

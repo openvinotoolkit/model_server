@@ -4,6 +4,7 @@ This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph 
 
 Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
+
 ## Prepare the repository
 
 Clone the repository and enter mediapipe object_detection directory
