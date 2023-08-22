@@ -69,7 +69,14 @@ int main(int argc, char** argv) {
     ;
     // clang-format on
 
-    auto args = opt.parse(argc, argv);
+    cxxopts::ParseResult args;
+    try {
+        args = opt.parse(argc, argv);
+    }
+    catch(cxxopts::option_not_exists_exception e) {
+        std::cerr << "error: cli options parsing failed - " << e.what();
+        return 1;
+    }
 
     if (args.count("help")) {
         std::cout << opt.help() << std::endl;

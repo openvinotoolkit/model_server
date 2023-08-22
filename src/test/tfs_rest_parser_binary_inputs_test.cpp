@@ -66,6 +66,126 @@ TEST_F(TFSRestParserBinaryInputs, BatchSize2) {
     EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
+TEST_F(TFSRestParserBinaryInputs, RowStringMixedPrecision) {
+    std::string request = R"({"signature_name":"","instances":[{"i": "abcd"}, {"i": 1234}]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+}
+
+TEST_F(TFSRestParserBinaryInputs, ColumnStringMixedPrecision) {
+    std::string request = R"({"signature_name":"","inputs":{"i":["abcd", "efg", 52.1, "xyz"]}})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(TFSRestParserBinaryInputs, ColumnStringMixedPrecision2) {
+    std::string request = R"({"signature_name":"","inputs":{"i":[[2,3,4],[5,"abcd",7]]}})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(TFSRestParserBinaryInputs, RowString) {
+    std::string request = R"({"signature_name":"","instances":[{"i":"abcd"}]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+}
+
+TEST_F(TFSRestParserBinaryInputs, RowStringInvalidPrecision) {
+    std::string request = R"({"signature_name":"","instances":[{"i":"abcd"}]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::FP32));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+}
+
+TEST_F(TFSRestParserBinaryInputs, RowStringInvalidShape) {
+    std::string request = R"({"signature_name":"","instances":[{"i":"abcd"}]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+}
+
+TEST_F(TFSRestParserBinaryInputs, RowStringStaticShape) {
+    std::string request = R"({"signature_name":"","instances":[{"i":"abcd"}]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {1, 4}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+}
+
+TEST_F(TFSRestParserBinaryInputs, ColumnString) {
+    std::string request = R"({"signature_name":"","inputs":{"i":["abcd"]}})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+}
+
+TEST_F(TFSRestParserBinaryInputs, ColumnStringUnnamed) {
+    std::string request = R"({"signature_name":"","inputs":["abcd"]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+}
+
+TEST_F(TFSRestParserBinaryInputs, RowStringUnnamed) {
+    std::string request = R"({"signature_name":"","instances":["abcd"]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+}
+
+TEST_F(TFSRestParserBinaryInputs, RowStringBatchSize2) {
+    std::string request = R"({"signature_name":"","instances":[{"i":"abcd"}, {"i":"efgh"}]})";
+
+    TFSRestParser parser(prepareTensors({{"i", {-1, -1}}}, ovms ::Precision::U8));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 2);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2));
+    ASSERT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_STRING);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), "abcd"), 0);
+    EXPECT_EQ(strcmp(parser.getProto().inputs().find("i")->second.string_val(1).c_str(), "efgh"), 0);
+}
+
 TEST_F(TFSRestParserBinaryInputs, RowName) {
     std::string request = R"({"signature_name":"","instances":[{"k":[{"b64":")" + b64encoded + R"("}]}]})";
 

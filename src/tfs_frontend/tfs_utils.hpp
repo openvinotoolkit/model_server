@@ -26,6 +26,9 @@
 #include "../precision.hpp"
 
 using TFSDataType = tensorflow::DataType;
+using TFSPredictRequest = tensorflow::serving::PredictRequest;
+using TFSPredictResponse = tensorflow::serving::PredictResponse;
+using TFSInputTensorType = tensorflow::TensorProto;
 
 namespace ovms {
 class Status;
@@ -35,5 +38,12 @@ TFSDataType getPrecisionAsDataType(Precision precision);
 std::string getDataTypeAsString(TFSDataType dataType);
 
 std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
-Status prepareConsolidatedTensorImpl(tensorflow::serving::PredictResponse* response, char*& tensorOut, const std::string& name, size_t size);
+Status prepareConsolidatedTensorImpl(TFSPredictResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size);
+const std::string& getRequestServableName(const TFSPredictRequest& request);
+Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::string& name, bool& isNativeFileFormatUsed);
+bool isNativeFileFormatUsed(const TFSInputTensorType& request);
+bool requiresPreProcessing(const TFSInputTensorType& proto);
+std::string& createOrGetString(TFSInputTensorType& proto, int index);
+void setBatchSize(TFSInputTensorType& proto, int64_t batch);
+void setStringPrecision(TFSInputTensorType& proto);
 }  // namespace ovms

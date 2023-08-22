@@ -18,17 +18,17 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../entry_node.hpp"
+#include "../dags/entry_node.hpp"
+#include "../dags/exit_node.hpp"
+#include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
+#include "../dags/pipelinedefinition.hpp"
 #include "../execution_context.hpp"
-#include "../exit_node.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelmanager.hpp"
-#include "../pipeline.hpp"
-#include "../pipeline_factory.hpp"
-#include "../pipelinedefinition.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

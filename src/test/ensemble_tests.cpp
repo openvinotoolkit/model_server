@@ -21,10 +21,13 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
-#include "../binaryutils.hpp"
-#include "../dl_node.hpp"
-#include "../entry_node.hpp"
-#include "../exit_node.hpp"
+#include "../dags/dl_node.hpp"
+#include "../dags/entry_node.hpp"
+#include "../dags/exit_node.hpp"
+#include "../dags/nodestreamidguard.hpp"
+#include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
+#include "../dags/pipelinedefinition.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
@@ -32,12 +35,9 @@
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#include "../nodestreamidguard.hpp"
-#include "../pipeline.hpp"
-#include "../pipeline_factory.hpp"
-#include "../pipelinedefinition.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
+#include "../tensor_conversion.hpp"
 #include "../timer.hpp"
 #include "test_utils.hpp"
 
@@ -70,26 +70,30 @@ public:
         requestData = bs1requestData;
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
 
-    void prepareRequest(const std::vector<float>& requestData, TFSRequestType& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+    void prepareRequest(const std::vector<float>& requestData, TFSRequestType& request, const std::string& customPipelineInputName, const ovms::signed_shape_t& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
         request.Clear();
         preparePredictRequest(request, inputs_info_t{{customPipelineInputName, {shape, ovms::Precision::FP32}}}, requestData);
     }
 
-    void prepareRequest(const std::vector<float>& requestData, KFSRequest& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+    void prepareRequest(const std::vector<float>& requestData, KFSRequest& request, const std::string& customPipelineInputName, const ovms::signed_shape_t& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
         request.Clear();
         prepareKFSInferInputTensor(request, customPipelineInputName, std::make_tuple(shape, ovmsPrecisionToKFSPrecision(ovms::Precision::FP32)), requestData);
     }
 
-    void checkDummyResponse(int seriesLength, int batchSize = 1) {
-        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize);
+    void checkDummyResponse(int seriesLength, int batchSize = 1, const std::string& servableName = "") {
+        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize, servableName);
+    }
+
+    void checkScalarResponse(float inputScalar, const std::string& pipelineName) {
+        ::checkScalarResponse(customPipelineOutputName, inputScalar, response, pipelineName);
     }
 
     ModelConfig config;
@@ -103,13 +107,13 @@ public:
     std::optional<model_version_t> requestedModelVersion{std::nullopt};
     const std::string customPipelineInputName = "custom_dummy_input";
     const std::string customPipelineOutputName = "custom_dummy_output";
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
 
     std::vector<float> requestData;
@@ -137,11 +141,11 @@ protected:
         requestData = bs1requestData;
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
 
@@ -223,13 +227,13 @@ protected:
     std::optional<model_version_t> requestedModelVersion{std::nullopt};
     const std::string customPipelineInputName = "custom_dummy_input";
     const std::string customPipelineOutputName = "custom_dummy_output";
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
 
     std::vector<float> requestData;
@@ -248,7 +252,9 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
     auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", this->dummyModelName, this->requestedModelVersion, managerWithDummyModel);
     const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
-    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
+    std::set<std::string> gatherFromNode = {};
+    std::string pipelineName = "test_pipeline";
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, gatherFromNode, true, pipelineName);
     Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
@@ -259,7 +265,46 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
 
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
-    this->checkDummyResponse(dummySeriallyConnectedCount);
+    this->checkDummyResponse(dummySeriallyConnectedCount, 1, pipelineName);
+}
+
+TYPED_TEST(EnsembleFlowBothApiTest, ScalarModel) {
+    // Most basic configuration, just process single scalar model request
+    // input   scalar    output
+    //  O------->O------->O
+    ConstructorEnabledModelManager managerWithScalarModel;
+    this->config = SCALAR_MODEL_CONFIG;
+    managerWithScalarModel.reloadModelWithVersions(this->config);
+
+    float inputData = 5.4f;
+    this->prepareRequest(std::vector<float>{inputData}, this->request, this->customPipelineInputName, ovms::signed_shape_t{});
+
+    // Configure pipeline
+    const tensor_map_t inputsInfo{{this->customPipelineInputName,
+        std::make_shared<ovms::TensorInfo>(
+            this->customPipelineInputName,
+            ovms::Precision::FP32,
+            ovms::Shape{}, Layout{"..."})}};
+    auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+    auto model_node = std::make_unique<DLNode>("scalar_node", "scalar", this->requestedModelVersion, managerWithScalarModel);
+    const tensor_map_t outputsInfo{{this->customPipelineOutputName,
+        std::make_shared<ovms::TensorInfo>(
+            this->customPipelineOutputName,
+            ovms::Precision::FP32,
+            ovms::Shape{}, Layout{"..."})}};
+    std::set<std::string> gatherFromNode = {};
+    std::string pipelineName = "test_pipeline";
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, gatherFromNode, true, pipelineName);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_node, {{this->customPipelineInputName, SCALAR_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{SCALAR_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    this->checkScalarResponse(inputData, pipelineName);
 }
 
 TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {
@@ -309,7 +354,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMat
         pipeline.push(std::move(output_node));
 
         ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-        checkIncrement4DimResponse<float>(this->customPipelineOutputName, std::vector<float>{7.0, 8.0, 17.0, 18.0}, this->request, this->response, {2, 2});
+        checkIncrement4DimResponse<float>(this->customPipelineOutputName, std::vector<float>{7.0, 8.0, 17.0, 18.0}, this->response, {2, 2});
     }
 
     // 2x4 not passing due to not matched dummy_A (but matching dummy_B)
@@ -486,6 +531,11 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputWron
     proto1.mutable_tensor_shape()->add_dim()->set_size(1);
     proto1.mutable_tensor_shape()->add_dim()->set_size(1);
 
+    // enforce the endpoint to be 4d to not fall into string handling
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 224, 224, 3},
+        ovms::Layout{"NHWC"});
     auto pipeline = createDummyPipeline(managerWithDummyModel);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
@@ -499,6 +549,11 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputBatc
     proto1.set_dtype(tensorflow::DataType::DT_STRING);
     proto1.mutable_tensor_shape()->add_dim()->set_size(2);
 
+    // enforce the endpoint to be 4d to not fall into string handling
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 224, 224, 3},
+        ovms::Layout{"NHWC"});
     auto pipeline = createDummyPipeline(managerWithDummyModel);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::INVALID_BATCH_SIZE);
 }
@@ -591,7 +646,7 @@ protected:
             Layout{"NC"});
 
         config = DUMMY_MODEL_CONFIG;
-        config.setBatchingParams("0");
+        config.setBatchingParams("");
         config.parseShapeParameter("(1:10,2:11)");
     }
 };
@@ -647,7 +702,7 @@ protected:
             Layout{"NC"});
 
         config = DUMMY_MODEL_CONFIG;
-        config.setBatchingParams("0");
+        config.setBatchingParams("");
         config.parseShapeParameter("(-1,-1)");
     }
 };
@@ -675,7 +730,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     tensorflow::serving::PredictRequest simpleModelRequest;
     preparePredictRequest(simpleModelRequest,
         {{DUMMY_MODEL_INPUT_NAME,
-            std::tuple<ovms::shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
     std::vector<float> requestData{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
     auto& input = (*simpleModelRequest.mutable_inputs())[DUMMY_MODEL_INPUT_NAME];
     input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
@@ -1516,7 +1571,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
         const std::string inputName = customPipelineInputName + std::to_string(i);
         inputsInfoTmp[inputName] = std::make_shared<ovms::TensorInfo>(inputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
     const tensor_map_t inputsInfo = inputsInfoTmp;
@@ -1527,7 +1582,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
         outputsInfo.emplace(outputName,
             std::make_shared<ovms::TensorInfo>(outputName,
                 ovms::Precision::FP32,
-                DUMMY_MODEL_SHAPE,
+                DUMMY_MODEL_SHAPE_META,
                 Layout{"NC"}));
     }
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
@@ -1634,18 +1689,18 @@ TEST_F(EnsembleFlowTest, OrderOfScheduling) {
     tensor_map_t inputsInfoTmp;
     inputsInfoTmp[customPipelineInputName] = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
     auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfoTmp);
 
     tensor_map_t outputsInfoTmp;
     outputsInfoTmp[customPipelineOutputName + "_1"] = std::make_shared<ovms::TensorInfo>(customPipelineOutputName + "_1",
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
     outputsInfoTmp[customPipelineOutputName + "_2"] = std::make_shared<ovms::TensorInfo>(customPipelineOutputName + "_2",
         ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        DUMMY_MODEL_SHAPE_META,
         Layout{"NC"});
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfoTmp);
 
@@ -3117,7 +3172,7 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
     const tensor_map_t inputsInfo{{"proto_input_1x10",
                                       std::make_shared<ovms::TensorInfo>("proto_input_1x10",
                                           ovms::Precision::FP32,
-                                          DUMMY_MODEL_SHAPE,
+                                          DUMMY_MODEL_SHAPE_META,
                                           Layout{"NC"})},
         {"proto_input_1x5",
             std::make_shared<ovms::TensorInfo>("proto_input_1x5",
@@ -3341,14 +3396,14 @@ TEST_F(EnsembleFlowTest, RuntimeWrongBatchSizeArbitraryPosition) {
 
     ModelConfig configCN = DUMMY_MODEL_CONFIG;
     configCN.setName("dummy_C1_N10");
-    configCN.setBatchingParams("0");
+    configCN.setBatchingParams("");
     configCN.parseShapeParameter("(1,10)");
     ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
     managerWithDummyModel.reloadModelWithVersions(configCN);
 
     configCN = DUMMY_MODEL_CONFIG;
     configCN.setName("dummy_C1_N15");
-    configCN.setBatchingParams("0");
+    configCN.setBatchingParams("");
     configCN.parseShapeParameter("(1,15)");
     ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
     managerWithDummyModel.reloadModelWithVersions(configCN);
@@ -3387,14 +3442,14 @@ TEST_F(EnsembleFlowTest, RuntimeWrongShapeArbitraryBatchPosition) {
 
     ModelConfig configCN = DUMMY_MODEL_CONFIG;
     configCN.setName("dummy_C1_N10");
-    configCN.setBatchingParams("0");
+    configCN.setBatchingParams("");
     configCN.parseShapeParameter("(1,10)");
     ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
     managerWithDummyModel.reloadModelWithVersions(configCN);
 
     configCN = DUMMY_MODEL_CONFIG;
     configCN.setName("dummy_C2_N10");
-    configCN.setBatchingParams("0");
+    configCN.setBatchingParams("");
     configCN.parseShapeParameter("(2,10)");
     ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
     managerWithDummyModel.reloadModelWithVersions(configCN);
@@ -4560,7 +4615,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWC) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, request, response, {1, 3, 1, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, response, {1, 3, 1, 2});
 }
 
 static const char* pipelineSingleIncrement4DimInputNHWCDynamicBatch = R"(
@@ -4620,7 +4675,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimInputNHWCDynamicBa
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &this->request, &this->response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>(std::string{"pipeline_output"}, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, this->request, this->response, {2, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(std::string{"pipeline_output"}, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, this->response, {2, 1, 3, 1, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC = R"(
@@ -4678,7 +4733,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimOutputNHWC) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, request, response, {1, 1, 2, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, response, {1, 1, 2, 3});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWCDynamicBatch = R"(
@@ -4739,7 +4794,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimOutputNHWCDynamicB
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &this->request, &this->response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, this->request, this->response, {2, 1, 1, 2, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, this->response, {2, 1, 1, 2, 3});
 }
 
 static const char* pipelineAmbiguousInputMeta = R"(
@@ -4897,7 +4952,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithInnerNhwcConnection) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, request, response, {1, 3, 1, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, response, {1, 3, 1, 2});
 }
 
 class EnsembleFlowTestBinaryInput : public EnsembleFlowTest {
@@ -4963,7 +5018,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BatchSize1) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0}, response, {1, 3, 1, 1});
 }
 
 static const char* pipelineWith4DimDummyFP64 = R"(
@@ -5020,7 +5075,7 @@ TEST_F(EnsembleFlowTestBinaryInput, DoublePrecision) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<double>("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 1, 1, 3});
+    checkIncrement4DimResponse<double>("pipeline_output", {37.0, 28.0, 238.0}, response, {1, 1, 1, 3});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1x1BatchAny = R"(
@@ -5193,7 +5248,7 @@ TEST_F(EnsembleFlowTestBinaryInput, GrayscaleImage) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {1.0}, request, response, {1, 1, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {1.0}, response, {1, 1, 1, 1});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1x1BS5 = R"(
@@ -5252,7 +5307,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BatchSize5) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, response, {5, 3, 1, 1});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC2x2 = R"(
@@ -5310,7 +5365,7 @@ TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch1) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, request, response, {1, 3, 2, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, response, {1, 3, 2, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC2x2BS5 = R"(
@@ -5369,8 +5424,7 @@ TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch5) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0},
-        request, response, {5, 3, 2, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, response, {5, 3, 2, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1Channel = R"(
@@ -5505,7 +5559,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexer) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, response, {5, 1, 3, 1, 1});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryStaticDemultiplexer = R"(
@@ -5565,7 +5619,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionMatches) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, response, {5, 1, 3, 1, 1});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionAutoAlign) {
@@ -5641,7 +5695,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionMatches) 
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, response, {5, 1, 3, 1, 1});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionResolutionMismatch) {
@@ -5712,7 +5766,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, response, {1, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestBS2) {
@@ -5726,7 +5780,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, response, {2, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestMisaligned) {
@@ -5804,7 +5858,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, response, {1, 1, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestBS2) {
@@ -5818,7 +5872,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, response, {2, 1, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestMisaligned) {
@@ -5921,7 +5975,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomN
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, request, response, {1, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, response, {1, 1, 3, 1, 1});
 }
 
 static const char* pipelineWithDynamicCustomNodeDemultiplexerAndRangeOfResolutionModel = R"(
@@ -6010,5 +6064,5 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomN
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, request, response, {1, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, response, {1, 1, 3, 1, 1});
 }

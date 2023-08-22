@@ -16,7 +16,6 @@
 #pragma once
 
 #include <stdint.h>
-
 typedef enum {
     UNSPECIFIED,
     FP32,

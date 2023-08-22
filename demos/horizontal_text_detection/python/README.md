@@ -70,7 +70,7 @@ ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   
 
 ## Recognize Detected Text with OCR Pipeline
 Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://docs.openvino.ai/2022.1/omz_models_model_horizontal_text_detection_0001.html) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) 
-combined with a custom node implementation can be used with the same python script used before. OCR pipeline provides location of detected text boxes on the image and additionaly recognized text for each box.
+combined with a custom node implementation can be used with the same python script used before. OCR pipeline provides location of detected text boxes on the image and additionally recognized text for each box.
 
 ![horizontal text detection using OCR pipeline](horizontal-text-detection-ocr.gif)
 
@@ -117,8 +117,8 @@ workspace/
 If you modified the custom node or for some other reason, you want to have it compiled and then attached to the container, run:
 
 ```bash
- make BUILD_CUSTOM_NODE=true
- ```
+make BUILD_CUSTOM_NODE=true BASE_OS=ubuntu
+```
 
 #### Directory structure (with custom node)
 
@@ -181,4 +181,82 @@ ThreadID:   1; Current FPS:    31.23; Average FPS:    25.67; Average latency:   
 ThreadID:   2; Current FPS:    29.41; Average FPS:    25.70; Average latency:   130.88ms
 ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   135.65ms
 ...
+```
+
+## RTSP Client
+
+Build docker image containing rtsp client along with its dependencies
+The rtsp client app needs to have access to RTSP stream to read from and write to.
+
+Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
+
+Then write to the server using ffmpeg
+
+```bash
+ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
+
+```bash
+docker build . -t rtsp_client
+```
+
+### Start the client
+
+- Command
+
+```bash
+docker run rtsp_client --help
+usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
+                      [--input_stream INPUT_STREAM]
+                      [--output_stream OUTPUT_STREAM]
+                      [--model_name MODEL_NAME] [--width WIDTH]
+                      [--height HEIGHT] [--verbose VERBOSE]
+                      [--input_name INPUT_NAME]
+
+options:
+  -h, --help            show this help message and exit
+  --grpc_address GRPC_ADDRESS
+                        Specify url to grpc service
+  --input_stream INPUT_STREAM
+                        Url of input rtsp stream
+  --output_stream OUTPUT_STREAM
+                        Url of output rtsp stream
+  --model_name MODEL_NAME
+                        Name of the model
+  --width WIDTH         Width of model's input image
+  --height HEIGHT       Height of model's input image
+  --verbose VERBOSE     Should client dump debug information
+  --input_name INPUT_NAME
+                        Name of the model's input
+```
+
+- Usage example
+
+```bash
+docker run rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+```
+
+Then read rtsp stream using ffplay
+
+```bash
+ffplay -pix_fmt yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+```
+
+
+One might as well use prerecorded video and schedule it for inference.
+Replace horizontal_text.mp4 with your video file.
+
+```bash
+docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/horizontal_text.mp4' --output_stream 'workspace/output.mp4'
+```
+
+Validate inference output
+```bash
+cat output.mp4 | sha256 -x
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+```
+
+Preview video using ffplay 
+```bash
+ffplay output.mp4
 ```

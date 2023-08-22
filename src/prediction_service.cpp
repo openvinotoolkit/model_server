@@ -27,6 +27,7 @@
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
 
+#include "dags/pipeline.hpp"
 #include "execution_context.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpc_utils.hpp"
@@ -34,7 +35,6 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
-#include "pipeline.hpp"
 #include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"
@@ -106,6 +106,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_spec().name());
         status = getPipeline(request, response, pipelinePtr);
     }
+
     if (!status.ok()) {
         if (modelInstance) {
             INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcPredict);

@@ -353,27 +353,31 @@ TEST(TFSRestParserRow, ParseHalf) {
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[-5.1222, 0.434422, -4.52122, 155234.22122]]}]})"), StatusCode::OK);
 }
 
+static void checkParseStatusAndMessage(TFSRestParser& parser, const char* json, StatusCode expectedStatus, const char* expectedMessage) {
+    auto status = parser.parse(json);
+    EXPECT_EQ(status.getCode(), expectedStatus);
+    EXPECT_EQ(status.string(), expectedMessage);
+}
+
 TEST(TFSRestParserRow, InvalidJson) {
     TFSRestParser parser(prepareTensors({{"i", {1, 3, 2}}}));
 
-    EXPECT_EQ(parser.parse(""),
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse("{{}"),
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name:"","instances":[{"i":[1]}]})"),  // missing "
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{i":[1]}]})"),  // missing "
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1}]})"),  // missing ]
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1]}])"),  // missing }
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"(["signature_name":"","instances":[{"i":[1]}]})"),  // missing {
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":{[{"i":[1]}]})"),  // too many {
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[1.0,5.0],[3.0,0.0] [9.0,5.0]]}]})"),  // missing ,
-        StatusCode::JSON_INVALID);
+    checkParseStatusAndMessage(parser, "", StatusCode::JSON_INVALID, "The file is not valid json - Error: The document is empty. Offset: 0");
+    checkParseStatusAndMessage(parser, "{{}", StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a name for object member. Offset: 1");
+    checkParseStatusAndMessage(parser, R"({"signature_name:"","instances":[{"i":[1]}]})",
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a colon after a name of object member. Offset: 18");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{i":[1]}]})",  // missing "
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a name for object member. Offset: 35");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{"i":[1}]})",  // missing ]
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a comma or ']' after an array element. Offset: 41");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{"i":[1]}])",  // missing }
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a comma or '}' after an object member. Offset: 44");
+    checkParseStatusAndMessage(parser, R"(["signature_name":"","instances":[{"i":[1]}]})",  // missing {
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a comma or ']' after an array element. Offset: 17");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":{[{"i":[1]}]})",  // too many {
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a name for object member. Offset: 34");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{"i":[[1.0,5.0],[3.0,0.0] [9.0,5.0]]}]})",  // missing ,
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a comma or ']' after an array element. Offset: 60");
 }
 
 TEST(TFSRestParserRow, BodyNotAnObject) {
@@ -411,7 +415,6 @@ TEST(TFSRestParserRow, NamedInstanceNotAnObject) {
 TEST(TFSRestParserRow, CouldNotDetectNamedOrNoNamed) {
     TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":["1", "2"]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[null, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
 }
 

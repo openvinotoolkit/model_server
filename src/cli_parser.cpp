@@ -16,11 +16,12 @@
 #include "cli_parser.hpp"
 
 #include <iostream>
+#include <stdexcept>
 #include <string>
 
 #include <sysexits.h>
 
-#include "server_settings.hpp"
+#include "capi_frontend/server_settings.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -89,6 +90,14 @@ void CLIParser::parse(int argc, char** argv) {
                 "Overrides model cache directory. By default cache files are saved into /opt/cache if the directory is present. When enabled, first model load will produce cache files.",
                 cxxopts::value<std::string>(),
                 "CACHE_DIR")
+            ("metrics_enable",
+                "Flag enabling metrics endpoint on rest_port.",
+                cxxopts::value<bool>()->default_value("false"),
+                "METRICS")
+            ("metrics_list",
+                "Comma separated list of metrics. If unset, only default metrics will be enabled. Default metrics: ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us. When set, only the listed metrics will be enabled. Optional metrics: ovms_infer_req_queue_size, ovms_infer_req_active.",
+                cxxopts::value<std::string>()->default_value(""),
+                "METRICS_LIST")
             ("cpu_extension",
                 "A path to shared library containing custom CPU layer implementation. Default: empty.",
                 cxxopts::value<std::string>()->default_value(""),
@@ -133,21 +142,13 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>()->default_value("CPU"),
                 "TARGET_DEVICE")
             ("plugin_config",
-                "A dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
+                "A dictionary of plugin configuration keys and their values, eg \"{\\\"NUM_STREAMS\\\": \\\"1\\\"}\". Default number of streams is optimized to optimal latency with low concurrency.",
                 cxxopts::value<std::string>(),
                 "PLUGIN_CONFIG")
             ("stateful",
                 "Flag indicating model is stateful",
                 cxxopts::value<bool>()->default_value("false"),
                 "STATEFUL")
-            ("metrics_enable",
-                "Flag enabling metrics endpoint on rest_port.",
-                cxxopts::value<bool>()->default_value("false"),
-                "METRICS")
-            ("metrics_list",
-                "Comma separated list of metrics. If unset, only default metrics will be enabled. Default metrics: ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us. When set, only the listed metrics will be enabled. Optional metrics: ovms_infer_req_queue_size, ovms_infer_req_active.",
-                cxxopts::value<std::string>()->default_value(""),
-                "METRICS_LIST")
             ("idle_sequence_cleanup",
                 "Flag indicating if model is subject to sequence cleaner scans",
                 cxxopts::value<bool>()->default_value("true"),
@@ -168,6 +169,7 @@ void CLIParser::parse(int argc, char** argv) {
             std::string project_version(PROJECT_VERSION);
             std::cout << project_name + " " + project_version << std::endl;
             std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
+            std::cout << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
             exit(EX_OK);
         }
 
@@ -182,6 +184,9 @@ void CLIParser::parse(int argc, char** argv) {
 }
 
 void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+    if (nullptr == result) {
+        throw std::logic_error("Tried to prepare server and model settings without parse result");
+    }
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
     serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
 
@@ -193,7 +198,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (result->count("max_sequence_number"))
         modelsSettings->maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
 
-    if (result != nullptr && result->count("cpu_extension")) {
+    if (result->count("cpu_extension")) {
         serverSettings->cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
     }
 

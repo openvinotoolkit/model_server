@@ -59,16 +59,18 @@ namespace tc = triton::client;
         }                                                                \
     }
 
-std::vector<uint8_t> load(const std::string& fileName) {
-    std::ifstream fileImg(fileName, std::ios::binary);
-    fileImg.seekg(0, std::ios::end);
-    int bufferLength = fileImg.tellg();
-    fileImg.seekg(0, std::ios::beg);
+std::string load(const std::string& fileName) {
+    std::ifstream file(fileName, std::ios::binary);
+    file.unsetf(std::ios::skipws);
+    std::streampos fileSize;
 
-    char* buffer = new char[bufferLength];
-    fileImg.read(buffer, bufferLength);
+    file.seekg(0, std::ios::end);
+    fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+    std::ostringstream oss;
+    oss << file.rdbuf();
 
-    return std::vector<uint8_t>(buffer, buffer + bufferLength);
+    return oss.str();
 }
 
 int main(int argc, char** argv) {
@@ -89,17 +91,25 @@ int main(int argc, char** argv) {
     ;
     // clang-format on
 
-    auto args = opt.parse(argc, argv);
+    cxxopts::ParseResult args;
+    try {
+        args = opt.parse(argc, argv);
+    }
+    catch(cxxopts::option_not_exists_exception e) {
+        std::cerr << "error: cli options parsing failed - " << e.what();
+        return 1;
+    }
+    
     if (args.count("help")) {
         std::cout << opt.help() << std::endl;
         return 0;
     }
     if (!args.count("images_list")) {
-        std::cout << "error: option \"images_list\" has no value\n";
+        std::cerr << "error: option \"images_list\" has no value\n";
         return 1;
     }
     if (!args.count("labels_list")) {
-        std::cout << "error: option \"labels_list\" has no value\n";
+        std::cerr << "error: option \"labels_list\" has no value\n";
         return 1;
     }
     
@@ -127,6 +137,11 @@ int main(int argc, char** argv) {
         labels.push_back(label);
     }
 
+    if(imgs.size() == 0) {
+        std::cerr << "error: Path to image_list file is invalid or the file does not contain valid image paths. \n";
+        return 1;
+    }
+
     std::vector<int64_t> shape{1};
 
     // Initialize the inputs with the data.
@@ -144,7 +159,7 @@ int main(int argc, char** argv) {
     try {
         options.client_timeout_ = args["timeout"].as<int>();
     } catch (cxxopts::argument_incorrect_type e) {
-        std::cout << "The provided argument is of a wrong type" << std::endl;
+        std::cerr << "The provided argument is of a wrong type" << std::endl;
         return 1;
     }
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
@@ -152,9 +167,16 @@ int main(int argc, char** argv) {
     std::vector<tc::InferResult*> results;
     results.resize(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
-        std::vector<uint8_t> input_data = load(imgs[i]);
+        std::string input_data;
+        try {
+            input_data = load(imgs[i]);
+        }
+        catch(const std::bad_alloc&) {
+            std::cerr << "error: Loading image:" + imgs[i] + " failed. \n";
+            return 1;
+        }
         FAIL_IF_ERR(
-            input_ptr->AppendRaw(input_data),
+            input_ptr->AppendFromString({input_data}),
             "unable to set data for input");
         FAIL_IF_ERR(
             client->Infer(&(results[i]), options, inputs),

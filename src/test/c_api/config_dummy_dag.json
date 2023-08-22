@@ -1,0 +1,36 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["b"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "b"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "a"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"a": {"node_name": "dummyNode",
+                                         "data_item": "a"}
+                }
+            ]
+        }
+    ]
+}

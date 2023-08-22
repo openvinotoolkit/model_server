@@ -45,6 +45,6 @@ my_image = getJpeg(args["image_input_path"])
 data_obj = {'inputs':  my_image.tolist()}
 data_json = json.dumps(data_obj)
 
-result = requests.post(f'http://{args["rest_address"]}:{args["rest_port"]}/v1/models/{args["model_name"]}:predict', data=data_json)
+result = requests.post(f'http://{args["rest_address"]}:{args["rest_port"]}/v1/models/{args["model_name"]}:predict', data=data_json, timeout=15)
 result_dict = json.loads(result.text)
 print(result_dict)

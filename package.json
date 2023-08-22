@@ -1,0 +1,8 @@
+{
+  "name": "medipipe-dev",
+  "version": "0.0.0-alphga",
+  "description": "MediaPipe GitHub repo",
+  "devDependencies": {
+    "@bazel/typescript": "^5.7.1"
+  }
+}

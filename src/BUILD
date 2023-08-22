@@ -21,6 +21,36 @@
 #    ],
 #)
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
+
+#To build without mediapipe use flags - bazel build --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 //src:ovms
+config_setting(
+    name = "disable_mediapipe",
+    define_values = {
+        "MEDIAPIPE_DISABLE": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_disable_mediapipe",
+    negate = ":disable_mediapipe",
+)
+
+config_setting(
+    name = "fuzzer_build",
+    define_values = {
+        "FUZZER_BUILD": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_fuzzer_build",
+    negate = ":fuzzer_build",
+)
+
 constraint_setting(name = "linux_distribution_family")
 constraint_value(constraint_setting = "linux_distribution_family", name = "fedora") # like RHEL/CentOS
 constraint_value(constraint_setting = "linux_distribution_family", name = "debian") # like Ubuntu
@@ -43,16 +73,16 @@ cc_library(
 )
 
 load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
+load("@tensorflow_serving//tensorflow_serving:serving.bzl", "serving_tensorflow_proto_dep")
 
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
     static_deps = ["@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
-        "@rapidjson//:__subpackages__",
-        "@spdlog//:__subpackages__",
+        "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
-        "@cxxopts//:__subpackages__",
+        "@com_github_jarro2783_cxxopts//:__subpackages__",
         "@awssdk//:__subpackages__",
         "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
@@ -74,67 +104,142 @@ cc_shared_library(
         "@double_conversion//:__subpackages__",
         "@nsync//:__subpackages__",
         "@eigen_archive//:__subpackages__",
-        "@openvino//:__subpackages__",
+        "@linux_openvino//:__subpackages__",
         "@com_github_jupp0r_prometheus_cpp//:__subpackages__",
         "@//:__subpackages__",
         "@com_github_grpc_grpc//:__subpackages__",
         "@upb//:__subpackages__",
         "@zlib//:__subpackages__",
-    ],
+        "@oneTBB//:__subpackages__",
+        "@com_github_glog_glog//:__subpackages__",
+        "@com_github_gflags_gflags//:__subpackages__",
+    ] + select({
+        "//conditions:default": [
+            "@mediapipe//:__subpackages__",
+            "@mediapipe_calculators//:__subpackages__",
+            "@model_api//:__subpackages__",
+            "@arm_neon_2_x86_sse//:__subpackages__",
+            "@ruy//:__subpackages__",
+            "@cpuinfo//:__subpackages__",
+            "@clog//:__subpackages__",
+            "@gemmlowp//:__subpackages__",
+            "@flatbuffers//:__subpackages__",
+            ],
+        "//src:disable_mediapipe" : [],
+        }),
     features = [],
     roots = ["//src:ovms_lib"],
+)
+
+load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+
+mediapipe_proto_library(
+    name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["mediapipe_calculators/ovmscalculator.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
 )
 
 cc_library(
     name = "ovms_lib",
     hdrs = ["ovms.h"],
     srcs = [
-        "aliases.hpp",
         "azurestorage.hpp",
         "azurestorage.cpp",
         "azurefilesystem.cpp",
         "azurefilesystem.hpp",
-        "buffer.cpp",
-        "buffer.hpp",
+        "capi_frontend/buffer.cpp",
+        "capi_frontend/buffer.hpp",
         "capi_frontend/capi.cpp",
         "capi_frontend/capi_utils.cpp",
         "capi_frontend/capi_utils.hpp",
+        "capi_frontend/inferenceparameter.cpp",
+        "capi_frontend/inferenceparameter.hpp",
+        "capi_frontend/inferenceresponse.cpp",
+        "capi_frontend/inferenceresponse.hpp",
+        "capi_frontend/inferencerequest.cpp",
+        "capi_frontend/inferencerequest.hpp",
+        "capi_frontend/inferencetensor.cpp",
+        "capi_frontend/inferencetensor.hpp",
+        "capi_frontend/servablemetadata.cpp",
+        "capi_frontend/servablemetadata.hpp",
+        "capi_frontend/server_settings.hpp",
         "cleaner_utils.cpp",
         "cleaner_utils.hpp",
         "cli_parser.cpp",
         "cli_parser.hpp",
         "config.cpp",
         "config.hpp",
-        "custom_node.cpp",
-        "custom_node.hpp",
         "custom_node_interface.h",
-        "custom_node_library_manager.cpp",
-        "custom_node_library_manager.hpp",
-        "custom_node_output_allocator.cpp",
-        "custom_node_output_allocator.hpp",
-        "custom_node_library_internal_manager_wrapper.hpp",
-        "custom_node_library_internal_manager_wrapper.cpp",
-        "customnodesession.cpp",
-        "customnodesession.hpp",
         "customloaderconfig.hpp",
         "customloaders.hpp",
         "customloaders.cpp",
         "customloaderinterface.hpp",
         "deserialization.cpp",
         "deserialization.hpp",
-        "dl_node.cpp",
-        "dl_node.hpp",
-        "dlnodesession.cpp",
-        "dlnodesession.hpp",
-        "entry_node.cpp",
-        "entry_node.hpp",
+        "dags/aliases.hpp",
+        "dags/custom_node.cpp",
+        "dags/custom_node.hpp",
+        "dags/custom_node_library_manager.cpp",
+        "dags/custom_node_library_manager.hpp",
+        "dags/custom_node_output_allocator.cpp",
+        "dags/custom_node_output_allocator.hpp",
+        "dags/custom_node_library_internal_manager_wrapper.hpp",
+        "dags/custom_node_library_internal_manager_wrapper.cpp",
+        "dags/customnodesession.cpp",
+        "dags/customnodesession.hpp",
+        "dags/dl_node.cpp",
+        "dags/dl_node.hpp",
+        "dags/dlnodesession.cpp",
+        "dags/dlnodesession.hpp",
+        "dags/entry_node.cpp",
+        "dags/entry_node.hpp",
+        "dags/exit_node.cpp",
+        "dags/exit_node.hpp",
+        "dags/exitnodesession.cpp",
+        "dags/exitnodesession.hpp",
+        "dags/gathernodeinputhandler.cpp",
+        "dags/gathernodeinputhandler.hpp",
+        "dags/gatherexitnodeinputhandler.hpp",
+        "dags/node.cpp",
+        "dags/node.hpp",
+        "dags/nodeinfo.hpp",
+        "dags/node_library.cpp",
+        "dags/node_library.hpp",
+        "dags/node_library_utils.cpp",
+        "dags/node_library_utils.hpp",
+        "dags/nodesession.cpp",
+        "dags/nodesession.hpp",
+        "dags/nodesessionresult.hpp",
+        "dags/nodeinputhandler.cpp",
+        "dags/nodeinputhandler.hpp",
+        "dags/nodeoutputhandler.cpp",
+        "dags/nodeoutputhandler.hpp",
+        "dags/nodesessionmetadata.hpp",
+        "dags/nodesessionmetadata.cpp",
+        "dags/nodestreamidguard.cpp",
+        "dags/nodestreamidguard.hpp",
+        "dags/pipeline.cpp",
+        "dags/pipeline.hpp",
+        "dags/pipelinedefinition.cpp",
+        "dags/pipelinedefinition.hpp",
+        "dags/pipelinedefinitionstatus.cpp",
+        "dags/pipelinedefinitionstatus.hpp",
+        "dags/pipelinedefinitionunloadguard.cpp",
+        "dags/pipelinedefinitionunloadguard.hpp",
+        "dags/pipelineeventqueue.hpp",
+        "dags/pipeline_factory.cpp",
+        "dags/pipeline_factory.hpp",
+        "dags/session_id.hpp",
+        "dags/tensormap.hpp",
+        "gcsfilesystem.cpp",
         "execution_context.hpp",
         "executingstreamidguard.cpp",
         "executingstreamidguard.hpp",
-        "exit_node.cpp",
-        "exit_node.hpp",
-        "exitnodesession.cpp",
-        "exitnodesession.hpp",
+        "filesystem.cpp",
         "filesystem.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
@@ -152,24 +257,11 @@ cc_library(
         "layout_configuration.hpp",
         "localfilesystem.cpp",
         "localfilesystem.hpp",
-        "gathernodeinputhandler.cpp",
-        "gathernodeinputhandler.hpp",
-        "gatherexitnodeinputhandler.cpp",
-        "gatherexitnodeinputhandler.hpp",
-        "gcsfilesystem.cpp",
         "gcsfilesystem.hpp",
         "grpc_utils.cpp",
         "grpc_utils.hpp",
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
-        "inferenceparameter.cpp",
-        "inferenceparameter.hpp",
-        "inferenceresponse.cpp",
-        "inferenceresponse.hpp",
-        "inferencerequest.cpp",
-        "inferencerequest.hpp",
-        "inferencetensor.cpp",
-        "inferencetensor.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
         "kfs_frontend/kfs_grpc_inference_service.hpp",
         "kfs_frontend/kfs_utils.cpp",
@@ -206,39 +298,10 @@ cc_library(
         "model_metric_reporter.cpp",
         "model_metric_reporter.hpp",
         "module.hpp",
-        "node.cpp",
-        "node.hpp",
-        "nodeinfo.hpp",
-        "node_library.cpp",
-        "node_library.hpp",
-        "node_library_utils.cpp",
-        "node_library_utils.hpp",
-        "nodesession.cpp",
-        "nodesession.hpp",
-        "nodesessionresult.hpp",
-        "nodeinputhandler.cpp",
-        "nodeinputhandler.hpp",
-        "nodeoutputhandler.cpp",
-        "nodeoutputhandler.hpp",
-        "nodesessionmetadata.hpp",
-        "nodesessionmetadata.cpp",
-        "nodestreamidguard.cpp",
-        "nodestreamidguard.hpp",
         "ovinferrequestsqueue.hpp",
         "ov_utils.cpp",
         "ov_utils.hpp",
         "ovms.h",
-        "pipeline.cpp",
-        "pipeline.hpp",
-        "pipelinedefinition.cpp",
-        "pipelinedefinition.hpp",
-        "pipelinedefinitionstatus.cpp",
-        "pipelinedefinitionstatus.hpp",
-        "pipelinedefinitionunloadguard.cpp",
-        "pipelinedefinitionunloadguard.hpp",
-        "pipelineeventqueue.hpp",
-        "pipeline_factory.cpp",
-        "pipeline_factory.hpp",
         "precision.cpp",
         "precision.hpp",
         "prediction_service.cpp",
@@ -263,10 +326,8 @@ cc_library(
         "serialization.hpp",
         "servablemanagermodule.cpp",
         "servablemanagermodule.hpp",
-        "server_settings.hpp",
         "server.cpp",
         "server.hpp",
-        "session_id.hpp",
         "sequence.cpp",
         "sequence.hpp",
         "sequence_manager.cpp",
@@ -280,46 +341,45 @@ cc_library(
         "status.hpp",
         "stringutils.cpp",
         "stringutils.hpp",
+        "systeminfo.cpp",
+        "systeminfo.hpp",
         "queue.hpp",
         "tensorinfo.cpp",
         "tensorinfo.hpp",
         "tfs_frontend/tfs_utils.cpp",
         "tfs_frontend/tfs_utils.hpp",
-        "tensormap.hpp",
         "tensor_utils.hpp",
         "threadsafequeue.hpp",
         "timer.hpp",
         "version.hpp",
         "logging.hpp",
         "logging.cpp",
-        "binaryutils.hpp",
-        "binaryutils.cpp",
-    ],
+        "tensor_conversion.hpp",
+        "tensor_conversion.cpp",
+         ] + select({
+            "//conditions:default": [
+                "mediapipe_internal/mediapipefactory.cpp",
+                "mediapipe_internal/mediapipefactory.hpp",
+                "mediapipe_internal/mediapipegraphconfig.hpp",
+                "mediapipe_internal/mediapipegraphconfig.cpp",
+                "mediapipe_internal/mediapipegraphdefinition.cpp",
+                "mediapipe_internal/mediapipegraphdefinition.hpp",
+                "mediapipe_internal/mediapipegraphexecutor.cpp",
+                "mediapipe_internal/mediapipegraphexecutor.hpp",
+                "mediapipe_internal/packettypes.hpp",
+                "mediapipe_calculators/ovms_calculator.cc",
+            ],
+            "//src:disable_mediapipe" : [],
+        }),
     deps = [
-        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
-        "@minitrace//:trace",
-        "@com_github_grpc_grpc//:grpc++",
-        "@org_tensorflow//tensorflow/core:framework",
-        "@rapidjson//:rapidjson",
-        "@spdlog//:spdlog",
-        "@cxxopts//:cxxopts",
-        "@awssdk//:s3",
-        "@awssdk//:core",
-        "@awssdk//:deps",
-        "@azure//:storage",
-        "@cpprest//:sdk",
-        "@boost//:lib",
-        "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
-        "@tensorflow_serving//tensorflow_serving/util:json_tensor",
-        "@openvino//:openvino",
-        "@opencv//:opencv",
-        "@com_github_jupp0r_prometheus_cpp//core",
+        "//:ovms_dependencies",
         "//src/kfserving_api:kfserving_api_cpp",
-    ],
+        ] + select({
+            "//conditions:default": [
+                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+            ],
+            "//src:disable_mediapipe" : [],
+        }),
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
@@ -327,7 +387,15 @@ cc_library(
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
-    ],
+        ] + select({
+            "//conditions:default": [
+            ],
+            "//src:fuzzer_build" : [
+                "-fsanitize=address",
+                "-fprofile-generate",
+                "-ftest-coverage",
+            ],
+        }),
     visibility = [
         "//visibility:public",
     ],
@@ -336,7 +404,17 @@ cc_library(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-    ]
+    ] + select({
+        "//conditions:default": [
+        ],
+        "//src:fuzzer_build" : [
+            "-fprofile-generate",
+            "-fsanitize=address",
+            "-fsanitize-coverage=trace-pc",
+            "-static-libasan",
+        ],
+    }),
+    alwayslink = 1,
 )
 
 cc_binary(
@@ -347,7 +425,7 @@ cc_binary(
     ],
     linkshared = 1,
     deps = [
-        "@rapidjson//:rapidjson",
+        "@com_github_tencent_rapidjson//:rapidjson",
     ],
 )
 
@@ -423,7 +501,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -442,7 +520,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -487,7 +565,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -506,7 +584,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -525,7 +603,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@opencv//:opencv"
+        "@linux_opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -556,7 +634,7 @@ cc_binary(
     linkstatic = True,
 )
 
-# Use for dynamic linking when neccessary
+# Use for dynamic linking when necessary
 cc_import(
   name = "shared_lib",
   hdrs = ["ovms.h"],
@@ -574,8 +652,6 @@ cc_binary(
     name = "capi_benchmark",
     srcs = [
         "main_benchmark.cpp",
-        "stringutils.cpp",
-        "stringutils.hpp",
     ],
     linkopts = [
         "-lpthread",
@@ -602,17 +678,29 @@ cc_binary(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-        # "-lovms_shared",  # Use for dynamic linking when neccessary
+        # "-lovms_shared",  # Use for dynamic linking when necessary
     ],
     copts = [
+        "-Wall",
         "-Wconversion",
         "-Werror",
     ],
     deps = [
         "//src:ovms_lib",
-        # "//src:cpp_headers",  # Use for dynamic linking when neccessary
-    ],
-    # linkstatic = False,  # Use for dynamic linking when neccessary
+        "//src:libcustom_node_east_ocr.so",
+        "//src:libcustom_node_face_blur.so",
+        "//src:libcustom_node_horizontal_ocr.so",
+        "//src:libcustom_node_model_zoo_intel_object_detection.so",
+        "//src:libcustom_node_image_transformation.so",
+	    ] + select({
+        "//conditions:default": [
+            "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
+
+        # "//src:cpp_headers",  # Use for dynamic linking when necessary
+    # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
 cc_test(
@@ -620,7 +708,8 @@ cc_test(
     linkstatic = 1,
     srcs = [
         "test/azurefilesystem_test.cpp",
-        "test/binaryutils_test.cpp",
+        "test/tensor_conversion_test.cpp",
+        "test/c_api_test_utils.hpp",
         "test/c_api_tests.cpp",
         "test/custom_loader_test.cpp",
         "test/custom_node_output_allocator_test.cpp",
@@ -683,24 +772,91 @@ cc_test(
         "test/stateful_test_utils.hpp",
         "test/status_test.cpp",
         "test/stringutils_test.cpp",
+        "test/systeminfo_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
         "test/test_utils.cpp",
         "test/test_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
-    ],
+        ] + select({
+        "//conditions:default": [
+            "test/get_mediapipe_graph_metadata_response_test.cpp",
+            "test/mediapipe/inputsidepacketusertestcalc.cc",
+            "test/mediapipeflow_test.cpp",
+            "test/mediapipe_validation_test.cpp",
+            "test/mediapipe/ovms_kfs_calculator.cc",
+            "test/mediapipe/ovms_image_input_calculator.cc",
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
     data = [
+        "test/add_two_inputs_model/1/add.xml",
+        "test/add_two_inputs_model/1/add.bin",
+        "test/binaryutils/grayscale.jpg",
+        "test/binaryutils/rgb.jpg",
+        "test/binaryutils/rgb2x2.jpg",
+        "test/binaryutils/rgb4x4.jpg",
+        "test/c_api/config.json",
+        "test/c_api/config_benchmark.json",
+        "test/c_api/config_dummy_dag.json",
+        "test/c_api/config_dummy_dynamic_entry_dag.json",
+        "test/c_api/config_metadata_all.json",
+        "test/c_api/config_standard_dummy.json",
+        "test/c_api/config_standard_scalar.json",
+        "test/configs/config_dummy_dynamic_shape.json",
+        "test/configs/emptyConfigWithMetrics.json",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
         "test/dummy_fp64/1/saved_model.xml",
         "test/dummy_fp64/1/saved_model.bin",
-        "test/add_two_inputs_model/1/add.xml",
-        "test/add_two_inputs_model/1/add.bin",
+        "test/dummy_saved_model/1/saved_model.pb",
+        "test/dummy_tflite/1/dummy.tflite",
+        "test/dummyUppercase/1/dummy.xml",
+        "test/dummyUppercase/1/dummy.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
+        "test/mediapipe/subconfig.json",
+        "test/mediapipe/config_mediapipe_add_adapter_full.json",
+        "test/mediapipe/config_mediapipe_dummy_adapter_full_subconfig.json",
+        "test/mediapipe/config_mediapipe_all_graphs_adapter_full.json",
+        "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json",
+        "test/mediapipe/config_mediapipe_dummy_adapter_full_dummy_in_both_config_and_subconfig.json",
+        "test/mediapipe/config_mediapipe_dummy_adapter_full.json",
+        "test/mediapipe/config_mediapipe_dummy_adapter_scalar.json",
+        "test/mediapipe/config_mediapipe_graph_with_side_packets.json",
+        "test/mediapipe/config_mp_tf_passthrough.json",
+        "test/mediapipe/config_standard_add.json",
+        "test/mediapipe/config_standard_dummy.json",
+        "test/mediapipe/graphadd.pbtxt",
+        "test/mediapipe/graphtfpassthrough.pbtxt",
+        "test/mediapipe/graphaddadapterfull.pbtxt",
+        "test/mediapipe/graphdummy_tf.pbtxt",
+        "test/mediapipe/graphdummy.pbtxt",
+        "test/mediapipe/graphscalar.pbtxt",
+        "test/mediapipe/graphdummyadapterfull.pbtxt",
+        "test/mediapipe/graphWithParams.pbtxt",
+        "test/mediapipe/relative_paths/config_relative_dummy_negative.json",
+        "test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json",
+        "test/mediapipe/relative_paths/config_relative_add_subconfig.json",
+        "test/mediapipe/relative_paths/config_relative_dummy.json",
+        "test/mediapipe/relative_paths/graph1/dummy1/1/dummy.xml",
+        "test/mediapipe/relative_paths/graph2/dummy2/1/dummy.xml",
+        "test/mediapipe/relative_paths/graph1/graphaddadapterfull.pbtxt",
+        "test/mediapipe/relative_paths/graph1/subconfig.json",
+        "test/mediapipe/relative_paths/graph2/graphadd.pbtxt",
+        "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
+        "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
+        "test/mediapipe/config_mediapipe_two_outputs_dag.json",
+        "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
+        "test/mediapipe/config_mediapipe_dummy_two_outputs.json",
+        "test/mediapipe/relative_paths/graph2/subconfig.json",
+        "test/passthrough/1/passthrough.xml",
+        "test/passthrough/1/passthrough.bin",
         "test/summator/1/summator.xml",
         "test/summator/1/summator.bin",
+        "test/scalar/1/saved_model.xml",
+        "test/scalar/1/saved_model.bin",
     ],
     linkopts = [
         "-lxml2",
@@ -727,23 +883,36 @@ cc_test(
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
         "@com_google_googletest//:gtest",
-    ],
+        ] + select({
+        "//conditions:default": [
+            "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+        ],
+        "//src:disable_mediapipe" : [],
+        }),
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
+        "-Isrc",
     ],
 )
 
 filegroup(
-  name = "static_analysis",
+  name = "release_custom_nodes",
   srcs = [
-    "//src:ovms",
     "//src:libcustom_node_add_one.so",
     "//src:libcustom_node_east_ocr.so",
     "//src:libcustom_node_face_blur.so",
     "//src:libcustom_node_horizontal_ocr.so",
     "//src:libcustom_node_model_zoo_intel_object_detection.so",
     "//src:libcustom_node_image_transformation.so",
+  ]
+)
+
+filegroup(
+  name = "static_analysis",
+  srcs = [
+    "//src:ovms",
+    "//src:release_custom_nodes",
   ]
 )

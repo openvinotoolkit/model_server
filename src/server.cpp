@@ -35,6 +35,7 @@
 #include <sysexits.h>
 #include <unistd.h>
 
+#include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
@@ -47,8 +48,8 @@
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
 #include "profiler.hpp"
+#include "profilermodule.hpp"
 #include "servablemanagermodule.hpp"
-#include "server_settings.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -181,51 +182,13 @@ const Module* Server::getModule(const std::string& name) const {
     return it->second.get();
 }
 
-#ifdef MTR_ENABLED
-class ProfilerModule : public Module {
-    std::unique_ptr<Profiler> profiler;
-
-public:
-    ProfilerModule() = default;
-    Status start(const ovms::Config& config) override { return StatusCode::OK; }
-
-    int start(const Config& config) override {
-        state = ModuleState::STARTED_INITIALIZE;
-        SPDLOG_INFO("{} starting", PROFILER_MODULE_NAME);
-        this->profiler = std::make_unique<Profiler>(config.tracePath());
-        if (!this->profiler) {
-            return EXIT_FAILURE;
-        }
-        if (!this->profiler->isInitialized()) {
-            SPDLOG_ERROR("Cannot open file for profiler, --trace_path: {}", config.tracePath());
-            return EXIT_FAILURE;
-        }
-        state = ModuleState::INITIALIZED;
-        SPDLOG_INFO("{} started", PROFILER_MODULE_NAME);
-        return EXIT_SUCCESS;
-    }
-    void shutdown() override {
-#ifdef MTR_ENABLED
-        if (state == ModuleState::SHUTDOWN)
-            return;
-        state = ModuleState::STARTED_SHUTDOWN;
-        SPDLOG_INFO("{} shutting down", PROFILER_MODULE_NAME);
-        profiler.reset();
-        state = ModuleState::SHUTDOWN;
-        SPDLOG_INFO("{} shutdown", PROFILER_MODULE_NAME);
-#endif
-    }
-    ~ProfilerModule() {
-        this->shutdown();
-    }
-};
-#endif
-
 void Server::setShutdownRequest(int i) {
     shutdown_request = i;
 }
 
-Server::~Server() = default;
+Server::~Server() {
+    this->shutdownModules();
+}
 
 std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #ifdef MTR_ENABLED
@@ -361,8 +324,16 @@ int Server::start(int argc, char** argv) {
 // C-API Start
 Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
-        if (this->isLive())
+        std::unique_lock lock{this->startMtx, std::defer_lock};
+        auto locked = lock.try_lock();
+        if (!locked) {
+            SPDLOG_ERROR("Cannot start OVMS - server is already starting");
+            return StatusCode::SERVER_ALREADY_STARTING;
+        }
+        if (this->isLive()) {
+            SPDLOG_ERROR("Cannot start OVMS - server is already live");
             return StatusCode::SERVER_ALREADY_STARTED;
+        }
         auto& config = ovms::Config::instance();
         if (!config.parse(serverSettings, modelsSettings))
             return StatusCode::OPTIONS_USAGE_ERROR;

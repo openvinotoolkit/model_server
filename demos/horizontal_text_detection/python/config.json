@@ -6,7 +6,7 @@
                 "base_path": "/workspace/horizontal-text-detection-0001",
                 "layout": "NHWC:NCHW",
                 "plugin_config": {
-                    "CPU_THROUGHPUT_STREAMS":  "1"
+                    "PERFORMANCE_HINT":  "LATENCY"
                 }
             }
         },

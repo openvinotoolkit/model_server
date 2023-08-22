@@ -73,6 +73,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::CANNOT_CONVERT_FLAT_SHAPE, "Cannot convert flat shape to Shape object"},
     {StatusCode::INVALID_BATCH_DIMENSION, "Invalid batch dimension in shape"},
     {StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE, "Layout incompatible with given shape"},
+    {StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED, "Batching set to AUTO but model contains scalar tensor"},
     {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, "allow_cache is set to true with custom loader usage"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 
@@ -96,6 +97,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_SHAPE, "Invalid input shape"},
     {StatusCode::INVALID_BUFFER_TYPE, "Invalid input buffer type"},
     {StatusCode::INVALID_DEVICE_ID, "Invalid input buffer device id"},
+    {StatusCode::INVALID_STRING_INPUT, "Invalid string input"},
+    {StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, "Maximum 2D array after string conversion exceeded 1GB"},
+    {StatusCode::INVALID_INPUT_FORMAT, "Inputs inside buffer does not match expected format."},
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
     {StatusCode::INVALID_CONTENT_SIZE, "Invalid content size of tensor proto"},
@@ -187,6 +191,24 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, "Pipeline execution aborted due to no content from custom node"},
     {StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA, "Multiple nodes connected to the same pipeline input require different tensor metadata"},
 
+    // Mediapipe
+    {StatusCode::MEDIAPIPE_GRAPH_START_ERROR, "Failed to start mediapipe graph"},
+    {StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, "Failed to read protobuf graph configuration file"},
+    {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, "Failed to initalize mediapipe graph"},
+    {StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, "Failed to add mediapipe graph output stream"},
+    {StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, "Failed to close mediapipe graph input stream"},
+    {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Failed to add packet to mediapipe graph input stream"},  // TODO add http/gRPC conversions for retCodes of Mediapipe
+    {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, "Model with requested name is not found"},
+    {StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Mediapipe execution failed. MP status"},
+    {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, "Mediapipe is retired"},
+    {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET, "Mediapipe is not loaded yet"},
+    {StatusCode::MEDIAPIPE_KFS_PASS_WRONG_INPUT_STREAM_COUNT, "Mediapipe unexpected input stream packets count"},
+    {StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME, "Mediapipe unexpected input stream packets name"},
+    {StatusCode::MEDIAPIPE_KFS_PASS_WRONG_OUTPUT_STREAM_COUNT, "Mediapipe unexpected output stream packets count"},
+    {StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME, "Mediapipe unexpected output stream packets name"},
+    {StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG, "Mediapipe KFS pass through graph is missing RESPONSE: string in the output name"},
+    {StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG, "Mediapipe KFS pass through graph is missing REQUEST: string in the input name"},
+
     // Storage errors
     // S3
     {StatusCode::S3_BUCKET_NOT_FOUND, "S3 Bucket not found"},
@@ -267,28 +289,21 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::DOUBLE_TENSOR_INSERT, "Cannot insert more than one tensor with the same name"},
     {StatusCode::DOUBLE_PARAMETER_INSERT, "Cannot insert more than one parameter with the same name"},
     {StatusCode::NONEXISTENT_BUFFER_FOR_REMOVAL, "Tried to remove nonexisting buffer"},
-    {StatusCode::NONEXISTENT_DATA, "Tried to use nonexisting data"},
-    {StatusCode::NONEXISTENT_STRING, "Tried to use nonexisting string"},
-    {StatusCode::NONEXISTENT_NUMBER, "Tried to use nonexisting number"},
-    {StatusCode::NONEXISTENT_SETTINGS, "Tried to use nonexisting settings"},
-    {StatusCode::NONEXISTENT_PARAMETER_FOR_REMOVAL, "Tried to remove nonexisting parameter"},
-    {StatusCode::NONEXISTENT_RESPONSE, "Tried to use nonexisting response"},
-    {StatusCode::NONEXISTENT_REQUEST, "Tried to use nonexisting request"},
-    {StatusCode::NONEXISTENT_SERVER, "Tried to use nonexisting server"},
-    {StatusCode::NONEXISTENT_TABLE, "Tried to use nonexisting table"},
+    {StatusCode::NONEXISTENT_PARAMETER, "Tried to use nonexisting parameter"},
     {StatusCode::NONEXISTENT_TENSOR, "Tried to get nonexisting tensor"},
     {StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER, "Tried to set buffer for nonexisting tensor"},
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER, "Tried to remove buffer for nonexisting tensor"},
     {StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL, "Tried to remove nonexisting tensor"},
-    {StatusCode::NONEXISTENT_STATUS, "Tried to use nonexisting status"},
     {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
-    {StatusCode::SERVER_NOT_READY_FOR_INFERENCE, "Server not in a state to perform inference"},
+    {StatusCode::NONEXISTENT_PTR, "Tried to use nonexisting pointer"},
+    {StatusCode::SERVER_NOT_READY, "Server is not ready"},
 
     // Server Start errors
     {StatusCode::OPTIONS_USAGE_ERROR, "options validation error"},
     {StatusCode::FAILED_TO_START_GRPC_SERVER, "Failed to start gRPC server"},
     {StatusCode::FAILED_TO_START_REST_SERVER, "Failed to start REST server"},
     {StatusCode::SERVER_ALREADY_STARTED, "Server has already started"},
+    {StatusCode::SERVER_ALREADY_STARTING, "Server is already starting"},
     {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
 };
 }  // namespace ovms

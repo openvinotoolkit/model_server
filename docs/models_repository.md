@@ -1,19 +1,17 @@
 # Preparing a Model Repository {#ovms_docs_models_repository}
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the four formats:
-- [OpenVINO IR](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
+- [OpenVINO IR](https://docs.openvino.ai/2023.0/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
 - [ONNX](https://onnx.ai/), using the .onnx file
 - [PaddlePaddle](https://www.paddlepaddle.org.cn/en), using .pdiparams and .pdmodel files
-- [TensorFlow](https://www.tensorflow.org/), using frozen graph format with .pb extension (preview feature)
+- [TensorFlow](https://www.tensorflow.org/), using SavedModel, MetaGraph or frozen Protobuf formats.
 
 To use models trained in other formats you need to convert them first. To do so, use 
-OpenVINO’s [Model Optimizer](https://docs.openvino.ai/2022.2/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) for IR, or different
+OpenVINO’s [Model Optimizer](https://docs.openvino.ai/2023.0/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) for IR, or different
 [converters](https://onnx.ai/supported-tools.html) for ONNX.
 
-The feature of direct import of Tensorflow models is currently a preview feature. Currently it supports only the frozen graph and not all topologies can be used that way.
-For unsupported models you can use the Model Optimizer to convert the model to IR format.
-
 The models need to be placed and mounted in a particular directory structure and according to the following rules:
+When the models are hosted on the cloud storage, they should be frozen to be imported successfully.
 
 ```
 tree models/
@@ -37,9 +35,15 @@ models/
 │      └── 1
 │        ├── model.pdiparams
 │        └── model.pdmodel
-└── model5
+├── model5
+│      └── 1
+│        ├── model.pdiparams
+│        └── model.pdmodel
+└── model6
        └── 1
-         └── TF_fronzen_model.pb
+         ├── variables
+         └── saved_model.pb
+
 ``` 
 
 - Each model should be stored in a dedicated directory, e.g. model1 and model2. 

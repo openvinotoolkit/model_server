@@ -67,7 +67,7 @@ grpc_extra_deps()
 ##################### OPEN CV ######################
 # OPENCV DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
 new_local_repository(
-    name = "opencv",
+    name = "linux_opencv",
     build_file = "@//third_party/opencv:BUILD",
     path = "/opt/opencv",
 )

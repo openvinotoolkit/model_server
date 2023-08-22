@@ -27,8 +27,9 @@
 namespace ovms {
 
 ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
-    this->servableManager = std::make_unique<ModelManager>("", &dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))->getRegistry());
-    if (nullptr == ovmsServer.getModule(METRICS_MODULE_NAME)) {
+    if (auto metricsModule = dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))) {
+        this->servableManager = std::make_unique<ModelManager>("", &metricsModule->getRegistry());
+    } else {
         const char* message = "Tried to create servable manager module without metrics module";
         SPDLOG_ERROR(message);
         throw std::logic_error(message);
@@ -38,7 +39,7 @@ ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
 Status ServableManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", SERVABLE_MANAGER_MODULE_NAME);
-    auto status = servableManager->start(config);
+    auto status = getServableManager().start(config);
     if (status.ok()) {
         state = ModuleState::INITIALIZED;
         SPDLOG_INFO("{} started", SERVABLE_MANAGER_MODULE_NAME);
@@ -52,7 +53,7 @@ void ServableManagerModule::shutdown() {
         return;
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", SERVABLE_MANAGER_MODULE_NAME);
-    servableManager->join();
+    getServableManager().join();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", SERVABLE_MANAGER_MODULE_NAME);
 }

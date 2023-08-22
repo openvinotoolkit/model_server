@@ -1,6 +1,6 @@
 # KServe API usage samples
 
-OpenVINO Model Server introduced support for [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2), including [Triton](https://github.com/triton-inference-server)'s raw format externsion.
+OpenVINO Model Server introduced support for [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2), including [Triton](https://github.com/triton-inference-server)'s raw format extension.
 
 This guide shows how to interact with KServe API endpoints on both gRPC and HTTP interfaces using [Triton](https://github.com/triton-inference-server)'s client library. It covers following topics:
 - <a href="#grpc-api">GRPC API Examples </a>
@@ -525,7 +525,7 @@ Usage:
 - Usage Example
 
 ```Bash
-./grpc_async_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --grpc_port 9111
+./grpc_async_infer_resnet --images_list ../../../common/resnet_input_images.txt --labels_list ../../../common/resnet_labels.txt --grpc_port 9000
 ../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
 ../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
 ../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
@@ -555,7 +555,7 @@ Usage:
       --images_list IMAGES      Path to a file with a list of labeled 
                                 images. 
       --labels_list LABELS      Path to a file with a list of labels. 
-      --http_address GRPC_ADDRESS
+      --http_address HTTP_ADDRESS
                                 Specify url to REST service.  (default: 
                                 localhost)
       --http_port PORT          Specify port to REST service.  (default: 
@@ -604,7 +604,7 @@ Usage:
       --images_list IMAGES      Path to a file with a list of labeled 
                                 images. 
       --labels_list LABELS      Path to a file with a list of labels. 
-      --http_address GRPC_ADDRESS
+      --http_address HTTP_ADDRESS
                                 Specify url to REST service.  (default: 
                                 localhost)
       --http_port PORT          Specify port to REST service.  (default: 
@@ -622,7 +622,7 @@ Usage:
 - Usage Example
 
 ```Bash
-./http_async_infer_resnet --images_list resnet_input_images.txt --labels_list resnet_labels.txt --http_port 9110
+./http_async_infer_resnet --images_list ../../../common/resnet_input_images.txt --labels_list ../../../common/resnet_labels.txt --http_port 8000
 ../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
 ../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
 ../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 

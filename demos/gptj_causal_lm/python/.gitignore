@@ -1,0 +1,4 @@
+.venv/
+local-pt-checkpoint/
+onnx/
+workspace/

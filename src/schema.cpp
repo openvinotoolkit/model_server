@@ -25,8 +25,83 @@
 #include <spdlog/spdlog.h>
 
 namespace ovms {
-const char* MODELS_CONFIG_SCHEMA = R"({
-	"definitions": {
+const std::string MODEL_CONFIG_DEFINITION = R"(
+"model_config": {
+	"type": "object",
+	"required": ["config"],
+	"properties": {
+		"config": {
+			"type": "object",
+			"required": ["name", "base_path"],
+			"properties": {
+				"name": {
+					"type": "string"
+				},
+				"base_path": {
+					"type": "string"
+				},
+				"batch_size": {
+					"type": ["integer", "string"],
+					"minimum": 0
+				},
+				"model_version_policy": {
+	"$ref": "#/definitions/model_version_policy"
+				},
+				"shape": {
+		"$ref": "#/definitions/layout_shape_def"
+				},
+				"layout": {
+		"$ref": "#/definitions/layout_shape_def"
+				},
+				"nireq": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"target_device": {
+					"type": "string"
+				},
+				"allow_cache": {
+					"type": "boolean"
+				},
+				"plugin_config": {
+					"type": "object",
+		"additionalProperties": {"anyOf": [
+						{"type": "string"},
+						{"type": "number"}
+					]}
+				},
+				"stateful": {
+					"type": "boolean"
+				},
+				"idle_sequence_cleanup": {
+					"type": "boolean"
+				},
+				"low_latency_transformation": {
+					"type": "boolean"
+				},
+				"max_sequence_number": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"custom_loader_options": {
+					"type": "object",
+												"required": ["loader_name"],
+												"properties": {
+													"loader_name": {
+														"type": "string"
+													}
+												},
+												"minProperties": 1
+				}
+			},
+			"additionalProperties": false
+		},
+		"additionalProperties": false
+})";
+
+const std::string MODELS_CONFIG_SCHEMA = R"({
+    "definitions": {)" + MODEL_CONFIG_DEFINITION +
+                                         R"(},
 		"custom_loader_config": {
 			"type": "object",
 			"required": ["config"],
@@ -50,75 +125,87 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"additionalProperties": false
 			}
 		},
-		"model_config": {
-			"type": "object",
-			"required": ["config"],
-			"properties": {
-				"config": {
-					"type": "object",
-					"required": ["name", "base_path"],
-					"properties": {
-						"name": {
-							"type": "string"
-						},
-						"base_path": {
-							"type": "string"
-						},
-						"batch_size": {
-							"type": ["integer", "string"],
-							"minimum": 0
-						},
-						"model_version_policy": {
-							"type": "object"
-						},
-						"shape": {
-							"type": ["object", "string"]
-						},
-						"layout": {
-							"type": ["object", "string"]
-						},
-						"nireq": {
-							"type": "integer",
-							"minimum": 0
-						},
-						"target_device": {
-							"type": "string"
-						},
-                        "allow_cache": {
-                            "type": "boolean"
-                        },
-						"plugin_config": {
-							"type": "object"
-						},
-						"stateful": {
-							"type": "boolean"
-						},
-						"idle_sequence_cleanup": {
-							"type": "boolean"
-						},
-						"low_latency_transformation": {
-							"type": "boolean"
-						},
-						"max_sequence_number": {
-							"type": "integer",
-							"minimum": 0
-						},
-						"custom_loader_options": {
-							"type": "object",
-                                                        "required": ["loader_name"],
-                                                        "properties": {
-                                                            "loader_name": {
-                                                                "type": "string"
-                                                            }
-                                                        },
-                                                        "minProperties": 1
-						}
-					},
-					"additionalProperties": false
-				},
-				"additionalProperties": false
-			}
-		},
+    "layout_shape_def": {
+        "oneOf": [
+        {
+            "type": "object",
+            "additionalProperties": {"type": "string"}
+        },
+        {
+            "type": "string"
+        }
+        ]
+    },
+        "all_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {},
+            "minProperties": 0,
+            "maxProperties": 0
+        },
+        "specific_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "versions" : {
+                  "type": "array",
+                  "items": {
+                        "type": "integer",
+                        "minimum": 1
+                  }
+                }
+            },
+            "required": ["versions"]
+        },
+        "latest_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "num_versions" : {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            },
+            "required": ["num_versions"]
+        },
+        "model_version_policy": {
+            "oneOf": [
+                {
+                  "properties" : {"all" : {"$ref": "#/definitions/all_version_policy"}},
+                  "required": ["all"],
+                  "additionalProperties": false
+                },
+                {
+                  "properties" : {"specific" : {"$ref": "#/definitions/specific_version_policy"}},
+                  "required": ["specific"],
+                  "additionalProperties": false
+                },
+                {
+                  "properties" : {"latest" : {"$ref": "#/definitions/latest_version_policy"}},
+                  "required": ["latest"],
+                  "additionalProperties": false
+                }
+            ]
+        },
+    "mediapipe_config": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+             "name": {
+                 "type": "string"
+             },
+             "base_path": {
+                 "type": "string"
+             },
+             "graph_path": {
+                 "type": "string"
+             },
+             "subconfig": {
+                 "type": "string"
+             }
+        },
+        "additionalProperties": false
+    },
 		"source_node_names": {
 			"type": "object",
 			"required": ["node_name", "data_item"],
@@ -275,13 +362,21 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"$ref": "#/definitions/model_config"
 			}
 		},
-		"pipeline_config_list": {
+        "pipeline_config_list": {
 			"type": "array",
 			"items": {
 				"$ref": "#/definitions/pipeline_config"
 			}
-		},
-		"custom_node_library_config_list": {
+        },)" +
+#if (MEDIAPIPE_DISABLE == 0)
+                                         R"("mediapipe_config_list": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/mediapipe_config"
+      }
+    },)" +
+#endif
+                                         R"("custom_node_library_config_list": {
 			"type": "array",
 			"items": {
 				"$ref": "#/definitions/custom_node_library_config"
@@ -315,37 +410,38 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 	"additionalProperties": false
 })";
 
-const char* MODELS_MAPPING_INPUTS_SCHEMA = R"({
+const char* MODELS_MAPPING_SCHEMA = R"(
+{
     "type": "object",
-    "required": [
-        "inputs"
-    ],
-    "properties": {
-		"outputs":{
-            "type": "object"
-        },
-        "inputs":{
-            "type": "object"
-        }
-    },
-	"additionalProperties": false
-    })";
-
-const char* MODELS_MAPPING_OUTPUTS_SCHEMA = R"({
-    "type": "object",
-    "required": [
-        "outputs"
-    ],
     "properties": {
         "outputs":{
-            "type": "object"
+                "type": "object",
+                "additionalProperties": {"type": "string"}
         },
         "inputs":{
-            "type": "object"
+            "type": "object",
+            "additionalProperties": {"type": "string"}
         }
     },
+    "additionalProperties": false
+})";
+
+const std::string MEDIAPIPE_SUBCONFIG_SCHEMA = R"({
+    "definitions": {)" + MODEL_CONFIG_DEFINITION +
+                                               R"(},
+	"type": "object",
+	"required": ["model_config_list"],
+	"properties": {
+		"model_config_list": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/model_config"
+			}
+		}
+    },
 	"additionalProperties": false
-    })";
+}
+})";
 
 StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema) {
     rapidjson::Document schemaJson;

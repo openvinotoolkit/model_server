@@ -18,7 +18,7 @@
 #include <optional>
 #include <string>
 
-#include "server_settings.hpp"
+#include "capi_frontend/server_settings.hpp"
 
 namespace ovms {
 

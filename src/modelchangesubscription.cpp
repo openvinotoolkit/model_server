@@ -18,7 +18,7 @@
 #include <exception>
 #include <sstream>
 
-#include "pipelinedefinition.hpp"
+#include "dags/pipelinedefinition.hpp"
 
 namespace ovms {
 void ModelChangeSubscription::subscribe(PipelineDefinition& pd) {

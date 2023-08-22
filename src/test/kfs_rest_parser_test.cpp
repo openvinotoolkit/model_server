@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <regex>
+#include <vector>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -292,6 +295,59 @@ TEST_F(KFSRestParserTest, parseValidRequestBOOL) {
     ASSERT_EQ(proto.inputs()[0].datatype(), "BOOL");
     ASSERT_EQ(proto.inputs()[0].contents().bool_contents_size(), 4);
     ASSERT_THAT(proto.inputs()[0].contents().bool_contents(), ElementsAre(true, true, false, false));
+}
+
+TEST_F(KFSRestParserTest, parseValidRequestStringInput) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "BYTES",
+        "data" : [ "zebra", "openvino", "123"]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(3));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
+    ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 3);
+    ASSERT_THAT(proto.inputs()[0].contents().bytes_contents(), ElementsAre("zebra", "openvino", "123"));
+}
+
+TEST_F(KFSRestParserTest, parseValidRequestStringInputNested) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "BYTES",
+        "data" : [ ["zebra"], ["openvino", "123"]]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(3));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "BYTES");
+    ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 3);
+    ASSERT_THAT(proto.inputs()[0].contents().bytes_contents(), ElementsAre("zebra", "openvino", "123"));
+}
+
+TEST_F(KFSRestParserTest, InvalidJson) {
+    std::string request = R"({
+    "inputs" : [ INVALID)";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::JSON_INVALID);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestBYTES) {
@@ -859,4 +915,76 @@ TEST_F(KFSRestParserTest, parseInvalidRequestWithInputsMissing) {
     std::string request = R"({})";
     auto status = parser.parse(request.c_str());
     ASSERT_EQ(status, StatusCode::REST_NO_INPUTS_FOUND);
+}
+
+TEST_F(KFSRestParserTest, parseInvalidRequestStringInput_datatypeNotU8) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "UINT16",
+        "data" : [ "zebra", "openvino", "123"]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(KFSRestParserTest, parseInvalidRequestStringInput) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 3 ],
+        "datatype" : "BYTES",
+        "data" : [ "zebra", "openvino", 123]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(KFSRestParserTest, parseInvalidDataNotHeterogenous) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "b",
+        "shape" : [ 2, 3 ],
+        "datatype" : "FP32",
+        "data" : [ 30.9, [ 1.5, 2.9, 3.0 ], [ 1.5, 2.9, 3.0 ], [ 1.5, 2.9, 3.0 ] ]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+}
+
+TEST_F(KFSRestParserTest, parseNegativeBatch) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "b",
+        "shape" : [ $replace, 3 ],
+        "datatype" : "FP32",
+        "data" : [ [ 1.5, 2.9, 3.0 ], [ 1.5, 2.9, 3.0 ], [ 1.5, 2.9, 3.0 ] ]
+        }
+    ]
+    })";
+
+    for (double i : std::vector<double>{-5, -2.56, -7, -1, -0.5, -124, -0.0000000}) {
+        std::string replace = std::to_string(i);
+        std::string requestCopy = std::regex_replace(request, std::regex("\\$replace"), replace);
+        auto status = parser.parse(requestCopy.c_str());
+        ASSERT_NE(status, StatusCode::OK) << "for value: " << replace;
+    }
+
+    for (int i : std::vector<int>{-5, -8, -1, -0, -124}) {
+        std::string replace = std::to_string(i);
+        std::string requestCopy = std::regex_replace(request, std::regex("\\$replace"), replace);
+        auto status = parser.parse(requestCopy.c_str());
+        ASSERT_NE(status, StatusCode::OK) << "for value: " << replace;
+    }
 }

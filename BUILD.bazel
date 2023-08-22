@@ -1,0 +1,78 @@
+#
+# Copyright (c) 2023 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+licenses(["notice"])
+
+exports_files([
+    "package.json",
+    "yarn.lock",
+])
+
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
+
+config_setting(
+    name = "disable_mediapipe",
+    define_values = {
+        "MEDIAPIPE_DISABLE": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_disable_mediapipe",
+    negate = ":disable_mediapipe",
+)
+
+cc_library(
+  name = "ovms_dependencies",
+  deps = [
+        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
+        "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
+        "@minitrace//:trace",
+        "@com_github_grpc_grpc//:grpc++",
+        "@org_tensorflow//tensorflow/core:framework",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@com_github_gabime_spdlog//:spdlog",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
+        "@awssdk//:s3",
+        "@awssdk//:core",
+        "@awssdk//:deps",
+        "@azure//:storage",
+        "@cpprest//:sdk",
+        "@boost//:lib",
+        "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
+        "@tensorflow_serving//tensorflow_serving/util:json_tensor",
+        "@linux_openvino//:openvino",
+        "@linux_opencv//:opencv",
+        "@com_github_jupp0r_prometheus_cpp//core",
+        "@oneTBB//:tbb",
+        ] + select({
+            "//conditions:default": [
+                "@mediapipe//mediapipe/framework:calculator_framework",
+                "@mediapipe//mediapipe/framework/port:logging",
+                "@mediapipe//mediapipe/framework/port:parse_text_proto",
+                "@mediapipe//mediapipe/framework/port:status",
+                "@mediapipe_calculators//:mediapipe_calculators",
+                "@model_api//:adapter_api",
+            ],
+            "//:disable_mediapipe" : [],
+        }),
+  visibility = ["//visibility:public"],
+)

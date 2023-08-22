@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../custom_node_library_manager.hpp"
+#include "../dags/custom_node_library_manager.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -26,6 +26,13 @@ TEST(NodeLibraryManagerTest, NewManagerExpectMissingLibrary) {
     NodeLibrary library;
     auto status = manager.getLibrary("random_name", library);
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_MISSING);
+}
+
+TEST(NodeLibraryManagerTest, UnSuccessfullLibraryLoading) {
+    CustomNodeLibraryManager manager;
+    NodeLibrary library;
+    auto status = manager.loadLibrary("random_name", "ovms/bazel-bin/src/lib_node_mock.so");
+    ASSERT_EQ(status, StatusCode::PATH_INVALID);
 }
 
 TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {

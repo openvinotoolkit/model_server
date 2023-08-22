@@ -9,11 +9,17 @@ This document describes OpenVINO Model Server (OVMS) C API that allows OVMS to b
 Server functionalities are encapsulated in shared library built from OVMS source. To include OVMS you need to link this library with your application and use C API defined in [header file](https://github.com/openvinotoolkit/model_server/blob/develop/src/ovms.h). 
 
 
-To start model serving you need to spawn process that will keep OVMS alive. Then you can schedule inference both directly from app using C API and gRPC/HTTP endpoints.
+Calling a method to start the model serving in your application initiates the OVMS as a separate thread. Then you can schedule inference both directly from app using C API and gRPC/HTTP endpoints.
+
+API is versioned according to [SemVer 2.0](https://semver.org/). Calling `OVMS_ApiVersion` it is possible to get `major` and `minor` version number.
+- major - incremented when new, backward incompatible changes are introduced to the API itself (API call removal, name change, parameter change)
+- minor - incremented when API is modified but backward compatible (new API call added)
+
+There is no patch version number. Underlying functionality changes not related to API itself are tracked via OVMS version. OVMS and OpenVINO versions can be tracked via logs or `ServerMetadata` request (via KServe API).
 
 ### Server configuration and start
 
-To start OVMS you need to create `OVMS_Server` object using `OVMS_ServerNew`, with set of `OVMS_ServerSettings` and `OVMS_ModelsSettings` that describe how the server should be configured. Once the server is started using `OVMS_ServerStartFromConfigurationFile` you can schedule the inferences using `OVMS_Inference`. To stop server, you must call `OVMS_ServerDelete`. While the server is alive you can schedule both in process inferences as well as use gRPC API to schedule inferences from remote machine. Optionally you can also enable HTTP service. Example how to use OVMS with C/C++ application is [here](../demos/c_api_minimal_app/README.md).
+To start OVMS you need to create `OVMS_Server` object using `OVMS_ServerNew`, with set of `OVMS_ServerSettings` and `OVMS_ModelsSettings` that describe how the server should be configured. Once the server is started using `OVMS_ServerStartFromConfigurationFile` you can schedule the inferences using `OVMS_Inference`. To stop server, you must call `OVMS_ServerDelete`. While the server is alive you can schedule both in process inferences as well as use gRPC API to schedule inferences from remote machine. Optionally you can also enable HTTP service. One can also query metadata using `OVMS_GetServerMetadata`. Example how to use OVMS with C/C++ application is [here](../demos/c_api_minimal_app/README.md).
 
 ### Error handling
 Most of OVMS C API functions return `OVMS_Status` object pointer indicating the success or failure. Success is indicated by nullptr (NULL). Failure is indicated by returning `OVMS_Status` object. The status code can be extracted using `OVMS_StatusGetCode` function and the details of error can be retrieved using `OVMS_StatusGetDetails` function.
@@ -39,11 +45,10 @@ To process response, first you must check for inference error. If no error occur
 
 ## Preview limitations
 * Launching server in single model mode is not supported. You must use configuration file.
-* DAG pipelines cannot be used directly through C API. DAG inferences can be scheduled only by gRPC/HTTP endpoints.
-* There is no support for native file format (jpg/png) through C API.
+* There is no direct support for jpeg/png encoded input format through C API.
 * There are no server live, server ready, model ready, model metadata, metrics endpoints exposed through C API.
-* Inference scheduled through C API does not have inference success/failure, request time metrics counted.
-* You cannot turn gRPC service off, HTTP service is off by default but can be enabled.
+* Inference scheduled through C API does not have metrics `ovms_requests_success`,`ovms_requests_fail` and `ovms_request_time_us` counted.
+* You cannot turn gRPC endpoint off, REST API endpoint is optional.
 * There is no API for asynchronous inference.
 * There is no support for stateful models.
 

@@ -61,7 +61,7 @@ class KFS_Client(BaseClient):
         assert self.rest_port is not None, "checking only via REST port, which is not set"
         status_url = f"http://{self.address}:{self.rest_port}{self.status_endpoint}"
         self.print_info(f"try to send request to endpoint: {status_url}")
-        response = requests.post(url=status_url, params={})
+        response = requests.post(url=status_url, params={}, timeout=15)
         self.print_info(f"received status code is {response.status_code}.")
         message = "It seems to REST service is not runnig"
         assert response.status_code == HTTPStatus.OK.value, message

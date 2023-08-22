@@ -25,9 +25,12 @@
 #include <utility>
 
 #include <dirent.h>
+#include <malloc.h>
 #include <spdlog/spdlog.h>
 #include <sys/types.h>
 
+#include "capi_frontend/inferencerequest.hpp"
+#include "capi_frontend/inferenceresponse.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
@@ -65,12 +68,7 @@ enum : unsigned int {
 
 namespace ovms {
 
-const char* CPU_THROUGHPUT_STREAMS = "CPU_THROUGHPUT_STREAMS";
-const char* NIREQ = "NIREQ";
-
 const uint MAX_NIREQ_COUNT = 100000;
-
-const int DEFAULT_OV_STREAMS = std::thread::hardware_concurrency() / 4;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
@@ -96,17 +94,16 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
 static Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
     Shape shape;
     auto mappedName = config.getMappingInputByKey(name);
+    auto inputNameToUse = (mappedName != "" ? mappedName : name);
     if (config.getBatchSize().has_value() || parameter.isBatchSizeRequested()) {
         // leave shape untouched
-    } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
-        auto status = Shape::fromFlatShape(parameter.getShape(name), shape);
+    } else if (config.isShapeAuto(inputNameToUse) && parameter.isShapeRequested(inputNameToUse)) {
+        auto status = Shape::fromFlatShape(parameter.getShape(inputNameToUse), shape);
         if (!status.ok()) {
             return status;
         }
-    } else if (mappedName == "" && config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
-        shape = config.getShapes().at(name).shape;
-    } else if (config.getShapes().count(mappedName) && config.getShapes().at(mappedName).shape.size()) {
-        shape = config.getShapes().at(mappedName).shape;
+    } else if (config.getShapes().count(inputNameToUse) && config.getShapes().at(inputNameToUse).shape.size()) {
+        shape = config.getShapes().at(inputNameToUse).shape;
     } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
         shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
     }
@@ -171,8 +168,10 @@ static Status validateConfigurationAgainstNetwork(const ModelConfig& config, std
 }
 
 const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput) {
+    Layout defaultLayout;
     if (isInput) {
         const auto& input = this->model->input(name);
+        defaultLayout = Layout::getDefaultLayout(input.get_partial_shape().size());
         auto networkSpecifiedLayout = getLayoutFromRTMap(input.get_rt_info());
         if (networkSpecifiedLayout.has_value()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting input layout from RTMap: {}; for tensor name: {}", networkSpecifiedLayout.value().to_string(), name);
@@ -180,28 +179,28 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
         }
     } else {
         const auto& output = this->model->output(name);
+        defaultLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
         auto networkSpecifiedLayout = getLayoutFromRTMap(output.get_rt_info());
         if (networkSpecifiedLayout.has_value()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting output layout from RTMap: {}; for tensor name: {}", networkSpecifiedLayout.value().to_string(), name);
             return Layout::fromOvLayout(networkSpecifiedLayout.value());
         }
     }
-    auto layout = Layout::getDefaultLayout();
     if (isInput && config.getLayout().isSet()) {
-        layout = config.getLayout().getTensorLayout();
+        auto layout = config.getLayout().getTensorLayout();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting layout from ModelConfig: {}; for tensor name: {}", layout, name);
         return layout;
     } else if (config.getLayouts().size() > 0) {
         auto mappedName = config.getMappingInputByKey(name);
         auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
         if (it != config.getLayouts().end()) {
-            layout = it->second.getTensorLayout();
+            auto layout = it->second.getTensorLayout();
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting layout from ModelConfig: {}; for tensor name: {}", layout, name);
             return layout;
         }
     }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting default layout: {}; for tensor name: {}", layout, name);
-    return layout;
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting default layout: {}; for tensor name: {}", defaultLayout, name);
+    return defaultLayout;
 }
 
 static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
@@ -235,7 +234,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
                 preproc.input(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
                 auto inheritedModelLayout = getLayoutFromRTMap(input.get_rt_info());
-                auto guessedModelLayout = Layout::getDefaultLayout();
+                auto guessedModelLayout = Layout::getDefaultLayout(input.get_partial_shape().size());
 
                 ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
 
@@ -282,7 +281,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
                 preproc.output(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
                 auto inheritedModelLayout = getLayoutFromRTMap(output.get_rt_info());
-                auto guessedModelLayout = Layout::getDefaultLayout();
+                auto guessedModelLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
 
                 ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
 
@@ -322,6 +321,15 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
     return StatusCode::OK;
 }
 
+const std::string RT_INFO_KEY{"model_info"};
+
+ov::AnyMap ModelInstance::getRTInfo() const {
+    if (this->model->has_rt_info(RT_INFO_KEY)) {
+        return model->get_rt_info<ov::AnyMap>(RT_INFO_KEY);
+    }
+    return ov::AnyMap();
+}
+
 Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork(config, this->model);
     if (!status.ok()) {
@@ -354,12 +362,20 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     std::map<std::string, ov::PartialShape> modelShapes;
     bool reshapeRequired = false;
 
+    bool isBatchingModeAuto = config.getBatchingMode() == Mode::AUTO;
+
     // First pass, gather reshape info.
     for (const ov::Output<ov::Node>& input : this->model->inputs()) {
         std::string name;
         try {
             std::string name = input.get_any_name();
             ov::PartialShape shape = input.get_partial_shape();
+
+            if (shape.size() == 0 && isBatchingModeAuto) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load model:{}; version:{}; with batching=AUTO due to existing scalar input name:{}",
+                    getName(), getVersion(), name);
+                return StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED;
+            }
 
             Shape requestedShape;
             auto status = getRequestedShape(config, parameter, name, requestedShape);
@@ -427,7 +443,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
             }
 
-            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+            std::shared_ptr<const TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
                 mappingName,
                 precision,
@@ -435,7 +451,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 layout);
 
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Input {}", info->asString());
-
             this->inputsInfo[info->getMappedName()] = std::move(info);
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
@@ -476,7 +491,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
                 return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
             }
 
-            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+            std::shared_ptr<const TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
                 mappingName,
                 precision,
@@ -595,7 +610,7 @@ Status ModelInstance::loadOVModel() {
     auto& modelFile = modelFiles[0];
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
     try {
-        model = loadOVModelPtr(modelFile);
+        this->model = loadOVModelPtr(modelFile);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading ov::Model model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
@@ -661,11 +676,11 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
-    // By default, set "PERFORMANCE_HINT" = "THROUGHPUT";
+    // By default, set "PERFORMANCE_HINT" = "LATENCY";
     if ((pluginConfig.count("NUM_STREAMS") == 1) || (pluginConfig.count("PERFORMANCE_HINT") == 1)) {
         return pluginConfig;
     } else {
-        pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
+        pluginConfig["PERFORMANCE_HINT"] = "LATENCY";
     }
     return pluginConfig;
 }
@@ -694,21 +709,13 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         return status;
     }
 
-    uint32_t numberOfStreams = 0;
-    try {
-        numberOfStreams = getNumOfStreams();
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numberOfStreams);
-    } catch (ov::Exception& e) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams with error: {}; model: {}; version: {}; device: {}", e.what(), getName(), getVersion(), config.getTargetDevice());
-    } catch (...) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of streams; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
-    }
+    uint32_t numberOfStreams = getNumOfStreams();
     SET_IF_ENABLED(getMetricReporter().streams, numberOfStreams);
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
-    for (const auto pair : pluginConfig) {
-        const auto key = pair.first;
-        const auto value = pair.second;
+    for (const auto& pair : pluginConfig) {
+        const auto& key = pair.first;
+        const auto& value = pair.second;
         SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
 
@@ -752,6 +759,9 @@ void ModelInstance::fetchModelFiles(bool& found, ArrayType ext) {
             if (file.empty()) {
                 found = false;
             }
+            if (endsWith(file, "saved_model.pb")) {
+                file = file.substr(0, file.find("saved_model.pb"));
+            }
             modelFiles.push_back(file);
         }
     }
@@ -774,6 +784,7 @@ Status ModelInstance::fetchModelFilepaths() {
     fetchModelFiles(found, ONNX_MODEL_FILES_EXTENSIONS);
     fetchModelFiles(found, PADDLE_MODEL_FILES_EXTENSIONS);
     fetchModelFiles(found, TF_MODEL_FILES_EXTENSIONS);
+    fetchModelFiles(found, TFLITE_MODEL_FILES_EXTENSIONS);
 
     if (!found) {
         SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
@@ -790,10 +801,11 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
     }
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*compiledModel, numberOfParallelInferRequests);
     SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, numberOfParallelInferRequests);
+    auto batchSize = getBatchSize();
     SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
-        getBatchSize().toString(),
+        batchSize.has_value() ? batchSize.value().toString() : std::string{"none"},
         numberOfParallelInferRequests);
     return StatusCode::OK;
 }
@@ -864,6 +876,12 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         SPDLOG_ERROR("exception occurred while loading model: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::MODEL_NOT_LOADED;
+    }
+    try {
+        bool isModelLoadedFromCache = compiledModel->get_property(ov::loaded_from_cache);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Is model loaded from cache: {}", isModelLoadedFromCache);
+    } catch (...) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
     }
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
@@ -1102,6 +1120,7 @@ void ModelInstance::unloadModelComponents() {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
+    malloc_trim(0);
 }
 
 const std::set<std::string>& ModelInstance::getOptionalInputNames() {
@@ -1165,9 +1184,13 @@ Status ModelInstance::infer(const RequestType* requestProto,
     if (!status.ok())
         return status;
     status = validate(requestProto);
-    auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
-    auto requestShapes = getRequestShapes(requestProto);
-    status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
+    if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
+        // We are ensured that request shape is valid and convertible to model shape (non negative, non zero)
+        // We can use it to perform reshape via shape=auto
+        auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
+        auto requestShapes = getRequestShapes(requestProto);
+        status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
+    }
     if (!status.ok())
         return status;
     status = requestProcessor->prepare();
@@ -1214,7 +1237,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName);
+    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;
@@ -1228,6 +1251,9 @@ Status ModelInstance::infer(const RequestType* requestProto,
         return status;
     SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
+    if (targetDevice == "AUTO")
+        for (std::string device : compiledModel->get_property(ov::execution_devices))
+            SPDLOG_DEBUG("Used device: {}", device);
 
     status = requestProcessor->release();
     return status;
@@ -1251,8 +1277,26 @@ const size_t ModelInstance::getBatchSizeIndex() const {
     return batchIndex.value();
 }
 
+uint32_t ModelInstance::getOptimalNumberOfInferRequests() const {
+    try {
+        uint32_t numOptimalInferRequests = compiledModel->get_property(ov::optimal_number_of_infer_requests);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numOptimalInferRequests);
+        return numOptimalInferRequests;
+    } catch (...) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Unable to get information about number of optimal infer requests; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+    }
+    return 0;
+}
+
 uint32_t ModelInstance::getNumOfStreams() const {
-    return compiledModel->get_property(ov::num_streams);
+    try {
+        uint32_t numStreams = compiledModel->get_property(ov::num_streams);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Number of OpenVINO streams: {}", numStreams);
+        return numStreams;
+    } catch (...) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get property ov::num_streams device: {}. Number of streams will be set to number of optimal infer requests.", config.getTargetDevice());
+    }
+    return getOptimalNumberOfInferRequests();
 }
 
 std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {

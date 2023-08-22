@@ -84,13 +84,20 @@ func ModelInferRequest(client grpc_client.GRPCInferenceServiceClient, fileName s
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	bytes, err := ioutil.ReadFile(fileName)
+	contents := grpc_client.InferTensorContents{}
+	contents.BytesContents = append(contents.BytesContents, bytes) 
+
+	inferInput := grpc_client.ModelInferRequest_InferInputTensor{
+		Name:     "0",
+		Datatype: "BYTES",
+		Shape:    []int64{1},
+		Contents: &contents,
+	}
+
 	// Create request input tensors
 	inferInputs := []*grpc_client.ModelInferRequest_InferInputTensor{
-		&grpc_client.ModelInferRequest_InferInputTensor{
-			Name:     "0",
-			Datatype: "BYTES",
-			Shape:    []int64{1},
-		},
+		&inferInput,
 	}
 
 	// Create inference request for specific model/version
@@ -99,11 +106,6 @@ func ModelInferRequest(client grpc_client.GRPCInferenceServiceClient, fileName s
 		ModelVersion: modelVersion,
 		Inputs:       inferInputs,
 	}
-
-    bytes, err := ioutil.ReadFile(fileName)
-
-
-	modelInferRequest.RawInputContents = append(modelInferRequest.RawInputContents, bytes) 
 
 	// Submit inference request to server
 	modelInferResponse, err := client.ModelInfer(ctx, &modelInferRequest)

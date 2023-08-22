@@ -36,6 +36,8 @@ constexpr double BUCKET_MULTIPLIER = 10;
         throw std::logic_error(MESSAGE);                   \
     }
 
+ServableMetricReporter::~ServableMetricReporter() = default;
+
 ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion) :
     registry(registry) {
     if (!registry) {

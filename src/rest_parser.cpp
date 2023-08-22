@@ -18,6 +18,9 @@
 #include <functional>
 #include <string>
 
+#include <rapidjson/error/en.h>
+
+#include "precision.hpp"
 #include "rest_utils.hpp"
 #include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
@@ -56,7 +59,7 @@ void TFSRestParser::removeUnusedInputs() {
     auto& inputs = (*requestProto.mutable_inputs());
     auto it = inputs.begin();
     while (it != inputs.end()) {
-        if (!it->second.tensor_shape().dim_size()) {
+        if (!inputsFoundInRequest.count(it->first)) {
             SPDLOG_DEBUG("Removing {} input from proto since it's not included in the request", it->first);
             it = inputs.erase(it);
         } else {
@@ -123,6 +126,12 @@ bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::Tenso
         }
         return true;
     }
+    if (doc.IsString() && tensorPrecisionMap[tensorName] == ovms::Precision::U8 && (proto.dtype() == tensorflow::DataType::DT_UINT8 || proto.dtype() == tensorflow::DataType::DT_STRING)) {
+        if (!addValue(proto, doc)) {
+            return false;
+        }
+        return true;
+    }
     if (!doc.IsArray()) {
         return false;
     }
@@ -165,6 +174,7 @@ bool TFSRestParser::parseInstance(rapidjson::Value& doc) {
     }
     for (auto& itr : doc.GetObject()) {
         std::string tensorName = itr.name.GetString();
+        inputsFoundInRequest.insert(tensorName);
         auto& proto = (*requestProto.mutable_inputs())[tensorName];
         increaseBatchSize(proto);
         if (!parseArray(itr.value, 1, proto, tensorName)) {
@@ -205,10 +215,12 @@ Status TFSRestParser::parseRowFormat(rapidjson::Value& node) {
                 return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
             }
         }
-    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber() || isBinary(node.GetArray()[0])) {
+    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber() || isBinary(node.GetArray()[0]) || node.GetArray()[0].IsString()) {
         // no named format
-        if (requestProto.inputs_size() != 1) {
+        if (requestProto.inputs_size() == 0) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;
+        } else if (requestProto.inputs_size() != 1) {
+            return StatusCode::INVALID_INPUT_FORMAT;
         }
         auto inputsIterator = requestProto.mutable_inputs()->begin();
         if (inputsIterator == requestProto.mutable_inputs()->end()) {
@@ -231,94 +243,6 @@ Status TFSRestParser::parseRowFormat(rapidjson::Value& node) {
     }
     format = Format::NAMED;
     return StatusCode::OK;
-}
-
-Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
-    order = Order::COLUMN;
-    // no named format
-    if (node.IsArray()) {
-        if (requestProto.inputs_size() != 1) {
-            return StatusCode::REST_INPUT_NOT_PREALLOCATED;
-        }
-        auto inputsIterator = requestProto.mutable_inputs()->begin();
-        if (inputsIterator == requestProto.mutable_inputs()->end()) {
-            const std::string details = "Failed to parse column formatted request.";
-            SPDLOG_ERROR("Internal error occured: {}", details);
-            return Status(StatusCode::INTERNAL_ERROR, details);
-        }
-        if (!parseArray(node, 0, inputsIterator->second, inputsIterator->first)) {
-            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-        }
-        format = Format::NONAMED;
-        return StatusCode::OK;
-    }
-    // named format
-    if (!node.IsObject()) {
-        return StatusCode::REST_INPUTS_NOT_AN_OBJECT;
-    }
-    if (node.GetObject().MemberCount() == 0) {
-        return StatusCode::REST_NO_INPUTS_FOUND;
-    }
-    for (auto& kv : node.GetObject()) {
-        std::string tensorName = kv.name.GetString();
-        auto& proto = (*requestProto.mutable_inputs())[tensorName];
-        if (!parseArray(kv.value, 0, proto, tensorName)) {
-            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-        }
-    }
-    removeUnusedInputs();
-    format = Format::NAMED;
-    return StatusCode::OK;
-}
-
-Status TFSRestParser::parse(const char* json) {
-    rapidjson::Document doc;
-    if (doc.Parse(json).HasParseError()) {
-        return StatusCode::JSON_INVALID;
-    }
-    if (!doc.IsObject()) {
-        return StatusCode::REST_BODY_IS_NOT_AN_OBJECT;
-    }
-    auto instancesItr = doc.FindMember("instances");
-    auto inputsItr = doc.FindMember("inputs");
-    if (instancesItr != doc.MemberEnd() && inputsItr != doc.MemberEnd()) {
-        return StatusCode::REST_PREDICT_UNKNOWN_ORDER;
-    }
-    if (instancesItr != doc.MemberEnd()) {
-        return parseRowFormat(instancesItr->value);
-    }
-    if (inputsItr != doc.MemberEnd()) {
-        return parseColumnFormat(inputsItr->value);
-    }
-    return StatusCode::REST_PREDICT_UNKNOWN_ORDER;
-}
-
-void TFSRestParser::increaseBatchSize(tensorflow::TensorProto& proto) {
-    if (proto.tensor_shape().dim_size() < 1) {
-        proto.mutable_tensor_shape()->add_dim()->set_size(0);
-    }
-    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(proto.tensor_shape().dim(0).size() + 1);
-}
-
-bool TFSRestParser::setDimOrValidate(tensorflow::TensorProto& proto, int dim, int size) {
-    if (proto.tensor_shape().dim_size() > dim) {
-        return proto.tensor_shape().dim(dim).size() == size;
-    } else {
-        while (proto.tensor_shape().dim_size() <= dim) {
-            proto.mutable_tensor_shape()->add_dim()->set_size(0);
-        }
-        proto.mutable_tensor_shape()->mutable_dim(dim)->set_size(size);
-        return true;
-    }
-}
-
-static bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
-    if (!isBinary(value)) {
-        return false;
-    }
-
-    b64Val = value["b64"].GetString();
-    return true;
 }
 
 template <typename T>
@@ -401,25 +325,7 @@ static bool addToIntVal(tensorflow::TensorProto& proto, const rapidjson::Value& 
     return false;
 }
 
-bool TFSRestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
-    if (isBinary(value)) {
-        std::string b64Val;
-        if (!getB64FromValue(value, b64Val))
-            return false;
-        std::string decodedBytes;
-        if (decodeBase64(b64Val, decodedBytes) == StatusCode::OK) {
-            proto.add_string_val(decodedBytes.c_str(), decodedBytes.length());
-            proto.set_dtype(tensorflow::DataType::DT_STRING);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    if (!value.IsNumber()) {
-        return false;
-    }
-
+static bool addNumber(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
     switch (proto.dtype()) {
     case tensorflow::DataType::DT_FLOAT:
         return addToTensorContent<float>(proto, value);
@@ -446,7 +352,139 @@ bool TFSRestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Va
     default:
         return false;
     }
-    return false;
+}
+
+Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
+    order = Order::COLUMN;
+    // no named scalar
+    if (node.IsNumber() && requestProto.inputs_size() == 1) {
+        addNumber(requestProto.mutable_inputs()->begin()->second, node);
+        format = Format::NONAMED;
+        return StatusCode::OK;
+    }
+    // no named format
+    if (node.IsArray()) {
+        if (requestProto.inputs_size() == 0) {
+            return StatusCode::REST_INPUT_NOT_PREALLOCATED;
+        } else if (requestProto.inputs_size() != 1) {
+            return StatusCode::INVALID_INPUT_FORMAT;
+        }
+        auto inputsIterator = requestProto.mutable_inputs()->begin();
+        if (inputsIterator == requestProto.mutable_inputs()->end()) {
+            const std::string details = "Failed to parse column formatted request.";
+            SPDLOG_ERROR("Internal error occured: {}", details);
+            return Status(StatusCode::INTERNAL_ERROR, details);
+        }
+        if (!parseArray(node, 0, inputsIterator->second, inputsIterator->first)) {
+            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        }
+        format = Format::NONAMED;
+        return StatusCode::OK;
+    }
+    // named format
+    if (!node.IsObject()) {
+        return StatusCode::REST_INPUTS_NOT_AN_OBJECT;
+    }
+    if (node.GetObject().MemberCount() == 0) {
+        return StatusCode::REST_NO_INPUTS_FOUND;
+    }
+    for (auto& kv : node.GetObject()) {
+        std::string tensorName = kv.name.GetString();
+        inputsFoundInRequest.insert(tensorName);
+        auto& proto = (*requestProto.mutable_inputs())[tensorName];
+        // scalar
+        if (kv.value.IsNumber()) {
+            setDTypeIfNotSet(kv.value, proto, tensorName);
+            addNumber(proto, kv.value);
+        } else if (!parseArray(kv.value, 0, proto, tensorName)) {
+            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        }
+    }
+    removeUnusedInputs();
+    format = Format::NAMED;
+    return StatusCode::OK;
+}
+
+Status TFSRestParser::parse(const char* json) {
+    rapidjson::Document doc;
+    if (doc.Parse(json).HasParseError()) {
+        std::stringstream ss;
+        ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
+           << " Offset: " << doc.GetErrorOffset();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
+        return Status(StatusCode::JSON_INVALID, details);
+    }
+    if (!doc.IsObject()) {
+        return StatusCode::REST_BODY_IS_NOT_AN_OBJECT;
+    }
+    auto instancesItr = doc.FindMember("instances");
+    auto inputsItr = doc.FindMember("inputs");
+    if (instancesItr != doc.MemberEnd() && inputsItr != doc.MemberEnd()) {
+        return StatusCode::REST_PREDICT_UNKNOWN_ORDER;
+    }
+    if (instancesItr != doc.MemberEnd()) {
+        return parseRowFormat(instancesItr->value);
+    }
+    if (inputsItr != doc.MemberEnd()) {
+        return parseColumnFormat(inputsItr->value);
+    }
+    return StatusCode::REST_PREDICT_UNKNOWN_ORDER;
+}
+
+void TFSRestParser::increaseBatchSize(tensorflow::TensorProto& proto) {
+    if (proto.tensor_shape().dim_size() < 1) {
+        proto.mutable_tensor_shape()->add_dim()->set_size(0);
+    }
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(proto.tensor_shape().dim(0).size() + 1);
+}
+
+bool TFSRestParser::setDimOrValidate(tensorflow::TensorProto& proto, int dim, int size) {
+    if (proto.tensor_shape().dim_size() > dim) {
+        return proto.tensor_shape().dim(dim).size() == size;
+    } else {
+        while (proto.tensor_shape().dim_size() <= dim) {
+            proto.mutable_tensor_shape()->add_dim()->set_size(0);
+        }
+        proto.mutable_tensor_shape()->mutable_dim(dim)->set_size(size);
+        return true;
+    }
+}
+
+static bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
+    if (!isBinary(value)) {
+        return false;
+    }
+
+    b64Val = value["b64"].GetString();
+    return true;
+}
+
+bool TFSRestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
+    if (isBinary(value)) {
+        std::string b64Val;
+        if (!getB64FromValue(value, b64Val))
+            return false;
+        std::string decodedBytes;
+        if (decodeBase64(b64Val, decodedBytes) == StatusCode::OK) {
+            proto.add_string_val(decodedBytes.c_str(), decodedBytes.length());
+            proto.set_dtype(tensorflow::DataType::DT_STRING);
+            return true;
+        } else {
+            return false;
+        }
+    }
+    if (value.IsString() && (proto.dtype() == tensorflow::DataType::DT_UINT8 || proto.dtype() == tensorflow::DataType::DT_STRING)) {
+        proto.add_string_val(value.GetString(), strlen(value.GetString()));
+        proto.set_dtype(tensorflow::DataType::DT_STRING);
+        return true;
+    }
+
+    if (!value.IsNumber()) {
+        return false;
+    }
+
+    return addNumber(proto, value);
 }
 
 // This is still required for parsing inputs which are not present in model/DAG.
@@ -546,13 +584,11 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
 #define HANDLE_VALUE(CONTENTS, TYPE_GETTER, TYPE_CHECK)                 \
     for (auto& value : node.GetArray()) {                               \
         if (value.IsArray()) {                                          \
-            for (auto& v : node.GetArray()) {                           \
-                auto status = parseData(v, input);                      \
-                if (!status.ok()) {                                     \
-                    return status;                                      \
-                }                                                       \
+            auto status = parseData(value, input);                      \
+            if (!status.ok()) {                                         \
+                return status;                                          \
             }                                                           \
-            return StatusCode::OK;                                      \
+            continue;                                                   \
         }                                                               \
         if (!value.TYPE_CHECK()) {                                      \
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;              \
@@ -584,8 +620,21 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
     } else if (input.datatype() == "BOOL") {
         HANDLE_VALUE(mutable_bool_contents, GetBool, IsBool)
     } else if (input.datatype() == "BYTES") {
-        SPDLOG_DEBUG("For REST datatype BYTES is supported only with binary data extension");
-        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        for (auto& value : node.GetArray()) {
+            if (value.IsArray()) {
+                auto status = parseData(value, input);
+                if (!status.ok()) {
+                    return status;
+                }
+                continue;
+            }
+            if (value.IsString()) {
+                input.mutable_contents()->add_bytes_contents(value.GetString());
+            } else {
+                SPDLOG_DEBUG("BYTES datatype used in REST request, but data contains non string JSON values");
+                return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+            }
+        }
     } else {
         return StatusCode::REST_UNSUPPORTED_PRECISION;
     }
@@ -618,6 +667,10 @@ Status KFSRestParser::parseInput(rapidjson::Value& node, bool onlyOneInput) {
     }
     for (auto& dim : shapeItr->value.GetArray()) {
         if (!dim.IsInt()) {
+            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        }
+        if (dim.GetInt() <= 0) {
+            SPDLOG_DEBUG("Shape dimension is invalid: {}", dim.GetInt());
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
         input->mutable_shape()->Add(dim.GetInt());
@@ -672,8 +725,12 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
 Status KFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
     if (doc.Parse(json).HasParseError()) {
-        SPDLOG_DEBUG("Request parsing is not a valid JSON");
-        return StatusCode::JSON_INVALID;
+        std::stringstream ss;
+        ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
+           << " Offset: " << doc.GetErrorOffset();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
+        return Status(StatusCode::JSON_INVALID, details);
     }
     if (!doc.IsObject()) {
         SPDLOG_DEBUG("Request body is not an object");

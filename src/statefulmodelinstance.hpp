@@ -78,9 +78,7 @@ public:
 protected:
     std::shared_ptr<SequenceManager> sequenceManager;
 
-    bool performLowLatencyTransformation;
-
-    bool autoCleanupEnabled;
+    bool performLowLatencyTransformation = false;
 
     GlobalSequencesViewer* globalSequencesViewer;
 

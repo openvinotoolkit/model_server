@@ -202,7 +202,7 @@ Usage of ./grpc_infer_resnet:
 - Usage Example
 
 ```Bash
-./grpc_infer_resnet -i ../resnet_input_images.txt -l ../../../common/resnet_labels.txt -u localhost:9000 
+./grpc_infer_resnet -i ../../../common/resnet_input_images.txt -l ../../../common/resnet_labels.txt -u localhost:9000 
 ../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner
 ../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra
 ../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus

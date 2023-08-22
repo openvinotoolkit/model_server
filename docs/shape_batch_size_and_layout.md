@@ -9,10 +9,11 @@ It accepts also a value `auto` - this command makes the served model set the bat
 This feature is useful for sequential inference requests of the same batch size.
 
 *Note:* In case of frequent batch size changes in predict requests, consider using [demultiplexing feature](./demultiplexing.md) from [Directed Acyclic Graph Scheduler](./dag_scheduler.md) which is more
-performant in such situations because it is not adding an extra overhead with model reloading between requests like --batch_size auto setting. Examplary usage of this feature can be found in [dynamic_batch_size](./dynamic_bs_demultiplexer.md) document.
+performant in such situations because it is not adding an extra overhead with model reloading between requests like --batch_size auto setting. Exemplary usage of this feature can be found in [dynamic_batch_size](./dynamic_bs_demultiplexer.md) document.
 
-- OpenVINO&trade; Model Server determines the batch size based on the size of the first dimension in the first input.
+- OpenVINO&trade; Model Server determines the batch size based on the size of the first dimension in the first input by default.
 For example with the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
+It is possible to change the batch position by applying `--layout` parameter with batch `N` in other position.
 
 *Note:* Some models like object detection do not work correctly with batch size changed with the `batch_size` parameter. Typically those are the models,
 whose output's first dimension is not representing the batch size like on the input side.
@@ -28,16 +29,18 @@ it ignores the batch_size value.
     - JSON object e.g. `{"input1":"(1,3,224,224)","input2":"(1,3,50,50)"}` - it defines a shape of every included input in the model
 
 *Note:* Some models do not support the reshape operation. Learn more about supported model graph layers including all limitations
-on [Shape Inference Document](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_ShapeInference.html).
+on [Shape Inference Document](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_ShapeInference.html).
 In case the model can't be reshaped, it will remain in the original parameters and all requests with incompatible input format
 will get an error. The model server will also report such problems in the logs.
+
+*Note:* In case of frequent shape changes in predict requests, consider using native dynamic shape feature from OpenVINO&trade;. Such endpoints can be configured by passing `-1` to `--shape` parameter: `(-1,3,-1,-1)` - meaning any batch, height and width will be accepted. Model optimizer is capable of exporting dynamic models with dynamic shapes - then the parameter can be omitted. This should be preferred way over `auto`, since shape change does not require model reload.
 
 ## Changing model input/output layout
 Starting from 2022.1, Model Optimizer by default preserves the layout of original model. If the model uses NHWC layout before conversion to IR format, it will be preserved after conversion. Model Optimizer can also be used to add transposition step to change the layout to desired one. Models which process image data are usually exported with NCHW or NHWC layout. Image transformation libraries like OpenCV or Pillow use NHWC layout. To minimize amount of overhead caused by transposition operation, it is suggested to export your model with NHWC layout.
 
 In case you already have model with NCHW layout and are not willing to re-export it, OpenVINO™ Model Server allows changing input/output layout at runtime with `--layout` parameter via CLI or `config.json`. Please note that it modifies the model by adding transposition operations as pre-processing step.
 
-Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can use this parameter to adjust models both in ONNX and Intermediate Representation format. In case no layout was specified during model export phase, the default layout OpenVINO™ Model Server sets is `N...`. It means that the only known dimensions is the first one - batch (`N`), and there is undefined amount of dimensions following the batch.
+Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can use this parameter to adjust models both in ONNX and Intermediate Representation format. In case no layout was specified during model export phase, the default layout OpenVINO™ Model Server sets is `N...`. It means that the only known dimensions is the first one - batch (`N`), and there is undefined amount of dimensions following the batch. For scalar tensors, the default layout is set to `...`.
 
 Layout change is supported for variety of combinations accepting following characters: `N`, `C`, `H`, `W`, `D`, `?`, `...`. Each dimension can appear only once. The exception is `?` which can appear multiple times meaning that there is unknown dimension on given position. `...` means that there is unknown number of dimensions in between given dimensions.
 
@@ -67,6 +70,6 @@ This is also possible to omit the colon (`:`) and pass single layout parameter: 
 
 ### Important
 Changing layout is not supported for models with input names the same as output names. <br>
-For model included in DAG, layouts of subsequent nodes must match, similary to network shape and precision.
+For model included in DAG, layouts of subsequent nodes must match, similarly to network shape and precision.
 
 > **WARNING**: Beginning with 2022.1 release, the `--layout` parameter has changed meaning and the setting is not back compatible. Previously to change from `NCHW` to `NHWC` it was required to pass `--layout NHWC`, now it is required to pass `--layout NHWC:NCHW`. The prior version does not add preprocessing step and just informs about incorrect layout of exported model.

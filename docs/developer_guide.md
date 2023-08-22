@@ -73,7 +73,7 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 	```
 	OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make docker_build
     OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make test_functional
-    OVMS_CPP_CONTAINTER_PORT=<unique_network_port> make test_perf
+    OVMS_CPP_CONTAINER_PORT=<unique_network_port> make test_perf
 	```
 
 	* Without a Docker cache :
@@ -165,7 +165,7 @@ make test_functional
 | `TEST_DIR_CLEANUP` | Set to `True` to remove the directory under `TEST_DIR` after the tests.| 
 | `LOG_LEVEL` | The log level.|
 | `BUILD_LOGS` | Path to save artifacts.| 
-| `START_CONTAINER_COMMAND` | The command to start the OpeVINO Model Storage container.|
+| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container.|
 | `CONTAINER_LOG_LINE` | The log line in the container that confirms the container started properly.|
 
 2. Add any configuration variables to the command line in this format :
@@ -354,10 +354,13 @@ make docker_build MINITRACE=ON
 
 2. Run OVMS with minitrace enabled and `--trace_path` to specify where to save trace JSON file. Since the file is flushed and saved at container shutdown, mount the host directory with write access to persist the file after container stops.
 ```bash
-docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/trace.json 
+mkdir traces
+chmod -R 777 traces
+
+docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json 
 ```
 
-3. During app exit, the trace info will be saved into `${PWD}/trace.json`.
+3. During app exit, the trace info will be saved into `${PWD}/traces/trace.json`.
 
 4. Use Chrome web browser `chrome://tracing` tool to display the graph, similarly to Option 1.
 

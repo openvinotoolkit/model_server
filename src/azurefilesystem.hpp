@@ -131,10 +131,6 @@ public:
    */
     StatusCode deleteFileFolder(const std::string& path) override;
 
-    static const std::string AZURE_URL_FILE_PREFIX;
-
-    static const std::string AZURE_URL_BLOB_PREFIX;
-
 private:
     /**
    *

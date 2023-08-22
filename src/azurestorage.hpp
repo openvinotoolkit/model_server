@@ -58,7 +58,6 @@ public:
     virtual StatusCode downloadFileFolderTo(const std::string& local_path) = 0;
     virtual StatusCode checkPath(const std::string& path) = 0;
 
-    std::string joinPath(std::initializer_list<std::string> segments);
     StatusCode CreateLocalDir(const std::string& path);
     bool isAbsolutePath(const std::string& path);
     std::vector<std::string> FindSubdirectories(std::string path);
@@ -73,7 +72,7 @@ private:
 
 class AzureStorageBlob : public AzureStorageAdapter {
 public:
-    AzureStorageBlob(const std::string& path, as::cloud_storage_account account);
+    AzureStorageBlob(const std::string& path, as::cloud_storage_account& account);
 
     StatusCode checkPath(const std::string& path) override;
 
@@ -131,7 +130,7 @@ private:
 
 class AzureStorageFile : public AzureStorageAdapter {
 public:
-    AzureStorageFile(const std::string& path, as::cloud_storage_account account);
+    AzureStorageFile(const std::string& path, as::cloud_storage_account& account);
 
     StatusCode checkPath(const std::string& path) override;
 
@@ -187,7 +186,7 @@ private:
 
 class AzureStorageFactory {
 public:
-    std::shared_ptr<AzureStorageAdapter> getNewAzureStorageObject(const std::string& path, as::cloud_storage_account account);
+    std::shared_ptr<AzureStorageAdapter> getNewAzureStorageObject(const std::string& path, as::cloud_storage_account& account);
 
 private:
     bool isBlobStoragePath(std::string path);

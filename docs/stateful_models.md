@@ -71,7 +71,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v
 | `stateful` | `bool` | If set to true, model is loaded as stateful. | false |
 | `idle_sequence_cleanup` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans. <br> See [idle sequence cleanup](#stateful_cleanup). | true |
 | `max_sequence_number` | `uint32` | Determines how many sequences can be  handled concurrently by a model instance. | 500 |
-| `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. | false |
+| `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_model_state_intro.html#lowlatency-transformations) on model load. | false |
 
 **Note:** Setting `idle_sequence_cleanup`, `max_sequence_number` and `low_latency_transformation` require setting `stateful` to true.
 
@@ -202,11 +202,11 @@ sequence_id = response.outputs['sequence_id'].uint64_val[0]
 
 ```
 
-See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/speech_recognition_with_kaldi_model/python/grpc_stateful_client.py) example client for reference.
+See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/demos/speech_recognition_with_kaldi_model/python/grpc_stateful_client.py) example client for reference.
 
 ### Inference via HTTP <a name="stateful_http"></a>
 
-Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api_tfs.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api_tfs.md) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
 
 `sequence_id` and `sequence_control_input` must be added to HTTP request by adding new `key:value` pair in `inputs` field of JSON body. 
 
@@ -272,7 +272,7 @@ response_body = json.loads(response.text)
 sequence_id = response_body["outputs"]["sequence_id"]
 
 ```
-See [rest_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/speech_recognition_with_kaldi_model/python/rest_stateful_client.py) example client for reference.
+See [rest_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/demos/speech_recognition_with_kaldi_model/python/rest_stateful_client.py) example client for reference.
 
 ### Error Codes <a name="stateful_errors"></a>
 
@@ -292,7 +292,7 @@ When a request is invalid or could not be processed, you can expect following er
 
 ## Idle Sequence Cleanup <a name="stateful_cleanup"></a>
 
-Once started sequence might get dropped for some reason like lost connection etc. In this case model server will not receive SEQUENCE_END signal and will not free sequence resources. To prevent keeping idle sequences indefinitely, mthe Model Server launches a sequence cleaner thread that periodically scans stateful models and checks if their sequences received any valid inference request recently. If not, such sequences are removed, their resources are freed and their ids can be reused.
+Once started sequence might get dropped for some reason like lost connection etc. In this case model server will not receive SEQUENCE_END signal and will not free sequence resources. To prevent keeping idle sequences indefinitely, the Model Server launches a sequence cleaner thread that periodically scans stateful models and checks if their sequences received any valid inference request recently. If not, such sequences are removed, their resources are freed and their ids can be reused.
 
 Two parameters regulate sequence cleanup. 
 One is `sequence_cleaner_poll_wait_minutes` which holds the value of the time interval between the next scans. If there has been not a single valid request with a particular sequence id between two consecutive checks, the sequence is considered idle and gets deleted. 
@@ -309,7 +309,7 @@ If set to `true` sequence cleaner will check that model. Otherwise, sequence cle
 There are limitations for using stateful models with OVMS:
 
  - Support inference execution only using CPU as the target device.
- - Support Kaldi models with memory layers and non-Kaldi models with Tensor Iterator. See this [docs about stateful networks](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_network_state_intro.html) to learn about stateful networks representation in OpenVINO.
+ - Support Kaldi models with memory layers and non-Kaldi models with Tensor Iterator. See this [docs about stateful networks](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_model_state_intro.html) to learn about stateful networks representation in OpenVINO.
  - [Auto batch size and shape](shape_batch_size_and_layout.md) are **not** available in stateful models.
  - Stateful model instances **cannot** be used in [DAGs](dag_scheduler.md).
  - Requests ordering is guaranteed only when a single client sends subsequent requests in a synchronous manner. Concurrent interaction with the same sequence might negatively affect the accuracy of the results.

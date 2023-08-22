@@ -19,10 +19,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../buffer.hpp"
-#include "../inferenceparameter.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
+#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/inferenceparameter.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"
@@ -49,7 +49,7 @@ const uint32_t PRIORITY{7};
 const uint64_t REQUEST_ID{3};
 
 const std::string INPUT_NAME{"NOT_RANDOM_NAME"};
-const ovms::shape_t INPUT_SHAPE{1, 3, 220, 230};
+const ovms::signed_shape_t INPUT_SHAPE{1, 3, 220, 230};
 const std::array<float, 10> INPUT_DATA{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
 constexpr size_t INPUT_DATA_BYTESIZE{INPUT_DATA.size() * sizeof(float)};
 const OVMS_DataType DATATYPE{OVMS_DATATYPE_FP32};
@@ -97,7 +97,8 @@ TEST(InferenceRequest, CreateInferenceRequest) {
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     ASSERT_NE(nullptr, tensor);
     EXPECT_EQ(tensor->getDataType(), DATATYPE);
-    EXPECT_TRUE(Shape(tensor->getShape()).match(INPUT_SHAPE));
+    ASSERT_EQ(tensor->getShape().size(), INPUT_SHAPE.size());
+    EXPECT_EQ(std::memcmp(tensor->getShape().data(), INPUT_SHAPE.data(), INPUT_SHAPE.size() * sizeof(int64_t)), 0);
     const Buffer* buffer = tensor->getBuffer();
     ASSERT_NE(nullptr, buffer);
     ASSERT_NE(nullptr, buffer->data());

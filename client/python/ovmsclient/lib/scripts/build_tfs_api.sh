@@ -21,7 +21,7 @@ set -e
 cleanup_tmp_dirs() {
     ARG=$?
     echo "Cleaning up temp directories"
-    rm -rf tf/ tfs/
+    rm -rf tf/ tfs/ compiled_protos/
     exit $ARG
 }
 
@@ -30,11 +30,13 @@ trap cleanup_tmp_dirs EXIT
 git clone --branch v2.5.0 --depth 1 https://github.com/tensorflow/tensorflow.git tf
 git clone --branch 2.5.1 --depth 1 https://github.com/tensorflow/serving.git tfs
 
+rm -rf ovmsclient/tfs_compat/protos compiled_protos
 mkdir -p ovmsclient/tfs_compat/protos
 mkdir compiled_protos
 cp -R tf/tensorflow ovmsclient/tfs_compat/protos/tensorflow
 cp -R tfs/tensorflow_serving ovmsclient/tfs_compat/protos/tensorflow_serving 
 find ovmsclient/tfs_compat/protos -name "*.proto" -exec sed -i -E 's/import "tensorflow/import "ovmsclient\/tfs_compat\/protos\/tensorflow/g' {} \;
+python3 scripts/rename_proto_package.py
 
 protoc --proto_path=$PWD --python_out=$PWD/compiled_protos \
 $PWD/ovmsclient/tfs_compat/protos/tensorflow/core/framework/*.proto \

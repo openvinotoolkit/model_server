@@ -18,11 +18,14 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <locale>
 #include <sstream>
 #include <utility>
+
+#include "logging.hpp"
 namespace ovms {
 
 std::string joins(const std::vector<std::string>& listOfStrings, const std::string delimiter) {
@@ -84,6 +87,20 @@ bool endsWith(const std::string& str, const std::string& match) {
            std::all_of(std::next(str.begin(), str.size() - match.size()), str.end(), [&it](const char& c) {
                return ::tolower(c) == ::tolower(*(it++));
            });
+}
+
+bool startsWith(const std::string& str, const std::string& prefix) {
+    auto it = prefix.begin();
+    bool sizeCheck = (str.size() >= prefix.size());
+    if (!sizeCheck) {
+        return false;
+    }
+    bool allOf = std::all_of(str.begin(),
+        std::next(str.begin(), prefix.size()),
+        [&it](const char& c) {
+            return c == *(it++);
+        });
+    return allOf;
 }
 
 std::optional<uint32_t> stou32(const std::string& input) {

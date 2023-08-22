@@ -1,0 +1,79 @@
+#
+# Copyright 2023 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+input_stream: "in1"
+input_stream: "in2"
+output_stream: "out"
+node {
+  calculator: "ModelAPISessionCalculator"
+  output_side_packet: "SESSION:dummy"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+      servable_name: "dummy"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "ModelAPISessionCalculator"
+  output_side_packet: "SESSION:add"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+      servable_name: "add"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "ModelAPISideFeedCalculator"
+  input_side_packet: "SESSION:dummy"
+  input_stream: "DUMMY_IN:in1"
+  output_stream: "DUMMY_OUT:dummy_output"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
+        tag_to_input_tensor_names {
+          key: "DUMMY_IN"
+          value: "b"
+        }
+        tag_to_output_tensor_names {
+          key: "DUMMY_OUT"
+          value: "a"
+        }
+    }
+  }
+}
+node {
+  calculator: "ModelAPISideFeedCalculator"
+  input_side_packet: "SESSION:add"
+  input_stream: "ADD_INPUT1:dummy_output"
+  input_stream: "ADD_INPUT2:in2"
+  output_stream: "SUM:out"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
+        tag_to_input_tensor_names {
+          key: "ADD_INPUT1"
+          value: "input1"
+        }
+        tag_to_input_tensor_names {
+          key: "ADD_INPUT2"
+          value: "input2"
+        }
+        tag_to_output_tensor_names {
+          key: "SUM"
+          value: "sum"
+        }
+    }
+  }
+}

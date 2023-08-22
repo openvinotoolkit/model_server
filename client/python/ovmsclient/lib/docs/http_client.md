@@ -180,7 +180,7 @@ Request prediction on provided inputs.
         ...
     }
     ```   
-    Where `output_name` is a `string` and `prediction_result` is a `numpy ndarray`
+    Where `output_name` is a `string` and `prediction_result` is a `numpy ndarray`. Both strings and binary data are returned as array of `numpy.bytes_` dtype. 
 
 
 **Raises:**
@@ -200,12 +200,21 @@ Request prediction on provided inputs.
 ```python
 import ovmsclient
 client = ovmsclient.make_http_client("localhost:9000")
+
+# Numeric input
 inputs = {"input": [1, 2, 3]}
 # request prediction on specific model version, with timeout set to 2.5 seconds
 results = client.predict(inputs=inputs, model_name="model", model_version=1, timeout=2.5)
 # request prediction on the latest model version
 results = client.predict(inputs=inputs, model_name="model")
 
+# String input
+inputs = {"input": ["We have a really nice", "One, two, three,"]}
+results = client.predict(inputs=inputs, model_name="model")
+print(inputs["input"])
+# ['We have a really nice', 'One, two, three,']
+print(results)
+# [b'We have a really nice way' b'One, two, three, four']
 ```
 
 ---

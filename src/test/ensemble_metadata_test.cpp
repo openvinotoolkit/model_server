@@ -16,13 +16,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../custom_node_library_manager.hpp"
-#include "../entry_node.hpp"
-#include "../exit_node.hpp"
+#include "../dags/custom_node_library_manager.hpp"
+#include "../dags/entry_node.hpp"
+#include "../dags/exit_node.hpp"
+#include "../dags/pipeline_factory.hpp"
+#include "../dags/pipelinedefinition.hpp"
 #include "../model_version_policy.hpp"
 #include "../modelinstance.hpp"
-#include "../pipeline_factory.hpp"
-#include "../pipelinedefinition.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

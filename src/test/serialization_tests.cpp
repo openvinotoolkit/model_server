@@ -29,14 +29,12 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "../buffer.hpp"
-#include "../inferenceresponse.hpp"
-#include "../inferencetensor.hpp"
+#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
+#include "../capi_frontend/inferencetensor.hpp"
 #include "../serialization.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
-
-#include <gmock/gmock-generated-function-mockers.h>
 
 using TFTensorProto = tensorflow::TensorProto;
 
@@ -202,10 +200,10 @@ protected:
 class SerializeTFTensorProto : public TensorflowGRPCPredict {
 public:
     std::tuple<
-        std::shared_ptr<ovms::TensorInfo>,
+        std::shared_ptr<const ovms::TensorInfo>,
         ov::Tensor>
     getInputs(ovms::Precision precision) {
-        std::shared_ptr<ovms::TensorInfo> servableOutput =
+        std::shared_ptr<const ovms::TensorInfo> servableOutput =
             std::make_shared<ovms::TensorInfo>(
                 std::string("2_values_C_layout"),
                 precision,
@@ -282,7 +280,7 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
-    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+    std::shared_ptr<const ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_OUTPUT_NAME,
         ovms::Precision::FP32,
         ovms::Shape{1, 10},
@@ -416,10 +414,10 @@ TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorShape) {
 class SerializeKFSInferOutputTensor : public KFServingGRPCPredict {
 public:
     std::tuple<
-        std::shared_ptr<ovms::TensorInfo>,
+        std::shared_ptr<const ovms::TensorInfo>,
         ov::Tensor>
     getInputs(ovms::Precision precision) {
-        std::shared_ptr<ovms::TensorInfo> servableOutput =
+        std::shared_ptr<const ovms::TensorInfo> servableOutput =
             std::make_shared<ovms::TensorInfo>(
                 std::string("2_values_C_layout"),
                 precision,
@@ -506,7 +504,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
-    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+    std::shared_ptr<const ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_OUTPUT_NAME,
         ovms::Precision::FP32,
         ovms::Shape{1, 10},
@@ -531,7 +529,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithuseS
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
-    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+    std::shared_ptr<const ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_INPUT_NAME,
         ovms::Precision::FP32,
         ovms::Shape{1, 10},
@@ -557,7 +555,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithshar
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
-    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+    std::shared_ptr<const ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_INPUT_NAME,
         ovms::Precision::FP32,
         ovms::Shape{1, 10},
@@ -594,11 +592,11 @@ INSTANTIATE_TEST_SUITE_P(
 
 // C-API
 
-class CApiSerialization : public ::testing::TestWithParam<ovms::Precision> {
+class CAPISerialization : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     tensor_map_t prepareInputs(ovms::Precision precision, ovms::Shape shape = ovms::Shape{1, 10}) {
         tensor_map_t ret;
-        std::shared_ptr<ovms::TensorInfo> servableOutput =
+        std::shared_ptr<const ovms::TensorInfo> servableOutput =
             std::make_shared<ovms::TensorInfo>(std::string(DUMMY_MODEL_OUTPUT_NAME), precision, shape, Layout{"NC"});
         ret[DUMMY_MODEL_OUTPUT_NAME] = servableOutput;
         return ret;
@@ -606,14 +604,14 @@ protected:
     InferenceResponse response{"dummy", 1};
 };
 
-TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
+TEST(SerializeCAPITensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
     InferenceResponse response{"dummy", 1};
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
-    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+    std::shared_ptr<const ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_OUTPUT_NAME,
         ovms::Precision::I32,  // wrong precision
         ovms::Shape{1, 10},
@@ -628,14 +626,14 @@ TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecis
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorShape) {
+TEST(SerializeCAPITensorSingle, NegativeMismatchBetweenTensorInfoAndTensorShape) {
     InferenceResponse response{"dummy", 1};
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
-    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+    std::shared_ptr<const ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_OUTPUT_NAME,
         ovms::Precision::FP32,
         ovms::Shape{1, 8},  // wrong shape
@@ -650,7 +648,7 @@ TEST(SerializeCApiTensorSingle, NegativeMismatchBetweenTensorInfoAndTensorShape)
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-class SerializeCApiTensorPositive : public CApiSerialization {};
+class SerializeCAPITensorPositive : public CAPISerialization {};
 
 struct MockedTensorProvider {
     ov::Tensor& tensor;
@@ -663,7 +661,7 @@ Status OutputGetter<MockedTensorProvider&>::get(const std::string& name, ov::Ten
     return StatusCode::OK;
 }
 
-TEST_P(SerializeCApiTensorPositive, SerializeTensorShouldSucceedForPrecision) {
+TEST_P(SerializeCAPITensorPositive, SerializeTensorShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     ov::Tensor tensor(ovmsPrecisionToIE2Precision(testedPrecision), ov::Shape{1, 10});
     MockedTensorProvider provider(tensor);
@@ -684,15 +682,15 @@ TEST_P(SerializeCApiTensorPositive, SerializeTensorShouldSucceedForPrecision) {
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    SerializeCApiTensorPositive,
+    SerializeCAPITensorPositive,
     ::testing::ValuesIn(SUPPORTED_CAPI_OUTPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<SerializeCApiTensorPositive::ParamType>& info) {
+    [](const ::testing::TestParamInfo<SerializeCAPITensorPositive::ParamType>& info) {
         return toString(info.param);
     });
 
-class SerializeCApiTensorNegative : public CApiSerialization {};
+class SerializeCAPITensorNegative : public CAPISerialization {};
 
-TEST_P(SerializeCApiTensorNegative, SerializeTensorShouldFailForPrecision) {
+TEST_P(SerializeCAPITensorNegative, SerializeTensorShouldFailForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     ov::Tensor tensor(ovmsPrecisionToIE2Precision(testedPrecision), ov::Shape{1, 10});
     MockedTensorProvider provider(tensor);
@@ -713,13 +711,13 @@ TEST_P(SerializeCApiTensorNegative, SerializeTensorShouldFailForPrecision) {
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    SerializeCApiTensorNegative,
+    SerializeCAPITensorNegative,
     ::testing::ValuesIn(UNSUPPORTED_CAPI_OUTPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<SerializeCApiTensorNegative::ParamType>& info) {
+    [](const ::testing::TestParamInfo<SerializeCAPITensorNegative::ParamType>& info) {
         return toString(info.param);
     });
 
-TEST_F(CApiSerialization, ValidSerialization) {
+TEST_F(CAPISerialization, ValidSerialization) {
     constexpr size_t NUMBER_OF_ELEMENTS = 3;
     std::array<float, NUMBER_OF_ELEMENTS> data = {3.0, 2.0, 1.0};
     shape_t shape{1, NUMBER_OF_ELEMENTS, 1, 1};
@@ -753,4 +751,64 @@ TEST_F(CApiSerialization, ValidSerialization) {
     ASSERT_NE(buffer->data(), nullptr);
     EXPECT_EQ(buffer->getByteSize(), tensor.get_byte_size());
     EXPECT_EQ(std::memcmp(tensor.data(), buffer->data(), sizeof(float) * NUMBER_OF_ELEMENTS), 0);
+}
+
+template <typename T>
+class SerializeString : public ::testing::Test {
+public:
+    T response;
+};
+
+using MyTypes = ::testing::Types<TFPredictResponse, ::KFSResponse>;
+TYPED_TEST_SUITE(SerializeString, MyTypes);
+
+// Serialization to string due to suffix _string in mapping
+TYPED_TEST(SerializeString, Valid_2D_U8_String) {
+    std::vector<uint8_t> data = {
+        'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
+        'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    ov::Tensor tensor(ov::element::u8, ov::Shape{3, 11}, data.data());
+    MockedTensorProvider provider(tensor);
+    OutputGetter<MockedTensorProvider&> outputGetter(provider);
+
+    ovms::tensor_map_t infos;
+    infos["out_string"] = std::make_shared<ovms::TensorInfo>("out", "out_string", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
+
+    bool useSharedOutputContent = true;
+    ASSERT_EQ(serializePredictResponse(outputGetter,
+                  UNUSED_NAME,
+                  UNUSED_VERSION,
+                  infos,
+                  &this->response,
+                  getTensorInfoName,
+                  useSharedOutputContent),
+        ovms::StatusCode::OK);
+    assertStringResponse(this->response, {"String_123", "zebra", ""}, "out_string");
+}
+
+// Serialization to U8 due to missing suffix _string in mapping
+TYPED_TEST(SerializeString, Valid_2D_U8_NonString) {
+    std::vector<uint8_t> data = {
+        'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
+        'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    ov::Tensor tensor(ov::element::u8, ov::Shape{3, 11}, data.data());
+    MockedTensorProvider provider(tensor);
+    OutputGetter<MockedTensorProvider&> outputGetter(provider);
+
+    ovms::tensor_map_t infos;
+    infos["out_string"] = std::make_shared<ovms::TensorInfo>("out", "out", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
+
+    bool useSharedOutputContent = false;  // TODO: support raw field
+    ASSERT_EQ(serializePredictResponse(outputGetter,
+                  UNUSED_NAME,
+                  UNUSED_VERSION,
+                  infos,
+                  &this->response,
+                  getTensorInfoName,
+                  useSharedOutputContent),
+        ovms::StatusCode::OK);
+    bool checkRaw = false;  // raw not supported
+    checkIncrement4DimResponse("out", data, this->response, std::vector<size_t>{3, 11}, checkRaw);
 }

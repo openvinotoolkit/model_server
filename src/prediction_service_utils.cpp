@@ -17,10 +17,10 @@
 
 #include <map>
 
+#include "capi_frontend/inferencerequest.hpp"
+#include "capi_frontend/inferencetensor.hpp"
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
-#include "inferencerequest.hpp"
-#include "inferencetensor.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
@@ -33,6 +33,7 @@ using tensorflow::serving::PredictResponse;
 
 namespace ovms {
 
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const size_t batchSizeIndex) {
     auto requestInputItr = request->inputs().begin();
     if (requestInputItr == request->inputs().end()) {
@@ -51,6 +52,7 @@ std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const 
     return Dimension(requestInput->shape()[batchSizeIndex]);
 }
 
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request) {
     std::map<std::string, shape_t> requestShapes;
     for (auto& it : request->inputs()) {
@@ -65,6 +67,7 @@ std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request) {
     return requestShapes;
 }
 
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request, const size_t batchSizeIndex) {
     auto requestInputItr = request->inputs().begin();
     if (requestInputItr == request->inputs().end()) {
@@ -85,6 +88,7 @@ std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictR
     return Dimension(requestInput.tensor_shape().dim(batchSizeIndex).size());
 }
 
+// Assuming the request is already validated, therefore no need to check for negative values or zeros
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request) {
     std::map<std::string, shape_t> requestShapes;
     for (auto& it : request->inputs()) {
@@ -111,12 +115,18 @@ std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request)
     return request->getRequestShapes();
 }
 
-bool useSharedOutputContent(const tensorflow::serving::PredictRequest* request) {
+bool useSharedOutputContentFn(const tensorflow::serving::PredictRequest* request) {
+    // does not apply for TFS frontend
+    return false;
+}
+
+bool useSharedOutputContentFn(const ::KFSRequest* request) {
     return true;
 }
 
-bool useSharedOutputContent(const ::inference::ModelInferRequest* request) {
-    return request->raw_input_contents().size() > 0;
+bool useSharedOutputContentFn(const InferenceRequest* request) {
+    // does not apply for C-API frontend
+    return false;
 }
 
 }  // namespace ovms

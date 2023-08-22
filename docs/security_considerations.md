@@ -18,5 +18,5 @@ OpenVINO Model Server currently does not provide access restrictions and traffic
 
 See also:
 - [Securing OVMS with NGINX](../extras/nginx-mtls-auth/README.md)
-- [Securing models with OVSA](https://docs.openvino.ai/2022.2/ovsa_get_started.html)
+- [Securing models with OVSA](https://docs.openvino.ai/2023.0/ovsa_get_started.html)
 

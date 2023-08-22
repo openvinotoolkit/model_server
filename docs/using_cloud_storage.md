@@ -1,15 +1,22 @@
 # Using Cloud Storage as a Model Repository {#ovms_docs_cloud_storage}
 
-### Cloud Storage Requirements<a name="storage"></a>
+### Cloud Storage Requirements
 
 OpenVINO Model Server supports a range of cloud storage options. In general, "read" and "list" permissions are required for a model repository.
 
-### Azure Cloud Storage
-
 @sphinxdirective
+
+-  `Azure Cloud Storage <#-azure>`__
+-  `Google Cloud Storage <#-gcs>`__
+-  `Amazon S3 and MinIO Storage <#-s3>`__
+
 .. raw:: html
 
-    <div id="azure" class="switcher-anchor">Azure Cloud Storage</div>
+   <a name='-azure' id='-azure'/>
+
+`Azure Cloud Storage`_
+======================
+
 @endsphinxdirective
 
 Add the Azure Storage path as the model_path and pass the Azure Storage credentials to the Docker container.
@@ -41,12 +48,15 @@ Add `-e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy"` to docker run co
 
 By default, the `https_proxy` variable will be used. If you want to use `http_proxy` please set the `AZURE_STORAGE_USE_HTTP_PROXY` environment variable to any value and pass it to the container.
 
-### Google Cloud Storage
-
 @sphinxdirective
+
 .. raw:: html
 
-    <div id="gcs" class="switcher-anchor">Google Cloud Storage</div>
+   <a name='-gcs' id='-gcs'/>
+
+`Google Cloud Storage`_
+=======================
+
 @endsphinxdirective
 
 Add the Google Cloud Storage path as the model_path and pass the Google Cloud Storage credentials to the Docker container.
@@ -63,12 +73,15 @@ openvino/model_server:latest \
 --model_path gs://bucket/model_path --model_name gs_model --port 9001
 ```
 
-### Amazon S3 and MinIO Storage
-
 @sphinxdirective
+
 .. raw:: html
 
-    <div id="s3" class="switcher-anchor">S3 Cloud Storage</div>
+   <a name='-s3' id='-s3'/>
+
+`Amazon S3 and MinIO Storage`_
+==============================
+
 @endsphinxdirective
 
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
@@ -82,9 +95,11 @@ docker run --rm -d -p 9001:9001 \
 -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
 -e AWS_REGION="${AWS_REGION}" \
 -e S3_ENDPOINT="${S3_ENDPOINT}" \
+-e AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN}" \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
+In the above command, `S3_ENDPOINT` parameter is required only for [Minio](https://min.io/) storage. `AWS_SESSION_TOKEN` variable is needed only when AWS temporary credentials are used.
 
 You can also use anonymous access to public S3 paths.
 
@@ -110,4 +125,3 @@ docker run --rm -d -p 9001:9001 \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
-

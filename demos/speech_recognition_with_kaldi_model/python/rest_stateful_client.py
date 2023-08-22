@@ -376,7 +376,7 @@ def main():
 
             start_time = datetime.datetime.now()
             # result includes a dictionary with all model outputs
-            result = session.post("http://{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
+            result = session.post("http://{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server, timeout=15)
             end_time = datetime.datetime.now()
 
             try:

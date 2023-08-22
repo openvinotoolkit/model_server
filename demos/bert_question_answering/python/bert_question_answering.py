@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 Intel Corporation
+# Copyright (c) 2021-2023 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,11 +23,8 @@ import numpy as np
 
 from tokens_bert import text_to_tokens, load_vocab_file, Token
 from html_reader import get_paragraphs
-import grpc
 import numpy as np
-from tensorflow import make_tensor_proto, make_ndarray
-from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2_grpc
+import ovmsclient
 
 class ConcatenatedParagraph():
     def __init__(self, text="", tokens=[]):
@@ -102,8 +99,7 @@ def main():
     args = build_argparser().parse_args()
 
     # create grpc connection
-    channel = grpc.insecure_channel("{}:{}".format(args.grpc_address,args.grpc_port))
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    client = ovmsclient.make_grpc_client("{}:{}".format(args.grpc_address,args.grpc_port))
 
     if args.colors:
         COLOR_RED = "\033[91m"
@@ -183,23 +179,9 @@ def main():
             if len(input_names)>3:
                 inputs[input_names[3]] = np.arange(input_ids_length, dtype=np.int64)[None,:]
 
-
-            #print("inputs:",inputs)
-
-            # create grpc prediction request
-            request = predict_pb2.PredictRequest()
-            request.model_spec.name = args.model_name
-            for inp_name in inputs:
-                request.inputs[inp_name].CopyFrom(make_tensor_proto(inputs[inp_name], shape=(inputs[inp_name].shape)))
-
             t_start = time.perf_counter()
-            result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+            res = client.predict(inputs, args.model_name, timeout=10.0)
             t_end = time.perf_counter()
-            #print("\nresult:", result)
-            res = {}
-            for out_name in output_names:
-             #   print("out_name:",out_name)
-                res[out_name] = make_ndarray(result.outputs[out_name])
 
             t_count += 1
             log.info("Sequence of length {} is processed with {:0.2f} requests/sec ({:0.2} sec per request)".format(

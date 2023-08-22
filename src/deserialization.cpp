@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include "deserialization.hpp"
 
-#include "buffer.hpp"
+#include "capi_frontend/buffer.hpp"
 
 namespace ovms {
 
@@ -41,29 +41,35 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
     return status;
 }
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     for (const auto& dim : requestInput.getShape()) {
         shape.push_back(dim);
     }
     ov::element::Type_t precision = tensorInfo->getOvPrecision();
+    if (!requestInput.getBuffer()->getByteSize()) {
+        return ov::Tensor(precision, shape);
+    }
     return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
 }
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         shape.push_back(requestInput.tensor_shape().dim(i).size());
     }
     ov::element::Type_t precision = tensorInfo->getOvPrecision();
+    if (!requestInput.tensor_content().size()) {
+        return ov::Tensor(precision, shape);
+    }
     return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.tensor_content().data())));
 }
 
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::shared_ptr<const TensorInfo>& tensorInfo,
     const std::string& buffer) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
@@ -71,16 +77,19 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
         shape.push_back(requestInput.shape().at(i));
     }
     ov::element::Type precision = tensorInfo->getOvPrecision();
-    ov::Tensor tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(buffer.data())));
-    return tensor;
+    if (!buffer.size()) {
+        return ov::Tensor(precision, shape);
+    }
+    return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(buffer.data())));
 }
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     for (int i = 0; i < requestInput.shape_size(); i++) {
         shape.push_back(requestInput.shape().at(i));
     }
+
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::Tensor tensor(precision, shape);
     return tensor;

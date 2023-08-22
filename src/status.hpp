@@ -59,6 +59,7 @@ enum class StatusCode {
     INVALID_BATCH_DIMENSION, /*!< Invalid batch dimension in shape */
     ALLOW_CACHE_WITH_CUSTOM_LOADER,
     LAYOUT_INCOMPATIBLE_WITH_SHAPE,
+    MODEL_WITH_SCALAR_AUTO_UNSUPPORTED,
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
@@ -87,18 +88,21 @@ enum class StatusCode {
     MAX_SEQUENCE_NUMBER_REACHED,     /*!< Model handles maximum number of sequences and will not accept new ones */
 
     // Predict request validation
-    INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */
-    INVALID_MISSING_INPUT,          /*!< Missing one or more of inputs */
-    INVALID_MISSING_OUTPUT,         /*!< Missing one or more of outputs */
-    INVALID_NO_OF_SHAPE_DIMENSIONS, /*!< Invalid number of shape dimensions */
-    INVALID_BATCH_SIZE,             /*!< Input batch size other than required */
-    INVALID_SHAPE,                  /*!< Invalid shape dimension number or dimension value */
-    INVALID_PRECISION,              /*!< Invalid precision */
-    INVALID_VALUE_COUNT,            /*!< Invalid value count error status for uint16 and half float data types */
-    INVALID_CONTENT_SIZE,           /*!< Invalid content size error status for types using tensor_content() */
-    INVALID_MESSAGE_STRUCTURE,      /*!< Buffers can't be both in raw_input_content & input tensor content */
-    INVALID_BUFFER_TYPE,            /*!< Invalid buffer type */
-    INVALID_DEVICE_ID,              /*!< Invalid buffer device id */
+    INVALID_NO_OF_INPUTS,             /*!< Invalid number of inputs */
+    INVALID_MISSING_INPUT,            /*!< Missing one or more of inputs */
+    INVALID_MISSING_OUTPUT,           /*!< Missing one or more of outputs */
+    INVALID_NO_OF_SHAPE_DIMENSIONS,   /*!< Invalid number of shape dimensions */
+    INVALID_BATCH_SIZE,               /*!< Input batch size other than required */
+    INVALID_SHAPE,                    /*!< Invalid shape dimension number or dimension value */
+    INVALID_PRECISION,                /*!< Invalid precision */
+    INVALID_VALUE_COUNT,              /*!< Invalid value count error status for uint16 and half float data types */
+    INVALID_CONTENT_SIZE,             /*!< Invalid content size error status for types using tensor_content() */
+    INVALID_MESSAGE_STRUCTURE,        /*!< Buffers can't be both in raw_input_content & input tensor content */
+    INVALID_BUFFER_TYPE,              /*!< Invalid buffer type */
+    INVALID_DEVICE_ID,                /*!< Invalid buffer device id */
+    INVALID_STRING_INPUT,             /*!< Invalid string input */
+    INVALID_INPUT_FORMAT,             /*!< Invalid format of the input inside buffer */
+    INVALID_STRING_MAX_SIZE_EXCEEDED, /*!< Maximum 2D array after string conversion exceeded 1GB */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
@@ -232,6 +236,24 @@ enum class StatusCode {
     PIPELINE_DEMULTIPLEXER_NO_RESULTS,
     PIPELINE_INPUTS_AMBIGUOUS_METADATA,
 
+    // Mediapipe
+    MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID,
+    MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
+    MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR,
+    MEDIAPIPE_GRAPH_START_ERROR,
+    MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR,
+    MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM,
+    MEDIAPIPE_DEFINITION_NAME_MISSING,
+    MEDIAPIPE_EXECUTION_ERROR,
+    MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE,
+    MEDIAPIPE_DEFINITION_NOT_LOADED_YET,
+    MEDIAPIPE_KFS_PASS_WRONG_INPUT_STREAM_COUNT,
+    MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME,
+    MEDIAPIPE_KFS_PASS_WRONG_OUTPUT_STREAM_COUNT,
+    MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME,
+    MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG,
+    MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG,
+
     // Custom Loader
     CUSTOM_LOADER_LIBRARY_INVALID,
     CUSTOM_LOADER_LIBRARY_LOAD_FAILED,
@@ -278,28 +300,21 @@ enum class StatusCode {
     DOUBLE_TENSOR_INSERT,
     DOUBLE_PARAMETER_INSERT,
     NONEXISTENT_BUFFER_FOR_REMOVAL,
-    NONEXISTENT_DATA,
-    NONEXISTENT_STRING,
-    NONEXISTENT_NUMBER,
-    NONEXISTENT_SETTINGS,
-    NONEXISTENT_PARAMETER_FOR_REMOVAL,  // rename to non existen parameter
-    NONEXISTENT_SERVER,
-    NONEXISTENT_RESPONSE,
-    NONEXISTENT_REQUEST,
-    NONEXISTENT_TABLE,
+    NONEXISTENT_PARAMETER,
     NONEXISTENT_TENSOR,
     NONEXISTENT_TENSOR_FOR_SET_BUFFER,
     NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER,
     NONEXISTENT_TENSOR_FOR_REMOVAL,
-    NONEXISTENT_STATUS,
     NONEXISTENT_LOG_LEVEL,
-    SERVER_NOT_READY_FOR_INFERENCE,
+    NONEXISTENT_PTR,
+    SERVER_NOT_READY,
 
     // Server Start errors
     OPTIONS_USAGE_ERROR,
     FAILED_TO_START_GRPC_SERVER,
     FAILED_TO_START_REST_SERVER,
     SERVER_ALREADY_STARTED,
+    SERVER_ALREADY_STARTING,
     MODULE_ALREADY_INSERTED,
 
     STATUS_CODE_END
@@ -315,13 +330,14 @@ class Status {
         ensureMessageAllocated();
         *this->message += " - " + details;
     }
+
+public:
     void ensureMessageAllocated() {
         if (nullptr == message) {
             message = std::make_unique<std::string>();
         }
     }
 
-public:
     Status(StatusCode code = StatusCode::OK) :
         code(code) {
         if (code == StatusCode::OK) {
@@ -380,10 +396,8 @@ public:
     const std::string& string() const {
         return this->message ? *this->message : statusMessageMap.at(code);
     }
-
     operator const std::string&() const {
         return this->string();
     }
 };
-
 }  // namespace ovms

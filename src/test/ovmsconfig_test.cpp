@@ -129,6 +129,13 @@ TEST_F(OvmsConfigDeathTest, negativeConfigPathWithTargetDevice) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
+TEST_F(OvmsConfigDeathTest, OVMSDuplicatedMetricsConfig) {
+    char* n_argv[] = {"ovms", "--config_path", "/path/to/config", "--metrics_enable", "--rest_port", "8080"};
+    int arg_count = 6;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    EXPECT_TRUE(ovms::Config::instance().validate());
+}
+
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithPluginConfig) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--plugin_config", "setting"};
     int arg_count = 5;
@@ -157,24 +164,6 @@ TEST_F(OvmsConfigDeathTest, metricEnablingInCli) {
     char* n_argv[] = {"ovms", "--config_path", "/path/to/config", "--metrics_enable"};
     int arg_count = 4;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_port setting is missing, metrics are enabled on rest port");
-}
-
-TEST_F(OvmsConfigDeathTest, metricListInCli) {
-    char* n_argv[] = {"ovms", "--config_path", "/path/to/config", "--metrics_list", "metric1,metric2"};
-    int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "metrics_enable or metrics_list and config_path cant be used together. Use json config file to enable metrics when using config_path.");
-}
-
-TEST_F(OvmsConfigDeathTest, metricEnablingInCliWithPort) {
-    char* n_argv[] = {"ovms", "--config_path", "/path/to/config", "--metrics_enable", "--rest_port", "8080"};
-    int arg_count = 6;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "metrics_enable or metrics_list and config_path cant be used together. Use json config file to enable metrics when using config_path.");
-}
-
-TEST_F(OvmsConfigDeathTest, metricListAndEnableInCli) {
-    char* n_argv[] = {"ovms", "--config_path", "/path/to/config", "--metrics_list", "metric1,metric2", "--metrics_enable", "--rest_port", "8080"};
-    int arg_count = 8;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "metrics_enable or metrics_list and config_path cant be used together. Use json config file to enable metrics when using config_path.");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingName) {

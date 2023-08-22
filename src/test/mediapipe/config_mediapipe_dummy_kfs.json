@@ -1,0 +1,9 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeDummyKFS",
+        "graph_path":"/ovms/src/test/mediapipe/graphkfspass.pbtxt"
+    }
+    ]
+}

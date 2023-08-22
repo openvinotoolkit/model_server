@@ -5,7 +5,7 @@
                 "name": "east",
                 "base_path": "/OCR/east_fp32",
                 "plugin_config": {
-                    "CPU_THROUGHPUT_STREAMS":  "1"
+                    "PERFORMANCE_HINT": "LATENCY"
                 }
             }
         },

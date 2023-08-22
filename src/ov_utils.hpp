@@ -35,7 +35,7 @@ Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t pre
  **/
 ov::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data);
 
-std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& tensorMap);
+std::string getTensorMapString(const std::map<std::string, std::shared_ptr<const TensorInfo>>& tensorMap);
 
 Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor);
 

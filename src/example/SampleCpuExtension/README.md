@@ -24,7 +24,7 @@ make cpu_extension BASE_OS=${BASE_OS}
 
 In order to demonstrate the usage of cpu_extension library some small modifications in resnet model are needed.
 In this sample we are going to change one of the ReLU layers type to CustomReLU.
-By doing so this layer will take adventage of cpu_extension.
+By doing so this layer will take advantage of cpu_extension.
 
 ```bash
 mkdir -p resnet50-binary-0001/1
@@ -40,4 +40,4 @@ $ docker run -it --rm -p 9000:9000 -v `pwd`/lib/${BASE_OS}:/extension:ro -v `pwd
  --port 9000 --model_name resnet --model_path /resnet --cpu_extension /extension/libcustom_relu_cpu_extension.so
 ```
 
-> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2022.2/openvino_docs_Extensibility_UG_Intro.html) 
+> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2023.0/openvino_docs_Extensibility_UG_Intro.html) 

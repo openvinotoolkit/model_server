@@ -17,13 +17,13 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "dags/pipelinedefinition.hpp"
+#include "dags/pipelinedefinitionstatus.hpp"
+#include "dags/pipelinedefinitionunloadguard.hpp"
 #include "execution_context.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
-#include "pipelinedefinition.hpp"
-#include "pipelinedefinitionstatus.hpp"
-#include "pipelinedefinitionunloadguard.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
 #include "status.hpp"
@@ -128,7 +128,7 @@ void GetModelMetadataImpl::convert(
         *input.mutable_name() = name;
         *input.mutable_tensor_shape() = tensorflow::TensorShapeProto();
 
-        for (auto dim : tensor->getShape()) {
+        for (const auto& dim : tensor->getShape()) {
             if (dim.isStatic()) {
                 input.mutable_tensor_shape()->add_dim()->set_size(dim.getStaticValue());
             } else {

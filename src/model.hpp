@@ -25,6 +25,7 @@
 
 #include "logging.hpp"
 #include "modelchangesubscription.hpp"
+#include "modelconfig.hpp"
 #include "modelversion.hpp"
 
 namespace ov {
@@ -34,7 +35,6 @@ class Core;
 namespace ovms {
 class FileSystem;
 class GlobalSequencesViewer;
-class ModelConfig;
 class ModelInstance;
 class PipelineDefinition;
 class MetricConfig;

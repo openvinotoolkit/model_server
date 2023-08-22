@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<net name="saved_model" version="11">
+	<layers>
+		<layer id="0" name="input" type="Parameter" version="opset1">
+			<data shape="?,?" element_type="u8" />
+			<output>
+				<port id="0" precision="U8" names="input,input:0">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="1" name="const" type="Const" version="opset1">
+			<data element_type="u8" shape="1, 1" offset="0" size="1" />
+			<output>
+				<port id="0" precision="U8" names="const:0">
+					<dim>1</dim>
+					<dim>1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="2" name="copy" type="Add" version="opset1">
+			<data auto_broadcast="numpy" />
+			<input>
+				<port id="0" precision="U8">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+				<port id="1" precision="U8">
+					<dim>1</dim>
+					<dim>1</dim>
+				</port>
+			</input>
+			<output>
+				<port id="2" precision="U8" names="copy:0">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="3" name="copy:0" type="Result" version="opset1">
+			<input>
+				<port id="0" precision="U8">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+			</input>
+		</layer>
+	</layers>
+	<edges>
+		<edge from-layer="0" from-port="0" to-layer="2" to-port="0" />
+		<edge from-layer="1" from-port="0" to-layer="2" to-port="1" />
+		<edge from-layer="2" from-port="2" to-layer="3" to-port="0" />
+	</edges>
+	<rt_info>
+		<MO_version value="2022.3.0-9038-b84161848ea-releases/2022/3" />
+		<Runtime_version value="2022.3.0-9038-b84161848ea-releases/2022/3" />
+		<conversion_parameters>
+			<framework value="tf" />
+			<input value="input[-1,-1]{u8}" />
+			<model_name value="saved_model" />
+			<saved_model_dir value="DIR" />
+		</conversion_parameters>
+		<legacy_frontend value="True" />
+	</rt_info>
+</net>
