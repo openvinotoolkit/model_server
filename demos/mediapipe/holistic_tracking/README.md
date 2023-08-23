@@ -16,7 +16,7 @@ virtualenv .venv
 pip install -r requirements.txt
 
 git clone https://github.com/openvinotoolkit/mediapipe.git
-git co atobisze_hollistic
+git checkout atobisze_hollistic
 cd mediapipe
 make docker_build
 cd ..
@@ -24,6 +24,8 @@ cd ..
 docker run -it -v `pwd`:/models mediapipe_ovms:latest bash
 python setup_ovms.py --get_models --get_graphs --convert_pose
 cp -rf mediapipe/models/ovms /models
+mkdir -p /models/mediapipe/modules/hand_landmark/
+cp -rf mediapipe/modules/hand_landmark/handedness.txt /models/mediapipe/modules/hand_landmark/
 exit
 
 sudo chown $(id -u) ovms
