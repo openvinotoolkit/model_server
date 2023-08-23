@@ -22,7 +22,7 @@ make docker_build
 cd ..
 
 docker run -it -v `pwd`:/models mediapipe_ovms:latest bash
-python setup_ovms.py --get_models --get_graphs
+python setup_ovms.py --get_models --get_graphs --convert_pose
 cp -rf mediapipe/models/ovms /models
 exit
 

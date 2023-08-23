@@ -86,17 +86,17 @@ http_archive(
 
 ################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
-git_repository(
-    name = "mediapipe",
-    remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "c0e32e0ea439c9b40f5b85f3c6a3f5f68872a42e", # Holistic tracking branch
-)
+#git_repository(
+#    name = "mediapipe",
+#    remote = "https://github.com/openvinotoolkit/mediapipe",
+#    commit = "c0e32e0ea439c9b40f5b85f3c6a3f5f68872a42e", # Holistic tracking branch
+#)
 
 # DEV mediapipe 1 source - adjust local repository path for build
-#local_repository(
-#    name = "mediapipe",
-#    path = "/mediapipe/",
-#)
+local_repository(
+    name = "mediapipe",
+    path = "/mediapipe/",
+)
 
 # Protobuf for Node dependencies
 http_archive(
@@ -190,12 +190,35 @@ cc_library(
 """,
 )
 
-load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
-tensorflow_http_archive(
+#load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
+#tensorflow_http_archive(
+#    name = "org_tensorflow",
+#    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
+#    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
+#    patch = "tf.patch",
+#    repo_mapping = {"@curl" : "@curl"}
+#)
+
+# TensorFlow repo should always go after the other external dependencies.
+# TF on 2022-08-10.
+_TENSORFLOW_GIT_COMMIT = "af1d5bc4fbb66d9e6cc1cf89503014a99233583b"
+_TENSORFLOW_SHA256 = "f85a5443264fc58a12d136ca6a30774b5bc25ceaf7d114d97f252351b3c3a2cb"
+http_archive(
     name = "org_tensorflow",
-    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
-    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
-    patch = "tf.patch",
+    urls = [
+      "https://github.com/tensorflow/tensorflow/archive/%s.tar.gz" % _TENSORFLOW_GIT_COMMIT,
+    ],
+    patches = [
+        "@mediapipe//third_party:org_tensorflow_compatibility_fixes.diff",
+        # Diff is generated with a script, don't update it manually.
+        "@mediapipe//third_party:org_tensorflow_custom_ops.diff",
+        #"tf.patch",
+    ],
+    patch_args = [
+        "-p1",
+    ],
+    strip_prefix = "tensorflow-%s" % _TENSORFLOW_GIT_COMMIT,
+    sha256 = _TENSORFLOW_SHA256,
     repo_mapping = {"@curl" : "@curl"}
 )
 

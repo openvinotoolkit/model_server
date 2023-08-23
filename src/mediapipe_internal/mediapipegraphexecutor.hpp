@@ -23,8 +23,11 @@
 
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
+#pragma GCC diagnostic pop
 #include "packettypes.hpp"
 
 namespace ovms {

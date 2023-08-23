@@ -1,10 +1,10 @@
 # Tracks and renders pose + hands + face landmarks.
 
 # CPU image. (ImageFrame)
-input_stream: "input_video"
+input_stream: "IMAGE:throttled_input_video"
 
 # CPU image with rendered results. (ImageFrame)
-output_stream: "output_video"
+output_stream: "IMAGE:output"
 
 # Throttles the images flowing downstream for flow control. It passes through
 # the very first incoming image unaltered, and waits for downstream nodes
@@ -18,8 +18,8 @@ output_stream: "output_video"
 # subsequent nodes are still busy processing previous inputs.
 node {
   calculator: "FlowLimiterCalculator"
-  input_stream: "input_video"
-  input_stream: "FINISHED:output_video"
+  input_stream: "IMAGE:input"
+  input_stream: "FINISHED:output"
   input_stream_info: {
     tag_index: "FINISHED"
     back_edge: true
@@ -71,5 +71,5 @@ node {
   calculator: "AnnotationOverlayCalculator"
   input_stream: "IMAGE:throttled_input_video"
   input_stream: "VECTOR:render_data_vector"
-  output_stream: "IMAGE:output_video"
+  output_stream: "IMAGE:output"
 }

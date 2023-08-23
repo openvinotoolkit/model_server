@@ -144,6 +144,24 @@ mediapipe_proto_library(
 )
 
 cc_library(
+    name = "ovms_header",
+    hdrs = ["ovms.h"],
+    srcs = [ "ovms.h" ],
+    deps = [      
+        ],
+    local_defines = [
+    ],
+    copts = [
+        ],
+    visibility = [
+        "//visibility:public",
+    ],
+    linkopts = [
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "ovms_lib",
     hdrs = ["ovms.h"],
     srcs = [
@@ -386,7 +404,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        "-Werror",
+        # "-Werror",
         ] + select({
             "//conditions:default": [
             ],
@@ -683,7 +701,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wconversion",
-        "-Werror",
+       # "-Werror",
     ],
     deps = [
         "//src:ovms_lib",
@@ -892,7 +910,7 @@ cc_test(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        "-Werror",
+        # "-Werror",
         "-Isrc",
     ],
 )

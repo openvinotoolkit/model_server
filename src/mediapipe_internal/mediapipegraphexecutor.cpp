@@ -37,10 +37,13 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/image_frame_opencv.h"
 #include "mediapipe/framework/port/status.h"
+#pragma GCC diagnostic pop
 #include "mediapipegraphdefinition.hpp"  // for version in response
 #include "opencv2/opencv.hpp"
 

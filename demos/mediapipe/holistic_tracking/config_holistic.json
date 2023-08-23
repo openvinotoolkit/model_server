@@ -62,10 +62,10 @@
         {
             "name":"PoseLandmarkByRoiCpu",
             "graph_path":"pose_landmark_full/pose_landmark_by_roi_cpu.pbtxt"
+        },
+        {
+            "name":"HolisticLandmarkCpu",
+            "graph_path":"holistic_landmark/holistic_landmark_cpu.pbtxt"
         }
-        // Ned compile as calculator not graph only{
-        //    "name":"HolisticLandmarkCpu",
-        //    "graph_path":"holistic_landmark/holistic_landmark_cpu.pbtxt"
-        //}
     ]
 }
