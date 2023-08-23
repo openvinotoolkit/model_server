@@ -16,25 +16,6 @@ output_stream: "IMAGE:output"
 # real-time mobile applications. It also eliminates unnecessarily computation,
 # e.g., the output produced by a node may get dropped downstream if the
 # subsequent nodes are still busy processing previous inputs.
-node {
-  calculator: "FlowLimiterCalculator"
-  input_stream: "IMAGE:input"
-  input_stream: "FINISHED:output"
-  input_stream_info: {
-    tag_index: "FINISHED"
-    back_edge: true
-  }
-  output_stream: "throttled_input_video"
-  node_options: {
-    [type.googleapis.com/mediapipe.FlowLimiterCalculatorOptions] {
-      max_in_flight: 1
-      max_in_queue: 1
-      # Timeout is disabled (set to 0) as first frame processing can take more
-      # than 1 second.
-      in_flight_timeout: 0
-    }
-  }
-}
 
 node {
   calculator: "HolisticLandmarkCpu"
