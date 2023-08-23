@@ -42,30 +42,6 @@
         {
             "name":"holisticTracking",
             "graph_path":"holistic_tracking.pbtxt"
-        },
-        {
-            "name":"faceDetection",
-            "graph_path":"face_detection_short_range/face_detection.pbtxt"
-        },
-        {
-            "name":"FaceLandmarkCpu",
-            "graph_path":"face_landmark/face_landmark_cpu.pbtxt"
-        },
-        {
-            "name":"HandLandmarkCpu",
-            "graph_path":"hand_landmark_full/hand_landmark_cpu.pbtxt"
-        },
-        {
-            "name":"PoseDetectionCpu",
-            "graph_path":"pose_detection/pose_detection_cpu.pbtxt"
-        },
-        {
-            "name":"PoseLandmarkByRoiCpu",
-            "graph_path":"pose_landmark_full/pose_landmark_by_roi_cpu.pbtxt"
-        },
-        {
-            "name":"HolisticLandmarkCpu",
-            "graph_path":"holistic_landmark/holistic_landmark_cpu.pbtxt"
         }
     ]
 }
