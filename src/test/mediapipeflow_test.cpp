@@ -848,9 +848,8 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
 
 using testing::ElementsAre;
 
-TEST_P(MediapipeFlowAddTest, AdapterMetadata) {
-    const std::string modelName = "add";
-    mediapipe::ovms::OVMSInferenceAdapter adapter(modelName);
+TEST_F(MediapipeFlowAddTest, AdapterMetadata) {
+    mediapipe::ovms::OVMSInferenceAdapter adapter("add");
     const std::shared_ptr<const ov::Model> model;
     ov::Core unusedCore;
     ov::AnyMap notUsedAnyMap;
@@ -859,6 +858,18 @@ TEST_P(MediapipeFlowAddTest, AdapterMetadata) {
     EXPECT_THAT(adapter.getOutputNames(), ElementsAre(SUM_MODEL_OUTPUT_NAME));
     EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_1), ov::Shape({1, 10}));
     EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_2), ov::Shape({1, 10}));
+}
+
+TEST_F(MediapipeFlowTest, AdapterMetadataDynamicShape) {
+    SetUpServer("/ovms/src/test/configs/config_dummy_dynamic_shape.json");
+    mediapipe::ovms::OVMSInferenceAdapter adapter("dummy");
+    const std::shared_ptr<const ov::Model> model;
+    ov::Core unusedCore;
+    ov::AnyMap notUsedAnyMap;
+    adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
+    EXPECT_THAT(adapter.getInputNames(), ElementsAre(DUMMY_MODEL_INPUT_NAME));
+    EXPECT_THAT(adapter.getOutputNames(), ElementsAre(DUMMY_MODEL_OUTPUT_NAME));
+    EXPECT_EQ(adapter.getInputShape(DUMMY_MODEL_INPUT_NAME), ov::PartialShape({1, {1, 10}}));
 }
 
 namespace {
