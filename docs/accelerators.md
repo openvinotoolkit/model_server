@@ -106,7 +106,7 @@ openvino/model_server:latest-gpu --config_path /opt/model/config.json --port 900
 
 ```bash
 docker run -d --rm --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
--u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v -p 9001:9001 \
+-u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -p 9001:9001 \
 openvino/model_server:latest-gpu model --model_path /opt/model --model_name resnet --port 9001 --target_device 'MULTI:GPU,CPU'
 ```
  
