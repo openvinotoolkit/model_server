@@ -24,15 +24,6 @@ Before using GPU as OpenVINO Model Server target device, you need to:
 - set the parameter of `--target_device` to `GPU`.
 - use the `openvino/model_server:latest-gpu` image, which contains GPU dependencies
 
-A command example:
-
-```bash
-
-docker run --rm -it --device=/dev/dri -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
---model_path /opt/model --model_name resnet --port 9001 --target_device GPU
-
-```
-
 Running inference on GPU requires the model server process security context account to have correct permissions. It must belong to the render group identified by the command:
 
 @sphinxdirective
