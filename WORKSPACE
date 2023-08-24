@@ -84,12 +84,12 @@ http_archive(
     #],
 )
 
-################################### Official mediapipe repository #########
+################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "ef8b0ac5f41c658f1a6d11be42c6a840a0c44e8c", # Add support for dynamic shapes in OVMS Adapter #14
+    commit = "7e87234cc8ddec5430d16eb0ea50fa3dc6c216ec", # Add support for dynamic shapes in OVMS Adapter (#14)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
