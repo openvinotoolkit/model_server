@@ -404,7 +404,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        # "-Werror",
+         "-Werror",
         ] + select({
             "//conditions:default": [
             ],
@@ -701,7 +701,7 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wconversion",
-       # "-Werror",
+        "-Werror",
     ],
     deps = [
         "//src:ovms_lib",
@@ -910,7 +910,7 @@ cc_test(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        # "-Werror",
+        "-Werror",
         "-Isrc",
     ],
 )

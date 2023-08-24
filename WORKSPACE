@@ -212,7 +212,7 @@ http_archive(
         "@mediapipe//third_party:org_tensorflow_compatibility_fixes.diff",
         # Diff is generated with a script, don't update it manually.
         "@mediapipe//third_party:org_tensorflow_custom_ops.diff",
-        #"tf.patch",
+        "tf.patch",
     ],
     patch_args = [
         "-p1",
