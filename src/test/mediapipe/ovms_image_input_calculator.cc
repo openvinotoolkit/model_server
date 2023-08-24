@@ -13,11 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/mediapipe_calculators/ovmscalculator.pb.h"
+#pragma GCC diagnostic pop
 
 namespace mediapipe {
 

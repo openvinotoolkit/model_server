@@ -28,7 +28,7 @@ mkdir -p /models/mediapipe/modules/hand_landmark/
 cp -rf mediapipe/modules/hand_landmark/handedness.txt /models/mediapipe/modules/hand_landmark/
 exit
 
-sudo chown $(id -u) ovms
+sudo chown -R $(id -u) ovms
 cp config_holistic.json ovms
 cp holistic_tracking.pbtxt ovms
 ```

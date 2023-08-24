@@ -20,8 +20,11 @@
 #include <openvino/openvino.hpp>
 
 #include "../../stringutils.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
+#pragma GCC diagnostic pop
 namespace mediapipe {
 #define MLOG(A) LOG(ERROR) << " " << A << std::endl;
 using std::endl;
