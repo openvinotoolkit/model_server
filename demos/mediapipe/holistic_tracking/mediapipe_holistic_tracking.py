@@ -84,7 +84,7 @@ if __name__ == '__main__':
         inputs = []
         if not os.path.exists(line.strip()):
             print("Image does not exist: " + line.strip())
-        im_cv = cv2.imread() 
+        im_cv = cv2.imread(line.strip()) 
         img = cv2.cvtColor(im_cv, cv2.COLOR_BGR2RGB)
         print(img.shape)
         inputs.append(grpcclient.InferInput(args['input_name'], img.shape, "UINT8"))

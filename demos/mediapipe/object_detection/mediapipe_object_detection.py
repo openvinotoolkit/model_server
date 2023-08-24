@@ -121,7 +121,9 @@ if __name__ == '__main__':
     for line in lines:
         inputs = []
         path = line.strip()
-        img = cv2.imread(path, cv2.IMREAD_UNCHANGED) 
+        if not os.path.exists(path):
+            print("Image does not exist: " + path)
+        im_cv = cv2.imread(path, cv2.IMREAD_UNCHANGED) 
         print(os.path.basename(path))
         inputs.append(grpcclient.InferInput(args['input_name'], img.shape, "UINT8"))
         outputs = []
