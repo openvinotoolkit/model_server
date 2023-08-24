@@ -22,6 +22,7 @@ import cv2
 
 import datetime
 import argparse
+import os
 
 import tritonclient.grpc as grpcclient
 
@@ -81,7 +82,9 @@ if __name__ == '__main__':
 
     for line in lines:
         inputs = []
-        im_cv = cv2.imread(line.strip()) 
+        if not os.path.exists(line.strip()):
+            print("Image does not exist: " + line.strip())
+        im_cv = cv2.imread() 
         img = cv2.cvtColor(im_cv, cv2.COLOR_BGR2RGB)
         print(img.shape)
         inputs.append(grpcclient.InferInput(args['input_name'], img.shape, "UINT8"))

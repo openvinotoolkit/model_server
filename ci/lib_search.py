@@ -123,7 +123,7 @@ def check_dir(start_dir):
         "package.json",
         "graph.pbtxt",
         "holistic_tracking.pbtxt",
-        "ssd_object_detection_labelmap.txt",
+        "ssdlite_object_detection_labelmap.txt",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
