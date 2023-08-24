@@ -395,6 +395,10 @@ cc_library(
         ] + select({
             "//conditions:default": [
                 "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
+                "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
+                "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
             ],
             "//src:disable_mediapipe" : [],
         }),
@@ -404,7 +408,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-         "-Werror",
+        "-Werror",
         ] + select({
             "//conditions:default": [
             ],
