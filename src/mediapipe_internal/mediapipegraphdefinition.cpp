@@ -194,7 +194,9 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
 
 const std::string KFS_REQUEST_PREFIX{"REQUEST"};
 const std::string KFS_RESPONSE_PREFIX{"RESPONSE"};
-const std::string TF_TENSOR_PREFIX{"TENSOR"};
+const std::string MP_TENSOR_PREFIX{"TENSOR"};
+const std::string TF_TENSOR_PREFIX{"TFTENSOR"};
+const std::string TFLITE_TENSOR_PREFIX{"TFLITE_TENSOR"};
 const std::string OV_TENSOR_PREFIX{"OVTENSOR"};
 const std::string MP_IMAGE_PREFIX{"IMAGE"};
 
@@ -327,20 +329,26 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
         {KFS_RESPONSE_PREFIX, mediapipe_packet_type_enum::KFS_RESPONSE},
         {TF_TENSOR_PREFIX, mediapipe_packet_type_enum::TFTENSOR},
         {OV_TENSOR_PREFIX, mediapipe_packet_type_enum::OVTENSOR},
+        {MP_TENSOR_PREFIX, mediapipe_packet_type_enum::MPTENSOR},
         {MP_IMAGE_PREFIX, mediapipe_packet_type_enum::MEDIAPIPE_IMAGE}};
     std::vector<std::string> tokens = tokenize(streamFullName, ':');
-    if (tokens.size() == 2) {
+    // MP convention
+    // input_stream: "lowercase_input_stream_name"
+    // input_stream: "PACKET_TAG:lowercase_input_stream_name"
+    // input_stream: "PACKET_TAG:[0-9]:lowercase_input_stream_name"
+    if (tokens.size() == 2 || tokens.size() == 3) {
         auto it = std::find_if(prefix2enum.begin(), prefix2enum.end(), [tokens](const auto& p) {
             const auto& [k, v] = p;
             bool b = startsWith(tokens[0], k);
             return b;
         });
+        size_t inputStreamIndex = tokens.size() - 1;
         if (it != prefix2enum.end()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[1], it->first, streamFullName);
-            return {tokens[1], it->second};
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[inputStreamIndex], it->first, streamFullName);
+            return {tokens[inputStreamIndex], it->second};
         } else {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[1], "UNKNOWN", streamFullName);
-            return {tokens[1], mediapipe_packet_type_enum::UNKNOWN};
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[inputStreamIndex], "UNKNOWN", streamFullName);
+            return {tokens[inputStreamIndex], mediapipe_packet_type_enum::UNKNOWN};
         }
     } else if (tokens.size() == 1) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[0], "UNKNOWN", streamFullName);
