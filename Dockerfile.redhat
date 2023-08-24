@@ -277,10 +277,6 @@ RUN if [[ $debug_bazel_flags == *"MEDIAPIPE_DISABLE=1"* ]]; then true ; else exi
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
-# Patch apple build scripts
-# hadolint ignore=SC2046
-RUN patch -d $(bazel info output_base)/external/build_bazel_rules_apple/ -p1 < /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch
-
 # Mediapipe
 COPY BUILD.bazel /ovms/
 COPY yarn.lock /ovms/
