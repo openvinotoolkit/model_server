@@ -95,6 +95,7 @@ OVMS_Status* OVMS_ServerLive(OVMS_Server* serverPtr, bool* isLive) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
+    SPDLOG_DEBUG("Processing C-API server liveness request");
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     *isLive = server.isLive();
     return nullptr;
@@ -103,6 +104,7 @@ OVMS_Status* OVMS_ServerReady(OVMS_Server* serverPtr, bool* isReady) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
+    SPDLOG_DEBUG("Processing C-API server readyness request");
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     *isReady = server.isReady();
     return nullptr;
@@ -230,6 +232,7 @@ OVMS_Status* OVMS_GetServerMetadata(OVMS_Server* server, OVMS_Metadata** metadat
     if (metadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
     }
+    SPDLOG_DEBUG("Processing C-API server metadata request");
     rapidjson::Document* doc = new rapidjson::Document;
     doc->SetObject();
     doc->AddMember("name", PROJECT_NAME, doc->GetAllocator());
@@ -811,7 +814,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     auto req = reinterpret_cast<ovms::InferenceRequest*>(request);
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
 
-    SPDLOG_DEBUG("Processing C-API request for model: {}; version: {}",
+    SPDLOG_DEBUG("Processing C-API inference request for servable: {}; version: {}",
         req->getServableName(),
         req->getServableVersion());
 
@@ -872,6 +875,9 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
     if (state == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable status"));
     }
+    SPDLOG_DEBUG("Processing C-API state request for servable: {}; version: {}",
+        servableName,
+        servableVersion);
     // TODO metrics
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     ModelManager* modelManager{nullptr};
@@ -920,7 +926,9 @@ OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servab
     if (servableMetadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
-    // TODO check inputs
+    SPDLOG_DEBUG("Processing C-API metadata request for servable: {}; version: {}",
+        servableName,
+        servableVersion);
     // TODO metrics
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     std::shared_ptr<ovms::ModelInstance> modelInstance;
