@@ -121,7 +121,9 @@ def check_dir(start_dir):
         "yarn.lock",
         "BUILD.bazel",
         "package.json",
-        'graph.pbtxt',
+        "graph.pbtxt",
+        "holistic_tracking.pbtxt",
+        "ssd_object_detection_labelmap.txt",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
