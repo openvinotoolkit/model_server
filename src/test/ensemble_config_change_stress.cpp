@@ -2473,7 +2473,7 @@ TEST_F(StressMediapipeChanges, RemoveGraphDuringStatusLoad) {
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE};
+    std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
         &StressPipelineConfigChanges::removeMediapipeGraph,
@@ -2485,7 +2485,7 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringStatusLoad) {
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};
+    std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
         &StressPipelineConfigChanges::removeMediapipeGraphUsedModel,
