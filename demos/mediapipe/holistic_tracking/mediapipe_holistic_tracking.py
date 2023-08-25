@@ -178,7 +178,6 @@ if __name__ == '__main__':
         outputs = []
         outputs.append(grpcclient.InferRequestedOutput(output_name))
         
-        #nmpy = np.array(img , dtype=np.uint8)
         inputs[0].set_data_from_numpy(img)
         start_time = datetime.datetime.now()
         results = triton_client.infer(model_name=graph_name,
@@ -189,7 +188,7 @@ if __name__ == '__main__':
         processing_times = np.append(processing_times,np.array([int(duration)]))
         output = results.as_numpy(output_name)
         nu = np.array(output)
-        # for object classification models show imagenet class
+        
         print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
                                                                                       round(1000 / np.average(duration), 2)
                                                                                       ))
