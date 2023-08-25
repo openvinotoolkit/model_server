@@ -15,19 +15,7 @@ virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 
-curl -kL -o girl.jpg https://cdn.pixabay.com/photo/2019/03/12/20/39/girl-4051811_960_720.jpg
-
-curl -o download_utils.py -kL https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/python/solutions/download_utils.py
-
-docker run -it -v `pwd`:/models mediapipe_ovms:latest bash
-python setup_ovms.py --get_models --convert_pose
-cp -rf mediapipe/models/ovms /models
-mkdir -p /models/mediapipe/modules/hand_landmark/
-cp -rf mediapipe/modules/hand_landmark/handedness.txt /models/mediapipe/modules/hand_landmark/
-
-sudo chown -R $(id -u) ovms
-cp config_holistic.json ovms
-cp holistic_tracking.pbtxt ovms
+python mediapipe_holistic_tracking.py --download_models
 ```
 
 ### Pull the Latest Model Server Image
