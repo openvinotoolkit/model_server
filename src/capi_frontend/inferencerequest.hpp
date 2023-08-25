@@ -49,7 +49,7 @@ public:
     Status removeParameter(const char* parameterName);
     const InferenceParameter* getParameter(const char* name) const;
 
-    const std::string& getServableName() const;
+    const std::string getServableName() const;
     model_version_t getServableVersion() const;
 
     Status setId();

@@ -711,6 +711,7 @@ cc_test(
         "test/tensor_conversion_test.cpp",
         "test/c_api_test_utils.hpp",
         "test/c_api_tests.cpp",
+        "test/c_api_stress_tests.cpp",
         "test/custom_loader_test.cpp",
         "test/custom_node_output_allocator_test.cpp",
         "test/custom_node_buffersqueue_test.cpp",
@@ -777,6 +778,7 @@ cc_test(
         "test/tensorutils_test.cpp",
         "test/test_utils.cpp",
         "test/test_utils.hpp",
+        "test/stress_test_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
