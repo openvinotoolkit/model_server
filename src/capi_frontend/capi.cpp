@@ -104,7 +104,7 @@ OVMS_Status* OVMS_ServerReady(OVMS_Server* serverPtr, bool* isReady) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
-    SPDLOG_DEBUG("Processing C-API server readyness request");
+    SPDLOG_DEBUG("Processing C-API server readiness request");
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     *isReady = server.isReady();
     return nullptr;
