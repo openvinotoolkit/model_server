@@ -113,6 +113,10 @@ cc_shared_library(
         "@oneTBB//:__subpackages__",
         "@com_github_glog_glog//:__subpackages__",
         "@com_github_gflags_gflags//:__subpackages__",
+        "@XNNPACK//:__subpackages__",
+        "@pthreadpool//:__subpackages__",
+        "@FXdiv//:__subpackages__",
+        "@FP16//:__subpackages__",
     ] + select({
         "//conditions:default": [
             "@mediapipe//:__subpackages__",
