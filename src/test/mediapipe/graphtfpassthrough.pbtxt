@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-input_stream: "TENSOR:in"
-output_stream: "TENSOR:out"
+input_stream: "TFTENSOR:in"
+output_stream: "TFTENSOR:out"
 node {
   calculator: "PassThroughCalculator"
-  input_stream: "TENSOR:in"
-  output_stream: "TENSOR:out"
+  input_stream: "TFTENSOR:in"
+  output_stream: "TFTENSOR:out"
 }

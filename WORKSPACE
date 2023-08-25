@@ -84,12 +84,12 @@ http_archive(
     #],
 )
 
-################################### Official mediapipe repository #########
+################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "f60c6432636d42e100c7d7bbcb6bdd7b57ebe6c8", # Update calculators from ovms repo
+    commit = "7e87234cc8ddec5430d16eb0ea50fa3dc6c216ec", # Add support for dynamic shapes in OVMS Adapter (#14)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -346,7 +346,7 @@ cc_library(
     visibility = ["//visibility:public"],
 )
     """,
-    commit = "7e163416c60ba9ccdf440c6c049d6c7e7137e144"
+    commit = "ca5a91ed5b3dbf428dc4de6b72f0a3da93d2aa0a" # using the same model_api sha as MP fork
 )
 
 git_repository(

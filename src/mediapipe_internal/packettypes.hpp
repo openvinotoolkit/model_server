@@ -23,6 +23,8 @@ enum class mediapipe_packet_type_enum {
     KFS_RESPONSE,
     OVTENSOR,
     TFTENSOR,
+    MPTENSOR,
+    TFLITETENSOR,
     MEDIAPIPE_IMAGE,
     MEDIAPIPE_IMAGE_FRAME,
     UNKNOWN
