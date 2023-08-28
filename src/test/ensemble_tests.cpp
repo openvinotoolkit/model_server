@@ -307,6 +307,53 @@ TYPED_TEST(EnsembleFlowBothApiTest, ScalarModel) {
     this->checkScalarResponse(inputData, pipelineName);
 }
 
+TYPED_TEST(EnsembleFlowBothApiTest, SequenceOfDynamicDummyInferZeroBatch) {
+    //             input   3x dynamic dummy    output
+    //  ===[0,10]===>O----------->O->O->O-------->O=====[0,10]===>
+    ConstructorEnabledModelManager managerWithDummyModel;
+    this->config = DUMMY_MODEL_CONFIG;
+    this->config.setBatchingParams("-1");
+    managerWithDummyModel.reloadModelWithVersions(this->config);
+    int batchSize = 0;
+
+    std::vector<float> inputData;  // no data (0,10)
+    this->prepareRequest(inputData, this->request, this->customPipelineInputName, ovms::signed_shape_t{batchSize,10});
+
+    // Configure pipeline
+    const tensor_map_t inputsInfo{{this->customPipelineInputName,
+        std::make_shared<ovms::TensorInfo>(
+            this->customPipelineInputName,
+            ovms::Precision::FP32,
+            ovms::Shape{-1,10}, Layout{"..."})}};
+    auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+    auto model_node1 = std::make_unique<DLNode>("dummy_node_1", "dummy", this->requestedModelVersion, managerWithDummyModel);
+    auto model_node2 = std::make_unique<DLNode>("dummy_node_2", "dummy", this->requestedModelVersion, managerWithDummyModel);
+    auto model_node3 = std::make_unique<DLNode>("dummy_node_3", "dummy", this->requestedModelVersion, managerWithDummyModel);
+    const tensor_map_t outputsInfo{{this->customPipelineOutputName,
+        std::make_shared<ovms::TensorInfo>(
+            this->customPipelineOutputName,
+            ovms::Precision::FP32,
+            ovms::Shape{-1,10}, Layout{"..."})}};
+    std::set<std::string> gatherFromNode = {};
+    std::string pipelineName = "test_pipeline";
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, gatherFromNode, true, pipelineName);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_node1, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node1, *model_node2, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node2, *model_node3, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node3, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node1));
+    pipeline.push(std::move(model_node2));
+    pipeline.push(std::move(model_node3));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    int series = 3;
+    this->checkDummyResponse(series, batchSize, pipelineName);
+}
+
 TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {
     ConstructorEnabledModelManager managerWithDummyModel;
 
