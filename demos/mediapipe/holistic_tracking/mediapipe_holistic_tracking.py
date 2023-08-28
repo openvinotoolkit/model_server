@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022 Intel Corporation
+# Copyright (c) 2023 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ def prepare_models():
        # 'face_detection/face_detection_full_range_sparse.tflite',
         'face_detection/face_detection_short_range.tflite',
         'face_landmark/face_landmark.tflite',
-       # Model loading error
+       # Model loading error due to custom tf op
        # 'face_landmark/face_landmark_with_attention.tflite',
         'hand_landmark/hand_landmark_full.tflite',
        # Using full
@@ -89,12 +89,9 @@ def prepare_models():
         'palm_detection/palm_detection_full.tflite',
        # Using full
        # 'palm_detection/palm_detection_lite.tflite',
-       # Need to use OV version
+       # Need to convert model using TF toolset
         'pose_detection/pose_detection.tflite',
         'pose_landmark/pose_landmark_full.tflite',
-       # Not working
-       # 'selfie_segmentation/selfie_segmentation.tflite',
-       # 'selfie_segmentation/selfie_segmentation_landscape.tflite',
     ]
     for elem in external_files:
       sys.stderr.write('downloading file: %s\n' % elem)
