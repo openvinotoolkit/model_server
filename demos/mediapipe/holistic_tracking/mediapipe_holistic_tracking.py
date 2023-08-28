@@ -122,9 +122,10 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     if args['download_models'] == True:
-        #run_command("curl -kL -o girl.jpeg ")
-        run_command("mkdir -p /models/mediapipe/modules/hand_landmark/")
-        run_command("curl -kL -o /models/mediapipe/modules/hand_landmark/handedness.txt https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/modules/hand_landmark/handedness.txt")
+        # TODO uncomment when download is available
+        #run_command("curl -kL -o girl.jpeg https://cdn.pixabay.com/photo/2019/03/12/20/39/girl-4051811_960_720.jpg")
+        run_command("mkdir -p ovms/mediapipe/modules/hand_landmark/")
+        run_command("curl -kL -o ovms/mediapipe/modules/hand_landmark/handedness.txt https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/modules/hand_landmark/handedness.txt")
         run_command("cp config_holistic.json ovms")
         run_command("cp holistic_tracking.pbtxt ovms")
         prepare_models()
@@ -188,7 +189,7 @@ if __name__ == '__main__':
         processing_times = np.append(processing_times,np.array([int(duration)]))
         output = results.as_numpy(output_name)
         nu = np.array(output)
-        
+
         print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
                                                                                       round(1000 / np.average(duration), 2)
                                                                                       ))
