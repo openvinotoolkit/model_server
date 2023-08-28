@@ -5239,6 +5239,152 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, response, {3, 1, 1, 2, 3});
 }
 
+// Accepting static input [0,10], producing [1,10] (1.0f, 2.0f, ...)
+struct LibraryWithZeroDimInput {
+    static constexpr float libraryScalarNodeAddValue = 2.1f;
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        if (inputsCount != 1)
+            return 1;
+        if (inputs[0].dimsCount != 2)
+            return 2;
+        if (inputs[0].dims[0] != 0 || inputs[0].dims[1] != 10)
+            return 3;
+        *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsNum = 1;
+        (*handle)->name = "output_numbers";
+        (*handle)->precision = CustomNodeTensorPrecision::FP32;
+        (*handle)->dimsCount = 2;
+        (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t) * (*handle)->dimsCount);
+        (*handle)->dims[0] = 1;
+        (*handle)->dims[1] = 10;
+        (*handle)->dataBytes = 10 * sizeof(float);
+        (*handle)->data = (uint8_t*)malloc((*handle)->dataBytes);
+        for (int i = 0; i < 10; i++)
+            *(((float*)(*handle)->data) + i) = (float)i;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+// Accepting any input, producing [5,0,3]
+struct LibraryWithZeroDimOutput {
+    static constexpr float libraryScalarNodeAddValue = 2.1f;
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        if (inputsCount != 1)
+            return 1;
+        *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsNum = 1;
+        (*handle)->name = "output_numbers";
+        (*handle)->precision = CustomNodeTensorPrecision::FP32;
+        (*handle)->dimsCount = 2;
+        (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t) * (*handle)->dimsCount);
+        (*handle)->dims[0] = 5;
+        (*handle)->dims[1] = 0;
+        (*handle)->data = (uint8_t*)malloc(0);
+        (*handle)->dataBytes = 0;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReturnBatchZeroFromCustomNode) {
+    //             input   DL(-1,-1)       CN             DL(-1,-1)   output
+    //  ====[1,1]===>O------->O---[1,1]---->O---[0,5]----->O---[0,5]---->O
+    //                                      |___[0,5]___________________>
+    ConstructorEnabledModelManager modelManager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(-1,-1)");
+    modelManager.reloadModelWithVersions(config);
+    const std::string outputNameFromCustomNode{"second_output"};
+
+    const std::vector<float> inputValues{5.4f};
+    const std::vector<float> expectedOutputValues;
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {1,1});
+
+    const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
+                                                          ovms::Precision::FP32,
+                                                          ovms::Shape{ovms::Dimension::any(),ovms::Dimension::any()},
+                                                          Layout{"N..."})}};
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{ovms::Dimension::any(),ovms::Dimension::any()},
+                                                            Layout{"N..."})},
+                                                            {outputNameFromCustomNode, std::make_shared<ovms::TensorInfo>outputNameFromCustomNode,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{5, 0},
+                                                            Layout{"..."})}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+    auto model_node_before = std::make_unique<DLNode>(
+        "dummy_node_before",
+        "dummy",
+        std::nullopt,
+        modelManager);
+    auto custom_node = std::make_unique<CustomNode>("custom_node_0", createLibraryMock<LibraryWithZeroDimOutput>(),
+            parameters_t{});
+    auto model_node_after = std::make_unique<DLNode>(
+        "dummy_node_after",
+        "dummy",
+        std::nullopt,
+        modelManager);
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_node_before, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_before, *custom_node, {{DUMMY_MODEL_OUTPUT_NAME, "anything"}});
+    pipeline.connect(*custom_node, *model_node_after, {{outputNameFromCustomNode, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_after, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
+    pipeline.connect(*custom_node, *output_node, {{outputNameFromCustomNode, outputNameFromCustomNode}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(custom_node));
+    pipeline.push(std::move(model_node_before));
+    pipeline.push(std::move(model_node_after));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    ASSERT_EQ(this->response.mutable_outputs()->count(pipelineOutputName), 1);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim_size(), 2);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim(0).size(), 5);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim(1).size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->count(outputNameFromCustomNode), 1);
+    ASSERT_EQ(this->response.mutable_outputs()->at(outputNameFromCustomNode).mutable_tensor_shape()->dim_size(), 2);
+    ASSERT_EQ(this->response.mutable_outputs()->at(outputNameFromCustomNode).mutable_tensor_shape()->dim(0).size(), 5);
+    ASSERT_EQ(this->response.mutable_outputs()->at(outputNameFromCustomNode).mutable_tensor_shape()->dim(1).size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->at(outputNameFromCustomNode).mutable_tensor_content()->size(), 0);
+}
+
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedFP64TensorsFromEntryNode) {
     /*
         Description:
