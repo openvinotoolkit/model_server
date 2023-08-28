@@ -5239,7 +5239,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, response, {3, 1, 1, 2, 3});
 }
 
-// Accepting static input [0,10], producing [1,10] (1.0f, 2.0f, ...)
+// Accepting static input [0,10], producing [1,10] (0.0f, 1.0f, ...)
 struct LibraryWithZeroDimInput {
     static constexpr float libraryScalarNodeAddValue = 2.1f;
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
@@ -5281,7 +5281,59 @@ struct LibraryWithZeroDimInput {
     }
 };
 
-// Accepting any input, producing [5,0,3]
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AcceptDimZeroInCustomNode) {
+    //             input   DL(-1,-1)       CN             DL(-1,-1)    output
+    //  ====[0,10]==>O------->O---[0,10]--->O---[1,10]----->O---[1,10]---->O
+    ConstructorEnabledModelManager modelManager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(-1,-1)");
+    modelManager.reloadModelWithVersions(config);
+
+    const std::vector<float> inputValues;
+    const std::vector<float> expectedOutputValues;
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {0, 10});
+
+    const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
+                                                          ovms::Precision::FP32,
+                                                          ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+                                                          Layout{"N..."})}};
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+                                                            Layout{"N..."})}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+    auto model_node_before = std::make_unique<DLNode>(
+        "dummy_node_before",
+        "dummy",
+        std::nullopt,
+        modelManager);
+    auto custom_node = std::make_unique<CustomNode>("custom_node_0", createLibraryMock<LibraryWithZeroDimInput>(),
+        parameters_t{});
+    auto model_node_after = std::make_unique<DLNode>(
+        "dummy_node_after",
+        "dummy",
+        std::nullopt,
+        modelManager);
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_node_before, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_before, *custom_node, {{DUMMY_MODEL_OUTPUT_NAME, "anything"}});
+    pipeline.connect(*custom_node, *model_node_after, {{"output_numbers", DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_after, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(custom_node));
+    pipeline.push(std::move(model_node_before));
+    pipeline.push(std::move(model_node_after));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    this->checkResponse<float>(pipelineOutputName, this->response, std::vector<float>{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f}, shape_t{1, 10});
+}
+
+// Accepting any input, producing [5,0]
 struct LibraryWithZeroDimOutput {
     static constexpr float libraryScalarNodeAddValue = 2.1f;
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
@@ -5317,7 +5369,7 @@ struct LibraryWithZeroDimOutput {
     }
 };
 
-TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReturnBatchZeroFromCustomNode) {
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReturnDimZeroFromCustomNode) {
     //             input   DL(-1,-1)       CN             DL(-1,-1)   output
     //  ====[1,1]===>O------->O---[1,1]---->O---[0,5]----->O---[0,5]---->O
     //                                      |___[0,5]___________________>
@@ -5330,21 +5382,21 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReturnBatchZeroFromCustomNod
 
     const std::vector<float> inputValues{5.4f};
     const std::vector<float> expectedOutputValues;
-    this->prepareRequest(this->request, inputValues, pipelineInputName, {1,1});
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {1, 1});
 
     const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
                                                           ovms::Precision::FP32,
-                                                          ovms::Shape{ovms::Dimension::any(),ovms::Dimension::any()},
+                                                          ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
                                                           Layout{"N..."})}};
     auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
     const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
                                                             ovms::Precision::FP32,
-                                                            ovms::Shape{ovms::Dimension::any(),ovms::Dimension::any()},
+                                                            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
                                                             Layout{"N..."})},
-                                                            {outputNameFromCustomNode, std::make_shared<ovms::TensorInfo>outputNameFromCustomNode,
-                                                            ovms::Precision::FP32,
-                                                            ovms::Shape{5, 0},
-                                                            Layout{"..."})}};
+        {outputNameFromCustomNode, std::make_shared<ovms::TensorInfo>(outputNameFromCustomNode,
+                                       ovms::Precision::FP32,
+                                       ovms::Shape{5, 0},
+                                       Layout{"..."})}};
     auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
     auto model_node_before = std::make_unique<DLNode>(
         "dummy_node_before",
@@ -5352,7 +5404,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReturnBatchZeroFromCustomNod
         std::nullopt,
         modelManager);
     auto custom_node = std::make_unique<CustomNode>("custom_node_0", createLibraryMock<LibraryWithZeroDimOutput>(),
-            parameters_t{});
+        parameters_t{});
     auto model_node_after = std::make_unique<DLNode>(
         "dummy_node_after",
         "dummy",
@@ -5362,9 +5414,9 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReturnBatchZeroFromCustomNod
     Pipeline pipeline(*input_node, *output_node, *this->reporter);
     pipeline.connect(*input_node, *model_node_before, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node_before, *custom_node, {{DUMMY_MODEL_OUTPUT_NAME, "anything"}});
-    pipeline.connect(*custom_node, *model_node_after, {{outputNameFromCustomNode, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*custom_node, *model_node_after, {{"output_numbers", DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node_after, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
-    pipeline.connect(*custom_node, *output_node, {{outputNameFromCustomNode, outputNameFromCustomNode}});
+    pipeline.connect(*custom_node, *output_node, {{"output_numbers", outputNameFromCustomNode}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(custom_node));

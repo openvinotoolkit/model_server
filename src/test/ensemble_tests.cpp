@@ -317,14 +317,14 @@ TYPED_TEST(EnsembleFlowBothApiTest, SequenceOfDynamicDummyInferZeroBatch) {
     int batchSize = 0;
 
     std::vector<float> inputData;  // no data (0,10)
-    this->prepareRequest(inputData, this->request, this->customPipelineInputName, ovms::signed_shape_t{batchSize,10});
+    this->prepareRequest(inputData, this->request, this->customPipelineInputName, ovms::signed_shape_t{batchSize, 10});
 
     // Configure pipeline
     const tensor_map_t inputsInfo{{this->customPipelineInputName,
         std::make_shared<ovms::TensorInfo>(
             this->customPipelineInputName,
             ovms::Precision::FP32,
-            ovms::Shape{-1,10}, Layout{"..."})}};
+            ovms::Shape{-1, 10}, Layout{"..."})}};
     auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
     auto model_node1 = std::make_unique<DLNode>("dummy_node_1", "dummy", this->requestedModelVersion, managerWithDummyModel);
     auto model_node2 = std::make_unique<DLNode>("dummy_node_2", "dummy", this->requestedModelVersion, managerWithDummyModel);
@@ -333,7 +333,7 @@ TYPED_TEST(EnsembleFlowBothApiTest, SequenceOfDynamicDummyInferZeroBatch) {
         std::make_shared<ovms::TensorInfo>(
             this->customPipelineOutputName,
             ovms::Precision::FP32,
-            ovms::Shape{-1,10}, Layout{"..."})}};
+            ovms::Shape{-1, 10}, Layout{"..."})}};
     std::set<std::string> gatherFromNode = {};
     std::string pipelineName = "test_pipeline";
     auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, gatherFromNode, true, pipelineName);
