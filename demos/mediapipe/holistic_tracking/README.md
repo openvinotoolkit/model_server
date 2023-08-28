@@ -38,11 +38,6 @@ ovms
 ├── iris_landmark
 │   └── 1
 │       └── iris_landmark.tflite
-├── models
-│   └── mediapipe
-│       └── modules
-│           └── hand_landmark
-│               └── handedness.txt
 ├── palm_detection_full
 │   └── 1
 │       └── palm_detection_full.tflite
