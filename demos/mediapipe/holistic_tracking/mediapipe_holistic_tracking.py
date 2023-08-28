@@ -106,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
     parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
     parser.add_argument('--grpc_port',required=False, default=9022, help='Specify port to grpc service. default: 9022')
-    parser.add_argument('--input_name',required=False, default='throttled_input_video', help='Specify input tensor name. default: input')
+    parser.add_argument('--input_name',required=False, default='first_input_video', help='Specify input tensor name. default: input')
     parser.add_argument('--output_name',required=False, default='output',
                         help='Specify output name. default: output')
     parser.add_argument('--batchsize', default=1,
@@ -124,10 +124,11 @@ if __name__ == '__main__':
     if args['download_models'] == True:
         # TODO uncomment when download is available
         #run_command("curl -kL -o girl.jpeg https://cdn.pixabay.com/photo/2019/03/12/20/39/girl-4051811_960_720.jpg")
-        run_command("mkdir -p ovms/mediapipe/modules/hand_landmark/")
-        run_command("curl -kL -o ovms/mediapipe/modules/hand_landmark/handedness.txt https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/modules/hand_landmark/handedness.txt")
-        run_command("cp config_holistic.json ovms")
-        run_command("cp holistic_tracking.pbtxt ovms")
+        run_command("mkdir -p mediapipe/mediapipe/modules/hand_landmark/")
+        run_command("mkdir -p ovms")
+        run_command("wget -O mediapipe/mediapipe/modules/hand_landmark/handedness.txt https://raw.githubusercontent.com/openvinotoolkit/mediapipe/main/mediapipe/modules/hand_landmark/handedness.txt")
+        run_command("cp config_holistic.json ovms/")
+        run_command("cp holistic_tracking.pbtxt ovms/")
         prepare_models()
         convert_pose()
         print("All files and models are prepared.")

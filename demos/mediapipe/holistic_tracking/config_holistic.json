@@ -21,7 +21,6 @@
         { "config": {
                 "name":"pose_detection",
                 "base_path":"/models/pose_detection",
-                "layout": "NHWC:NCHW",
                 "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
             }
         },
