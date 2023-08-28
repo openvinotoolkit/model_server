@@ -5239,6 +5239,61 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, response, {3, 1, 1, 2, 3});
 }
 
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ZeroDimWithDemultiplexer) {
+    //                 input   (D)DL(-1,1,1,1)                  DL(1,1,1)    output
+    //  ====[0,1,1,1]===>O---------->O-----0x[1,1,1]----STOP
+    ConstructorEnabledModelManager manager;
+
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(config.parseShapeParameter("(-1,1,1,1)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(config.parseShapeParameter("(1,1,1)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    const std::vector<float> inputValues;
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {0, 1, 1, 1});
+
+    const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
+                                                          ovms::Precision::FP32,
+                                                          ovms::Shape{ovms::Dimension::any(), 1, 1, 1},
+                                                          Layout{"N..."})}};
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{ovms::Dimension::any(), 1, 1, 1},
+                                                            Layout{"N..."})}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo, std::set<std::string>{"node_1"});
+    std::optional<int32_t> demultiplyCount{-1};
+    auto model_1 = std::make_unique<DLNode>(
+        "node_1",
+        "increment_1x3x4x5",
+        std::nullopt,
+        manager, std::unordered_map<std::string, std::string>{}, demultiplyCount);
+    auto model_2 = std::make_unique<DLNode>(
+        "node_2",
+        "dummy",
+        std::nullopt,
+        manager);
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_1, {{pipelineInputName, INCREMENT_1x3x4x5_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_1, *model_2, {{INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_1));
+    pipeline.push(std::move(model_2));
+    pipeline.push(std::move(output_node));
+
+    // Expect 0 first dimension to cause pipeline to stop
+    // TODO: Should we gather 0 elements and prepare [0,1,1,1] out of that?
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS);
+}
+
 // Accepting static input [0,10], producing [1,10] (0.0f, 1.0f, ...)
 struct LibraryWithZeroDimInput {
     static constexpr float libraryScalarNodeAddValue = 2.1f;
