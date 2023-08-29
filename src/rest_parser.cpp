@@ -135,9 +135,10 @@ bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::Tenso
     if (!doc.IsArray()) {
         return false;
     }
-    if (doc.GetArray().Size() == 0) {
-        return false;
-    }
+    // if (doc.GetArray().Size() == 0) {
+    //     // ???
+    //     return false;
+    // }
     if (!setDimOrValidate(proto, dim, doc.GetArray().Size())) {
         return false;
     }
@@ -145,6 +146,9 @@ bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::Tenso
         if (!parseSpecialInput(doc, proto, tensorName)) {
             return false;
         }
+        return true;
+    }
+    if (doc.GetArray().Size() == 0) {
         return true;
     }
     if (doc.GetArray()[0].IsArray()) {
