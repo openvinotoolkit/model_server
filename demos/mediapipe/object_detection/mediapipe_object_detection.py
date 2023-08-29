@@ -76,8 +76,7 @@ if __name__ == '__main__':
     for line in lines:
         inputs = []
         path = line.strip()
-        im_cv = cv2.imread(path, cv2.IMREAD_UNCHANGED) 
-        img = cv2.resize(im_cv, [320, 320])
+        img = cv2.imread(path, cv2.IMREAD_UNCHANGED) 
         print(os.path.basename(path))
         inputs.append(grpcclient.InferInput(args['input_name'], img.shape, "UINT8"))
         outputs = []
