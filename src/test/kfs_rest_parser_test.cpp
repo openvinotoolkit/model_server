@@ -297,6 +297,30 @@ TEST_F(KFSRestParserTest, parseValidRequestBOOL) {
     ASSERT_THAT(proto.inputs()[0].contents().bool_contents(), ElementsAre(true, true, false, false));
 }
 
+TEST_F(KFSRestParserTest, parseRequestWithZeroDim) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 10, 224, 0, 3 ],
+        "datatype" : "INT64",
+        "data" : [ ]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].name(), "input0");
+    ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(10, 224, 0, 3));
+    ASSERT_EQ(proto.inputs()[0].datatype(), "FP32");
+    ASSERT_EQ(proto.inputs()[0].contents().fp32_contents_size(), 0);
+    ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 0);
+    ASSERT_EQ(proto.inputs()[0].contents().int64_contents_size(), 0);
+}
+
 TEST_F(KFSRestParserTest, parseValidRequestStringInput) {
     std::string request = R"({
     "inputs" : [
