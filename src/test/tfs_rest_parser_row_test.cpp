@@ -110,6 +110,33 @@ TEST(TFSRestParserRow, ParseValid2Inputs) {
                                                               14.0, 15.0, 16.0));
 }
 
+TEST(TFSRestParserRow, ValidShape_0) {
+    TFSRestParser parser(prepareTensors({{"i", {0}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+}
+
+TEST(TFSRestParserRow, ValidShape_2) {
+    TFSRestParser parser(prepareTensors({{"i", {2}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":12.0}, {"i":13.0},
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2));
+    // Precision?
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(12.0, 13.0));
+}
+
 TEST(TFSRestParserRow, ValidShape_1x1) {
     TFSRestParser parser(prepareTensors({{"i", {1, 1}}}));
 
@@ -134,6 +161,19 @@ TEST(TFSRestParserRow, ValidShape_1x2) {
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
     EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1, 2));
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 56.0));
+}
+
+TEST(TFSRestParserRow, ValidShape_2x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 1}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[ ]}, {"i":[ ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
 }
 
 TEST(TFSRestParserRow, ValidShape_2x1) {
@@ -256,6 +296,32 @@ TEST(TFSRestParserRow, ValidShape_2x1x3x1x5) {
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9));
+}
+
+TEST(TFSRestParserRow, ValidShape_2x1x3x1x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 0}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ]},
+        {"i":[
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3, 1, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
 }
 
 TEST(TFSRestParserRow, MissingInputInBatch) {
@@ -418,6 +484,7 @@ TEST(TFSRestParserRow, CouldNotDetectNamedOrNoNamed) {
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[null, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
 }
 
+// ?
 TEST(TFSRestParserRow, NoInstancesFound) {
     TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
