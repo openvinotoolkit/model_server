@@ -182,7 +182,7 @@ bool TFSRestParser::parseInstance(rapidjson::Value& doc) {
         auto& proto = (*requestProto.mutable_inputs())[tensorName];
 
         increaseBatchSize(proto);
-        if (itr.value.IsNumber()) {
+        if (itr.value.IsNumber() || itr.value.IsString()) {
             // If previous iterations already increased number of dimensions
             // it means we have incorrect json
             if (proto.tensor_shape().dim_size() > 1) {
