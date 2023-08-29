@@ -121,6 +121,7 @@ def check_dir(start_dir):
         "yarn.lock",
         "BUILD.bazel",
         "package.json",
+        'graph.pbtxt',
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -200,6 +201,7 @@ def check_func(start_dir):
         'yarn.lock',
         'BUILD.bazel',
         'package.json',
+        'graph.pbtxt',
     ]
 
     exclude_directories = ['/dist/']
