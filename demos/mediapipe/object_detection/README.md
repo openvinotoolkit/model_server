@@ -13,23 +13,22 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/object_detection
 ```
 
-## Prepare repository that conatains the object detection model
-
-```bash
-git clone https://github.com/openvinotoolkit/mediapipe.git
-```
-
 ## Run OpenVINO Model Server
 ```bash
-docker run -d -v $PWD:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
+docker run -d -v $PWD/ovms:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
 ```
 
-## Run the client:
+## Prepare models and the environment:
 ```bash
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 
+python mediapipe_object_detection.py --download_models
+```
+
+## Run the client:
+```bash
 python mediapipe_object_detection.py --grpc_port 9000 --images ./input_images.txt
 Start processing:
         Graph name: objectDetection

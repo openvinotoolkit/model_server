@@ -23,9 +23,45 @@ import cv2
 import datetime
 import argparse
 import os
+import subprocess
+import shutil
+import urllib.request
 
 import tritonclient.grpc as grpcclient
 
+_GCS_URL_PREFIX = 'https://storage.googleapis.com/mediapipe-assets/'
+
+def run_command(command):
+    print(command)
+    if subprocess.call(command.split()) != 0:
+      sys.exit(-1)
+
+def download_model(model_path: str):
+    """Downloads the oss model from Google Cloud Storage if it doesn't exist in the package."""
+    model_url = _GCS_URL_PREFIX + model_path.split('/')[-1]
+    dst = os.path.join("ovms/", model_path.replace("/","/1/"))
+    dst_dir = os.path.dirname(model_path)
+
+    # Workaround to copy every model in separate directory
+    model_name = os.path.basename(model_path).replace(".tflite","")
+    dir_name = os.path.basename(dst_dir)
+    if dir_name != model_name:
+        dst = dst.replace(dir_name + "/", model_name + "/")
+
+    dst_dir = os.path.dirname(dst)
+    if model_path == 'ssdlite_object_detection_labelmap.txt':
+        dst_dir = 'ovms'
+    elif not os.path.exists(dst_dir):
+        os.makedirs(dst_dir)
+
+    dst_file = os.path.join(dst_dir, os.path.basename(model_path))
+    print('Downloading model to ' + dst_file)
+    with urllib.request.urlopen(model_url) as response, open(dst_file,
+                                                           'wb') as out_file:
+        if response.code != 200:
+            raise ConnectionError('Cannot download ' + model_path +
+                                    ' from Google Cloud Storage.')
+        shutil.copyfileobj(response, out_file)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sends requests via KServe gRPC API using images in format supported by OpenCV. ')
@@ -38,9 +74,18 @@ if __name__ == '__main__':
     parser.add_argument('--graph_name', default='objectDetection', help='Define model name, must be same as is in service. default: objectDetection',
                         dest='graph_name')
     parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with GRPC endpoint')
+    parser.add_argument('--download_models', default=False, action='store_true', help='download models and files for demo')
 
     error = False
     args = vars(parser.parse_args())
+
+    if args['download_models'] == True:
+        run_command("mkdir -p ovms")
+        download_model('models/ssdlite_object_detection.tflite')
+        download_model('ssdlite_object_detection_labelmap.txt')
+        run_command("cp config.json ovms/")
+        run_command("cp graph.pbtxt ovms/")
+        exit(0)
 
     address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
     input_name = args['input_name']
