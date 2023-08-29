@@ -20,8 +20,6 @@
 #include "../ovms.h"  // NOLINT
 
 namespace ovms {
-size_t DataTypeToByteSize(OVMS_DataType datatype);
-
 class InferenceParameter {
     const std::string name;
     OVMS_DataType datatype;
