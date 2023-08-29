@@ -124,6 +124,7 @@ def check_dir(start_dir):
         "graph.pbtxt",
         "holistic_tracking.pbtxt",
         "ssdlite_object_detection_labelmap.txt",
+        "build_dependencies.sh",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -204,6 +205,7 @@ def check_func(start_dir):
         'BUILD.bazel',
         'package.json',
         'graph.pbtxt',
+        "build_dependencies.sh",
     ]
 
     exclude_directories = ['/dist/']
