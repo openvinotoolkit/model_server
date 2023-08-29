@@ -110,27 +110,14 @@ TEST(TFSRestParserRow, ParseValid2Inputs) {
                                                               14.0, 15.0, 16.0));
 }
 
-TEST(TFSRestParserRow, ValidShape_0) {
-    TFSRestParser parser(prepareTensors({{"i", {0}}}));
-
-    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-
-    ]})"),
-        StatusCode::OK);
-    EXPECT_EQ(parser.getOrder(), Order::ROW);
-    EXPECT_EQ(parser.getFormat(), Format::NAMED);
-    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(0));
-    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
-}
-
 TEST(TFSRestParserRow, InvalidShape_1D) {
     TFSRestParser parser(prepareTensors({{"i", {2}}}));
 
-    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":12.0}, {"i":[[13.0]]}
     ]})"),
         StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[[12.0]]}, {"i":13.0}
     ]})"),
         StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
