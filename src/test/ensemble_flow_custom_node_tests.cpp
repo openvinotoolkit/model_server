@@ -5290,13 +5290,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FirstZeroDimWithDemultiplexe
     pipeline.push(std::move(output_node));
 
     // Expect 0 first dimension to cause pipeline to stop
-    // TODO: Should we gather 0 elements and prepare [0,1,1,1] out of that?
+    // In future we could gather 0 elements and prepare [0,1,1,1] out of that
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS);
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, GatheringZeroDimension) {
-    //                 input   (D)DL(-1,1,1,1)                  DL(1,1,1)    output
-    //  ====[0,1,1,1]===>O---------->O-----0x[1,1,1]----STOP
+    //                 input   (D)DL(-1,1,1,-1)                  DL(1,1,1)          output
+    //  ====[2,1,1,0]===>O---------->O-----2x[1,1,0]---------------->O----[2,1,1,0]--->0
     ConstructorEnabledModelManager manager;
 
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
