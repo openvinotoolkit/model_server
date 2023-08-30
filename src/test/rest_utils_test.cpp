@@ -349,6 +349,25 @@ protected:
     }
 };
 
+const char* noDataResponseRow = R"({
+    "predictions": [[]
+    ]
+})";
+
+const char* noDataResponseColumn = R"({
+    "outputs": [
+        []
+    ]
+})";
+
+TEST_P(TFSMakeJsonFromPredictResponsePrecisionTest, NoData) {
+    auto order = GetParam();
+    output->mutable_tensor_shape()->mutable_dim(1)->set_size(0);
+    output->set_dtype(tensorflow::DataType::DT_FLOAT);
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::OK);
+    EXPECT_EQ(json, getJsonResponseDependsOnOrder(order, noDataResponseRow, noDataResponseColumn));
+}
+
 const char* floatResponseRow = R"({
     "predictions": [[92.5]
     ]
