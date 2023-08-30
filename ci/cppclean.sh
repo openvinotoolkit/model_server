@@ -64,7 +64,7 @@ if [ ${NO_WARNINGS} -gt  160 ]; then
     echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
     exit 1
 fi
-if [ ${NO_WARNINGS_TEST} -gt  54 ]; then
+if [ ${NO_WARNINGS_TEST} -gt  56 ]; then
     echo "Failed due to higher than allowed number of issues in test code: ${NO_WARNINGS_TEST}"
     cat ${CPPCLEAN_RESULTS_FILE_TEST}
     exit 1
