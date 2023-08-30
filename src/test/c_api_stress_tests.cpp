@@ -249,7 +249,7 @@ TEST_F(StressCapiConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLoad) 
     SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
     bool performWholeConfigReload = false;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};                         // we hit when all config changes finish to propagate
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
@@ -325,7 +325,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, Remove
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, RenameCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                 // we expect full continuity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressCapiConfigChanges::triggerCApiInferenceInALoop,
@@ -338,7 +338,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, Rename
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, ChangeParamCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                 // we expect full continuity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressCapiConfigChanges::triggerCApiInferenceInALoop,
@@ -351,7 +351,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, Change
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, ReduceQueueSizeCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                 // we expect full continuity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressCapiConfigChanges::triggerCApiInferenceInALoop,
@@ -364,7 +364,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, Reduce
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, IncreaseQueueSizeCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                 // we expect full continuity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressCapiConfigChanges::triggerCApiInferenceInALoop,
@@ -378,7 +378,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, Remove
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};                         // we hit when all config changes finish to propagate
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
@@ -391,7 +391,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, Remove
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, RenameCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                 // we expect full continuity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
@@ -404,7 +404,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, Rename
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, ChangeParamCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                 // we expect full continuity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
@@ -417,7 +417,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, Change
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, ReduceQueueSizeCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                 // we expect full continuity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
@@ -430,7 +430,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, Reduce
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges, IncreaseQueueSizeCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                 // we expect full continuity of operation
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
     performStressTest(
         &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
