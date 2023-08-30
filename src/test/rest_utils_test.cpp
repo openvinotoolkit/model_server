@@ -791,7 +791,7 @@ TEST_F(KFSMakeJsonFromPredictResponseRawTest, Positive) {
 
 TEST_F(KFSMakeJsonFromPredictResponseRawTest, EmptyRawOutputContentsError) {
     proto.mutable_raw_output_contents()->Clear();
-    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::REST_SERIALIZE_NO_DATA);
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE);
     ASSERT_EQ(inferenceHeaderContentLength.has_value(), false);
 }
 
