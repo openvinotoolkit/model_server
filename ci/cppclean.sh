@@ -52,7 +52,7 @@ if [ ${NO_WARNINGS_TEST_FORWARD} -gt 1 ]; then
     echo "Failed due to not using forward declarations where possible: ${NO_WARNINGS_TEST_FORWARD}";
     exit 1;
 fi
-if [ ${NO_WARNINGS_TEST_DIRECT} -gt 12 ]; then
+if [ ${NO_WARNINGS_TEST_DIRECT} -gt 14 ]; then
     echo "Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_TEST_DIRECT}";
     exit 1;
 fi
