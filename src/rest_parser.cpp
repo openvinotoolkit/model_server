@@ -135,10 +135,6 @@ bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::Tenso
     if (!doc.IsArray()) {
         return false;
     }
-    // if (doc.GetArray().Size() == 0) {
-    //     // ???
-    //     return false;
-    // }
     if (!setDimOrValidate(proto, dim, doc.GetArray().Size())) {
         return false;
     }
@@ -180,7 +176,6 @@ bool TFSRestParser::parseInstance(rapidjson::Value& doc) {
         std::string tensorName = itr.name.GetString();
         inputsFoundInRequest.insert(tensorName);
         auto& proto = (*requestProto.mutable_inputs())[tensorName];
-
         increaseBatchSize(proto);
         if (itr.value.IsNumber() || itr.value.IsString()) {
             // If previous iterations already increased number of dimensions

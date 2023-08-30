@@ -164,7 +164,7 @@ TEST(TFSRestParserRow, ValidShape_1x2) {
 }
 
 TEST(TFSRestParserRow, ValidShape_2x0) {
-    TFSRestParser parser(prepareTensors({{"i", {2, 1}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 1}}}, ovms::Precision::I32));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[ ]}, {"i":[ ]}
@@ -174,6 +174,7 @@ TEST(TFSRestParserRow, ValidShape_2x0) {
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
     EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 0));
     EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_INT32);
 }
 
 TEST(TFSRestParserRow, ValidShape_2x1) {
@@ -299,7 +300,7 @@ TEST(TFSRestParserRow, ValidShape_2x1x3x1x5) {
 }
 
 TEST(TFSRestParserRow, ValidShape_2x1x3x1x0) {
-    TFSRestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 0}}}));
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 0}}}, ovms::Precision::FP32));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[
@@ -322,6 +323,7 @@ TEST(TFSRestParserRow, ValidShape_2x1x3x1x0) {
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
     EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3, 1, 0));
     EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_FLOAT);
 }
 
 TEST(TFSRestParserRow, MissingInputInBatch) {
@@ -484,7 +486,6 @@ TEST(TFSRestParserRow, CouldNotDetectNamedOrNoNamed) {
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[null, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
 }
 
-// ?
 TEST(TFSRestParserRow, NoInstancesFound) {
     TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 

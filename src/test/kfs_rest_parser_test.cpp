@@ -318,7 +318,8 @@ TEST_F(KFSRestParserTest, parseRequestWithZeroDim) {
     ASSERT_EQ(proto.inputs()[0].datatype(), "INT64");
     ASSERT_EQ(proto.inputs()[0].contents().fp32_contents_size(), 0);
     ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 0);
-    ASSERT_EQ(proto.inputs()[0].contents().int64_contents_size(), 0);
+    ASSERT_EQ(proto.inputs()[0].contents().int64_contents_size(), 0);  // when data is present, it should be packed here
+    ASSERT_EQ(proto.raw_input_contents_size(), 0);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestStringInput) {
