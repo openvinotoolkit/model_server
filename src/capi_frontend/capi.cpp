@@ -934,7 +934,7 @@ OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servab
         std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
         status = getPipelineDefinition(server, servableName, &pipelineDefinition, unloadGuard);
         if (!status.ok() || !pipelineDefinition) {
-            return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
+            return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
         }
         *servableMetadata = reinterpret_cast<OVMS_ServableMetadata*>(new ovms::ServableMetadata(servableName, servableVersion, pipelineDefinition->getInputsInfo(), pipelineDefinition->getOutputsInfo()));
         return nullptr;

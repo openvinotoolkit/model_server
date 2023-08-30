@@ -26,7 +26,7 @@ InferenceRequest::InferenceRequest(const char* servableName, model_version_t ser
     servableVersion(servableVersion) {
 }
 
-const std::string InferenceRequest::getServableName() const {
+const std::string& InferenceRequest::getServableName() const {
     return this->servableName;
 }
 model_version_t InferenceRequest::getServableVersion() const {
