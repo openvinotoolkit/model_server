@@ -113,3 +113,38 @@ TEST_F(GetMediapipeGraphMetadataResponse, BasicResponseMetadata) {
     EXPECT_EQ(thirdOutput.datatype(), "INVALID");
     EXPECT_EQ(thirdOutput.shape_size(), 0);
 }
+
+TEST_F(GetMediapipeGraphMetadataResponse, TypedResponseMetadata) {
+    // TODO
+    std::string testPbtxt = R"(
+        input_stream: "TEST:in"
+        input_stream: "TEST33:in2"
+        output_stream: "TEST0:out"
+        output_stream: "TEST1:out2"
+        output_stream: "TEST3:out3"
+            node {
+            calculator: "OVMSOVCalculator"
+            input_stream: "B:in"
+            output_stream: "A:out"
+            }
+        )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeGraphDefinition("mediaDummy", mgc, testPbtxt);
+    mediapipeGraphDefinition.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeGraphDefinition.validate(manager), StatusCode::OK);
+
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(mediapipeGraphDefinition, &response), ovms::StatusCode::OK);
+
+    EXPECT_EQ(response.inputs_size(), 2);
+    auto firstInput = response.inputs().at(0);
+    EXPECT_EQ(firstInput.name(), "in");
+    EXPECT_EQ(firstInput.datatype(), "INVALID");
+    EXPECT_EQ(firstInput.shape_size(), 0);
+
+    EXPECT_EQ(response.outputs_size(), 3);
+    auto firstOutput = response.outputs().at(0);
+    EXPECT_EQ(firstOutput.name(), "out");
+    EXPECT_EQ(firstOutput.datatype(), "INVALID");
+    EXPECT_EQ(firstOutput.shape_size(), 0);
+}
