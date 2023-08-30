@@ -114,8 +114,8 @@ TEST_F(StressCapiConfigChanges, RemoveDefaultVersionDuringPredictLoad) {
 }
 TEST_F(StressCapiConfigChanges, ChangeToShapeAutoDuringPredictLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};
-    std::set<StatusCode> allowedLoadResults = {};
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
         &StressCapiConfigChanges::triggerCApiInferenceInALoop,
         &StressCapiConfigChanges::changeToAutoShape,
@@ -199,8 +199,8 @@ TEST_F(StressCapiConfigChanges, RemoveDefaultVersionDuringGetMetadataLoad) {
 }
 TEST_F(StressCapiConfigChanges, ChangeToShapeAutoDuringGetMetadataLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
-    std::set<StatusCode> allowedLoadResults = {};
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
         &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
         &StressCapiConfigChanges::changeToAutoShape,
