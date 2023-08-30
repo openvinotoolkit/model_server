@@ -114,37 +114,78 @@ TEST_F(GetMediapipeGraphMetadataResponse, BasicResponseMetadata) {
     EXPECT_EQ(thirdOutput.shape_size(), 0);
 }
 
-TEST_F(GetMediapipeGraphMetadataResponse, TypedResponseMetadata) {
-    // TODO
-    std::string testPbtxt = R"(
-        input_stream: "TEST:in"
-        input_stream: "TEST33:in2"
-        output_stream: "TEST0:out"
-        output_stream: "TEST1:out2"
-        output_stream: "TEST3:out3"
-            node {
-            calculator: "OVMSOVCalculator"
-            input_stream: "B:in"
-            output_stream: "A:out"
-            }
-        )";
+class MediapipeGraphDefinitionMetadataResponseBuild : public ::testing::Test {
+protected:
+    class MockMediapipeGraphDefinitionGetInputsOutputsInfo : public ovms::MediapipeGraphDefinition {
+        ovms::Status status = ovms::StatusCode::OK;
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeGraphDefinition("mediaDummy", mgc, testPbtxt);
-    mediapipeGraphDefinition.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeGraphDefinition.validate(manager), StatusCode::OK);
+    public:
+        MockMediapipeGraphDefinitionGetInputsOutputsInfo() :
+            MediapipeGraphDefinition("mediaDummy", {}, {}) {
+            MediapipeGraphDefinition::status.handle(ovms::ValidationPassedEvent());
+        }
 
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(mediapipeGraphDefinition, &response), ovms::StatusCode::OK);
+        void mockMetadata() {
+            std::string testPbtxt = R"(
+                input_stream: "TEST:in"
+                output_stream: "TEST0:out"
+                    node {
+                    calculator: "OVMSOVCalculator"
+                    input_stream: "B:in"
+                    output_stream: "A:out"
+                    }
+                )";
+            
+            // ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+            // DummyMediapipeGraphDefinition mediapipeGraphDefinition("mediaDummy", mgc, testPbtxt);
+            // this->inputConfig = testPbtxt;
+        }
 
-    EXPECT_EQ(response.inputs_size(), 2);
-    auto firstInput = response.inputs().at(0);
-    EXPECT_EQ(firstInput.name(), "in");
-    EXPECT_EQ(firstInput.datatype(), "INVALID");
-    EXPECT_EQ(firstInput.shape_size(), 0);
+        void mockStatus(ovms::Status status) {
+            this->status = status;
+        }
 
-    EXPECT_EQ(response.outputs_size(), 3);
-    auto firstOutput = response.outputs().at(0);
-    EXPECT_EQ(firstOutput.name(), "out");
-    EXPECT_EQ(firstOutput.datatype(), "INVALID");
-    EXPECT_EQ(firstOutput.shape_size(), 0);
+        ovms::PipelineDefinitionStatus& getGraphDefinitionStatus() {
+            return ovms::MediapipeGraphDefinition::status;
+        }
+    };
+
+    MockMediapipeGraphDefinitionGetInputsOutputsInfo graphDefinition;
+    KFSModelMetadataResponse response;
+    ConstructorEnabledModelManager manager;
+
+public:
+    void prepare() {
+        graphDefinition.mockMetadata();
+    }
+};
+
+TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, ModelVersionNotLoadedAnymoreButGraphNotReloadedYet) {
+    graphDefinition.mockStatus(ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(graphDefinition, &response), ovms::StatusCode::OK);
+}
+
+TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, ModelVersionNotLoadedYet) {
+    graphDefinition.mockStatus(ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(graphDefinition, &response), ovms::StatusCode::OK);
+}
+
+TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, GraphNotLoadedAnymore) {
+    graphDefinition.getGraphDefinitionStatus().handle(ovms::RetireEvent());
+    auto status = ovms::KFSInferenceServiceImpl::buildResponse(graphDefinition, &response);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
+}
+
+TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, GraphNotLoadedYet) {
+    graphDefinition.getGraphDefinitionStatus().handle(ovms::UsedModelChangedEvent());
+    graphDefinition.getGraphDefinitionStatus().handle(ovms::ValidationFailedEvent());
+    auto status = ovms::KFSInferenceServiceImpl::buildResponse(graphDefinition, &response);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET) << status.string();
+    graphDefinition.getGraphDefinitionStatus().handle(ovms::UsedModelChangedEvent());
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(graphDefinition, &response), ovms::StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET);
+}
+
+TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, GraphAvailableOrAvailableRequiringRevalidation) {
+    graphDefinition.getGraphDefinitionStatus().handle(ovms::UsedModelChangedEvent());
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(graphDefinition, &response), ovms::StatusCode::OK);
 }
