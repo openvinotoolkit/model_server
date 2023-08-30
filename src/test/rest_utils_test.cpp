@@ -103,6 +103,15 @@ TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveColumn) {
     EXPECT_EQ(json, expected_json);
 }
 
+TEST_F(TFSMakeJsonFromPredictResponseStringTest, ScalarColumn) {
+    float data = 5.1f;
+    *output1->mutable_tensor_content() = std::string((char*)(&data), ((char*)(&data)) + sizeof(float));
+    output1->set_dtype(tensorflow::DataType::DT_FLOAT);
+    std::string expected_json = "{\n    \"outputs\": 5.1\n}";
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::OK);
+    EXPECT_EQ(json, expected_json);
+}
+
 TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveColumnBatchSize2) {
     output1->add_string_val("Hello");
     output1->add_string_val("World");
@@ -293,10 +302,18 @@ static std::string toString(ovms::Order order) {
     }
 }
 
-TEST_P(TFSMakeJsonFromPredictResponseRawTest, EmptyTensorContentError) {
+TEST_P(TFSMakeJsonFromPredictResponseRawTest, TensorZeroDimPositive) {
     auto order = GetParam();
     output1->mutable_tensor_content()->clear();
-    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::REST_SERIALIZE_NO_DATA);
+    output1->mutable_tensor_shape()->add_dim()->set_size(1);
+    output1->mutable_tensor_shape()->add_dim()->set_size(0);
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::OK);
+}
+
+TEST_P(TFSMakeJsonFromPredictResponseRawTest, EmptyScalarTensorContentError) {
+    auto order = GetParam();
+    output1->mutable_tensor_content()->clear();
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE);
 }
 
 TEST_P(TFSMakeJsonFromPredictResponseRawTest, InvalidTensorContentSizeError) {
