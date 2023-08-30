@@ -209,8 +209,8 @@ TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringPredictLoad) {
 }
 TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringPredictLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};
+    std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &ConfigChangeStressTest::triggerPredictInALoop<TFSPredictRequest, TFSPredictResponse>,
         &ConfigChangeStressTest::changeToAutoShape,
@@ -295,8 +295,8 @@ TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringGetMetadataLoad) {
 }
 TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringGetMetadataLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK, StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
+    std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &ConfigChangeStressTest::triggerGetPipelineMetadataInALoop,
         &ConfigChangeStressTest::changeToAutoShape,
