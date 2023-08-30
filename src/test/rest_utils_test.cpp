@@ -860,6 +860,42 @@ protected:
     }
 };
 
+TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Scalar) {
+    float data = 92.5f;
+    output->mutable_shape()->Clear();
+    prepareData(data, "FP32");
+    EXPECT_EQ(json, R"({
+    "model_name": "model",
+    "id": "id",
+    "outputs": [{
+            "name": "output",
+            "shape": [],
+            "datatype": "FP32",
+            "data": [92.5]
+        }]
+})");
+}
+
+TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, PositiveZeroData) {
+    output->set_datatype("FP32");
+    output->mutable_shape()->Clear();
+    output->mutable_shape()->Add(1);
+    output->mutable_shape()->Add(0);
+    proto.add_raw_output_contents();
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::OK);
+    ASSERT_EQ(inferenceHeaderContentLength.has_value(), false);
+    EXPECT_EQ(json, R"({
+    "model_name": "model",
+    "id": "id",
+    "outputs": [{
+            "name": "output",
+            "shape": [1, 0],
+            "datatype": "FP32",
+            "data": []
+        }]
+})");
+}
+
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Float) {
     float data = 92.5f;
     prepareData(data, "FP32");
