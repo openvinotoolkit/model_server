@@ -960,7 +960,7 @@ const std::string basicMediapipeConfig = R"({
     ]
 })";
 
-const std::string basicMediapipeConfigWithAddedGraph = R"({
+static const std::string basicMediapipeConfigWithAddedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
@@ -980,7 +980,7 @@ const std::string basicMediapipeConfigWithAddedGraph = R"({
     ]
 })";
 
-const std::string basicMediapipeConfigWithRemovedGraph = R"({
+static const std::string basicMediapipeConfigWithRemovedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
@@ -992,7 +992,7 @@ const std::string basicMediapipeConfigWithRemovedGraph = R"({
     ]
 })";
 
-const std::string basicMediapipeConfigWithRemovedModel = R"({
+static const std::string basicMediapipeConfigWithRemovedModel = R"({
     "model_config_list": [
     ],
     "mediapipe_config_list": [
@@ -1003,7 +1003,7 @@ const std::string basicMediapipeConfigWithRemovedModel = R"({
     ]
 })";
 
-const std::string basicMediapipeConfigWithReloadedModel = R"({
+static const std::string basicMediapipeConfigWithReloadedModel = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
@@ -1020,7 +1020,7 @@ const std::string basicMediapipeConfigWithReloadedModel = R"({
     ]
 })";
 
-const std::string basicMediapipeConfigWithNewGraphPath = R"({
+static const std::string basicMediapipeConfigWithNewGraphPath = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
