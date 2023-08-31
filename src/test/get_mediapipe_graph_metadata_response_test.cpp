@@ -126,6 +126,7 @@ protected:
         }
 
         void mockMetadata() {
+            // This functionality may be required in future graph tags implementations
             std::string testPbtxt = R"(
                 input_stream: "TEST:in"
                 output_stream: "TEST0:out"
@@ -135,10 +136,6 @@ protected:
                     output_stream: "A:out"
                     }
                 )";
-            
-            // ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-            // DummyMediapipeGraphDefinition mediapipeGraphDefinition("mediaDummy", mgc, testPbtxt);
-            // this->inputConfig = testPbtxt;
         }
 
         void mockStatus(ovms::Status status) {
