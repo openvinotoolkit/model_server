@@ -13,11 +13,6 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/object_detection
 ```
 
-## Run OpenVINO Model Server
-```bash
-docker run -d -v $PWD/ovms:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
-```
-
 ## Prepare models and the environment:
 ```bash
 virtualenv .venv
@@ -25,6 +20,11 @@ virtualenv .venv
 pip install -r requirements.txt
 
 python mediapipe_object_detection.py --download_models
+```
+
+## Run OpenVINO Model Server
+```bash
+docker run -d -v $PWD/ovms:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
 ```
 
 ## Run the client:
