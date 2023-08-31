@@ -14,8 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 #include "../../stringutils.hpp"  // TODO dispose
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
+#pragma GCC diagnostic pop
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/mediapipe_calculators/ovmscalculator.pb.h"
 

@@ -27,9 +27,6 @@ ADD ./kwbuildtools /tmp/kwbuildtools
 
 WORKDIR /example_cpp_client/cpp
 RUN bazel build @org_tensorflow//tensorflow/core:framework
-# Patch apple build scripts
-RUN cp -rf /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch $(bazel info output_base)/external/build_bazel_rules_apple/
-RUN cd $(bazel info output_base)/external/build_bazel_rules_apple/ && patch -p1 < bazel_rules_apple.patch
 
 RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build //src:all
 

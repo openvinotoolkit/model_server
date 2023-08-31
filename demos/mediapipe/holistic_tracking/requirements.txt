@@ -1,0 +1,10 @@
+protobuf==3.20.1
+tritonclient[all]
+requests==2.31.0
+grpcio
+opencv-python
+tensorflow==2.9.0
+tflite2tensorflow
+pandas==1.4.2
+gdown
+tensorflow-datasets
