@@ -119,8 +119,7 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     if args['download_models'] == True:
-        # TODO uncomment when download is available
-        #run_command("curl -kL -o girl.jpeg https://cdn.pixabay.com/photo/2019/03/12/20/39/girl-4051811_960_720.jpg")
+        run_command("curl -kL -o girl.jpeg https://cdn.pixabay.com/photo/2019/03/12/20/39/girl-4051811_960_720.jpg")
         run_command("mkdir -p mediapipe/mediapipe/modules/hand_landmark/")
         run_command("mkdir -p ovms")
         run_command("wget -O mediapipe/mediapipe/modules/hand_landmark/handedness.txt https://raw.githubusercontent.com/openvinotoolkit/mediapipe/main/mediapipe/modules/hand_landmark/handedness.txt")
