@@ -164,7 +164,7 @@ TEST(TFSRestParserRow, ValidShape_1x2) {
 }
 
 TEST(TFSRestParserRow, ValidShape_2x0) {
-    TFSRestParser parser(prepareTensors({{"i", {2, 1}}}, ovms::Precision::I32));
+    TFSRestParser parser(prepareTensors({{"i", {2, 0}}}, ovms::Precision::I32));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
         {"i":[ ]}, {"i":[ ]}

@@ -316,9 +316,17 @@ TEST_F(KFSRestParserTest, parseRequestWithZeroDim) {
     ASSERT_EQ(proto.inputs()[0].name(), "input0");
     ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(10, 224, 0, 3));
     ASSERT_EQ(proto.inputs()[0].datatype(), "INT64");
+    // when data is present, it should be packed here
+    ASSERT_EQ(proto.inputs()[0].contents().int64_contents_size(), 0);
+    // all the containers below should be empty as well
+    // the entire request should contain no data
     ASSERT_EQ(proto.inputs()[0].contents().fp32_contents_size(), 0);
     ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 0);
-    ASSERT_EQ(proto.inputs()[0].contents().int64_contents_size(), 0);  // when data is present, it should be packed here
+    ASSERT_EQ(proto.inputs()[0].contents().int64_contents_size(), 0);
+    ASSERT_EQ(proto.inputs()[0].contents().uint_contents_size(), 0);
+    ASSERT_EQ(proto.inputs()[0].contents().uint64_contents_size(), 0);
+    ASSERT_EQ(proto.inputs()[0].contents().bytes_contents_size(), 0);
+    ASSERT_EQ(proto.inputs()[0].contents().bool_contents_size(), 0);
     ASSERT_EQ(proto.raw_input_contents_size(), 0);
 }
 
