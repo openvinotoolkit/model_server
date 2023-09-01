@@ -639,7 +639,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         if (std::regex_match(request_path, sm, metricsRegex)) {
             std::string params = sm[3];
             if (!params.empty()) {
-                SPDLOG_WARN("Discarded following url parameters: {}", params);
+                SPDLOG_DEBUG("Discarded following url parameters: {}", params);
             }
             requestComponents.type = Metrics;
             return StatusCode::OK;
