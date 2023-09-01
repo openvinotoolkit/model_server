@@ -63,10 +63,8 @@ class FfmpegOutputBackend(OutputBackend):
 
 class CvOutputBackend(OutputBackend):
     def init(self, sink, fps, width, height):
-        self.i = 0
         self.cv_sink = cv2.VideoWriter(sink, cv2.VideoWriter_fourcc(*'avc1'), fps, (width,height))
     def write(self, frame):
-        cv2.imwrite("image_" + str(self.i) + ".jpg", frame)
         self.cv_sink.write(frame)
     def release(self):
         self.cv_sink.release()
@@ -94,9 +92,9 @@ class StreamClient:
             RTSP address in case of ffmpeg backend, filepath in case of cv2 backend.
         output_backend : OutputBackend
             Backed used for presenting postprocessed frames.
-        verbose : nool
+        verbose : bool
             Should client output debug information.
-        exact : nool
+        exact : bool
             Should client push every frame into output backwend.
         """
 
