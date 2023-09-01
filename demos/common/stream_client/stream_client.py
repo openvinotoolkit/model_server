@@ -22,6 +22,24 @@ import tritonclient.grpc as grpcclient
 import subprocess #nosec
 import numpy as np
 
+class Datatype:
+    def dtype(self):
+        pass
+    def string(self):
+        pass
+
+class FP32(Datatype):
+    def dtype(self):
+        return np.float32
+    def string(self):
+        return "FP32"
+
+class UINT8(Datatype):
+    def dtype(self):
+        return np.uint8
+    def string(self):
+        return "UINT8"
+
 class OutputBackend:
     def init(self, sink, fps, width, height):
         pass
@@ -45,8 +63,10 @@ class FfmpegOutputBackend(OutputBackend):
 
 class CvOutputBackend(OutputBackend):
     def init(self, sink, fps, width, height):
+        self.i = 0
         self.cv_sink = cv2.VideoWriter(sink, cv2.VideoWriter_fourcc(*'avc1'), fps, (width,height))
     def write(self, frame):
+        cv2.imwrite("image_" + str(self.i) + ".jpg", frame)
         self.cv_sink.write(frame)
     def release(self):
         self.cv_sink.release()
@@ -56,7 +76,11 @@ class StreamClient:
         ffmpeg = FfmpegOutputBackend()
         cv2 = CvOutputBackend()
         none = OutputBackend()
-    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink : str, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend :OutputBackend = OutputBackends.ffmpeg, verbose = False, exact = True):
+    class Datatypes():
+        fp32 = FP32()
+        uint8 = UINT8()
+
+    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink : str, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend :OutputBackend = OutputBackends.ffmpeg, verbose : bool = True, exact : bool = True):
         """
         Parameters
         ----------
@@ -70,9 +94,9 @@ class StreamClient:
             RTSP address in case of ffmpeg backend, filepath in case of cv2 backend.
         output_backend : OutputBackend
             Backed used for presenting postprocessed frames.
-        verbose : Bool
+        verbose : nool
             Should client output debug information.
-        exact : Bool
+        exact : nool
             Should client push every frame into output backwend.
         """
 
@@ -117,7 +141,8 @@ class StreamClient:
                 if isinstance(entry[1], str) and entry[1] == "EOS":
                     break
                 frame = entry[1]
-                self.output_backend.write(frame)
+                if frame is not None:
+                    self.output_backend.write(frame)
                 if self.exact:
                     i += 1
                 else:
@@ -125,7 +150,7 @@ class StreamClient:
             elif self.exact:
                 self.pq.put(entry)
 
-    def start(self, *, ovms_address : str, input_name : str, model_name : str):
+    def start(self, *, ovms_address : str, input_name : str, model_name : str, datatype : Datatype = FP32(), batch = True):
         """
         Parameters
         ----------
@@ -135,6 +160,10 @@ class StreamClient:
             Name of the model's input
         model_name : str
             Namoe of the model
+        datatype : Datatype
+            Input type of loaded model
+        batch : bool
+            Determines if client should reserve shape dimension for batching
         """
 
         self.cap = cv2.VideoCapture(self.source, cv2.CAP_ANY)
@@ -145,7 +174,7 @@ class StreamClient:
         display_th = threading.Thread(target=self.display)
         display_th.start()
         test_frame = self.grab_frame()
-        np_test_frame = np.array(test_frame, dtype=np.float32)
+        np_test_frame = np.array(test_frame, dtype=datatype.dtype())
         if test_frame is None:
             self. force_exit = True
         else:
@@ -159,8 +188,8 @@ class StreamClient:
         while not self.force_exit:
             frame = self.grab_frame()
             if frame is not None:
-                np_frame = np.array([frame], dtype=np.float32)
-                inputs=[grpcclient.InferInput(input_name, np_frame.shape, "FP32")]
+                np_frame = np.array([frame], dtype=datatype.dtype()) if batch else np.array(frame, dtype=datatype.dtype())
+                inputs=[grpcclient.InferInput(input_name, np_frame.shape, datatype.string())]
                 inputs[0].set_data_from_numpy(np_frame)
                 triton_client.async_infer(
                     model_name=model_name,

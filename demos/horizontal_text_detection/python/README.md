@@ -197,7 +197,7 @@ ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://local
 ```
 
 ```bash
-docker build . -t rtsp_client
+docker build ../../common/stream_client/ -t rtsp_client
 ```
 
 ### Start the client
@@ -205,7 +205,7 @@ docker build . -t rtsp_client
 - Command
 
 ```bash
-docker run rtsp_client --help
+docker run -v $(pwd):/workspace rtsp_client --help
 usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
                       [--input_stream INPUT_STREAM]
                       [--output_stream OUTPUT_STREAM]
@@ -233,7 +233,7 @@ options:
 - Usage example
 
 ```bash
-docker run rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
 
 Then read rtsp stream using ffplay

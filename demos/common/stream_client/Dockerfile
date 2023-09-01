@@ -112,6 +112,5 @@ COPY --from=BASE /fflib /lib/x86_64-linux-gnu/
 RUN apt-get update -qq && apt-get --no-install-recommends -y install python3 python3-pip libavcodec58 libavformat58 libswscale5 libgstreamer-opencv1.0-0 gstreamer1.0* && rm -rf /var/lib/apt/lists/*
 RUN pip3 install tritonclient[grpc] numpy==1.24.3
 RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
-COPY ./rtsp_client.py ./rtsp_client.py 
 COPY ./stream_client.py ./stream_client.py 
-ENTRYPOINT ["python3", "rtsp_client.py"]
+ENTRYPOINT ["python3", "/workspace/rtsp_client.py"]

@@ -76,3 +76,58 @@ python mediapipe_holistic_tracking.py --graph_name irisTracking
 
 ## Output image
 ![output](output_image1.jpg)
+## RTSP Client
+
+Build docker image containing rtsp client along with its dependencies
+The rtsp client app needs to have access to RTSP stream to read from and write to.
+
+Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
+
+Then write to the server using ffmpeg
+
+```bash
+ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
+
+```bash
+docker build ../../common/stream_client/ -t rtsp_client
+```
+
+### Start the client
+
+- Command
+
+```bash
+docker run -v $(pwd):/workspace rtsp_client --help
+usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
+                      [--input_stream INPUT_STREAM]
+                      [--output_stream OUTPUT_STREAM]
+                      [--model_name MODEL_NAME] [--verbose VERBOSE]
+                      [--input_name INPUT_NAME]
+
+options:
+  -h, --help            show this help message and exit
+  --grpc_address GRPC_ADDRESS
+                        Specify url to grpc service
+  --input_stream INPUT_STREAM
+                        Url of input rtsp stream
+  --output_stream OUTPUT_STREAM
+                        Url of output rtsp stream
+  --model_name MODEL_NAME
+                        Name of the model
+  --verbose VERBOSE     Should client dump debug information
+  --input_name INPUT_NAME
+                        Name of the model's input
+```
+
+- Usage example
+
+```bash
+docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+```
+
+Then read rtsp stream using ffplay
+
+```bash
+ffplay -pix_fmt yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+```
