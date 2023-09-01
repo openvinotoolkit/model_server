@@ -26,7 +26,22 @@
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
+#include "../executingstreamidguard.hpp"
 #include "../get_model_metadata_impl.hpp"
+#include "../grpcservermodule.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../localfilesystem.hpp"
+#include "../model.hpp"
+#include "../model_service.hpp"
+#include "../modelinstance.hpp"
+#include "../modelinstanceunloadguard.hpp"
+#include "../modelmanager.hpp"
+#include "../modelversionstatus.hpp"
+#include "../prediction_service_utils.hpp"
+#include "../schema.hpp"
+#include "../sequence_processing_spec.hpp"
+#include "../server.hpp"
+#include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -185,4 +200,135 @@ TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, GraphNotLoadedYet) {
 TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, GraphAvailableOrAvailableRequiringRevalidation) {
     graphDefinition.getGraphDefinitionStatus().handle(ovms::UsedModelChangedEvent());
     EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(graphDefinition, &response), ovms::StatusCode::OK);
+}
+
+const char* dummy_config = R"({
+      "model_config_list":[
+        {
+          "config":{
+            "name":"dummy",
+            "base_path": "/tmp/test_cl_models/model1"
+          }
+        }
+      ]
+    })";
+
+class TestImplGetModelStatus : public ::testing::Test {
+public:
+    ConstructorEnabledModelManager manager;
+    std::string cl_models_path;
+    std::string cl_model_1_path;
+    std::string cl_model_2_path;
+
+    void SetUpSingleModel(std::string modelPath, std::string modelName) {
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)modelPath.data(), (char*)"--model_name", (char*)modelName.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0"};
+        int arg_count = 7;
+        ovms::Config::instance().parse(arg_count, n_argv);
+    }
+
+    void SetUp() {
+        const ::testing::TestInfo* const test_info =
+            ::testing::UnitTest::GetInstance()->current_test_info();
+
+        cl_models_path = "/tmp/" + std::string(test_info->name());
+        cl_model_1_path = cl_models_path + "/model1/";
+        cl_model_2_path = cl_models_path + "/model2/";
+
+        const std::string FIRST_MODEL_NAME = "dummy";
+        const std::string SECOND_MODEL_NAME = "dummy_new";
+
+        std::filesystem::remove_all(cl_models_path);
+        std::filesystem::create_directories(cl_model_1_path);
+    }
+
+    void TearDown() {
+        // Clean up temporary destination
+        std::filesystem::remove_all(cl_models_path);
+    }
+};
+
+TEST_F(TestImplGetModelStatus, NegativeTfsGetModelStatus) {
+    // Create config file with an empty config & reload
+    std::string configStr = dummy_config;
+    configStr = configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+    ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::OK);
+
+    tensorflow::serving::GetModelMetadataRequest req;
+    tensorflow::serving::GetModelMetadataResponse res;
+
+    auto model_spec = req.mutable_model_spec();
+    model_spec->Clear();
+    model_spec->set_name("dummy2");
+    model_spec->mutable_version()->set_value(2);
+    ASSERT_EQ(GetModelMetadataImpl::getModelStatus(&req, &res, manager, DEFAULT_TEST_CONTEXT), StatusCode::MODEL_NAME_MISSING);
+
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+    model_spec->mutable_version()->set_value(2);
+    ASSERT_EQ(GetModelMetadataImpl::getModelStatus(&req, &res, manager, DEFAULT_TEST_CONTEXT), StatusCode::MODEL_VERSION_MISSING);
+
+    model_spec->Clear();
+    model_spec->set_name("dummy");
+    ASSERT_EQ(GetModelMetadataImpl::getModelStatus(&req, &res, manager, DEFAULT_TEST_CONTEXT), StatusCode::MODEL_VERSION_MISSING);
+}
+
+class ServerShutdownGuard {
+    ovms::Server& ovmsServer;
+
+public:
+    ServerShutdownGuard(ovms::Server& ovmsServer) :
+        ovmsServer(ovmsServer) {}
+    ~ServerShutdownGuard() {
+        ovmsServer.shutdownModules();
+    }
+};
+
+TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
+    // Create config file with an empty config & reload
+    std::string configStr = dummy_config;
+    configStr = configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
+    // Copy dummy model to temporary destination
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::OK);
+
+    KFSModelMetadataRequest req;
+    KFSModelMetadataResponse res;
+
+    req.Clear();
+    req.set_name("dummy2");
+    req.set_version("2");
+
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    SetUpSingleModel(cl_models_path, "dummy");
+    auto& config = ovms::Config::instance();
+    auto retCode = server.startModules(config);
+    EXPECT_TRUE(retCode.ok()) << retCode.string();
+    if (!retCode.ok())
+        throw std::runtime_error("Failed to start modules");
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+
+    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata)), StatusCode::MODEL_NAME_MISSING);
+    req.Clear();
+    req.set_name("dummy");
+    req.set_version("2");
+    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata)), StatusCode::MODEL_VERSION_MISSING);
+
+    req.Clear();
+    req.set_name("dummy");
+    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata)), StatusCode::MODEL_VERSION_MISSING);
+
+    req.Clear();
+    req.set_name("dummy");
+    req.set_version("$$");
+    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata)), StatusCode::MODEL_VERSION_INVALID_FORMAT);
 }
