@@ -61,7 +61,7 @@ public:
     /**
          * @brief Construct a new Mediapie Graph configuration object
          *
-         * @param name
+         * @param graphName
          * @param basePath
          * @param graphPath
          * @param subconfigPath
@@ -163,6 +163,26 @@ public:
      */
     const std::string& getRootDirectoryPath() const {
         return this->rootDirectoryPath;
+    }
+
+    bool isReloadRequired(const MediapipeGraphConfig& rhs) const {
+        if (this->graphName != rhs.graphName) {
+            SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to name mismatch", this->graphName);
+            return true;
+        }
+        if (this->basePath != rhs.basePath) {
+            SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to basePath mismatch", this->graphName);
+            return true;
+        }
+        if (this->graphPath != rhs.graphPath) {
+            SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to graphPath mismatch", this->graphName);
+            return true;
+        }
+        if (this->subconfigPath != rhs.subconfigPath) {
+            SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to subconfigPath mismatch", this->graphName);
+            return true;
+        }
+        return false;
     }
 
     /**

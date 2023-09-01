@@ -65,6 +65,7 @@ public:
     const model_version_t getVersion() const { return VERSION; }
     const tensor_map_t getInputsInfo() const;
     const tensor_map_t getOutputsInfo() const;
+    const MediapipeGraphConfig& getMediapipeGraphConfig() { return this->mgconfig; }
 
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
 

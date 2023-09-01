@@ -378,18 +378,28 @@ Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, con
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
         return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
     }
-    if (!factory.definitionExists(config.getGraphName())) {
+
+    MediapipeGraphDefinition * mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
+
+    if (mediapipeGraphDefinition == nullptr) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
         auto status = factory.createDefinition(config.getGraphName(), config, *this);
         mediapipesInConfigFile.insert(config.getGraphName());
         return status;
     }
-    SPDLOG_LOGGER_WARN(modelmanager_logger, "Mediapipe graph:{} is already loaded. Triggering reload", config.getGraphName());
-    auto status = factory.reloadDefinition(config.getGraphName(),
-        config,
-        *this);
+
+    if (mediapipeGraphDefinition->getMediapipeGraphConfig().isReloadRequired(config)) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} triggering reload", config.getGraphName());
+        auto status = factory.reloadDefinition(config.getGraphName(),
+            config,
+            *this);
+        mediapipesInConfigFile.insert(config.getGraphName());
+        return status;
+    }
+
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} already loaded and reload is not required", config.getGraphName());
     mediapipesInConfigFile.insert(config.getGraphName());
-    return status;
+    return StatusCode::OK;
 }
 #endif
 
