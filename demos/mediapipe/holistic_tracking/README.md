@@ -83,7 +83,7 @@ The rtsp client app needs to have access to RTSP stream to read from and write t
 
 Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
 
-Then write to the server using ffmpeg
+Then write to the server using ffmpeg, example using camera
 
 ```bash
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
@@ -122,6 +122,8 @@ options:
 
 - Usage example
 
+### Inference using RTSP stream
+
 ```bash
 docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
@@ -130,4 +132,13 @@ Then read rtsp stream using ffplay
 
 ```bash
 ffplay -pix_fmt yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+```
+
+### Inference using prerecorded video
+
+One might as well use prerecorded video and schedule it for inference.
+Replace horizontal_text.mp4 with your video file.
+
+```bash
+docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/horizontal_text.mp4' --output_stream 'workspace/output.mp4'
 ```
