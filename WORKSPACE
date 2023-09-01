@@ -213,6 +213,7 @@ http_archive(
         # Diff is generated with a script, don't update it manually.
         "@mediapipe//third_party:org_tensorflow_custom_ops.diff",
         "tf.patch",
+        "tf_graph_info_multilinecomment.patch",
     ],
     patch_args = [
         "-p1",

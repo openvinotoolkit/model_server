@@ -45,6 +45,8 @@ MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 
+MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
+
 const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
     std::shared_lock lock(metadataMtx);
     return this->inputsInfo;
@@ -247,6 +249,18 @@ Status MediapipeGraphDefinition::setStreamTypes() {
     for (auto& outputStreamName : this->config.output_stream()) {
         outputTypes.emplace(getStreamNamePair(outputStreamName));
     }
+    bool anyInputTfLite = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
+        const auto& [k, v] = p;
+        return v == mediapipe_packet_type_enum::TFLITETENSOR;
+    });
+    bool anyOutputTfLite = std::any_of(outputTypes.begin(), outputTypes.end(), [](const auto& p) {
+        const auto& [k, v] = p;
+        return v == mediapipe_packet_type_enum::TFLITETENSOR;
+    });
+    if (anyInputTfLite || anyOutputTfLite) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "There is no support for TfLiteTensor deserialization & serialization");
+        return StatusCode::NOT_IMPLEMENTED;
+    }
     bool kfsRequestPass = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
         const auto& [k, v] = p;
         return v == mediapipe_packet_type_enum::KFS_REQUEST;
@@ -343,6 +357,8 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
     return StatusCode::OK;
 }
 
+const std::string EMPTY_STREAM_NAME{""};
+
 std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFullName) {
     std::vector<std::string> tokens = tokenize(streamFullName, ':');
     if (tokens.size() == 2) {
@@ -350,8 +366,7 @@ std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFul
     } else if (tokens.size() == 1) {
         return tokens[0];
     }
-    static std::string empty = "";
-    return empty;
+    return EMPTY_STREAM_NAME;
 }
 
 std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::getStreamNamePair(const std::string& streamFullName) {
@@ -359,6 +374,7 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
         {KFS_REQUEST_PREFIX, mediapipe_packet_type_enum::KFS_REQUEST},
         {KFS_RESPONSE_PREFIX, mediapipe_packet_type_enum::KFS_RESPONSE},
         {TF_TENSOR_PREFIX, mediapipe_packet_type_enum::TFTENSOR},
+        {TFLITE_TENSOR_PREFIX, mediapipe_packet_type_enum::TFLITETENSOR},
         {OV_TENSOR_PREFIX, mediapipe_packet_type_enum::OVTENSOR},
         {MP_TENSOR_PREFIX, mediapipe_packet_type_enum::MPTENSOR},
         {MP_IMAGE_PREFIX, mediapipe_packet_type_enum::MEDIAPIPE_IMAGE}};

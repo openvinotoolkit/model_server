@@ -105,6 +105,20 @@ public:
     }
 };
 
+class MediapipeTensorTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mp_passthrough.json");
+    }
+};
+
+class MediapipeTfLiteTensorTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_tflite_passthrough.json");
+    }
+};
+
 TEST_F(MediapipeTFTest, Passthrough) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -141,14 +155,50 @@ TEST_F(MediapipeTFTest, DummyInfer) {
     checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, modelName);
 }
 
-// Incorrect KServe proto to TFTensor conversion
-TEST_F(MediapipeTFTest, SendDummyInferMoreDataThanExpected) {
+TEST_F(MediapipeTensorTest, DummyInfer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
+    const std::string modelName{"mpTensorDummy"};
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData{13.5, 0., 0, 0., 0., 0., 0., 0, 3., 67.};
+    preparePredictRequest(request, inputsMeta, requestData);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    size_t dummysInTheGraph = 1;
+    checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, modelName);
+}
 
+TEST_F(MediapipeTfLiteTensorTest, DummyInfer) {
+    GTEST_SKIP() << "OVMS calculator doesn't handle TfLite on output. Only vector of TfLite"
+                 << "OVMS deserialization & serialization of TfLiteTensors is not finised as well";
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName{"mpTfLiteTensorDummy"};
+    request.Clear();
+    response.Clear();
+    // TfLite tensors don't hold batch size dimension so we send shape [10] instead of default dummy's [1, 10]
+    inputs_info_t inputsMeta{{"in", {{10}, precision}}};
+    std::vector<float> requestData{13.5, 0., 0, 0., 0., 0., 0., 0, 3., 67.};
+    preparePredictRequest(request, inputsMeta, requestData);
+    request.mutable_model_name()->assign(modelName);
+    EXPECT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    size_t dummysInTheGraph = 1;
+    checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, modelName);
+}
+
+// Incorrect KServe proto to TFTensor conversion
+TEST_F(MediapipeTFTest, SendDummyInferMoreDataThanExpected) {
     const std::string modelName{"mpTFDummy"};
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
     request.Clear();
     response.Clear();
     const size_t numElements = 50000;
@@ -166,7 +216,6 @@ TEST_F(MediapipeTFTest, DummyInferScalar) {
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
-
     const std::string modelName{"mpTFScalar"};
     request.Clear();
     response.Clear();
@@ -189,12 +238,11 @@ TEST_F(MediapipeTFTest, DummyInferScalar) {
 
 // 0-data KServe proto to TFTensor conversion
 TEST_F(MediapipeTFTest, DummyInferZeroData) {
+    const std::string modelName{"mpTFDummy"};
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
-
-    const std::string modelName{"mpTFDummy"};
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {{1, 0}, precision}}};
@@ -1391,7 +1439,17 @@ TEST_F(MediapipeConfig, MediapipeAdd) {
         EXPECT_NE(graphDefinition, nullptr);
         EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
     }
+    manager.join();
+}
 
+TEST_F(MediapipeConfig, MediapipeTfLiteTagsNotSupported) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/config_tflite_passthrough.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName("mpTfLiteTensorDummy");
+    EXPECT_NE(graphDefinition, nullptr);
+    EXPECT_EQ(graphDefinition->getStatus().getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     manager.join();
 }
 
@@ -1413,7 +1471,6 @@ TEST_F(MediapipeConfig, MediapipeDummyWithDag) {
     auto model = manager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-
     manager.join();
 }
 

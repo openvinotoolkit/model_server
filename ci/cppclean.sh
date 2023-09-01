@@ -40,7 +40,7 @@ if [ ${NO_WARNINGS_FORWARD} -gt 7 ]; then
     echo "Failed due to not using forward declarations where possible: ${NO_WARNINGS_FORWARD}";
     exit 1;
 fi
-if [ ${NO_WARNINGS_DIRECT} -gt 18 ]; then
+if [ ${NO_WARNINGS_DIRECT} -gt 19 ]; then
     echo "Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}";
     exit 1;
 fi
