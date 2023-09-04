@@ -63,7 +63,7 @@ docker run -it -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9022:9022 op
 
 ## Run client application
 ```bash
-python mediapipe_holistic_tracking.py
+python mediapipe_holistic_tracking.py --grpc_port 9022
 ```
 
 ## Output image
