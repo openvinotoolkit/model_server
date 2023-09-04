@@ -124,6 +124,14 @@ public:
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
 std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 
+TEST_F(HttpRestApiHandlerTest, MetricsParameters) {
+    std::string request = "/metrics?test=test";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
+    ASSERT_EQ(comp.type, ovms::Metrics);
+}
+
 TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithLongVersion) {
     std::string request = "/v1/models/dummy/versions/72487667423532349025128558057";
     ovms::HttpRequestComponents comp;
