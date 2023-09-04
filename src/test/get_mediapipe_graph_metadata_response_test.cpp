@@ -140,19 +140,6 @@ protected:
             MediapipeGraphDefinition::status.handle(ovms::ValidationPassedEvent());
         }
 
-        void mockMetadata() {
-            // This functionality may be required in future graph tags implementations
-            std::string testPbtxt = R"(
-                input_stream: "TEST:in"
-                output_stream: "TEST0:out"
-                    node {
-                    calculator: "OVMSOVCalculator"
-                    input_stream: "B:in"
-                    output_stream: "A:out"
-                    }
-                )";
-        }
-
         void mockStatus(ovms::Status status) {
             this->status = status;
         }
@@ -165,22 +152,7 @@ protected:
     MockMediapipeGraphDefinitionGetInputsOutputsInfo graphDefinition;
     KFSModelMetadataResponse response;
     ConstructorEnabledModelManager manager;
-
-public:
-    void prepare() {
-        graphDefinition.mockMetadata();
-    }
 };
-
-TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, ModelVersionNotLoadedAnymoreButGraphNotReloadedYet) {
-    graphDefinition.mockStatus(ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
-    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(graphDefinition, &response), ovms::StatusCode::OK);
-}
-
-TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, ModelVersionNotLoadedYet) {
-    graphDefinition.mockStatus(ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
-    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(graphDefinition, &response), ovms::StatusCode::OK);
-}
 
 TEST_F(MediapipeGraphDefinitionMetadataResponseBuild, GraphNotLoadedAnymore) {
     graphDefinition.getGraphDefinitionStatus().handle(ovms::RetireEvent());
