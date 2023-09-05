@@ -1636,6 +1636,28 @@ TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
     manager.join();
 }
 
+TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfig2) {
+    ConstructorEnabledModelManager manager;
+    auto status = manager.startFromFile("src/test/mediapipe/relative_paths/config_relative_add_subconfig.json");
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    EXPECT_NE(definitionFull, nullptr);
+    EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
+    auto model = manager.findModelByName("dummy1");
+    ASSERT_NE(nullptr, model->getDefaultModelInstance());
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
+
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    EXPECT_NE(definitionAdd, nullptr);
+    EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
+    model = manager.findModelByName("dummy2");
+    ASSERT_NE(nullptr, model->getDefaultModelInstance());
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
+
+    manager.join();
+}
+
 TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfigBasePath) {
     ConstructorEnabledModelManager manager;
     auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json");
@@ -1854,7 +1876,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
 
 TEST_F(MediapipeConfigChanges, AddImroperGraphThenFixWithReloadThenBreakAgain) {
     std::string configFileContent = configFileWithGraphPathToReplace;
-    std::string configFilePath = directoryPath + "/subconfig.json";
+    std::string configFilePath = directoryPath + "/config.json";
     std::string graphFilePath = directoryPath + "/graph.pbtxt";
     createConfigFileWithContent(configFileContent, configFilePath);
     createConfigFileWithContent(pbtxtContent, graphFilePath);

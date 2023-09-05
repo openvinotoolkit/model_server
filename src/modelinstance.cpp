@@ -553,6 +553,7 @@ static std::string findFilePathWithExtension(const std::string& path, const std:
 
     while ((entry = readdir(dir)) != nullptr) {
         auto name = std::string(entry->d_name);
+        SPDLOG_DEBUG(name);
         if (endsWith(name, extension)) {
             closedir(dir);
             if (endsWith(name, "/")) {
@@ -755,8 +756,10 @@ void ModelInstance::fetchModelFiles(bool& found, ArrayType ext) {
         found = true;
         modelFiles.clear();
         for (auto extension : ext) {
+            SPDLOG_DEBUG("Getting model files from path2");
             auto file = findModelFilePathWithExtension(extension);
             if (file.empty()) {
+                SPDLOG_DEBUG("Returning false");
                 found = false;
             }
             if (endsWith(file, "saved_model.pb")) {
