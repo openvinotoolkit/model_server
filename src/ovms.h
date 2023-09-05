@@ -32,8 +32,8 @@ typedef struct OVMS_ModelsSettings_ OVMS_ModelsSettings;
 typedef struct OVMS_ServableMetadata_ OVMS_ServableMetadata;
 typedef struct OVMS_Metadata_ OVMS_Metadata;
 
-#define OVMS_API_VERSION_MAJOR 0
-#define OVMS_API_VERSION_MINOR 3
+#define OVMS_API_VERSION_MAJOR 1
+#define OVMS_API_VERSION_MINOR 0
 
 // Function to retrieve OVMS API version.
 //
