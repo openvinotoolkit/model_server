@@ -1820,7 +1820,7 @@ node {
 
 TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     std::string configFileContent = configFileWithGraphPathToReplace;
-    std::string configFilePath = directoryPath + "/subconfig.json";
+    std::string configFilePath = directoryPath + "/config.json";
     std::string graphFilePath = directoryPath + "/graph.pbtxt";
     const std::string modelPathToReplace{"XYZ"};
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);

@@ -16,15 +16,9 @@
 #pragma once
 
 #include <string>
-
 #include <rapidjson/document.h>
-#include <rapidjson/istreamwrapper.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#include <spdlog/spdlog.h>
 
 #include "../status.hpp"
-#include "../filesystem.hpp"
 
 namespace ovms {
 
@@ -71,6 +65,7 @@ public:
          * @param basePath
          * @param graphPath
          * @param subconfigPath
+         * @param currentGraphPbTxtMD5
          */
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
@@ -132,6 +127,13 @@ public:
     void setGraphPath(const std::string& graphPath);
 
     /**
+         * @brief Set the Base Path using RootDirectoryPath (when base_path is not defined)
+         *
+         * @param basePath
+         */
+    void setBasePathWithRootPath();
+
+    /**
          * @brief Set the Base Path
          *
          * @param basePath
@@ -176,83 +178,13 @@ public:
         this->currentGraphPbTxtMD5 = currentGraphPbTxtMD5;
     }
 
-    bool isReloadRequired(const MediapipeGraphConfig& rhs) const {
-
-        // Checking OVMS configuration part
-        if (this->graphName != rhs.graphName) {
-            SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to name mismatch", this->graphName);
-            return true;
-        }
-        if (this->basePath != rhs.basePath) {
-            SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to basePath mismatch", this->graphName);
-            return true;
-        }
-        if (this->graphPath != rhs.graphPath) {
-            SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to graphPath mismatch", this->graphName);
-            return true;
-        }
-        if (this->subconfigPath != rhs.subconfigPath) {
-            SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to subconfigPath mismatch", this->graphName);
-            return true;
-        }
-        
-        // Checking if graph pbtxt has been modified
-        if (currentGraphPbTxtMD5 != "") {
-            std::string newGraphPbTxtMD5 = FileSystem::getFileMD5(rhs.graphPath);
-            if (newGraphPbTxtMD5 != currentGraphPbTxtMD5) {
-                SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to graph definition modification", this->graphName);
-                return true;
-            }
-        }
-        return false;
-    }
+    bool isReloadRequired(const MediapipeGraphConfig& rhs) const;
 
     /**
-     * @brief  Parses all settings from a JSON node
-        *
-        * @return Status
-        */
-    Status parseNode(const rapidjson::Value& v) {
-        try {
-            this->setGraphName(v["name"].GetString());
-            if (v.HasMember("base_path")) {
-                std::string providedBasePath(v["base_path"].GetString());
-                if (providedBasePath.back() == '/')
-                    this->setBasePath(providedBasePath);
-                else
-                    this->setBasePath(providedBasePath + "/");
-            } else {
-                if (!getRootDirectoryPath().empty()) {
-                    this->setBasePath(getRootDirectoryPath());
-                    SPDLOG_DEBUG("base_path not defined in config so it will be set to default based on main config directory: {}", this->getBasePath());
-                } else {
-                    SPDLOG_ERROR("Mediapipe {} root directory path is not set.", getGraphName());
-                    return StatusCode::INTERNAL_ERROR;
-                }
-            }
-            if (v.HasMember("graph_path")) {
-                this->setGraphPath(v["graph_path"].GetString());
-            } else {
-                this->setGraphPath(basePath + "graph.pbtxt");
-                SPDLOG_DEBUG("graph_path not defined in config so it will be set to default based on base_path and graph name: {}", this->getGraphPath());
-            }
-            this->setCurrentGraphPbTxtMD5(FileSystem::getFileMD5(this->graphPath));
-
-            if (v.HasMember("subconfig")) {
-                this->setSubconfigPath(v["subconfig"].GetString());
-            } else {
-                std::string defaultSubconfigPath = getBasePath() + "subconfig.json";
-                SPDLOG_DEBUG("No subconfig path was provided for graph: {} so default subconfig file: {} will be loaded.", getGraphName(), defaultSubconfigPath);
-                this->setSubconfigPath("subconfig.json");
-            }
-        } catch (std::logic_error& e) {
-            SPDLOG_DEBUG("Relative path error: {}", e.what());
-            return StatusCode::INTERNAL_ERROR;
-        } catch (...) {
-            SPDLOG_ERROR("There was an error parsing the mediapipe graph config");
-            return StatusCode::JSON_INVALID;
-        }
-        return StatusCode::OK;
-    }
+    * @brief  Parses all settings from a JSON node
+    *
+    * @return Status
+    */
+    Status parseNode(const rapidjson::Value& v);
 };
 }  // namespace ovms

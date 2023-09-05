@@ -65,7 +65,7 @@ public:
     const model_version_t getVersion() const { return VERSION; }
     const tensor_map_t getInputsInfo() const;
     const tensor_map_t getOutputsInfo() const;
-    const MediapipeGraphConfig& getMediapipeGraphConfig() { return this->mgconfig; }
+    const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
 
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
 
@@ -75,6 +75,8 @@ public:
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
+
+    bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
     static const std::string SCHEDULER_CLASS_NAME;

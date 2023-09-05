@@ -387,7 +387,7 @@ Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, con
         return status;
     }
 
-    if (mediapipeGraphDefinition->getMediapipeGraphConfig().isReloadRequired(config)) {
+    if (mediapipeGraphDefinition->isReloadRequired(config)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} triggering reload", config.getGraphName());
         auto status = factory.reloadDefinition(config.getGraphName(),
             config,
@@ -786,19 +786,11 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
 #if (MEDIAPIPE_DISABLE == 0)
     for (auto mediapipeConfig : mediapipesInConfigFile) {
         std::string subconfigPath = mediapipeConfig.getSubconfigPath();
-        if (subconfigPath.empty()) {
-            std::string defaultSubconfigPath = mediapipeConfig.getBasePath() + "subconfig.json";
-            std::ifstream ifs(defaultSubconfigPath);
-            if (!ifs.is_open()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "No subconfig path was provided for graph: {} and defualt subconfig file does not exist.", mediapipeConfig.getGraphName());
-                continue;
-            }
-            subconfigPath = defaultSubconfigPath;
-        }
         rapidjson::Document mediapipeConfigJson;
         std::ifstream ifs(subconfigPath);
         if (!ifs.is_open()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.", subconfigPath, subconfigPath);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.", 
+                                subconfigPath, mediapipeConfig.getGraphName());
             continue;
         }
         rapidjson::Document subconfigJson;
