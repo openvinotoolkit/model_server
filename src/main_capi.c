@@ -44,8 +44,8 @@ int main() {
         uint32_t code = 0;
         const char* details = 0;
 
-        OVMS_StatusGetCode(res, &code);
-        OVMS_StatusGetDetails(res, &details);
+        OVMS_StatusCode(res, &code);
+        OVMS_StatusDetails(res, &details);
 
         fprintf(stderr, "error during start: code %d, details: %s\n", code, details);
 
@@ -82,8 +82,8 @@ int main() {
         uint32_t code = 0;
         const char* details = 0;
 
-        OVMS_StatusGetCode(res, &code);
-        OVMS_StatusGetDetails(res, &details);
+        OVMS_StatusCode(res, &code);
+        OVMS_StatusDetails(res, &details);
 
         fprintf(stderr, "error during inference: code %d, details: %s\n", code, details);
 
@@ -98,14 +98,14 @@ int main() {
     }
 
     const char* oName = NULL;  // not needed
-    OVMS_DataType oType;  // not needed
-    const int64_t* oShape;  // not needed
-    size_t oDims;  // not needed
+    OVMS_DataType oType;       // not needed
+    const int64_t* oShape;     // not needed
+    size_t oDims;              // not needed
     const void* oData = NULL;
     size_t oNumBytes = 0;
     OVMS_BufferType oBuffType;  // not needed
-    uint32_t oDeviceId;  // not needed
-    OVMS_InferenceResponseGetOutput(response, 0, &oName, &oType, &oShape, &oDims, &oData, &oNumBytes, &oBuffType, &oDeviceId);
+    uint32_t oDeviceId;         // not needed
+    OVMS_InferenceResponseOutput(response, 0, &oName, &oType, &oShape, &oDims, &oData, &oNumBytes, &oBuffType, &oDeviceId);
 
     float expectedOutput[DATA_SIZE];
     for (int i = 0; i < NUM_ELEMENTS; i++) {

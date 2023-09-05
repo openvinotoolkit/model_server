@@ -994,7 +994,7 @@ TEST(Mediapipe, AdapterRTInfo) {
     ASSERT_CAPI_STATUS_NULL(OVMS_GetServableMetadata(cserver, mockedModelName.c_str(), servableVersion, &servableMetadata));
 
     const ov::AnyMap* servableMetadataRtInfo;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
     ASSERT_NE(nullptr, servableMetadataRtInfo);
     checkModelInfo(*servableMetadataRtInfo);
     OVMS_ServableMetadataDelete(servableMetadata);
