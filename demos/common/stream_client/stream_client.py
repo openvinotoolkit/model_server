@@ -49,11 +49,11 @@ class OutputBackend:
         pass
 
 class FfmpegOutputBackend(OutputBackend):
-    def init(self, sink, fps, width, height):
+    def init(self, sink, fps, width, height, bitrate : int = 1000):
         args = (
             "ffmpeg -re -stream_loop -1 -f rawvideo -err_detect aggressive -fflags discardcorrupt -pix_fmt "
                 f"bgr24 -r {fps} -s {width}x{height} -i pipe:0 -cpu-used 6 -avioflags direct -deadline realtime -pix_fmt yuv420p -c:v libvpx -muxdelay 0.1 "
-            f"-b:v 90k -f rtsp {sink}"
+            f"-b:v {bitrate}k -f rtsp {sink}"
         ).split()
         self.process = subprocess.Popen(args, stdin=subprocess.PIPE) #nosec
     def write(self, frame):
@@ -177,9 +177,9 @@ class StreamClient:
             self. force_exit = True
         else:
             if self.width is None:
-                self.width = np_test_frame.shape[0]
+                self.width = np_test_frame.shape[1]
             if self.height is None:
-                self.height = np_test_frame.shape[1]
+                self.height = np_test_frame.shape[0]
         self.output_backend.init(self.sink, fps, self.width, self.height)
             
         i = 0
