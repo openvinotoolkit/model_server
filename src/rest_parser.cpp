@@ -187,7 +187,7 @@ bool TFSRestParser::parseInstance(rapidjson::Value& doc) {
                 return false;
             }
         } else {
-            // If previous iterations already added instances (bateches)
+            // If previous iterations already added instances (batches)
             // and those were non-arrays it means we have incorrect json
             if (proto.tensor_shape().dim(0).size() > 1 &&
                 proto.tensor_shape().dim_size() == 1) {
