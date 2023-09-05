@@ -718,8 +718,12 @@ Status HttpRestApiHandler::processPredictRequest(
 
     timer.stop(TOTAL);
     double requestTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
-    OBSERVE_IF_ENABLED(reporterOut->requestTimeRest, requestTime);
     SPDLOG_DEBUG("Total REST request processing time: {} ms", requestTime / 1000);
+    if (!reporterOut) {
+        return StatusCode::OK;
+        // TODO fix after Mediapipe metrics implementation
+    }
+    OBSERVE_IF_ENABLED(reporterOut->requestTimeRest, requestTime);
     return StatusCode::OK;
 }
 
