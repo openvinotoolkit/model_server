@@ -60,7 +60,6 @@
 #include "metric_config.hpp"
 #include "metric_registry.hpp"
 #include "modelinstance.hpp"  // for logging
-#include "openssl/md5.h"
 #include "ov_utils.hpp"
 #include "s3filesystem.hpp"
 #include "schema.hpp"
@@ -886,7 +885,7 @@ public:
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
-    lastConfigFileMD5 = getConfigFileMD5();
+    lastConfigFileMD5 = FileSystem::getFileMD5(configFilename);
     rapidjson::Document configJson;
 
     uint16_t counter = 0;
@@ -1050,24 +1049,6 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
     }
 }
 
-std::string ModelManager::getConfigFileMD5() {
-    std::ifstream ifs;
-    ifs.open(configFilename);
-    std::stringstream strStream;
-    strStream << ifs.rdbuf();
-    std::string str = strStream.str();
-    ifs.close();
-
-    unsigned char result[MD5_DIGEST_LENGTH];
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    MD5((unsigned char*)str.c_str(), str.size(), result);
-#pragma GCC diagnostic pop
-
-    std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
-    return (md5sum);
-}
-
 Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
 
@@ -1077,7 +1058,7 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
         return StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED;
     }
 
-    std::string newmd5 = getConfigFileMD5();
+    std::string newmd5 = FileSystem::getFileMD5(configFilename);
     bool configFileModified = false;
     if (lastConfigFileMD5 != newmd5) {
         configFileModified = true;

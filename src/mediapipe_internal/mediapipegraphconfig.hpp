@@ -24,6 +24,7 @@
 #include <spdlog/spdlog.h>
 
 #include "../status.hpp"
+#include "../filesystem.hpp"
 
 namespace ovms {
 
@@ -57,6 +58,11 @@ private:
      */
     std::string subconfigPath;
 
+    /**
+     * @brief MD5 hash for graph pbtxt file
+     */
+    std::string currentGraphPbTxtMD5;
+
 public:
     /**
          * @brief Construct a new Mediapie Graph configuration object
@@ -69,11 +75,12 @@ public:
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
         const std::string& graphPath = "",
-        const std::string& subconfigPath = "") :
+        const std::string& subconfigPath = "",
+        const std::string& currentGraphPbTxtMD5 = "") :
         graphName(graphName),
         basePath(basePath),
         graphPath(graphPath),
-        subconfigPath(subconfigPath) {
+        currentGraphPbTxtMD5(currentGraphPbTxtMD5) {
     }
 
     void clear() {
@@ -165,7 +172,13 @@ public:
         return this->rootDirectoryPath;
     }
 
+    void setCurrentGraphPbTxtMD5(const std::string& currentGraphPbTxtMD5) {
+        this->currentGraphPbTxtMD5 = currentGraphPbTxtMD5;
+    }
+
     bool isReloadRequired(const MediapipeGraphConfig& rhs) const {
+
+        // Checking OVMS configuration part
         if (this->graphName != rhs.graphName) {
             SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to name mismatch", this->graphName);
             return true;
@@ -181,6 +194,15 @@ public:
         if (this->subconfigPath != rhs.subconfigPath) {
             SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to subconfigPath mismatch", this->graphName);
             return true;
+        }
+        
+        // Checking if graph pbtxt has been modified
+        if (currentGraphPbTxtMD5 != "") {
+            std::string newGraphPbTxtMD5 = FileSystem::getFileMD5(rhs.graphPath);
+            if (newGraphPbTxtMD5 != currentGraphPbTxtMD5) {
+                SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to graph definition modification", this->graphName);
+                return true;
+            }
         }
         return false;
     }
@@ -214,12 +236,14 @@ public:
                 this->setGraphPath(basePath + "graph.pbtxt");
                 SPDLOG_DEBUG("graph_path not defined in config so it will be set to default based on base_path and graph name: {}", this->getGraphPath());
             }
+            this->setCurrentGraphPbTxtMD5(FileSystem::getFileMD5(this->graphPath));
+
             if (v.HasMember("subconfig")) {
                 this->setSubconfigPath(v["subconfig"].GetString());
             } else {
                 std::string defaultSubconfigPath = getBasePath() + "subconfig.json";
                 SPDLOG_DEBUG("No subconfig path was provided for graph: {} so default subconfig file: {} will be loaded.", getGraphName(), defaultSubconfigPath);
-                this->setSubconfigPath(defaultSubconfigPath);
+                this->setSubconfigPath("subconfig.json");
             }
         } catch (std::logic_error& e) {
             SPDLOG_DEBUG("Relative path error: {}", e.what());
