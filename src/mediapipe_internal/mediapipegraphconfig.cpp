@@ -13,16 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "mediapipegraphconfig.hpp"
+
 #include <string>
+
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
-#include "mediapipegraphconfig.hpp"
-
-#include "../status.hpp"
 #include "../filesystem.hpp"
+#include "../status.hpp"
 
 namespace ovms {
 
@@ -46,7 +47,6 @@ void MediapipeGraphConfig::setSubconfigPath(const std::string& subconfigPath) {
 }
 
 bool MediapipeGraphConfig::isReloadRequired(const MediapipeGraphConfig& rhs) const {
-
     // Checking OVMS configuration part
     if (this->graphName != rhs.graphName) {
         SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to name mismatch", this->graphName);
@@ -64,7 +64,6 @@ bool MediapipeGraphConfig::isReloadRequired(const MediapipeGraphConfig& rhs) con
         SPDLOG_DEBUG("MediapipeGraphConfig {} reload required due to subconfigPath mismatch", this->graphName);
         return true;
     }
-    
     // Checking if graph pbtxt has been modified
     if (currentGraphPbTxtMD5 != "") {
         std::string newGraphPbTxtMD5 = FileSystem::getFileMD5(rhs.graphPath);

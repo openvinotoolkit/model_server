@@ -1542,7 +1542,6 @@ node {
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
 }
 
-
 class MediapipeConfig : public MediapipeFlowTest {
 public:
     void TearDown() override {}
@@ -1552,7 +1551,7 @@ const std::string NAME = "Name";
 TEST_P(MediapipeConfig, MediapipeGraphDefinitionNonExistentFile) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
-    std::replace(basePath.begin(), basePath.end(),'X', '/');
+    std::replace(basePath.begin(), basePath.end(), 'X', '/');
     MediapipeGraphConfig mgc{"noname", basePath + "NONEXISTENT_FILE"};
     MediapipeGraphDefinition mgd(NAME, mgc);
     EXPECT_EQ(mgd.validate(manager), StatusCode::FILE_INVALID);
@@ -1561,7 +1560,7 @@ TEST_P(MediapipeConfig, MediapipeGraphDefinitionNonExistentFile) {
 TEST_P(MediapipeConfig, MediapipeAdd) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
-    std::replace(basePath.begin(), basePath.end(),'X', '/');
+    std::replace(basePath.begin(), basePath.end(), 'X', '/');
     auto status = manager.startFromFile(basePath + "test/mediapipe/config_mediapipe_add_adapter_full.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
@@ -1577,7 +1576,7 @@ TEST_P(MediapipeConfig, MediapipeAdd) {
 TEST_P(MediapipeConfig, MediapipeDummyWithDag) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
-    std::replace(basePath.begin(), basePath.end(),'X', '/');
+    std::replace(basePath.begin(), basePath.end(), 'X', '/');
     auto status = manager.startFromFile(basePath + "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
@@ -1601,7 +1600,7 @@ TEST_P(MediapipeConfig, MediapipeDummyWithDag) {
 TEST_P(MediapipeConfig, MediapipeFullRelativePaths) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
-    std::replace(basePath.begin(), basePath.end(),'X', '/');
+    std::replace(basePath.begin(), basePath.end(), 'X', '/');
     auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
@@ -1619,7 +1618,7 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePaths) {
 TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
-    std::replace(basePath.begin(), basePath.end(),'X', '/');
+    std::replace(basePath.begin(), basePath.end(), 'X', '/');
     auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_add_subconfig.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
@@ -1643,7 +1642,7 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
 TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfigBasePath) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
-    std::replace(basePath.begin(), basePath.end(),'X', '/');
+    std::replace(basePath.begin(), basePath.end(), 'X', '/');
     auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
@@ -1667,7 +1666,7 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfigBasePath) {
 TEST_P(MediapipeConfig, MediapipeFullRelativePathsNegative) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
-    std::replace(basePath.begin(), basePath.end(),'X', '/');
+    std::replace(basePath.begin(), basePath.end(), 'X', '/');
     auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy_negative.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
@@ -1863,7 +1862,6 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
     EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
-
 
     // now change the input name in graph.pbtxt and trigger config reload
     graphPbtxtFileContent.replace(pbtxtContent.find(inputName), inputName.size(), newInputName);

@@ -16,11 +16,12 @@
 #pragma once
 
 #include <string>
+
 #include <rapidjson/document.h>
 
-#include "../status.hpp"
-
 namespace ovms {
+
+class Status;
 
 /**
      * @brief This class represents Mediapie Graph configuration

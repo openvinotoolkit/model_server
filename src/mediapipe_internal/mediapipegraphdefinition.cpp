@@ -312,7 +312,7 @@ void MediapipeGraphDefinition::retire(ModelManager& manager) {
 
 bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& config) const {
     if (getStateCode() == PipelineDefinitionStateCode::RETIRED) {
-        SPDLOG_DEBUG("Reloading previously retired mediapipe definition: {}", getName());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading previously retired mediapipe definition: {}", getName());
         return true;
     }
     return getMediapipeGraphConfig().isReloadRequired(config);

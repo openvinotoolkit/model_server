@@ -25,8 +25,8 @@
 #include <spdlog/spdlog.h>
 
 #include "model_version_policy.hpp"
-#include "status.hpp"
 #include "openssl/md5.h"
+#include "status.hpp"
 
 namespace ovms {
 
@@ -236,7 +236,7 @@ public:
 
         return joined;
     }
-    
+
     static std::string getFileMD5(const std::string& filename) {
         std::ifstream ifs;
         ifs.open(filename);
@@ -246,10 +246,10 @@ public:
         ifs.close();
 
         unsigned char result[MD5_DIGEST_LENGTH];
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         MD5((unsigned char*)str.c_str(), str.size(), result);
-    #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
 
         std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
         return (md5sum);

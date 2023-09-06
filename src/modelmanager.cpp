@@ -378,7 +378,7 @@ Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, con
         return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
     }
 
-    MediapipeGraphDefinition * mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
+    MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
 
     if (mediapipeGraphDefinition == nullptr) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
@@ -789,8 +789,8 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         rapidjson::Document mediapipeConfigJson;
         std::ifstream ifs(subconfigPath);
         if (!ifs.is_open()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.", 
-                                subconfigPath, mediapipeConfig.getGraphName());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
+                subconfigPath, mediapipeConfig.getGraphName());
             continue;
         }
         rapidjson::Document subconfigJson;
