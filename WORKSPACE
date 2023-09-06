@@ -89,7 +89,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "c839182d40daae7270a29feba5bedd6330ccc2f8", # Cleanup and switch to tflite object detection (#16)
+    commit = "54696469b496be5eaed700b8c9721a349c224d65", # tmp branch: mediapipie_examples
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
