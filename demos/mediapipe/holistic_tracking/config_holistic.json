@@ -35,12 +35,22 @@
                 "base_path":"/models/pose_landmark_full",
                 "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
             }
+        },
+        { "config": {
+            "name":"iris_landmark",
+            "base_path":"/models/iris_landmark",
+            "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
         }
+    }
     ],
     "mediapipe_config_list": [
         {
             "name":"holisticTracking",
             "graph_path":"holistic_tracking.pbtxt"
+        },
+        {
+            "name":"irisTracking",
+            "graph_path":"iris_tracking.pbtxt"
         }
     ]
 }
