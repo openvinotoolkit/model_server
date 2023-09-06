@@ -96,6 +96,13 @@ const grpc::Status grpc(const Status& status) {
         {StatusCode::MODEL_VERSION_NOT_LOADED_YET, grpc::StatusCode::UNAVAILABLE},
         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::UNAVAILABLE},
         {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::UNAVAILABLE},
+        // UNKNOWN
+        {StatusCode::MEDIAPIPE_EXECUTION_ERROR, grpc::StatusCode::UNKNOWN},
+        {StatusCode::MEDIAPIPE_GRAPH_START_ERROR, grpc::StatusCode::UNKNOWN},
+        {StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, grpc::StatusCode::UNKNOWN},
+        {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, grpc::StatusCode::UNKNOWN},
+        {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, grpc::StatusCode::UNKNOWN},
+        {StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, grpc::StatusCode::UNKNOWN},
     };
     auto it = grpcStatusMap.find(status.getCode());
     if (it != grpcStatusMap.end()) {
