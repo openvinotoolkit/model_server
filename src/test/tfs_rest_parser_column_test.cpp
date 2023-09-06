@@ -148,6 +148,20 @@ TEST(TFSRestParserColumn, ValidShape_1x2) {
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 56.0));
 }
 
+TEST(TFSRestParserColumn, ValidShape_0) {
+    TFSRestParser parser(prepareTensors({{"i", {0}}}, ovms::Precision::FP32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":[]
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_FLOAT);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+}
+
 TEST(TFSRestParserColumn, ValidShape_2x1) {
     TFSRestParser parser(prepareTensors({{"i", {2, 1}}}));
 
@@ -172,6 +186,20 @@ TEST(TFSRestParserColumn, ValidShape_2x2) {
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
     EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 2));
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 9.0, 513.0, -5.0));
+}
+
+TEST(TFSRestParserColumn, ValidShape_2x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 0}}}, ovms::Precision::I64));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":[[],[]]
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_INT64);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
 }
 
 TEST(TFSRestParserColumn, ValidShape_2x1x3) {
@@ -246,6 +274,27 @@ TEST(TFSRestParserColumn, ValidShape_2x1x3x1x5) {
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9));
+}
+
+TEST(TFSRestParserColumn, ValidShape_2x1x3x1x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 0}}}, ovms::Precision::FP32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i": [
+            [[[[ ]],
+            [[ ]],
+            [[ ]]]],
+            [[[[ ]],
+            [[ ]],
+            [[ ]]]]
+        ]
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3, 1, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_FLOAT);
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
 }
 
 TEST(TFSRestParserColumn, ValidScalar) {

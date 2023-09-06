@@ -59,6 +59,35 @@ TEST(TFSRestParserNoNamed, RowOrder_2x1x3x1x5) {
                                                                 1, 2, 3, 4, 5));
 }
 
+TEST(TFSRestParserNoNamed, RowOrder_2x1x3x1x0) {
+    TFSRestParser parser(prepareTensors({{"my_input", {2, 1, 3, 1, 5}}}, ovms::Precision::I32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        [
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ],
+        [
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ]
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NONAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("my_input"), 1);
+    EXPECT_EQ(parser.getProto().inputs().at("my_input").dtype(), tensorflow::DT_INT32);
+    const auto& my_input = parser.getProto().inputs().at("my_input");
+    EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre(2, 1, 3, 1, 0));
+    EXPECT_EQ(my_input.tensor_content().size(), 0);
+}
+
 TEST(TFSRestParserNoNamed, Parse2InputsRow) {
     TFSRestParser parser(prepareTensors({{"first", {2}}, {"second", {3}}}));
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
@@ -153,6 +182,35 @@ TEST(TFSRestParserNoNamed, ColumnOrder_2x1x3x1x5) {
                                                                 1, 2, 3, 4, 5,
                                                                 1, 2, 3, 4, 5,
                                                                 1, 2, 3, 4, 5));
+}
+
+TEST(TFSRestParserNoNamed, ColumnOrder_2x1x3x1x0) {
+    TFSRestParser parser(prepareTensors({{"my_input", {2, 1, 3, 1, 5}}}, ovms::Precision::FP32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":[
+        [
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ],
+        [
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ]
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NONAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("my_input"), 1);
+    const auto& my_input = parser.getProto().inputs().at("my_input");
+    EXPECT_EQ(my_input.dtype(), tensorflow::DT_FLOAT);
+    EXPECT_THAT(asVector(my_input.tensor_shape()), ElementsAre(2, 1, 3, 1, 0));
+    EXPECT_EQ(my_input.tensor_content().size(), 0);
 }
 
 TEST(TFSRestParserNoNamed, ColumnOrder_1d_5elements) {

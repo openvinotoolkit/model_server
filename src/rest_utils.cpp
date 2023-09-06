@@ -53,8 +53,6 @@ enum : unsigned int {
 namespace ovms {
 
 static Status checkValField(const size_t& fieldSize, const size_t& expectedElementsNumber) {
-    if (fieldSize == 0)
-        return StatusCode::REST_SERIALIZE_NO_DATA;
     if (fieldSize != expectedElementsNumber)
         return StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE;
     return StatusCode::OK;

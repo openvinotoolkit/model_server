@@ -190,7 +190,6 @@ enum class StatusCode {
     REST_UNSUPPORTED_PRECISION,                   /*!< Unsupported conversion from tensor_content to _val container */
     REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE,   /*!< Size of data in tensor_content does not match declared tensor shape */
     REST_SERIALIZE_VAL_FIELD_INVALID_SIZE,        /*!< Number of elements in xxx_val field does not match declared tensor shape */
-    REST_SERIALIZE_NO_DATA,                       /*!< No data found in tensor_content or xxx_val field matching tensor dtype */
     REST_BINARY_DATA_SIZE_PARAMETER_INVALID,      /*!< binary_data_size parameter is invalid and cannot be parsed*/
     REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID, /*!< inferenceHeaderContentLength parameter is invalid and cannot be parsed*/
     REST_BINARY_BUFFER_EXCEEDED,                  /*!< Received buffer size is smaller than binary_data_size parameter indicates*/
