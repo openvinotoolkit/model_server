@@ -38,9 +38,9 @@ def run_command(command):
 
 def convert_pose():
     print("Converting pose detection model")
-    #run_command("wget https://github.com/PINTO0309/tflite2tensorflow/raw/main/schema/schema.fbs")
-    #run_command("git clone -b v2.0.8 https://github.com/google/flatbuffers.git")
-    #run_command("bash build_dependencies.sh")
+    run_command("wget https://github.com/PINTO0309/tflite2tensorflow/raw/main/schema/schema.fbs")
+    run_command("git clone -b v2.0.8 https://github.com/google/flatbuffers.git")
+    run_command("bash build_dependencies.sh")
     run_command("cp -r  ovms/pose_detection/1/pose_detection.tflite .")
     run_command("tflite2tensorflow --model_path pose_detection.tflite --flatc_path flatbuffers/build/flatc --schema_path schema.fbs --output_pb")
     run_command("tflite2tensorflow --model_path pose_detection.tflite --flatc_path flatbuffers/build/flatc --schema_path schema.fbs --output_no_quant_float32_tflite   --output_dynamic_range_quant_tflite   --output_weight_quant_tflite   --output_float16_quant_tflite   --output_integer_quant_tflite")
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     parser.add_argument('--batchsize', default=1,
                         help='Number of images in a single request. default: 1',
                         dest='batchsize')
-    parser.add_argument('--graph_name', default='holisticTracking', help='Define graph name, must be same as is in service. default: holisticTracking, also available: irisTracking',
+    parser.add_argument('--graph_name', default='holisticTracking', help='Define graph name, must be same as is in service. default: holisticTracking, also available: holisticTracking, irisTracking',
                         dest='graph_name')
     parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with GRPC endpoint')
 
@@ -119,15 +119,14 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     if args['download_models'] == True:
-        # TODO uncomment when download is available
-        #run_command("curl -kL -o girl.jpeg https://cdn.pixabay.com/photo/2019/03/12/20/39/girl-4051811_960_720.jpg")
-        #run_command("mkdir -p mediapipe/mediapipe/modules/hand_landmark/")
-        #run_command("mkdir -p ovms")
-        #run_command("wget -O mediapipe/mediapipe/modules/hand_landmark/handedness.txt https://raw.githubusercontent.com/openvinotoolkit/mediapipe/main/mediapipe/modules/hand_landmark/handedness.txt")
-        #run_command("cp config_holistic.json ovms/")
-        #run_command("cp iris_tracking.pbtxt ovms/")
-        #run_command("cp holistic_tracking.pbtxt ovms/")
-        #prepare_models()
+        run_command("curl -kL -o girl.jpeg https://cdn.pixabay.com/photo/2019/03/12/20/39/girl-4051811_960_720.jpg")
+        run_command("mkdir -p mediapipe/mediapipe/modules/hand_landmark/")
+        run_command("mkdir -p ovms")
+        run_command("wget -O mediapipe/mediapipe/modules/hand_landmark/handedness.txt https://raw.githubusercontent.com/openvinotoolkit/mediapipe/main/mediapipe/modules/hand_landmark/handedness.txt")
+        run_command("cp config_holistic.json ovms/")
+        run_command("cp iris_tracking.pbtxt ovms/")
+        run_command("cp holistic_tracking.pbtxt ovms/")
+        prepare_models()
         convert_pose()
         print("All files and models are prepared.")
         exit(0)
