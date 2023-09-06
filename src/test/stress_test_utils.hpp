@@ -1704,8 +1704,8 @@ public:
         ASSERT_NE(nullptr, servableMetadata);
         uint32_t inputCount = 42;
         uint32_t outputCount = 42;
-        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInputCount(servableMetadata, &inputCount));
-        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetOutputCount(servableMetadata, &outputCount));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataInputCount(servableMetadata, &inputCount));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataOutputCount(servableMetadata, &outputCount));
         auto expectedInputs = getExpectedInputsInfo();
         ASSERT_EQ(expectedInputs.size(), inputCount);
         ASSERT_EQ(1, outputCount);
@@ -1717,7 +1717,7 @@ public:
         const char* tensorName{nullptr};
         std::set<std::string> inputNames;
         std::set<std::string> outputNames;
-        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataGetInput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataInput(servableMetadata, id, &tensorName, &datatype, &dimCount, &shapeMin, &shapeMax));
         EXPECT_EQ(std::string(tensorName), std::string("custom_dummy_input"));
         EXPECT_EQ(datatype, (OVMS_DataType)2);
         EXPECT_EQ(dimCount, 2);
@@ -1730,7 +1730,6 @@ public:
         const std::set<StatusCode>& requiredLoadResults,
         const std::set<StatusCode>& allowedLoadResults,
         std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
-        tensorflow::serving::GetModelMetadataRequest request;
         startSignal.get();
         // stressIterationsCounter is additional safety measure
         auto stressIterationsCounter = stressIterationsLimit;
@@ -1743,7 +1742,7 @@ public:
             OVMS_ServableMetadata* servableMetadata = nullptr;
             OVMS_Status* status = OVMS_GetServableMetadata(this->cserver, "pipeline1Dummy", 0, &servableMetadata);
             uint32_t code = 0;
-            OVMS_Status* codeStatus = OVMS_StatusGetCode(status, &code);
+            OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
             StatusCode sc;
             if (codeStatus != nullptr) {
                 sc = static_cast<StatusCode>(StatusCode::OK);
@@ -1769,7 +1768,6 @@ public:
         const std::set<StatusCode>& requiredLoadResults,
         const std::set<StatusCode>& allowedLoadResults,
         std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
-        tensorflow::serving::GetModelStatusRequest request;
         startSignal.get();
         // stressIterationsCounter is additional safety measure
         // for getModelStatus requests it must be much higher since the response time is much lower
@@ -1784,7 +1782,7 @@ public:
             OVMS_ServableState state;
             OVMS_Status* status = OVMS_GetServableState(this->cserver, "pipeline1Dummy", 0, &state);
             uint32_t code = 0;
-            OVMS_Status* codeStatus = OVMS_StatusGetCode(status, &code);
+            OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
             StatusCode sc;
             if (codeStatus != nullptr) {
                 sc = static_cast<StatusCode>(StatusCode::OK);
@@ -1807,7 +1805,7 @@ public:
     virtual void checkInferResponse(OVMS_InferenceResponse* response) {
         ASSERT_NE(response, nullptr);
         uint32_t outputCount = 42;
-        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutputCount(response, &outputCount));
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
         ASSERT_EQ(outputCount, 1);
         const void* voutputData = nullptr;
         size_t bytesize = 42;
@@ -1818,7 +1816,7 @@ public:
         OVMS_BufferType bufferType = (OVMS_BufferType)199;
         uint32_t deviceId = 42;
         const char* outputName{nullptr};
-        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
         ASSERT_EQ(std::string("custom_dummy_output"), outputName);
         EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
         EXPECT_EQ(dimCount, 2);
@@ -1867,7 +1865,7 @@ public:
             OVMS_Status* status = OVMS_Inference(this->cserver, request, &response);
             OVMS_InferenceRequestDelete(request);
             uint32_t code = 0;
-            OVMS_Status* codeStatus = OVMS_StatusGetCode(status, &code);
+            OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
             StatusCode sc;
             if (codeStatus != nullptr) {
                 sc = static_cast<StatusCode>(StatusCode::OK);
