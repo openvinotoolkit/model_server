@@ -282,8 +282,6 @@ TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
     auto& config = ovms::Config::instance();
     auto retCode = server.startModules(config);
     EXPECT_TRUE(retCode.ok()) << retCode.string();
-    if (!retCode.ok())
-        throw std::runtime_error("Failed to start modules");
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
 
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
