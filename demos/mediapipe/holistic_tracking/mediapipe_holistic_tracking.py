@@ -109,7 +109,7 @@ if __name__ == '__main__':
     parser.add_argument('--batchsize', default=1,
                         help='Number of images in a single request. default: 1',
                         dest='batchsize')
-    parser.add_argument('--graph_name', default='holisticTracking', help='Define graph name, must be same as is in service. default: holisticTracking, also available: irisTracking',
+    parser.add_argument('--graph_name', default='holisticTracking', help='Define graph name, must be same as is in service. default: holisticTracking, also available: irisTracking, faceDetection',
                         dest='graph_name')
     parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with GRPC endpoint')
 
@@ -126,6 +126,7 @@ if __name__ == '__main__':
         #run_command("wget -O mediapipe/mediapipe/modules/hand_landmark/handedness.txt https://raw.githubusercontent.com/openvinotoolkit/mediapipe/main/mediapipe/modules/hand_landmark/handedness.txt")
         #run_command("cp config_holistic.json ovms/")
         #run_command("cp iris_tracking.pbtxt ovms/")
+        #run_command("cp face_detection.pbtxt ovms/")
         #run_command("cp holistic_tracking.pbtxt ovms/")
         #prepare_models()
         convert_pose()

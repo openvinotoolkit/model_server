@@ -51,6 +51,15 @@
         {
             "name":"irisTracking",
             "graph_path":"iris_tracking.pbtxt"
+        },
+        {
+            "name":"faceDetection",
+            "graph_path":"face_detection.pbtxt"
+        },
+        {
+            "name":"poseTracking",
+            "graph_path":"pose_tracking.pbtxt"
         }
+
     ]
 }
