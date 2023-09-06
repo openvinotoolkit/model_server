@@ -66,6 +66,12 @@ TEST_F(GetMediapipeGraphMetadataResponse, BasicResponseMetadata) {
             calculator: "OVMSOVCalculator"
             input_stream: "B:in"
             output_stream: "A:out"
+              node_options: {
+                  [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                    servable_name: "dummyUpper"
+                    servable_version: "1"
+                  }
+              }
             }
         )";
 

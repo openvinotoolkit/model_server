@@ -1066,9 +1066,15 @@ TEST(Mediapipe, MetadataDummyInputTypes) {
     output_stream: "TEST1:out2"
     output_stream: "TEST3:out3"
         node {
-        calculator: "OVMSOVCalculator"
-        input_stream: "B:in"
-        output_stream: "A:out"
+            calculator: "OVMSOVCalculator"
+            input_stream: "B:in"
+            output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1100,6 +1106,12 @@ TEST(Mediapipe, MetadataExistingInputNames) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1119,6 +1131,12 @@ TEST(Mediapipe, MetadataExistingOutputNames) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1137,6 +1155,12 @@ TEST(Mediapipe, MetadataMissingResponseOutputTypes) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1155,6 +1179,12 @@ TEST(Mediapipe, MetadataMissingRequestInputTypes) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1173,6 +1203,12 @@ TEST(Mediapipe, MetadataNegativeWrongInputTypes) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1191,6 +1227,12 @@ TEST(Mediapipe, MetadataNegativeWrongOutputTypes) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
