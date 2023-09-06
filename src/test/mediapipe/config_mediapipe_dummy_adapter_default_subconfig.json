@@ -4,7 +4,7 @@
     {
         "name":"mediaDummy",
         "graph_path":"/ovms/src/test/mediapipe/graphdummy.pbtxt",
-        "base_path":"/ovms/src/test/mediapipe"
+        "base_path":"/ovms/src/test/mediapipe/relative_paths/only_subconfig"
     }
     ]
 }

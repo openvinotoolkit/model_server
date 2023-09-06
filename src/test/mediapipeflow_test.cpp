@@ -122,6 +122,7 @@ TEST_F(MediapipeTFTest, Passthrough) {
     size_t dummysInTheGraph = 0;
     checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, modelName);
 }
+
 TEST_F(MediapipeTFTest, DummyInfer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -140,6 +141,80 @@ TEST_F(MediapipeTFTest, DummyInfer) {
     checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, modelName);
 }
 
+// Incorrect KServe proto to TFTensor conversion
+TEST_F(MediapipeTFTest, SendDummyInferMoreDataThanExpected) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName{"mpTFDummy"};
+    request.Clear();
+    response.Clear();
+    const size_t numElements = 50000;
+    inputs_info_t inputsMeta{{"in", {{1, numElements}, precision}}};
+    std::vector<float> requestData(numElements);
+    preparePredictRequest(request, inputsMeta, requestData);
+    request.mutable_model_name()->assign(modelName);
+    request.mutable_inputs(0)->set_shape(1, 1);  // change only shape [1,numElements] to [1,1], keep data
+    ASSERT_NE(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+}
+
+// Scalar in KServe proto to TFTensor conversion
+TEST_F(MediapipeTFTest, DummyInferScalar) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName{"mpTFScalar"};
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"in", {{1}, precision}}};
+    std::vector<float> requestData{7.1f};
+    preparePredictRequest(request, inputsMeta, requestData);
+    request.mutable_inputs(0)->clear_shape();  // imitate scalar
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    ASSERT_EQ(response.model_name(), modelName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:out";
+    const auto& output_proto = *response.outputs().begin();
+    std::string* content = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(content->size(), sizeof(float));
+    ASSERT_EQ(output_proto.shape_size(), 0);
+}
+
+// 0-data KServe proto to TFTensor conversion
+TEST_F(MediapipeTFTest, DummyInferZeroData) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName{"mpTFDummy"};
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"in", {{1, 0}, precision}}};
+    std::vector<float> requestData;
+    preparePredictRequest(request, inputsMeta, requestData);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    ASSERT_EQ(response.model_name(), modelName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:out";
+    const auto& output_proto = *response.outputs().begin();
+    std::string* content = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(content->size(), 0);
+    ASSERT_EQ(output_proto.shape_size(), 2);
+    ASSERT_EQ(output_proto.shape(0), 1);
+    ASSERT_EQ(output_proto.shape(1), 0);
+}
+
 class MediapipeFlowDummyTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -150,6 +225,13 @@ class MediapipeFlowScalarTest : public MediapipeFlowTest {
 public:
     void SetUp() {
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_scalar.json");
+    }
+};
+
+class MediapipeFlowDynamicZeroDimTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_dynamic.json");
     }
 };
 class MediapipeFlowDummyPathsRelativeToBasePathTest : public MediapipeFlowTest {
@@ -169,7 +251,7 @@ public:
 class MediapipeFlowDummyOnlyGraphNameSpecified : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_only_name_specified.json");
+        SetUpServer("/ovms/src/test/mediapipe/relative_paths/graph_only_name/config_mediapipe_dummy_adapter_full_only_name_specified.json");
     }
 };
 
@@ -347,35 +429,29 @@ TEST_F(MediapipeFlowImageInput, InvalidShape) {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
 }
 
-TEST_F(MediapipeFlowImageInput, InvalidNumberOfChannels) {
+TEST_F(MediapipeFlowImageInput, InvalidShapes) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
     const std::string modelName = "mediapipeImageInput";
-    request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
-    ASSERT_TRUE(!imageRaw.empty());
-    cv::Mat image;
-    size_t matFormat = convertKFSDataTypeToMatFormat("UINT8");
-    size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 3);
-    imageRaw.convertTo(image, matFormatWithChannels);
-    std::string* content = request.add_raw_input_contents();
-    size_t elementSize = image.elemSize1();
-    content->resize(image.cols * image.rows * image.channels() * elementSize);
-    std::memcpy(content->data(), image.data, image.cols * image.rows * image.channels() * elementSize);
+    request.mutable_model_name()->assign(modelName);
 
     KFSTensorInputProto* input = request.add_inputs();
+    request.add_raw_input_contents();
     input->set_name("in");
     input->set_datatype("UINT8");
     input->mutable_shape()->Clear();
-    input->add_shape(image.cols);
-    input->add_shape(image.rows);
-    input->add_shape(0);
-
-    request.mutable_model_name()->assign(modelName);
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+    input->add_shape(3);                                     // cols
+    input->add_shape(3);                                     // rows
+    input->add_shape(3);                                     // channels
+    for (auto dimIndex : std::vector<size_t>{0, 1, 2}) {     // h/w/c
+        for (auto dimValue : std::vector<int64_t>{0, -5}) {  // zero and negative
+            input->set_shape(dimIndex, dimValue);
+            EXPECT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT) << " for dim index: " << dimIndex;
+        }
+    }
 }
 
 TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
@@ -742,6 +818,39 @@ TEST_F(MediapipeFlowScalarTest, Infer) {
 
     ASSERT_EQ(outContent->size(), sizeof(float));
     EXPECT_EQ(*(float*)outContent->data(), 3.8f);
+}
+
+// KServe proto to OVTensor conversion
+TEST_F(MediapipeFlowDynamicZeroDimTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName = "mediaDummy";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"in", {{2, 0}, precision}}};
+    preparePredictRequest(request, inputsMeta);
+    auto* content = request.mutable_raw_input_contents()->Mutable(0);
+    ASSERT_EQ(content->size(), 0);
+    ASSERT_EQ(request.inputs_size(), 1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+
+    const std::string outputName = "out";
+    ASSERT_EQ(response.model_name(), modelName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), outputName) << "Did not find:" << outputName;
+    const auto& output_proto = *response.outputs().begin();
+    std::string* outContent = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output_proto.shape_size(), 2);
+    ASSERT_EQ(output_proto.shape(0), 2);
+    ASSERT_EQ(output_proto.shape(1), 0);
+
+    ASSERT_EQ(outContent->size(), 0);
 }
 
 TEST_P(MediapipeFlowAddTest, Infer) {

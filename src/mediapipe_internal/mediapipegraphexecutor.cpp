@@ -76,9 +76,9 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         TensorShape tensorShape;
         std::vector<int64_t> rawShape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
-            if (requestInputItr->shape()[i] <= 0) {
+            if (requestInputItr->shape()[i] < 0) {
                 std::stringstream ss;
-                ss << "Negative or zero dimension size is not acceptable: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
+                ss << "Negative dimension size is not acceptable: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
                 const std::string details = ss.str();
                 SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_SHAPE, details);
@@ -90,13 +90,22 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         TensorShape::BuildTensorShapeBase(rawShape, static_cast<tensorflow::TensorShapeBase<TensorShape>*>(&tensorShape));
         // TODO here we allocate default TF CPU allocator
         tensorflow::Tensor localTensor(datatype, tensorShape);  // TODO error handling
+        if (localTensor.TotalBytes() != bufferLocation.size()) {
+            std::stringstream ss;
+            ss << "Mediapipe deserialization content size mismatch; allocated TF Tensor: " << localTensor.TotalBytes() << " bytes vs KServe buffer: " << bufferLocation.size() << " bytes";
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+        }
         void* tftensordata = localTensor.data();
         std::memcpy(tftensordata, bufferLocation.data(), bufferLocation.size());
         outTensor = std::move(localTensor);
     } catch (const std::exception& e) {
         SPDLOG_DEBUG("Exception: {}; caught during Mediapipe TF tensor deserialization", e.what());
+        // TODO: Return error?
     } catch (...) {
         SPDLOG_ERROR("Unknown exception caught during Mediapipe TF tensor deserialization");
+        // TODO: Return error?
     }
     return StatusCode::OK;
 }
@@ -112,9 +121,9 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     try {
         ov::Shape shape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
-            if (requestInputItr->shape()[i] <= 0) {
+            if (requestInputItr->shape()[i] < 0) {
                 std::stringstream ss;
-                ss << "Negative or zero dimension size is not acceptable: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
+                ss << "Negative dimension size is not acceptable: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
                 const std::string details = ss.str();
                 SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_SHAPE, details);
@@ -124,13 +133,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         size_t expectElementsCount = ov::shape_size(shape.begin(), shape.end());
         size_t expectedBytes = precision.size() * expectElementsCount;
-        if (expectedBytes <= 0) {
-            std::stringstream ss;
-            ss << "Invalid precision with expected bytes equal to 0: " << requestInputItr->datatype() << "; input name: " << requestedName;
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-            return Status(StatusCode::INVALID_PRECISION, details);
-        }
         if (expectedBytes != bufferLocation.size()) {
             std::stringstream ss;
             ss << "Expected: " << expectedBytes << " bytes; Actual: " << bufferLocation.size() << " bytes; input name: " << requestedName;
@@ -138,7 +140,11 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
-        outTensor = ov::Tensor(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
+        if (expectedBytes == 0) {
+            outTensor = ov::Tensor(precision, shape);  // OpenVINO does not accept nullptr as data ptr
+        } else {
+            outTensor = ov::Tensor(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
+        }
         return StatusCode::OK;
     } catch (const std::exception& e) {
         SPDLOG_DEBUG("Kserve mediapipe request deserialization failed:{}", e.what());
@@ -208,21 +214,35 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 
     if (requestInputItr->shape().size() != 3) {
         std::stringstream ss;
-        ss << "Invalid Mediapipe Image input shape size. Expected: 3 Actual: " << requestInputItr->shape().size();
+        ss << "Invalid Mediapipe Image input shape size. Expected: 3; Actual: " << requestInputItr->shape().size();
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
-    size_t numberOfChannels = requestInputItr->shape()[2];
-    if (numberOfChannels == 0) {
+    int64_t numberOfChannels = requestInputItr->shape()[2];
+    if (numberOfChannels <= 0) {
         std::stringstream ss;
-        ss << "Invalid Mediapipe Image input number of channels. Expected: 3 Actual: " << numberOfChannels << "Expected layout - HWC.";
+        ss << "Invalid Mediapipe Image input number of channels. Expected greater than 0; Actual: " << numberOfChannels << "; Expected layout - HWC.";
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
-    size_t numberOfRows = requestInputItr->shape()[0];
-    size_t numberOfCols = requestInputItr->shape()[1];
+    int64_t numberOfRows = requestInputItr->shape()[0];
+    if (numberOfRows <= 0) {
+        std::stringstream ss;
+        ss << "Invalid Mediapipe Image input height. Expected greater than 0; Actual: " << numberOfRows << "; Expected layout - HWC.";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_SHAPE, details);
+    }
+    int64_t numberOfCols = requestInputItr->shape()[1];
+    if (numberOfCols <= 0) {
+        std::stringstream ss;
+        ss << "Invalid Mediapipe Image input width. Expected greater than 0; Actual: " << numberOfCols << "; Expected layout - HWC.";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_SHAPE, details);
+    }
     size_t elementSize = KFSDataTypeSize(requestInputItr->datatype());
     size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
     if (bufferLocation.size() != expectedSize) {
