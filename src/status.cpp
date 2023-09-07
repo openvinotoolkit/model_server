@@ -203,6 +203,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET, "Mediapipe is not loaded yet"},
     {StatusCode::MEDIAPIPE_KFS_PASS_WRONG_INPUT_STREAM_COUNT, "Mediapipe unexpected input stream packets count"},
     {StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME, "Mediapipe unexpected input stream packets name"},
+    {StatusCode::MEDIAPIPE_WRONG_INPUT_SIDE_PACKET_STREAM_PACKET_NAME, "Mediapipe unexpected input side packet stream name"},
     {StatusCode::MEDIAPIPE_KFS_PASS_WRONG_OUTPUT_STREAM_COUNT, "Mediapipe unexpected output stream packets count"},
     {StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME, "Mediapipe unexpected output stream packets name"},
     {StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG, "Mediapipe KFS pass through graph is missing RESPONSE: string in the output name"},

@@ -146,6 +146,12 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json");
     }
 };
+class MediapipeFlowDummyNegativeTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_nonexistent_calculator.json");
+    }
+};
 class MediapipeFlowScalarTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -709,6 +715,21 @@ TEST_P(MediapipeFlowDummyTest, Infer) {
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
 }
 
+TEST_F(MediapipeFlowDummyNegativeTest, NegativeShouldNotReachInferDueToNonexistentCalculator) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName = "mediaDummyNonexistentCaclulator";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+    preparePredictRequest(request, inputsMeta);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::UNAVAILABLE);
+}
+
 TEST_F(MediapipeFlowScalarTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -1045,9 +1066,15 @@ TEST(Mediapipe, MetadataDummyInputTypes) {
     output_stream: "TEST1:out2"
     output_stream: "TEST3:out3"
         node {
-        calculator: "OVMSOVCalculator"
-        input_stream: "B:in"
-        output_stream: "A:out"
+            calculator: "OVMSOVCalculator"
+            input_stream: "B:in"
+            output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1079,6 +1106,12 @@ TEST(Mediapipe, MetadataExistingInputNames) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1098,6 +1131,12 @@ TEST(Mediapipe, MetadataExistingOutputNames) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1116,6 +1155,12 @@ TEST(Mediapipe, MetadataMissingResponseOutputTypes) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1134,6 +1179,12 @@ TEST(Mediapipe, MetadataMissingRequestInputTypes) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1152,6 +1203,12 @@ TEST(Mediapipe, MetadataNegativeWrongInputTypes) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1170,6 +1227,12 @@ TEST(Mediapipe, MetadataNegativeWrongOutputTypes) {
         calculator: "OVMSOVCalculator"
         input_stream: "B:in"
         output_stream: "A:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                  servable_name: "dummyUpper"
+                  servable_version: "1"
+                }
+            }
         }
     )";
 
@@ -1433,6 +1496,7 @@ public:
     static const std::string configFileWithGraphPathToReplaceAndSubconfig;
     static const std::string configFileWithoutGraph;
     static const std::string pbtxtContent;
+    static const std::string pbtxtContentNonexistentCalc;
     template <typename Request, typename Response>
     static void checkStatus(ModelManager& manager, ovms::StatusCode code) {
         std::shared_ptr<MediapipeGraphExecutor> executor;
@@ -1531,6 +1595,39 @@ node {
 }
 )";
 
+const std::string MediapipeConfigChanges::pbtxtContentNonexistentCalc = R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "ModelAPISessionCalculatorNONEXISTENT"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+      servable_name: "dummy"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "ModelAPISideFeedCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "B:in"
+  output_stream: "A:out"
+  node_options: {
+    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
+      tag_to_input_tensor_names {
+        key: "B"
+        value: "b"
+      }
+      tag_to_output_tensor_names {
+        key: "A"
+        value: "a"
+      }
+    }
+  }
+}
+)";
+
 TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     std::string configFileContent = configFileWithGraphPathToReplace;
     std::string configFilePath = directoryPath + "/subconfig.json";
@@ -1597,6 +1694,24 @@ TEST_F(MediapipeConfigChanges, AddImroperGraphThenFixWithReloadThenBreakAgain) {
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET);
+}
+
+TEST_F(MediapipeConfigChanges, GraphWithNonexistentCalcShouldBeInNotLoadedYet) {
+    std::string configFileContent = configFileWithGraphPathToReplace;
+    std::string configFilePath = directoryPath + "/subconfig.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    createConfigFileWithContent(configFileContent, configFilePath);
+    createConfigFileWithContent(pbtxtContentNonexistentCalc, graphFilePath);
+    ConstructorEnabledModelManager modelManager;
+    modelManager.loadConfig(configFilePath);
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    auto definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    ovms::Status status;
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET);
+    // TODO check for tfs as well - now not supported
+    // checkStatus<TFSPredictRequest, TFSPredictResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET);
 }
 
 TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
