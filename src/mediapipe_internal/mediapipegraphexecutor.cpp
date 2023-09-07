@@ -89,7 +89,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         tensorflow::TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
         TensorShape::BuildTensorShapeBase(rawShape, static_cast<tensorflow::TensorShapeBase<TensorShape>*>(&tensorShape));
         // TODO here we allocate default TF CPU allocator
-        tensorflow::Tensor localTensor(datatype, tensorShape);  // TODO error handling
+        tensorflow::Tensor localTensor(datatype, tensorShape);
         if (localTensor.TotalBytes() != bufferLocation.size()) {
             std::stringstream ss;
             ss << "Mediapipe deserialization content size mismatch; allocated TF Tensor: " << localTensor.TotalBytes() << " bytes vs KServe buffer: " << bufferLocation.size() << " bytes";
@@ -219,14 +219,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         SPDLOG_DEBUG(details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
-    int64_t numberOfChannels = requestInputItr->shape()[2];
-    if (numberOfChannels <= 0) {
-        std::stringstream ss;
-        ss << "Invalid Mediapipe Image input number of channels. Expected greater than 0; Actual: " << numberOfChannels << "; Expected layout - HWC.";
-        const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
-        return Status(StatusCode::INVALID_SHAPE, details);
-    }
     int64_t numberOfRows = requestInputItr->shape()[0];
     if (numberOfRows <= 0) {
         std::stringstream ss;
@@ -239,6 +231,14 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     if (numberOfCols <= 0) {
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input width. Expected greater than 0; Actual: " << numberOfCols << "; Expected layout - HWC.";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_SHAPE, details);
+    }
+    int64_t numberOfChannels = requestInputItr->shape()[2];
+    if (numberOfChannels <= 0) {
+        std::stringstream ss;
+        ss << "Invalid Mediapipe Image input number of channels. Expected greater than 0; Actual: " << numberOfChannels << "; Expected layout - HWC.";
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
         return Status(StatusCode::INVALID_SHAPE, details);
