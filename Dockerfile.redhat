@@ -472,6 +472,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
                 rpm -vi pkg/bin/*.rpm ; \
                 cd / ; \
                 rm -rf /tmp_ovms ; \
+                $DNF_TOOL remove -y tar gzip; \
         fi ; \
         $DNF_TOOL install -y shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
