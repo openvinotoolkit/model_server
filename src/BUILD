@@ -880,7 +880,6 @@ cc_test(
         "test/mediapipe/relative_paths/graph2/dummy2/1/dummy.xml",
         "test/mediapipe/relative_paths/graph2/subconfig.json",
         "test/mediapipe/relative_paths/graph2/graphadd.pbtxt",
-        "test/mediapipe/subconfig.json",
         "test/passthrough/1/passthrough.xml",
         "test/passthrough/1/passthrough.bin",
         "test/summator/1/summator.xml",
