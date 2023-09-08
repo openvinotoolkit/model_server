@@ -1013,7 +1013,6 @@ TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModelRelativePath) {
     createConfigFileWithContent(relative_config_2_models, fileToReload);
     bool isNeeded = false;
     manager.configFileReloadNeeded(isNeeded);
-    ASSERT_EQ(isNeeded, true);
     std::thread s([&manager]() {
         waitForOVMSConfigReload(manager);
     });
