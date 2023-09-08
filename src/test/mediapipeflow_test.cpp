@@ -1560,17 +1560,17 @@ TEST_F(MediapipeNoTagMapping, DummyUppercase) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "ModelAPISessionCalculator"
+  calculator: "OpenVINOModelServerSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
       servable_name: "dummyUpper"
       servable_version: "1"
     }
   }
 }
 node {
-  calculator: "ModelAPISideFeedCalculator"
+  calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
   input_stream: "B:in"
   output_stream: "A:out"
@@ -1756,22 +1756,22 @@ const std::string MediapipeConfigChanges::pbtxtContent = R"(
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "ModelAPISessionCalculator"
+  calculator: "OpenVINOModelServerSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
       servable_name: "dummy"
       servable_version: "1"
     }
   }
 }
 node {
-  calculator: "ModelAPISideFeedCalculator"
+  calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
   input_stream: "B:in"
   output_stream: "A:out"
   node_options: {
-    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
       tag_to_input_tensor_names {
         key: "B"
         value: "b"
@@ -1789,22 +1789,22 @@ const std::string MediapipeConfigChanges::pbtxtContentNonexistentCalc = R"(
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "ModelAPISessionCalculatorNONEXISTENT"
+  calculator: "OpenVINOModelServerSessionCalculatorNONEXISTENT"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
       servable_name: "dummy"
       servable_version: "1"
     }
   }
 }
 node {
-  calculator: "ModelAPISideFeedCalculator"
+  calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
   input_stream: "B:in"
   output_stream: "A:out"
   node_options: {
-    [type.googleapis.com / mediapipe.ModelAPIInferenceCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
       tag_to_input_tensor_names {
         key: "B"
         value: "b"
