@@ -108,14 +108,14 @@ public:
 class MediapipeTensorTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mp_passthrough.json");
+        SetUpServer("/ovms/src/test/mediapipe/relative_paths/config_mp_passthrough.json");
     }
 };
 
 class MediapipeTfLiteTensorTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_tflite_passthrough.json");
+        SetUpServer("/ovms/src/test/mediapipe/relative_paths/config_tflite_passthrough.json");
     }
 };
 

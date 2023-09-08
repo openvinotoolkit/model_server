@@ -204,6 +204,13 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         tensorflow::TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
         TensorShape::BuildTensorShapeBase(rawShape, static_cast<tensorflow::TensorShapeBase<TensorShape>*>(&tensorShape));
         outTensor = std::make_unique<tensorflow::Tensor>(datatype, tensorShape);
+        if (outTensor->TotalBytes() != bufferLocation.size()) {
+            std::stringstream ss;
+            ss << "Mediapipe deserialization content size mismatch; allocated TF Tensor: " << outTensor->TotalBytes() << " bytes vs KServe buffer: " << bufferLocation.size() << " bytes";
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+        }
         void* tftensordata = outTensor->data();
         std::memcpy(tftensordata, bufferLocation.data(), bufferLocation.size());
     } catch (const std::exception& e) {
