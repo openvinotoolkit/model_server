@@ -67,7 +67,7 @@ RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
-RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
+RUN wget -nv https://boostorg.jfrog.io/artifactory/main/release/1.68.0/source/boost_1_68_0.tar.gz && \
 	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
 	./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
@@ -482,6 +482,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
                 rpm -vi pkg/bin/*.rpm ; \
                 cd / ; \
                 rm -rf /tmp_ovms ; \
+                $DNF_TOOL remove -y tar gzip; \
         fi ; \
         $DNF_TOOL install -y shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \

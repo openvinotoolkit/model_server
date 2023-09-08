@@ -106,6 +106,7 @@ protected:
     Status validateForConfigLoadableness();
 
     Status setStreamTypes();
+    Status dryInitializeTest();
     std::string chosenConfig;
     static MediapipeGraphConfig MGC;
     const std::string name;
@@ -120,6 +121,7 @@ protected:
 
     Status createInputsInfo();
     Status createOutputsInfo();
+    Status createInputSidePacketsInfo();
 
     std::condition_variable loadedNotify;
     mutable std::shared_mutex metadataMtx;
@@ -138,6 +140,7 @@ private:
 
     std::vector<std::string> inputNames;
     std::vector<std::string> outputNames;
+    std::vector<std::string> inputSidePacketNames;
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 };

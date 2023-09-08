@@ -58,12 +58,12 @@ docker pull openvino/model_server:latest
 
 ## Run OpenVINO Model Server
 ```bash
-docker run -it -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9022:9022 openvino/model_server:latest --config_path /models/config_holistic.json --port 9022
+docker run -it -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
 ```
 
 ## Run client application
 ```bash
-python mediapipe_holistic_tracking.py
+python mediapipe_holistic_tracking.py --grpc_port 9000
 ```
 
 ## Output image

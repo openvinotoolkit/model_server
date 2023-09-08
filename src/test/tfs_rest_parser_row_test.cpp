@@ -110,6 +110,33 @@ TEST(TFSRestParserRow, ParseValid2Inputs) {
                                                               14.0, 15.0, 16.0));
 }
 
+TEST(TFSRestParserRow, InvalidShape_1D) {
+    TFSRestParser parser(prepareTensors({{"i", {2}}}));
+
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":12.0}, {"i":[[13.0]]}
+    ]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[[12.0]]}, {"i":13.0}
+    ]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+}
+
+TEST(TFSRestParserRow, ValidShape_2) {
+    TFSRestParser parser(prepareTensors({{"i", {2}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":12.0}, {"i":13.0}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2));
+    // Precision?
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(12.0, 13.0));
+}
+
 TEST(TFSRestParserRow, ValidShape_1x1) {
     TFSRestParser parser(prepareTensors({{"i", {1, 1}}}));
 
@@ -134,6 +161,20 @@ TEST(TFSRestParserRow, ValidShape_1x2) {
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
     EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1, 2));
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 56.0));
+}
+
+TEST(TFSRestParserRow, ValidShape_2x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 0}}}, ovms::Precision::I32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[ ]}, {"i":[ ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_INT32);
 }
 
 TEST(TFSRestParserRow, ValidShape_2x1) {
@@ -256,6 +297,33 @@ TEST(TFSRestParserRow, ValidShape_2x1x3x1x5) {
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9));
+}
+
+TEST(TFSRestParserRow, ValidShape_2x1x3x1x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 0}}}, ovms::Precision::FP32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ]},
+        {"i":[
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3, 1, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_FLOAT);
 }
 
 TEST(TFSRestParserRow, MissingInputInBatch) {
@@ -428,7 +496,6 @@ TEST(TFSRestParserRow, CannotParseInstance) {
     TFSRestParser parser(prepareTensors({{"i", {1, 2}}}));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":2}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":null}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1,null]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[1,2],[3,"str"]]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);

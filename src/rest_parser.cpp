@@ -135,9 +135,6 @@ bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::Tenso
     if (!doc.IsArray()) {
         return false;
     }
-    if (doc.GetArray().Size() == 0) {
-        return false;
-    }
     if (!setDimOrValidate(proto, dim, doc.GetArray().Size())) {
         return false;
     }
@@ -145,6 +142,9 @@ bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::Tenso
         if (!parseSpecialInput(doc, proto, tensorName)) {
             return false;
         }
+        return true;
+    }
+    if (doc.GetArray().Size() == 0) {
         return true;
     }
     if (doc.GetArray()[0].IsArray()) {
@@ -177,8 +177,25 @@ bool TFSRestParser::parseInstance(rapidjson::Value& doc) {
         inputsFoundInRequest.insert(tensorName);
         auto& proto = (*requestProto.mutable_inputs())[tensorName];
         increaseBatchSize(proto);
-        if (!parseArray(itr.value, 1, proto, tensorName)) {
-            return false;
+        if (itr.value.IsNumber() || itr.value.IsString()) {
+            // If previous iterations already increased number of dimensions
+            // it means we have incorrect json
+            if (proto.tensor_shape().dim_size() > 1) {
+                return false;
+            }
+            if (!addValue(proto, itr.value)) {
+                return false;
+            }
+        } else {
+            // If previous iterations already added instances (batches)
+            // and those were non-arrays it means we have incorrect json
+            if (proto.tensor_shape().dim(0).size() > 1 &&
+                proto.tensor_shape().dim_size() == 1) {
+                return false;
+            }
+            if (!parseArray(itr.value, 1, proto, tensorName)) {
+                return false;
+            }
         }
     }
     return true;
@@ -669,7 +686,7 @@ Status KFSRestParser::parseInput(rapidjson::Value& node, bool onlyOneInput) {
         if (!dim.IsInt()) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
-        if (dim.GetInt() <= 0) {
+        if (dim.GetInt() < 0) {
             SPDLOG_DEBUG("Shape dimension is invalid: {}", dim.GetInt());
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }

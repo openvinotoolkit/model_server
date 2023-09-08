@@ -880,6 +880,27 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
     this->checkOutputShape(response, {}, SCALAR_MODEL_OUTPUT_NAME);
 }
 
+TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithDynamicBatch) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(-1,2)");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{0, 2}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {0, 2}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
 TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithDynamicDim) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("");

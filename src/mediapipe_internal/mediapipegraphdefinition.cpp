@@ -85,6 +85,16 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
     return StatusCode::OK;
 }
 
+Status MediapipeGraphDefinition::dryInitializeTest() {
+    ::mediapipe::CalculatorGraph graph;
+    auto absStatus = graph.Initialize(this->config);
+    if (!absStatus.ok()) {
+        const std::string absMessage = absStatus.ToString();
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}. Check if all required calculators are registered in OVMS", this->getName(), absMessage);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+    }
+    return StatusCode::OK;
+}
 Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
@@ -112,8 +122,18 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
         return status;
     }
+    status = createInputSidePacketsInfo();
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create input side packets info for mediapipe graph definition: {}", getName());
+        return status;
+    }
     // Detect what deserialization needs to be performed
     status = this->setStreamTypes();
+    if (!status.ok()) {
+        return status;
+    }
+    // here we will not be available if calculator does not exist in OVMS
+    status = this->dryInitializeTest();
     if (!status.ok()) {
         return status;
     }
@@ -151,8 +171,20 @@ Status MediapipeGraphDefinition::createInputsInfo() {
             SPDLOG_ERROR("Creating Mediapipe graph inputs name failed for: {}. Input with the same name already exists.", name);
             return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME;
         }
+        inputNames.emplace_back(std::move(streamName));
+    }
+    return StatusCode::OK;
+}
 
-        inputNames.push_back(streamName);
+Status MediapipeGraphDefinition::createInputSidePacketsInfo() {
+    inputSidePacketNames.clear();
+    for (auto& name : config.input_side_packet()) {
+        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
+        if (streamName.empty()) {
+            SPDLOG_ERROR("Creating Mediapipe graph input side packet name failed for: {}", name);
+            return StatusCode::MEDIAPIPE_WRONG_INPUT_SIDE_PACKET_STREAM_PACKET_NAME;
+        }
+        inputSidePacketNames.emplace_back(std::move(streamName));
     }
     return StatusCode::OK;
 }
@@ -172,8 +204,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
             SPDLOG_ERROR("Creating Mediapipe graph outputs name failed for: {}. Output with the same name already exists.", name);
             return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME;
         }
-
-        outputNames.push_back(streamName);
+        outputNames.emplace_back(std::move(streamName));
     }
     return StatusCode::OK;
 }

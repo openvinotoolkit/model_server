@@ -278,7 +278,7 @@ public:
     void checkInferResponse(OVMS_InferenceResponse* response) override {
         ASSERT_NE(response, nullptr);
         uint32_t outputCount = 42;
-        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutputCount(response, &outputCount));
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
         ASSERT_EQ(outputCount, 1);
         const void* voutputData = nullptr;
         size_t bytesize = 42;
@@ -289,7 +289,7 @@ public:
         OVMS_BufferType bufferType = (OVMS_BufferType)199;
         uint32_t deviceId = 42;
         const char* outputName{nullptr};
-        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
         ASSERT_EQ(std::string("custom_dummy_output"), outputName);
         EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
         EXPECT_EQ(dimCount, 2);

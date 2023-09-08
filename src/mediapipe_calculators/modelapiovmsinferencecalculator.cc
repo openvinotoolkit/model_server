@@ -43,8 +43,8 @@ namespace {
         if (err != nullptr) {                                                               \
             uint32_t code = 0;                                                              \
             const char* msg = nullptr;                                                      \
-            OVMS_StatusGetCode(err, &code);                                                 \
-            OVMS_StatusGetDetails(err, &msg);                                               \
+            OVMS_StatusCode(err, &code);                                                    \
+            OVMS_StatusDetails(err, &msg);                                                  \
             LOG(INFO) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
             OVMS_StatusDelete(err);                                                         \
             RET_CHECK(err == nullptr);                                                      \
@@ -127,7 +127,7 @@ public:
                 // TODO decide which will be easier to migrating later
                 // using OV tensor by default will be more performant
                 // but harder to migrate
-                /*    
+                /*
                 cc->Outputs().Tag(tag).Set<tensorflow::Tensor>();
                 */
                 LOG(INFO) << "setting output tag:" << tag << " to OVTensor";
