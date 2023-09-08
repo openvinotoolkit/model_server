@@ -1444,7 +1444,7 @@ TEST_F(MediapipeConfig, MediapipeAdd) {
 
 TEST_F(MediapipeConfig, MediapipeTfLiteTagsNotSupported) {
     ConstructorEnabledModelManager manager;
-    auto status = manager.startFromFile("/ovms/src/test/mediapipe/config_tflite_passthrough.json");
+    auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_tflite_passthrough.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName("mpTfLiteTensorDummy");

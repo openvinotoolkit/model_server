@@ -1,0 +1,10 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":"mpTfLiteTensorDummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummy_tflite.pbtxt",
+        "subconfig":"only_subconfig/subconfig.json"
+    }
+    ]
+}

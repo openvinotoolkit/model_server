@@ -876,6 +876,7 @@ cc_test(
         "test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json",
         "test/mediapipe/relative_paths/config_relative_add_subconfig.json",
         "test/mediapipe/relative_paths/config_relative_dummy.json",
+        "test/mediapipe/relative_paths/config_tflite_passthrough.json",
         "test/mediapipe/relative_paths/graph1/dummy1/1/dummy.xml",
         "test/mediapipe/relative_paths/graph1/graphaddadapterfull.pbtxt",
         "test/mediapipe/relative_paths/graph1/subconfig.json",
