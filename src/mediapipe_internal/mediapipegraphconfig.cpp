@@ -82,7 +82,7 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
             std::string providedBasePath(v["base_path"].GetString());
             if (providedBasePath.size() == 0)
                 this->setBasePath("");
-            else if(providedBasePath.back() == '/')
+            else if (providedBasePath.back() == '/')
                 this->setBasePath(providedBasePath);
             else
                 this->setBasePath(providedBasePath + "/");

@@ -1734,7 +1734,7 @@ const std::string MediapipeConfigChanges::configFileWithGraphPathToReplace = R"(
 }
 )";
 
-const std::string MediapipeConfigChanges::configFileWithEmptyBasePath= R"(
+const std::string MediapipeConfigChanges::configFileWithEmptyBasePath = R"(
 {
     "model_config_list": [
         {"config": {
