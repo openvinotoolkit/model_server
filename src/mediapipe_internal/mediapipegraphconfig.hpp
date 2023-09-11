@@ -18,14 +18,10 @@
 #include <string>
 
 #include <rapidjson/document.h>
-#include <rapidjson/istreamwrapper.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#include <spdlog/spdlog.h>
-
-#include "../status.hpp"
 
 namespace ovms {
+
+class Status;
 
 /**
      * @brief This class represents Mediapie Graph configuration
@@ -57,23 +53,30 @@ private:
      */
     std::string subconfigPath;
 
+    /**
+     * @brief MD5 hash for graph pbtxt file
+     */
+    std::string currentGraphPbTxtMD5;
+
 public:
     /**
          * @brief Construct a new Mediapie Graph configuration object
          *
-         * @param name
+         * @param graphName
          * @param basePath
          * @param graphPath
          * @param subconfigPath
+         * @param currentGraphPbTxtMD5
          */
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
         const std::string& graphPath = "",
-        const std::string& subconfigPath = "") :
+        const std::string& subconfigPath = "",
+        const std::string& currentGraphPbTxtMD5 = "") :
         graphName(graphName),
         basePath(basePath),
         graphPath(graphPath),
-        subconfigPath(subconfigPath) {
+        currentGraphPbTxtMD5(currentGraphPbTxtMD5) {
     }
 
     void clear() {
@@ -125,6 +128,13 @@ public:
     void setGraphPath(const std::string& graphPath);
 
     /**
+         * @brief Set the Base Path using RootDirectoryPath (when base_path is not defined)
+         *
+         * @param basePath
+         */
+    void setBasePathWithRootPath();
+
+    /**
          * @brief Set the Base Path
          *
          * @param basePath
@@ -165,50 +175,17 @@ public:
         return this->rootDirectoryPath;
     }
 
-    /**
-     * @brief  Parses all settings from a JSON node
-        *
-        * @return Status
-        */
-    Status parseNode(const rapidjson::Value& v) {
-        try {
-            this->setGraphName(v["name"].GetString());
-            if (v.HasMember("base_path")) {
-                std::string providedBasePath(v["base_path"].GetString());
-                if (providedBasePath.back() == '/')
-                    this->setBasePath(providedBasePath);
-                else
-                    this->setBasePath(providedBasePath + "/");
-            } else {
-                if (!getRootDirectoryPath().empty()) {
-                    this->setBasePath(getRootDirectoryPath());
-                    SPDLOG_DEBUG("base_path not defined in config so it will be set to default based on main config directory: {}", this->getBasePath());
-                } else {
-                    SPDLOG_ERROR("Mediapipe {} root directory path is not set.", getGraphName());
-                    return StatusCode::INTERNAL_ERROR;
-                }
-            }
-            if (v.HasMember("graph_path")) {
-                this->setGraphPath(v["graph_path"].GetString());
-            } else {
-                this->setGraphPath(basePath + "graph.pbtxt");
-                SPDLOG_DEBUG("graph_path not defined in config so it will be set to default based on base_path and graph name: {}", this->getGraphPath());
-            }
-            if (v.HasMember("subconfig")) {
-                this->setSubconfigPath(v["subconfig"].GetString());
-            } else {
-                std::string defaultSubconfigPath = getBasePath() + "subconfig.json";
-                SPDLOG_DEBUG("No subconfig path was provided for graph: {} so default subconfig file: {} will be loaded.", getGraphName(), defaultSubconfigPath);
-                this->setSubconfigPath(defaultSubconfigPath);
-            }
-        } catch (std::logic_error& e) {
-            SPDLOG_DEBUG("Relative path error: {}", e.what());
-            return StatusCode::INTERNAL_ERROR;
-        } catch (...) {
-            SPDLOG_ERROR("There was an error parsing the mediapipe graph config");
-            return StatusCode::JSON_INVALID;
-        }
-        return StatusCode::OK;
+    void setCurrentGraphPbTxtMD5(const std::string& currentGraphPbTxtMD5) {
+        this->currentGraphPbTxtMD5 = currentGraphPbTxtMD5;
     }
+
+    bool isReloadRequired(const MediapipeGraphConfig& rhs) const;
+
+    /**
+    * @brief  Parses all settings from a JSON node
+    *
+    * @return Status
+    */
+    Status parseNode(const rapidjson::Value& v);
 };
 }  // namespace ovms
