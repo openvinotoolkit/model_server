@@ -119,6 +119,32 @@ public:
     }
 };
 
+TEST_F(MediapipeFlowKfsTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipeDummyKFS";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    auto outputs = response.outputs();
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(outputs[0].name(), "out");
+    ASSERT_EQ(outputs[0].shape().size(), 2);
+    ASSERT_EQ(outputs[0].shape()[0], 1);
+    ASSERT_EQ(outputs[0].shape()[1], 10);
+
+    // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
+    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
+
 TEST_F(MediapipeTFTest, Passthrough) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -1414,8 +1440,6 @@ const std::vector<std::string> mediaGraphsDummy{"mediaDummy",
 const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
     "mediapipeAddADAPTFULL"};
 
-const std::vector<std::string> mediaGraphsKfs{"mediapipeDummyKFS"};
-
 class MediapipeConfig : public MediapipeFlowTest {
 public:
     void TearDown() override {}
@@ -1970,13 +1994,6 @@ INSTANTIATE_TEST_SUITE_P(
     Test,
     MediapipeFlowDummyTest,
     ::testing::ValuesIn(mediaGraphsDummy),
-    [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
-        return info.param;
-    });
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    MediapipeFlowKfsTest,
-    ::testing::ValuesIn(mediaGraphsKfs),
     [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
         return info.param;
     });
