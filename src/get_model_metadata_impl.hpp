@@ -67,7 +67,7 @@ public:
         tensorflow::serving::GetModelMetadataResponse* response,
         ModelManager& manager,
         ExecutionContext context);
-    static Status createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request);
+    static Status createGrpcRequest(const std::string& model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request);
     static Status serializeResponse2Json(const tensorflow::serving::GetModelMetadataResponse* response, std::string* output);
 };
 

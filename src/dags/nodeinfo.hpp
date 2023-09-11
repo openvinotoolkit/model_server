@@ -81,7 +81,7 @@ struct NodeInfo {
         nodeName(nodeName),
         modelName(modelName),
         modelVersion(modelVersion),
-        outputNameAliases(outputNameAliases),
+        outputNameAliases(std::move(outputNameAliases)),
         demultiplyCount(demultiplyCount),
         gatherFromNode(gatherFromNode),
         library(library),
