@@ -119,12 +119,12 @@ public:
     }
 };
 
-TEST_P(MediapipeFlowKfsTest, Infer) {
+TEST_F(MediapipeFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
-    const std::string modelName = GetParam();
+    const std::string modelName = "mediapipeDummyKFS";
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{
@@ -1440,8 +1440,6 @@ const std::vector<std::string> mediaGraphsDummy{"mediaDummy",
 const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
     "mediapipeAddADAPTFULL"};
 
-const std::vector<std::string> mediaGraphsKfs{"mediapipeDummyKFS"};
-
 class MediapipeConfig : public MediapipeFlowTest {
 public:
     void TearDown() override {}
@@ -1996,13 +1994,6 @@ INSTANTIATE_TEST_SUITE_P(
     Test,
     MediapipeFlowDummyTest,
     ::testing::ValuesIn(mediaGraphsDummy),
-    [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
-        return info.param;
-    });
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    MediapipeFlowKfsTest,
-    ::testing::ValuesIn(mediaGraphsKfs),
     [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
         return info.param;
     });
