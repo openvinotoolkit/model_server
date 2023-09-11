@@ -130,7 +130,7 @@ static void requestServerReady(const char* grpcPort, grpc::StatusCode status = g
 static void requestModelReady(const char* grpcPort, const std::string& modelName, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
-    SPDLOG_INFO("Verifying if server is ready on address: {}", address);
+    SPDLOG_INFO("Verifying if model is ready on address: {}", address);
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
     client.verifyModelReady(modelName, status, expectedStatus);
 }
@@ -266,6 +266,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
         if (modelInstance->getStatus().getState() == ovms::ModelVersionState::AVAILABLE)
             break;
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     requestModelReady(argv[8], argv[2], grpc::StatusCode::OK, true);
     requestServerReady(argv[8], grpc::StatusCode::OK, false);
