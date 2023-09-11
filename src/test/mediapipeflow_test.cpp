@@ -1566,7 +1566,7 @@ TEST_P(MediapipeConfig, MediapipeAdd) {
 
     for (auto& graphName : mediaGraphsAdd) {
         auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName(graphName);
-        EXPECT_NE(graphDefinition, nullptr);
+        ASSERT_NE(graphDefinition, nullptr);
         EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
     }
 
@@ -1582,7 +1582,7 @@ TEST_P(MediapipeConfig, MediapipeDummyWithDag) {
 
     for (auto& graphName : mediaGraphsDummy) {
         auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName(graphName);
-        EXPECT_NE(graphDefinition, nullptr);
+        ASSERT_NE(graphDefinition, nullptr);
         EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
     }
 
@@ -1605,11 +1605,11 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePaths) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
-    EXPECT_NE(definitionAdd, nullptr);
+    ASSERT_NE(definitionAdd, nullptr);
     EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
-    EXPECT_NE(definitionFull, nullptr);
+    ASSERT_NE(definitionFull, nullptr);
     EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
 
     manager.join();
@@ -1623,14 +1623,14 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
-    EXPECT_NE(definitionFull, nullptr);
+    ASSERT_NE(definitionFull, nullptr);
     EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
     auto model = manager.findModelByName("dummy1");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
-    EXPECT_NE(definitionAdd, nullptr);
+    ASSERT_NE(definitionAdd, nullptr);
     EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
     model = manager.findModelByName("dummy2");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
@@ -1647,14 +1647,14 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfigBasePath) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graphaddadapterfull");
-    EXPECT_NE(definitionFull, nullptr);
+    ASSERT_NE(definitionFull, nullptr);
     EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
     auto model = manager.findModelByName("dummy1");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("graphadd");
-    EXPECT_NE(definitionAdd, nullptr);
+    ASSERT_NE(definitionAdd, nullptr);
     EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
     model = manager.findModelByName("dummy2");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
@@ -1671,11 +1671,11 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsNegative) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
-    EXPECT_NE(definitionAdd, nullptr);
+    ASSERT_NE(definitionAdd, nullptr);
     EXPECT_EQ(definitionAdd->getStatus().isAvailable(), false);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
-    EXPECT_NE(definitionFull, nullptr);
+    ASSERT_NE(definitionFull, nullptr);
     EXPECT_EQ(definitionFull->getStatus().isAvailable(), false);
 
     manager.join();
@@ -1702,6 +1702,7 @@ public:
     static const std::string configFileWithGraphPathToReplace;
     static const std::string configFileWithGraphPathToReplaceWithoutModel;
     static const std::string configFileWithGraphPathToReplaceAndSubconfig;
+    static const std::string configFileWithEmptyBasePath;
     static const std::string configFileWithoutGraph;
     static const std::string pbtxtContent;
     static const std::string pbtxtContentNonexistentCalc;
@@ -1728,6 +1729,24 @@ const std::string MediapipeConfigChanges::configFileWithGraphPathToReplace = R"(
     {
         "name":"mediapipeGraph",
         "graph_path":"XYZ"
+    }
+    ]
+}
+)";
+
+const std::string MediapipeConfigChanges::configFileWithEmptyBasePath= R"(
+{
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeGraph",
+        "base_path":""
     }
     ]
 }
@@ -1864,7 +1883,8 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 
     // now change the input name in graph.pbtxt and trigger config reload
-    graphPbtxtFileContent.replace(pbtxtContent.find(inputName), inputName.size(), newInputName);
+    graphPbtxtFileContent.replace(graphPbtxtFileContent.find(inputName), inputName.size(), newInputName);
+    graphPbtxtFileContent.replace(graphPbtxtFileContent.find(inputName), inputName.size(), newInputName);
     createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
 
     modelManager.loadConfig(configFilePath);
@@ -1873,6 +1893,31 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
     EXPECT_EQ(definition->getInputsInfo().count("in"), 0);
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 1);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+}
+
+TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
+    std::string graphPbtxtFileContent = pbtxtContent;
+    std::string configFileContent = configFileWithEmptyBasePath;
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+
+    const std::string inputName{"in\""};
+    const std::string newInputName{"in2\""};
+
+    createConfigFileWithContent(configFileContent, configFilePath);
+    createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
+    ConstructorEnabledModelManager modelManager;
+    modelManager.loadConfig(configFilePath);
+    auto model = modelManager.findModelByName("dummy");
+    ASSERT_NE(nullptr, model->getDefaultModelInstance());
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    auto definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
+    EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
 

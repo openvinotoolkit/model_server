@@ -884,7 +884,6 @@ cc_test(
         "test/mediapipe/relative_paths/graph1/graph.pbtxt",
         "test/mediapipe/relative_paths/graph1/dummy1/1/dummy.bin",
         "test/mediapipe/relative_paths/graph2/graph.pbtxt",
-        "test/mediapipe/relative_paths/graph2/dummy2/1/dummy.xml",
         "test/mediapipe/relative_paths/graph2/dummy2/1/dummy.bin",
         "test/mediapipe/relative_paths/graph1/graphaddadapterfull.pbtxt",
         "test/mediapipe/relative_paths/graph1/subconfig.json",
