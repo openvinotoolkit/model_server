@@ -395,7 +395,6 @@ cc_library(
     deps = [
         "//:ovms_dependencies",
         "//src/kfserving_api:kfserving_api_cpp",
-        "@org_tensorflow//tensorflow/lite:framework_stable",
         ] + select({
             "//conditions:default": [
                 "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
