@@ -56,7 +56,7 @@ find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
 if [ "$ov_use_binary" == "1" ] ; then cp /opt/intel/openvino/docs/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 if [ "$ov_use_binary" == "0" ] ; then cp /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
-if [ "$BASE_OS" == "redhat" ] ; then cp /usr/lib64/libpugixml.so* /ovms_release/lib/ ; fi
+if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libpugixml.so* /ovms_release/lib/ ; fi
 
 if [ "$FUZZER_BUILD" == "0" ]; then find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \; ; fi;
 cd /ovms_release/bin
