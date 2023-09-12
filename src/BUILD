@@ -403,7 +403,6 @@ cc_library(
                 "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
                 "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
                 "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
-                "@org_tensorflow//tensorflow/lite:framework_stable",
             ],
             "//src:disable_mediapipe" : [],
         }),
