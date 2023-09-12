@@ -46,7 +46,7 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, manager.getMetricRegistry(), &manager.getMetricConfig());
     auto stat = graphDefinition->validate(manager);
     std::unique_lock lock(definitionsMtx);
-    definitions.insert({pipelineName, std::move(graphDefinition)});  // TODO check if inserted
+    definitions.insert({pipelineName, std::move(graphDefinition)});
     return stat;
 }
 
@@ -103,7 +103,6 @@ void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFil
 }
 
 Status MediapipeFactory::revalidatePipelines(ModelManager&) {
-    // TODO potentially not needed if we do not validate presence of models required in pbtxt
     SPDLOG_LOGGER_WARN(modelmanager_logger, "revalidation of mediapipe graphs not implemented yet");
     return StatusCode::OK;
 }

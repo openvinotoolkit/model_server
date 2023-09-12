@@ -46,6 +46,7 @@ const grpc::Status grpc(const Status& status) {
         {StatusCode::RESHAPE_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
         {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
         {StatusCode::SEQUENCE_TERMINATED, grpc::StatusCode::FAILED_PRECONDITION},
+        {StatusCode::MEDIAPIPE_DESERIALIZATION_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
         {StatusCode::MEDIAPIPE_GRAPH_START_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
         {StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
         {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, grpc::StatusCode::FAILED_PRECONDITION},

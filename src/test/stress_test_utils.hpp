@@ -1104,7 +1104,7 @@ public:
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));  // required for metrics
         // ideally we would want to have emptyConfigWithMetrics
-        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/emptyConfigWithMetrics.json"));  // FIXME the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/emptyConfigWithMetrics.json"));  // the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(serverSettings, 0));                                      // set to 0 to reload only through test and avoid races
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
@@ -1647,7 +1647,9 @@ public:
             std::shared_ptr<MediapipeGraphExecutor> executorPtr;
 #endif
             ResponseType response;
-            RequestType request2;  // DIRTY HACK WARNING
+            // little hack - we can't use noninitializad object to call function
+            // and then return that object
+            RequestType request2;
             RequestType request = preparePipelinePredictRequest(request2);
             ovms::Status createPipelineStatus = StatusCode::UNKNOWN_ERROR;
             if (typeid(ServableType) == typeid(ovms::Pipeline)) {

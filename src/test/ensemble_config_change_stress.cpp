@@ -774,7 +774,6 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringMetadataLoad) {
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
-    // TODO remove MEDIAPIPE_DEFINITION_NOT_LOADED_YET from allowed list
     performStressTest(
         &ConfigChangeStressTest::triggerKFSGetPipelineMetadataInALoop,
         &ConfigChangeStressTest::removeMediapipeGraphUsedModel,
@@ -788,7 +787,6 @@ TEST_F(StressMediapipeChanges, ReloadModelDuringMetadataLoad) {
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
-    // TODO remove MEDIAPIPE_DEFINITION_NOT_LOADED_YET from allowed list
     performStressTest(
         &ConfigChangeStressTest::triggerKFSGetPipelineMetadataInALoop,
         &ConfigChangeStressTest::reloadMediapipeGraphUsedModel,
