@@ -61,7 +61,7 @@ docker pull openvino/model_server:latest
 
 ## Run OpenVINO Model Server
 ```bash
-docker run -it -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
+docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
 ```
 
 ## Run client application for holistic tracking - default demo
@@ -86,7 +86,7 @@ Results saved to :image_0.jpg
 In a similar way can be executed the iris image analysis:
 
 ```bash
-python mediapipe_holistic_tracking.py --graph_name irisTracking --images_list input_images.txt
+python mediapipe_holistic_tracking.py --graph_name irisTracking --images_list input_images.txt --grpc_port 9000
 Running demo application.
 Start processing:
         Graph name: irisTracking
