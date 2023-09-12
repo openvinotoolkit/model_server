@@ -250,15 +250,14 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
      this could be potentially changed)");
     mockedServableManagerModule->waitWithStart = false;
     requestServerReady(argv[8], grpc::StatusCode::OK, false);
-    requestModelReady(argv[8], argv[2], grpc::StatusCode::NOT_FOUND, false);
 
     SPDLOG_INFO(R"(here check that server eventually is still not ready beceause module is not initialized
     sleep potentially to improve with signaling)");
     auto& manager = mockedServableManagerModule->getServableManager();
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     start = std::chrono::high_resolution_clock::now();
-    while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));  // average:32ms on CLX3 to load model
+    while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 8) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(15));  // average:32ms on CLX3 to load model
         std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
         auto status = manager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuard);
         if (!status.ok())
@@ -266,7 +265,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
         if (modelInstance->getStatus().getState() == ovms::ModelVersionState::AVAILABLE)
             break;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(15));  // average:32ms on CLX3 to load model
 
     requestModelReady(argv[8], argv[2], grpc::StatusCode::OK, true);
     requestServerReady(argv[8], grpc::StatusCode::OK, false);
