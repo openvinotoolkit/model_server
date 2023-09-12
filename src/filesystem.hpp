@@ -16,6 +16,7 @@
 #pragma once
 
 #include <filesystem>
+#include <fstream>
 #include <regex>
 #include <set>
 #include <string>
@@ -24,6 +25,7 @@
 #include <spdlog/spdlog.h>
 
 #include "model_version_policy.hpp"
+#include "openssl/md5.h"
 #include "status.hpp"
 
 namespace ovms {
@@ -233,6 +235,24 @@ public:
         }
 
         return joined;
+    }
+
+    static std::string getFileMD5(const std::string& filename) {
+        std::ifstream ifs;
+        ifs.open(filename);
+        std::stringstream strStream;
+        strStream << ifs.rdbuf();
+        std::string str = strStream.str();
+        ifs.close();
+
+        unsigned char result[MD5_DIGEST_LENGTH];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        MD5((unsigned char*)str.c_str(), str.size(), result);
+#pragma GCC diagnostic pop
+
+        std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
+        return (md5sum);
     }
 
     StatusCode CreateLocalDir(const std::string& path) {

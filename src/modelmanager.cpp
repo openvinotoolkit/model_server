@@ -60,7 +60,6 @@
 #include "metric_config.hpp"
 #include "metric_registry.hpp"
 #include "modelinstance.hpp"  // for logging
-#include "openssl/md5.h"
 #include "ov_utils.hpp"
 #include "s3filesystem.hpp"
 #include "schema.hpp"
@@ -378,18 +377,28 @@ Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, con
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
         return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
     }
-    if (!factory.definitionExists(config.getGraphName())) {
+
+    MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
+
+    if (mediapipeGraphDefinition == nullptr) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
         auto status = factory.createDefinition(config.getGraphName(), config, *this);
         mediapipesInConfigFile.insert(config.getGraphName());
         return status;
     }
-    SPDLOG_LOGGER_WARN(modelmanager_logger, "Mediapipe graph:{} is already loaded. Triggering reload", config.getGraphName());
-    auto status = factory.reloadDefinition(config.getGraphName(),
-        config,
-        *this);
+
+    if (mediapipeGraphDefinition->isReloadRequired(config)) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} triggering reload", config.getGraphName());
+        auto status = factory.reloadDefinition(config.getGraphName(),
+            config,
+            *this);
+        mediapipesInConfigFile.insert(config.getGraphName());
+        return status;
+    }
+
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} already loaded and reload is not required", config.getGraphName());
     mediapipesInConfigFile.insert(config.getGraphName());
-    return status;
+    return StatusCode::OK;
 }
 #endif
 
@@ -777,19 +786,11 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
 #if (MEDIAPIPE_DISABLE == 0)
     for (auto mediapipeConfig : mediapipesInConfigFile) {
         std::string subconfigPath = mediapipeConfig.getSubconfigPath();
-        if (subconfigPath.empty()) {
-            std::string defaultSubconfigPath = mediapipeConfig.getBasePath() + "subconfig.json";
-            std::ifstream ifs(defaultSubconfigPath);
-            if (!ifs.is_open()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "No subconfig path was provided for graph: {} and defualt subconfig file does not exist.", mediapipeConfig.getGraphName());
-                continue;
-            }
-            subconfigPath = defaultSubconfigPath;
-        }
         rapidjson::Document mediapipeConfigJson;
         std::ifstream ifs(subconfigPath);
         if (!ifs.is_open()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.", subconfigPath, subconfigPath);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
+                subconfigPath, mediapipeConfig.getGraphName());
             continue;
         }
         rapidjson::Document subconfigJson;
@@ -876,7 +877,7 @@ public:
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
-    lastConfigFileMD5 = getConfigFileMD5();
+    lastConfigFileMD5 = FileSystem::getFileMD5(configFilename);
     rapidjson::Document configJson;
 
     uint16_t counter = 0;
@@ -1040,24 +1041,6 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
     }
 }
 
-std::string ModelManager::getConfigFileMD5() {
-    std::ifstream ifs;
-    ifs.open(configFilename);
-    std::stringstream strStream;
-    strStream << ifs.rdbuf();
-    std::string str = strStream.str();
-    ifs.close();
-
-    unsigned char result[MD5_DIGEST_LENGTH];
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    MD5((unsigned char*)str.c_str(), str.size(), result);
-#pragma GCC diagnostic pop
-
-    std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
-    return (md5sum);
-}
-
 Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
 
@@ -1067,7 +1050,7 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
         return StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED;
     }
 
-    std::string newmd5 = getConfigFileMD5();
+    std::string newmd5 = FileSystem::getFileMD5(configFilename);
     bool configFileModified = false;
     if (lastConfigFileMD5 != newmd5) {
         configFileModified = true;

@@ -310,6 +310,14 @@ void MediapipeGraphDefinition::retire(ModelManager& manager) {
     this->status.handle(RetireEvent());
 }
 
+bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& config) const {
+    if (getStateCode() == PipelineDefinitionStateCode::RETIRED) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading previously retired mediapipe definition: {}", getName());
+        return true;
+    }
+    return getMediapipeGraphConfig().isReloadRequired(config);
+}
+
 Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
     // TODO possibly unify with DAG to share code
     unloadGuard = std::make_unique<MediapipeGraphDefinitionUnloadGuard>(*this);
