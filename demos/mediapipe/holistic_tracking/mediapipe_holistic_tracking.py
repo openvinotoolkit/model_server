@@ -29,73 +29,10 @@ import urllib.request
 
 import tritonclient.grpc as grpcclient
 
-_GCS_URL_PREFIX = 'https://storage.googleapis.com/mediapipe-assets/'
-
 def run_command(command):
     print(command)
     if subprocess.call(command.split()) != 0:
       sys.exit(-1)
-
-def convert_pose():
-    print("Converting pose detection model")
-    run_command("wget https://github.com/PINTO0309/tflite2tensorflow/raw/main/schema/schema.fbs")
-    run_command("git clone -b v2.0.8 https://github.com/google/flatbuffers.git")
-    run_command("bash build_dependencies.sh")
-    run_command("cp -r  ovms/pose_detection/1/pose_detection.tflite .")
-    run_command("tflite2tensorflow --model_path pose_detection.tflite --flatc_path flatbuffers/build/flatc --schema_path schema.fbs --output_pb")
-    run_command("tflite2tensorflow --model_path pose_detection.tflite --flatc_path flatbuffers/build/flatc --schema_path schema.fbs --output_no_quant_float32_tflite   --output_dynamic_range_quant_tflite   --output_weight_quant_tflite   --output_float16_quant_tflite   --output_integer_quant_tflite")
-    run_command("cp -rf saved_model/model_float32.tflite ovms/pose_detection/1/pose_detection.tflite")
-    run_command("rm -rf pose_detection.tflite")
-    run_command("rm -rf saved_model")
-
-def download_model(model_path: str):
-    """Downloads the oss model from Google Cloud Storage if it doesn't exist in the package."""
-    model_url = _GCS_URL_PREFIX + model_path.split('/')[-1]
-    dst = os.path.join("ovms/", model_path.replace("/","/1/"))
-    dst_dir = os.path.dirname(model_path)
-
-    # Workaround to copy every model in separate directory
-    model_name = os.path.basename(model_path).replace(".tflite","")
-    dir_name = os.path.basename(dst_dir)
-    if dir_name != model_name:
-        dst = dst.replace(dir_name + "/", model_name + "/")
-
-    dst_dir = os.path.dirname(dst)
-    if not os.path.exists(dst_dir):
-        os.makedirs(dst_dir)
-
-    dst_file = os.path.join(dst_dir, os.path.basename(model_path))
-    print('Downloading model to ' + dst_file)
-    with urllib.request.urlopen(model_url) as response, open(dst_file,
-                                                           'wb') as out_file:
-        if response.code != 200:
-            raise ConnectionError('Cannot download ' + model_path +
-                                    ' from Google Cloud Storage.')
-        shutil.copyfileobj(response, out_file)
-
-def prepare_models():    
-    external_files = [
-       # Using short range
-       # 'face_detection/face_detection_full_range_sparse.tflite',
-        'face_detection/face_detection_short_range.tflite',
-        'face_landmark/face_landmark.tflite',
-       # Model loading error due to custom tf op
-       # 'face_landmark/face_landmark_with_attention.tflite',
-        'hand_landmark/hand_landmark_full.tflite',
-       # Using full
-       # 'hand_landmark/hand_landmark_lite.tflite',
-        'holistic_landmark/hand_recrop.tflite',
-        'iris_landmark/iris_landmark.tflite',
-        'palm_detection/palm_detection_full.tflite',
-       # Using full
-       # 'palm_detection/palm_detection_lite.tflite',
-       # Need to convert model using TF toolset
-        'pose_detection/pose_detection.tflite',
-        'pose_landmark/pose_landmark_full.tflite',
-    ]
-    for elem in external_files:
-      sys.stderr.write('downloading file: %s\n' % elem)
-      download_model(elem)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sends requests via KServe gRPC API using images in format supported by OpenCV. '
@@ -113,23 +50,8 @@ if __name__ == '__main__':
                         dest='graph_name')
     parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with GRPC endpoint')
 
-    parser.add_argument('--download_models', default=False, action='store_true', help='download models and files for demo')
-
     error = False
     args = vars(parser.parse_args())
-
-    if args['download_models'] == True:
-        run_command("curl -kL -o girl.jpeg https://cdn.pixabay.com/photo/2019/03/12/20/39/girl-4051811_960_720.jpg")
-        run_command("mkdir -p mediapipe/mediapipe/modules/hand_landmark/")
-        run_command("mkdir -p ovms")
-        run_command("wget -O mediapipe/mediapipe/modules/hand_landmark/handedness.txt https://raw.githubusercontent.com/openvinotoolkit/mediapipe/main/mediapipe/modules/hand_landmark/handedness.txt")
-        run_command("cp config_holistic.json ovms/")
-        run_command("cp iris_tracking.pbtxt ovms/")
-        run_command("cp holistic_tracking.pbtxt ovms/")
-        prepare_models()
-        convert_pose()
-        print("All files and models are prepared.")
-        exit(0)
 
     print("Running demo application.")
     address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
@@ -193,4 +115,5 @@ if __name__ == '__main__':
                                                                                       ))
         out = cv2.cvtColor(output, cv2.COLOR_RGB2BGR)
         cv2.imwrite("image_" + str(iteration) + ".jpg", out)
+        print("Results saved to :"+ "image_" + str(iteration) + ".jpg")
         iteration = iteration + 1
