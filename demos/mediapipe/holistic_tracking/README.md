@@ -1,21 +1,21 @@
-# MediaPipe Object Detection Demo {#ovms_docs_demo_mediapipe_object_detection}
+# MediaPipe Holistic Demo {#ovms_docs_demo_mediapipe_holistic}
 
 This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph using OVMS.
 
 Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
-## Prepare the repository
+The demo is based on the [upstream Mediapipe holistic demo](https://github.com/google/mediapipe/blob/master/docs/solutions/holistic.md)
+and [Mediapipe Iris demo](https://github.com/google/mediapipe/blob/master/docs/solutions/iris.md.)
+
+## Prepare the server deployment
 
 Clone the repository and enter mediapipe object_detection directory
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/holistic_tracking
 
-virtualenv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
+./prepare_server.sh
 
-python mediapipe_holistic_tracking.py --download_models
 ```
 
 The models setup should look like this
@@ -38,6 +38,7 @@ ovms
 ├── iris_landmark
 │   └── 1
 │       └── iris_landmark.tflite
+├── iris_tracking.pbtxt
 ├── palm_detection_full
 │   └── 1
 │       └── palm_detection_full.tflite
@@ -47,6 +48,8 @@ ovms
 └── pose_landmark_full
     └── 1
         └── pose_landmark_full.tflite
+
+
 ```
 
 ### Pull the Latest Model Server Image
@@ -58,25 +61,49 @@ docker pull openvino/model_server:latest
 
 ## Run OpenVINO Model Server
 ```bash
-docker run -it -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
+docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
 ```
 
 ## Run client application for holistic tracking - default demo
 ```bash
-python mediapipe_holistic_tracking.py --grpc_port 9000
+pip install -r requirements.txt
+# download a sample image for analysis
+curl -kL -o girl.jpeg https://cdn.pixabay.com/photo/2019/03/12/20/39/girl-4051811_960_720.jpg
+echo "girl.jpeg" > input_images.txt
+# launch the client
+python mediapipe_holistic_tracking.py --grpc_port 9000 --images_list input_images.txt
+Running demo application.
+Start processing:
+        Graph name: holisticTracking
+(640, 960, 3)
+Iteration 0; Processing time: 131.45 ms; speed 7.61 fps
+Results saved to :image_0.jpg
 ```
-
 ## Output image
 ![output](output_image.jpg)
 
 ## Run client application for iris tracking
+In a similar way can be executed the iris image analysis:
+
 ```bash
-python mediapipe_holistic_tracking.py --graph_name irisTracking
+python mediapipe_holistic_tracking.py --graph_name irisTracking --images_list input_images.txt --grpc_port 9000
+Running demo application.
+Start processing:
+        Graph name: irisTracking
+(640, 960, 3)
+Iteration 0; Processing time: 77.03 ms; speed 12.98 fps
+Results saved to :image_0.jpg
 ```
 
 ## Output image
 ![output](output_image1.jpg)
+
+
+
 ## RTSP Client
+Mediapipe graph can be used for remote analysis of individual images but the client can use it for a complete video stream processing.
+Below is an example how to run a client reading encoded rtsp video stream.
+
 
 Build docker image containing rtsp client along with its dependencies
 The rtsp client app needs to have access to RTSP stream to read from and write to.
@@ -89,6 +116,7 @@ Then write to the server using ffmpeg, example using camera
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
 ```
 
+Build the docker image with the python client for video stream reading an remote analysis:
 ```bash
 docker build ../../common/stream_client/ -t rtsp_client
 ```
