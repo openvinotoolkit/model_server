@@ -26,6 +26,7 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
+#include "opencv2/opencv.hpp"
 
 namespace ovms {
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {

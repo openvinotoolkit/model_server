@@ -30,9 +30,12 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#pragma GCC diagnostic pop
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
 
@@ -48,6 +51,7 @@ class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
 
 public:
+    virtual ~MediapipeGraphDefinition();
     MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,
@@ -61,6 +65,7 @@ public:
     const model_version_t getVersion() const { return VERSION; }
     const tensor_map_t getInputsInfo() const;
     const tensor_map_t getOutputsInfo() const;
+    const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
 
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
 
@@ -70,6 +75,8 @@ public:
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
+
+    bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
     static const std::string SCHEDULER_CLASS_NAME;
@@ -103,6 +110,7 @@ protected:
     Status validateForConfigLoadableness();
 
     Status setStreamTypes();
+    Status dryInitializeTest();
     std::string chosenConfig;
     static MediapipeGraphConfig MGC;
     const std::string name;
@@ -117,6 +125,7 @@ protected:
 
     Status createInputsInfo();
     Status createOutputsInfo();
+    Status createInputSidePacketsInfo();
 
     std::condition_variable loadedNotify;
     mutable std::shared_mutex metadataMtx;
@@ -135,6 +144,7 @@ private:
 
     std::vector<std::string> inputNames;
     std::vector<std::string> outputNames;
+    std::vector<std::string> inputSidePacketNames;
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 };

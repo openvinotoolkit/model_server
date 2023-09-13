@@ -113,6 +113,12 @@ cc_shared_library(
         "@oneTBB//:__subpackages__",
         "@com_github_glog_glog//:__subpackages__",
         "@com_github_gflags_gflags//:__subpackages__",
+        "@XNNPACK//:__subpackages__",
+        "@pthreadpool//:__subpackages__",
+        "@FXdiv//:__subpackages__",
+        "@FP16//:__subpackages__",
+        "@flatbuffers//:__subpackages__",
+        "@ruy//:__subpackages__",
     ] + select({
         "//conditions:default": [
             "@mediapipe//:__subpackages__",
@@ -141,6 +147,24 @@ mediapipe_proto_library(
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",
     ],
+)
+
+cc_library(
+    name = "ovms_header",
+    hdrs = ["ovms.h"],
+    srcs = [ "ovms.h" ],
+    deps = [      
+        ],
+    local_defines = [
+    ],
+    copts = [
+        ],
+    visibility = [
+        "//visibility:public",
+    ],
+    linkopts = [
+    ],
+    alwayslink = 1,
 )
 
 cc_library(
@@ -367,7 +391,6 @@ cc_library(
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
-                "mediapipe_calculators/ovms_calculator.cc",
             ],
             "//src:disable_mediapipe" : [],
         }),
@@ -377,6 +400,11 @@ cc_library(
         ] + select({
             "//conditions:default": [
                 "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
+                "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
+                "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
+                "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
             ],
             "//src:disable_mediapipe" : [],
         }),
@@ -687,12 +715,18 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-	] + select({
+        "//src:libcustom_node_east_ocr.so",
+        "//src:libcustom_node_face_blur.so",
+        "//src:libcustom_node_horizontal_ocr.so",
+        "//src:libcustom_node_model_zoo_intel_object_detection.so",
+        "//src:libcustom_node_image_transformation.so",
+	    ] + select({
         "//conditions:default": [
             "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
         ],
         "//src:disable_mediapipe" : [],
         }),
+
         # "//src:cpp_headers",  # Use for dynamic linking when necessary
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -705,6 +739,7 @@ cc_test(
         "test/tensor_conversion_test.cpp",
         "test/c_api_test_utils.hpp",
         "test/c_api_tests.cpp",
+        "test/c_api_stress_tests.cpp",
         "test/custom_loader_test.cpp",
         "test/custom_node_output_allocator_test.cpp",
         "test/custom_node_buffersqueue_test.cpp",
@@ -771,6 +806,7 @@ cc_test(
         "test/tensorutils_test.cpp",
         "test/test_utils.cpp",
         "test/test_utils.hpp",
+        "test/stress_test_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
@@ -780,6 +816,8 @@ cc_test(
             "test/mediapipeflow_test.cpp",
             "test/mediapipe_validation_test.cpp",
             "test/mediapipe/ovms_kfs_calculator.cc",
+            "test/mediapipe/ovms_image_input_calculator.cc",
+            "mediapipe_calculators/ovms_calculator.cc",
         ],
         "//src:disable_mediapipe" : [],
         }),
@@ -809,41 +847,49 @@ cc_test(
         "test/dummyUppercase/1/dummy.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
-        "test/mediapipe/subconfig.json",
         "test/mediapipe/config_mediapipe_add_adapter_full.json",
-        "test/mediapipe/config_mediapipe_dummy_adapter_full_subconfig.json",
         "test/mediapipe/config_mediapipe_all_graphs_adapter_full.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dummy_in_both_config_and_subconfig.json",
+        "test/mediapipe/config_mediapipe_dummy_adapter_full_subconfig.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_scalar.json",
+        "test/mediapipe/config_mediapipe_dummy_nonexistent_calculator.json",
+        "test/mediapipe/config_mediapipe_dummy_two_outputs.json",
         "test/mediapipe/config_mediapipe_graph_with_side_packets.json",
+        "test/mediapipe/config_mediapipe_two_outputs_dag.json",
         "test/mediapipe/config_mp_tf_passthrough.json",
         "test/mediapipe/config_standard_add.json",
         "test/mediapipe/config_standard_dummy.json",
         "test/mediapipe/graphadd.pbtxt",
-        "test/mediapipe/graphtfpassthrough.pbtxt",
         "test/mediapipe/graphaddadapterfull.pbtxt",
         "test/mediapipe/graphdummy_tf.pbtxt",
         "test/mediapipe/graphdummy.pbtxt",
-        "test/mediapipe/graphscalar.pbtxt",
         "test/mediapipe/graphdummyadapterfull.pbtxt",
+        "test/mediapipe/graphdummynonexistentcalculator.pbtxt",
+        "test/mediapipe/graphtfpassthrough.pbtxt",
+        "test/mediapipe/graphscalar.pbtxt",
         "test/mediapipe/graphWithParams.pbtxt",
+        "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
+        "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
+        "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
+        "test/mediapipe/relative_paths/config_mp_passthrough.json",
         "test/mediapipe/relative_paths/config_relative_dummy_negative.json",
         "test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json",
         "test/mediapipe/relative_paths/config_relative_add_subconfig.json",
         "test/mediapipe/relative_paths/config_relative_dummy.json",
+        "test/mediapipe/relative_paths/config_tflite_passthrough.json",
+        "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json",
         "test/mediapipe/relative_paths/graph1/dummy1/1/dummy.xml",
+        "test/mediapipe/relative_paths/graph1/graph.pbtxt",
+        "test/mediapipe/relative_paths/graph1/dummy1/1/dummy.bin",
+        "test/mediapipe/relative_paths/graph2/graph.pbtxt",
         "test/mediapipe/relative_paths/graph2/dummy2/1/dummy.xml",
+        "test/mediapipe/relative_paths/graph2/dummy2/1/dummy.bin",
         "test/mediapipe/relative_paths/graph1/graphaddadapterfull.pbtxt",
         "test/mediapipe/relative_paths/graph1/subconfig.json",
-        "test/mediapipe/relative_paths/graph2/graphadd.pbtxt",
-        "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
-        "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
-        "test/mediapipe/config_mediapipe_two_outputs_dag.json",
-        "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
-        "test/mediapipe/config_mediapipe_dummy_two_outputs.json",
         "test/mediapipe/relative_paths/graph2/subconfig.json",
+        "test/mediapipe/relative_paths/graph2/graphadd.pbtxt",
         "test/passthrough/1/passthrough.xml",
         "test/passthrough/1/passthrough.bin",
         "test/summator/1/summator.xml",
@@ -891,14 +937,21 @@ cc_test(
 )
 
 filegroup(
-  name = "static_analysis",
+  name = "release_custom_nodes",
   srcs = [
-    "//src:ovms",
     "//src:libcustom_node_add_one.so",
     "//src:libcustom_node_east_ocr.so",
     "//src:libcustom_node_face_blur.so",
     "//src:libcustom_node_horizontal_ocr.so",
     "//src:libcustom_node_model_zoo_intel_object_detection.so",
     "//src:libcustom_node_image_transformation.so",
+  ]
+)
+
+filegroup(
+  name = "static_analysis",
+  srcs = [
+    "//src:ovms",
+    "//src:release_custom_nodes",
   ]
 )

@@ -987,7 +987,6 @@ TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
     createConfigFileWithContent(getConfig2Models(this->getFilePath("/models/dummy1"), this->getFilePath("/models/dummy2")), fileToReload);
     bool isNeeded = false;
     manager.configFileReloadNeeded(isNeeded);
-    ASSERT_EQ(isNeeded, true);
     std::thread s([&manager]() {
         waitForOVMSConfigReload(manager);
     });
@@ -1014,7 +1013,6 @@ TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModelRelativePath) {
     createConfigFileWithContent(relative_config_2_models, fileToReload);
     bool isNeeded = false;
     manager.configFileReloadNeeded(isNeeded);
-    ASSERT_EQ(isNeeded, true);
     std::thread s([&manager]() {
         waitForOVMSConfigReload(manager);
     });

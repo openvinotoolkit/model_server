@@ -84,26 +84,18 @@ protected:
     MediapipeFactory mediapipeFactory;
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
-
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
-
     GlobalSequencesViewer globalSequencesViewer;
-
     uint32_t waitForModelLoadedTimeoutMs;
 
 private:
     bool watcherStarted = false;
     bool cleanerStarted = false;
 
-    /**
-     * @brief 
-     * 
-     */
     ModelManager(const ModelManager&) = delete;
 
     Status lastLoadConfigStatus = StatusCode::OK;
 
-    std::string getConfigFileMD5();
     Status cleanupModelTmpFiles(ModelConfig& config);
     Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);

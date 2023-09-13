@@ -1,8 +1,0 @@
-apiVersion: operators.coreos.com/v1alpha1
-kind: CatalogSource
-metadata:
-  name: my-test-catalog
-  namespace: olm
-spec:
-  sourceType: grpc
-  image: test-catalog:latest

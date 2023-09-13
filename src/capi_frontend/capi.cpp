@@ -19,11 +19,18 @@
 #include <memory>
 #include <string>
 
+#include <rapidjson/document.h>
+#include <rapidjson/pointer.h>
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
+#include "../version.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
@@ -89,6 +96,7 @@ OVMS_Status* OVMS_ServerLive(OVMS_Server* serverPtr, bool* isLive) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
+    SPDLOG_DEBUG("Processing C-API server liveness request");
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     *isLive = server.isLive();
     return nullptr;
@@ -97,11 +105,12 @@ OVMS_Status* OVMS_ServerReady(OVMS_Server* serverPtr, bool* isReady) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
+    SPDLOG_DEBUG("Processing C-API server readiness request");
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     *isReady = server.isReady();
     return nullptr;
 }
-OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
+OVMS_Status* OVMS_StatusCode(OVMS_Status* status,
     uint32_t* code) {
     if (status == nullptr)
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "status"));
@@ -112,7 +121,7 @@ OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
     return nullptr;
 }
 
-OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
+OVMS_Status* OVMS_StatusDetails(OVMS_Status* status,
     const char** details) {
     if (status == nullptr)
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "status"));
@@ -170,6 +179,80 @@ void OVMS_ServerDelete(OVMS_Server* server) {
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     srv->shutdownModules();
     // delete passed in ptr once multi server configuration is done
+}
+
+OVMS_Status* OVMS_MetadataFieldByPointer(OVMS_Metadata* metadata, const char* pointer, const char** value, size_t* size) {
+    if (metadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
+    }
+    if (pointer == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "pointer"));
+    }
+    if (value == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "base"));
+    }
+    if (size == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "byte_size"));
+    }
+    rapidjson::Document* doc = reinterpret_cast<rapidjson::Document*>(metadata);
+    rapidjson::Value* val = rapidjson::Pointer(pointer).Get(*doc);
+    if (!val) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::JSON_SERIALIZATION_ERROR, "value not found"));
+    }
+    *value = strdup(val->GetString());
+    *size = val->GetStringLength();
+    return nullptr;
+}
+
+OVMS_Status* OVMS_SerializeMetadataToString(OVMS_Metadata* metadata, const char** json, size_t* size) {
+    if (metadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
+    }
+    if (json == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "base"));
+    }
+    if (size == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "byte_size"));
+    }
+    rapidjson::Document* doc = reinterpret_cast<rapidjson::Document*>(metadata);
+    rapidjson::StringBuffer strbuf;
+    strbuf.Clear();
+
+    rapidjson::Writer<rapidjson::StringBuffer> writer(strbuf);
+    doc->Accept(writer);
+    *json = strdup(strbuf.GetString());
+    *size = strbuf.GetSize();
+
+    return nullptr;
+}
+
+OVMS_Status* OVMS_ServerMetadata(OVMS_Server* server, OVMS_Metadata** metadata) {
+    if (server == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
+    }
+    if (metadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
+    }
+    SPDLOG_DEBUG("Processing C-API server metadata request");
+    rapidjson::Document* doc = new rapidjson::Document;
+    doc->SetObject();
+    doc->AddMember("name", PROJECT_NAME, doc->GetAllocator());
+    doc->AddMember("version", PROJECT_VERSION, doc->GetAllocator());
+    doc->AddMember("ov_version", OPENVINO_NAME, doc->GetAllocator());
+    *metadata = reinterpret_cast<OVMS_Metadata*>(doc);
+    return nullptr;
+}
+OVMS_Status* OVMS_ServerMetadataDelete(OVMS_Metadata* metadata) {
+    if (metadata == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "metadata"));
+    }
+    rapidjson::Document* doc = reinterpret_cast<rapidjson::Document*>(metadata);
+    delete doc;
+    return nullptr;
+}
+
+void OVMS_StringFree(const char* ptr) {
+    free((void*)ptr);
 }
 
 OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
@@ -529,7 +612,7 @@ OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, co
     return nullptr;
 }
 
-OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const int64_t** shape, size_t* dimCount, const void** data, size_t* bytesize, OVMS_BufferType* bufferType, uint32_t* deviceId) {
+OVMS_Status* OVMS_InferenceResponseOutput(OVMS_InferenceResponse* res, uint32_t id, const char** name, OVMS_DataType* datatype, const int64_t** shape, size_t* dimCount, const void** data, size_t* bytesize, OVMS_BufferType* bufferType, uint32_t* deviceId) {
     if (res == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference response"));
     }
@@ -605,7 +688,7 @@ OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* res, uint32
     return nullptr;
 }
 
-OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* res, uint32_t* count) {
+OVMS_Status* OVMS_InferenceResponseOutputCount(OVMS_InferenceResponse* res, uint32_t* count) {
     if (res == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference response"));
     }
@@ -617,7 +700,7 @@ OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* res, u
     return nullptr;
 }
 
-OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* res, uint32_t* count) {
+OVMS_Status* OVMS_InferenceResponseParameterCount(OVMS_InferenceResponse* res, uint32_t* count) {
     if (res == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference response"));
     }
@@ -629,7 +712,7 @@ OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* res
     return nullptr;
 }
 
-OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* res, uint32_t id, OVMS_DataType* datatype, const void** data) {
+OVMS_Status* OVMS_InferenceResponseParameter(OVMS_InferenceResponse* res, uint32_t id, OVMS_DataType* datatype, const void** data) {
     if (res == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference response"));
     }
@@ -732,7 +815,7 @@ OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* reque
     auto req = reinterpret_cast<ovms::InferenceRequest*>(request);
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
 
-    SPDLOG_DEBUG("Processing C-API request for model: {}; version: {}",
+    SPDLOG_DEBUG("Processing C-API inference request for servable: {}; version: {}",
         req->getServableName(),
         req->getServableVersion());
 
@@ -793,6 +876,9 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableN
     if (state == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable status"));
     }
+    SPDLOG_DEBUG("Processing C-API state request for servable: {}; version: {}",
+        servableName,
+        servableVersion);
     // TODO metrics
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     ModelManager* modelManager{nullptr};
@@ -841,7 +927,9 @@ OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servab
     if (servableMetadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
-    // TODO check inputs
+    SPDLOG_DEBUG("Processing C-API metadata request for servable: {}; version: {}",
+        servableName,
+        servableVersion);
     // TODO metrics
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     std::shared_ptr<ovms::ModelInstance> modelInstance;
@@ -855,7 +943,7 @@ OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servab
         std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
         status = getPipelineDefinition(server, servableName, &pipelineDefinition, unloadGuard);
         if (!status.ok() || !pipelineDefinition) {
-            return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
+            return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
         }
         *servableMetadata = reinterpret_cast<OVMS_ServableMetadata*>(new ovms::ServableMetadata(servableName, servableVersion, pipelineDefinition->getInputsInfo(), pipelineDefinition->getOutputsInfo()));
         return nullptr;
@@ -871,7 +959,7 @@ OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const char* servab
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServableMetadataGetInputCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
+OVMS_Status* OVMS_ServableMetadataInputCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
     if (servableMetadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
@@ -883,7 +971,7 @@ OVMS_Status* OVMS_ServableMetadataGetInputCount(OVMS_ServableMetadata* servableM
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServableMetadataGetOutputCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
+OVMS_Status* OVMS_ServableMetadataOutputCount(OVMS_ServableMetadata* servableMetadata, uint32_t* count) {
     if (servableMetadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
@@ -894,7 +982,7 @@ OVMS_Status* OVMS_ServableMetadataGetOutputCount(OVMS_ServableMetadata* servable
     *count = metadata->getOutputsInfo().size();
     return nullptr;
 }
-OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax) {
+OVMS_Status* OVMS_ServableMetadataInput(OVMS_ServableMetadata* servableMetadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax) {
     if (servableMetadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
@@ -952,7 +1040,7 @@ OVMS_Status* OVMS_ServableMetadataGetInput(OVMS_ServableMetadata* servableMetada
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax) {
+OVMS_Status* OVMS_ServableMetadataOutput(OVMS_ServableMetadata* servableMetadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMin, int64_t** shapeMax) {
     if (servableMetadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }
@@ -1010,7 +1098,7 @@ OVMS_Status* OVMS_ServableMetadataGetOutput(OVMS_ServableMetadata* servableMetad
     return nullptr;
 }
 
-OVMS_Status* OVMS_ServableMetadataGetInfo(OVMS_ServableMetadata* servableMetadata, const void** info) {
+OVMS_Status* OVMS_ServableMetadataInfo(OVMS_ServableMetadata* servableMetadata, const void** info) {
     if (servableMetadata == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "servable metadata"));
     }

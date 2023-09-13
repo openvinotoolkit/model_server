@@ -92,7 +92,7 @@ const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
 const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
     R"(/v2)";
 
-const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics)";
+const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
 
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
     predictionRegex(predictionRegexExp),
@@ -637,6 +637,10 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         if (std::regex_match(request_path, sm, predictionRegex))
             return StatusCode::REST_UNSUPPORTED_METHOD;
         if (std::regex_match(request_path, sm, metricsRegex)) {
+            std::string params = sm[3];
+            if (!params.empty()) {
+                SPDLOG_DEBUG("Discarded following url parameters: {}", params);
+            }
             requestComponents.type = Metrics;
             return StatusCode::OK;
         }
@@ -714,8 +718,12 @@ Status HttpRestApiHandler::processPredictRequest(
 
     timer.stop(TOTAL);
     double requestTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
-    OBSERVE_IF_ENABLED(reporterOut->requestTimeRest, requestTime);
     SPDLOG_DEBUG("Total REST request processing time: {} ms", requestTime / 1000);
+    if (!reporterOut) {
+        return StatusCode::OK;
+        // TODO fix after Mediapipe metrics implementation
+    }
+    OBSERVE_IF_ENABLED(reporterOut->requestTimeRest, requestTime);
     return StatusCode::OK;
 }
 

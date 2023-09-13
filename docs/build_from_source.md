@@ -161,7 +161,7 @@ Enables or disabled calculating the unit tests coverage as part of the docker im
 - `1` Checking the coverage is included
 
 ```bash
-make docker_build RUN_TESTS=0
+make docker_build CHECK_COVERAGE=0
 ```
 
 Running the unit tests will increase build time and consume more RAM

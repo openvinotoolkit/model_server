@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -51,6 +52,8 @@ using ovms::Buffer;
 using ovms::InferenceResponse;
 using ovms::InferenceTensor;
 using ovms::StatusCode;
+
+const int SLEEP_TIME_AFTER_THREAD_STARTED_MS = 1;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
@@ -143,19 +146,22 @@ public:
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(waitingBeforeGettingModelCount);
         std::vector<std::promise<void>> releaseWaitBeforePerformInference(waitingBeforePerformInferenceCount);
+        std::vector<std::promise<void>> threadsWaitingBeforeGettingModelInstanceStarted(waitingBeforeGettingModelCount);
+        std::vector<std::promise<void>> threadsWaitingBeforePerformInferenceStarted(waitingBeforePerformInferenceCount);
+        std::promise<void> thread1Started, thread2Started;
 
         std::vector<std::thread> predictsWaitingBeforeGettingModelInstance;
         std::vector<std::thread> predictsWaitingBeforeInference;
         for (auto i = 0u; i < waitingBeforeGettingModelCount; ++i) {
             predictsWaitingBeforeGettingModelInstance.emplace_back(
                 std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i]() {
+                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, &threadsWaitingBeforeGettingModelInstanceStarted, i]() {
                         RequestType request;
                         Preparer<RequestType> preparer;
                         preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
                                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{(initialBatchSize + (i % 3)), 10}, ovms::Precision::FP32}}});
-
+                        threadsWaitingBeforeGettingModelInstanceStarted[i].set_value();
                         performPredict(config.getName(), config.getVersion(), request,
                             std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
                     }));
@@ -163,19 +169,25 @@ public:
         for (auto i = 0u; i < waitingBeforePerformInferenceCount; ++i) {
             predictsWaitingBeforeInference.emplace_back(
                 std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforePerformInference, i]() {
+                    [this, initialBatchSize, &releaseWaitBeforePerformInference, &threadsWaitingBeforePerformInferenceStarted, i]() {
                         RequestType request;
                         Preparer<RequestType> preparer;
                         preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
                                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{initialBatchSize, 10}, ovms::Precision::FP32}}});
-
+                        threadsWaitingBeforePerformInferenceStarted[i].set_value();
                         performPredict(config.getName(), config.getVersion(), request, nullptr,
                             std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInference[i].get_future())));
                     }));
         }
         // sleep to allow all threads to initialize
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        for (auto& p : threadsWaitingBeforeGettingModelInstanceStarted) {
+            p.get_future().get();
+        }
+        for (auto& p : threadsWaitingBeforePerformInferenceStarted) {
+            p.get_future().get();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME_AFTER_THREAD_STARTED_MS));
         for (auto& promise : releaseWaitBeforeGettingModelInstance) {
             promise.set_value();
         }
@@ -196,22 +208,27 @@ public:
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(numberOfThreads);
+        std::vector<std::promise<void>> threadsWaitingBeforeGettingModelInstanceStarted(numberOfThreads);
         std::vector<std::thread> predictThreads;
         for (auto i = 0u; i < numberOfThreads; ++i) {
             predictThreads.emplace_back(
                 std::thread(
-                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, i]() {
+                    [this, initialBatchSize, &releaseWaitBeforeGettingModelInstance, &threadsWaitingBeforeGettingModelInstanceStarted, i]() {
                         RequestType request;
                         Preparer<RequestType> preparer;
                         preparer.preparePredictRequest(request,
                             {{DUMMY_MODEL_INPUT_NAME,
                                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{(initialBatchSize + i), 10}, ovms::Precision::FP32}}});
+                        threadsWaitingBeforeGettingModelInstanceStarted[i].set_value();
                         performPredict(config.getName(), config.getVersion(), request,
                             std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
                     }));
         }
         // sleep to allow all threads to initialize
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        for (auto& p : threadsWaitingBeforeGettingModelInstanceStarted) {
+            p.get_future().get();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME_AFTER_THREAD_STARTED_MS));
         for (auto& promise : releaseWaitBeforeGettingModelInstance) {
             promise.set_value();
         }
@@ -723,18 +740,23 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceInProgress) {
     ASSERT_EQ(this->manager.reloadModelWithVersions(this->config), ovms::StatusCode::OK_RELOADED);
 
     std::promise<void> releaseWaitBeforePerformInferenceBs1, releaseWaitBeforeGetModelInstanceBs2;
+    std::promise<void> thread1Started, thread2Started;
     std::thread t1(
-        [this, &requestBs1, &releaseWaitBeforePerformInferenceBs1]() {
+        [this, &requestBs1, &releaseWaitBeforePerformInferenceBs1, &thread1Started]() {
+            thread1Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs1, nullptr,
                 std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInferenceBs1.get_future())));
         });
     std::thread t2(
-        [this, &requestBs2, &releaseWaitBeforeGetModelInstanceBs2]() {
+        [this, &requestBs2, &releaseWaitBeforeGetModelInstanceBs2, &thread2Started]() {
+            thread2Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs2,
                 std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGetModelInstanceBs2.get_future())),
                 nullptr);
         });
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    thread1Started.get_future().get();
+    thread2Started.get_future().get();
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME_AFTER_THREAD_STARTED_MS));
     releaseWaitBeforePerformInferenceBs1.set_value();
     releaseWaitBeforeGetModelInstanceBs2.set_value();
     t1.join();
@@ -758,18 +780,23 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceAboutToStart) {
     ASSERT_EQ(this->manager.reloadModelWithVersions(this->config), ovms::StatusCode::OK_RELOADED);
 
     std::promise<void> releaseWaitBeforeGetModelInstanceBs1, releaseWaitBeforePerformInferenceBs2;
+    std::promise<void> thread1Started, thread2Started;
     std::thread t1(
-        [this, &requestBs1, &releaseWaitBeforeGetModelInstanceBs1]() {
+        [this, &requestBs1, &releaseWaitBeforeGetModelInstanceBs1, &thread1Started]() {
+            thread1Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs1,
                 std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGetModelInstanceBs1.get_future())),
                 nullptr);
         });
     std::thread t2(
-        [this, &requestBs2, &releaseWaitBeforePerformInferenceBs2]() {
+        [this, &requestBs2, &releaseWaitBeforePerformInferenceBs2, &thread2Started]() {
+            thread2Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs2, nullptr,
                 std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInferenceBs2.get_future())));
         });
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    thread1Started.get_future().get();
+    thread2Started.get_future().get();
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME_AFTER_THREAD_STARTED_MS));
     releaseWaitBeforePerformInferenceBs2.set_value();
     releaseWaitBeforeGetModelInstanceBs1.set_value();
     t1.join();
@@ -813,7 +840,7 @@ TYPED_TEST(TestPredict, SuccesfullReloadForMultipleThreadsDifferentBS) {
 TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     // Prepare model this->manager with dynamic shaped dummy model, originally loaded with 1x10 shape
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -835,7 +862,7 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
 
 TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
     ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Prepare request with empty shape
@@ -853,6 +880,133 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
     this->checkOutputShape(response, {}, SCALAR_MODEL_OUTPUT_NAME);
 }
 
+TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithDynamicBatch) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(-1,2)");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{0, 2}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {0, 2}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, Succesfull0DimInferenceOnModelWithDynamicDim) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(1,-1)");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 0}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {1, 0}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
+// TODO: Re-enable positive check when models with static 0 dimension become available in OpenVINO
+TYPED_TEST(TestPredict, DISABLED_Succesfull0DimInferenceOnModelWithStaticZeroDim) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(1,0)");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 0}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {1, 0}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, Succesfull0DimInferenceOnBatchAutoModel) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{0, 10}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE) << status.string();
+
+    // TODO: Re-enable positive check when models with static 0 dimension become available in OpenVINO
+    // ASSERT_EQ(status, StatusCode::OK) << status.string();
+    // this->checkOutputShape(response, {0,10}, DUMMY_MODEL_OUTPUT_NAME);
+
+    // Prepare non 0-dim request, test recovery
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+    status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {1, 10}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
+TYPED_TEST(TestPredict, Succesfull0DimInferenceOnShapeAutoModel) {
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("auto");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare request with empty shape
+    Preparer<typename TypeParam::first_type> preparer;
+    typename TypeParam::first_type request;
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 0}, ovms::Precision::FP32}}});
+
+    typename TypeParam::second_type response;
+
+    // Do the inference
+    auto status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE) << status.string();
+
+    // TODO: Re-enable positive check when models with static 0 dimension become available in OpenVINO
+    // ASSERT_EQ(status, StatusCode::OK) << status.string();
+    // this->checkOutputShape(response, {1,0}, DUMMY_MODEL_OUTPUT_NAME);
+
+    // Prepare non 0-dim request, test recovery
+    preparer.preparePredictRequest(request,
+        {{DUMMY_MODEL_INPUT_NAME,
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}});
+    status = this->performInferenceWithRequest(request, response, "dummy");
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {1, 10}, DUMMY_MODEL_OUTPUT_NAME);
+}
+
 TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarBatchAuto) {
     ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
     config.setBatchingParams("auto");
@@ -861,7 +1015,7 @@ TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarBatchAuto) {
 
 TYPED_TEST(TestPredict, NegativeInferenceOnModelWithScalarShapeAuto) {
     ovms::ModelConfig config = SCALAR_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -896,7 +1050,7 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
 
     // Prepare model with shape=auto (initially (1,10) shape)
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -907,7 +1061,7 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
     this->checkOutputShape(response, {1, 12});
 
     // Reshape with model reload to Fixed=(1,11)
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("(1,11)");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -919,7 +1073,7 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
     this->checkOutputShape(response, {1, 11});
 
     // Reshape back to AUTO, internal shape is (1,10)
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("auto");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -989,7 +1143,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelInputLayout) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1042,7 +1196,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelInputLayoutAndShape) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1099,7 +1253,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayout) {
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nhwc:nchw\"}")), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1140,7 +1294,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayoutAndShape) {
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nhwc:nchw\"}")), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1183,7 +1337,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelLayoutAndKeepChangingBatchSiz
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1240,7 +1394,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1283,7 +1437,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     // binary input shape is [1,1,1,3] so it should be resized to the nearest border which is in this case [1,1,2,3]
     ASSERT_EQ(config.parseShapeParameter("(1,1,2:5,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
@@ -1296,6 +1450,32 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
     this->checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     this->checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
+
+/* Scenario - perform inference with binary input of batch 0 when model shape is dynamic. Check results.
+ *
+ * 1. Load model with dynamic shape and input layout=nhwc, initial internal layout: nchw
+ * 2. Do the inference with 0 binary image tensors with witdth exceeding shape range - expect status OK and reshaped output tensor
+ */
+TYPED_TEST(TestPredict, PerformInferenceWithZeroBinaryInputsAndShapeDynamic) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "Binary inputs not implemented for C-API yet";
+    using namespace ovms;
+
+    // Prepare model with changed layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("");
+    // binary input shape is [0] so it should not proceed to inference anyway
+    ASSERT_EQ(config.parseShapeParameter("(-1,1,2:5,3)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    typename TypeParam::second_type response;
+
+    // Perform inference with 0 binary inputs, ensure status INVALID_BATCH_SIZE
+    const int batchSize = 0;
+    ASSERT_EQ(this->performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "increment_1x3x4x5", batchSize), ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
 /*
  * Scenario - send binary input request to model accepting auto batch size.
  *
@@ -1411,7 +1591,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsAny) {
     using namespace ovms;
 
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(-1,-1)"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1521,7 +1701,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsHaveRange) {
     using namespace ovms;
 
     ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(2:4,1:5)"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -1554,7 +1734,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionNot
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(-1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1578,7 +1758,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionMat
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(-1,1,1,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1604,7 +1784,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionAny) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,-1,-1,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1630,7 +1810,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionRange) {
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1:2,1:2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1713,6 +1893,23 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D) {
     this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
 }
 
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_2D) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {};
+    prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings);
+    ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    auto status = modelInstance->infer(&request, &response, modelInstanceUnloadGuard);
+    ASSERT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
+}
+
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D_data_in_buffer) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest) || typeid(typename TypeParam::first_type) == typeid(TFSRequestType))
         GTEST_SKIP() << "String inputs in buffer not supported for C-API and TFS api";
@@ -1742,7 +1939,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
     std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
     prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings);
     ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("(-1)");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
@@ -1765,6 +1962,29 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
     this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
 }
 
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_1D) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {};
+    prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings);
+    ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(-1)");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    this->checkOutputShape(response, {1, 8}, PASSTHROUGH_MODEL_OUTPUT_NAME);
+    std::vector<uint8_t> expectedData = {
+        0, 0, 0, 0,
+        0, 0, 0, 0};
+    bool checkRaw = true;
+    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+}
+
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D_data_in_buffer) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest) || typeid(typename TypeParam::first_type) == typeid(TFSRequestType))
         GTEST_SKIP() << "String inputs in buffer not supported for C-API and TFS api";
@@ -1772,7 +1992,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D_data_in_buffer) {
     std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
     prepareInferStringRequest(request, PASSTHROUGH_MODEL_INPUT_NAME, inputStrings, false);
     ovms::ModelConfig config = PASSTHROUGH_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     config.parseShapeParameter("(-1)");
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::ModelInstance> modelInstance;

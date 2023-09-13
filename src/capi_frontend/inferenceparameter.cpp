@@ -19,35 +19,8 @@
 #include <stdexcept>
 
 #include "../ovms.h"  // NOLINT
+#include "capi_utils.hpp"
 namespace ovms {
-//
-size_t DataTypeToByteSize(OVMS_DataType datatype) {
-    static std::unordered_map<OVMS_DataType, size_t> datatypeSizeMap{
-        {OVMS_DATATYPE_BOOL, 1},
-        {OVMS_DATATYPE_U1, 1},
-        {OVMS_DATATYPE_U4, 1},
-        {OVMS_DATATYPE_U8, 1},
-        {OVMS_DATATYPE_U16, 2},
-        {OVMS_DATATYPE_U32, 4},
-        {OVMS_DATATYPE_U64, 8},
-        {OVMS_DATATYPE_I4, 1},
-        {OVMS_DATATYPE_I8, 1},
-        {OVMS_DATATYPE_I16, 2},
-        {OVMS_DATATYPE_I32, 4},
-        {OVMS_DATATYPE_I64, 8},
-        {OVMS_DATATYPE_FP16, 2},
-        {OVMS_DATATYPE_FP32, 4},
-        {OVMS_DATATYPE_FP64, 8},
-        {OVMS_DATATYPE_BF16, 2},
-        // {"BYTES", },
-    };
-    auto it = datatypeSizeMap.find(datatype);
-    if (it == datatypeSizeMap.end()) {
-        return 0;
-    }
-    return it->second;
-}
-
 InferenceParameter::InferenceParameter(const char* name, OVMS_DataType datatype, const void* data) :
     name(name),
     datatype(datatype),

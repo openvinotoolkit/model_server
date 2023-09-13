@@ -324,6 +324,12 @@ int Server::start(int argc, char** argv) {
 // C-API Start
 Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
+        std::unique_lock lock{this->startMtx, std::defer_lock};
+        auto locked = lock.try_lock();
+        if (!locked) {
+            SPDLOG_ERROR("Cannot start OVMS - server is already starting");
+            return StatusCode::SERVER_ALREADY_STARTING;
+        }
         if (this->isLive()) {
             SPDLOG_ERROR("Cannot start OVMS - server is already live");
             return StatusCode::SERVER_ALREADY_STARTED;

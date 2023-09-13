@@ -605,7 +605,7 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenOutputLayoutIncompatible) {
 TEST_F(TestLoadModel, SuccessfulLoadDummyAllDimensionsAny) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(-1,-1)"), ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -617,7 +617,7 @@ TEST_F(TestLoadModel, SuccessfulLoadDummyAllDimensionsAny) {
 TEST_F(TestLoadModel, SuccessfulLoadDummyDimensionRanges) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(20:30,40:50)"), ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());

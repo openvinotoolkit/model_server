@@ -21,8 +21,12 @@
 
 #include "../ovms.h"           // NOLINT
 #include "../stringutils.hpp"  // TODO dispose
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
+#pragma GCC diagnostic pop
 #include "src/mediapipe_calculators/ovmscalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
@@ -36,8 +40,8 @@ namespace {
         if (err != nullptr) {                                                               \
             uint32_t code = 0;                                                              \
             const char* msg = nullptr;                                                      \
-            OVMS_StatusGetCode(err, &code);                                                 \
-            OVMS_StatusGetDetails(err, &msg);                                               \
+            OVMS_StatusCode(err, &code);                                                    \
+            OVMS_StatusDetails(err, &msg);                                                  \
             LOG(INFO) << "Error encountred in OVMSCalculator:" << msg << " code: " << code; \
             OVMS_StatusDelete(err);                                                         \
             RET_CHECK(err == nullptr);                                                      \
@@ -250,10 +254,10 @@ public:
         CREATE_GUARD(responseGuard, OVMS_InferenceResponse, response);
         // verify GetOutputCount
         uint32_t outputCount = 42;
-        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutputCount(response, &outputCount));
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
         RET_CHECK(outputCount == cc->Outputs().GetTags().size());
         uint32_t parameterCount = 42;
-        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetParameterCount(response, &parameterCount));
+        ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseParameterCount(response, &parameterCount));
         // TODO handle output filtering. Graph definition could suggest
         // that we are not interested in all outputs from OVMS Inference
         const void* voutputData;
@@ -265,7 +269,7 @@ public:
         uint32_t deviceId = 42;
         const char* outputName{nullptr};
         for (size_t i = 0; i < outputCount; ++i) {
-            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseGetOutput(response, i, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, i, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
             ov::Tensor* outOvTensor = makeOvTensor(datatype, shape, dimCount, voutputData, bytesize);
             cc->Outputs().Tag(outputNameToTag.at(outputName)).Add(outOvTensor, cc->InputTimestamp());
         }

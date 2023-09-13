@@ -24,15 +24,6 @@ Before using GPU as OpenVINO Model Server target device, you need to:
 - set the parameter of `--target_device` to `GPU`.
 - use the `openvino/model_server:latest-gpu` image, which contains GPU dependencies
 
-A command example:
-
-```bash
-
-docker run --rm -it --device=/dev/dri -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
---model_path /opt/model --model_name resnet --port 9001 --target_device GPU
-
-```
-
 Running inference on GPU requires the model server process security context account to have correct permissions. It must belong to the render group identified by the command:
 
 @sphinxdirective
@@ -97,15 +88,17 @@ To start OpenVINO Model Server, with the described config file placed as `./mode
 and use the run command, like so:
 
 ```bash
-docker run -d --net=host -u root --privileged --rm -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v /dev:/dev -p 9001:9001 \
-openvino/model_server:latest --config_path /opt/model/config.json --port 9001
+docker run -d --rm --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+-u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -p 9001:9001 \
+openvino/model_server:latest-gpu --config_path /opt/model/config.json --port 9001
 ```
 
 2. When using just a single model, you can start OpenVINO Model Server without the config.json file. To do so, use the run command together with additional parameters, like so: 
 
 ```bash
-docker run -d --net=host -u root --privileged --name ie-serving --rm -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v \ 
-/dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/model --model_name resnet --port 9001 --target_device 'MULTI:GPU,CPU'
+docker run -d --rm --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+-u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -p 9001:9001 \
+openvino/model_server:latest-gpu model --model_path /opt/model --model_name resnet --port 9001 --target_device 'MULTI:GPU,CPU'
 ```
  
 The deployed model will perform inference on both Intel Movidius Neural Compute Stick and CPU. 

@@ -121,8 +121,46 @@ public:
     }
 };
 
+class HttpRestApiHandlerWithDynamicModelTest : public HttpRestApiHandlerTest {
+public:
+    static void SetUpTestSuite() {
+        HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
+        std::string port = "9000";
+        randomizePort(port);
+        char* argv[] = {
+            (char*)"OpenVINO Model Server",
+            (char*)"--model_name",
+            (char*)"dummy",
+            (char*)"--model_path",
+            (char*)"/ovms/src/test/dummy",
+            (char*)"--shape",
+            (char*)"(-1,-1)",
+            (char*)"--log_level",
+            (char*)"DEBUG",
+            (char*)"--port",
+            (char*)port.c_str(),
+            nullptr};
+        thread = std::make_unique<std::thread>(
+            [&argv]() {
+                ASSERT_EQ(EXIT_SUCCESS, server->start(11, argv));
+            });
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
+    }
+};
+
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
 std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
+
+TEST_F(HttpRestApiHandlerTest, MetricsParameters) {
+    std::string request = "/metrics?test=test";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
+    ASSERT_EQ(comp.type, ovms::Metrics);
+}
 
 TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithLongVersion) {
     std::string request = "/v1/models/dummy/versions/72487667423532349025128558057";
@@ -410,6 +448,52 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, inferRequestScalar) {
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 0);
 }
 
+TEST_F(HttpRestApiHandlerWithDynamicModelTest, inferRequestZeroBatch) {
+    std::string request = "/v2/models/dummy/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[0,10],\"datatype\":\"FP32\",\"data\":[]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
+    ASSERT_EQ(doc["id"].GetString(), std::string("1"));
+    ASSERT_TRUE(doc["outputs"].GetArray()[0].GetObject().HasMember("data"));
+    ASSERT_TRUE(doc["outputs"].GetArray()[0].GetObject().HasMember("shape"));
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(output.Size(), 0);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 2);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0], 0);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1], 10);
+}
+
+TEST_F(HttpRestApiHandlerWithDynamicModelTest, inferRequestZeroDim) {
+    std::string request = "/v2/models/dummy/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,0],\"datatype\":\"FP32\",\"data\":[]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
+    ASSERT_EQ(doc["id"].GetString(), std::string("1"));
+    ASSERT_TRUE(doc["outputs"].GetArray()[0].GetObject().HasMember("data"));
+    ASSERT_TRUE(doc["outputs"].GetArray()[0].GetObject().HasMember("shape"));
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(output.Size(), 0);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 2);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0], 1);
+    ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1], 0);
+}
+
 TEST_F(HttpRestApiHandlerTest, inferPreprocess) {
     std::string request_body("{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}],\"parameters\":{\"binary_data_output\":1, \"bool_test\":true, \"string_test\":\"test\"}}");
 
@@ -628,6 +712,84 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsINT16) {
     int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
     ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
     assertBinaryInputsINT16(modelName, modelVersion, grpc_request, binaryData);
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsINT16ZeroDim) {
+    std::string binaryData{/*[1,0]=no data*/};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,0],\"datatype\":\"INT16\",\"parameters\":{\"binary_data_size\":0}}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
+    ASSERT_EQ(grpc_request.inputs_size(), 1);
+    ASSERT_EQ(grpc_request.model_name(), modelName);
+    ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
+    ASSERT_EQ(grpc_request.raw_input_contents().size(), 1);
+    ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
+    ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT16");
+    ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
+    ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 0);
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].size(), 0);
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsINT16ZeroDim_noBinaryDataSizeParameter) {
+    std::string binaryData{/*[1,0]=no data*/};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,0],\"datatype\":\"INT16\"}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
+    ASSERT_EQ(grpc_request.inputs_size(), 1);
+    ASSERT_EQ(grpc_request.model_name(), modelName);
+    ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
+    ASSERT_EQ(grpc_request.raw_input_contents().size(), 1);
+    ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
+    ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT16");
+    ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
+    ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 0);
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].size(), 0);
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsINT16Scalar) {
+    std::string binaryData{0x14, 0x15};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[],\"datatype\":\"INT16\",\"parameters\":{\"binary_data_size\":2}}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
+    ASSERT_EQ(grpc_request.inputs_size(), 1);
+    ASSERT_EQ(grpc_request.model_name(), modelName);
+    ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
+    ASSERT_EQ(grpc_request.raw_input_contents().size(), 1);
+    ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
+    ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT16");
+    ASSERT_EQ(grpc_request.inputs()[0].shape().size(), 0);
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].size(), 2);
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].data()[0], 0x14);
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].data()[1], 0x15);
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsINT16Scalar_noBinaryDataSizeParameter) {
+    std::string binaryData{0x14, 0x15};
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[],\"datatype\":\"INT16\"}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = (request_body.size() - binaryData.size());
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::OK);
+    ASSERT_EQ(grpc_request.inputs_size(), 1);
+    ASSERT_EQ(grpc_request.model_name(), modelName);
+    ASSERT_EQ(grpc_request.model_version(), std::to_string(modelVersion.value()));
+    ASSERT_EQ(grpc_request.raw_input_contents().size(), 1);
+    ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
+    ASSERT_EQ(grpc_request.inputs()[0].datatype(), "INT16");
+    ASSERT_EQ(grpc_request.inputs()[0].shape().size(), 0);
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].size(), 2);
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].data()[0], 0x14);
+    ASSERT_EQ(grpc_request.raw_input_contents()[0].data()[1], 0x15);
 }
 
 TEST_F(HttpRestApiHandlerTest, binaryInputsINT16_noBinaryDataSizeParameter) {

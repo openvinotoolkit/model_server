@@ -54,7 +54,8 @@ class Status;
 class TensorInfo;
 class PipelineDefinition;
 
-class KFSInferenceServiceImpl final : public GRPCInferenceService::Service {
+class KFSInferenceServiceImpl : public GRPCInferenceService::Service {
+protected:
     const Server& ovmsServer;
     ModelManager& modelManager;
 

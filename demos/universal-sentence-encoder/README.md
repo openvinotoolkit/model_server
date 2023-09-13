@@ -106,3 +106,5 @@ Output subset [-0.00552387  0.00599531 -0.0148055   0.01098951 -0.09355522 -0.08
 
 ```
 
+> NOTE: Do not use this model with `--cache_dir`, the model does not support caching.
+

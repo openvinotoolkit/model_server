@@ -302,7 +302,7 @@ template <typename RequestType, typename InputTensorType, typename InputTensorIt
 Status RequestValidator<RequestType, InputTensorType, InputTensorIteratorType, ShapeType>::checkIfShapeValuesNegative(const InputTensorType& proto) const {
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
     for (size_t i = 0; i < rsi.getShapeSize(); i++) {
-        if (rsi.getDim(i) <= 0) {
+        if (rsi.getDim(i) < 0) {
             std::stringstream ss;
             ss << "Negative or zero dimension size is not acceptable: " << tensorShapeToString(rsi.getShape()) << "; input name: " << getCurrentlyValidatedInputName();
             const std::string details = ss.str();
@@ -405,7 +405,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
     RequestShapeInfo<TFSInputTensorType, TFSShapeType> rsi(proto);
-    if (inputBatchSize <= 0) {
+    if (inputBatchSize < 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
@@ -441,7 +441,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
     RequestShapeInfo<KFSTensorInputProto, KFSShapeType> rsi(proto);
-    if (inputBatchSize <= 0) {
+    if (inputBatchSize < 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
@@ -477,7 +477,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
     RequestShapeInfo<InferenceTensor, signed_shape_t> rsi(tensor);
-    if (rsi.getDim(0) <= 0) {
+    if (rsi.getDim(0) < 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();

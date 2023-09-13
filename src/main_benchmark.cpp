@@ -262,8 +262,8 @@ int main(int argc, char** argv) {
     if (res) {
         uint32_t code = 0;
         const char* details = nullptr;
-        OVMS_StatusGetCode(res, &code);
-        OVMS_StatusGetDetails(res, &details);
+        OVMS_StatusCode(res, &code);
+        OVMS_StatusDetails(res, &details);
         std::cout << "Error starting the server. Code:" << code
                   << "; details:" << details << std::endl;
         OVMS_ServerDelete(srv);
@@ -327,8 +327,8 @@ int main(int argc, char** argv) {
     if (res != nullptr) {
         uint32_t code = 0;
         const char* details = 0;
-        OVMS_StatusGetCode(res, &code);
-        OVMS_StatusGetDetails(res, &details);
+        OVMS_StatusCode(res, &code);
+        OVMS_StatusDetails(res, &details);
         std::cerr << "Error occured during inference. Code:" << code
                   << ", details:" << details << std::endl;
         OVMS_StatusDelete(res);
