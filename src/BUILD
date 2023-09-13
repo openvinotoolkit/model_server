@@ -117,6 +117,8 @@ cc_shared_library(
         "@pthreadpool//:__subpackages__",
         "@FXdiv//:__subpackages__",
         "@FP16//:__subpackages__",
+        "@flatbuffers//:__subpackages__",
+        "@ruy//:__subpackages__",
     ] + select({
         "//conditions:default": [
             "@mediapipe//:__subpackages__",
