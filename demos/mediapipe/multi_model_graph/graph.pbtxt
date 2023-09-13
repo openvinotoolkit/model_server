@@ -17,7 +17,7 @@ input_stream: "in1"
 input_stream: "in2"
 output_stream: "out"
 node {
-  calculator: "ModelAPISessionCalculator"
+  calculator: "OpenVINOModelServerSessionCalculator"
   output_side_packet: "SESSION:dummy"
   node_options: {
     [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
@@ -27,7 +27,7 @@ node {
   }
 }
 node {
-  calculator: "ModelAPISessionCalculator"
+  calculator: "OpenVINOModelServerSessionCalculator"
   output_side_packet: "SESSION:add"
   node_options: {
     [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
