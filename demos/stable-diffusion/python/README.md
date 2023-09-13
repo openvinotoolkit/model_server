@@ -5,7 +5,7 @@ Download the models from HuggingFaces and convert them the ONNX format:
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server 
-cd model_server/demos/stable-diffusion
+cd model_server/demos/stable-diffusion/python
 pip install -r requirements.txt
 python vae.py
 python text_encoder.py 
