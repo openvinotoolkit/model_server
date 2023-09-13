@@ -20,7 +20,7 @@ node {
   calculator: "OpenVINOModelServerSessionCalculator"
   output_side_packet: "SESSION:dummy"
   node_options: {
-    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
       servable_name: "dummy"
       servable_version: "1"
     }
@@ -30,7 +30,7 @@ node {
   calculator: "OpenVINOModelServerSessionCalculator"
   output_side_packet: "SESSION:add"
   node_options: {
-    [type.googleapis.com / mediapipe.ModelAPIOVMSSessionCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
       servable_name: "add"
       servable_version: "1"
     }
