@@ -4,7 +4,7 @@
           "config":{
              "name":"unet",
              "base_path":"/models/unet",
-             "layout": {"latent_model_input":"...:NCHW","t":"...:...","encoder_hidden_states":"...:CHW"},
+             "layout": {"latent_model_input":"...:NCHW","t":"...","encoder_hidden_states":"...:CHW"},
              "plugin_config": {"NUM_STREAMS":1}
           }
        },

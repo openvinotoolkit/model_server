@@ -1,4 +1,4 @@
-# Demo for running stable diffusion with OpenVINO Model Server
+# Demo for running stable diffusion with OpenVINO Model Server {#ovms_demo_stable_diffusion}
 
 
 Build the model server from source

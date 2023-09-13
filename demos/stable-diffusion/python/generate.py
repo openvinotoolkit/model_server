@@ -48,10 +48,10 @@ if args["adapter"] == "openvino":
     text_encoder_model = OpenvinoAdapter(create_core(), "text_encoder/1/text_encoder.onnx", device="CPU", plugin_config={"NUM_STREAMS":1})
     text_encoder_model.load_model()
 else:
-    unet_model = OVMSAdapter("localhost:9000/models/unet")
-    vae_decoder_model = OVMSAdapter("localhost:9000/models/vae_decoder")
-    vae_encoder_model = OVMSAdapter("localhost:9000/models/vae_encoder")
-    text_encoder_model = OVMSAdapter("localhost:9000/models/text_encoder")
+    unet_model = OVMSAdapter("localhost:9006/models/unet")
+    vae_decoder_model = OVMSAdapter("localhost:9006/models/vae_decoder")
+    vae_encoder_model = OVMSAdapter("localhost:9006/models/vae_encoder")
+    text_encoder_model = OVMSAdapter("localhost:9006/models/text_encoder")
 print("Models initialized")
 
 ov_pipe = OVStableDiffusionPipeline(
