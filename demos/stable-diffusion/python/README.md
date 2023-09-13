@@ -1,18 +1,11 @@
 # Demo for running stable diffusion with OpenVINO Model Server {#ovms_demo_stable_diffusion}
 
 
-Build the model server from source
-```bash
-git clone https://github.com/openvinotoolkit/model_server 
-cd model_server
-make docker_build
-```
-
-
 Download the models from HuggingFaces and convert them the ONNX format:
 
 ```bash
-cd demos/stable-diffusion
+git clone https://github.com/openvinotoolkit/model_server 
+cd model_server/demos/stable-diffusion
 pip install -r requirements.txt
 python vae.py
 python text_encoder.py 
