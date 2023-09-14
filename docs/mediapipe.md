@@ -1,4 +1,4 @@
-# Integration with mediapipe (preview) {#ovms_docs_mediapipe}
+# Integration with mediapipe {#ovms_docs_mediapipe}
 
 @sphinxdirective
 
