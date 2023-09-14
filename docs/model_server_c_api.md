@@ -51,5 +51,5 @@ To process response, first you must check for inference error. If no error occur
 * You cannot turn gRPC endpoint off, REST API endpoint is optional.
 * There is no API for asynchronous inference.
 * There is no support for stateful models.
-* There is no support for mediapipes.
+* There is no support for mediapipe graphs.
 
