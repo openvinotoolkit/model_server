@@ -117,7 +117,9 @@ Following table lists supported tag and packet types based on pbtxt configuratio
 |input_stream: "REQUEST:req"|input|REQUEST|KServe inference::ModelInferRequest|req|
 |output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
 
-For list of supported packet types and tags of OpenVINOInferenceCalculator check documentation of [OpenVINO Mediapipe fork](TODO).
+In case of missing tag OVMS assumes that the packet type is `ov::Tensor'.
+For list of supported packet types and tags of OpenVINOInferenceCalculator check documentation of [OVMS calculators](https://github.com/openvinotoolkit/model_server/blob/main/src/mediapipe_calculators/calculators.md).
+
 With KServe gRPC API you are also able to push side input packets into graph. In this case created side packet type is the same as KServe parameter type (string, int64 or boolean).
 
 TODO add details about IMAGE @mkulakow
