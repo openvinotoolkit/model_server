@@ -190,7 +190,7 @@ OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& se
     return request;
 }
 
-void triggerInferenceInALoop(
+void triggerInferenceInALoopInferenceOnly(
     std::future<void>& startSignal,
     std::promise<void>& readySignal,
     const size_t niterPerThread,
@@ -222,7 +222,7 @@ void triggerInferenceInALoop(
     averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
 }
 
-void triggerInferenceInALoop(
+void triggerInferenceInALoopResetBuffer(
     std::future<void>& startSignal,
     std::promise<void>& readySignal,
     const size_t niterPerThread,
@@ -236,16 +236,20 @@ void triggerInferenceInALoop(
     OVMS_InferenceResponse* response{nullptr};
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
+    std::vector<std::vector<float>> preparedData;
+    for(int i = 0; i < niterPerThread; i ++){
+        float random = ((float) rand()) / (float) RAND_MAX;
+        std::vector<float> data(elementsCount, random);
+        preparedData.push_back(data);
+    }
     readySignal.set_value();
     startSignal.get();
     auto workloadStart = std::chrono::high_resolution_clock::now();
-    size_t iter = niterPerThread;
-    while (iter-- > 0) {
-        float random = ((float) rand()) / (float) RAND_MAX;
-        std::vector<float> data(elementsCount, random);
-        OVMS_InferenceRequestInputRemoveData(request, inputName.c_str());
-        OVMS_InferenceRequestInputSetData(request, inputName.c_str(), (const void*)data.data(), elementsCount * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
+    size_t iter = 0;
+    while (iter < niterPerThread) {
         auto iterationWholeStart = std::chrono::high_resolution_clock::now();
+        OVMS_InferenceRequestInputRemoveData(request, inputName.c_str());
+        OVMS_InferenceRequestInputSetData(request, inputName.c_str(), (const void*)preparedData[iter].data(), elementsCount * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
         auto iterationPureStart = std::chrono::high_resolution_clock::now();
         OVMS_Inference(server, request, &response);
         auto iterationPureEnd = std::chrono::high_resolution_clock::now();
@@ -253,6 +257,7 @@ void triggerInferenceInALoop(
         auto iterationWholeEnd = std::chrono::high_resolution_clock::now();
         latenciesWhole[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationWholeEnd - iterationWholeStart).count();
         latenciesPure[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationPureEnd - iterationPureStart).count();
+        iter++;
     }
     auto workloadEnd = std::chrono::high_resolution_clock::now();
     wholeThreadTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(workloadEnd - workloadStart).count();
@@ -260,7 +265,7 @@ void triggerInferenceInALoop(
     averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
 }
 
-void triggerInferenceInALoop(
+void triggerInferenceInALoopResetRequest(
     std::future<void>& startSignal,
     std::promise<void>& readySignal,
     const size_t niterPerThread,
@@ -273,23 +278,28 @@ void triggerInferenceInALoop(
     auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
+    std::vector<std::vector<float>> preparedData;
+    for(int i = 0; i < niterPerThread; i ++){
+        float random = ((float) rand()) / (float) RAND_MAX;
+        std::vector<float> data(elementsCount, random);
+        preparedData.push_back(data);
+    }
     readySignal.set_value();
     startSignal.get();
     auto workloadStart = std::chrono::high_resolution_clock::now();
-    size_t iter = niterPerThread;
-    while (iter-- > 0) {
-        float random = ((float) rand()) / (float) RAND_MAX;
-        std::vector<float> data(elementsCount, random);
-        OVMS_InferenceRequest* request = prepareRequest(server, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
+    size_t iter = 0;
+    while (iter < niterPerThread) {
+        OVMS_InferenceRequest* request = prepareRequest(server, servableName, servableVersion, datatype, shape, inputName, (const void*)preparedData[iter].data());
         auto iterationWholeStart = std::chrono::high_resolution_clock::now();
         auto iterationPureStart = std::chrono::high_resolution_clock::now();
         OVMS_Inference(server, request, &response);
         auto iterationPureEnd = std::chrono::high_resolution_clock::now();
         OVMS_InferenceResponseDelete(response);
+        OVMS_InferenceRequestDelete(request);
         auto iterationWholeEnd = std::chrono::high_resolution_clock::now();
         latenciesWhole[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationWholeEnd - iterationWholeStart).count();
         latenciesPure[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationPureEnd - iterationPureStart).count();
-        OVMS_InferenceRequestDelete(request);
+        iter++;
     }
     auto workloadEnd = std::chrono::high_resolution_clock::now();
     wholeThreadTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(workloadEnd - workloadStart).count();
@@ -474,7 +484,7 @@ int main(int argc, char** argv) {
                 &srv,
                 &request,
                 i]() {
-                    triggerInferenceInALoop(
+                    triggerInferenceInALoopInferenceOnly(
                         futureStartSignals[i],
                         readySignals[i],
                         niterPerThread,
@@ -505,7 +515,7 @@ int main(int argc, char** argv) {
                 &inputName,
                 &elementsCount,
                 i]() {
-                    triggerInferenceInALoop(
+                    triggerInferenceInALoopResetBuffer(
                         futureStartSignals[i],
                         readySignals[i],
                         niterPerThread,
@@ -536,7 +546,7 @@ int main(int argc, char** argv) {
                 &shape, 
                 &inputName,
                 i]() {
-                    triggerInferenceInALoop(
+                    triggerInferenceInALoopResetRequest(
                         futureStartSignals[i],
                         readySignals[i],
                         niterPerThread,
