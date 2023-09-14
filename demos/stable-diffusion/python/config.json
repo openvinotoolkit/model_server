@@ -1,0 +1,33 @@
+{
+    "model_config_list":[
+       {
+          "config":{
+             "name":"unet",
+             "base_path":"/models/unet",
+             "layout": {"latent_model_input":"...:NCHW","t":"...","encoder_hidden_states":"...:CHW"},
+             "plugin_config": {"NUM_STREAMS":1}
+          }
+       },
+       {
+          "config":{
+             "name":"vae_decoder",
+             "base_path":"/models/vae_decoder",
+             "plugin_config": {"NUM_STREAMS":1}
+          }
+       },
+       {
+          "config":{
+             "name":"vae_encoder",
+             "base_path":"/models/vae_encoder",
+             "plugin_config": {"NUM_STREAMS":1}
+          }
+       },
+       {
+        "config":{
+           "name":"text_encoder",
+           "base_path":"/models/text_encoder",
+           "plugin_config": {"NUM_STREAMS":1}
+        }
+     }
+    ]
+}       

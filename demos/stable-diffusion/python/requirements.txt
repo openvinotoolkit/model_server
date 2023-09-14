@@ -1,0 +1,14 @@
+huggingface-hub==0.15.1
+numpy==1.24.3
+onnx==1.14.0
+opencv-python==4.7.0.72
+ovmsclient==2023.0
+Pillow==9.5.0
+tokenizers==0.13.3
+torch==1.13.1
+tqdm==4.65.0
+transformers==4.29.2
+diffusers==0.16.1
+accelerate==0.20.3
+scipy==1.10.1
+git+https://github.com/openvinotoolkit/model_api@master#egg=openvino_model_api&subdirectory=model_api/python
