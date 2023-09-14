@@ -43,6 +43,15 @@ To process response, first you must check for inference error. If no error occur
 
 **Note**: After inference execution is finished you can reuse the same `OVMS_InferenceRequest` by using `OVMS_InferenceRequestInputRemoveData` and then setting different tensor data with `OVMS_InferenceRequestSetData`.
 
+#### Server liveness and readiness
+To check if OVMS is alive and should respond to requests you can use `OVMS_ServerLive`. Checking readiness with `OVMS_ServerReady' will show if initial configuration loading finished.
+
+#### Servable readiness
+To check if servable is ready for inference and metadata requests use `OVMS_GetServableState` specifying name and optionally version.
+
+#### Servable metadata
+Execute `OVMS_GetServableMetadata` call to get information about servable inputs, outputs. If the request was succesfull you receive `OVMS_ServableMetadata` object. To get information about every input/output you must use first check for number of inputs/outputs with `OVMS_ServableMetadataInputCount`/`OVMS_ServableMetadataOutputCount`, and then use `OVMS_ServableMetadataInput` and `OVMS_ServableMetadataOuput` calls to extract details about each input/output. After retreiving required data you must release response object with `OVMS_ServableMetadataDelete`.
+
 ## Preview limitations
 * Launching server in single model mode is not supported. You must use configuration file.
 * There is no direct support for jpeg/png encoded input format through C API.
