@@ -6,8 +6,6 @@
    :maxdepth: 1
    :hidden:
 
-   ovms_docs_mediapipe_calculators
-
 @endsphinxdirective
 
 ## Introduction
@@ -124,6 +122,8 @@ With KServe gRPC API you are also able to push side input packets into graph. In
 
 TODO add details about IMAGE @mkulakow
 
+Documentation on handling tags inside OVMS calculators is placed [here](https://github.com/openvinotoolkit/mediapipe/blob/237bf3bf23c4d7b7e38eb92b4a3b6d540d83421b/mediapipe/calculators/ovms/calculators.md).
+
 ## Configuration files <a name="configuration-files"></a>
 MediaPipe pipelines configuration is to be placed in the same json file like the 
 [models config file](starting_server.md).
@@ -185,6 +185,7 @@ the predictions. The request format must match the pipeline definition inputs.
 
 Graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md)
 and [REST Model Status](model_server_rest_api_kfs.md)
+
 
 ## MediaPipe Graphs Examples <a name="graphs-examples"></a>
 
