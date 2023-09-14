@@ -23,15 +23,6 @@ This guide gives information about:
 * <a href="#graphs-examples">Graphs examples </a>
 * <a href="#current-limitations">Current Limitations</a>
 
-## How to build OVMS with mediapipe support <a name="how-to-build"></a>
-Building OVMS with mediapipe support requires passing additional flag for make command, for example:
-
-```
-MEDIAPIPE_DISABLE=0 make docker_build
-```
-
-More information about OVMS build parameters can be found here [here](https://github.com/openvinotoolkit/model_server/blob/develop/docs/build_from_source.md).
-
 ## Node Types <a name="ovms-calculators"></a>
 
 "Each calculator is a node of a graph. The bulk of graph execution happens inside its calculators. OVMS has its own calculators but can also use newly developed calculators or reuse the existing calculators defined in the original mediapipe repository."
@@ -40,7 +31,7 @@ For more details you can visit mediapipe concept description - [Calculators Conc
 
 ## Graph proto files <a name="graph-proto"></a>
 
-Graph proto files are used to define a graph. Example content of proto file with graph containing ModelAPICalculator nodes:
+Graph proto files are used to define a graph. Example content of proto file with graph containing OpenVINO inference nodes:
 
 ```
 
@@ -110,12 +101,13 @@ node {
 }
 
 ```
-
+TODO add details about packet types (OVTENSOR, IMAGE)
+TODO add details about using input_side_packets from KServe requests
 
 Here can be found more information about [MediaPipe graphs proto](https://developers.google.com/mediapipe/framework/framework_concepts/graphs)
 
 ## Configuration files <a name="configuration-files"></a>
-MediaPipe graph configuration is to be placed in the same json file like the 
+MediaPipe pipelines configuration is to be placed in the same json file like the 
 [models config file](starting_server.md).
 While models are defined in section `model_config_list`, graphs are configured in
 the `mediapipe_config_list` section. 
@@ -127,11 +119,11 @@ Basic graph section template is depicted below:
 {
     "model_config_list": [...],
     "mediapipe_config_list": [
-    {
-        "name":"mediaDummy",
-        "base_path":"/mediapipe/graphs/",
-        "graph_path":"graphdummyadapterfull.pbtxt",
-        "subconfig":"subconfig_dummy.json"
+        {
+            "name":"mediaDummy",
+            "base_path":"/mediapipe/graphs/",
+            "graph_path":"graphdummyadapterfull.pbtxt",
+            "subconfig":"subconfig_dummy.json"
     }
     ]
 }
@@ -148,8 +140,8 @@ Basic subconfig:
                 "name": "dummy",
                 "base_path": "/models/dummy",
                 "shape": "(1, 10)"
-        	}
-	}
+            }
+        }
     ]
 }
 
@@ -158,6 +150,8 @@ Basic subconfig:
 Nodes in the MediaPipe graphs can reference both to the models configured in model_config_list section and in subconfig.
 
 ### MediaPipe configuration options explained
+
+TODO check default base path graph path subconfig
 
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
@@ -183,12 +177,10 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 [Multi model](../demos/mediapipe/multi_model_graph/README.md)
 
 ## Current limitations <a name="current-limitations"></a>
-- It is preview version of the MediaPipe integrations which means that its not ready to be used in production and only some of the OVMS features are supported for Mediapipe graphs.
-
 - Mediapipe graphs are supported only for GRPC KFS API. Only TFS calls supported are get model status and config reload.
 
-- Binary inputs are not supported for MediaPipe graphs.
+- KServe ModelMetadata call respond only with required input and output names. Shape and datatype are not specified in the response.
 
-- Public images do not include mediapipe feature.
+- Binary inputs are not supported for MediaPipe graphs.
 
 - Making changes in subconfig file does not trigger config reloads. Main config changes are monitored and triggers subconfig reload even if those weren't changed.
