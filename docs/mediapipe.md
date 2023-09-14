@@ -120,7 +120,16 @@ For list of supported packet types and tags of OpenVINOInferenceCalculator check
 
 With KServe gRPC API you are also able to push side input packets into graph. In this case created side packet type is the same as KServe parameter type (string, int64 or boolean).
 
-TODO add details about IMAGE @mkulakow
+`Image` inputs requires image pixel data inside raw_input_contents that can be converted to Mediapipe::ImageFrame format. For now, those kind of inputs only accepts three-dimensional data in HWC layout. Datatypes supported for `Image` format:
+|Datatype|Number of channels|
+|:---|:---|
+|FP16|1,3,4|
+|FP32|1,2|
+|UINT8|1,3,4|
+|INT8|1,3,4|
+|UINT16|1,3,4|
+|INT16|1,3,4|
+
 
 Documentation on handling tags inside OVMS calculators is placed [here](https://github.com/openvinotoolkit/mediapipe/blob/237bf3bf23c4d7b7e38eb92b4a3b6d540d83421b/mediapipe/calculators/ovms/calculators.md).
 
