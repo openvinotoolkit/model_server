@@ -33,7 +33,7 @@ Models initialized
 Pipeline settings
 Input text: sea shore at midnight, epic vista, beach
 Negative text: frames, borderline, text, character, duplicate, error, out of frame, watermark
-Seed: None
+Seed: 10
 Number of steps: 20
 getting initial random noise (1, 4, 96, 96) {}
 100%|████████████████████████████████████████████████| 20/20 [01:15<00:00,  3.75s/it]
@@ -47,7 +47,7 @@ Models initialized
 Pipeline settings
 Input text: sea shore at midnight, epic vista, beach
 Negative text: frames, borderline, text, character, duplicate, error, out of frame, watermark
-Seed: None
+Seed: 10
 Number of steps: 20
 getting initial random noise (1, 4, 96, 96) {}
 100%|████████████████████████████████████████████████| 20/20 [00:53<00:00,  2.66s/it]
