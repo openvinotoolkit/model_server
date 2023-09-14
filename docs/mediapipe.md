@@ -101,10 +101,26 @@ node {
 }
 
 ```
-TODO add details about packet types (OVTENSOR, IMAGE)
-TODO add details about using input_side_packets from KServe requests
 
 Here can be found more information about [MediaPipe graphs proto](https://developers.google.com/mediapipe/framework/framework_concepts/graphs)
+
+# Supported input/output packet types
+
+OVMS does support processing several packet types at the inputs and outputs of the graph.
+Following table lists supported tag and packet types based on pbtxt configuration file line:
+
+| pbtxt line | input/output | tag | packet type | stream name |
+|:---|:---|:---|:---|:---|:---|
+| input_stream: "a" | input | none | ov::Tensor | a |
+| input_stream: "IMAGE:a" | input | IMAGE | mediapipe::Image | a |
+| output_stream: "OVTENSOR:b" | output | OVTENSOR | ov::Tensor | b |
+| input_stream: "REQUEST:req" | input | REQUEST | KServe inference::ModelInferRequest | req |
+| output_stream: "RESPONSE:res" | output | RESPONSE | KServe inference::ModelInferResponse | res |
+
+For list of supported packet types and tags of OpenVINOInferenceCalculator check documentation of [OpenVINO Mediapipe fork](TODO).
+With KServe gRPC API you are also able to push side input packets into graph. In this case created side packet type is the same as KServe parameter type (string, int64 or boolean).
+
+TODO add details about IMAGE @mkulakow
 
 ## Configuration files <a name="configuration-files"></a>
 MediaPipe pipelines configuration is to be placed in the same json file like the 
@@ -151,12 +167,10 @@ Nodes in the MediaPipe graphs can reference both to the models configured in mod
 
 ### MediaPipe configuration options explained
 
-TODO check default base path graph path subconfig
-
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
 |`"name"`|string|Graph identifier related to name field specified in gRPC/REST request|Yes|
-|`"base_path"`|string|Path to the which graph definition and subconfig files paths are relative. May be absolute or relative to the main config path. Default value is "(main config path)\"|No|
+|`"base_path"`|string|Path to the which graph definition and subconfig files paths are relative. May be absolute or relative to the main config path. Default value is "(main config path)\(name)"|No| # TODO
 |`"graph_path"`|string|Path to the graph proto file. May be absolute or relative to the base_path. Default value is "(base_path)\graph.pbtxt". File have to exist.|No|
 |`"subconfig"`|string|Path to the subconfig file. May be absolute or relative to the base_path. Default value is "(base_path)\subconfig.json". Missing  file does not result in error.|No|
 
