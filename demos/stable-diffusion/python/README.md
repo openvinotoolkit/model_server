@@ -41,7 +41,7 @@ getting initial random noise (1, 4, 96, 96) {}
 
 Remote execution:
 ```bash
-python generate.py --adapter ovms --seed 10
+python generate.py --adapter ovms --url localhost:9000 --seed 10
 Initializing models
 Models initialized
 Pipeline settings

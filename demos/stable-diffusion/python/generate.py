@@ -30,6 +30,7 @@ parser.add_argument('--prompt', required=False, type=str, default="sea shore at 
 parser.add_argument('--negative', required=False, type=str, default='frames, borderline, text, character, duplicate, error, out of frame, watermark', help='Negative prompt')
 parser.add_argument('--steps', required=False, default=20, type=int, help='Number of steps')
 parser.add_argument('--seed', required=False, default=None, help='Seed')
+parser.add_argument('--url', required=False, default="localhost:9000", help='OVMS url')
 args = vars(parser.parse_args())
 
 conf = {"num_train_timesteps": 1000, "beta_start" : 0.00085, 'beta_end': 0.012, 'beta_schedule': 'scaled_linear', 'trained_betas': None, 'skip_prk_steps': True, 'set_alpha_to_one': False, 'prediction_type': 'epsilon', 'steps_offset': 1, '_class_name': 'PNDMScheduler', '_diffusers_version': '0.10.0.dev0', 'clip_sample': False}
@@ -48,10 +49,10 @@ if args["adapter"] == "openvino":
     text_encoder_model = OpenvinoAdapter(create_core(), "text_encoder/1/text_encoder.onnx", device="CPU", plugin_config={"NUM_STREAMS":1})
     text_encoder_model.load_model()
 else:
-    unet_model = OVMSAdapter("localhost:9006/models/unet")
-    vae_decoder_model = OVMSAdapter("localhost:9006/models/vae_decoder")
-    vae_encoder_model = OVMSAdapter("localhost:9006/models/vae_encoder")
-    text_encoder_model = OVMSAdapter("localhost:9006/models/text_encoder")
+    unet_model = OVMSAdapter(args["url"]+"/models/unet")
+    vae_decoder_model = OVMSAdapter(args["url"]+"/models/vae_decoder")
+    vae_encoder_model = OVMSAdapter(args["url"]+"/models/vae_encoder")
+    text_encoder_model = OVMSAdapter(args["url"]+"/models/text_encoder")
 print("Models initialized")
 
 ov_pipe = OVStableDiffusionPipeline(
