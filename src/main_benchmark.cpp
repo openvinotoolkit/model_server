@@ -237,7 +237,7 @@ void triggerInferenceInALoopResetBuffer(
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
     std::vector<std::vector<float>> preparedData;
-    for(int i = 0; i < niterPerThread; i ++){
+    for (int i = 0; i < niterPerThread; i ++) {
         float random = ((float) rand()) / (float) RAND_MAX;
         std::vector<float> data(elementsCount, random);
         preparedData.push_back(data);
@@ -279,7 +279,7 @@ void triggerInferenceInALoopResetRequest(
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
     std::vector<std::vector<float>> preparedData;
-    for(int i = 0; i < niterPerThread; i ++){
+    for (int i = 0; i < niterPerThread; i ++) {
         float random = ((float) rand()) / (float) RAND_MAX;
         std::vector<float> data(elementsCount, random);
         preparedData.push_back(data);
@@ -354,12 +354,11 @@ int main(int argc, char** argv) {
 
     std::string modeParam = cliparser.result->operator[]("mode").as<std::string>();
     Mode mode;
-    if(modeParam == "INFERENCE_ONLY"){
+    if (modeParam == "INFERENCE_ONLY") {
         mode = Mode::INFERENCE_ONLY;
-    }
-    else if(modeParam == "RESET_BUFFER"){
+    }else if (modeParam == "RESET_BUFFER") {
         mode = Mode::RESET_BUFFER;
-    }else if(modeParam == "RESET_REQUEST"){
+    }else if (modeParam == "RESET_REQUEST") {
         mode = Mode::RESET_REQUEST;
     }else {
         std::cout << "Invalid mode requested: " <<  modeParam;
@@ -394,7 +393,7 @@ int main(int argc, char** argv) {
         return EX_USAGE;
     }
     // input names handling
-    std::string cliInputsNames(cliparser.result->operator[]("inputs_names").as<std::string>());    
+    std::string cliInputsNames(cliparser.result->operator[]("inputs_names").as<std::string>());
     auto inputsNames = ovms::tokenize(cliInputsNames, ',');
     if (inputsNames.size() != 1) {
         std::cout << __LINE__ << std::endl;
@@ -472,7 +471,7 @@ int main(int argc, char** argv) {
     ///////////////////////
     // prepare threads
     ///////////////////////
-    if(mode == Mode::INFERENCE_ONLY){
+    if (mode == Mode::INFERENCE_ONLY) {
         for (size_t i = 0; i < threadCount; ++i) {
             workerThreads.emplace_back(std::make_unique<std::thread>(
                 [&futureStartSignals,
@@ -495,8 +494,7 @@ int main(int argc, char** argv) {
                         request);
                 }));
         }
-    }
-    else if(mode == Mode::RESET_BUFFER)
+    } else if (mode == Mode::RESET_BUFFER)
     {   
         for (size_t i = 0; i < threadCount; ++i) {
             auto request = prepareRequest(srv, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
@@ -528,8 +526,7 @@ int main(int argc, char** argv) {
                         elementsCount);
                 }));
         }
-    }
-    else if(mode == Mode::RESET_REQUEST)
+    } else if (mode == Mode::RESET_REQUEST)
     {
         for (size_t i = 0; i < threadCount; ++i) {
             workerThreads.emplace_back(std::make_unique<std::thread>(
@@ -540,10 +537,10 @@ int main(int argc, char** argv) {
                 &wholeTimes,
                 &pureTimes,
                 &srv,
-                &servableName, 
-                &servableVersion, 
-                &datatype, 
-                &shape, 
+                &servableName,
+                &servableVersion,
+                &datatype,
+                &shape,
                 &inputName,
                 i]() {
                     triggerInferenceInALoopResetRequest(
