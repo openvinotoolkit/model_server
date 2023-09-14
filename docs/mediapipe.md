@@ -110,7 +110,7 @@ Following table lists supported tag and packet types based on pbtxt configuratio
 |pbtxt line|input/output|tag|packet type|stream name|
 |:---|:---|:---|:---|:---|
 |input_stream: "a"|input|none|ov::Tensor|a|
-|input_stream: "IMAGE:a"|input|IMAGE|mediapipe::Image|a|
+|input_stream: "IMAGE:a"|input|IMAGE|mediapipe::ImageFrame|a|
 |output_stream: "OVTENSOR:b"|output|OVTENSOR|ov::Tensor|b|
 |input_stream: "REQUEST:req"|input|REQUEST|KServe inference::ModelInferRequest|req|
 |output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
