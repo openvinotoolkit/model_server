@@ -101,10 +101,10 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 "Semicolon separated list of inputs names followed by their shapes in brackers. For example: \"inputA[1,3,224,224],inputB[1,10]\"",
                 cxxopts::value<std::string>(),
                 "SHAPE")
-            ("reuse_buffer",
-                "Reuse request buffer",
-                cxxopts::value<bool>()->default_value("true"),
-                "REUSE_BUFFER");
+            ("mode",
+                "Workload mode. Possible values: INFERENCE_ONLY, RESET_BUFFER, RESET_REQUEST",
+                cxxopts::value<std::string>()->default_value("INFERENCE_ONLY"),
+                "MODE");
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
@@ -233,12 +233,10 @@ void triggerInferenceInALoop(
     double& averageWholeLatency,
     double& averagePureLatency,
     OVMS_Server* server,
-    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName) {
+    OVMS_InferenceRequest* request,
+    const std::string& inputName,
+    std::uint32_t elementsCount) {
     OVMS_InferenceResponse* response{nullptr};
-    auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
-    float random = ((float) rand()) / (float) RAND_MAX;
-    std::vector<float> data(elementsCount, random);
-    OVMS_InferenceRequest* request = prepareRequest(server, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
     readySignal.set_value();
@@ -246,6 +244,10 @@ void triggerInferenceInALoop(
     auto workloadStart = std::chrono::high_resolution_clock::now();
     size_t iter = niterPerThread;
     while (iter-- > 0) {
+        float random = ((float) rand()) / (float) RAND_MAX;
+        std::vector<float> data(elementsCount, random);
+        OVMS_InferenceRequestInputSetData(request, inputName.c_str(), (const void*)data.data(), elementsCount * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
+        //InferenceRequest* ir = reinterpret_cast<InferenceRequest*>(request);
         // stopSignal will be used with ctrl-c app stopping or with total requestCount
         // stopSignal.wait_for(std::chrono::milliseconds(0));
         auto iterationWholeStart = std::chrono::high_resolution_clock::now();
@@ -258,7 +260,46 @@ void triggerInferenceInALoop(
         latenciesWhole[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationWholeEnd - iterationWholeStart).count();
         latenciesPure[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationPureEnd - iterationPureStart).count();
     }
-    OVMS_InferenceRequestDelete(request);
+    auto workloadEnd = std::chrono::high_resolution_clock::now();
+    wholeThreadTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(workloadEnd - workloadStart).count();
+    averageWholeLatency = std::accumulate(latenciesWhole.begin(), latenciesWhole.end(), 0) / (double(niterPerThread) * 1'000);
+    averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
+}
+
+void triggerInferenceInALoop(
+    std::future<void>& startSignal,
+    std::promise<void>& readySignal,
+    const size_t niterPerThread,
+    size_t& wholeThreadTimeUs,
+    double& averageWholeLatency,
+    double& averagePureLatency,
+    OVMS_Server* server,
+    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName) {
+    OVMS_InferenceResponse* response{nullptr};
+    auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
+    std::vector<uint64_t> latenciesWhole(niterPerThread);
+    std::vector<uint64_t> latenciesPure(niterPerThread);
+    readySignal.set_value();
+    startSignal.get();
+    auto workloadStart = std::chrono::high_resolution_clock::now();
+    size_t iter = niterPerThread;
+    while (iter-- > 0) {
+        float random = ((float) rand()) / (float) RAND_MAX;
+        std::vector<float> data(elementsCount, random);
+        OVMS_InferenceRequest* request = prepareRequest(server, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
+        // stopSignal will be used with ctrl-c app stopping or with total requestCount
+        // stopSignal.wait_for(std::chrono::milliseconds(0));
+        auto iterationWholeStart = std::chrono::high_resolution_clock::now();
+        auto iterationPureStart = std::chrono::high_resolution_clock::now();
+        // aternatively we are changing request
+        OVMS_Inference(server, request, &response);
+        auto iterationPureEnd = std::chrono::high_resolution_clock::now();
+        OVMS_InferenceResponseDelete(response);
+        auto iterationWholeEnd = std::chrono::high_resolution_clock::now();
+        latenciesWhole[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationWholeEnd - iterationWholeStart).count();
+        latenciesPure[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationPureEnd - iterationPureStart).count();
+        OVMS_InferenceRequestDelete(request);
+    }
     auto workloadEnd = std::chrono::high_resolution_clock::now();
     wholeThreadTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(workloadEnd - workloadStart).count();
     averageWholeLatency = std::accumulate(latenciesWhole.begin(), latenciesWhole.end(), 0) / (double(niterPerThread) * 1'000);
@@ -266,6 +307,12 @@ void triggerInferenceInALoop(
 }
 
 }  // namespace
+
+enum Mode {
+    INFERENCE_ONLY,
+    RESET_BUFFER,
+    RESET_REQUEST
+};
 
 int main(int argc, char** argv) {
     installSignalHandlers();
@@ -303,6 +350,21 @@ int main(int argc, char** argv) {
     }
     OVMS_ServerSettingsSetLogLevel(serverSettings, logLevel);
     OVMS_ModelsSettingsSetConfigPath(modelsSettings, cliparser.result->operator[]("config_path").as<std::string>().c_str());
+
+    std::string modeParam = cliparser.result->operator[]("mode").as<std::string>();
+    Mode mode;
+    if(modeParam == "INFERENCE_ONLY"){
+        mode = Mode::INFERENCE_ONLY;
+    }
+    else if(modeParam == "RESET_BUFFER"){
+        mode = Mode::RESET_BUFFER;
+    }else if(modeParam == "RESET_REQUEST"){
+        mode = Mode::RESET_REQUEST;
+    }else {
+        std::cout << "Invalid mode requested: " <<  modeParam;
+        return 1;
+    }
+    std::cerr << "Mode: " << mode;
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
 
@@ -387,9 +449,6 @@ int main(int argc, char** argv) {
     }
     OVMS_InferenceResponseDelete(response);
 
-    bool reuse_buffer = cliparser.result->operator[]("reuse_buffer").as<bool>();
-    std::cerr << "Reuse: " << reuse_buffer;
-
     ///////////////////////
     // setup workload machinery
     ///////////////////////
@@ -411,7 +470,61 @@ int main(int argc, char** argv) {
     ///////////////////////
     // prepare threads
     ///////////////////////
-    if(!reuse_buffer){
+    if(mode == Mode::INFERENCE_ONLY){
+        for (size_t i = 0; i < threadCount; ++i) {
+            workerThreads.emplace_back(std::make_unique<std::thread>(
+                [&futureStartSignals,
+                &readySignals,
+                &niterPerThread,
+                &wholeThreadsTimesUs,
+                &wholeTimes,
+                &pureTimes,
+                &srv,
+                &request,
+                i]() {
+                    triggerInferenceInALoop(
+                        futureStartSignals[i],
+                        readySignals[i],
+                        niterPerThread,
+                        wholeThreadsTimesUs[i],
+                        wholeTimes[i],
+                        pureTimes[i],
+                        srv,
+                        request);
+                }));
+        }
+    }
+    else if(mode == Mode::RESET_BUFFER)
+    {
+        for (size_t i = 0; i < threadCount; ++i) {
+            workerThreads.emplace_back(std::make_unique<std::thread>(
+                [&futureStartSignals,
+                &readySignals,
+                &niterPerThread,
+                &wholeThreadsTimesUs,
+                &wholeTimes,
+                &pureTimes,
+                &srv,
+                &request,
+                &inputName,
+                &elementsCount,
+                i]() {
+                    triggerInferenceInALoop(
+                        futureStartSignals[i],
+                        readySignals[i],
+                        niterPerThread,
+                        wholeThreadsTimesUs[i],
+                        wholeTimes[i],
+                        pureTimes[i],
+                        srv,
+                        request,
+                        inputName,
+                        elementsCount);
+                }));
+        }
+    }
+    else if(mode == Mode::RESET_REQUEST)
+    {
         for (size_t i = 0; i < threadCount; ++i) {
             workerThreads.emplace_back(std::make_unique<std::thread>(
                 [&futureStartSignals,
@@ -436,31 +549,6 @@ int main(int argc, char** argv) {
                         pureTimes[i],
                         srv,
                         servableName, servableVersion, datatype, shape, inputName);
-                }));
-        }
-    }
-    else
-    {
-        for (size_t i = 0; i < threadCount; ++i) {
-            workerThreads.emplace_back(std::make_unique<std::thread>(
-                [&futureStartSignals,
-                &readySignals,
-                &niterPerThread,
-                &wholeThreadsTimesUs,
-                &wholeTimes,
-                &pureTimes,
-                &srv,
-                &request,
-                i]() {
-                    triggerInferenceInALoop(
-                        futureStartSignals[i],
-                        readySignals[i],
-                        niterPerThread,
-                        wholeThreadsTimesUs[i],
-                        wholeTimes[i],
-                        pureTimes[i],
-                        srv,
-                        request);
                 }));
         }
     }
