@@ -207,11 +207,8 @@ void triggerInferenceInALoop(
     auto workloadStart = std::chrono::high_resolution_clock::now();
     size_t iter = niterPerThread;
     while (iter-- > 0) {
-        // stopSignal will be used with ctrl-c app stopping or with total requestCount
-        // stopSignal.wait_for(std::chrono::milliseconds(0));
         auto iterationWholeStart = std::chrono::high_resolution_clock::now();
         auto iterationPureStart = std::chrono::high_resolution_clock::now();
-        // aternatively we are changing request
         OVMS_Inference(server, request, &response);
         auto iterationPureEnd = std::chrono::high_resolution_clock::now();
         OVMS_InferenceResponseDelete(response);
@@ -246,13 +243,10 @@ void triggerInferenceInALoop(
     while (iter-- > 0) {
         float random = ((float) rand()) / (float) RAND_MAX;
         std::vector<float> data(elementsCount, random);
+        OVMS_InferenceRequestInputRemoveData(request, inputName.c_str());
         OVMS_InferenceRequestInputSetData(request, inputName.c_str(), (const void*)data.data(), elementsCount * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
-        //InferenceRequest* ir = reinterpret_cast<InferenceRequest*>(request);
-        // stopSignal will be used with ctrl-c app stopping or with total requestCount
-        // stopSignal.wait_for(std::chrono::milliseconds(0));
         auto iterationWholeStart = std::chrono::high_resolution_clock::now();
         auto iterationPureStart = std::chrono::high_resolution_clock::now();
-        // aternatively we are changing request
         OVMS_Inference(server, request, &response);
         auto iterationPureEnd = std::chrono::high_resolution_clock::now();
         OVMS_InferenceResponseDelete(response);
@@ -287,11 +281,8 @@ void triggerInferenceInALoop(
         float random = ((float) rand()) / (float) RAND_MAX;
         std::vector<float> data(elementsCount, random);
         OVMS_InferenceRequest* request = prepareRequest(server, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
-        // stopSignal will be used with ctrl-c app stopping or with total requestCount
-        // stopSignal.wait_for(std::chrono::milliseconds(0));
         auto iterationWholeStart = std::chrono::high_resolution_clock::now();
         auto iterationPureStart = std::chrono::high_resolution_clock::now();
-        // aternatively we are changing request
         OVMS_Inference(server, request, &response);
         auto iterationPureEnd = std::chrono::high_resolution_clock::now();
         OVMS_InferenceResponseDelete(response);
@@ -452,6 +443,7 @@ int main(int argc, char** argv) {
     ///////////////////////
     // setup workload machinery
     ///////////////////////
+    std::vector<OVMS_InferenceRequest*> requests;
     std::vector<std::unique_ptr<std::thread>> workerThreads;
     std::vector<std::promise<void>> startSignals(threadCount);
     std::vector<std::promise<void>> readySignals(threadCount);
@@ -495,7 +487,11 @@ int main(int argc, char** argv) {
         }
     }
     else if(mode == Mode::RESET_BUFFER)
-    {
+    {   
+        for (size_t i = 0; i < threadCount; ++i) {
+            auto request = prepareRequest(srv, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
+            requests.push_back(request);
+        }
         for (size_t i = 0; i < threadCount; ++i) {
             workerThreads.emplace_back(std::make_unique<std::thread>(
                 [&futureStartSignals,
@@ -505,7 +501,7 @@ int main(int argc, char** argv) {
                 &wholeTimes,
                 &pureTimes,
                 &srv,
-                &request,
+                &requests,
                 &inputName,
                 &elementsCount,
                 i]() {
@@ -517,7 +513,7 @@ int main(int argc, char** argv) {
                         wholeTimes[i],
                         pureTimes[i],
                         srv,
-                        request,
+                        requests[i],
                         inputName,
                         elementsCount);
                 }));
@@ -571,6 +567,9 @@ int main(int argc, char** argv) {
     auto totalUs = std::accumulate(wholeThreadsTimesUs.begin(), wholeThreadsTimesUs.end(), 0);
     std::cout << "Average per thread FPS: " << double(niter) * threadCount/totalUs * 1'000'000 << std::endl;
     OVMS_InferenceRequestDelete(request);
+    for(auto request : requests){
+        OVMS_InferenceRequestDelete(request);
+    }
     double totalWhole = std::accumulate(wholeTimes.begin(), wholeTimes.end(), double(0)) / threadCount;
     double totalPure = std::accumulate(pureTimes.begin(), pureTimes.end(), double(0)) / threadCount;
     std::cout << std::fixed << std::setprecision(3);
