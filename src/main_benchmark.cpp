@@ -28,9 +28,9 @@
 #include <stdio.h>
 #include <sysexits.h>
 
+#include "capi_frontend/capi_utils.hpp"
 #include "ovms.h"  // NOLINT
 #include "stringutils.hpp"
-#include "capi_frontend/capi_utils.hpp"
 
 namespace {
 
