@@ -109,13 +109,13 @@ Here can be found more information about [MediaPipe graphs proto](https://develo
 OVMS does support processing several packet types at the inputs and outputs of the graph.
 Following table lists supported tag and packet types based on pbtxt configuration file line:
 
-| pbtxt line | input/output | tag | packet type | stream name |
-|:---|:---|:---|:---|:---|:---|
-| input_stream: "a" | input | none | ov::Tensor | a |
-| input_stream: "IMAGE:a" | input | IMAGE | mediapipe::Image | a |
-| output_stream: "OVTENSOR:b" | output | OVTENSOR | ov::Tensor | b |
-| input_stream: "REQUEST:req" | input | REQUEST | KServe inference::ModelInferRequest | req |
-| output_stream: "RESPONSE:res" | output | RESPONSE | KServe inference::ModelInferResponse | res |
+|pbtxt line|input/output|tag|packet type|stream name|
+|:---|:---|:---|:---|:---|
+|input_stream: "a"|input|none|ov::Tensor|a|
+|input_stream: "IMAGE:a"|input|IMAGE|mediapipe::Image|a|
+|output_stream: "OVTENSOR:b"|output|OVTENSOR|ov::Tensor|b|
+|input_stream: "REQUEST:req"|input|REQUEST|KServe inference::ModelInferRequest|req|
+|output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
 
 For list of supported packet types and tags of OpenVINOInferenceCalculator check documentation of [OpenVINO Mediapipe fork](TODO).
 With KServe gRPC API you are also able to push side input packets into graph. In this case created side packet type is the same as KServe parameter type (string, int64 or boolean).
@@ -170,7 +170,7 @@ Nodes in the MediaPipe graphs can reference both to the models configured in mod
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
 |`"name"`|string|Graph identifier related to name field specified in gRPC/REST request|Yes|
-|`"base_path"`|string|Path to the which graph definition and subconfig files paths are relative. May be absolute or relative to the main config path. Default value is "(main config path)\(name)"|No| # TODO
+|`"base_path"`|string|Path to the which graph definition and subconfig files paths are relative. May be absolute or relative to the main config path. Default value is "(main config path)\(name)"|No|
 |`"graph_path"`|string|Path to the graph proto file. May be absolute or relative to the base_path. Default value is "(base_path)\graph.pbtxt". File have to exist.|No|
 |`"subconfig"`|string|Path to the subconfig file. May be absolute or relative to the base_path. Default value is "(base_path)\subconfig.json". Missing  file does not result in error.|No|
 
@@ -191,10 +191,10 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 [Multi model](../demos/mediapipe/multi_model_graph/README.md)
 
 ## Current limitations <a name="current-limitations"></a>
-- Mediapipe graphs are supported only for GRPC KFS API. Only TFS calls supported are get model status and config reload.
+- Mediapipe graphs are supported only for gRPC KServe API. Only Tensorflow Servin API calls supported are get model status and config reload.
 
 - KServe ModelMetadata call respond only with required input and output names. Shape and datatype are not specified in the response.
 
 - Binary inputs are not supported for MediaPipe graphs.
 
-- Making changes in subconfig file does not trigger config reloads. Main config changes are monitored and triggers subconfig reload even if those weren't changed.
+- Making changes in subconfig file does not trigger config reloads. Main config changes are monitored and triggers subconfig reload even if this wasn't changed. Changes in main config json trigger also checking for changes in graph's pbtxt files.
