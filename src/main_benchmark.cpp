@@ -494,8 +494,7 @@ int main(int argc, char** argv) {
                         request);
                 }));
         }
-    } else if (mode == Mode::RESET_BUFFER)
-    {   
+    } else if (mode == Mode::RESET_BUFFER){
         for (size_t i = 0; i < threadCount; ++i) {
             auto request = prepareRequest(srv, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
             requests.push_back(request);
@@ -526,8 +525,7 @@ int main(int argc, char** argv) {
                         elementsCount);
                 }));
         }
-    } else if (mode == Mode::RESET_REQUEST)
-    {
+    } else if (mode == Mode::RESET_REQUEST) {
         for (size_t i = 0; i < threadCount; ++i) {
             workerThreads.emplace_back(std::make_unique<std::thread>(
                 [&futureStartSignals,
@@ -556,7 +554,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    //allow all threads to initialize
+    // allow all threads to initialize
     std::for_each(futureReadySignals.begin(), futureReadySignals.end(), [](auto& readySignal) { readySignal.get(); });
     ///////////////////////
     // start workload
@@ -574,7 +572,7 @@ int main(int argc, char** argv) {
     auto totalUs = std::accumulate(wholeThreadsTimesUs.begin(), wholeThreadsTimesUs.end(), 0);
     std::cout << "Average per thread FPS: " << double(niter) * threadCount/totalUs * 1'000'000 << std::endl;
     OVMS_InferenceRequestDelete(request);
-    for(auto request : requests){
+    for (auto request : requests) {
         OVMS_InferenceRequestDelete(request);
     }
     double totalWhole = std::accumulate(wholeTimes.begin(), wholeTimes.end(), double(0)) / threadCount;
