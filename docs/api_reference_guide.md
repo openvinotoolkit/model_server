@@ -25,5 +25,5 @@ OpenVINO&trade; Model Server exposes two sets of network APIs for inference: one
 
 If you already use one of these APIs, integration of OpenVINO Model Server should be smooth and transparent.
 
-Additionally OVMS provides preview of in process inference with its C API:
+Additionally OVMS provides in process inference with its C API:
 - [OVMS C API](./model_server_c_api.md)
