@@ -120,7 +120,7 @@ For list of supported packet types and tags of OpenVINOInferenceCalculator check
 
 With KServe gRPC API you are also able to push side input packets into graph. In this case created side packet type is the same as KServe parameter type (string, int64 or boolean).
 
-`Image` inputs requires image pixel data inside raw_input_contents that can be converted to Mediapipe::ImageFrame format. For now, those kind of inputs only accepts three-dimensional data in HWC layout. Datatypes supported for `Image` format:
+`Image` inputs requires image pixel data inside raw_input_contents that can be converted to MediaPipe ImageFrame format. For now, those kind of inputs only accepts three-dimensional data in HWC layout. Datatypes supported for `Image` format:
 |Datatype|Number of channels|
 |:---|:---|
 |FP16|1,3,4|
@@ -187,7 +187,7 @@ Nodes in the MediaPipe graphs can reference both to the models configured in mod
 
 Subconfig file may only contain *model_config_list* section  - in the same format as in [models config file](starting_server.md).
 
-## Using Mediapipe <a name="using-mediapipe"></a>
+## Using MediaPipe <a name="using-mediapipe"></a>
 
 MediaPipe graphs can use the same KServe Inference API as the models. There are exactly the same calls for running
 the predictions. The request format must match the pipeline definition inputs.
@@ -203,7 +203,7 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 [Multi model](../demos/mediapipe/multi_model_graph/README.md)
 
 ## Current limitations <a name="current-limitations"></a>
-- Mediapipe graphs are supported only for gRPC KServe API. Only Tensorflow Serving API call supported is get model status.
+- MediaPipe graphs are supported only for gRPC KServe API.
 
 - KServe ModelMetadata call responds only with required input and output names. Shape and datatype are not specified in the response.
 
