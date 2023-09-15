@@ -20,6 +20,8 @@ This guide gives information about:
 * <a href="#using-mediapipe">Using the mediapipe graphs</a>
 * <a href="#graphs-examples">Graphs examples </a>
 * <a href="#current-limitations">Current Limitations</a>
+* <a href="#adding-calculator">Adding calculator</a>
+
 
 ## Node Types <a name="ovms-calculators"></a>
 
@@ -210,3 +212,27 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 - Binary inputs are not supported for MediaPipe graphs.
 
 - Making changes in subconfig file does not trigger config reloads. Main config changes are monitored and triggers subconfig reload even if this wasn't changed. Changes in main config json trigger also checking for changes in graph's pbtxt files.
+
+## Adding your own mediapipe calculator to OVMS <a name="adding-calculator"></a>
+If you want ot add your own mediapipe calculator to OVMS functionality you need to add it as a dependency and rebuild the ovms binary.
+
+If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel WORKSPACE file.
+Then you need to add the calculator target as a bazel dependency to the src/BUILD file. This should be done for:
+cc_library(
+ name = "ovms_lib",
+...
+
+in the conditions:default section of the deps property:
+
+```bash
+  deps = [
+         "//:ovms_dependencies",
+        "//src/kfserving_api:kfserving_api_cpp",
+        ] + select({
+            "//conditions:default": [
+                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "@mediapipe_calculators//:mediapipe_calculators",
+                 "@your_repository//:yourpathtocalculator/your_calculator
+```
+
+ Make sure the REGISTER_CALCULATOR(your_calculator); macro is present in the calculator file that you have added.
