@@ -339,7 +339,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         -d '{"instances": [{"input_name": "<string>"}]}'
 
 @endsphinxdirective
-For complete usage examples see [ovmsclient samples](https://github.com/openvinotoolkit/model_server/tree/releases/2023/0/client/python/ovmsclient/samples).
+For complete usage examples see [ovmsclient samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/ovmsclient/samples).
 
 @sphinxdirective
 

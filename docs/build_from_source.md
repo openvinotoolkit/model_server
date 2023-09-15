@@ -184,4 +184,4 @@ Example:
 make docker_build MEDIAPIPE_DISABLE=0
 ```
 
-Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/develop/docs/developer_guide.md).
+Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md).

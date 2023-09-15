@@ -6,7 +6,7 @@ OVMS client library contains only the necessary dependencies, so the whole packa
 
 As OpenVINO Model Server API is compatible with TensorFlow Serving, it's possible to use `ovmsclient` with TensorFlow Serving instances on: Predict, GetModelMetadata and GetModelStatus endpoints.
 
-See [API documentation](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/client/python/ovmsclient/lib/docs/README.md) for details on what the library provides.
+See [API documentation](https://github.com/openvinotoolkit/model_server/blob/main/client/python/ovmsclient/lib/docs/README.md) for details on what the library provides.
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
@@ -100,7 +100,7 @@ model_status = client.get_model_status(model_name="model")
 model_metadata = client.get_model_metadata(model_name="model")
 
 # Exemplary model_metadata. Values for model:
-# https://docs.openvino.ai/2023.0/omz_models_model_resnet_50_tf.html
+# https://docs.openvino.ai/2023.1/omz_models_model_resnet_50_tf.html
 #
 #{
 #   "model_version": 1,
@@ -123,7 +123,7 @@ model_metadata = client.get_model_metadata(model_name="model")
 **Create and send predict request with binary input data:**
 ```python
 # Assuming requesting model with inputs and outputs as in:
-# https://docs.openvino.ai/2023.0/omz_models_model_resnet_50_tf.html
+# https://docs.openvino.ai/2023.1/omz_models_model_resnet_50_tf.html
 
 with open(<path_to_img>, 'rb') as f:
     img = f.read()
@@ -136,4 +136,4 @@ results = client.predict(inputs=inputs, model_name="model")
 #
 ```
 
-For more details on `ovmsclient` see [API reference](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/client/python/ovmsclient/lib/docs/README.md)
+For more details on `ovmsclient` see [API reference](https://github.com/openvinotoolkit/model_server/blob/main/client/python/ovmsclient/lib/docs/README.md)

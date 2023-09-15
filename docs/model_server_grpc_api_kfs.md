@@ -12,7 +12,7 @@ The API includes following endpoints:
 * <a href="#kfs-model-metadata">Model Metadata API </a>
 * <a href="#kfs-model-infer"> Inference API </a>
 
-> **NOTE**: Examples of using each of above endpoints can be found in [KServe samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/python/kserve-api/samples/README.md).
+> **NOTE**: Examples of using each of above endpoints can be found in [KServe samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples/README.md).
 
 
 ## Server Live API <a name="kfs-server-live"></a>
@@ -51,7 +51,7 @@ Also, using `BYTES` datatype it is possible to send to model or pipeline, that h
 
 ## See Also
 
-- [Example client code](https://github.com/openvinotoolkit/model_server/tree/develop/client/python/kserve-api/samples/README.md) shows how to use GRPC API and REST API.
+- [Example client code](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples/README.md) shows how to use GRPC API and REST API.
 - [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2)
 - [gRPC](https://grpc.io/)
 

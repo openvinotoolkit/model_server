@@ -13,7 +13,7 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 - [Docker Engine](https://docs.docker.com/engine/) installed 
 - Intel® Core™ processor (6-13th gen.) or Intel® Xeon® processor (1st to 4th gen.)
 - Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/) 
-- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_Working_with_devices.html). Accelerators are tested only on bare-metal Linux hosts.
+- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_Working_with_devices.html). Accelerators are tested only on bare-metal Linux hosts.
 
 ### Launch Model Server Container 
 
@@ -43,8 +43,8 @@ docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_serv
 --layout NHWC:NCHW --port 9000 
 
 # download input files: an image and a label mapping file
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/common/static/images/zebra.jpeg
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/common/python/classes.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/zebra.jpeg
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/classes.py
 
 # install the Python-based ovmsclient package
 pip3 install ovmsclient
@@ -84,7 +84,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
    
    .. code-block:: sh
 
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_ubuntu20.tar.gz
+      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu20.tar.gz
    
    or build it yourself:
    
@@ -110,7 +110,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
    
    .. code-block:: sh
 
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_ubuntu22.tar.gz
+      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu22.tar.gz
    
    or build it yourself:
    
@@ -136,7 +136,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
    
    .. code-block:: sh
 
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.0/ovms_redhat.tar.gz
+      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_redhat.tar.gz
    
    or build it yourself:
 
@@ -173,7 +173,7 @@ Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
 > When serving models on [AI accelerators](accelerators.md), some additional steps may be required to install device drivers and dependencies. 
-> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2023.0/openvino_docs_install_guides_configurations_header.html) documentation.
+> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2023.1/openvino_docs_install_guides_configurations_header.html) documentation.
 
 
 ## Deploying Model Server in Kubernetes 

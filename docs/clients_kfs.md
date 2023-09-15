@@ -785,4 +785,4 @@ When creating a Python-based client application, you can use Triton client libra
         -d '{"inputs" : [ {"name" : "input_name", "shape" : [ 1 ], "datatype"  : "BYTES", "data" : ["<string>"]} ]}'
 
 @endsphinxdirective
-For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/develop/client/python/kserve-api/samples).
+For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples).
