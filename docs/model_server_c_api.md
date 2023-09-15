@@ -19,10 +19,10 @@ There is no patch version number. Underlying functionality changes not related t
 
 ### Server configuration and start
 
-To start OVMS you need to create `OVMS_Server` object using `OVMS_ServerNew`, with set of `OVMS_ServerSettings` and `OVMS_ModelsSettings` that describe how the server should be configured. Once the server is started using `OVMS_ServerStartFromConfigurationFile` you can schedule the inferences using `OVMS_Inference`. To stop server, you must call `OVMS_ServerDelete`. While the server is alive you can schedule both in process inferences as well as use gRPC API to schedule inferences from remote machine. Optionally you can also enable HTTP service. One can also query metadata using `OVMS_GetServerMetadata`. Example how to use OVMS with C/C++ application is [here](../demos/c_api_minimal_app/README.md).
+To start OVMS you need to create `OVMS_Server` object using `OVMS_ServerNew`, with set of `OVMS_ServerSettings` and `OVMS_ModelsSettings` that describe how the server should be configured. Once the server is started using `OVMS_ServerStartFromConfigurationFile` you can schedule the inferences using `OVMS_Inference`. To stop server, you must call `OVMS_ServerDelete`. While the server is alive you can schedule both in process inferences as well as use gRPC API to schedule inferences from remote machine. Optionally you can also enable HTTP service. One can also query metadata using `OVMS_ServerMetadata`. Example how to use OVMS with C/C++ application is [here](../demos/c_api_minimal_app/README.md).
 
 ### Error handling
-Most of OVMS C API functions return `OVMS_Status` object pointer indicating the success or failure. Success is indicated by nullptr (NULL). Failure is indicated by returning `OVMS_Status` object. The status code can be extracted using `OVMS_StatusGetCode` function and the details of error can be retrieved using `OVMS_StatusGetDetails` function.
+Most of OVMS C API functions return `OVMS_Status` object pointer indicating the success or failure. Success is indicated by nullptr (NULL). Failure is indicated by returning `OVMS_Status` object. The status code can be extracted using `OVMS_StatusCode` function and the details of error can be retrieved using `OVMS_StatusDetails` function.
 
 The ownership of `OVMS_Status` is passed to the caller of the function. You must delete the object using `OVMS_StatusDelete`.
 
@@ -39,7 +39,7 @@ Execute inference with OVMS using `OVMS_Inference` synchronous call. During infe
 #### Process inference response
 If the inference was successful, you receive `OVMS_InferenceRequest` object. After processing the response, you must free the response memory by calling `OVMS_InferenceResponseDelete`.
 
-To process response, first you must check for inference error. If no error occurred, you must iterate over response outputs and parameters using `OVMS_InferenceResponseGetOutputCount` and `OVMS_InferenceResponseGetParameterCount`. Then you must extract details describing each output and parameter using `OVMS_InferenceResponseGetOutput` and `OVMS_InferenceResponseGetParameter`. Example how to use OVMS with C/C++ application is [here](../demos/c_api_minimal_app/README.md). While in example app you have only single thread scheduling inference request you can execute multiple inferences simultaneously using different threads.
+To process response, first you must check for inference error. If no error occurred, you must iterate over response outputs and parameters using `OVMS_InferenceResponseOutputCount` and `OVMS_InferenceResponseParameterCount`. Then you must extract details describing each output and parameter using `OVMS_InferenceResponseOutput` and `OVMS_InferenceResponseParameter`. Example how to use OVMS with C/C++ application is [here](../demos/c_api_minimal_app/README.md). While in example app you have only single thread scheduling inference request you can execute multiple inferences simultaneously using different threads.
 
 **Note**: After inference execution is finished you can reuse the same `OVMS_InferenceRequest` by using `OVMS_InferenceRequestInputRemoveData` and then setting different tensor data with `OVMS_InferenceRequestSetData`.
 
