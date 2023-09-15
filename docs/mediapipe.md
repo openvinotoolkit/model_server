@@ -214,13 +214,15 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 - Making changes in subconfig file does not trigger config reloads. Main config changes are monitored and triggers subconfig reload even if this wasn't changed. Changes in main config json trigger also checking for changes in graph's pbtxt files.
 
 ## Adding your own mediapipe calculator to OVMS <a name="adding-calculator"></a>
-If you want ot add your own mediapipe calculator to OVMS functionality you need to add it as a dependency and rebuild the ovms binary.
+If you want to add your own mediapipe calculator to OVMS functionality you need to add it as a dependency and rebuild the ovms binary.
 
 If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel WORKSPACE file.
 Then you need to add the calculator target as a bazel dependency to the src/BUILD file. This should be done for:
+```bash
 cc_library(
  name = "ovms_lib",
 ...
+```
 
 in the conditions:default section of the deps property:
 
