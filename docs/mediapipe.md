@@ -9,7 +9,7 @@
 @endsphinxdirective
 
 ## Introduction
-MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. Using MediaPipe in the OVMS enables user to define a powerful graph from a lot of ready calculators/nodes that come with the MediaPipe which support all the needed features for running a stable graph like e.g. flow limiter node. User can also run the graph in a server or run it inside application host. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
+MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. Using MediaPipe in the OpenVINO Model Server enables user to define a powerful graph from a lot of ready calculators/nodes that come with the MediaPipe which support all the needed features for running a stable graph like e.g. flow limiter node. User can also run the graph in a server or run it inside application host. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
 
 This guide gives information about:
 
@@ -25,9 +25,9 @@ This guide gives information about:
 
 ## Node Types <a name="ovms-calculators"></a>
 
-"Each calculator is a node of a graph. The bulk of graph execution happens inside its calculators. OVMS has its own calculators but can also use newly developed calculators or reuse the existing calculators defined in the original mediapipe repository."
+"Each calculator is a node of a graph. The bulk of graph execution happens inside its calculators. OpenVINO Model Server has its own calculators but can also use newly developed calculators or reuse the existing calculators defined in the original mediapipe repository."
 
-For more details you can visit mediapipe concept description - [Calculators Concept Page](https://developers.google.com/mediapipe/framework/framework_concepts/calculators) or OVMS specific calculators implementation - [Ovms Calculators Concept Page](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/src/mediapipe_calculators/calculators.md)
+For more details you can visit mediapipe concept description - [Calculators Concept Page](https://developers.google.com/mediapipe/framework/framework_concepts/calculators) or OpenVINO Model Server specific calculators implementation - [Ovms Calculators Concept Page](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/calculators.md)
 
 ## Graph proto files <a name="graph-proto"></a>
 
@@ -106,7 +106,7 @@ Here can be found more information about [MediaPipe graphs proto](https://develo
 
 # Supported input/output packet types
 
-OVMS does support processing several packet types at the inputs and outputs of the graph.
+OpenVINO Model Server does support processing several packet types at the inputs and outputs of the graph.
 Following table lists supported tag and packet types based on pbtxt configuration file line:
 
 |pbtxt line|input/output|tag|packet type|stream name|
@@ -117,13 +117,13 @@ Following table lists supported tag and packet types based on pbtxt configuratio
 |input_stream: "REQUEST:req"|input|REQUEST|KServe inference::ModelInferRequest|req|
 |output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
 
-In case of missing tag OVMS assumes that the packet type is `ov::Tensor'.
-For list of supported packet types and tags of OpenVINOInferenceCalculator check documentation of [OVMS calculators](https://github.com/openvinotoolkit/model_server/blob/main/src/mediapipe_calculators/calculators.md).
+In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor'.
+For list of supported packet types and tags of OpenVINOInferenceCalculator check documentation of [OpenVINO Model Server calculators](https://github.com/openvinotoolkit/model_server/blob/main/src/mediapipe_calculators/calculators.md).
 
 With KServe gRPC API you are also able to push side input packets into graph. In this case created side packet type is the same as KServe parameter type (string, int64 or boolean).
 
-`Image` inputs requires image pixel data inside raw_input_contents that can be converted to MediaPipe ImageFrame format. For now, those kind of inputs only accepts three-dimensional data in HWC layout. Datatypes supported for `Image` format:
-|Datatype|Number of channels|
+`Image` inputs requires image pixel data inside `raw_input_contents` that can be converted to MediaPipe ImageFrame format. For now, those kind of inputs only accepts three-dimensional data in HWC layout. Datatypes supported for `Image` format:
+|Datatype|Allowed number of channels|
 |:---|:---|
 |FP16|1,3,4|
 |FP32|1,2|
@@ -133,7 +133,7 @@ With KServe gRPC API you are also able to push side input packets into graph. In
 |INT16|1,3,4|
 
 
-Documentation on handling tags inside OVMS calculators is placed [here](https://github.com/openvinotoolkit/mediapipe/blob/237bf3bf23c4d7b7e38eb92b4a3b6d540d83421b/mediapipe/calculators/ovms/calculators.md).
+Check the documentation on [handling tags inside OpenVINO Model Server calculators](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/calculators.md).
 
 ## Configuration files <a name="configuration-files"></a>
 MediaPipe servables configuration is to be placed in the same json file like the 
@@ -213,11 +213,12 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 
 - Making changes in subconfig file does not trigger config reloads. Main config changes are monitored and triggers subconfig reload even if this wasn't changed. Changes in main config json trigger also checking for changes in graph's pbtxt files.
 
-## Adding your own mediapipe calculator to OVMS <a name="adding-calculator"></a>
-If you want to add your own mediapipe calculator to OVMS functionality you need to add it as a dependency and rebuild the ovms binary.
+## Adding your own mediapipe calculator to OpenVINO Model Server <a name="adding-calculator"></a>
+MediaPipe graphs can include only the calculators built-in the model server during the image build.
+If you want to add your own mediapipe calculator to OpenVINO Model Server functionality you need to add it as a dependency and rebuild the OpenVINO Model Server binary.
 
 If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel WORKSPACE file.
-Then you need to add the calculator target as a bazel dependency to the src/BUILD file. This should be done for:
+Then you need to add the calculator target as a bazel dependency to the [src/BUILD](,./src/BUILD) file. This should be done for:
 ```bash
 cc_library(
  name = "ovms_lib",

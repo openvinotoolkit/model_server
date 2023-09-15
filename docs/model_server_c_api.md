@@ -57,7 +57,7 @@ To process response, first you must check for inference error. If no error occur
 **Note**: After inference execution is finished you can reuse the same `OVMS_InferenceRequest` by using `OVMS_InferenceRequestInputRemoveData` and then setting different tensor data with `OVMS_InferenceRequestSetData`.
 
 #### Server liveness and readiness
-To check if OpenVINO Model Server is alive and should respond to requests you can use `OVMS_ServerLive`. Checking readiness with `OVMS_ServerReady' will show if initial configuration loading has finished.
+To check if OpenVINO Model Server is alive and will respond to requests you can use `OVMS_ServerLive`. Note that live status doesn't guarantee the model readiness. Check the readiness with `OVMS_ServerReady' call to show if initial configuration loading has finished including loading all correctly configured models.
 
 #### Servable readiness
 To check if servable is ready for inference and metadata requests use `OVMS_GetServableState` specifying name and optionally version.
