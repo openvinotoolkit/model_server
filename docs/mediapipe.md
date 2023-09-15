@@ -205,7 +205,7 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 ## Current limitations <a name="current-limitations"></a>
 - Mediapipe graphs are supported only for gRPC KServe API. Only Tensorflow Serving API call supported is get model status.
 
-- KServe ModelMetadata call respond only with required input and output names. Shape and datatype are not specified in the response.
+- KServe ModelMetadata call responds only with required input and output names. Shape and datatype are not specified in the response.
 
 - Binary inputs are not supported for MediaPipe graphs.
 
