@@ -59,7 +59,7 @@ Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 > **NOTE**:
 > The public docker image includes the OpenCL drivers for GPU in version 22.28 (RedHat) and 22.35 (Ubuntu).
 
-If you need to build the OpenVINO Model Server with different driver version, refer to the [building from sources](https://github.com/openvinotoolkit/model_server/blob/releases/2023/1/docs/build_from_source.md)
+If you need to build the OpenVINO Model Server with different driver version, refer to the [building from sources](https://github.com/openvinotoolkit/model_server/blob/main/docs/build_from_source.md)
 
 ## Using Multi-Device Plugin
 
@@ -191,7 +191,7 @@ The docker image of OpenVINO Model Server including support for NVIDIA can be bu
    make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=master OV_CONTRIB_BRANCH=master
    cd ..
 ```
-Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/releases/2023/1/docs/build_from_source.md).
+Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/main/docs/build_from_source.md).
 
 Example command to run container with NVIDIA support:
 

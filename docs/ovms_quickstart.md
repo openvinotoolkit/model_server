@@ -73,7 +73,7 @@ During this step, the `model` folder is mounted to the Docker container.  This f
 Client scripts are available for quick access to the Model Server. Run an example command to download all required components:
 
 ```bash
-curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/1/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/1/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/1/demos/common/python/requirements.txt -o client_requirements.txt
+curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/requirements.txt -o client_requirements.txt
 ```
 
 For more information, check these links:
@@ -85,10 +85,10 @@ For more information, check these links:
 
 Put the files in a separate folder to provide inference data, as inference will be performed on all the files it contains.
 
-You can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/releases/2023/1/demos/common/static/images/people). This example uses the file [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/releases/2023/1/demos/common/static/images/people/people1.jpeg). Run the following command to download the image:
+You can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/static/images/people). This example uses the file [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/static/images/people/people1.jpeg). Run the following command to download the image:
 
 ```bash
-curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/1/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
+curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
 ### Step 7: Run Inference
