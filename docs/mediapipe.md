@@ -136,7 +136,7 @@ With KServe gRPC API you are also able to push side input packets into graph. In
 Documentation on handling tags inside OVMS calculators is placed [here](https://github.com/openvinotoolkit/mediapipe/blob/237bf3bf23c4d7b7e38eb92b4a3b6d540d83421b/mediapipe/calculators/ovms/calculators.md).
 
 ## Configuration files <a name="configuration-files"></a>
-MediaPipe pipelines configuration is to be placed in the same json file like the 
+MediaPipe servables configuration is to be placed in the same json file like the 
 [models config file](starting_server.md).
 While models are defined in section `model_config_list`, graphs are configured in
 the `mediapipe_config_list` section. 
