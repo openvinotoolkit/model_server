@@ -55,7 +55,7 @@ Execute `OVMS_GetServableMetadata` call to get information about servable inputs
 ## Preview limitations
 * Launching server in single model mode is not supported. You must use configuration file.
 * There is no direct support for jpeg/png encoded input format through C API.
-* There is no metrics endpoints exposed through C API.
+* There is no metrics endpoint exposed through C API.
 * Inference scheduled through C API does not have metrics `ovms_requests_success`,`ovms_requests_fail` and `ovms_request_time_us` counted.
 * You cannot turn gRPC endpoint off, REST API endpoint is optional.
 * There is no API for asynchronous inference.
