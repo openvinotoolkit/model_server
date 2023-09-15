@@ -44,7 +44,7 @@ To process response, first you must check for inference error. If no error occur
 **Note**: After inference execution is finished you can reuse the same `OVMS_InferenceRequest` by using `OVMS_InferenceRequestInputRemoveData` and then setting different tensor data with `OVMS_InferenceRequestSetData`.
 
 #### Server liveness and readiness
-To check if OVMS is alive and should respond to requests you can use `OVMS_ServerLive`. Checking readiness with `OVMS_ServerReady' will show if initial configuration loading finished.
+To check if OVMS is alive and should respond to requests you can use `OVMS_ServerLive`. Checking readiness with `OVMS_ServerReady' will show if initial configuration loading has finished.
 
 #### Servable readiness
 To check if servable is ready for inference and metadata requests use `OVMS_GetServableState` specifying name and optionally version.
