@@ -215,7 +215,7 @@ and [REST Model Status](model_server_rest_api_kfs.md)
 
 - Updates in subconfig files and mediapipe graph files do not trigger model server config reloads. The reload of the full config, including subconfig and graphs, can be initiated by an updated in the main config json file or using the REST API `config/reload` endpoint. 
 
-## Adding your own mediapipe calculator to OVMS <a name="adding-calculator"></a>
+## Adding your own mediapipe calculator to OpenVINO Model Server <a name="adding-calculator"></a>
 If you want to add your own mediapipe calculator to OVMS functionality you need to add it as a dependency and rebuild the ovms binary.
 
 If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel WORKSPACE file.
