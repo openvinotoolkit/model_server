@@ -118,7 +118,7 @@ Following table lists supported tag and packet types based on pbtxt configuratio
 |output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
 
 In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor'.
-For list of supported packet types and tags of OpenVINOInferenceCalculator check documentation of [OpenVINO Model Server calculators](https://github.com/openvinotoolkit/model_server/blob/main/src/mediapipe_calculators/calculators.md).
+For list of supported packet types and tags of OpenVINOInferenceCalculator check documentation of [OpenVINO Model Server calculators](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/calculators.md).
 
 With KServe gRPC API you are also able to push side input packets into graph. In this case created side packet type is the same as KServe parameter type (string, int64 or boolean).
 

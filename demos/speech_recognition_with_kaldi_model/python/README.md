@@ -48,7 +48,7 @@ wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/
 
 [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with reference model results
 
-- [Convert model to IR](https://docs.openvino.ai/2023.0/openvino_inference_engine_samples_speech_sample_README.html)
+- [Convert model to IR](https://docs.openvino.ai/2023.1/openvino_inference_engine_samples_speech_sample_README.html)
  
 ```bash
 docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu20_dev:latest mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
