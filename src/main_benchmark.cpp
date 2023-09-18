@@ -361,7 +361,7 @@ int main(int argc, char** argv) {
     }else if (modeParam == "RESET_REQUEST") {
         mode = Mode::RESET_REQUEST;
     }else {
-        std::cout << "Invalid mode requested: " <<  modeParam;
+        std::cerr << "Invalid mode requested: " <<  modeParam << std::endl;
         return 1;
     }
     std::cout << "Mode requested: " <<  modeParam << std::endl;
