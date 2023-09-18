@@ -364,7 +364,7 @@ int main(int argc, char** argv) {
         std::cout << "Invalid mode requested: " <<  modeParam;
         return 1;
     }
-    std::cerr << "Mode: " << mode;
+    std::cout << "Mode requested: " <<  modeParam << std::endl;
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
 
