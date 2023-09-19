@@ -14,8 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <filesystem>
 #include <iostream>
 #include <memory>
+#include <pybind11/embed.h> // everything needed for embedding
 #include <shared_mutex>
 #include <sstream>
 #include <string>
@@ -36,8 +38,11 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
+
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
+
+namespace py = pybind11;
 
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
@@ -61,6 +66,7 @@ public:
     const PipelineDefinitionStatus& getStatus() const {
         return this->status;
     }
+
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     const model_version_t getVersion() const { return VERSION; }
     const tensor_map_t getInputsInfo() const;
@@ -75,6 +81,8 @@ public:
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
+    Status initializeNodes();
+    Status initializeGraph();
 
     bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
@@ -147,6 +155,10 @@ private:
     std::vector<std::string> inputSidePacketNames;
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
+
+    std::map<std::string, py::object> pythonNodeStates;
+    ::mediapipe::CalculatorGraph graph;
+    std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

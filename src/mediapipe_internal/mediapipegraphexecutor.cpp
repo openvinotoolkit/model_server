@@ -56,6 +56,7 @@
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/interpreter.h"
 #pragma GCC diagnostic pop
+#include "src/mediapipe_calculators/python_backend_calculator.pb.h"
 
 namespace ovms {
 static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
@@ -424,14 +425,22 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
     stream_types_mapping_t inputTypes,
     stream_types_mapping_t outputTypes,
-    std::vector<std::string> inputNames, std::vector<std::string> outputNames) :
+    std::vector<std::string> inputNames, std::vector<std::string> outputNames,
+    std::map<std::string, py::object> pythonNodeStates,
+    ::mediapipe::CalculatorGraph * graph,
+    std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> * outputPollers) :
     name(name),
     version(version),
     config(config),
     inputTypes(std::move(inputTypes)),
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
-    outputNames(std::move(outputNames)) {}
+    outputNames(std::move(outputNames)),
+    {
+        this->pythonNodeStates = pythonNodeStates,
+        this->graph = graph;
+        this->outputPollers = outputPollers;
+    }
 
 namespace {
 enum : unsigned int {
