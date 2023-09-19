@@ -28,9 +28,9 @@ LABEL version="1.0.0"
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=8
-COPY entitlement /etc/pki/entitlement
-COPY rhsm-ca /etc/rhsm/ca
-RUN rm -f /etc/rhsm-host
+# COPY entitlement /etc/pki/entitlement
+# COPY rhsm-ca /etc/rhsm/ca
+# RUN rm -f /etc/rhsm-host
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             boost169-atomic \
@@ -143,10 +143,11 @@ ARG NVIDIA=0
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms && \
+    yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
     yum -y module disable python36 && \
+    yum -y install libzstd-devel ; \
     yum install -y  \
-        libzstd-devel \
+        cuda-nvcc-11-8 libcublas-11-8 libcublas-devel-11-8 \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcudnn8-devel-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 \
