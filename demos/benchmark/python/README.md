@@ -5,7 +5,7 @@
 The benchmark client introduced in this directory is written in Python 3. Benchmark client uses TFServing API and KServe API to communicate with model servers. It is recommended to use the benchmark client as a docker container. Prior to transmission, the client downloads metadata from the server, which contains a list of available models, their versions as well as accepted input and output shapes. Then it generates tensors containing random data with shapes matched to the models served by the service. Both the length of the dataset and the workload duration can be specified independently. The synthetic data created is then served in a loop iterating over the dataset until the workload length is satisfied. As the main role of the client is performance measurement all aspects unrelated to throughput and/or latency are ignored. This means the client does not validate the received responses nor does it estimate accuracy as these activities would negatively affect the measured performance metrics on the client side.
 
 In addition to the standard data format, the client also supports stateful models (recognizing dependencies between consecutive
-inference requests) as well as binary input for select file formats (PNG and JPEG).
+inference requests) as well as binary input for selected file formats (PNG and JPEG).
 
 ![urandom generated input image](readme-img-urandom.png) ![xrandom generated input image](readme-img-xrandom.png)
 
@@ -17,6 +17,8 @@ and counters) are collected from all client processes and then combined upon whi
 the entire parallel workload. If the docker container is run in the deamon mode the final logs can be shown using the `docker logs`
 command. Results can also be exported to a Mongo database. In order to do this the appropriate identification metadata has to
 be specified in the command line.
+
+Since 2.7 update, following Benchmark Client measurement options were introduced: language model `MUSE` (Universal Sentence Encoder) and implementation of `MediaPipe` graphs as OVMS servable. For each of them there is a need to specify input data method. Data method `-d muse` creates sample text dat. Benchmarking of OVMS intergated with MediaPipe is possible for KServe API via gRPC protocol. In this case there is also a necessity to feed client with pre-prepared `numpy` file consisting of numpy array. This usecase id further described in this document.
 
 ## OVMS Deployment
 
@@ -85,7 +87,7 @@ The version can be checked by using `--internal_version` switch as follows:
 ```bash
   docker run benchmark_client --internal_version
 
-  2.6
+  2.7
 ```
 
 The client is able to download the metadata of the served models. If you are
@@ -95,7 +97,7 @@ form `-l` is available):
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 --list_models
 
-Client 2.6
+Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30002 --list_models
 XI worker: try to send request to endpoint: http://localhost:30002/v1/config
 XI worker: received status code is 200.
@@ -111,7 +113,7 @@ of an application instance. For example:
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 -l -m resnet50-binary-0001 -p 30001 -i id
 
-Client 2.6
+Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30002 -l -m resnet50-binary-0001 -p 30001 -i id
 XW id: Finished execution. If you want to run inference remove --list_models.
 XI id: try to send request to endpoint: http://localhost:30002/v1/config
@@ -147,7 +149,7 @@ will be generated as follows (remember to add `--print_all` to show metrics in s
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 -m resnet50-binary-0001 -p 30001 -n 8 --report_warmup --print_all
 
-Client 2.6
+Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30002 -m resnet50-binary-0001 -p 30001 -n 8 --report_warmup --print_all
 XI worker: request for metadata of model resnet50-binary-0001...
 XI worker: Metadata for model resnet50-binary-0001 is downloaded...
@@ -270,6 +272,12 @@ XI worker: warmup_fail_mean_latency: 0.0
 XI worker: warmup_fail_mean_latency2: 0.0
 XI worker: warmup_fail_stdev_latency: 0.0
 XI worker: warmup_fail_cv_latency: 0.0
+```
+
+Usecase of `MediaPipe` graph implementation in OVMS. While having MediaPipe graph file and servable specified in config file, we call it be its name instead of simple model name: `-m <mediapipe-servable-name>`. Example MediaPipe files preparation can be found in [mediapipe.md](https://github.com/openvinotoolkit/model_server/blob/develop/docs/mediapipe.md) file. It is necessary to set `--api KFS` since only KServe API is supported.
+Requests for benchmarking are prepared based on array from numpy file. This data file is fed to Benchmark Client by specyfing switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. 
+```
+docker run --network host benchmark_client -a localhost -r 30002 -l -m dummy_mediapipe --api KFS -d /workspace/dummy.npy -p 30001
 ```
 Many other client options together with benchmarking examples are presented in
 [an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/main/docs/python-benchmarking-client-16feb.pdf). 
