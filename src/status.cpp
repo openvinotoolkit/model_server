@@ -211,6 +211,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG, "Mediapipe KFS pass through graph is missing REQUEST: string in the input name"},
     {StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED, "Given mediapipe graph name is already occupied"},
 
+    // Python Nodes
+    {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node file name is already present in nodes list"},
+
     // Storage errors
     // S3
     {StatusCode::S3_BUCKET_NOT_FOUND, "S3 Bucket not found"},

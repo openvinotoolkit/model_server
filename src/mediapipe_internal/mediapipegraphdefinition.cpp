@@ -16,8 +16,10 @@
 #include "mediapipegraphdefinition.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <memory>
+#include <pybind11/embed.h> // everything needed for embedding
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -39,6 +41,9 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphexecutor.hpp"
+#include "src/mediapipe_calculators/python_backend_calculator.pb.h"
+
+namespace py = pybind11;
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
@@ -225,7 +230,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,  this->pythonNodeStates, &this->graph, &this->outputPollers);
     return status;
 }
 
@@ -415,4 +420,76 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", "", "UNKNOWN", streamFullName);
     return {"", mediapipe_packet_type_enum::UNKNOWN};
 }
+
+Status MediapipeGraphDefinition::initializeNodes() {
+    SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
+    std::string tmp;
+    this->config.SerializeToString(&tmp);
+    SPDLOG_DEBUG(tmp);
+    for (int i = 0; i < config.node().size(); i++){
+        if (config.node(i).node_options().size()) {
+            mediapipe::PythonBackendCalculatorOptions options;
+            config.node(i).node_options(0).UnpackTo(&options);
+            const std::string handler_path = options.handler_path();
+            auto handler_path2 = std::filesystem::path(handler_path);
+            handler_path2.replace_extension();
+
+            std::string parent_path = handler_path2.parent_path();
+            std::string filename = handler_path2.filename();
+
+            if (this->pythonNodeStates.find(filename) != this->pythonNodeStates.end()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} already used in graph: {}. ", filename, this->name);
+                return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
+            }
+            py::gil_scoped_acquire acquire;
+            py::module_ sys = py::module_::import("sys");
+            sys.attr("path").attr("append")(parent_path.c_str());
+            py::module_ script = py::module_::import(filename.c_str());
+            py::object OvmsPythonModel = script.attr("OvmsPythonModel");
+            py::object model_instance = OvmsPythonModel();
+            model_instance.attr("initialize")();
+            this->pythonNodeStates.insert(std::pair<std::string, py::object>(filename, model_instance));
+            SPDLOG_DEBUG(config.node(i).name());
+        }
+    }
+
+    return StatusCode::OK;
+}
+
+Status MediapipeGraphDefinition::initializeGraph() {
+    SPDLOG_DEBUG("Initializing graph");
+    auto absStatus = graph.Initialize(this->config);
+    if (!absStatus.ok()) {
+        const std::string absMessage = absStatus.ToString();
+        SPDLOG_DEBUG("Iinitialization failed with message: {}", absMessage);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+    }
+
+    for (auto& name : this->outputNames) {
+        if (name.empty()) {
+            SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
+            return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
+        }
+        auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
+        if (!absStatusOrPoller.ok()) {
+            const std::string absMessage = absStatusOrPoller.status().ToString();
+            SPDLOG_DEBUG("Failed to add mediapipe graph output stream poller with error: {}", absMessage);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, std::move(absMessage));
+        }
+        outputPollers.emplace(name, std::move(absStatusOrPoller).value());
+    }
+
+    std::map<std::string, mediapipe::Packet> inputSidePackets{};
+    inputSidePackets["pyobject"] = mediapipe::MakePacket<std::map<std::string, py::object>>(this->pythonNodeStates).At(mediapipe::Timestamp(0));
+    SPDLOG_DEBUG("Starting graph");
+    absStatus = graph.StartRun(inputSidePackets);
+    if (!absStatus.ok()) {
+        const std::string absMessage = absStatus.ToString();
+        SPDLOG_DEBUG("Failed to start mediapipe graph with error: {}", absMessage);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, std::move(absMessage));
+    }
+    return StatusCode::OK;
+
+}
+
 }  // namespace ovms

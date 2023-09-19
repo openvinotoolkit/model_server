@@ -165,7 +165,8 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["mediapipe_calculators/ovmscalculator.proto"],
+    srcs = ["mediapipe_calculators/ovmscalculator.proto", 
+            "mediapipe_calculators/python_backend_calculator.proto"],
     visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
@@ -415,6 +416,9 @@ cc_library(
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
+                "mediapipe_calculators/pyobject.hpp",
+                "mediapipe_calculators/python_backend_calculator.cc",
+                #TODO:"mediapipe_calculators/python_session_calculator.cc",
             ],
             "//src:disable_mediapipe" : [],
         })
