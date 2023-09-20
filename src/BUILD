@@ -38,6 +38,20 @@ more_selects.config_setting_negation(
     negate = ":disable_mediapipe",
 )
 
+#To build without python use flags - bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
+config_setting(
+    name = "disable_python",
+    define_values = {
+        "PYTHON_DISABLE": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_disable_python",
+    negate = ":disable_python",
+)
+
 config_setting(
     name = "fuzzer_build",
     define_values = {
@@ -74,6 +88,8 @@ cc_library(
 
 load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
 load("@tensorflow_serving//tensorflow_serving:serving.bzl", "serving_tensorflow_proto_dep")
+
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 cc_shared_library(
     name = "ovms_shared",
@@ -120,7 +136,7 @@ cc_shared_library(
         "@flatbuffers//:__subpackages__",
         "@ruy//:__subpackages__",
     ] + select({
-        "//conditions:default": [
+        "//:not_disable_mediapipe": [
             "@mediapipe//:__subpackages__",
             "@mediapipe_calculators//:__subpackages__",
             "@model_api//:__subpackages__",
@@ -129,10 +145,18 @@ cc_shared_library(
             "@cpuinfo//:__subpackages__",
             "@clog//:__subpackages__",
             "@gemmlowp//:__subpackages__",
-            "@flatbuffers//:__subpackages__",
+            "@flatbuffers//:__subpackages__",],
+        "//:disable_mediapipe": []
+        })
+     + select({
+        "//:not_disable_python": [
+            "@pybind11//:__subpackages__",
+            "@python3_linux//:__subpackages__",
+            "@local_config_python//:__subpackages__",
             ],
-        "//src:disable_mediapipe" : [],
-        }),
+        "//:disable_python": []
+        })
+    ,
     features = [],
     roots = ["//src:ovms_lib"],
 )

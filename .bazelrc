@@ -39,6 +39,7 @@ build:nativeopt --copt=-march=native
 build:nativeopt --host_copt=-march=native
 build:nativeopt --copt=-O3
 
+# For Tensorflow building only
 build --action_env PYTHON_BIN_PATH="/usr/bin/python3"
 build --define PYTHON_BIN_PATH=/usr/bin/python3
 
@@ -53,6 +54,10 @@ test --define=MEDIAPIPE_DISABLE_GPU=1
 build --define=MEDIAPIPE_DISABLE=0
 coverage --define=MEDIAPIPE_DISABLE=0
 test --define=MEDIAPIPE_DISABLE=0
+
+build --define=PYTHON_DISABLE=0
+coverage --define=PYTHON_DISABLE=0
+test --define=PYTHON_DISABLE=0
 
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos

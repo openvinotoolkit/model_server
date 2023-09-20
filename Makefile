@@ -51,6 +51,7 @@ NVIDIA ?=0
 GPU ?= 0
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
+PYTHON_DISABLE ?= 1
 FUZZER_BUILD ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
@@ -75,6 +76,12 @@ DISABLE_MEDIAPIPE_PARAMS ?= ""
 ifeq ($(MEDIAPIPE_DISABLE),1)
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1"
 endif
+
+DISABLE_PYTHON_PARAMS ?= ""
+ifeq ($(PYTHON_DISABLE),1)
+	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1"
+endif
+
 FUZZER_BUILD_PARAMS ?= ""
 ifeq ($(FUZZER_BUILD),1)
 	FUZZER_BUILD_PARAMS = " --define FUZZER_BUILD=1 --cxxopt=-DFUZZER_BUILD=1"
@@ -93,7 +100,7 @@ else
   MINITRACE_FLAGS=""
 endif
 
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(FUZZER_BUILD_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)
 
 
 
@@ -250,6 +257,11 @@ clang-format-check: clang-format
 .PHONY: docker_build
 docker_build: ovms_builder_image targz_package ovms_release_images
 ovms_builder_image:
+ifeq ($(PYTHON_DISABLE),0)
+  ifeq ($(MEDIAPIPE_DISABLE),1)
+	@echo "Cannot build model server with Python support without building with Mediapipe enabled. Use 'MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 make docker_build'"; exit 1 ;
+  endif
+endif
 ifeq ($(CHECK_COVERAGE),1)
   ifeq ($(RUN_TESTS),0)
 	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
