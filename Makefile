@@ -257,6 +257,11 @@ clang-format-check: clang-format
 .PHONY: docker_build
 docker_build: ovms_builder_image targz_package ovms_release_images
 ovms_builder_image:
+ifeq ($(PYTHON_DISABLE),0)
+  ifeq ($(MEDIAPIPE_DISABLE),1)
+	@echo "Cannot build model server with Python support without building with Mediapipe enabled. Use 'MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 make docker_build'"; exit 1 ;
+  endif
+endif
 ifeq ($(CHECK_COVERAGE),1)
   ifeq ($(RUN_TESTS),0)
 	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
