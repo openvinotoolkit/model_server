@@ -41,10 +41,9 @@ ARG ENV_COVERITY_PROJECT
 ARG ENV_COVERITY_TOKEN
 ARG ENV_BUILD_VERSION=3
 WORKDIR /
-#RUN curl --form token=$ENV_COVERITY_TOKEN \
-#  --form email=dariusz.trawinski@intel.com \
-#  --form file=@model_server.tgz \
-#  --form version=$ENV_BUILD_VERSION \
-#  --form description="SDL build" \
-#  https://scan.coverity.com/builds?project=$ENV_COVERITY_PROJECT
-#
+RUN curl --form token=$ENV_COVERITY_TOKEN \
+  --form email=dariusz.trawinski@intel.com \
+  --form file=@model_server.tgz \
+  --form version=$ENV_BUILD_VERSION \
+  --form description="SDL build" \
+  https://scan.coverity.com/builds?project=$ENV_COVERITY_PROJECT
