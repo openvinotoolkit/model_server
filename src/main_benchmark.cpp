@@ -483,7 +483,7 @@ int main(int argc, char** argv) {
     ///////////////////////
     // prepare threads
     ///////////////////////
-    void (*triggerInferenceInALoop)(std::future<void>&, std::promise<void>&, const size_t, size_t&, double&, double&, OVMS_Server*, const std::string&, int64_t, OVMS_DataType, const signed_shape_t&,const std::string&);
+    void (*triggerInferenceInALoop)(std::future<void>&, std::promise<void>&, const size_t, size_t&, double&, double&, OVMS_Server*, const std::string&, int64_t, OVMS_DataType, const signed_shape_t&, const std::string&);
     if (mode == Mode::INFERENCE_ONLY) {
         triggerInferenceInALoop = triggerInferenceInALoopInferenceOnly;
     } else if (mode == Mode::RESET_BUFFER){
