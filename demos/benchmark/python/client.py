@@ -332,7 +332,7 @@ class BaseClient(metaclass=abc.ABCMeta):
             batch = self.create_batch_from_data(content, content_offset, input_name, batch_length)
             if batch is None: break
             content_offset += len(batch)
-            xargs = batch, {"shape": list(content.shape[1:])}
+            xargs = batch, {"shape": list(content.shape)}
             self.xdata[input_name].append(xargs)
         self.dataset_length = len(self.xdata[input_name])
 

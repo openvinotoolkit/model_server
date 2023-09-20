@@ -1,0 +1,35 @@
+#
+# Copyright 2023 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+input_stream: "input"
+output_stream: "output"
+node: {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:resnet50"
+  input_stream: "INPUT:input"
+  output_stream: "OUTPUT:output"
+  node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+          tag_to_input_tensor_names {key: "INPUT" value: "0"}
+          tag_to_output_tensor_names {key: "OUTPUT" value: "1463"}
+}}}
+node: {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:resnet50"
+  node_options: {
+  [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+  servable_name: "resnet50-binary-0001"
+  servable_version: "1"
+}}}
