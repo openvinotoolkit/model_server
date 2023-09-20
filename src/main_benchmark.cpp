@@ -19,10 +19,10 @@
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <random>
 #include <sstream>
 #include <thread>
 #include <vector>
-#include <random>
 
 #include <cxxopts.hpp>
 #include <signal.h>
