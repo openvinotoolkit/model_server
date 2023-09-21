@@ -977,5 +977,7 @@ filegroup(
   srcs = [
     "//src:ovms",
     "//src:release_custom_nodes",
+    "//src:capi_benchmark",
+    "//src:capi_cpp_example"
   ]
 )

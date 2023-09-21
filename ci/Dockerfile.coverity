@@ -17,7 +17,7 @@
 ARG BUILD_IMAGE=openvino/model_server-build:latest
 FROM $BUILD_IMAGE
 
-COPY ./cov-analysis-linux64-2022.6.0 /cov
+COPY ./cov-analysis-linux64-2022.12.2 /cov
 
 RUN apt-get remove --yes cmake && apt-get update && apt-get install -y rapidjson-dev && pip3 install cmake
 
@@ -29,7 +29,7 @@ RUN /cov/bin/cov-configure --gcc --config coverity_config.xml && \
     /cov/bin/cov-configure --comptype gcc --compiler /usr/bin/gcc && \
     /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:static_analysis && cmake /client/cpp/kserve-api && make --jobs=$(nproc) && \
     cd /ovms/src/custom_nodes/tokenizer && \
-    mkdir build && cd build && \
+    mkdir -p build && cd build && \
     cmake .. && make --jobs=$(nproc) && \
     cd /example_cpp_client/cpp && \
     bazel build --spawn_strategy=standalone //src:all'
@@ -47,4 +47,3 @@ RUN curl --form token=$ENV_COVERITY_TOKEN \
   --form version=$ENV_BUILD_VERSION \
   --form description="SDL build" \
   https://scan.coverity.com/builds?project=$ENV_COVERITY_PROJECT
-

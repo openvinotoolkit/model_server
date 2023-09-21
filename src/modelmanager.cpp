@@ -784,7 +784,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     }
 
 #if (MEDIAPIPE_DISABLE == 0)
-    for (auto mediapipeConfig : mediapipesInConfigFile) {
+    for (auto& mediapipeConfig : mediapipesInConfigFile) {
         std::string subconfigPath = mediapipeConfig.getSubconfigPath();
         rapidjson::Document mediapipeConfigJson;
         std::ifstream ifs(subconfigPath);

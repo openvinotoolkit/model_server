@@ -76,7 +76,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
     return grpc(GetModelStatusImpl::getModelStatus(request, response, modelManager, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelStatus)));
 }
 
-Status GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
+Status GetModelStatusImpl::createGrpcRequest(const std::string& model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
     request->mutable_model_spec()->set_name(model_name);
     if (model_version.has_value()) {
         request->mutable_model_spec()->mutable_version()->set_value(model_version.value());

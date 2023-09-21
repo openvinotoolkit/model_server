@@ -52,11 +52,11 @@ DLNode::DLNode(const std::string& nodeName,
     ModelManager& modelManager,
     std::unordered_map<std::string, std::string> nodeOutputNameAlias,
     std::optional<int32_t> demultiplyCount, std::set<std::string> gatherFromNode) :
-    Node(nodeName, demultiplyCount, gatherFromNode),
+    Node(nodeName, demultiplyCount, std::move(gatherFromNode)),
     modelName(modelName),
     modelVersion(modelVersion),
     modelManager(modelManager),
-    nodeOutputNameAlias(nodeOutputNameAlias) {
+    nodeOutputNameAlias(std::move(nodeOutputNameAlias)) {
 }
 
 Status DLNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {
