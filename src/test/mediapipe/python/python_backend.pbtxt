@@ -37,7 +37,7 @@ node {
   output_stream: "out2"
   node_options: {
     [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
-      handler_path: "/ovms/src/test/mediapipe/python/script.py"
+      handler_path: "/ovms/src/test/mediapipe/python/script2.py"
     }
   }
 }

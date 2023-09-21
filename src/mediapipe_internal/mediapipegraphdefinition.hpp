@@ -56,7 +56,7 @@ class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
 
 public:
-    virtual ~MediapipeGraphDefinition();
+    ~MediapipeGraphDefinition();
     MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,

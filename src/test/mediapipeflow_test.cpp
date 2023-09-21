@@ -2108,7 +2108,8 @@ public:
     }
 };
 
-TEST_F(MediapipeFlowPythonNodeTest, Infer) {
+TEST_F(MediapipeFlowPythonNodeTest, InitializationPass) {
+    ASSERT_TRUE(server.isReady());
     //const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     //KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     //::KFSRequest request;

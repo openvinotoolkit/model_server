@@ -50,7 +50,13 @@ MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 
-MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
+MediapipeGraphDefinition::~MediapipeGraphDefinition(){
+    // pybind requires to acquire gil when destructing objects
+    if(!this->pythonNodeStates.empty()){
+        py::gil_scoped_acquire acquire;
+        this->pythonNodeStates.clear();
+    }
+};
 
 const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
     std::shared_lock lock(metadataMtx);
@@ -423,19 +429,22 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
 
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
-    std::string tmp;
-    this->config.SerializeToString(&tmp);
-    SPDLOG_DEBUG(tmp);
     for (int i = 0; i < config.node().size(); i++){
         if (config.node(i).node_options().size()) {
             mediapipe::PythonBackendCalculatorOptions options;
             config.node(i).node_options(0).UnpackTo(&options);
             const std::string handler_path = options.handler_path();
-            auto handler_path2 = std::filesystem::path(handler_path);
-            handler_path2.replace_extension();
 
-            std::string parent_path = handler_path2.parent_path();
-            std::string filename = handler_path2.filename();
+            if (!std::filesystem::exists(handler_path)){
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} error. Python node file: {} does not exist. ", this->name, handler_path);
+                return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
+            }
+
+            auto fs_handler_path = std::filesystem::path(handler_path);
+            fs_handler_path.replace_extension();
+
+            std::string parent_path = fs_handler_path.parent_path();
+            std::string filename = fs_handler_path.filename();
 
             if (this->pythonNodeStates.find(filename) != this->pythonNodeStates.end()) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} already used in graph: {}. ", filename, this->name);
@@ -449,14 +458,16 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 py::module_ script = py::module_::import(filename.c_str());
                 py::object OvmsPythonModel = script.attr("OvmsPythonModel");
                 py::object model_instance = OvmsPythonModel();
-                model_instance.attr("initialize")();
+                py::object kwargs_param = pybind11::dict();
+                model_instance.attr("initialize")(kwargs_param);
+                this->pythonNodeStates.insert(std::pair<std::string, py::object>(filename, model_instance));
             } catch (const std::exception& e) {
-                SPDLOG_ERROR("Failed to process python node file {} :{}", handler_path2,  e.what());
+                SPDLOG_ERROR("Failed to process python node file {} : {}", handler_path,  e.what());
+                return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
             } catch (...) {
-                SPDLOG_ERROR("Failed to process python node file {}", handler_path2);
+                SPDLOG_ERROR("Failed to process python node file {}", handler_path);
+                return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
             }
-            this->pythonNodeStates.insert(std::pair<std::string, py::object>(filename, model_instance));
-            SPDLOG_DEBUG(config.node(i).name());
         }
     }
 
