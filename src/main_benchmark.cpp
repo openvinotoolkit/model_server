@@ -416,7 +416,14 @@ int main(int argc, char** argv) {
     // datatype handling
     OVMS_DataType datatype = OVMS_DATATYPE_FP32;
     // shape handling
-    signed_shape_t shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
+    signed_shape_t shape;
+    try {
+        shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
+    }
+    catch(...){
+        std::cerr << "Invalid shape parameter.";
+        exit(EX_CONFIG);
+    }
     ///////////////////////
     // benchmark parameters
     ///////////////////////
