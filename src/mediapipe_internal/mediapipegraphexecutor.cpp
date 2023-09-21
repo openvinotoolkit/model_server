@@ -56,7 +56,6 @@
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/interpreter.h"
 #pragma GCC diagnostic pop
-#include "src/mediapipe_calculators/python_backend_calculator.pb.h"
 
 namespace ovms {
 static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
@@ -460,11 +459,9 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
-    {
-        this->pythonNodeStates = pythonNodeStates,
-        this->graph = graph;
-        this->outputPollers = outputPollers;
-    }
+    pythonNodeStates(std::move(pythonNodeStates)),
+    graph(std::move(graph)),
+    outputPollers(std::move(outputPollers)) { }
 
 namespace {
 enum : unsigned int {

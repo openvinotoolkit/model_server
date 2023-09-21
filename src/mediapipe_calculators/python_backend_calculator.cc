@@ -16,7 +16,10 @@
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h> // everything needed for embedding
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
+#pragma GCC diagnostic pop
 #include "pyobject.hpp"
 
 namespace py = pybind11;
@@ -52,13 +55,15 @@ public:
         py::gil_scoped_acquire acquire;
         py::print("PYTHON: Acquired GIL");
         //pyobjectClass.attr("execute")();
+        // Read input from the stream
+        PYOBJECT inputs = cc->Inputs().Index(0).Get<PYOBJECT>();
 
-        py::iterator = pyobjectClass.attr("execute")(inputs);
-        while (it != py::iterator::sentinel()) {
-            result = cast<PYOBJECT>(*it);
-            cc->Outputs().Index(0).Add(result, myTimestamp);
-            ++it;
-        }
+        //py::iterator it = pyobjectClass.attr("execute")(inputs);
+        //while (it != py::iterator::sentinel()) {
+        //    auto result = cast<PYOBJECT>(*it);
+        //    cc->Outputs().Index(0).Add(result, myTimestamp);
+        //    ++it;
+        //}
 
         ov::Tensor in_tensor = cc->Inputs().Index(0).Get<ov::Tensor>();
 

@@ -48,7 +48,7 @@ class MediapipeGraphExecutor {
 
     std::map<std::string, py::object> pythonNodeStates;
     ::mediapipe::CalculatorGraph* graph;
-    std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
+    std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> * outputPollers;
 
 public:
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
