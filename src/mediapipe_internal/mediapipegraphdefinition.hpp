@@ -82,7 +82,6 @@ public:
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
     Status initializeNodes();
-    Status initializeGraph();
 
     bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
@@ -157,8 +156,6 @@ private:
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 
     std::map<std::string, py::object> pythonNodeStates;
-    ::mediapipe::CalculatorGraph graph;
-    std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

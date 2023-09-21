@@ -2100,3 +2100,17 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<MediapipeFlowTest::ParamType>& info) {
         return info.param;
     });
+
+class MediapipeFlowPythonNodeTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json");
+    }
+};
+
+TEST_F(MediapipeFlowPythonNodeTest, Infer) {
+    //const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    //KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    //::KFSRequest request;
+    //::KFSResponse response;
+}

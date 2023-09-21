@@ -449,9 +449,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     stream_types_mapping_t inputTypes,
     stream_types_mapping_t outputTypes,
     std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-    std::map<std::string, py::object> pythonNodeStates,
-    ::mediapipe::CalculatorGraph * graph,
-    std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> * outputPollers) :
+    std::map<std::string, py::object> pythonNodeStates) :
     name(name),
     version(version),
     config(config),
@@ -459,9 +457,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
-    pythonNodeStates(std::move(pythonNodeStates)),
-    graph(std::move(graph)),
-    outputPollers(std::move(outputPollers)) { }
+    pythonNodeStates(std::move(pythonNodeStates)) { }
 
 namespace {
 enum : unsigned int {

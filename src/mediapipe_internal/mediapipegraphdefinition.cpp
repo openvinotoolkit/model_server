@@ -230,7 +230,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,  this->pythonNodeStates, &this->graph, &this->outputPollers);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,  this->pythonNodeStates);
     return status;
 }
 
@@ -441,55 +441,26 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} already used in graph: {}. ", filename, this->name);
                 return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
             }
-            py::gil_scoped_acquire acquire;
-            py::module_ sys = py::module_::import("sys");
-            sys.attr("path").attr("append")(parent_path.c_str());
-            py::module_ script = py::module_::import(filename.c_str());
-            py::object OvmsPythonModel = script.attr("OvmsPythonModel");
-            py::object model_instance = OvmsPythonModel();
-            model_instance.attr("initialize")();
+
+            try {
+                py::gil_scoped_acquire acquire;
+                py::module_ sys = py::module_::import("sys");
+                sys.attr("path").attr("append")(parent_path.c_str());
+                py::module_ script = py::module_::import(filename.c_str());
+                py::object OvmsPythonModel = script.attr("OvmsPythonModel");
+                py::object model_instance = OvmsPythonModel();
+                model_instance.attr("initialize")();
+            } catch (const std::exception& e) {
+                SPDLOG_ERROR("Failed to process python node file {} :{}", handler_path2,  e.what());
+            } catch (...) {
+                SPDLOG_ERROR("Failed to process python node file {}", handler_path2);
+            }
             this->pythonNodeStates.insert(std::pair<std::string, py::object>(filename, model_instance));
             SPDLOG_DEBUG(config.node(i).name());
         }
     }
 
     return StatusCode::OK;
-}
-
-Status MediapipeGraphDefinition::initializeGraph() {
-    SPDLOG_DEBUG("Initializing graph");
-    auto absStatus = graph.Initialize(this->config);
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Iinitialization failed with message: {}", absMessage);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
-    }
-
-    for (auto& name : this->outputNames) {
-        if (name.empty()) {
-            SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
-            return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
-        }
-        auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
-        if (!absStatusOrPoller.ok()) {
-            const std::string absMessage = absStatusOrPoller.status().ToString();
-            SPDLOG_DEBUG("Failed to add mediapipe graph output stream poller with error: {}", absMessage);
-            return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, std::move(absMessage));
-        }
-        outputPollers.emplace(name, std::move(absStatusOrPoller).value());
-    }
-
-    std::map<std::string, mediapipe::Packet> inputSidePackets{};
-    inputSidePackets["pyobject"] = mediapipe::MakePacket<std::map<std::string, py::object>>(this->pythonNodeStates).At(mediapipe::Timestamp(0));
-    SPDLOG_DEBUG("Starting graph");
-    absStatus = graph.StartRun(inputSidePackets);
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Failed to start mediapipe graph with error: {}", absMessage);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, std::move(absMessage));
-    }
-    return StatusCode::OK;
-
 }
 
 }  // namespace ovms
