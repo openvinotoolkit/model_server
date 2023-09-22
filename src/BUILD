@@ -415,6 +415,8 @@ cc_library(
                 "mediapipe_internal/mediapipegraphdefinition.hpp",
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
+                "mediapipe_internal/nodestate.cpp",
+                "mediapipe_internal/nodestate.hpp",
                 "mediapipe_internal/packettypes.hpp",
                 "mediapipe_calculators/pyobject.hpp",
                 "mediapipe_calculators/python_backend_calculator.cc",

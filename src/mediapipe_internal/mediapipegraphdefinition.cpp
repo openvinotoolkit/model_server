@@ -49,14 +49,9 @@ namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
+const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonBackendCalculator"};
 
-MediapipeGraphDefinition::~MediapipeGraphDefinition(){
-    // pybind requires to acquire gil when destructing objects
-    if(!this->pythonNodeStates.empty()){
-        py::gil_scoped_acquire acquire;
-        this->pythonNodeStates.clear();
-    }
-};
+MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
 const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
     std::shared_lock lock(metadataMtx);
@@ -236,7 +231,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,  this->pythonNodeStates);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,  &this->pythonNodeStates);
     return status;
 }
 
@@ -431,42 +426,33 @@ Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++){
         if (config.node(i).node_options().size()) {
-            mediapipe::PythonBackendCalculatorOptions options;
-            config.node(i).node_options(0).UnpackTo(&options);
-            const std::string handler_path = options.handler_path();
+            if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
+                mediapipe::PythonBackendCalculatorOptions options;
+                config.node(i).node_options(0).UnpackTo(&options);
+                if (!std::filesystem::exists(options.handler_path())){
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} error. Python node file: {} does not exist. ", this->name, options.handler_path());
+                    return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
+                }
 
-            if (!std::filesystem::exists(handler_path)){
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} error. Python node file: {} does not exist. ", this->name, handler_path);
-                return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
-            }
+                auto fs_handler_path = std::filesystem::path(options.handler_path());
+                fs_handler_path.replace_extension();
 
-            auto fs_handler_path = std::filesystem::path(handler_path);
-            fs_handler_path.replace_extension();
+                std::string filename = fs_handler_path.filename();
 
-            std::string parent_path = fs_handler_path.parent_path();
-            std::string filename = fs_handler_path.filename();
+                if (this->pythonNodeStates.find(filename) != this->pythonNodeStates.end()) {
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} already used in graph: {}. ", filename, this->name);
+                    return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
+                }
 
-            if (this->pythonNodeStates.find(filename) != this->pythonNodeStates.end()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} already used in graph: {}. ", filename, this->name);
-                return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
-            }
+                std::unique_ptr<NodeState> state = std::make_unique<NodeState>();
+                auto status = state->Create(options.handler_path());
+                if (status != StatusCode::OK)
+                {
+                    SPDLOG_ERROR("Failed to process python node file {}", options.handler_path());
+                    return status;
+                }
 
-            try {
-                py::gil_scoped_acquire acquire;
-                py::module_ sys = py::module_::import("sys");
-                sys.attr("path").attr("append")(parent_path.c_str());
-                py::module_ script = py::module_::import(filename.c_str());
-                py::object OvmsPythonModel = script.attr("OvmsPythonModel");
-                py::object model_instance = OvmsPythonModel();
-                py::object kwargs_param = pybind11::dict();
-                model_instance.attr("initialize")(kwargs_param);
-                this->pythonNodeStates.insert(std::pair<std::string, py::object>(filename, model_instance));
-            } catch (const std::exception& e) {
-                SPDLOG_ERROR("Failed to process python node file {} : {}", handler_path,  e.what());
-                return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
-            } catch (...) {
-                SPDLOG_ERROR("Failed to process python node file {}", handler_path);
-                return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
+                this->pythonNodeStates.insert(std::pair<std::string, std::unique_ptr<NodeState>>(filename, std::move(state)));
             }
         }
     }

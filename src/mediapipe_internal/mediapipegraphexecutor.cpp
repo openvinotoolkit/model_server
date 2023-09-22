@@ -37,6 +37,7 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
+#include "nodestate.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -449,7 +450,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     stream_types_mapping_t inputTypes,
     stream_types_mapping_t outputTypes,
     std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-    std::map<std::string, py::object> pythonNodeStates) :
+    std::map<std::string, std::unique_ptr<NodeState>> *pythonNodeStates) :
     name(name),
     version(version),
     config(config),

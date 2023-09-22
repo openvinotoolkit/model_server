@@ -14,10 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <filesystem>
 #include <iostream>
 #include <memory>
-#include <pybind11/embed.h> // everything needed for embedding
 #include <shared_mutex>
 #include <sstream>
 #include <string>
@@ -39,6 +37,7 @@
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
 
+#include "nodestate.hpp"
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
 
@@ -87,6 +86,7 @@ public:
 
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
     static const std::string SCHEDULER_CLASS_NAME;
+    static const std::string PYTHON_NODE_CALCULATOR_NAME;
     Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
@@ -155,7 +155,7 @@ private:
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 
-    std::map<std::string, py::object> pythonNodeStates;
+    std::map<std::string, std::unique_ptr<NodeState>> pythonNodeStates;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {
