@@ -149,6 +149,11 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!status.ok()) {
         return status;
     }
+    // We initialize python node states
+    status = this->initializeNodes();
+    if (!status.ok()) {
+        return status;
+    }
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
