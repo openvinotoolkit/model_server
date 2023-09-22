@@ -176,6 +176,21 @@ TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithEscapedPath) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);
 }
 
+TEST_F(HttpRestApiHandlerTest, UnsupportedMethods) {
+    ovms::HttpRequestComponents comp;
+    std::string request = "/v2/models/dummy/ready";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), StatusCode::REST_UNSUPPORTED_METHOD);
+    request = "/v2/models/dummy";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), StatusCode::REST_UNSUPPORTED_METHOD);
+    request = "/v2/models/dummy/infer";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::REST_UNSUPPORTED_METHOD);
+    request = "/v2";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), StatusCode::REST_UNSUPPORTED_METHOD);
+    request = "/v2/health/live";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), StatusCode::REST_UNSUPPORTED_METHOD);
+    request = "/v2/health/ready";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), StatusCode::REST_UNSUPPORTED_METHOD);
+}
 TEST_F(HttpRestApiHandlerTest, RegexParseReadyWithImplicitVersion) {
     std::string request = "/v2/models/dummy/ready";
     ovms::HttpRequestComponents comp;
