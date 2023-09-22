@@ -41,8 +41,6 @@
 #include "nodestate.hpp"
 #include "packettypes.hpp"
 
-namespace py = pybind11;
-
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
 class MetricConfig;

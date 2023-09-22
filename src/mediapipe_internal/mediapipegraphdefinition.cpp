@@ -16,7 +16,6 @@
 #include "mediapipegraphdefinition.hpp"
 
 #include <algorithm>
-#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -24,8 +23,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include <pybind11/embed.h>  // everything needed for embedding
 
 #include "../deserialization.hpp"
 #include "../execution_context.hpp"
@@ -42,7 +39,6 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphexecutor.hpp"
-#include "src/mediapipe_calculators/python_backend_calculator.pb.h"
 
 namespace py = pybind11;
 
@@ -431,8 +427,8 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
-        if (config.node(i).node_options().size()) {
-            if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
+        if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
+            if (config.node(i).node_options().size()) {
                 mediapipe::PythonBackendCalculatorOptions options;
                 config.node(i).node_options(0).UnpackTo(&options);
                 if (!std::filesystem::exists(options.handler_path())) {

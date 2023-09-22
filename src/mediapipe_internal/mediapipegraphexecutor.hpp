@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -22,19 +21,15 @@
 #include <unordered_map>
 #include <vector>
 
-#include <pybind11/embed.h>  // everything needed for embedding
-
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
-#include "nodestate.hpp"
 #pragma GCC diagnostic pop
+#include "nodestate.hpp"
 #include "packettypes.hpp"
-
-namespace py = pybind11;
 
 namespace ovms {
 class Status;
