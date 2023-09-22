@@ -1955,7 +1955,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
 
-TEST_F(MediapipeConfigChanges, AddImroperGraphThenFixWithReloadThenBreakAgain) {
+TEST_F(MediapipeConfigChanges, AddImproperGraphThenFixWithReloadThenBreakAgain) {
     std::string configFileContent = configFileWithGraphPathToReplace;
     std::string configFilePath = directoryPath + "/config.json";
     std::string graphFilePath = directoryPath + "/graph.pbtxt";
