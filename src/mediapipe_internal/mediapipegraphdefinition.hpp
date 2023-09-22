@@ -37,8 +37,8 @@
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
 
-#include "nodestate.hpp"
 #include "mediapipegraphconfig.hpp"
+#include "nodestate.hpp"
 #include "packettypes.hpp"
 
 namespace py = pybind11;

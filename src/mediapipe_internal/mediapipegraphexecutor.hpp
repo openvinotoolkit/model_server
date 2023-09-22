@@ -17,19 +17,20 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
-#include <pybind11/embed.h> // everything needed for embedding
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include <pybind11/embed.h>  // everything needed for embedding
+
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "nodestate.hpp"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
+#include "nodestate.hpp"
 #pragma GCC diagnostic pop
 #include "packettypes.hpp"
 
@@ -47,14 +48,14 @@ class MediapipeGraphExecutor {
     const std::vector<std::string> inputNames;
     const std::vector<std::string> outputNames;
 
-    std::map<std::string, std::unique_ptr<NodeState>> *pythonNodeStates;
+    std::map<std::string, std::unique_ptr<NodeState>>* pythonNodeStates;
 
 public:
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-        std::map<std::string, std::unique_ptr<NodeState>> *pythonNodeStates);
+        std::map<std::string, std::unique_ptr<NodeState>>* pythonNodeStates);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 };
 }  // namespace ovms

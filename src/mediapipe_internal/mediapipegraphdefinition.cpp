@@ -19,12 +19,13 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
-#include <pybind11/embed.h> // everything needed for embedding
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <pybind11/embed.h>  // everything needed for embedding
 
 #include "../deserialization.hpp"
 #include "../execution_context.hpp"
@@ -236,7 +237,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,  &this->pythonNodeStates);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, &this->pythonNodeStates);
     return status;
 }
 
@@ -429,12 +430,12 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
 
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
-    for (int i = 0; i < config.node().size(); i++){
+    for (int i = 0; i < config.node().size(); i++) {
         if (config.node(i).node_options().size()) {
             if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
                 mediapipe::PythonBackendCalculatorOptions options;
                 config.node(i).node_options(0).UnpackTo(&options);
-                if (!std::filesystem::exists(options.handler_path())){
+                if (!std::filesystem::exists(options.handler_path())) {
                     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} error. Python node file: {} does not exist. ", this->name, options.handler_path());
                     return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
                 }
@@ -451,8 +452,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
 
                 std::unique_ptr<NodeState> state = std::make_unique<NodeState>();
                 auto status = state->Create(options.handler_path());
-                if (status != StatusCode::OK)
-                {
+                if (status != StatusCode::OK) {
                     SPDLOG_ERROR("Failed to process python node file {}", options.handler_path());
                     return status;
                 }

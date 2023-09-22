@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <openvino/openvino.hpp>
-#include <pybind11/embed.h> // everything needed for embedding
+#include <pybind11/embed.h>  // everything needed for embedding
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -29,6 +29,7 @@ namespace mediapipe {
 
 class PythonBackendCalculator : public CalculatorBase {
     py::object pyobjectClass;
+
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         LOG(ERROR) << "PythonBackendCalculator::GetContract";
@@ -74,7 +75,6 @@ public:
             float* pV = ((float*)out_tensor->data()) + i;
             *pV += 1.0f;
         }
-
 
         py::print("PYTHON: Released GIL");
         return absl::OkStatus();

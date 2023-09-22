@@ -16,11 +16,12 @@
 #include "nodestate.hpp"
 
 #include <filesystem>
-#include <pybind11/embed.h> // everything needed for embedding
+
+#include <pybind11/embed.h>  // everything needed for embedding
 #include <spdlog/spdlog.h>
 
-#include "src/mediapipe_calculators/python_backend_calculator.pb.h"
 #include "../status.hpp"
+#include "src/mediapipe_calculators/python_backend_calculator.pb.h"
 
 namespace ovms {
 
@@ -50,7 +51,7 @@ Status NodeState::Create(const std::string handler_path) {
         model_instance.attr("initialize")(kwargs_param);
         this->pythonNodeState = model_instance;
     } catch (const std::exception& e) {
-        SPDLOG_ERROR("Failed to process python node file {} : {}", handler_path,  e.what());
+        SPDLOG_ERROR("Failed to process python node file {} : {}", handler_path, e.what());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
         SPDLOG_ERROR("Failed to process python node file {}", handler_path);
@@ -60,11 +61,10 @@ Status NodeState::Create(const std::string handler_path) {
     return StatusCode::OK;
 }
 
-
 NodeState::~NodeState() {
     // pybind requires to acquire gil when destructing objects
-        py::gil_scoped_acquire acquire;
-        // This is equivalent to calling ~object
-        this->pythonNodeState.dec_ref();
-    }
+    py::gil_scoped_acquire acquire;
+    // This is equivalent to calling ~object
+    this->pythonNodeState.dec_ref();
+}
 }  // namespace ovms

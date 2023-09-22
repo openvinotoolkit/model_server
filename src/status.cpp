@@ -215,7 +215,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node file name is already present in nodes list"},
     {StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST, "The Python Node file path does not exist"},
     {StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED, "The Python Node state initialization failed"},
-    
+
     // Storage errors
     // S3
     {StatusCode::S3_BUCKET_NOT_FOUND, "S3 Bucket not found"},
