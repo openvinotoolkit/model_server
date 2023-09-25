@@ -110,7 +110,15 @@ The rtsp client app needs to have access to RTSP stream to read from and write t
 
 Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
 
-Then write to the server using ffmpeg, example using camera
+```bash
+docker run --rm -d -p 8080:8554 bluenviron/mediamtx:latest
+```
+
+Then write to the server using ffmpeg, example using video or camera
+
+```bash
+ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
 
 ```bash
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
