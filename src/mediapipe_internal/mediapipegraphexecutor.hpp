@@ -29,11 +29,11 @@
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
-#include "nodestate.hpp"
 #include "packettypes.hpp"
 
 namespace ovms {
 class Status;
+class NodeState;
 
 class MediapipeGraphExecutor {
     const std::string name;

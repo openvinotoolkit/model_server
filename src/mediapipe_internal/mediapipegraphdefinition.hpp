@@ -39,7 +39,6 @@
 #pragma GCC diagnostic pop
 
 #include "mediapipegraphconfig.hpp"
-#include "nodestate.hpp"
 #include "packettypes.hpp"
 
 namespace ovms {
@@ -48,6 +47,7 @@ class MetricConfig;
 class MetricRegistry;
 class ModelManager;
 class MediapipeGraphExecutor;
+class NodeState;
 class Status;
 
 class MediapipeGraphDefinition {

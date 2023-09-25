@@ -20,12 +20,12 @@
 
 #include <pybind11/embed.h>  // everything needed for embedding
 
-#include "../status.hpp"
 #include "src/mediapipe_calculators/python_backend_calculator.pb.h"
 
 namespace py = pybind11;
 
 namespace ovms {
+class Status;
 
 class NodeState {
     py::object pythonNodeState;
