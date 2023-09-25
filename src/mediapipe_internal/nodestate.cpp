@@ -18,24 +18,39 @@
 #include <filesystem>
 #include <string>
 
-#include <pybind11/embed.h>  // everything needed for embedding
 #include <spdlog/spdlog.h>
 
 #include "../status.hpp"
+
+#if (PYTHON_DISABLE == 0)
+#include <pybind11/embed.h>  // everything needed for embedding
+
 #include "src/mediapipe_calculators/python_backend_calculator.pb.h"
+#endif
 
 namespace ovms {
 
 NodeState::NodeState() {
+#if (PYTHON_DISABLE == 0)
     this->pythonNodeState = py::none();
+#endif
 }
 
 NodeState::NodeState(const NodeState& other) {
+#if (PYTHON_DISABLE == 0)
     this->pythonNodeState = other.pythonNodeState;
+#endif
 }
 
-Status NodeState::Create(const std::string handler_path) {
-    auto fs_handler_path = std::filesystem::path(handler_path);
+#if (PYTHON_DISABLE == 0)
+Status NodeState::Create(const google::protobuf::Any node_options) {
+    mediapipe::PythonBackendCalculatorOptions options;
+    node_options.UnpackTo(&options);
+    if (!std::filesystem::exists(options.handler_path())) {
+        SPDLOG_DEBUG("Python node file: {} does not exist. ", options.handler_path());
+        return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
+    }
+    auto fs_handler_path = std::filesystem::path(options.handler_path());
     fs_handler_path.replace_extension();
 
     std::string parent_path = fs_handler_path.parent_path();
@@ -52,20 +67,23 @@ Status NodeState::Create(const std::string handler_path) {
         model_instance.attr("initialize")(kwargs_param);
         this->pythonNodeState = model_instance;
     } catch (const std::exception& e) {
-        SPDLOG_ERROR("Failed to process python node file {} : {}", handler_path, e.what());
+        SPDLOG_ERROR("Failed to process python node file {} : {}", options.handler_path(), e.what());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
-        SPDLOG_ERROR("Failed to process python node file {}", handler_path);
+        SPDLOG_ERROR("Failed to process python node file {}", options.handler_path());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
 
     return StatusCode::OK;
 }
+#endif
 
 NodeState::~NodeState() {
+#if (PYTHON_DISABLE == 0)
     // pybind requires to acquire gil when destructing objects
     py::gil_scoped_acquire acquire;
     // This is equivalent to calling ~object
     this->pythonNodeState.dec_ref();
+#endif
 }
 }  // namespace ovms

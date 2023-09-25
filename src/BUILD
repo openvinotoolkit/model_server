@@ -418,17 +418,17 @@ cc_library(
                 "mediapipe_internal/nodestate.cpp",
                 "mediapipe_internal/nodestate.hpp",
                 "mediapipe_internal/packettypes.hpp",
-                "mediapipe_calculators/pyobject.hpp",
-                "mediapipe_calculators/python_backend_calculator.cc",
-            ],
+                ],
             "//src:disable_mediapipe" : [],
         })
-         + select({
-            "//src:not_disable_python": [
-                "ovms_py_tensor.hpp",
-                "ovms_py_tensor.cpp",
+        + select({
+            "//:not_disable_python": [
+                    "ovms_py_tensor.hpp",
+                    "ovms_py_tensor.cpp",
+                    "mediapipe_calculators/pyobject.hpp",
+                    "mediapipe_calculators/python_backend_calculator.cc",
                 ],
-            "//src:disable_python": []
+            "//:disable_python": []
         }),
     deps = [
         "//:ovms_dependencies",

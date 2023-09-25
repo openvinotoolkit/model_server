@@ -79,8 +79,9 @@ public:
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
+#if (PYTHON_DISABLE == 0)
     Status initializeNodes();
-
+#endif
     bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;

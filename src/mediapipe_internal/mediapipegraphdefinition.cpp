@@ -16,6 +16,7 @@
 #include "mediapipegraphdefinition.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -40,8 +41,7 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphexecutor.hpp"
-
-namespace py = pybind11;
+#include "nodestate.hpp"
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
@@ -147,11 +147,13 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!status.ok()) {
         return status;
     }
+#if (PYTHON_DISABLE == 0)
     // We initialize python node states
     status = this->initializeNodes();
     if (!status.ok()) {
         return status;
     }
+#endif
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
@@ -425,41 +427,31 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
     return {"", mediapipe_packet_type_enum::UNKNOWN};
 }
 
+#if (PYTHON_DISABLE == 0)
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
             if (config.node(i).node_options().size()) {
-                mediapipe::PythonBackendCalculatorOptions options;
-                config.node(i).node_options(0).UnpackTo(&options);
-                if (!std::filesystem::exists(options.handler_path())) {
-                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} error. Python node file: {} does not exist. ", this->name, options.handler_path());
-                    return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
-                }
-
-                auto fs_handler_path = std::filesystem::path(options.handler_path());
-                fs_handler_path.replace_extension();
-
-                std::string filename = fs_handler_path.filename();
-
-                if (this->pythonNodeStates.find(filename) != this->pythonNodeStates.end()) {
-                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} already used in graph: {}. ", filename, this->name);
+                std::string node_name = config.node(i).name();
+                if (this->pythonNodeStates.find(node_name) != this->pythonNodeStates.end()) {
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} already used in graph: {}. ", node_name, this->name);
                     return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
                 }
 
                 std::unique_ptr<NodeState> state = std::make_unique<NodeState>();
-                auto status = state->Create(options.handler_path());
+                auto status = state->Create(config.node(i).node_options(0));
                 if (status != StatusCode::OK) {
-                    SPDLOG_ERROR("Failed to process python node file {}", options.handler_path());
+                    SPDLOG_ERROR("Failed to process python node graph {}", this->name);
                     return status;
                 }
 
-                this->pythonNodeStates.insert(std::pair<std::string, std::unique_ptr<NodeState>>(filename, std::move(state)));
+                this->pythonNodeStates.insert(std::pair<std::string, std::unique_ptr<NodeState>>(node_name, std::move(state)));
             }
         }
     }
 
     return StatusCode::OK;
 }
-
+#endif
 }  // namespace ovms

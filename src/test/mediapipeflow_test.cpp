@@ -2101,6 +2101,7 @@ INSTANTIATE_TEST_SUITE_P(
         return info.param;
     });
 
+#if (PYTHON_DISABLE == 0)
 class MediapipeFlowPythonNodeTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -2111,3 +2112,4 @@ public:
 TEST_F(MediapipeFlowPythonNodeTest, InitializationPass) {
     ASSERT_TRUE(server.isReady());
 }
+#endif

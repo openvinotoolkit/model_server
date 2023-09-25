@@ -16,25 +16,28 @@
 #pragma once
 #include <filesystem>
 #include <map>
-#include <string>
 
+#if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
 
 #include "src/mediapipe_calculators/python_backend_calculator.pb.h"
 
 namespace py = pybind11;
+#endif
 
 namespace ovms {
 class Status;
 
 class NodeState {
+#if (PYTHON_DISABLE == 0)
     py::object pythonNodeState;
-
+#endif
 public:
     NodeState();
     NodeState(const NodeState& other);
-    Status Create(const std::string handler_path);
-
+#if (PYTHON_DISABLE == 0)
+    Status Create(const google::protobuf::Any node_options);
+#endif
     ~NodeState();
 };
 
