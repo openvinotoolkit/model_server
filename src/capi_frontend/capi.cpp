@@ -752,12 +752,9 @@ static Status getModelManager(Server& server, ModelManager** modelManager) {
     if (!server.isLive()) {
         return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not live");
     }
-    if (!server.isReady()) {
-        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not ready");
-    }
     const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     if (!servableModule) {
-        return ovms::Status(ovms::StatusCode::INTERNAL_ERROR, "missing servable manager");
+        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not ready - missing servable manager");
     }
     *modelManager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
     return StatusCode::OK;

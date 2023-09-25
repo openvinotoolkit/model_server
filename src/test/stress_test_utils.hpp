@@ -1088,7 +1088,7 @@ public:
             std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
     }
     // we setup the OVMS so that it does not have any models loaded but also prepare the fixture to have ovmsConfig & configFilePath set up
-    void SetUpServerInstance(const std::string& initialConfigContent) {
+    void SetUpCAPIServerInstance(const std::string& initialConfigContent) {
         TestWithTempDir::SetUp();
         std::string port = "9178";
         std::string restPort = "9178";
@@ -1114,7 +1114,7 @@ public:
         manager = &(dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
     }
     void SetUp() override {
-        SetUpServerInstance(createStressTestPipelineOneDummyConfig());
+        SetUpCAPIServerInstance(createStressTestPipelineOneDummyConfig());
     }
     void TearDown() override {
         OVMS_Server* cserver;
