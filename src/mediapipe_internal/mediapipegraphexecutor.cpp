@@ -152,6 +152,13 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
         auto datatype = KFSPrecisionToMPPrecision(requestInputItr->datatype());
+        if (datatype == mediapipe::Tensor::ElementType::kNone) {
+            std::stringstream ss;
+            ss << "Not supported precision for Mediapipe tensor deserialization: " << requestInputItr->datatype();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG(details);
+            return Status(StatusCode::INVALID_PRECISION, std::move(details));
+        }
         std::vector<int> rawShape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
             if (requestInputItr->shape()[i] <= 0) {
@@ -188,6 +195,13 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
         auto datatype = getPrecisionAsDataType(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
+        if (datatype == TFSDataType::DT_INVALID) {
+            std::stringstream ss;
+            ss << "Not supported precision for Tensorflow tensor deserialization: " << requestInputItr->datatype();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG(details);
+            return Status(StatusCode::INVALID_PRECISION, std::move(details));
+        }
         TensorShape tensorShape;
         std::vector<int64_t> rawShape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
@@ -233,6 +247,13 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
         auto datatype = getPrecisionAsTfLiteDataType(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
+        if (datatype == kTfLiteNoType) {
+            std::stringstream ss;
+            ss << "Not supported precision for Tensorflow Lite tensor deserialization: " << requestInputItr->datatype();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG(details);
+            return Status(StatusCode::INVALID_PRECISION, std::move(details));
+        }
         std::vector<int> rawShape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
             if (requestInputItr->shape()[i] < 0) {
