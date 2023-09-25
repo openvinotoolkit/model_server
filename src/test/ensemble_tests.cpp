@@ -4182,6 +4182,101 @@ static const char* pipelineModelSameNameConfigNoPipeline = R"(
     ]
 })";
 
+#if (MEDIAPIPE_DISABLE == 0)
+static const char* mediapipeSameNameConfigMediapipe = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummy.pbtxt"
+    }
+    ]
+})";
+static const char* mediapipeSameNameConfigMediapipeWithPipeline = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummyModel",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummy.pbtxt"
+    }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummyModel",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+static const std::string MEDIAPIPE_DUMMY_NAME = "dummy";
+TEST_F(EnsembleFlowTest, MediapipeConfigModelWithSameName) {
+    // Expected result - model added, adding pipeline failed
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(mediapipeSameNameConfigMediapipe, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.loadConfig(fileToReload);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED);
+    ASSERT_FALSE(manager.getMediapipeFactory().definitionExists(MEDIAPIPE_DUMMY_NAME));
+
+    auto instance = manager.findModelInstance(MEDIAPIPE_DUMMY_NAME);
+    ASSERT_NE(instance, nullptr);
+    ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
+}
+
+TEST_F(EnsembleFlowTest, MediapipeConfigModelWithSameNamePipeline) {
+    // Expected result - model added, adding pipeline failed
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(mediapipeSameNameConfigMediapipeWithPipeline, fileToReload);
+    ConstructorEnabledModelManager manager;
+    auto status = manager.loadConfig(fileToReload);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED);
+
+    ASSERT_FALSE(manager.getMediapipeFactory().definitionExists(MEDIAPIPE_DUMMY_NAME));
+
+    ASSERT_TRUE(manager.pipelineDefinitionExists(MEDIAPIPE_DUMMY_NAME));
+}
+#endif
 TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {
     // Expected result - model added, adding pipeline failed
     std::string fileToReload = directoryPath + "/config.json";

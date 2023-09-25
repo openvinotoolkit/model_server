@@ -733,6 +733,13 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
             continue;
         }
+#if (MEDIAPIPE_DISABLE == 0)
+        if (mediapipeFactory.definitionExists(modelName)) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by mediapipe graph definition.", modelName);
+            continue;
+        }
+#endif
         if (modelsInConfigFile.find(modelName) != modelsInConfigFile.end()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
