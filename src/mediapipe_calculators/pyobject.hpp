@@ -65,4 +65,4 @@ private:
     // TODO: fix this -> bool packToResponse(T& response);
 };
 
-#endif // SRC_MEDIAPIPE_CALCULATORS_PYOBJECT_HPP_
+#endif  // SRC_MEDIAPIPE_CALCULATORS_PYOBJECT_HPP_
