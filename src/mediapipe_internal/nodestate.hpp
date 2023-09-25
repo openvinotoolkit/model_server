@@ -16,6 +16,7 @@
 #pragma once
 #include <filesystem>
 #include <map>
+#include <string>
 
 #include <pybind11/embed.h>  // everything needed for embedding
 

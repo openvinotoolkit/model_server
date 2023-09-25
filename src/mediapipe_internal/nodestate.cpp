@@ -16,6 +16,7 @@
 #include "nodestate.hpp"
 
 #include <filesystem>
+#include <string>
 
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <spdlog/spdlog.h>

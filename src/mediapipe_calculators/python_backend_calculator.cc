@@ -55,16 +55,16 @@ public:
 
         py::gil_scoped_acquire acquire;
         py::print("PYTHON: Acquired GIL");
-        //pyobjectClass.attr("execute")();
+        // pyobjectClass.attr("execute")();
         // Read input from the stream
         PYOBJECT inputs = cc->Inputs().Index(0).Get<PYOBJECT>();
 
-        //py::iterator it = pyobjectClass.attr("execute")(inputs);
-        //while (it != py::iterator::sentinel()) {
+        // py::iterator it = pyobjectClass.attr("execute")(inputs);
+        // while (it != py::iterator::sentinel()) {
         //    auto result = cast<PYOBJECT>(*it);
         //    cc->Outputs().Index(0).Add(result, myTimestamp);
         //    ++it;
-        //}
+        // }
 
         ov::Tensor in_tensor = cc->Inputs().Index(0).Get<ov::Tensor>();
 

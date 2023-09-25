@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 #include <iostream>
+#include <map>
 #include <memory>
 #include <shared_mutex>
 #include <sstream>
