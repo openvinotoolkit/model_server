@@ -68,8 +68,7 @@ PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
-    auto& models = manager.getModels();
-    if (std::find_if(models.begin(), models.end(), [this](auto pair) { return this->pipelineName == pair.first; }) != models.end()) {
+    if (manager.modelExists(this->pipelineName)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model.", pipelineName);
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }

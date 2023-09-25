@@ -100,8 +100,7 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
-    auto& models = manager.getModels();
-    if (std::find_if(models.begin(), models.end(), [this](auto pair) { return this->getName() == pair.first; }) != models.end() || manager.pipelineDefinitionExists(this->getName())) {
+    if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
         return StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED;
     }
