@@ -59,9 +59,6 @@ build --define=PYTHON_DISABLE=0
 coverage --define=PYTHON_DISABLE=0
 test --define=PYTHON_DISABLE=0
 
-# Needed for pybind targets
-build --cxxopt=-fvisibility=hidden
-
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
 

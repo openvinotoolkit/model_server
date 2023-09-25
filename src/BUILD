@@ -451,6 +451,7 @@ cc_library(
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
+        "-fvisibility=hidden",# Needed for pybind targets
         ] + select({
             "//conditions:default": [
             ],
@@ -992,6 +993,7 @@ cc_test(
         "-Wno-unknown-pragmas",
         "-Werror",
         "-Isrc",
+        "-fvisibility=hidden",# Needed for pybind targets
     ],
 )
 
