@@ -90,12 +90,3 @@ if __name__ == '__main__':
 
         if actual_content.endswith("[EOS]"):
             break
-
-
-# python3 client.py --url localhost:11337 --question "How many corners there are in square?" --seed 14140 --actor general-knowledge
-#    Four.
-
-# python3 client.py --url localhost:11337 --question "Write python function to sum 3 numbers." --seed 1332 --actor python-programmer
-#    def sum_three_numbers(a,b,c):
-#      result = a + b + c
-#      return result

@@ -60,7 +60,7 @@ optional arguments:
   --actor {general-knowledge,python-programmer}
 ```
 
-Examples:
+Multiple examples for different pre-prompts (`--actor` parameter):
 
 ```bash
 python3 client.py --url localhost:9000 --question "How many corners there are in square?" --seed 14140 --actor general-knowledge
@@ -75,3 +75,5 @@ def sum_three_numbers(a,b,c):
    result = a + b + c
    return result [EOS]%
 ```
+
+>NOTE: You can edit the pre-prompt in `client.py` for your use case.
