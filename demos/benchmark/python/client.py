@@ -295,8 +295,8 @@ class BaseClient(metaclass=abc.ABCMeta):
                 self.load_vehicle_jpeg_data(input_name, dataset_length)
             elif method_name in ("png-xrandom", "xrandom", "xrand"):
                 self.generate_png_xrandom_data(input_name, dataset_length)
-            elif method_name in ("muse", ):
-                self.generate_muse_data(input_name, dataset_length)
+            elif method_name in ("string", ):
+                self.generate_string_data(input_name, dataset_length)
             else: raise ValueError(f"unknown method: {method_name}")
         self.prepare_batch_requests()
 
@@ -501,11 +501,14 @@ class BaseClient(metaclass=abc.ABCMeta):
                 writ.write(fd, png_image)
         return binary_png
 
-    def generate_muse_data(self, input_name, dataset_length):
+    def generate_string_data(self, input_name, dataset_length):
         self.__fix_dataset_length(input_name, dataset_length)
         self.xdata[input_name] = []
 
-        xargs = np.array([str(x).encode("utf-8") for x in ["Puppies", "are", "nice"]], dtype=np.object_)
+        string_data = ["dog",
+                       "Puppies are nice.",
+                       "I enjoy taking long walks along the beach with my dog."]
+        xargs = np.array([str(x).encode("utf-8") for x in string_data], dtype=np.object_)
         self.xdata[input_name].append((xargs, {"dtype": xargs.dtype, "shape": xargs.shape}))
 
     def generate_png_xrandom_data(self, input_name, dataset_length):

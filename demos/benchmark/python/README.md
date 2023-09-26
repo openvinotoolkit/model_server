@@ -18,11 +18,11 @@ the entire parallel workload. If the docker container is run in the deamon mode 
 command. Results can also be exported to a Mongo database. In order to do this the appropriate identification metadata has to
 be specified in the command line.
 
-Since 2.7 update, these Benchmark Client measurement options were introduced: language model `MUSE` (Universal Sentence Encoder) and implementation of `MediaPipe` graphs as OVMS servable. For each of them, there is a need to specify the input data method. Data method `-d muse` creates sample text data. Benchmarking of OVMS integrated with MediaPipe is possible for KServe API via gRPC protocol. In this case there is also a necessity to feed client with a pre-prepared `numpy` file consisting of a numpy array. This usecase is furthermore described in this document.
+Since 2.7 update, these Benchmark Client measurement options were introduced: language models testing with in-built string data input and support for testing `MediaPipe` graphs in the OVMS. For each of them, there is a need to specify the input data method. Data method `-d string` creates sample text data. Benchmarking of OVMS integrated with MediaPipe is possible for KServe API via gRPC protocol. In this case there is also a necessity to feed client with a pre-prepared `numpy` file consisting of a numpy array. There is also an option to test dynamic models using `shape` parameter. Last two usecases are furthermore described in this document.
 
 ## OVMS Deployment
 
-First of all, download a model and create an appropriate directory tree. For example, for some resnet 50 model from Intel's Open Model Zoo:
+First of all, download a model and create an appropriate directory tree. For example, for resnet50 binary model from Intel's Open Model Zoo:
 
 ```bash
 mkdir -p workspace/resnet50-binary-0001/1
@@ -32,7 +32,7 @@ wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/mode
 cd ../../..
 ```
 
-Let's start OVMS before building and running the benchmark client as follows:
+Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](https://docs.openvino.ai/2023.1/ovms_what_is_openvino_model_server.html)):
 ```bash
 docker run -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
                      /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 30001 --rest_port 30002
@@ -46,7 +46,7 @@ workspace
         └── resnet50-binary-0001.xml
 ```
 
-## Build Client Docker Image
+## Build Benchmark Client Docker Image
 
 To build the docker image and tag it as `benchmark_client` run:
 ```bash
@@ -105,6 +105,8 @@ XI worker: found models and their status:
 XI worker:  model: resnet50-binary-0001, version: 1 - AVAILABLE
 
 ```
+## Sample benchmarks
+
 Names, model shape, as well as information about data types of both inputs and
 outputs can also be downloaded for all available models using the same listing
 switches and adding `-m <model-name>` and `-v <model-version>` to the command
@@ -274,16 +276,62 @@ XI worker: warmup_fail_stdev_latency: 0.0
 XI worker: warmup_fail_cv_latency: 0.0
 ```
 
-##MediaPipe benchmarking
-Start OVMS container with `config.json` including mediapipe servable. OVMS should be built with MediaPipe enabled.
+## Dynamic models benchmarking
+
+In order to test dynamic models, `-s` (shape) parameter needs to be specified. You can use dynamic model, although some static models also can have dynamic shape specified. First download the model to workspace.
+```bash
+mkdir -p workspace/face-detection-retail-0005/1
+cd workspace/face-detection-retail-0005/1
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/face-detection-retail-0005/FP32/face-dtection-retail-0005.bin
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/face-detection-retail-0005/FP32/face-dtection-retail-0005.xml
+cd ../../..
 ```
+Next start OVMS having dynamic input shape specified.
+```bash
+docker run -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path workspace/face-detection-retail-0005 --model_name face-detection-retail-0005 --shape "(-1,3,-1,-1)" --port 30001 --rest_port 30002
+```
+To generate request with specified shape, it is necessary to set input shape explicitly. It is done by specifying `-s` or `--shape` parameter, followed by desired numbers.
+```bash
+docker run --network host benchmark_client -a localhost -r 30002 -m face-detection-retail-0005 -p 30001 -n 8 -s 1 3 300 300 --print_all
+Client 2.7
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30006 -m face-detection-retail-0005 -p 30005 -n 8 -s 1 3 300 300 --print_all
+          XI worker: request for metadata of model face-detection-retail-0005...
+          XI worker: Metadata for model face-detection-retail-0005 is downloaded...
+          XI worker: set version of model face-detection-retail-0005: 1
+          XI worker: inputs:
+          XI worker:  input.1:
+          XI worker:   name: input.1
+          XI worker:   dtype: DT_FLOAT
+          XI worker:   tensorShape: {'dim': [{'size': '-1'}, {'size': '3'}, {'size': '-1'}, {'size': '-1'}]}
+          XI worker: outputs:
+          XI worker:  527:
+          XI worker:   name: 527
+          XI worker:   dtype: DT_FLOAT
+          XI worker:   tensorShape: {'dim': [{'size': '1'}, {'size': '1'}, {'size': '-1'}, {'size': '7'}]}
+          XI worker: new random range: 0.0, 255.0
+          XI worker: batchsize sequence: [1]
+          XI worker: dataset length (input.1): 1
+          XI worker: --> dim: 1
+          XI worker: --> dim: 3
+          XI worker: --> dim: 300
+          XI worker: --> dim: 300
+          XI worker: Generated data shape: (1, 3, 300, 300)
+          XI worker: start workload...
+(...)
+```
+
+## MediaPipe benchmarking
+
+Start OVMS container with `config.json` including mediapipe servable. OVMS should be built with MediaPipe enabled.
+```bash
 cp -r ${PWD}/model_server/demos/benchmark/python/sample_data ${PWD}/workspace
 docker run -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --port 30001 --rest_port 30002 --config_path /workspace/sample_data/config.json
 ```
 Having MediaPipe graph file and servable specified in config.json, we call it by its name instead of the model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api KFS` since the Mediapipe graphs are exposed only via KServe API.
 Requests for benchmarking are prepared basing on array from numpy file. This data file is fed to Benchmark Client by specifing switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. 
-```
+```bash
 docker run -v ${PWD}/workspace:/workspace --network host benchmark_client -a localhost -r 30002 -m resnet50-binary-0001_mediapipe -p 30001 -n 8 --api KFS -d /workspace/sample_data/resnet50-binary-0001.npy --report_warmup --print_all
 ```
+
 Many other client options together with benchmarking examples are presented in
 [an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/main/docs/python-benchmarking-client-16feb.pdf). 
