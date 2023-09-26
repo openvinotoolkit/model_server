@@ -577,8 +577,17 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             requestComponents.type = ConfigReload;
             return StatusCode::OK;
         }
-        if (std::regex_match(request_path, sm, modelstatusRegex))
-            return StatusCode::REST_UNSUPPORTED_METHOD;
+        return (std::regex_match(request_path, sm, modelstatusRegex) ||
+                   std::regex_match(request_path, sm, kfs_serverliveRegex) ||
+                   std::regex_match(request_path, sm, configStatusRegex) ||
+                   std::regex_match(request_path, sm, kfs_serverreadyRegex) ||
+                   std::regex_match(request_path, sm, kfs_servermetadataRegex) ||
+                   std::regex_match(request_path, sm, kfs_modelmetadataRegex) ||
+                   std::regex_match(request_path, sm, kfs_modelreadyRegex) ||
+                   std::regex_match(request_path, sm, metricsRegex))
+                   ? StatusCode::REST_UNSUPPORTED_METHOD
+                   : StatusCode::REST_INVALID_URL;
+
     } else if (http_method == "GET") {
         if (std::regex_match(request_path, sm, modelstatusRegex)) {
             requestComponents.model_name = sm[2];
@@ -644,6 +653,11 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             requestComponents.type = Metrics;
             return StatusCode::OK;
         }
+        return (std::regex_match(request_path, sm, predictionRegex) ||
+                   std::regex_match(request_path, sm, kfs_inferRegex, std::regex_constants::match_any) ||
+                   std::regex_match(request_path, sm, configReloadRegex))
+                   ? StatusCode::REST_UNSUPPORTED_METHOD
+                   : StatusCode::REST_INVALID_URL;
     }
     return StatusCode::REST_INVALID_URL;
 }
