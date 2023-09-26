@@ -142,6 +142,23 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
         data = reinterpret_cast<void*>(const_cast<void*>((TENSOR)->VIEW_TYPE().buffer<void>()));       \
     }
 
+#define HANDLE_DESERIALIZATION_EXCEPTION(TYPE_STRING)                                                       \
+    catch (const std::exception& e) {                                                                       \
+        std::stringstream ss;                                                                               \
+        ss << "Exception:"                                                                                  \
+           << e.what()                                                                                      \
+           << "; caught during " TYPE_STRING " deserialization from KServe request tensor";                 \
+        std::string details = ss.str();                                                                     \
+        SPDLOG_DEBUG(details);                                                                              \
+        return Status(StatusCode::UNKNOWN_ERROR, std::move(details));                                       \
+    }                                                                                                       \
+    catch (...) {                                                                                           \
+        std::stringstream ss;                                                                               \
+        ss << "Unknown exception caught during " TYPE_STRING " deserialization from KServe request tensor"; \
+        std::string details = ss.str();                                                                     \
+        SPDLOG_DEBUG(details);                                                                              \
+        return Status(StatusCode::UNKNOWN_ERROR, std::move(details));                                       \
+    }
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<mediapipe::Tensor>& outTensor) {
     auto requestInputItr = request.inputs().begin();
     auto status = getRequestInput(requestInputItr, requestedName, request);
@@ -175,11 +192,8 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         void* data;
         SET_DATA_FROM_MP_TENSOR(outTensor, GetCpuWriteView);
         std::memcpy(data, bufferLocation.data(), bufferLocation.size());
-    } catch (const std::exception& e) {
-        SPDLOG_DEBUG("Exception: {}; caught during Mediapipe tensor deserialization", e.what());
-    } catch (...) {
-        SPDLOG_ERROR("Unknown exception caught during Mediapipe tensor deserialization");
     }
+    HANDLE_DESERIALIZATION_EXCEPTION("Mediapipe tensor")
     return StatusCode::OK;
 }
 
@@ -227,13 +241,8 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         }
         void* tftensordata = outTensor->data();
         std::memcpy(tftensordata, bufferLocation.data(), bufferLocation.size());
-    } catch (const std::exception& e) {
-        SPDLOG_DEBUG("Exception: {}; caught during Mediapipe TF tensor deserialization", e.what());
-        // TODO: Return error?
-    } catch (...) {
-        SPDLOG_ERROR("Unknown exception caught during Mediapipe TF tensor deserialization");
-        // TODO: Return error?
     }
+    HANDLE_DESERIALIZATION_EXCEPTION("Tensorflow tensor")
     return StatusCode::OK;
 }
 
@@ -275,13 +284,8 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         auto tensor = interpreter->tensor(tfLiteTensorIdx);
         tensor->data.data = reinterpret_cast<void*>(const_cast<char*>((bufferLocation.data())));
         *outTensor = tensor;
-    } catch (const std::exception& e) {
-        SPDLOG_DEBUG("Exception: {}; caught during Mediapipe TfLite tensor deserialization", e.what());
-        return Status(StatusCode::UNKNOWN_ERROR, "failed to deserialize KServe request tensor to TfLiteTensor");
-    } catch (...) {
-        SPDLOG_ERROR("Unknown exception caught during Mediapipe TfLite tensor deserialization");
-        return Status(StatusCode::UNKNOWN_ERROR, "failed to deserialize KServe request tensor to TfLiteTensor");
     }
+    HANDLE_DESERIALIZATION_EXCEPTION("Tensorflow Lite tensor")
     return StatusCode::OK;
 }
 
@@ -320,13 +324,9 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         } else {
             outTensor = std::make_unique<ov::Tensor>(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
         }
-        return StatusCode::OK;
-    } catch (const std::exception& e) {
-        SPDLOG_DEBUG("Kserve mediapipe request deserialization failed:{}", e.what());
-    } catch (...) {
-        SPDLOG_DEBUG("KServe mediapipe request deserialization failed");
     }
-    return Status(StatusCode::INTERNAL_ERROR, "Unexpected error during Tensor creation");
+    HANDLE_DESERIALIZATION_EXCEPTION("OpenVINO tensor")
+    return StatusCode::OK;
 }
 
 static mediapipe::ImageFormat::Format KFSDatatypeToImageFormat(const std::string& datatype, const size_t numberOfChannels) {
@@ -432,13 +432,16 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         SPDLOG_DEBUG("Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
         return Status(StatusCode::INVALID_INPUT_FORMAT, "Invalid KFS request datatype, conversion to Mediapipe ImageFrame format failed.");
     }
-    outTensor = std::make_unique<mediapipe::ImageFrame>(
-        imageFormat,
-        numberOfCols,
-        numberOfRows,
-        numberOfCols * numberOfChannels * elementSize,
-        reinterpret_cast<uint8_t*>((const_cast<char*>(bufferLocation.data()))),
-        mediapipe::ImageFrame::PixelDataDeleter::kNone);
+    try {
+        outTensor = std::make_unique<mediapipe::ImageFrame>(
+            imageFormat,
+            numberOfCols,
+            numberOfRows,
+            numberOfCols * numberOfChannels * elementSize,
+            reinterpret_cast<uint8_t*>((const_cast<char*>(bufferLocation.data()))),
+            mediapipe::ImageFrame::PixelDataDeleter::kNone);
+    }
+    HANDLE_DESERIALIZATION_EXCEPTION("Mediapipe ImageFrame")
     return StatusCode::OK;
 }
 

@@ -323,7 +323,6 @@ bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& conf
 }
 
 Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
-    // TODO possibly unify with DAG to share code
     unloadGuard = std::make_unique<MediapipeGraphDefinitionUnloadGuard>(*this);
 
     const uint waitLoadedTimestepMicroseconds = 1000;

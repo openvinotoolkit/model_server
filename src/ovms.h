@@ -566,7 +566,7 @@ OVMS_Status* OVMS_ServableMetadataInput(OVMS_ServableMetadata* metadata, uint32_
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServableMetadataOutput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
 
-// EXPERIMENTAL // TODO if declare specific type for underlying ov::AnyMap
+// EXPERIMENTAL
 // Get the additional info about servable.
 //
 // \param metadata The metadata object
