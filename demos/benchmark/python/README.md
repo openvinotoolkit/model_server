@@ -18,7 +18,7 @@ the entire parallel workload. If the docker container is run in the deamon mode 
 command. Results can also be exported to a Mongo database. In order to do this the appropriate identification metadata has to
 be specified in the command line.
 
-Since 2.7 update, following Benchmark Client measurement options were introduced: language model `MUSE` (Universal Sentence Encoder) and implementation of `MediaPipe` graphs as OVMS servable. For each of them there is a need to specify input data method. Data method `-d muse` creates sample text data. Benchmarking of OVMS intergated with MediaPipe is possible for KServe API via gRPC protocol. In this case there is also a necessity to feed client with pre-prepared `numpy` file consisting of numpy array. This usecase is further described in this document.
+Since 2.7 update, these Benchmark Client measurement options were introduced: language model `MUSE` (Universal Sentence Encoder) and implementation of `MediaPipe` graphs as OVMS servable. For each of them, there is a need to specify the input data method. Data method `-d muse` creates sample text data. Benchmarking of OVMS integrated with MediaPipe is possible for KServe API via gRPC protocol. In this case there is also a necessity to feed client with a pre-prepared `numpy` file consisting of a numpy array. This usecase is furthermore described in this document.
 
 ## OVMS Deployment
 
@@ -280,7 +280,7 @@ Start OVMS container with `config.json` including mediapipe servable. OVMS shoul
 cp -r ${PWD}/model_server/demos/benchmark/python/sample_data ${PWD}/workspace
 docker run -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --port 30001 --rest_port 30002 --config_path /workspace/sample_data/config.json
 ```
-While having MediaPipe graph file and servable specified in config.json, we call it by its name instead of simple model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api KFS` since so far only KServe API is supported.
+Having MediaPipe graph file and servable specified in config.json, we call it by its name instead of simple model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api KFS` since so far only KServe API is supported.
 Requests for benchmarking are prepared basing on array from numpy file. This data file is fed to Benchmark Client by specifing switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. 
 ```
 docker run -v ${PWD}/workspace:/workspace --network host benchmark_client -a localhost -r 30002 -m resnet50-binary-0001_mediapipe -p 30001 -n 8 --api KFS -d /workspace/sample_data/resnet50-binary-0001.npy --report_warmup --print_all
