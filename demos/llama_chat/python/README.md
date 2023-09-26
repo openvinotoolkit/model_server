@@ -54,20 +54,23 @@ Inference script for generating text with llama
 
 optional arguments:
   -h, --help            show this help message and exit
-  --url URL
-  --question QUESTION
-  --seed SEED
+  --url URL             Specify url to grpc service
+  --question QUESTION   Question to selected actor
+  --seed SEED           Seed for next token selection algorithm. Providing different numbers will produce slightly different results.
   --actor {general-knowledge,python-programmer}
+                        Domain in which you want to interact with the model. Selects predefined pre-prompt.
 ```
 
-Multiple examples for different pre-prompts (`--actor` parameter):
+Multiple examples for different pre-prompts (`--actor` parameter):  
 
+General knowledge:
 ```bash
 python3 client.py --url localhost:9000 --question "How many corners there are in square?" --seed 14140 --actor general-knowledge
 
  Four. [EOS]%
 ```
 
+Python programmer:
 ```bash
 python3 client.py --url localhost:90000 --question "Write python function to sum 3 numbers." --seed 1332 --actor python-programmer
 

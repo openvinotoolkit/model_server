@@ -22,10 +22,12 @@ from transformers import AutoTokenizer
 
 parser = argparse.ArgumentParser(description='Inference script for generating text with llama')
 
-parser.add_argument('--url', required=True, type=str)
-parser.add_argument('--question', required=True, type=str)
-parser.add_argument('--seed', required=False, type=int, default=0)
-parser.add_argument('--actor', required=False, type=str, choices=['general-knowledge', 'python-programmer'], default='general-knowledge')
+parser.add_argument('--url', required=True, type=str, help='Specify url to grpc service')
+parser.add_argument('--question', required=True, type=str, help='Question to selected actor')
+parser.add_argument('--seed', required=False, type=int, default=0,
+    help='Seed for next token selection algorithm. Providing different numbers will produce slightly different results.')
+parser.add_argument('--actor', required=False, type=str, choices=['general-knowledge', 'python-programmer'], default='general-knowledge',
+    help='Domain in which you want to interact with the model. Selects predefined pre-prompt.')
 args = parser.parse_args()
 
 np.random.seed(args.seed)
