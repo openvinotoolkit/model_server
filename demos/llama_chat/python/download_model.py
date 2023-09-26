@@ -12,7 +12,9 @@ try:
     whoami()
     print('Authorization token already provided')
 except OSError:
-    assert args.token is not None, "need to provide HF authorization --token param"
+    if args.token is None:
+        "need to provide HF authorization --token param"
+        exit(1)
     login(args.token)
 
 print('Downloading and converting...')
