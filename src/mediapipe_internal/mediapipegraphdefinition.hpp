@@ -76,6 +76,7 @@ public:
     static std::string getStreamName(const std::string& streamFullName);
     static std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName);
 
+    Status getPythonNodeState(const std::string& node_name, std::unique_ptr<NodeState>& nodeState);
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);

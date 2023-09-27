@@ -391,6 +391,17 @@ std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFul
     return EMPTY_STREAM_NAME;
 }
 
+Status MediapipeGraphDefinition::getPythonNodeState(const std::string& node_name, std::unique_ptr<NodeState>& nodeState) {
+    auto it = this->pythonNodeStates.find(node_name);
+    if (it == this->pythonNodeStates.end()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name: {} does not exist in graph: {}. ", node_name, this->name);
+        return StatusCode::PYTHON_NODE_NAME_DOES_NOT_EXISTS;
+    }
+
+    nodeState = std::move(it->second);
+    return StatusCode::OK;
+}
+
 std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::getStreamNamePair(const std::string& streamFullName) {
     static std::unordered_map<std::string, mediapipe_packet_type_enum> prefix2enum{
         {KFS_REQUEST_PREFIX, mediapipe_packet_type_enum::KFS_REQUEST},
@@ -435,12 +446,19 @@ Status MediapipeGraphDefinition::initializeNodes() {
             if (config.node(i).node_options().size()) {
                 std::string node_name = config.node(i).name();
                 if (this->pythonNodeStates.find(node_name) != this->pythonNodeStates.end()) {
-                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} already used in graph: {}. ", node_name, this->name);
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name: {} already used in graph: {}. ", node_name, this->name);
                     return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
                 }
 
+                // Validate what we can before we create py::object so that we do not have to acquire GIL on empty objects
+                auto status = NodeState::Validate(config.node(i).node_options(0));
+                if (status != StatusCode::OK) {
+                    SPDLOG_ERROR("Failed to validate python node graph {}", this->name);
+                    return status;
+                }
+
                 std::unique_ptr<NodeState> state = std::make_unique<NodeState>();
-                auto status = state->Create(config.node(i).node_options(0));
+                status = state->Create(config.node(i).node_options(0));
                 if (status != StatusCode::OK) {
                     SPDLOG_ERROR("Failed to process python node graph {}", this->name);
                     return status;

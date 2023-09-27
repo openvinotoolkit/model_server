@@ -29,14 +29,13 @@ namespace ovms {
 class Status;
 
 class NodeState {
-#if (PYTHON_DISABLE == 0)
-    py::object pythonNodeState;
-#endif
 public:
     NodeState();
     NodeState(const NodeState& other);
 #if (PYTHON_DISABLE == 0)
+    py::object pythonNodeState;
     Status Create(const google::protobuf::Any node_options);
+    static Status Validate(const google::protobuf::Any node_options);
 #endif
     ~NodeState();
 };

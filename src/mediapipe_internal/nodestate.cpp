@@ -46,10 +46,6 @@ NodeState::NodeState(const NodeState& other) {
 Status NodeState::Create(const google::protobuf::Any node_options) {
     mediapipe::PythonBackendCalculatorOptions options;
     node_options.UnpackTo(&options);
-    if (!std::filesystem::exists(options.handler_path())) {
-        SPDLOG_DEBUG("Python node file: {} does not exist. ", options.handler_path());
-        return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
-    }
     auto fs_handler_path = std::filesystem::path(options.handler_path());
     fs_handler_path.replace_extension();
 
@@ -74,6 +70,16 @@ Status NodeState::Create(const google::protobuf::Any node_options) {
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
 
+    return StatusCode::OK;
+}
+
+Status NodeState::Validate(const google::protobuf::Any node_options) {
+    mediapipe::PythonBackendCalculatorOptions options;
+    node_options.UnpackTo(&options);
+    if (!std::filesystem::exists(options.handler_path())) {
+        SPDLOG_DEBUG("Python node file: {} does not exist. ", options.handler_path());
+        return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
+    }
     return StatusCode::OK;
 }
 #endif

@@ -30,6 +30,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/nodestate.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
@@ -43,6 +44,12 @@
 #include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
+
+#if (PYTHON_DISABLE == 0)
+#include <pybind11/embed.h>
+namespace py = pybind11;
+using namespace py::literals;
+#endif
 
 using namespace ovms;
 
@@ -2110,6 +2117,261 @@ public:
 };
 
 TEST_F(MediapipeFlowPythonNodeTest, InitializationPass) {
-    ASSERT_TRUE(server.isReady());
+    ModelManager* manager;
+    manager = &(dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
+    auto graphDefinition = manager->getMediapipeFactory().findDefinitionByName("mediapipePythonBackend");
+    ASSERT_NE(graphDefinition, nullptr);
+    EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
 }
+
+class MediapipePythonNodeTest : public ::testing::Test {
+};
+
+TEST_F(MediapipePythonNodeTest, PythonNodeFileDoesNotExist) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/22script2.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST);
+}
+
+TEST_F(MediapipePythonNodeTest, PythonNodeNameAlreadyExist) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/script.py"
+                }
+            }
+        }
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out3"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/script2.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS);
+}
+
+TEST_F(MediapipePythonNodeTest, PythonNodeInitFailed) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/script3.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+}
+
+TEST_F(MediapipePythonNodeTest, PythonNodeNameDoesNotExist) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/script.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    std::unique_ptr<NodeState> nodeState = std::make_unique<NodeState>();
+    ASSERT_EQ(mediapipeDummy.getPythonNodeState("pythonNode4", nodeState), StatusCode::PYTHON_NODE_NAME_DOES_NOT_EXISTS);
+}
+
+TEST_F(MediapipePythonNodeTest, PythonNodeInitMembers) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/script.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    std::unique_ptr<NodeState> nodeState = std::make_unique<NodeState>();
+    ASSERT_EQ(mediapipeDummy.getPythonNodeState("pythonNode2", nodeState), StatusCode::OK);
+
+    try {
+        py::gil_scoped_acquire acquire;
+        using namespace py::literals;
+        py::module_ sys = py::module_::import("sys");
+        py::object model_instance = py::cast<py::object>(nodeState.get()->pythonNodeState);
+
+        // Casting and recasting needed for ASSER_EQ to work
+        py::str model_name = model_instance.attr("model_name");
+        py::str expected_name = py::str("testModel");
+        std::string s_model_name = model_name.cast<std::string>();
+        std::string s_expected_name = expected_name.cast<std::string>();
+
+        ASSERT_EQ(s_model_name, s_expected_name);
+        py::int_ execution_time = model_instance.attr("execution_time");
+        ASSERT_EQ(execution_time, 300);
+        py::list model_inputs = model_instance.attr("model_inputs");
+
+        py::str expected_input1 = py::str("input1");
+        py::str expected_input2 = py::str("input2");
+        std::string s_expected_input1 = expected_input1.cast<std::string>();
+        std::string s_expected_input2 = expected_input2.cast<std::string>();
+
+        // Check first element
+        for (py::handle obj : model_inputs) {
+            ASSERT_EQ(obj.attr("__str__")().cast<std::string>(), s_expected_input1);
+            break;
+        }
+        // Remove first element
+        model_inputs.attr("pop")(0);
+        // Check second element
+        for (py::handle obj : model_inputs) {
+            ASSERT_EQ(obj.attr("__str__")().cast<std::string>(), s_expected_input2);
+        }
+    } catch (const std::exception& e) {
+        std::cout << "Python pybind exception: " << e.what() << std::endl;
+        ASSERT_EQ(1, 0);
+    } catch (...) {
+        std::cout << "Python pybind exception: " << std::endl;
+        ASSERT_EQ(1, 0);
+    }
+}
+
+TEST_F(MediapipePythonNodeTest, PythonNodePassArgumentsToConstructor) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/script2.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    std::unique_ptr<NodeState> nodeState = std::make_unique<NodeState>();
+    ASSERT_EQ(mediapipeDummy.getPythonNodeState("pythonNode2", nodeState), StatusCode::OK);
+
+    try {
+        py::gil_scoped_acquire acquire;
+        using namespace py::literals;
+        py::module_ sys = py::module_::import("sys");
+        py::object model_instance = py::cast<py::object>(nodeState.get()->pythonNodeState);
+
+        // Casting and recasting needed for ASSER_EQ to work
+        py::dict model_outputs = model_instance.attr("model_outputs");
+        py::int_ size = model_outputs.size();
+        ASSERT_EQ(size, 0);
+    } catch (const std::exception& e) {
+        std::cout << "Python pybind exception: " << e.what() << std::endl;
+        ASSERT_EQ(1, 0);
+    } catch (...) {
+        std::cout << "Python pybind exception: " << std::endl;
+        ASSERT_EQ(1, 0);
+    }
+}
+
 #endif

@@ -16,9 +16,7 @@
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        # This method will be called once during initialization.
-        # It expects keyword arguments. They will map node configuration from pbtxt including node options, node name etc.
-        # Detailed spec to be provided. 
+        self.model_outputs = kwargs 
         ...
         return None
 

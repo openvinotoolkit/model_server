@@ -366,7 +366,6 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
 RUN rm -Rf /etc/entitlement /etc/rhsm/ca
-ENV BASE_IMAGE2=$BASE_IMAGE
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM $BUILD_IMAGE as pkg
 
