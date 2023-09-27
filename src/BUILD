@@ -405,7 +405,7 @@ cc_library(
         "tensor_conversion.hpp",
         "tensor_conversion.cpp",
          ] + select({
-            "//conditions:default": [
+            "//src:not_disable_mediapipe": [
                 "mediapipe_internal/mediapipefactory.cpp",
                 "mediapipe_internal/mediapipefactory.hpp",
                 "mediapipe_internal/mediapipegraphconfig.hpp",
@@ -417,6 +417,14 @@ cc_library(
                 "mediapipe_internal/packettypes.hpp",
             ],
             "//src:disable_mediapipe" : [],
+        })
+         + select({
+            "//src:not_disable_python": [
+                "ovms_py_tensor.hpp",
+                "ovms_py_tensor.cpp",
+                "bindings/python/ovms_py_tensor.cpp",
+                ],
+            "//src:disable_python": []
         }),
     deps = [
         "//:ovms_dependencies",
@@ -467,6 +475,24 @@ cc_library(
         ],
     }),
     alwayslink = 1,
+)
+
+pybind_extension(
+    name = "pyovms",
+    srcs = ["bindings/python/ovms_py_tensor.cpp",
+            "ovms_py_tensor.hpp",
+            "ovms_py_tensor.cpp"],
+)
+
+load("@pip_deps//:requirements.bzl", "all_requirements")
+
+py_test(
+    name = "test_python_binding",
+    srcs = glob(["bindings/python/tests/*.py"]),
+    main = "bindings/python/tests/run.py",
+    imports=["."],
+    data = [":pyovms.so"],
+    deps = all_requirements
 )
 
 cc_binary(
@@ -834,7 +860,7 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
-        "//conditions:default": [
+        "//src:not_disable_mediapipe": [
             "test/get_mediapipe_graph_metadata_response_test.cpp",
             "test/mediapipe/inputsidepacketusertestcalc.cc",
             "test/mediapipeflow_test.cpp",
@@ -844,6 +870,12 @@ cc_test(
             "mediapipe_calculators/ovms_calculator.cc",
         ],
         "//src:disable_mediapipe" : [],
+        }) +
+        select({
+        "//src:not_disable_python": [
+            "test/python/ovms_py_tensor_test.cpp",
+        ],
+        "//src:disable_python" : [],
         }),
     data = [
         "test/add_two_inputs_model/1/add.xml",
