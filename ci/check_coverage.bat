@@ -8,6 +8,11 @@ MIN_FUNCTION_COV=87.6
 MIN_LINES_COV=76.0
 MIN_FUNCTION_COV=75.1
 
+# Change back when PYTHON_DISABLE=0
+#Rhel
+MIN_LINES_COV=75.3
+MIN_FUNCTION_COV=72.9
+
 LINES_COV=`cat genhtml/index.html | grep "headerCovTableEntry.*%" | grep -oP  ">\K(\d*.\d*) " | head -n 1`
 FUNC_COV=`cat genhtml/index.html | grep "headerCovTableEntry.*%" | grep -oP  ">\K(\d*.\d*) " | tail -n 1`
 
