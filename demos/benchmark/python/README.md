@@ -327,8 +327,13 @@ Start OVMS container with `config.json` including mediapipe servable. OVMS shoul
 cp -r ${PWD}/model_server/demos/benchmark/python/sample_data ${PWD}/workspace
 docker run -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --port 30001 --rest_port 30002 --config_path /workspace/sample_data/config.json
 ```
-Having MediaPipe graph file and servable specified in config.json, we call it by its name instead of the model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api KFS` since the Mediapipe graphs are exposed only via KServe API.
-Requests for benchmarking are prepared basing on array from numpy file. This data file is fed to Benchmark Client by specifing switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. 
+Requests for benchmarking are prepared basing on array from numpy file. This data file is fed to Benchmark Client by specifing switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. You can create sample data with `Python3`, specifying array shape and precision. Generated .npy file should be saved to workspace/sample_data directory for this example.
+```bash
+import numpy as np
+arr = np.ones((1,3,224,224),dtype=np.float32)
+np.save("resnet50-binary-0001.npy", arr)
+```
+Having MediaPipe graph file and servable specified in config.json, we call it by its name instead of the model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api KFS` since the Mediapipe graphs are exposed only via KServe API. 
 ```bash
 docker run -v ${PWD}/workspace:/workspace --network host benchmark_client -a localhost -r 30002 -m resnet50-binary-0001_mediapipe -p 30001 -n 8 --api KFS -d /workspace/sample_data/resnet50-binary-0001.npy --report_warmup --print_all
 ```
