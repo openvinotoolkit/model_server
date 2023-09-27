@@ -418,7 +418,7 @@ cc_library(
                 "mediapipe_internal/nodestate.cpp",
                 "mediapipe_internal/nodestate.hpp",
                 "mediapipe_internal/packettypes.hpp",
-                ],
+            ],
             "//src:disable_mediapipe" : [],
         })
         + select({
