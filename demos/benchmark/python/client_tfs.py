@@ -169,7 +169,8 @@ class TFS_Client(BaseClient):
             request = predict_pb2.PredictRequest()
             request.model_spec.name = self.model_name
             for input_name, xbatches in self.xdata.items():
-                tensor = make_tensor_proto(xbatches[index][0], **xbatches[index][1])
+                try: tensor = make_tensor_proto(xbatches[index][0], **xbatches[index][1])
+                except: raise NotImplementedError("TFS / numpy")
                 request.inputs[input_name].CopyFrom(tensor)
 
             if self.stateful_length > 0:

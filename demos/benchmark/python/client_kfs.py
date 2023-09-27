@@ -159,7 +159,17 @@ class KFS_Client(BaseClient):
 
                 single_input_bytes = bytes()
                 if "dtype" not in xbatches[index][1]:
-                    raise NotImplementedError("KFS / binary")
+                    for binary_data in xbatches[index][0]:
+                        single_input_bytes += binary_data.tobytes()
+
+                    shape = xbatches[index][1]["shape"]
+                    shape[0] = batch_length
+                    if "float32" in str(xbatches[index][0][0].dtype):
+                        np_dtype, self.inputs[input_name]["dtype"] = "float32", "FP32"
+                    elif "int8" in str(xbatches[index][0][0].dtype):
+                        np_dtype, self.inputs[input_name]["dtype"] = "int8", "INT8"
+                    else: raise ValueError(f"not supported type: {xbatches[index][0][0].dtype}")
+
                 else:
                     if self.inputs[input_name]["dtype"] == self.DTYPE_INT_8: np_dtype = "int8"
                     elif self.inputs[input_name]["dtype"] == self.DTYPE_INT_32: np_dtype = "int32"
