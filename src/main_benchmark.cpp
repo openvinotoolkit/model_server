@@ -245,11 +245,10 @@ void prepareData(std::vector<std::vector<float>>& preparedData, const size_t& nu
         std::random_device rd;
         seedValue = rd();
     }
-    std::cout << "Seed used to generate random values:" << seedValue << std::endl;
+    std::cout << "Seed used to generate random values: " << seedValue << std::endl;
     generator = std::default_random_engine(seedValue);
     for (size_t i = 0; i < numberOfVectors; i ++) {
         float random = distribution(generator);
-        std::cout << random << std::endl;
         std::vector<float> data(vectorElementCount, random);
         preparedData.push_back(data);
     }
