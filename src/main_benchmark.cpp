@@ -237,11 +237,10 @@ void prepareData(std::vector<std::vector<float>>& preparedData, const size_t& nu
     std::uniform_real_distribution<float> distribution(0.0, 1.0);
     std::default_random_engine generator;
     uint64_t seedValue;
-    if(seed.has_value()){
+    if (seed.has_value()) {
         seedValue = seed.value();
     }
-    else
-    {
+    else {
         std::random_device rd;
         seedValue = rd();
     }
@@ -484,7 +483,7 @@ int main(int argc, char** argv) {
     }
     OVMS_InferenceResponseDelete(response);
     std::optional<uint64_t> seed;
-    if(cliparser.result->count("seed")){
+    if (cliparser.result->count("seed")) {
         seed = cliparser.result->operator[]("seed").as<uint64_t>();
     }
 
