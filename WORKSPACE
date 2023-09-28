@@ -199,8 +199,6 @@ http_archive(
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 python_configure(name = "local_config_python")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
 http_archive(
     name = "rules_python",
     sha256 = "29a801171f7ca190c543406f9894abf2d483c206e14d6acbd695623662320097",

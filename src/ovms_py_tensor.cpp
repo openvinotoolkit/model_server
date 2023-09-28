@@ -1,3 +1,20 @@
+//*****************************************************************************
+// Copyright 2023 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+
+
 #include "ovms_py_tensor.hpp"
 
 #include <string>
@@ -8,7 +25,8 @@
 namespace py = pybind11;
 using namespace ovms;
 
-OvmsPyTensor::OvmsPyTensor(void *ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size) :
+OvmsPyTensor::OvmsPyTensor(std::string name, void *ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size) :
+    name(name),
     ptr(ptr),
     shape(shape),
     ndim(shape.size()),
@@ -17,14 +35,10 @@ OvmsPyTensor::OvmsPyTensor(void *ptr, std::vector<py::ssize_t> shape, std::strin
     datatype(datatype),
     size(size)
 {
-    if (datatypeToBufferFormat.count(datatype)) {
-        // Known format
-        format = datatypeToBufferFormat.at(datatype);
-    }
-    else {
-        // Unknown format, assuming raw binary
-        format = datatypeToBufferFormat.at("UINT8");
-    }
+    // Map datatype to struct syntax format if it's known. Otherwise assume raw binary (UINT8 type)
+    auto it = datatypeToBufferFormat.find(datatype);
+    format = it != datatypeToBufferFormat.end() ?  it->second : RAW_BINARY_FORMAT;
+
     itemsize = bufferFormatToItemsize.at(format);
     strides.insert(strides.begin(), itemsize);
     for (int i = 1; i < ndim; i++){
@@ -33,7 +47,8 @@ OvmsPyTensor::OvmsPyTensor(void *ptr, std::vector<py::ssize_t> shape, std::strin
     }
 }
 
-OvmsPyTensor::OvmsPyTensor(py::buffer_info bufferInfo) : 
+OvmsPyTensor::OvmsPyTensor(std::string name, py::buffer_info bufferInfo) : 
+    name(name),
     ptr(bufferInfo.ptr),
     shape(bufferInfo.shape),
     ndim(bufferInfo.ndim),
@@ -43,7 +58,6 @@ OvmsPyTensor::OvmsPyTensor(py::buffer_info bufferInfo) :
 {
     size = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<py::ssize_t>()) * itemsize;
     datatype = format;
-    if (bufferFormatToDatatype.count(format)) {
-        datatype = bufferFormatToDatatype.at(format);
-    }
+    auto it = bufferFormatToDatatype.find(format);
+    datatype = it != datatypeToBufferFormat.end() ?  it->second : format;
 }

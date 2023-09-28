@@ -28,7 +28,7 @@ namespace ovms {
 // Struct string-syntax for buffer fromat description
 // https://docs.python.org/3/library/struct.html#format-characters
 
-const std::map<std::string, std::string> datatypeToBufferFormat {
+const std::unordered_map<std::string, std::string> datatypeToBufferFormat {
     {"BOOL", "?"},
     {"UINT8", "B"},
     {"UINT16", "H"},
@@ -44,7 +44,7 @@ const std::map<std::string, std::string> datatypeToBufferFormat {
     // {"BF16", X} to be considered, for now it shall be treated as a custom datatype
 };
 
-const std::map<std::string, std::string> bufferFormatToDatatype {
+const std::unordered_map<std::string, std::string> bufferFormatToDatatype {
     {"?", "BOOL"},
     {"B", "UINT8"},
     {"H", "UINT16"},
@@ -65,7 +65,7 @@ const std::map<std::string, std::string> bufferFormatToDatatype {
 // TO DO: Note that for numpy for example np.int64 gets translates to "l" not "q" on 64 bit linux systems.
 // We should consider an alternative to hardcoding those characters if it becomes an issue.
 
-const std::map<std::string, py::ssize_t> bufferFormatToItemsize {
+const std::unordered_map<std::string, py::ssize_t> bufferFormatToItemsize {
     {"?", 1},
     {"B", 1},
     {"H", 2},
@@ -81,8 +81,12 @@ const std::map<std::string, py::ssize_t> bufferFormatToItemsize {
     // {"BF16", X} to be considered, for now it shall be treated as a custom datatype
 };
 
-class OvmsPyTensor {
-public:
+const std::string RAW_BINARY_FORMAT = "B";
+
+struct OvmsPyTensor {
+
+    std::string name;
+
     // Buffer protocol fields
     void *ptr;
     std::vector<py::ssize_t> shape;
@@ -91,17 +95,16 @@ public:
     py::ssize_t itemsize;
     std::vector<py::ssize_t> strides;
 
-    // Additional fields
+    // ---
     
     // Can be one of predefined types (like int8, float32 etc.) or totally custom like numpy (for example "<U83")
     std::string datatype;
-
     size_t size;
-public:
+
     // Construct object from request contents
-    OvmsPyTensor(void *ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size);
+    OvmsPyTensor(std::string name, void *ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size);
 
     // Construct object from buffer info
-    OvmsPyTensor(py::buffer_info bufferInfo);
+    OvmsPyTensor(std::string name, py::buffer_info bufferInfo);
 };
 }  // namespace ovms

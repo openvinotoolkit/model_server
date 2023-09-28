@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,17 +26,6 @@ using namespace ovms;
 
 namespace py = pybind11;
 
-class OvmsPyTensorTest : public OvmsPyTensor {
-public:
-    using OvmsPyTensor::OvmsPyTensor;
-    void * getData() { return ptr; }
-    std::vector<py::ssize_t>& getShape() { return shape; }
-    std::vector<py::ssize_t>& getStrides() { return strides; }
-    std::string& getFormat() { return format; }
-    std::string& getDatatype() { return datatype; }
-    py::ssize_t& getItemsize() { return itemsize; }
-    size_t getSize() { return size; }
-};
 
 TEST(OvmsPyTensor, BuildKnownFormatMultiDimShape) {
     // OvmsPyTensor(void *ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size);
@@ -45,18 +34,19 @@ TEST(OvmsPyTensor, BuildKnownFormatMultiDimShape) {
     void * ptr = data.data();
     std::vector<py::ssize_t> shape {1,3,300,300};
     std::string datatype = "FP32";
-    OvmsPyTensorTest ovmsPyTensor(ptr, shape, datatype, INPUT_BUFFER_SIZE);
+    OvmsPyTensor ovmsPyTensor("input", ptr, shape, datatype, INPUT_BUFFER_SIZE);
 
     std::vector<py::ssize_t> expectedStrides {1080000, 360000, 1200, 4};
     std::string expectedFormat = datatypeToBufferFormat.at(datatype);
     size_t expectedItemsize = bufferFormatToItemsize.at(expectedFormat);
 
-    EXPECT_EQ(ovmsPyTensor.getData(), ptr);
-    EXPECT_EQ(ovmsPyTensor.getShape(), shape);
-    EXPECT_EQ(ovmsPyTensor.getStrides(), expectedStrides);
-    EXPECT_EQ(ovmsPyTensor.getFormat(), expectedFormat);
-    EXPECT_EQ(ovmsPyTensor.getDatatype(), datatype);
-    EXPECT_EQ(ovmsPyTensor.getItemsize(), expectedItemsize);
+    EXPECT_EQ(ovmsPyTensor.name, "input");
+    EXPECT_EQ(ovmsPyTensor.ptr, ptr);
+    EXPECT_EQ(ovmsPyTensor.shape, shape);
+    EXPECT_EQ(ovmsPyTensor.strides, expectedStrides);
+    EXPECT_EQ(ovmsPyTensor.format, expectedFormat);
+    EXPECT_EQ(ovmsPyTensor.datatype, datatype);
+    EXPECT_EQ(ovmsPyTensor.itemsize, expectedItemsize);
 }
 
 TEST(OvmsPyTensor, BuildKnownFormatSingleDimShape) {
@@ -65,18 +55,19 @@ TEST(OvmsPyTensor, BuildKnownFormatSingleDimShape) {
     void * ptr = data.data();
     std::vector<py::ssize_t> shape {1*3*300*300};
     std::string datatype = "FP32";
-    OvmsPyTensorTest ovmsPyTensor(ptr, shape, datatype, INPUT_BUFFER_SIZE);
+    OvmsPyTensor ovmsPyTensor("input", ptr, shape, datatype, INPUT_BUFFER_SIZE);
 
     std::vector<py::ssize_t> expectedStrides {sizeof(float)};
     std::string expectedFormat = datatypeToBufferFormat.at(datatype);
     size_t expectedItemsize = bufferFormatToItemsize.at(expectedFormat);
 
-    EXPECT_EQ(ovmsPyTensor.getData(), ptr);
-    EXPECT_EQ(ovmsPyTensor.getShape(), shape);
-    EXPECT_EQ(ovmsPyTensor.getStrides(), expectedStrides);
-    EXPECT_EQ(ovmsPyTensor.getFormat(), expectedFormat);
-    EXPECT_EQ(ovmsPyTensor.getDatatype(), datatype);
-    EXPECT_EQ(ovmsPyTensor.getItemsize(), expectedItemsize);
+    EXPECT_EQ(ovmsPyTensor.name, "input");
+    EXPECT_EQ(ovmsPyTensor.ptr, ptr);
+    EXPECT_EQ(ovmsPyTensor.shape, shape);
+    EXPECT_EQ(ovmsPyTensor.strides, expectedStrides);
+    EXPECT_EQ(ovmsPyTensor.format, expectedFormat);
+    EXPECT_EQ(ovmsPyTensor.datatype, datatype);
+    EXPECT_EQ(ovmsPyTensor.itemsize, expectedItemsize);
 }
 
 TEST(OvmsPyTensor, BuildUnknownFormatSingleDimShape) {
@@ -85,18 +76,19 @@ TEST(OvmsPyTensor, BuildUnknownFormatSingleDimShape) {
     void * ptr = data.data();
     std::vector<py::ssize_t> shape {3*1024};
     std::string datatype = "my_string_type";
-    OvmsPyTensorTest ovmsPyTensor(ptr, shape, datatype, INPUT_BUFFER_SIZE);
+    OvmsPyTensor ovmsPyTensor("input", ptr, shape, datatype, INPUT_BUFFER_SIZE);
 
     std::vector<py::ssize_t> expectedStrides {1};
     std::string expectedFormat = datatypeToBufferFormat.at("UINT8");
     size_t expectedItemsize = bufferFormatToItemsize.at(expectedFormat);
 
-    EXPECT_EQ(ovmsPyTensor.getData(), ptr);
-    EXPECT_EQ(ovmsPyTensor.getShape(), shape);
-    EXPECT_EQ(ovmsPyTensor.getStrides(), expectedStrides);
-    EXPECT_EQ(ovmsPyTensor.getFormat(), expectedFormat);
-    EXPECT_EQ(ovmsPyTensor.getDatatype(), datatype);
-    EXPECT_EQ(ovmsPyTensor.getItemsize(), expectedItemsize);
+    EXPECT_EQ(ovmsPyTensor.name, "input");
+    EXPECT_EQ(ovmsPyTensor.ptr, ptr);
+    EXPECT_EQ(ovmsPyTensor.shape, shape);
+    EXPECT_EQ(ovmsPyTensor.strides, expectedStrides);
+    EXPECT_EQ(ovmsPyTensor.format, expectedFormat);
+    EXPECT_EQ(ovmsPyTensor.datatype, datatype);
+    EXPECT_EQ(ovmsPyTensor.itemsize, expectedItemsize);
 }
 
 TEST(OvmsPyTensor, BuildUnknownFormatMultiDimShape) {
@@ -105,16 +97,17 @@ TEST(OvmsPyTensor, BuildUnknownFormatMultiDimShape) {
     void * ptr = data.data();
     std::vector<py::ssize_t> shape {3, 1024};
     std::string datatype = "my_string_type";
-    OvmsPyTensorTest ovmsPyTensor(ptr, shape, datatype, INPUT_BUFFER_SIZE);
+    OvmsPyTensor ovmsPyTensor("input", ptr, shape, datatype, INPUT_BUFFER_SIZE);
 
     std::vector<py::ssize_t> expectedStrides {1024, 1};
     std::string expectedFormat = datatypeToBufferFormat.at("UINT8");
     size_t expectedItemsize = bufferFormatToItemsize.at(expectedFormat);
 
-    EXPECT_EQ(ovmsPyTensor.getData(), ptr);
-    EXPECT_EQ(ovmsPyTensor.getShape(), shape);
-    EXPECT_EQ(ovmsPyTensor.getStrides(), expectedStrides);
-    EXPECT_EQ(ovmsPyTensor.getFormat(), expectedFormat);
-    EXPECT_EQ(ovmsPyTensor.getDatatype(), datatype);
-    EXPECT_EQ(ovmsPyTensor.getItemsize(), expectedItemsize);
+    EXPECT_EQ(ovmsPyTensor.name, "input");
+    EXPECT_EQ(ovmsPyTensor.ptr, ptr);
+    EXPECT_EQ(ovmsPyTensor.shape, shape);
+    EXPECT_EQ(ovmsPyTensor.strides, expectedStrides);
+    EXPECT_EQ(ovmsPyTensor.format, expectedFormat);
+    EXPECT_EQ(ovmsPyTensor.datatype, datatype);
+    EXPECT_EQ(ovmsPyTensor.itemsize, expectedItemsize);
 }
