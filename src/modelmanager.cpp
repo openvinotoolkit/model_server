@@ -921,9 +921,7 @@ Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Doc
 }
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
-    configFilename = jsonFilename;
     rapidjson::Document configJson;
-
     Status status = parseConfig(jsonFilename, configJson);
     if(!status.ok())
         return status;
