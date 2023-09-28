@@ -13,10 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
 #include <string>
+#include <unordered_map>
 #include <vector>
-#include <map>
+
 #include <pybind11/pybind11.h>
 
 namespace py = pybind11;
@@ -28,7 +30,7 @@ namespace ovms {
 // Struct string-syntax for buffer fromat description
 // https://docs.python.org/3/library/struct.html#format-characters
 
-const std::unordered_map<std::string, std::string> datatypeToBufferFormat {
+const std::unordered_map<std::string, std::string> datatypeToBufferFormat{
     {"BOOL", "?"},
     {"UINT8", "B"},
     {"UINT16", "H"},
@@ -44,17 +46,17 @@ const std::unordered_map<std::string, std::string> datatypeToBufferFormat {
     // {"BF16", X} to be considered, for now it shall be treated as a custom datatype
 };
 
-const std::unordered_map<std::string, std::string> bufferFormatToDatatype {
+const std::unordered_map<std::string, std::string> bufferFormatToDatatype{
     {"?", "BOOL"},
     {"B", "UINT8"},
     {"H", "UINT16"},
     {"I", "UINT32"},
-    {"L", "UINT32"}, // additional entry for unsigned long type
+    {"L", "UINT32"},  // additional entry for unsigned long type
     {"Q", "UINT64"},
     {"b", "INT8"},
     {"h", "INT16"},
     {"i", "INT32"},
-    {"l", "INT32"}, // additional entry for long type
+    {"l", "INT32"},  // additional entry for long type
     {"q", "INT64"},
     {"e", "FP16"},
     {"f", "FP32"},
@@ -65,7 +67,7 @@ const std::unordered_map<std::string, std::string> bufferFormatToDatatype {
 // TO DO: Note that for numpy for example np.int64 gets translates to "l" not "q" on 64 bit linux systems.
 // We should consider an alternative to hardcoding those characters if it becomes an issue.
 
-const std::unordered_map<std::string, py::ssize_t> bufferFormatToItemsize {
+const std::unordered_map<std::string, py::ssize_t> bufferFormatToItemsize{
     {"?", 1},
     {"B", 1},
     {"H", 2},
@@ -84,11 +86,10 @@ const std::unordered_map<std::string, py::ssize_t> bufferFormatToItemsize {
 const std::string RAW_BINARY_FORMAT = "B";
 
 struct OvmsPyTensor {
-
     std::string name;
 
     // Buffer protocol fields
-    void *ptr;
+    void* ptr;
     std::vector<py::ssize_t> shape;
     py::ssize_t ndim;
     std::string format;  // Struct-syntax buffer format
@@ -96,13 +97,13 @@ struct OvmsPyTensor {
     std::vector<py::ssize_t> strides;
 
     // ---
-    
+
     // Can be one of predefined types (like int8, float32 etc.) or totally custom like numpy (for example "<U83")
     std::string datatype;
     size_t size;
 
     // Construct object from request contents
-    OvmsPyTensor(std::string name, void *ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size);
+    OvmsPyTensor(std::string name, void* ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size);
 
     // Construct object from buffer info
     OvmsPyTensor(std::string name, py::buffer_info bufferInfo);
