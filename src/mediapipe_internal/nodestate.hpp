@@ -14,8 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <filesystem>
-#include <map>
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
@@ -34,8 +32,8 @@ public:
     NodeState(const NodeState& other);
 #if (PYTHON_DISABLE == 0)
     py::object pythonNodeState;
-    Status Create(const google::protobuf::Any node_options);
-    static Status Validate(const google::protobuf::Any node_options);
+    Status create(const google::protobuf::Any& node_options);
+    static Status validate(const google::protobuf::Any& node_options);
 #endif
     ~NodeState();
 };

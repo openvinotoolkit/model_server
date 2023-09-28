@@ -43,7 +43,7 @@ NodeState::NodeState(const NodeState& other) {
 }
 
 #if (PYTHON_DISABLE == 0)
-Status NodeState::Create(const google::protobuf::Any node_options) {
+Status NodeState::create(const google::protobuf::Any& node_options) {
     mediapipe::PythonBackendCalculatorOptions options;
     node_options.UnpackTo(&options);
     auto fs_handler_path = std::filesystem::path(options.handler_path());
@@ -73,7 +73,7 @@ Status NodeState::Create(const google::protobuf::Any node_options) {
     return StatusCode::OK;
 }
 
-Status NodeState::Validate(const google::protobuf::Any node_options) {
+Status NodeState::validate(const google::protobuf::Any& node_options) {
     mediapipe::PythonBackendCalculatorOptions options;
     node_options.UnpackTo(&options);
     if (!std::filesystem::exists(options.handler_path())) {

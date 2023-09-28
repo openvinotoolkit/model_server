@@ -147,13 +147,12 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!status.ok()) {
         return status;
     }
-#if (PYTHON_DISABLE == 0)
-    // We initialize python node states
+
     status = this->initializeNodes();
     if (!status.ok()) {
         return status;
     }
-#endif
+
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
@@ -236,7 +235,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, &this->pythonNodeStates);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeStates);
     return status;
 }
 
@@ -391,15 +390,13 @@ std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFul
     return EMPTY_STREAM_NAME;
 }
 
-Status MediapipeGraphDefinition::getPythonNodeState(const std::string& node_name, std::unique_ptr<NodeState>& nodeState) {
-    auto it = this->pythonNodeStates.find(node_name);
-    if (it == this->pythonNodeStates.end()) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name: {} does not exist in graph: {}. ", node_name, this->name);
-        return StatusCode::PYTHON_NODE_NAME_DOES_NOT_EXISTS;
+NodeState* MediapipeGraphDefinition::getPythonNodeState(const std::string& nodeName) {
+    auto it = this->pythonNodeStates.find(nodeName);
+    if (it == std::end(pythonNodeStates)) {
+        return nullptr;
+    } else {
+        return it->second.get();
     }
-
-    nodeState = std::move(it->second);
-    return StatusCode::OK;
 }
 
 std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::getStreamNamePair(const std::string& streamFullName) {
@@ -438,38 +435,44 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
     return {"", mediapipe_packet_type_enum::UNKNOWN};
 }
 
-#if (PYTHON_DISABLE == 0)
 Status MediapipeGraphDefinition::initializeNodes() {
+#if (PYTHON_DISABLE == 0)
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
-            if (config.node(i).node_options().size()) {
-                std::string node_name = config.node(i).name();
-                if (this->pythonNodeStates.find(node_name) != this->pythonNodeStates.end()) {
-                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name: {} already used in graph: {}. ", node_name, this->name);
-                    return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
-                }
-
-                // Validate what we can before we create py::object so that we do not have to acquire GIL on empty objects
-                auto status = NodeState::Validate(config.node(i).node_options(0));
-                if (status != StatusCode::OK) {
-                    SPDLOG_ERROR("Failed to validate python node graph {}", this->name);
-                    return status;
-                }
-
-                std::unique_ptr<NodeState> state = std::make_unique<NodeState>();
-                status = state->Create(config.node(i).node_options(0));
-                if (status != StatusCode::OK) {
-                    SPDLOG_ERROR("Failed to process python node graph {}", this->name);
-                    return status;
-                }
-
-                this->pythonNodeStates.insert(std::pair<std::string, std::unique_ptr<NodeState>>(node_name, std::move(state)));
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node missing options in graph: {}. ", this->name);
+                return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
             }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name is missing in graph: {}. ", this->name);
+                return StatusCode::PYTHON_NODE_MISSING_NAME;
+            }
+            std::string nodeName = config.node(i).name();
+            if (this->pythonNodeStates.find(nodeName) != this->pythonNodeStates.end()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
+            }
+
+            // Validate what we can before we create py::object so that we do not have to acquire GIL on empty objects
+            auto status = NodeState::validate(config.node(i).node_options(0));
+            if (!status.ok()) {
+                SPDLOG_ERROR("Failed to validate python node graph {}", this->name);
+                return status;
+            }
+
+            std::shared_ptr<NodeState> state = std::make_shared<NodeState>();
+            status = state->create(config.node(i).node_options(0));
+            if (!status.ok()) {
+                SPDLOG_ERROR("Failed to process python node graph {}", this->name);
+                return status;
+            }
+
+            this->pythonNodeStates.insert(std::pair<std::string, std::shared_ptr<NodeState>>(nodeName, std::move(state)));
         }
     }
+#endif
 
     return StatusCode::OK;
 }
-#endif
 }  // namespace ovms

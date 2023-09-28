@@ -76,13 +76,11 @@ public:
     static std::string getStreamName(const std::string& streamFullName);
     static std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName);
 
-    Status getPythonNodeState(const std::string& node_name, std::unique_ptr<NodeState>& nodeState);
+    NodeState* getPythonNodeState(const std::string& nodeName);
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
-#if (PYTHON_DISABLE == 0)
     Status initializeNodes();
-#endif
     bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
@@ -156,7 +154,7 @@ private:
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 
-    std::map<std::string, std::unique_ptr<NodeState>> pythonNodeStates;
+    std::map<std::string, std::shared_ptr<NodeState>> pythonNodeStates;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

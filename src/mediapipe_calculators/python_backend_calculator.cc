@@ -28,15 +28,25 @@ using namespace py::literals;
 namespace mediapipe {
 
 class PythonBackendCalculator : public CalculatorBase {
+    py::object pyobjectClass;
+
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
+        LOG(ERROR) << "PythonBackendCalculator::GetContract";
+        cc->Inputs().Index(0).Set<ov::Tensor>();
+        cc->Outputs().Index(0).Set<ov::Tensor>();
+        cc->InputSidePackets().Tag("PYOBJECT").Set<py::object>();
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext* cc) final {
         return absl::OkStatus();
     }
+
     absl::Status Open(CalculatorContext* cc) final {
+        LOG(ERROR) << "PythonBackendCalculator::Open";
+        LOG(ERROR) << "Python node name:" << cc->NodeName();
+        pyobjectClass = cc->InputSidePackets().Tag("PYOBJECT").Get<py::object>();
         return absl::OkStatus();
     }
 

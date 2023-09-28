@@ -17,14 +17,14 @@
 // Declaration common for C++ and Python
 // C++ definition part in separate location
 // pybind11 binding part also in separate location
-#ifndef SRC_MEDIAPIPE_CALCULATORS_PYOBJECT_HPP_
-#define SRC_MEDIAPIPE_CALCULATORS_PYOBJECT_HPP_
+#pragma once
 #include <string>
 #include <vector>
 
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h>  // everything needed for embedding
 
+// Temporary added file
 namespace py = pybind11;
 class PYOBJECT {
 public:
@@ -33,5 +33,3 @@ public:
 
 private:
 };
-
-#endif  // SRC_MEDIAPIPE_CALCULATORS_PYOBJECT_HPP_
