@@ -19,6 +19,7 @@
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <optional>
 #include <random>
 #include <sstream>
 #include <thread>
@@ -28,7 +29,6 @@
 #include <signal.h>
 #include <stdio.h>
 #include <sysexits.h>
-#include <optional>
 
 #include "capi_frontend/capi_utils.hpp"
 #include "ovms.h"  // NOLINT
