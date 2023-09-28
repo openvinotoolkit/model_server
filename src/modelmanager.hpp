@@ -479,6 +479,8 @@ public:
      */
     Status configFileReloadNeeded(bool& isNeeded);
 
+    Status parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson);
+
     /**
      * @brief Reads models from configuration file
      * 
