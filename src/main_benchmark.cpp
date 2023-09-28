@@ -239,8 +239,7 @@ void prepareData(std::vector<std::vector<float>>& preparedData, const size_t& nu
     uint64_t seedValue;
     if (seed.has_value()) {
         seedValue = seed.value();
-    }
-    else {
+    } else {
         std::random_device rd;
         seedValue = rd();
     }
