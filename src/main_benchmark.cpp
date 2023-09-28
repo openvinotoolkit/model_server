@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <sysexits.h>
+#include <optional>
 
 #include "capi_frontend/capi_utils.hpp"
 #include "ovms.h"  // NOLINT
@@ -105,7 +106,11 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
             ("mode",
                 "Workload mode. Possible values: INFERENCE_ONLY, RESET_BUFFER, RESET_REQUEST",
                 cxxopts::value<std::string>()->default_value("INFERENCE_ONLY"),
-                "MODE");
+                "MODE")
+            ("seed",
+                "Random values generator seed.",
+                cxxopts::value<uint64_t>(),
+                "SEED");
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
@@ -199,7 +204,8 @@ void triggerInferenceInALoopInferenceOnly(
     double& averageWholeLatency,
     double& averagePureLatency,
     OVMS_Server* server,
-    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName) {
+    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName,
+    std::optional<uint64_t> seed) {
     OVMS_InferenceResponse* response{nullptr};
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
@@ -227,6 +233,28 @@ void triggerInferenceInALoopInferenceOnly(
     OVMS_InferenceRequestDelete(request);
 }
 
+void prepareData(std::vector<std::vector<float>>& preparedData, const size_t& numberOfVectors, const size_t& vectorElementCount, std::optional<uint64_t> seed){
+    std::uniform_real_distribution<float> distribution(0.0, 1.0);
+    std::default_random_engine generator;
+    uint64_t seedValue;
+    if(seed.has_value()){
+        seedValue = seed.value();
+    }
+    else
+    {
+        std::random_device rd;
+        seedValue = rd();
+    }
+    std::cout << "Seed used to generate random values:" << seedValue << std::endl;
+    generator = std::default_random_engine(seedValue);
+    for (size_t i = 0; i < numberOfVectors; i ++) {
+        float random = distribution(generator);
+        std::cout << random << std::endl;
+        std::vector<float> data(vectorElementCount, random);
+        preparedData.push_back(data);
+    }
+}
+
 void triggerInferenceInALoopResetBuffer(
     std::future<void>& startSignal,
     std::promise<void>& readySignal,
@@ -235,20 +263,14 @@ void triggerInferenceInALoopResetBuffer(
     double& averageWholeLatency,
     double& averagePureLatency,
     OVMS_Server* server,
-    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName) {
+    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName,
+    std::optional<uint64_t> seed) {
     OVMS_InferenceResponse* response{nullptr};
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
     std::vector<std::vector<float>> preparedData;
-    std::uniform_real_distribution<float> distribution(0.0, 1.0);
-    std::random_device rd;
-    std::default_random_engine generator(rd());
     auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
-    for (size_t i = 0; i < niterPerThread; i ++) {
-        float random = distribution(generator);
-        std::vector<float> data(elementsCount, random);
-        preparedData.push_back(data);
-    }
+    prepareData(preparedData, niterPerThread, elementsCount, seed);
     std::vector<float> data(elementsCount, 1.0);
     OVMS_InferenceRequest* request = prepareRequest(server, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
     readySignal.set_value();
@@ -283,20 +305,14 @@ void triggerInferenceInALoopResetRequest(
     double& averageWholeLatency,
     double& averagePureLatency,
     OVMS_Server* server,
-    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName) {
+    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName,
+    std::optional<uint64_t> seed) {
     OVMS_InferenceResponse* response{nullptr};
     auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
     std::vector<std::vector<float>> preparedData;
-    std::uniform_real_distribution<float> distribution(0.0, 1.0);
-    std::random_device rd;
-    std::default_random_engine generator(rd());
-    for (size_t i = 0; i < niterPerThread; i ++) {
-        float random = distribution(generator);
-        std::vector<float> data(elementsCount, random);
-        preparedData.push_back(data);
-    }
+    prepareData(preparedData, niterPerThread, elementsCount, seed);
     readySignal.set_value();
     startSignal.get();
     auto workloadStart = std::chrono::high_resolution_clock::now();
@@ -468,6 +484,10 @@ int main(int argc, char** argv) {
         exit(EX_CONFIG);
     }
     OVMS_InferenceResponseDelete(response);
+    std::optional<uint64_t> seed;
+    if(cliparser.result->count("seed")){
+        seed = cliparser.result->operator[]("seed").as<uint64_t>();
+    }
 
     ///////////////////////
     // setup workload machinery
@@ -490,7 +510,7 @@ int main(int argc, char** argv) {
     ///////////////////////
     // prepare threads
     ///////////////////////
-    void (*triggerInferenceInALoop)(std::future<void>&, std::promise<void>&, const size_t, size_t&, double&, double&, OVMS_Server*, const std::string&, int64_t, OVMS_DataType, const signed_shape_t&, const std::string&);
+    void (*triggerInferenceInALoop)(std::future<void>&, std::promise<void>&, const size_t, size_t&, double&, double&, OVMS_Server*, const std::string&, int64_t, OVMS_DataType, const signed_shape_t&, const std::string&, std::optional<uint64_t>);
     if (mode == Mode::INFERENCE_ONLY) {
         triggerInferenceInALoop = triggerInferenceInALoopInferenceOnly;
     } else if (mode == Mode::RESET_BUFFER){
@@ -513,6 +533,7 @@ int main(int argc, char** argv) {
             &shape,
             &inputName,
             &triggerInferenceInALoop,
+            &seed,
             i]() {
                 triggerInferenceInALoop(
                     futureStartSignals[i],
@@ -522,7 +543,8 @@ int main(int argc, char** argv) {
                     wholeTimes[i],
                     pureTimes[i],
                     srv,
-                    servableName, servableVersion, datatype, shape, inputName);
+                    servableName, servableVersion, datatype, shape, inputName,
+                    seed);
             }));
     }
 
