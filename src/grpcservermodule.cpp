@@ -141,6 +141,9 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         } catch (std::out_of_range const& e) {
             SPDLOG_WARN("Out of range parameter {} : {}", channel_argument.key, channel_argument.value);
         }
+        ::grpc::ResourceQuota res_quota;
+        res_quota.SetMaxThreads(config.grpcMaxThreads());
+        builder.SetResourceQuota(res_quota);
     }
     uint grpcServersCount = getGRPCServersCount(config);
     servers.reserve(grpcServersCount);

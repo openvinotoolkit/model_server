@@ -130,6 +130,14 @@ public:
     uint32_t grpcWorkers() const;
 
     /**
+         * @brief Set the resource quota on gRPC server
+         * 
+         * @return uint
+         */
+    uint32_t grpcMaxThreads() const;
+
+
+    /**
          * @brief Gets the rest workers count
          * 
          * @return uint

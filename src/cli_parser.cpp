@@ -56,6 +56,10 @@ void CLIParser::parse(int argc, char** argv) {
                 "Number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "GRPC_WORKERS")
+            ("grpc_max_threads",
+                "Maximum number of threads which can be handled by the grpc server. Default value depends on number of CPUs.",
+                cxxopts::value<uint32_t>(),
+                "GRPC_WORKERS")                
             ("rest_workers",
                 "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
                 cxxopts::value<uint32_t>(),
