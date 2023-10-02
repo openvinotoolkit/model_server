@@ -43,8 +43,9 @@ clean:
 	mkdir -vp capi/$(DIST_OS)/demos && cd capi/$(DIST_OS)
 
 from_docker:
+	mkdir -p capi/$(DIST_OS)
 	docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
-			"tar -c -C / ovms.tar.gz ; sleep 2" | tar -x -C capi/$(DIST_OS)/ && cd ../../
+			"tar -c -C /ovms_pkg/$(DIST_OS) ovms.tar.gz ; sleep 2" | tar -x -C capi/$(DIST_OS)/ && cd ../../
 	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG))
 
 from_web:
