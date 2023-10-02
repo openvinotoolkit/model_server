@@ -77,11 +77,10 @@ RUN mkdir /bazel && \
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-WORKDIR /input/images
-RUN cd /input/ && wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.1/example_client/input_images.txt && \
-    cd /input/images && curl -sS https://github.com/openvinotoolkit/model_server/tree/v2021.4.1/example_client/images | \
-    grep -oh "\/images.*jpeg" | cut -c 9- | cut -f1 -d"\"" | \
-    xargs -I %s wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.1/example_client/images/%s
+WORKDIR /input
+RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_classification/input_images.txt && \
+    mkdir images && \
+    for I in `cat input_images.txt  | cut -d"/" -f6 | cut -d" " -f1` ; do curl  https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/$I -o images/$I --create-dirs; done
 
 WORKDIR /build
 COPY .bazelrc WORKSPACE /build/
@@ -92,16 +91,12 @@ RUN cp /build/third_party/opencv/install_opencv.sh /build/third_party/opencv/ope
 
 RUN bazel build @org_tensorflow//tensorflow/core:framework
 
-# Patch apple build scripts
-RUN cp -rf /build/third_party/build_bazel_rules_apple/bazel_rules_apple.patch $(bazel info output_base)/external/build_bazel_rules_apple/
-RUN cd $(bazel info output_base)/external/build_bazel_rules_apple/ && patch -p1 < bazel_rules_apple.patch   
-
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
     @com_github_grpc_grpc//:grpc++ \
     @com_google_protobuf//:protobuf_lite \
     @org_tensorflow//tensorflow/core:lib \
-    @opencv//:opencv
+    @linux_opencv//:opencv
 
 COPY src/ /build/src/
 

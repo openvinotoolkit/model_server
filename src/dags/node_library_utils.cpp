@@ -104,7 +104,7 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const Ten
     return inputTensors;
 }
 
-Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback, void* customNodeLibraryInternalManager) {
+Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<const TensorInfo>>& out, release_fn freeCallback, void* customNodeLibraryInternalManager) {
     if (info == nullptr) {
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED;
     }
@@ -115,13 +115,6 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
     // At this point it is important to not exit before we iterate over every info object.
     // This is due to a fact that we need to ensure to free resources allocated by shared library using freeCallback.
     for (int i = 0; i < infoCount; i++) {
-        if (info[i].dims == nullptr) {
-            continue;
-        }
-        if (info[i].dimsCount == 0) {
-            freeCallback(info[i].dims, customNodeLibraryInternalManager);
-            continue;
-        }
         if (info[i].name == nullptr) {
             continue;
         }

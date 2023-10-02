@@ -17,19 +17,64 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
-#include "../buffer.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"
+#include "buffer.hpp"
+#include "inferencerequest.hpp"
+#include "inferenceresponse.hpp"
 
 namespace ovms {
+size_t DataTypeToByteSize(OVMS_DataType datatype) {
+    static std::unordered_map<OVMS_DataType, size_t> datatypeSizeMap{
+        {OVMS_DATATYPE_BOOL, 1},
+        {OVMS_DATATYPE_U1, 1},
+        {OVMS_DATATYPE_U4, 1},
+        {OVMS_DATATYPE_U8, 1},
+        {OVMS_DATATYPE_U16, 2},
+        {OVMS_DATATYPE_U32, 4},
+        {OVMS_DATATYPE_U64, 8},
+        {OVMS_DATATYPE_I4, 1},
+        {OVMS_DATATYPE_I8, 1},
+        {OVMS_DATATYPE_I16, 2},
+        {OVMS_DATATYPE_I32, 4},
+        {OVMS_DATATYPE_I64, 8},
+        {OVMS_DATATYPE_FP16, 2},
+        {OVMS_DATATYPE_FP32, 4},
+        {OVMS_DATATYPE_FP64, 8},
+        {OVMS_DATATYPE_BF16, 2},
+        // {"BYTES", },
+    };
+    auto it = datatypeSizeMap.find(datatype);
+    if (it == datatypeSizeMap.end()) {
+        return 0;
+    }
+    return it->second;
+}
 
-std::string tensorShapeToString(const Shape& shape) {
-    return shape.toString();
+OVMS_ServableState convertToServableState(ovms::PipelineDefinitionStateCode code) {
+    switch (code) {
+    case ovms::PipelineDefinitionStateCode::BEGIN:
+        return OVMS_ServableState::OVMS_STATE_BEGIN;
+    case ovms::PipelineDefinitionStateCode::RELOADING:
+        return OVMS_ServableState::OVMS_STATE_LOADING;
+    case ovms::PipelineDefinitionStateCode::AVAILABLE:
+    case ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION:
+        return OVMS_ServableState::OVMS_STATE_AVAILABLE;
+    case ovms::PipelineDefinitionStateCode::RETIRED:
+        return OVMS_ServableState::OVMS_STATE_RETIRED;
+    case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED:
+    case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION:
+        return OVMS_ServableState::OVMS_STATE_LOADING_FAILED;
+    }
+    throw new std::exception();
+}
+
+std::string tensorShapeToString(const signed_shape_t& shape) {
+    return shapeToString(shape);
 }
 
 OVMS_DataType getPrecisionAsOVMSDataType(Precision precision) {
@@ -144,7 +189,7 @@ Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::str
     Status status = response->addOutput(
         name,
         getPrecisionAsOVMSDataType(ovElementTypeToOvmsPrecision(precision)),
-        shape.data(),
+        reinterpret_cast<const int64_t*>(shape.data()),
         shape.size());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to prepare consolidated tensor, servable: {}; tensor with name: {}", response->getServableName(), name);
@@ -168,5 +213,8 @@ Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::str
     SPDLOG_LOGGER_ERROR(dag_executor_logger, "Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find output",
         name, response->getServableName(), response->getServableVersion());
     return StatusCode::INTERNAL_ERROR;
+}
+bool requiresPreProcessing(const InferenceTensor& tensor) {
+    return false;
 }
 }  // namespace ovms

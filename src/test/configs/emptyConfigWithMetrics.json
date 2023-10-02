@@ -1,0 +1,14 @@
+{
+    "monitoring": {
+        "metrics": {
+            "enable": true,
+            "metrics_list": [
+                "ovms_current_requests",
+                "ovms_infer_req_active",
+                "ovms_requests_success",
+                "ovms_infer_req_queue_size"]
+        }
+    },
+    "model_config_list": [
+    ]
+}

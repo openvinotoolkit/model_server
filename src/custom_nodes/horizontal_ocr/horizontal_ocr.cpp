@@ -23,13 +23,12 @@
 #include "opencv2/opencv.hpp"
 
 static constexpr const char* IMAGE_TENSOR_NAME = "image";
-static constexpr const char* SCORES_TENSOR_NAME = "scores";
 static constexpr const char* GEOMETRY_TENSOR_NAME = "boxes";
 static constexpr const char* TEXT_IMAGES_TENSOR_NAME = "text_images";
 static constexpr const char* COORDINATES_TENSOR_NAME = "text_coordinates";
 static constexpr const char* CONFIDENCE_TENSOR_NAME = "confidence_levels";
 
-bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale) {
+static bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale) {
     const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
@@ -75,7 +74,7 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     return true;
 }
 
-bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
+static bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
     const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
@@ -102,7 +101,7 @@ bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::ve
     return true;
 }
 
-bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
+static bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
     const uint64_t outputBatch = scores.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 
@@ -198,7 +197,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     uint64_t _numDetections = boxesTensor->dims[0];
     uint64_t _numItems = boxesTensor->dims[1];
-    NODE_ASSERT(boxesTensor->dims[0] == 100, "boxes has dim 0 not equal to 100");
+    NODE_ASSERT(boxesTensor->dimsCount == 2, "boxes shape needs to have 2 dimensions");
     NODE_ASSERT(boxesTensor->dims[1] == 5, "boxes has dim 1 not equal to 5");
     int numDetections = static_cast<int>(_numDetections);
     int numItems = static_cast<int>(_numItems);
@@ -300,7 +299,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)[1].dimsCount = 2;
     (*info)[1].dims = (uint64_t*)malloc((*info)[1].dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[1].dims) != nullptr, "malloc has failed");
-    (*info)[1].dims[0] = 100;
+    (*info)[1].dims[0] = 0;
     (*info)[1].dims[1] = 5;
     (*info)[1].precision = FP32;
     return 0;

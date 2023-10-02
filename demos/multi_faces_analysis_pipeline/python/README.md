@@ -1,7 +1,7 @@
 # Multi Faces Analysis Pipeline Demo {#ovms_demo_multi_faces_analysis_pipeline}
 
 
-This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/emotions-recognition-retail-0003/README.md) models.
+This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/emotions-recognition-retail-0003/README.md) models.
 
 ![Multi Faces Analysis Graph](multi_faces_analysis.png)
 
@@ -20,8 +20,8 @@ Below is depicted graph implementing faces analysis pipeline execution.
 It includes the following Nodes:
 - Model `face-detection` - deep learning model which takes user image as input. Its outputs contain information about face coordinates and confidence levels.
 - Custom node `model_zoo_intel_object_detection` - it includes C++ implementation of common object detection models results processing. By analysing the output it produces cropped face images based on the configurable score level threshold. Custom node also resizes them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
-boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/model_zoo_intel_object_detection).
-- demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. In order to match it with the sequential recognition models, data is split into individuial images with each batch size equal to 1.
+boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection).
+- demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. In order to match it with the sequential recognition models, data is split into individual images with each batch size equal to 1.
 Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](../../../docs/demultiplexing.md).
 - Model `age-gender-recognition` - this model recognizes age and gender on given face image
 - Model `emotion-recognition` - this model outputs emotion probability for emotions: neutral, happy, sad, surprised and angry
@@ -42,13 +42,44 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/multi_faces_analysis_pipeline/python
 ```
 
-You can prepare the workspace that contains all the above by just running
+You can prepare the workspace that contains all the above by just running `make` command.
+Since custom node used in this demo is included in OpenVINO Model Server image you can either use the custom node from the image, or build one.
+
+If you just want to quickly run this demo and use already compiled custom node, run: 
 
 ```bash
 make
 ```
 
-### Final directory structure
+#### Directory structure (without custom node)
+
+Once the `make` procedure is finished, you should have `workspace` directory ready with the following content.
+
+```bash
+workspace
+├── age-gender-recognition-retail-0013
+│   └── 1
+│       ├── age-gender-recognition-retail-0013.bin
+│       └── age-gender-recognition-retail-0013.xml
+├── config.json
+├── emotion-recognition-retail-0003
+│   └── 1
+│       ├── emotions-recognition-retail-0003.bin
+│       └── emotions-recognition-retail-0003.xml
+└── face-detection-retail-0004
+    └── 1
+        ├── face-detection-retail-0004.bin
+        └── face-detection-retail-0004.xml
+
+```
+
+If you modified the custom node or for some other reason, you want to have it compiled and then attached to the container, run:
+
+```bash
+make BUILD_CUSTOM_NODE=true BASE_OS=ubuntu
+```
+
+#### Directory structure (with custom node)
 
 Once the `make` procedure is finished, you should have `workspace` directory ready with the following content.
 ```bash

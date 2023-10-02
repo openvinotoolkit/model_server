@@ -1,0 +1,10 @@
+grpcio
+requests
+tensorflow~=2.11.1
+tensorflow-serving-api
+pymongo
+retry
+PyYAML
+pypng
+nvidia-pyindex
+tritonclient[all]

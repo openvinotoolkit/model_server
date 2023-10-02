@@ -1,0 +1,65 @@
+#
+# Copyright 2023 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+input_stream: "in"
+output_stream: "out_1"
+output_stream: "out_2"
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "dummy"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "B:in"
+  output_stream: "A:out_1"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+      tag_to_input_tensor_names {
+        key: "B"
+        value: "b"
+      }
+      tag_to_output_tensor_names {
+        key: "A"
+        value: "a"
+      }
+    }
+  }
+}
+
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "D:in"
+  output_stream: "C:out_2"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+      tag_to_input_tensor_names {
+        key: "D"
+        value: "b"
+      }
+      tag_to_output_tensor_names {
+        key: "C"
+        value: "a"
+      }
+    }
+  }
+}

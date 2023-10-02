@@ -47,7 +47,7 @@ static constexpr const char* OUTPUT_IMAGES_INFO_DIMS_NAME = "images_info_dims";
 static constexpr const char* OUTPUT_CONFIDENCES_INFO_DIMS_NAME = "confidences_info_dims";
 static constexpr const char* OUTPUT_LABEL_IDS_INFO_DIMS_NAME = "label_ids_info_dims";
 
-bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, CustomNodeLibraryInternalManager* internalManager) {
+static bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
@@ -98,7 +98,7 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     return true;
 }
 
-bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Vec4f>& detections, CustomNodeLibraryInternalManager* internalManager) {
+static bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Vec4f>& detections, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = detections.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
@@ -125,7 +125,7 @@ bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::ve
     return true;
 }
 
-bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::vector<float>& confidences, CustomNodeLibraryInternalManager* internalManager) {
+static bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::vector<float>& confidences, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = confidences.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 
@@ -148,7 +148,7 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
     return true;
 }
 
-bool copy_label_ids_into_output(struct CustomNodeTensor* output, const std::vector<int>& labelIds, CustomNodeLibraryInternalManager* internalManager) {
+static bool copy_label_ids_into_output(struct CustomNodeTensor* output, const std::vector<int>& labelIds, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = labelIds.size();
     uint64_t byteSize = sizeof(int32_t) * outputBatch;
 

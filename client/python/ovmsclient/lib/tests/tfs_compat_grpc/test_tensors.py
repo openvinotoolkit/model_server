@@ -348,17 +348,52 @@ def test_make_tensor_proto_valid_scalar(params, expected_shape, expected_dtype, 
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]), DataType.DT_STRING,
      "string_val"
      ),
+    ({"values": [[bytes([0x13, 0x00, 0x00, 0x00, 0x08]), bytes([0x13, 0x00, 0x00, 0x00, 0x08])]],
+      "dtype": DataType.DT_STRING},
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=1), TensorShapeProto.Dim(size=2)]),
+     DataType.DT_STRING,
+     "string_val"
+     ),
 ])
-def test_make_tensor_proto_valid_string(params, expected_shape, expected_dtype, expected_field):
+def test_make_tensor_proto_valid_binary(params, expected_shape, expected_dtype, expected_field):
     tensor_proto = make_tensor_proto(**params)
 
     if expected_field == "string_val":
-        assert tensor_proto.__getattribute__(expected_field) == [params["values"]]
+        if type(params["values"]) is not list:
+            assert tensor_proto.__getattribute__(expected_field) == [params["values"]]
+        else:
+            assert (tensor_proto.__getattribute__(expected_field)
+                    == np.ravel(params["values"]).tolist())
     else:
         assert (tensor_proto.__getattribute__(expected_field)
                 == np.frombuffer(params["values"],
                                  dtype=TENSOR_TO_NP_MAP.get(expected_dtype)).tolist())
     assert tensor_proto.dtype == expected_dtype
+    assert tensor_proto.tensor_shape == expected_shape
+
+
+@pytest.mark.parametrize("params, expected_shape", [
+    ({"values": "string", "dtype": DataType.DT_STRING},
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)])
+     ),
+    ({"values": ["list", "of", "strings"], "shape": [3], "dtype": DataType.DT_STRING},
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)])
+     ),
+    ({"values": [["nested", "list", "of", "strings"]]},
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=1), TensorShapeProto.Dim(size=4)])
+     ),
+    # Upon numpy array creation it will be casted to numpy.str_ data type
+    ({"values": [1, 2, "three"]},
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)])
+     ),
+    ({"values": [[1, 2], [3, "four"]]},
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=2)])
+     ),
+])
+def test_make_tensor_proto_valid_string(params, expected_shape):
+    tensor_proto = make_tensor_proto(**params)
+    assert tensor_proto.string_val == np.ravel(params["values"]).astype(np.bytes_).tolist()
+    assert tensor_proto.dtype == DataType.DT_STRING
     assert tensor_proto.tensor_shape == expected_shape
 
 
@@ -625,40 +660,6 @@ def test_make_tensor_proto_invalid_values_type():
     assert str(exception) == "values type should be (list, np.ndarray, scalar), but is tuple"
 
 
-def test_make_tensor_proto_invalid_string_2D_array():
-    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-    with pytest.raises(ValueError) as exception_info:
-        make_tensor_proto(values=[[values, values], [values, values]],
-                          shape=None, dtype=DataType.DT_STRING)
-    exception = exception_info.value
-    assert str(exception) == "bytes values with dtype DT_STRING must be in shape [N]"
-
-
-def test_make_tensor_proto_invalid_string_reshape():
-    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-    with pytest.raises(ValueError) as exception_info:
-        make_tensor_proto(values=values, shape=[6], dtype=DataType.DT_STRING)
-    exception = exception_info.value
-    assert str(exception) == "cannot reshape array of size 1 into shape (6,)"
-
-
-def test_make_tensor_proto_invalid_string_reshape_2():
-    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-    with pytest.raises(ValueError) as exception_info:
-        make_tensor_proto(values=values, shape=[2, 3], dtype=DataType.DT_STRING)
-    exception = exception_info.value
-    assert str(exception) == "bytes values with dtype DT_STRING must be in shape [N]"
-
-
-def test_make_tensor_proto_invalid_string_2D_array_with_shape():
-    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-    with pytest.raises(ValueError) as exception_info:
-        make_tensor_proto(values=[[values, values], [values, values]],
-                          shape=[2, 2], dtype=DataType.DT_STRING)
-    exception = exception_info.value
-    assert str(exception) == "bytes values with dtype DT_STRING must be in shape [N]"
-
-
 def test_make_tensor_proto_invalid_int_reshape():
     values = [1, 2, 3]
     with pytest.raises(ValueError) as exception_info:
@@ -673,11 +674,3 @@ def test_make_tensor_proto_invalid_empty_list_of_empty_lists_reshape():
         make_tensor_proto(values=values, shape=[4, 2], dtype=DataType.DT_INT8)
     exception = exception_info.value
     assert str(exception) == "cannot reshape array of size 0 into shape (4,2)"
-
-
-def test_make_tensor_proto_invalid_dtype_provided():
-    values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
-    with pytest.raises(ValueError) as exception_info:
-        make_tensor_proto(values=values, shape=None, dtype=DataType.DT_STRING)
-    exception = exception_info.value
-    assert str(exception) == "bytes values with dtype DT_STRING must be in shape [N]"

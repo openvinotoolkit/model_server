@@ -53,6 +53,55 @@ TFSDataType getPrecisionAsDataType(Precision precision) {
     return it->second;
 }
 
+TfLiteType getPrecisionAsTfLiteDataType(Precision precision) {
+    static std::unordered_map<Precision, TfLiteType> precisionMap{
+        {Precision::FP32, kTfLiteFloat32},
+        {Precision::FP64, kTfLiteFloat64},
+        {Precision::FP16, kTfLiteFloat16},
+        {Precision::I64, kTfLiteInt64},
+        {Precision::I32, kTfLiteInt32},
+        {Precision::I16, kTfLiteInt16},
+        {Precision::I8, kTfLiteInt8},
+        {Precision::U64, kTfLiteUInt64},
+        {Precision::U16, kTfLiteUInt16},
+        {Precision::U8, kTfLiteUInt8},
+        //    {Precision::MIXED, kTfLite},
+        //    {Precision::Q78, kTfLite},
+        //    {Precision::BIN, kTfLite},
+        {Precision::BOOL, kTfLiteBool}
+        //    {Precision::CUSTOM, kTfLite}
+    };
+    auto it = precisionMap.find(precision);
+    if (it == precisionMap.end()) {
+        return kTfLiteNoType;
+    }
+    return it->second;
+}
+
+Precision TfLitePrecisionToOvmsPrecision(TfLiteType precision) {
+    static std::unordered_map<TfLiteType, Precision> precisionMap{
+        {kTfLiteFloat32, Precision::FP32},
+        {kTfLiteFloat64, Precision::FP64},
+        {kTfLiteFloat16, Precision::FP16},
+        {kTfLiteInt64, Precision::I64},
+        {kTfLiteInt32, Precision::I32},
+        {kTfLiteInt16, Precision::I16},
+        {kTfLiteInt8, Precision::I8},
+        {kTfLiteUInt64, Precision::U64},
+        {kTfLiteUInt16, Precision::U16},
+        {kTfLiteUInt8, Precision::U8},
+        //    {kTfLite, Precision::MIXED},
+        //    {kTfLite, Precision::Q78},
+        //    {kTfLite, Precision::BIN},
+        {kTfLiteBool, Precision::BOOL}
+        //    {kTfLite, Precision::CUSTOM}
+    };
+    auto it = precisionMap.find(precision);
+    if (it == precisionMap.end()) {
+        return Precision::UNDEFINED;
+    }
+    return it->second;
+}
 std::string getDataTypeAsString(TFSDataType dataType) {
     switch (dataType) {
     case TFSDataType::DT_FLOAT:
@@ -146,5 +195,26 @@ Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::strin
 bool isNativeFileFormatUsed(const TFSInputTensorType& proto) {
     return proto.dtype() == TFSDataType::DT_STRING;
     // return request.string_val_size() > 0;
+}
+
+bool requiresPreProcessing(const TFSInputTensorType& proto) {
+    return proto.dtype() == tensorflow::DataType::DT_STRING;
+}
+
+std::string& createOrGetString(TFSInputTensorType& proto, int index) {
+    while (proto.string_val_size() <= index) {
+        proto.add_string_val();
+    }
+    return *proto.mutable_string_val(index);
+}
+
+void setBatchSize(TFSInputTensorType& proto, int64_t batch) {
+    if (proto.tensor_shape().dim_size() == 0) {
+        proto.mutable_tensor_shape()->add_dim();
+    }
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batch);
+}
+void setStringPrecision(TFSInputTensorType& proto) {
+    proto.set_dtype(TFSDataType::DT_STRING);
 }
 }  // namespace ovms

@@ -37,29 +37,6 @@ const std::string AzureStorageAdapter::extractAzureStorageExceptionMessage(const
     }
 }
 
-std::string AzureStorageAdapter::joinPath(std::initializer_list<std::string> segments) {
-    std::string joined;
-
-    for (const auto& seg : segments) {
-        if (joined.empty()) {
-            joined = seg;
-        } else if (isAbsolutePath(seg)) {
-            if (joined[joined.size() - 1] == '/') {
-                joined.append(seg.substr(1));
-            } else {
-                joined.append(seg);
-            }
-        } else {
-            if (joined[joined.size() - 1] != '/') {
-                joined.append("/");
-            }
-            joined.append(seg);
-        }
-    }
-
-    return joined;
-}
-
 StatusCode AzureStorageAdapter::CreateLocalDir(const std::string& path) {
     int status =
         mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
@@ -470,8 +447,8 @@ StatusCode AzureStorageBlob::downloadFileFolderTo(const std::string& local_path)
         }
 
         for (auto&& d : dirs) {
-            std::string remote_dir_path = joinPath({fullUri_, d});
-            std::string local_dir_path = joinPath({local_path, d});
+            std::string remote_dir_path = FileSystem::joinPath({fullUri_, d});
+            std::string local_dir_path = FileSystem::joinPath({local_path, d});
             SPDLOG_LOGGER_TRACE(azurestorage_logger, "Processing directory {} from {} -> {}", d, remote_dir_path,
                 local_dir_path);
 
@@ -498,8 +475,8 @@ StatusCode AzureStorageBlob::downloadFileFolderTo(const std::string& local_path)
         }
 
         for (auto&& f : files) {
-            std::string remote_file_path = joinPath({fullUri_, f});
-            std::string local_file_path = joinPath({local_path, f});
+            std::string remote_file_path = FileSystem::joinPath({fullUri_, f});
+            std::string local_file_path = FileSystem::joinPath({local_path, f});
             SPDLOG_LOGGER_TRACE(azurestorage_logger, "Processing file {} from {} -> {}", f, remote_file_path,
                 local_file_path);
 
@@ -555,9 +532,9 @@ StatusCode AzureStorageBlob::parseFilePath(const std::string& path) {
     fullUri_ = path;
     int share_start = 0;
     // Blob path
-    if (path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos) {
-        share_start = path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) + AzureFileSystem::AZURE_URL_BLOB_PREFIX.size();
-    } else if (path.find(AzureFileSystem::AZURE_URL_FILE_PREFIX) != std::string::npos) {
+    if (path.find(FileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos) {
+        share_start = path.find(FileSystem::AZURE_URL_BLOB_PREFIX) + FileSystem::AZURE_URL_BLOB_PREFIX.size();
+    } else if (path.find(FileSystem::AZURE_URL_FILE_PREFIX) != std::string::npos) {
         // File path
         SPDLOG_LOGGER_ERROR(azurestorage_logger, "Wrong object type - az:// prefix in path required, azure:// found:", path);
         return StatusCode::AS_INVALID_PATH;
@@ -1064,8 +1041,8 @@ StatusCode AzureStorageFile::downloadFileFolderTo(const std::string& local_path)
         }
 
         for (auto&& d : dirs) {
-            std::string remote_dir_path = joinPath({fullUri_, d});
-            std::string local_dir_path = joinPath({local_path, d});
+            std::string remote_dir_path = FileSystem::joinPath({fullUri_, d});
+            std::string local_dir_path = FileSystem::joinPath({local_path, d});
             SPDLOG_LOGGER_TRACE(azurestorage_logger, "Processing directory {} from {} -> {}", d, remote_dir_path,
                 local_dir_path);
 
@@ -1092,8 +1069,8 @@ StatusCode AzureStorageFile::downloadFileFolderTo(const std::string& local_path)
         }
 
         for (auto&& f : files) {
-            std::string remote_file_path = joinPath({fullUri_, f});
-            std::string local_file_path = joinPath({local_path, f});
+            std::string remote_file_path = FileSystem::joinPath({fullUri_, f});
+            std::string local_file_path = FileSystem::joinPath({local_path, f});
             SPDLOG_LOGGER_TRACE(azurestorage_logger, "Processing file {} from {} -> {}", f, remote_file_path,
                 local_file_path);
 
@@ -1154,9 +1131,9 @@ StatusCode AzureStorageFile::parseFilePath(const std::string& path) {
     fullUri_ = path;
     int share_start = 0;
     // File or directory path
-    if (path.find(AzureFileSystem::AZURE_URL_FILE_PREFIX) != std::string::npos) {
-        share_start = path.find(AzureFileSystem::AZURE_URL_FILE_PREFIX) + AzureFileSystem::AZURE_URL_FILE_PREFIX.size();
-    } else if (path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos) {
+    if (path.find(FileSystem::AZURE_URL_FILE_PREFIX) != std::string::npos) {
+        share_start = path.find(FileSystem::AZURE_URL_FILE_PREFIX) + FileSystem::AZURE_URL_FILE_PREFIX.size();
+    } else if (path.find(FileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos) {
         // Blob path
         SPDLOG_LOGGER_ERROR(azurestorage_logger, "Wrong object type. azfs:// prefix in path required, found az://:", path);
         return StatusCode::AS_INVALID_PATH;
@@ -1212,7 +1189,7 @@ std::shared_ptr<AzureStorageAdapter> AzureStorageFactory::getNewAzureStorageObje
 }
 
 bool AzureStorageFactory::isBlobStoragePath(std::string path) {
-    return (path.find(AzureFileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos);
+    return (path.find(FileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos);
 }
 
 }  // namespace ovms

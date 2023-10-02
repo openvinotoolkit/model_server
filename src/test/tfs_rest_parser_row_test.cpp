@@ -110,6 +110,33 @@ TEST(TFSRestParserRow, ParseValid2Inputs) {
                                                               14.0, 15.0, 16.0));
 }
 
+TEST(TFSRestParserRow, InvalidShape_1D) {
+    TFSRestParser parser(prepareTensors({{"i", {2}}}));
+
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":12.0}, {"i":[[13.0]]}
+    ]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[[12.0]]}, {"i":13.0}
+    ]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+}
+
+TEST(TFSRestParserRow, ValidShape_2) {
+    TFSRestParser parser(prepareTensors({{"i", {2}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":12.0}, {"i":13.0}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2));
+    // Precision?
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(12.0, 13.0));
+}
+
 TEST(TFSRestParserRow, ValidShape_1x1) {
     TFSRestParser parser(prepareTensors({{"i", {1, 1}}}));
 
@@ -134,6 +161,20 @@ TEST(TFSRestParserRow, ValidShape_1x2) {
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
     EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1, 2));
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 56.0));
+}
+
+TEST(TFSRestParserRow, ValidShape_2x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 0}}}, ovms::Precision::I32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[ ]}, {"i":[ ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_INT32);
 }
 
 TEST(TFSRestParserRow, ValidShape_2x1) {
@@ -258,6 +299,33 @@ TEST(TFSRestParserRow, ValidShape_2x1x3x1x5) {
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9));
 }
 
+TEST(TFSRestParserRow, ValidShape_2x1x3x1x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 0}}}, ovms::Precision::FP32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ]},
+        {"i":[
+            [
+                [[ ]],
+                [[ ]],
+                [[ ]]
+            ]
+        ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3, 1, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_FLOAT);
+}
+
 TEST(TFSRestParserRow, MissingInputInBatch) {
     TFSRestParser parser(prepareTensors({{"i", {2, 1, 2, 2}},
         {"j", {1, 1, 2, 2}}}));
@@ -353,27 +421,31 @@ TEST(TFSRestParserRow, ParseHalf) {
     ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[-5.1222, 0.434422, -4.52122, 155234.22122]]}]})"), StatusCode::OK);
 }
 
+static void checkParseStatusAndMessage(TFSRestParser& parser, const char* json, StatusCode expectedStatus, const char* expectedMessage) {
+    auto status = parser.parse(json);
+    EXPECT_EQ(status.getCode(), expectedStatus);
+    EXPECT_EQ(status.string(), expectedMessage);
+}
+
 TEST(TFSRestParserRow, InvalidJson) {
     TFSRestParser parser(prepareTensors({{"i", {1, 3, 2}}}));
 
-    EXPECT_EQ(parser.parse(""),
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse("{{}"),
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name:"","instances":[{"i":[1]}]})"),  // missing "
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{i":[1]}]})"),  // missing "
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1}]})"),  // missing ]
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1]}])"),  // missing }
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"(["signature_name":"","instances":[{"i":[1]}]})"),  // missing {
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":{[{"i":[1]}]})"),  // too many {
-        StatusCode::JSON_INVALID);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[1.0,5.0],[3.0,0.0] [9.0,5.0]]}]})"),  // missing ,
-        StatusCode::JSON_INVALID);
+    checkParseStatusAndMessage(parser, "", StatusCode::JSON_INVALID, "The file is not valid json - Error: The document is empty. Offset: 0");
+    checkParseStatusAndMessage(parser, "{{}", StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a name for object member. Offset: 1");
+    checkParseStatusAndMessage(parser, R"({"signature_name:"","instances":[{"i":[1]}]})",
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a colon after a name of object member. Offset: 18");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{i":[1]}]})",  // missing "
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a name for object member. Offset: 35");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{"i":[1}]})",  // missing ]
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a comma or ']' after an array element. Offset: 41");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{"i":[1]}])",  // missing }
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a comma or '}' after an object member. Offset: 44");
+    checkParseStatusAndMessage(parser, R"(["signature_name":"","instances":[{"i":[1]}]})",  // missing {
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a comma or ']' after an array element. Offset: 17");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":{[{"i":[1]}]})",  // too many {
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a name for object member. Offset: 34");
+    checkParseStatusAndMessage(parser, R"({"signature_name":"","instances":[{"i":[[1.0,5.0],[3.0,0.0] [9.0,5.0]]}]})",  // missing ,
+        StatusCode::JSON_INVALID, "The file is not valid json - Error: Missing a comma or ']' after an array element. Offset: 60");
 }
 
 TEST(TFSRestParserRow, BodyNotAnObject) {
@@ -411,7 +483,6 @@ TEST(TFSRestParserRow, NamedInstanceNotAnObject) {
 TEST(TFSRestParserRow, CouldNotDetectNamedOrNoNamed) {
     TFSRestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":["1", "2"]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[null, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
 }
 
@@ -425,7 +496,6 @@ TEST(TFSRestParserRow, CannotParseInstance) {
     TFSRestParser parser(prepareTensors({{"i", {1, 2}}}));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":2}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":null}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1,null]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[1,2],[3,"str"]]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);

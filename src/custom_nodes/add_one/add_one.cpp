@@ -34,7 +34,7 @@ static constexpr const char* OUTPUT_TENSOR_DIMS_NAME = "output_dims";
 static constexpr const char* OUTPUT_INFO_NAME = "output_info";
 static constexpr const char* OUTPUT_INFO_DIMS_NAME = "output_info_dims";
 
-int initializeInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+static int initializeInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     std::unique_ptr<InternalManager> internalManager = std::make_unique<InternalManager>();
     NODE_ASSERT(internalManager != nullptr, "internalManager allocation failed");
 
@@ -63,7 +63,7 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     return 0;
 }
 
-int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+static int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     InternalManager* internalManager = static_cast<InternalManager*>(*customNodeLibraryInternalManager);
     NODE_ASSERT(internalManager != nullptr, "internalManager is not initialized");
     std::unique_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());

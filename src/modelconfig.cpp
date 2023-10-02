@@ -26,6 +26,7 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
+#include "filesystem.hpp"
 #include "logging.hpp"
 #include "model_version_policy.hpp"
 #include "schema.hpp"
@@ -205,7 +206,7 @@ std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(st
     std::optional<Dimension> effectiveBatchSize = std::nullopt;
     if (configBatchSize == "auto") {
         batchingMode = AUTO;
-    } else if (configBatchSize == "0") {
+    } else if (configBatchSize == "") {
         // do nothing
     } else {
         Dimension dim;
@@ -251,6 +252,11 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
         }
         m = specific.FindMember("versions");
         if (m == specific.MemberEnd()) {
+            SPDLOG_WARN("Model policy is invalid. 'specific' policy should include 'versions' item with a list of numbers as a value");
+            return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
+        }
+        if (!m->value.IsArray()) {
+            SPDLOG_WARN("Model policy is invalid. 'versions' item should have a list of numbers as a value, for example [1,2]");
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
         std::vector<model_version_t> versions;
@@ -504,7 +510,12 @@ Status ModelConfig::parseModelMapping() {
 
 Status ModelConfig::parseNode(const rapidjson::Value& v) {
     this->setName(v["name"].GetString());
-    this->setBasePath(v["base_path"].GetString());
+    try {
+        this->setBasePath(v["base_path"].GetString());
+    } catch (std::logic_error& e) {
+        SPDLOG_DEBUG("Relative path error: {}", e.what());
+        return StatusCode::INTERNAL_ERROR;
+    }
     Status firstErrorStatus = StatusCode::OK;
 
     // Check for optional parameters
@@ -738,6 +749,9 @@ std::string ModelConfig::layoutConfigurationToString() const {
         ss << name << " " << layoutCfg.toString() << "; ";
     }
     return ss.str();
+}
+void ModelConfig::setBasePath(const std::string& basePath) {
+    FileSystem::setPath(this->basePath, basePath, this->rootDirectoryPath);
 }
 
 }  // namespace ovms

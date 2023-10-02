@@ -27,34 +27,41 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "binaryutils.hpp"
-#include "inferencerequest.hpp"
-#include "inferencetensor.hpp"
+#include "capi_frontend/inferencerequest.hpp"
+#include "capi_frontend/inferencetensor.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
+#include "tensor_conversion.hpp"
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 
+#define RETURN_IF_ERR(X)   \
+    {                      \
+        auto status = (X); \
+        if (!status.ok())  \
+            return status; \
+    }
+
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::shared_ptr<const TensorInfo>& tensorInfo,
     const std::string& buffer);
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 class ConcreteTensorProtoDeserializator {
 public:
     static ov::Tensor deserializeTensorProto(
         const ::KFSRequest::InferInputTensor& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo,
+        const std::shared_ptr<const TensorInfo>& tensorInfo,
         const std::string* buffer) {
         OVMS_PROFILE_FUNCTION();
         if (nullptr != buffer) {
@@ -217,7 +224,7 @@ public:
 
     static ov::Tensor deserializeTensorProto(
         const InferenceTensor& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo) {
+        const std::shared_ptr<const TensorInfo>& tensorInfo) {
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP64:
@@ -247,7 +254,7 @@ public:
     }
     static ov::Tensor deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo) {
+        const std::shared_ptr<const TensorInfo>& tensorInfo) {
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP32:
@@ -300,14 +307,14 @@ public:
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
 }
 
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::shared_ptr<const TensorInfo>& tensorInfo,
     const std::string* buffer) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, buffer);
 }
@@ -315,7 +322,7 @@ ov::Tensor deserializeTensorProto(
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const InferenceTensor& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
 }
 
@@ -348,14 +355,27 @@ Status deserializePredictRequest(
             auto& requestInput = requestInputItr->second;
             ov::Tensor tensor;
 
-            if (isNativeFileFormatUsed(requestInput)) {
-                SPDLOG_DEBUG("Request contains input in native file format: {}", name);
-                status = convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("Input native file format conversion failed.");
-                    return status;
+            if (requiresPreProcessing(requestInput)) {
+                switch (tensorInfo->getPreProcessingHint()) {
+                case TensorInfo::ProcessingHint::STRING_1D_U8:
+                    SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestToOVTensor1D(requestInput, tensor, nullptr));
+                    break;
+                case TensorInfo::ProcessingHint::STRING_2D_U8:
+                    SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestToOVTensor2D(requestInput, tensor, nullptr));
+                    break;
+                case TensorInfo::ProcessingHint::IMAGE:
+                    SPDLOG_DEBUG("Request contains input in native file format: {}", name);
+                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr));
+                    break;
+                default:
+                    SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
+                        name, tensorInfo->getShape().size(), toString(tensorInfo->getPrecision()), tensorInfo->isInfluencedByDemultiplexer());
+                    return StatusCode::NOT_IMPLEMENTED;
                 }
             } else {
+                // Data Array Format
                 tensor = deserializeTensorProto<TensorProtoDeserializator>(
                     requestInput, tensorInfo);
             }
@@ -409,12 +429,24 @@ Status deserializePredictRequest(
             auto inputIndex = requestInputItr - request.inputs().begin();
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
-            if (isNativeFileFormatUsed(*requestInputItr)) {
-                SPDLOG_DEBUG("Request contains input in native file format: {}", name);
-                status = convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("Input native file format conversion failed.");
-                    return status;
+            if (requiresPreProcessing(*requestInputItr)) {
+                switch (tensorInfo->getPreProcessingHint()) {
+                case TensorInfo::ProcessingHint::STRING_1D_U8:
+                    SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestToOVTensor1D(*requestInputItr, tensor, bufferLocation));
+                    break;
+                case TensorInfo::ProcessingHint::STRING_2D_U8:
+                    SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestToOVTensor2D(*requestInputItr, tensor, bufferLocation));
+                    break;
+                case TensorInfo::ProcessingHint::IMAGE:
+                    SPDLOG_DEBUG("Request contains input in native file format: {}", name);
+                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation));
+                    break;
+                default:
+                    SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
+                        name, tensorInfo->getShape().size(), toString(tensorInfo->getPrecision()), tensorInfo->isInfluencedByDemultiplexer());
+                    return StatusCode::NOT_IMPLEMENTED;
                 }
             } else {
                 tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);

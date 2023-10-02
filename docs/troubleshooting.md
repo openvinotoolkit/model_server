@@ -38,7 +38,7 @@ models/
 ```
 - In the above example, the server will detect only Directory `1` of `model1`. It will not detect Directory `2` as a valid model version because it does not contain valid OpenVINO model files.
 
-- The server will not detect any version in `model2`because, although the files in `model2` are correct, they are not in a numerical directory.
+- The server will not detect any version in `model2` because, although the files in `model2` are correct, they are not in a numerical directory.
 
 - The root cause is reported in the server logs or the response from a call to GetModelStatus function. 
 
@@ -102,4 +102,3 @@ HTTP_proxy
 
 - Cache folder (by default `/opt/cache` or defined by `--cache_dir`) should be mounted into docker container with read-write access. Unless changed by the docker run command, the model server has a security context of ovms account with uid 5000.
 - The biggest speedup in the model loading time is expected for GPU device. For CPU device the gain will depend on the model topology. In some rare cases, it is possible the load time will not be improved noticeably or it might be even slightly slower.
-- Currently using model cache is not supported with HDDL target device. Do not enable model cache while using HDDL cards.

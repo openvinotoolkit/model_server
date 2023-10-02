@@ -59,7 +59,7 @@ namespace tc = triton::client;
         }                                                                \
     }
 
-std::vector<uint8_t> load(const std::string& fileName) {
+std::string load(const std::string& fileName) {
     std::ifstream file(fileName, std::ios::binary);
     file.unsetf(std::ios::skipws);
     std::streampos fileSize;
@@ -67,14 +67,10 @@ std::vector<uint8_t> load(const std::string& fileName) {
     file.seekg(0, std::ios::end);
     fileSize = file.tellg();
     file.seekg(0, std::ios::beg);
+    std::ostringstream oss;
+    oss << file.rdbuf();
 
-    std::vector<uint8_t> vec;
-    vec.reserve(fileSize);
-
-    vec.insert(vec.begin(),
-               std::istream_iterator<uint8_t>(file),
-               std::istream_iterator<uint8_t>());
-    return vec;
+    return oss.str();
 }
 
 int main(int argc, char** argv) {
@@ -171,7 +167,7 @@ int main(int argc, char** argv) {
     std::vector<tc::InferResult*> results;
     results.resize(imgs.size());
     for (int i = 0; i < imgs.size(); i++) {
-        std::vector<uint8_t> input_data;
+        std::string input_data;
         try {
             input_data = load(imgs[i]);
         }
@@ -180,7 +176,7 @@ int main(int argc, char** argv) {
             return 1;
         }
         FAIL_IF_ERR(
-            input_ptr->AppendRaw(input_data),
+            input_ptr->AppendFromString({input_data}),
             "unable to set data for input");
         FAIL_IF_ERR(
             client->Infer(&(results[i]), options, inputs),

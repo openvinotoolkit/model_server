@@ -15,20 +15,30 @@
 //*****************************************************************************
 #pragma once
 #include <string>
+#include <vector>
 
+#include "../dags/pipelinedefinitionstatus.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../precision.hpp"
+#include "../shape.hpp"
 
 namespace ovms {
 class InferenceRequest;
 class InferenceResponse;
-class Shape;
+class InferenceTensor;
 class Status;
-std::string tensorShapeToString(const Shape& tensorShape);
+
+OVMS_ServableState convertToServableState(PipelineDefinitionStateCode code);
+
+std::string tensorShapeToString(const signed_shape_t& tensorShape);
 
 OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
 Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype);
+size_t DataTypeToByteSize(OVMS_DataType datatype);
+
 Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string& name, bool& nativeFileFormatUsed);
 const std::string& getRequestServableName(const ovms::InferenceRequest& request);
 Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size);
+bool requiresPreProcessing(const InferenceTensor& tensor);
+std::string& createOrGetString(InferenceTensor& proto, int index);
 }  // namespace ovms

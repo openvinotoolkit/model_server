@@ -8,7 +8,7 @@ custom extension execution.
 
 ## Creating cpu_extension library
 
-Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root directory of [Model Server repository](https://github.com/openvinotoolkit/model_server/tree/develop). The implementation of this library slightly differs from the template in OpenVINO™ repository and can be found in [SampleCpuExtension directory](https://github.com/openvinotoolkit/model_server/tree/develop/src/example/SampleCpuExtension).
+Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root directory of [Model Server repository](https://github.com/openvinotoolkit/model_server/tree/main). The implementation of this library slightly differs from the template in OpenVINO™ repository and can be found in [SampleCpuExtension directory](https://github.com/openvinotoolkit/model_server/tree/main/src/example/SampleCpuExtension).
 
 Shared library will be generated in the `lib` folder. Such library can be used to run Model Server, using `--cpu_extension` argument.
 
@@ -24,7 +24,7 @@ make cpu_extension BASE_OS=${BASE_OS}
 
 In order to demonstrate the usage of cpu_extension library some small modifications in resnet model are needed.
 In this sample we are going to change one of the ReLU layers type to CustomReLU.
-By doing so this layer will take adventage of cpu_extension.
+By doing so this layer will take advantage of cpu_extension.
 
 ```bash
 mkdir -p resnet50-binary-0001/1
@@ -40,4 +40,4 @@ $ docker run -it --rm -p 9000:9000 -v `pwd`/lib/${BASE_OS}:/extension:ro -v `pwd
  --port 9000 --model_name resnet --model_path /resnet --cpu_extension /extension/libcustom_relu_cpu_extension.so
 ```
 
-> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2022.2/openvino_docs_Extensibility_UG_Intro.html) 
+> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2023.1/openvino_docs_Extensibility_UG_Intro.html) 

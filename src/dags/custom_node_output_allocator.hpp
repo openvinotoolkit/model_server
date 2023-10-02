@@ -24,16 +24,16 @@ namespace ovms {
 
 bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2);
 
-class CustomNodeOutputAllocator : public ov::AllocatorImpl {
+class CustomNodeOutputAllocator {
     struct ::CustomNodeTensor tensor;
     NodeLibrary nodeLibrary;
     void* customNodeLibraryInternalManager;
 
 public:
     CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager);
-    void* allocate(const size_t bytes, const size_t alignment = alignof(max_align_t)) override;
-    void deallocate(void* handle, const size_t bytes, size_t alignment = alignof(max_align_t)) override;
+    void* allocate(const size_t bytes, const size_t alignment = alignof(max_align_t));
+    void deallocate(void* handle, const size_t bytes, size_t alignment = alignof(max_align_t));
     bool is_equal(const CustomNodeOutputAllocator& other) const;
-    bool is_equal(const AllocatorImpl& other) const override;
 };
+
 }  // namespace ovms

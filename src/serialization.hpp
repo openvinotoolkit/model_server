@@ -28,8 +28,8 @@
 #pragma GCC diagnostic pop
 
 #include "capi_frontend/capi_utils.hpp"
-#include "inferenceresponse.hpp"
-#include "inferencetensor.hpp"
+#include "capi_frontend/inferenceresponse.hpp"
+#include "capi_frontend/inferencetensor.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
@@ -61,23 +61,23 @@ public:
 
 Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
 Status serializeTensorToTensorProto(
     ::KFSResponse::InferOutputTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
 Status serializeTensorToTensorProtoRaw(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
 Status serializeTensorToTensorProto(
     InferenceTensor& responseOutput,
-    const std::shared_ptr<TensorInfo>& servableOutput,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
 typedef const std::string& (*outputNameChooser_t)(const std::string&, const TensorInfo&);
@@ -92,7 +92,7 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response,
     outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent = true) {
+    bool useSharedOutputContent = true) {  // does not apply for TFS frontend
     OVMS_PROFILE_FUNCTION();
     Status status;
     ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&> protoGetter(response);
@@ -151,7 +151,8 @@ Status serializePredictResponse(
     model_version_t servableVersion,
     const tensor_map_t& outputMap,
     InferenceResponse* response,
-    outputNameChooser_t outputNameChooser) {
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent = true) {  // does not apply for C-API frontend
     OVMS_PROFILE_FUNCTION();
     Status status;
     uint32_t outputId = 0;
@@ -204,7 +205,7 @@ Status serializePredictResponse(
         status = response->addOutput(
             outputInfo->getMappedName(),
             getPrecisionAsOVMSDataType(actualPrecision),
-            tensor.get_shape().data(),
+            reinterpret_cast<const int64_t*>(tensor.get_shape().data()),
             tensor.get_shape().size());
         if (status == StatusCode::DOUBLE_TENSOR_INSERT) {
             // DAG demultiplexer CAPI handling
@@ -234,4 +235,5 @@ Status serializePredictResponse(
     }
     return StatusCode::OK;
 }
+
 }  // namespace ovms

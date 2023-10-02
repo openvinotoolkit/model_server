@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-FROM ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:20.04
+FROM $BASE_IMAGE
 RUN apt update && apt install -y build-essential wget unzip make
 COPY Makefile /src/example/SampleCustomLoader/
 COPY sampleCustLoader.cpp /src/example/SampleCustomLoader/

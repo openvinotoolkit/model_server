@@ -37,6 +37,7 @@ extern const std::string METRICS_MODULE_NAME;
 
 class Server {
     mutable std::shared_mutex modulesMtx;
+    mutable std::mutex startMtx;
 
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;

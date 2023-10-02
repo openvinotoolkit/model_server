@@ -52,7 +52,7 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 
 ## Requesting the Service
 
-Exemplary client [single_face_analysis_pipeline.py](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/single_face_analysis_pipeline/python/single_face_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
+Exemplary client [single_face_analysis_pipeline.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/single_face_analysis_pipeline/python/single_face_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
 
 ```bash
 pip3 install -r requirements.txt
@@ -63,10 +63,10 @@ Now you can create directory for text images and run the client:
 ```bash
 python single_face_analysis_pipeline.py --image_path ../../common/static/images/faces/face1.jpg --grpc_port 9000
 Age results: [[[21.099792]]]
-Gender results: Famale: 0.9483401 ; Male: 0.051659837
+Gender results: Female: 0.9483401 ; Male: 0.051659837
 Emotion results: Natural: 0.02335789 ; Happy: 0.9449672 ; Sad: 0.001236845 ; Surprise: 0.028111042 ; Angry: 0.0023269346
 ```
 
 ### Next step
 
-For more advanced use case with extracting and analysing mutliple faces on the same image see [multi_faces_analysis_pipeline](../../multi_faces_analysis_pipeline/python/README.md) demo.
+For more advanced use case with extracting and analysing multiple faces on the same image see [multi_faces_analysis_pipeline](../../multi_faces_analysis_pipeline/python/README.md) demo.

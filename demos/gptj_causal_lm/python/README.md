@@ -101,3 +101,79 @@ tensor([[[ 8.4078,  7.2025,  5.1148,  ..., -6.6914, -6.7891, -6.6537],
        grad_fn=<ViewBackward0>)
 predicted word:  a
 ```
+
+# Pipeline mode with server side tokenization and detokenization
+
+This variant offloads tokenization and detokenization step from client to the server. OVMS can convert string proto to `2D U8` tensor and pass the data to tokenization custom node. This way we generate tokens for `gpt-j-6b` model automatically and get the response as text instead of probability vector.
+
+![diagram](../../../src/custom_nodes/tokenizer/diagram.svg)
+
+## Prepare environment
+
+Use `make` command to prepare custom node libraries, blingfire tokenization models and configuration file.
+
+Since custom node used in this demo is included in OpenVINO Model Server image you can either use the custom node from the image, or build one.
+
+If you just want to quickly run this demo and use already compiled custom node, run:
+
+```bash
+make
+```
+
+Workspace should look as follows:
+
+```bash
+tree workspace 
+workspace
+├── config.json
+└── tokenizers
+    ├── gpt2.bin
+    └── gpt2.i2w
+
+1 directory, 3 files
+```
+
+(Optional) If you modified the custom node or for some other reason, you want to have it compiled and then attached to the container, run:
+
+```bash
+make BUILD_CUSTOM_NODE=true BASE_OS=ubuntu
+```
+
+Workspace will look as follows:
+
+```bash
+workspace
+├── config.json
+├── lib
+│   ├── libdetokenizer.so
+│   └── libtokenizer.so
+└── tokenizers
+    ├── gpt2.bin
+    └── gpt2.i2w
+```
+
+Start OVMS with prepared workspace:
+
+```bash
+docker run -d --rm -p 9000:9000 \
+    -v $(pwd)/onnx:/onnx:ro \
+    -v $(pwd)/workspace:/workspace:ro \
+    openvino/model_server \
+    --port 9000 \
+    --config_path /workspace/config.json
+```
+
+Install Tensorflow Serving API package:
+```bash
+pip install --upgrade pip
+pip install tensorflow-serving-api==2.11.0
+```
+
+Run example client:
+
+```bash
+python3 dag_client.py --url localhost:9000 --model_name my_gpt_pipeline --input "Neurons are fascinating"
+b'Neurons are fascinating cells that are responsible for the transmission of information from one brain region to another. They are also responsible for the production of hormones and neurotransmitters that are responsible for the regulation of mood, sleep, appetite, and sexual function.\n'
+```
+
+![demo](./gpt-demo.gif)

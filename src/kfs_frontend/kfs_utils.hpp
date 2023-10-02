@@ -31,4 +31,9 @@ Status prepareConsolidatedTensorImpl(KFSResponse* response, const std::string& n
 const std::string& getRequestServableName(const KFSRequest& request);
 Status isNativeFileFormatUsed(const KFSRequest& request, const std::string& name, bool& nativeFileFormatUsed);
 bool isNativeFileFormatUsed(const KFSTensorInputProto& proto);
+bool requiresPreProcessing(const KFSTensorInputProto& proto);
+std::string& createOrGetString(KFSTensorOutputProto& proto, int index);
+void setBatchSize(KFSTensorOutputProto& proto, int64_t batch);
+void setStringPrecision(KFSTensorOutputProto& proto);
+Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width);
 }  // namespace ovms

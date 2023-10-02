@@ -27,7 +27,6 @@
 #include <rapidjson/document.h>
 
 #include "layout_configuration.hpp"
-#include "metric_config.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
 #include "status.hpp"
@@ -57,6 +56,11 @@ private:
          * @brief Model uri path
          */
     std::string basePath;
+
+    /**
+         * @brief Json config directory path
+         */
+    std::string rootDirectoryPath;
 
     /**
          * @brief Model local destination path on disk after downloading from online storage
@@ -206,7 +210,7 @@ public:
     ModelConfig(const std::string& name = "",
         const std::string& basePath = "",
         const std::string& targetDevice = "CPU",
-        const std::string& configBatchSize = "0",
+        const std::string& configBatchSize = "",
         uint64_t nireq = 0,
         bool stateful = false,
         bool idleSequenceCleanup = true,
@@ -302,8 +306,15 @@ public:
          * 
          * @param basePath 
          */
-    void setBasePath(const std::string& basePath) {
-        this->basePath = basePath;
+    void setBasePath(const std::string& basePath);
+
+    /**
+         * @brief Set root directory path
+         *
+         * @param rootDirectoryPath
+         */
+    void setRootDirectoryPath(const std::string& rootDirectoryPath) {
+        this->rootDirectoryPath = rootDirectoryPath;
     }
 
     /**

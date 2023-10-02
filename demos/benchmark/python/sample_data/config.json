@@ -1,0 +1,14 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "resnet50-binary-0001",
+                "base_path": "/workspace/resnet50-binary-0001",
+                "plugin_config": {"PERFORMANCE_HINT":"LATENCY"}
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+        {"name": "resnet50-binary-0001_mediapipe", "graph_path": "/workspace/sample_data/graph.pbtxt"}
+    ]
+}

@@ -15,8 +15,8 @@
 //*****************************************************************************
 #include "pipeline_factory.hpp"
 
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelmanager.hpp"
@@ -110,6 +110,7 @@ Status PipelineFactory::revalidatePipelines(ModelManager& manager) {
     }
     return firstErrorStatus;
 }
+
 const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
     std::vector<std::string> names;
     std::shared_lock lock(definitionsMtx);
@@ -122,11 +123,11 @@ const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
 
 template <typename RequestType, typename ResponseType>
 Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const RequestType* request, ResponseType* response, ModelManager& manager) const {
+    std::shared_lock lock(definitionsMtx);
     if (!definitionExists(name)) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Pipeline with requested name: {} does not exist", name);
         return StatusCode::PIPELINE_DEFINITION_NAME_MISSING;
     }
-    std::shared_lock lock(definitionsMtx);
     auto& definition = *definitions.at(name);
     lock.unlock();
     return definition.create(pipeline, request, response, manager);

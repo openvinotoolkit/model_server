@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>  //  For precise data types
 
@@ -26,6 +28,18 @@ typedef struct OVMS_Status_ OVMS_Status;
 
 typedef struct OVMS_ServerSettings_ OVMS_ServerSettings;
 typedef struct OVMS_ModelsSettings_ OVMS_ModelsSettings;
+
+typedef struct OVMS_ServableMetadata_ OVMS_ServableMetadata;
+typedef struct OVMS_Metadata_ OVMS_Metadata;
+
+#define OVMS_API_VERSION_MAJOR 1
+#define OVMS_API_VERSION_MINOR 0
+
+// Function to retrieve OVMS API version.
+//
+// \param major Returns major version of OVMS API. Represents breaking, non-backward compatible API changes.
+// \param minor Returns minor version of OVMS API. Represents non-breaking, backward compatible API changes.
+OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor);
 
 // OVMS_DataType
 //
@@ -68,6 +82,15 @@ typedef enum OVMS_BufferType_enum {
     OVMS_BUFFERTYPE_HDDL,
 } OVMS_BufferType;
 
+typedef enum OVMS_ServableState_enum {
+    OVMS_STATE_BEGIN,
+    OVMS_STATE_LOADING,
+    OVMS_STATE_AVAILABLE,
+    OVMS_STATE_UNLOADING,
+    OVMS_STATE_RETIRED,
+    OVMS_STATE_LOADING_FAILED
+} OVMS_ServableState;
+
 typedef struct OVMS_InferenceRequest_ OVMS_InferenceRequest;
 typedef struct OVMS_InferenceResponse_ OVMS_InferenceResponse;
 
@@ -99,15 +122,45 @@ void OVMS_StatusDelete(OVMS_Status* status);
 // \param status The status object
 // \param code Value to be set
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_StatusGetCode(OVMS_Status* status,
+OVMS_Status* OVMS_StatusCode(OVMS_Status* status,
     uint32_t* code);
+
+// Get value of metadata field by json pointer
+//
+// \param metadata The metadata object
+// \param pointer Json pointer (https://datatracker.ietf.org/doc/html/rfc6901)
+// \param value Buffer that will contain fetched value, should be freed by user using OVMS_StringFree call
+// \param size Lenght of fetched value
+OVMS_Status* OVMS_MetadataFieldByPointer(OVMS_Metadata* metadata, const char* pointer, const char** value, size_t* size);
+// Serialize metadata object into json
+//
+// \param metadata The metadata object
+// \param json Buffer that will contain generated json, should be freed by user using OVMS_StringFree call
+// \param size Lenght of generated string
+OVMS_Status* OVMS_SerializeMetadataToString(OVMS_Metadata* metadata, const char** json, size_t* size);
+
+// Get the server metadata
+//
+// \param server The server object (reserved for future use)
+// \param metadata The metadata object
+OVMS_Status* OVMS_ServerMetadata(OVMS_Server* server, OVMS_Metadata** metadata);
+
+// Release memory used for holding metadata object
+//
+// \param metadata The metadata object
+OVMS_Status* OVMS_ServerMetadataDelete(OVMS_Metadata* metadata);
+
+// Release memory used for strings genereted by ovms
+//
+// \param metadata The pointer that points at memeory that will be released
+void OVMS_StringFree(const char* ptr);
 
 // Get the status details from a status.
 //
 // \param status The status object
 // \param details The status details
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_StatusGetDetails(OVMS_Status* status,
+OVMS_Status* OVMS_StatusDetails(OVMS_Status* status,
     const char** details);
 
 ////
@@ -296,6 +349,20 @@ OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerNew(OVMS_Server** server);
 
+// Get the liveliness of the server
+//
+// \param server The server object
+// \param liveliness of the server
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerLive(OVMS_Server* server, bool* isLive);
+//
+// Get the readiness of the server
+//
+// \param server The server object
+// \param readiness of the server
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerReady(OVMS_Server* server, bool* isReady);
+
 // Deallocates server memory for given ptr.
 //
 // \param server The server object to be removed
@@ -313,6 +380,15 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerSettings* server_settings,
     OVMS_ModelsSettings* models_settings);
 
+// Get the state of a servable
+//
+// \param server The server object
+// \param servableName The name of the servable to be used
+// \param servableVersion The version of the servable to be used. In case of servable version set to 0 server will choose the default servable version.
+// \param state The servable state
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_GetServableState(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableState* state);
+
 // OVMS_InferenceRequest
 //
 // Create new inference request object. In case of servable version set to 0 server will choose
@@ -323,7 +399,7 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
 // \param servableName The name of the servable to be used
 // \param servableVersion The version of the servable to be used
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, uint32_t servableVersion);
+OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, int64_t servableVersion);
 void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 
 // Set the data of the input buffer. Ownership of data needs to be maintained during inference.
@@ -331,10 +407,10 @@ void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 // \param request The request object
 // \param inputName The name of the input
 // \param datatype The data type of the input
-// \param shape The shape of the input
+// \param shape The shape of the input (ignored for scalars)
 // \param dimCount The number of dimensions of the shape
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const uint64_t* shape, uint32_t dimCount);
+OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
 
 // Set the data of the input buffer. Ownership of data needs to be maintained during inference.
 //
@@ -385,7 +461,7 @@ OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceRequest* request
 // \param response The response object
 // \param count The value to be set
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* response, uint32_t* count);
+OVMS_Status* OVMS_InferenceResponseOutputCount(OVMS_InferenceResponse* response, uint32_t* count);
 
 // Get all information about an output from the response by providing output id.
 //
@@ -400,14 +476,14 @@ OVMS_Status* OVMS_InferenceResponseGetOutputCount(OVMS_InferenceResponse* respon
 // \param bufferType The buffer type of the data
 // \param deviceId The device id of the data memory buffer
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_InferenceResponseGetOutput(OVMS_InferenceResponse* response, uint32_t id, const char** name, OVMS_DataType* datatype, const uint64_t** shape, uint32_t* dimCount, const void** data, size_t* byteSize, OVMS_BufferType* bufferType, uint32_t* deviceId);
+OVMS_Status* OVMS_InferenceResponseOutput(OVMS_InferenceResponse* response, uint32_t id, const char** name, OVMS_DataType* datatype, const int64_t** shape, size_t* dimCount, const void** data, size_t* byteSize, OVMS_BufferType* bufferType, uint32_t* deviceId);
 
 // Get the number of parameters in response.
 //
 // \param response The response object
 // \param count The parameter count to be set
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* response, uint32_t* count);
+OVMS_Status* OVMS_InferenceResponseParameterCount(OVMS_InferenceResponse* response, uint32_t* count);
 
 // Extract information about parameter by providing its id.
 //
@@ -416,7 +492,7 @@ OVMS_Status* OVMS_InferenceResponseGetParameterCount(OVMS_InferenceResponse* res
 // \param datatype The data type of the parameter
 // \param data The parameter content
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_InferenceResponseGetParameter(OVMS_InferenceResponse* response, uint32_t id, OVMS_DataType* datatype, const void** data);
+OVMS_Status* OVMS_InferenceResponseParameter(OVMS_InferenceResponse* response, uint32_t id, OVMS_DataType* datatype, const void** data);
 
 // Delete OVMS_InferenceResponse object.
 //
@@ -425,10 +501,83 @@ void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 
 // Execute synchronous inference.
 //
+// \param server The server object
 // \param request The request object
 // \param response The respons object. In case of success, caller takes the ownership of the response
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
+
+// Get OVMS_ServableMetadata object
+//
+// Creates OVMS_ServableMetadata object describing inputs and outputs.
+// Returned object needs to be deleted after use with OVMS_ServableMetadataDelete
+// if call succeeded.
+//
+// \param server The server object
+// \param servableName The name of the servable to be used
+// \param servableVersion The version of the servable to be used
+// \param metadata The metadata object to be created
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableMetadata** metadata);
+
+// Get the number of inputs of servable.
+//
+// \param metadata The metadata object
+// \param count The parameter count to be set
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataInputCount(OVMS_ServableMetadata* metadata, uint32_t* count);
+
+// Get the number of outputs of servable.
+//
+// \param metadata The metadata object
+// \param count The parameter count to be set
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataOutputCount(OVMS_ServableMetadata* metadata, uint32_t* count);
+
+// Get the metadata of servable input given the index
+//
+// The received shapeMin and shapeMax indicate whether the underlying servable accepts
+// a shape range or fully dynamic shape. A value of -1 for both shapeMin and shapeMax
+// for a specific dimension means that the servable accepts any value on that dimension.
+//
+// \param metadata The metadata object
+// \param id The id of the input
+// \param name The name of the input
+// \param datatype The data type of the input
+// \param dimCount The number of dimensions of the shape
+// \param shapeMin The shape lower bounds of the input
+// \param shapeMax The shape upper bounds of the input
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataInput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
+
+// Get the metadata of servable output given the index
+//
+// The received shapeMin and shapeMax indicate whether the underlying servable accepts
+// a shape range or fully dynamic shape. A value of -1 for both shapeMin and shapeMax
+// for a specific dimension means that the servable accepts any value on that dimension.
+//
+// \param metadata The metadata object
+// \param id The id of the output
+// \param name The name of the output
+// \param datatype The data type of the output
+// \param dimCount The number of dimensions of the shape
+// \param shapeMin The shape of the output
+// \param shapeMax The shape of the output
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataOutput(OVMS_ServableMetadata* metadata, uint32_t id, const char** name, OVMS_DataType* datatype, size_t* dimCount, int64_t** shapeMinArray, int64_t** shapeMaxArray);
+
+// EXPERIMENTAL
+// Get the additional info about servable.
+//
+// \param metadata The metadata object
+// \param info The ptr to the ov::AnyMap*
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServableMetadataInfo(OVMS_ServableMetadata* metadata, const void** info);
+
+// Deallocates a status object.
+//
+//  \param metadata The metadata object
+void OVMS_ServableMetadataDelete(OVMS_ServableMetadata* metadata);
 
 #ifdef __cplusplus
 }

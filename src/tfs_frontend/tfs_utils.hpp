@@ -17,6 +17,7 @@
 
 #include <string>
 
+#include "tensorflow/lite/c/common.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
@@ -35,6 +36,8 @@ class Status;
 
 Precision TFSPrecisionToOvmsPrecision(const TFSDataType& s);
 TFSDataType getPrecisionAsDataType(Precision precision);
+Precision TfLitePrecisionToOvmsPrecision(TfLiteType t);
+TfLiteType getPrecisionAsTfLiteDataType(Precision precision);
 std::string getDataTypeAsString(TFSDataType dataType);
 
 std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
@@ -42,4 +45,8 @@ Status prepareConsolidatedTensorImpl(TFSPredictResponse* response, const std::st
 const std::string& getRequestServableName(const TFSPredictRequest& request);
 Status isNativeFileFormatUsed(const TFSPredictRequest& request, const std::string& name, bool& isNativeFileFormatUsed);
 bool isNativeFileFormatUsed(const TFSInputTensorType& request);
+bool requiresPreProcessing(const TFSInputTensorType& proto);
+std::string& createOrGetString(TFSInputTensorType& proto, int index);
+void setBatchSize(TFSInputTensorType& proto, int64_t batch);
+void setStringPrecision(TFSInputTensorType& proto);
 }  // namespace ovms

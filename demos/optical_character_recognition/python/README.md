@@ -16,10 +16,10 @@ It includes the following nodes:
 
 - Model east-resnet50 - inference execution which takes the user image as input. It returns two outputs including information about all detected boxes, their location and scores.
 - Custom node east_ocr - it includes C++ implementation of east-resnet50 model results processing. It analyses the detected boxes coordinates, filters the results
-based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlaping boxes. Finally the custom node east-ocr crops all detected boxes
+based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlapping boxes. Finally the custom node east-ocr crops all detected boxes
 from the original image, resize them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
-boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/east_ocr)
-- demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individuial images with batch size 1 each.
+boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr)
+- demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individual images with batch size 1 each.
 Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](../../../docs/demultiplexing.md)
 - Model text-recognition - this model recognizes characters included in the input image. 
 - Response - the output of the whole pipeline combines the recognized `image_texts` with their metadata. 
@@ -40,7 +40,7 @@ Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed i
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
-Inside the EAST folder add a file `freeze_east_model.py`:
+Inside the EAST folder add a file `freeze_east_model.py` by executing the following `echo` command from the command line:
 ```bash
 echo "from tensorflow.python.framework import graph_util
 import tensorflow as tf
@@ -85,7 +85,7 @@ EAST/IR/1/
 ├── model.mapping
 └── model.xml
 ```
-Converted east-reasnet50 model will have the following interface:
+Converted east-resnet50 model will have the following interface:
 - Input name: `input_images` ; shape: `[1 1024 1920 3]` ; precision: `FP32` ; layout: `N...`
 - Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 256 480 1]` ; precision: `FP32` ; layout: `N...`
 - Output name: `feature_fusion/concat_3` ; shape: `[1 256 480 5]` ; precision: `FP32`; layout: `N...`
@@ -103,11 +103,11 @@ text-recognition model will have the following interface:
 
 ## Building the Custom Node "east_ocr" Library 
 
-Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/src/custom_node_interface.h).
-It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
+Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_node_interface.h).
+It can use OpenCV libraries included in OVMS or it could use other third party components.
 
 The custom node east_ocr can be built inside a docker container via the following procedure:
-- go to the directory with custom node examples [src/custom_node](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/src/custom_nodes)
+- go to the directory with custom node examples [src/custom_node](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes)
 - run `make` command:
 
 ```bash
@@ -208,5 +208,5 @@ Below is the exemplary input image.
 The custom node generates the following text images retrieved from the original input to CRNN model:
 ![image](crnn_table.png)
 
-## Accurracy
+## Accuracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.

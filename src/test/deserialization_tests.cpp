@@ -28,16 +28,14 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "../buffer.hpp"
+#include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/capi_utils.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferencetensor.hpp"
 #include "../deserialization.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferencetensor.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
-
-#include <gmock/gmock-generated-function-mockers.h>
 
 using TFTensorProto = tensorflow::TensorProto;
 
@@ -102,7 +100,7 @@ protected:
     }
 
     void SetUpTensorProto(OVMS_DataType dataType) {
-        std::array<size_t, 2> shape{1, DUMMY_MODEL_INPUT_SIZE};
+        std::array<int64_t, 2> shape{1, DUMMY_MODEL_INPUT_SIZE};
         tensorCapi = std::make_unique<InferenceTensor>(dataType,
             shape.data(),
             shape.size());
@@ -125,7 +123,7 @@ class CAPIPredictRequest : public CAPIPredict {
 protected:
     InferenceRequest request{"dummy", 1};
     static const std::string DATA;
-    static constexpr std::array<size_t, 2> SHAPE{1, 10};
+    static constexpr std::array<int64_t, 2> SHAPE{1, 10};
     void SetUp() {
         CAPIPredict::SetUp();
         request.addInput(DUMMY_MODEL_INPUT_NAME,
@@ -184,7 +182,7 @@ class GRPCPredictRequestNegative : public GRPCPredictRequest {};
 
 TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
     ovms::Precision testedPrecision = GetParam();
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::InferRequest inferRequest;
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
@@ -196,7 +194,7 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision)
 
 TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException) {
     ovms::Precision testedPrecision = GetParam();
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::InferRequest inferRequest;
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
@@ -208,12 +206,12 @@ public:
     MOCK_METHOD(ov::Tensor,
         deserializeTensorProto,
         (const tensorflow::TensorProto&,
-            const std::shared_ptr<ovms::TensorInfo>&));
+            const std::shared_ptr<const ovms::TensorInfo>&));
 
     MOCK_METHOD(ov::Tensor,
         deserializeTensorProto,
         (const ::KFSRequest::InferInputTensor&,
-            const std::shared_ptr<ovms::TensorInfo>&,
+            const std::shared_ptr<const ovms::TensorInfo>&,
             const std::string* buffer));
 };
 
@@ -223,19 +221,22 @@ public:
     static MockTensorProtoDeserializatorThrowingInferenceEngine* mock;
     static ov::Tensor deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
-        const std::shared_ptr<ovms::TensorInfo>& tensorInfo) {
+        const std::shared_ptr<const ovms::TensorInfo>& tensorInfo) {
         return mock->deserializeTensorProto(requestInput, tensorInfo);
     }
 
     static ov::Tensor deserializeTensorProto(
         const ::KFSRequest::InferInputTensor& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo,
+        const std::shared_ptr<const TensorInfo>& tensorInfo,
         const std::string* buffer) {
         return mock->deserializeTensorProto(requestInput, tensorInfo, buffer);
     }
 };
 
 MockTensorProtoDeserializatorThrowingInferenceEngine* MockTensorProtoDeserializator::mock = nullptr;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException2) {
     ov::Core ieCore;
@@ -255,6 +256,8 @@ TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorE
     EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
 }
 
+#pragma GCC diagnostic pop
+
 TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
@@ -267,7 +270,7 @@ TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
 
 TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
     ovms::Precision testedPrecision = GetParam();
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName]);
     EXPECT_FALSE((bool)tensor) << "Unsupported OVMS precision:"
                                << toString(testedPrecision)
@@ -276,7 +279,7 @@ TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
 
 TEST_P(DeserializeCAPITensorProtoNegative, ShouldReturnNullptrForPrecision) {
     ovms::Precision testedPrecision = GetParam();
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(*tensorCapi, tensorMap[tensorName]);
     EXPECT_FALSE((bool)tensor) << "Unsupported OVMS precision:"
                                << toString(testedPrecision)
@@ -286,7 +289,7 @@ TEST_P(DeserializeCAPITensorProtoNegative, ShouldReturnNullptrForPrecision) {
 TEST_P(DeserializeTFTensorProto, ShouldReturnValidTensor) {
     ovms::Precision testedPrecision = GetParam();
     SetUpTensorProto(getPrecisionAsDataType(testedPrecision));
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName]);
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
@@ -296,7 +299,7 @@ TEST_P(DeserializeTFTensorProto, ShouldReturnValidTensor) {
 TEST_P(DeserializeCAPITensor, ShouldReturnValidTensor) {
     ovms::Precision testedPrecision = GetParam();
     SetUpTensorProto(getPrecisionAsOVMSDataType(testedPrecision));
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(*tensorCapi, tensorMap[tensorName]);
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
@@ -420,7 +423,7 @@ class DeserializeKFSTensorProtoNegative : public KserveGRPCPredict {};
 TEST_P(DeserializeKFSTensorProtoNegative, ShouldReturnNullptrForPrecision) {
     auto [testedPrecision, getInputFromRawInputContents] = GetParam();
     std::string* bufferPtr = (getInputFromRawInputContents ? &buffer : nullptr);
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], bufferPtr);
     EXPECT_FALSE((bool)tensor) << "Unsupported OVMS precision:"
                                << toString(testedPrecision)
@@ -434,7 +437,7 @@ TEST_P(DeserializeKFSTensorProto, ShouldReturnValidTensor) {
         GTEST_SKIP() << "Not supported";
     }
     SetUpTensorProto(TensorInfo::getPrecisionAsString(testedPrecision), getInputFromRawInputContents);
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], bufferPtr);
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
@@ -495,7 +498,7 @@ public:
 
 TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
     auto [testedPrecision, getInputFromRawInputContents] = GetParam();
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::InferRequest inferRequest;
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
@@ -509,7 +512,7 @@ TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetT
     auto [testedPrecision, getInputFromRawInputContents] = GetParam();
     if (!getInputFromRawInputContents)
         GTEST_SKIP() << "test setup not implemented yet";
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
     ov::InferRequest inferRequest;
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
@@ -519,6 +522,9 @@ TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetT
 std::string toString(const std::pair<ovms::Precision, bool>& pair) {
     return toString(pair.first) + "_" + (pair.second ? "BufferInRequestRawInputContents" : "BufferInRequestTensorInputContents");
 }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException2) {
     ov::Core ieCore;
@@ -537,6 +543,8 @@ TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetT
         request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
 }
+
+#pragma GCC diagnostic pop
 
 std::vector<std::pair<ovms::Precision, bool>> KserveGRPCPredictRequestNegativeParams = cartesianProduct(UNSUPPORTED_KFS_INPUT_PRECISIONS, {true, false});
 

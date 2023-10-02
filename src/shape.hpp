@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -23,7 +24,6 @@
 
 namespace ovms {
 class Status;
-
 using dimension_value_t = std::int64_t;
 
 constexpr dimension_value_t DYNAMIC_DIMENSION = -1;
@@ -33,6 +33,22 @@ constexpr char DIMENSION_RANGE_DELIMETER = ':';
 enum Mode { FIXED,
     AUTO };
 using shape_t = std::vector<size_t>;
+using signed_shape_t = std::vector<dimension_value_t>;
+
+template <typename T>
+std::string shapeToString(const T& shape) {
+    std::ostringstream oss;
+    oss << "(";
+    size_t i = 0;
+    if (shape.size() > 0) {
+        for (; i < shape.size() - 1; i++) {
+            oss << shape[i] << ",";
+        }
+        oss << shape[i];
+    }
+    oss << ")";
+    return oss.str();
+}
 
 class Dimension {
     dimension_value_t minimum, maximum;
@@ -68,7 +84,6 @@ public:
     bool isAny() const;
     std::optional<Dimension> createIntersection(const Dimension& other) const;
 
-private:
     dimension_value_t getLowerBound() const;
     dimension_value_t getUpperBound() const;
 };

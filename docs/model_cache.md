@@ -1,14 +1,14 @@
 # Model Cache {#ovms_docs_model_cache}
 
 ## Overview
-The Model Server can leverage a [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/2022.2/openvino_docs_IE_DG_Model_caching_overview.html), to speed up subsequent model loading on a target device. 
+The Model Server can leverage a [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_Model_caching_overview.html), to speed up subsequent model loading on a target device. 
 The cached files make the Model Server initialization usually faster. 
-The boost depends on a model and a target device. The most noticable improvement will be observed with GPU devices. On other devices, like CPU, it is possible to observe no speed up effect or even slower loading process depending on used model. Test the setup before final deployment.
+The boost depends on a model and a target device. The most noticeable improvement will be observed with GPU devices. On other devices, like CPU, it is possible to observe no speed up effect or even slower loading process depending on used model. Test the setup before final deployment.
 
 The cache may consist of a compiled model blob in a form of `.blob` file or compiled kernels (GPU) in a form of multiple `.cl_cache` files. Cache files can be reused within the same Model Server version, target device, hardware, model and the model shape parameters. 
 The Model Server, automatically detects if the cache is present and re-generates new cache files when required. 
 
-Note: Model Server cache feature does not avoid downloading the model files from the remote storage. It speeds up the model loading but acceess to the original model files is still required.
+Note: Model Server cache feature does not avoid downloading the model files from the remote storage. It speeds up the model loading but access to the original model files is still required.
 
 Note: In some cases model cache might have undesirable side effects. Special considerations are required in the following cases:
 - custom loader library is in use - [custom loaders](custom_model_loader.md) might be used to import encrypted model files so using unencrypted cache might potentially lead to a security risk
@@ -41,8 +41,6 @@ In case there are valid reasons to enable the model cache also for models with a
 ```
 
 > IMPORTANT: Models imported via the custom loaders never create or use any cache.
-
-> IMPORTANT: Model cache can't be used with HDDL devices.
 
 ## Use case example
 

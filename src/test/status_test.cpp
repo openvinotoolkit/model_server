@@ -25,7 +25,7 @@
 #include "test_utils.hpp"
 
 namespace ovms {
-StatusCode& operator++(StatusCode& statusCode) {
+static StatusCode& operator++(StatusCode& statusCode) {
     if (statusCode == StatusCode::STATUS_CODE_END) {
         throw std::out_of_range("for E& operator ++ (E&)");
     }
@@ -40,15 +40,15 @@ TEST(StatusCodeTest, AllStatusCodesMapped) {
     }
 }
 
-TEST(StatusCodeTest, CApi) {
+TEST(StatusCodeTest, CAPI) {
     for (auto statusCode = StatusCode::OK; statusCode != StatusCode::STATUS_CODE_END; ++statusCode) {
         Status status = Status(statusCode);
         OVMS_Status* sts = reinterpret_cast<OVMS_Status*>(&status);
         uint32_t code = 0;
-        ASSERT_EQ(OVMS_StatusGetCode(sts, &code), nullptr);
+        ASSERT_EQ(OVMS_StatusCode(sts, &code), nullptr);
         EXPECT_EQ(code, static_cast<uint32_t>(statusCode));
         const char* details = nullptr;
-        ASSERT_EQ(OVMS_StatusGetDetails(sts, &details), nullptr);
+        ASSERT_EQ(OVMS_StatusDetails(sts, &details), nullptr);
         std::stringstream ss;
         ss << Status(statusCode).string();
         EXPECT_EQ(std::string(details), ss.str());

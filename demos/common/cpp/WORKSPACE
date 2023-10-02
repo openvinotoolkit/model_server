@@ -23,14 +23,30 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.6.5"
+    tag = "2.6.5",
+    patch_args = ["-p1"],
+    patches = ["net_http.patch", "listen.patch"]
+    #                             ^^^^^^^^^^^^
+    #                       make bind address configurable
+    #          ^^^^^^^^^^^^
+    #        allow all http methods
 )
 load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
-tensorflow_http_archive(
+_TENSORFLOW_GIT_COMMIT = "af1d5bc4fbb66d9e6cc1cf89503014a99233583b"
+_TENSORFLOW_SHA256 = "f85a5443264fc58a12d136ca6a30774b5bc25ceaf7d114d97f252351b3c3a2cb"
+http_archive(
     name = "org_tensorflow",
-    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
-    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
-    patch = "tf.patch",
+    urls = [
+      "https://github.com/tensorflow/tensorflow/archive/%s.tar.gz" % _TENSORFLOW_GIT_COMMIT,
+    ],
+    patches = [
+        "tf.patch",
+    ],
+    patch_args = [
+        "-p1",
+    ],
+    strip_prefix = "tensorflow-%s" % _TENSORFLOW_GIT_COMMIT,
+    sha256 = _TENSORFLOW_SHA256,
     repo_mapping = {"@curl" : "@curl"}
 )
 
@@ -67,7 +83,7 @@ grpc_extra_deps()
 ##################### OPEN CV ######################
 # OPENCV DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
 new_local_repository(
-    name = "opencv",
+    name = "linux_opencv",
     build_file = "@//third_party/opencv:BUILD",
     path = "/opt/opencv",
 )

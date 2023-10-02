@@ -20,6 +20,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "tensorflow_serving/apis/get_model_status.pb.h"
 #include "tensorflow_serving/apis/model_service.grpc.pb.h"
 #include "tensorflow_serving/apis/model_service.pb.h"
@@ -64,12 +65,12 @@ using MyTypes = ::testing::Types<
 
 TYPED_TEST_SUITE(ModelServiceTest, MyTypes);
 
-void executeModelStatus(const TFSGetModelStatusRequest& modelStatusRequest, TFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
+static void executeModelStatus(const TFSGetModelStatusRequest& modelStatusRequest, TFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
     modelStatusResponse.Clear();
     ASSERT_EQ(GetModelStatusImpl::getModelStatus(&modelStatusRequest, &modelStatusResponse, manager, context), statusCode);
 }
 
-void setModelStatusRequest(TFSGetModelStatusRequest& modelStatusRequest, const std::string& name, int version) {
+static void setModelStatusRequest(TFSGetModelStatusRequest& modelStatusRequest, const std::string& name, int version) {
     modelStatusRequest.Clear();
     auto model_spec = modelStatusRequest.mutable_model_spec();
     model_spec->Clear();
@@ -79,7 +80,7 @@ void setModelStatusRequest(TFSGetModelStatusRequest& modelStatusRequest, const s
     }
 }
 
-void verifyModelStatusResponse(const TFSGetModelStatusResponse& modelStatusResponse, const std::vector<int>& versions = {1}) {
+static void verifyModelStatusResponse(const TFSGetModelStatusResponse& modelStatusResponse, const std::vector<int>& versions = {1}) {
     ASSERT_EQ(modelStatusResponse.model_version_status_size(), versions.size());
     for (size_t i = 0; i < versions.size(); i++) {
         auto& model_version_status = modelStatusResponse.model_version_status()[i];
@@ -91,16 +92,16 @@ void verifyModelStatusResponse(const TFSGetModelStatusResponse& modelStatusRespo
     }
 }
 
-void verifyModelStatusResponse(const KFSGetModelStatusResponse& modelStatusResponse, const std::vector<int>& versions = {1}) {
+static void verifyModelStatusResponse(const KFSGetModelStatusResponse& modelStatusResponse, const std::vector<int>& versions = {1}) {
     ASSERT_TRUE(modelStatusResponse.ready());
 }
 
-void executeModelStatus(const KFSGetModelStatusRequest& modelStatusRequest, KFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
+static void executeModelStatus(const KFSGetModelStatusRequest& modelStatusRequest, KFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ExecutionContext context, ovms::StatusCode statusCode = StatusCode::OK) {
     modelStatusResponse.Clear();
     ASSERT_EQ(KFSInferenceServiceImpl::getModelReady(&modelStatusRequest, &modelStatusResponse, manager, context), statusCode);
 }
 
-void setModelStatusRequest(KFSGetModelStatusRequest& modelStatusRequest, const std::string& name, int version) {
+static void setModelStatusRequest(KFSGetModelStatusRequest& modelStatusRequest, const std::string& name, int version) {
     modelStatusRequest.Clear();
     modelStatusRequest.set_name(name);
     if (version)
@@ -185,6 +186,33 @@ TYPED_TEST(ModelServiceTest, pipeline) {
     executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_TEST_CONTEXT);
     verifyModelStatusResponse(this->modelStatusResponse);
 }
+
+#if (MEDIAPIPE_DISABLE == 0)
+TYPED_TEST(ModelServiceTest, MediapipeGraph) {
+    std::string fileToReload = "/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json";
+    ASSERT_EQ(this->manager.startFromFile(fileToReload), StatusCode::OK);
+
+    const std::string name = "mediaDummyADAPTFULL";
+
+    // existing version
+    int version = 1;
+    setModelStatusRequest(this->modelStatusRequest, name, version);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_TEST_CONTEXT);
+    verifyModelStatusResponse(this->modelStatusResponse);
+
+    // No version specified - with 0 version value is not set in helper function
+    version = 0;
+    setModelStatusRequest(this->modelStatusRequest, name, version);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_TEST_CONTEXT);
+    verifyModelStatusResponse(this->modelStatusResponse);
+
+    // Any version
+    version = 5;
+    setModelStatusRequest(this->modelStatusRequest, name, version);
+    executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, DEFAULT_TEST_CONTEXT);
+    verifyModelStatusResponse(this->modelStatusResponse);
+}
+#endif
 
 TYPED_TEST(ModelServiceTest, non_existing_model) {
     const std::string name = "non_existing_model";

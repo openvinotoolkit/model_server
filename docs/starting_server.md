@@ -120,9 +120,8 @@ To serve multiple models from the same container you will need an additional JSO
          "config":{
              "name":"model_name5",
              "base_path":"s3://bucket/models/model5",
-             "shape": "auto",
              "nireq": 32,
-             "target_device": "HDDL"
+             "target_device": "GPU"
          }
       }
    ]
@@ -130,6 +129,8 @@ To serve multiple models from the same container you will need an additional JSO
 ```
 
 Once the Docker container has the path to your config file mounted, it can be started. This simplifies the `docker run` command, as arguments are now read from the config file. 
+When the `base_path` in the config.json is without cloud URI prefix or `/` character, the path will be relative to the config file location. 
+This is helpful when models are distributed together with the config file, the paths do not need to be adjusted.
 
 ## Next Steps
 

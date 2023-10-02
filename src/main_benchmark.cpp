@@ -19,6 +19,8 @@
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <optional>
+#include <random>
 #include <sstream>
 #include <thread>
 #include <vector>
@@ -28,11 +30,13 @@
 #include <stdio.h>
 #include <sysexits.h>
 
+#include "capi_frontend/capi_utils.hpp"
 #include "ovms.h"  // NOLINT
 #include "stringutils.hpp"
 
 namespace {
 
+using signed_shape_t = std::vector<int64_t>;
 class BenchmarkCLIParser {
     std::unique_ptr<cxxopts::Options> options;
 
@@ -89,7 +93,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 "MODEL_NAME")
             ("servable_version",
                 "workload threads per ireq",
-                cxxopts::value<uint64_t>()->default_value("0"),
+                cxxopts::value<int64_t>()->default_value("0"),
                 "MODEL_VERSION")
             ("inputs_names",
                 "Comma separated list of inputs names",
@@ -98,7 +102,15 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
             ("shape",
                 "Semicolon separated list of inputs names followed by their shapes in brackers. For example: \"inputA[1,3,224,224],inputB[1,10]\"",
                 cxxopts::value<std::string>(),
-                "INPUTS_NAMES");
+                "SHAPE")
+            ("mode",
+                "Workload mode. Possible values: INFERENCE_ONLY, RESET_BUFFER, RESET_REQUEST",
+                cxxopts::value<std::string>()->default_value("INFERENCE_ONLY"),
+                "MODE")
+            ("seed",
+                "Random values generator seed.",
+                cxxopts::value<uint64_t>(),
+                "SEED");
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
@@ -112,7 +124,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
     }
 }
 
-std::vector<size_t> parseShapes(const std::string& cliInputShapes) {
+signed_shape_t parseShapes(const std::string& cliInputShapes) {
     auto inputShapes = ovms::tokenize(cliInputShapes, ';');
     if (inputShapes.size() != 1) {
         std::cout << __LINE__ << std::endl;
@@ -129,11 +141,11 @@ std::vector<size_t> parseShapes(const std::string& cliInputShapes) {
     }
     std::string shapeString = firstShape.substr(leftBracket + 1, rightBracket - leftBracket - 1);
     auto dimsString = ovms::tokenize(shapeString, ',');
-    std::vector<std::size_t> shape;
+    signed_shape_t shape;
     std::transform(dimsString.begin(), dimsString.end(), std::back_inserter(shape),
-                                   [](const std::string& s) -> std::size_t {
+                                   [](const std::string& s) -> signed_shape_t::value_type {
         auto dimOpt = ovms::stoi64(s);
-        if (!dimOpt.has_value()) {
+        if (!dimOpt.has_value() || dimOpt.value() <= 0) {
             std::cout << __LINE__ << " " << s << std::endl;
             throw std::invalid_argument("Invalid shape argument");
         }
@@ -175,38 +187,38 @@ static void installSignalHandlers() {
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
 
-using shape_t = std::vector<size_t>;
-
-OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& servableName, uint32_t servableVersion, OVMS_DataType datatype, const shape_t& shape, const std::string& inputName, const void* data) {
+OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName, const void* data) {
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceRequestNew(&request, server, servableName.c_str(), servableVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
-    size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);
+    auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
+    OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, ovms::DataTypeToByteSize(datatype) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);
     return request;
 }
 
-void triggerInferenceInALoop(
+void triggerInferenceInALoopInferenceOnly(
     std::future<void>& startSignal,
-    std::future<void>& stopSignal,
+    std::promise<void>& readySignal,
     const size_t niterPerThread,
     size_t& wholeThreadTimeUs,
     double& averageWholeLatency,
     double& averagePureLatency,
     OVMS_Server* server,
-    OVMS_InferenceRequest* request) {
+    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName,
+    std::optional<uint64_t> seed) {
     OVMS_InferenceResponse* response{nullptr};
     std::vector<uint64_t> latenciesWhole(niterPerThread);
     std::vector<uint64_t> latenciesPure(niterPerThread);
+    auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
+    std::vector<float> data(elementsCount, 1.0);
+    OVMS_InferenceRequest* request = prepareRequest(server, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
+    readySignal.set_value();
     startSignal.get();
     auto workloadStart = std::chrono::high_resolution_clock::now();
     size_t iter = niterPerThread;
     while (iter-- > 0) {
-        // stopSignal will be used with ctrl-c app stopping or with total requestCount
-        // stopSignal.wait_for(std::chrono::milliseconds(0));
         auto iterationWholeStart = std::chrono::high_resolution_clock::now();
         auto iterationPureStart = std::chrono::high_resolution_clock::now();
-        // aternatively we are changing request
         OVMS_Inference(server, request, &response);
         auto iterationPureEnd = std::chrono::high_resolution_clock::now();
         OVMS_InferenceResponseDelete(response);
@@ -218,8 +230,116 @@ void triggerInferenceInALoop(
     wholeThreadTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(workloadEnd - workloadStart).count();
     averageWholeLatency = std::accumulate(latenciesWhole.begin(), latenciesWhole.end(), 0) / (double(niterPerThread) * 1'000);
     averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
+    OVMS_InferenceRequestDelete(request);
 }
+
+void prepareData(std::vector<std::vector<float>>& preparedData, const size_t& numberOfVectors, const size_t& vectorElementCount, std::optional<uint64_t> seed){
+    std::uniform_real_distribution<float> distribution(0.0, 1.0);
+    std::default_random_engine generator;
+    uint64_t seedValue;
+    if (seed.has_value()) {
+        seedValue = seed.value();
+    } else {
+        std::random_device rd;
+        seedValue = rd();
+    }
+    std::cout << "Seed used to generate random values: " << seedValue << std::endl;
+    generator = std::default_random_engine(seedValue);
+    for (size_t i = 0; i < numberOfVectors; i ++) {
+        float random = distribution(generator);
+        std::vector<float> data(vectorElementCount, random);
+        preparedData.push_back(data);
+    }
+}
+
+void triggerInferenceInALoopResetBuffer(
+    std::future<void>& startSignal,
+    std::promise<void>& readySignal,
+    const size_t niterPerThread,
+    size_t& wholeThreadTimeUs,
+    double& averageWholeLatency,
+    double& averagePureLatency,
+    OVMS_Server* server,
+    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName,
+    std::optional<uint64_t> seed) {
+    OVMS_InferenceResponse* response{nullptr};
+    std::vector<uint64_t> latenciesWhole(niterPerThread);
+    std::vector<uint64_t> latenciesPure(niterPerThread);
+    std::vector<std::vector<float>> preparedData;
+    auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
+    prepareData(preparedData, niterPerThread, elementsCount, seed);
+    std::vector<float> data(elementsCount, 1.0);
+    OVMS_InferenceRequest* request = prepareRequest(server, servableName, servableVersion, datatype, shape, inputName, (const void*)data.data());
+    readySignal.set_value();
+    startSignal.get();
+    auto workloadStart = std::chrono::high_resolution_clock::now();
+    size_t iter = 0;
+    while (iter < niterPerThread) {
+        auto iterationWholeStart = std::chrono::high_resolution_clock::now();
+        OVMS_InferenceRequestInputRemoveData(request, inputName.c_str());
+        OVMS_InferenceRequestInputSetData(request, inputName.c_str(), (const void*)preparedData[iter].data(), elementsCount * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
+        auto iterationPureStart = std::chrono::high_resolution_clock::now();
+        OVMS_Inference(server, request, &response);
+        auto iterationPureEnd = std::chrono::high_resolution_clock::now();
+        OVMS_InferenceResponseDelete(response);
+        auto iterationWholeEnd = std::chrono::high_resolution_clock::now();
+        latenciesWhole[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationWholeEnd - iterationWholeStart).count();
+        latenciesPure[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationPureEnd - iterationPureStart).count();
+        iter++;
+    }
+    auto workloadEnd = std::chrono::high_resolution_clock::now();
+    wholeThreadTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(workloadEnd - workloadStart).count();
+    averageWholeLatency = std::accumulate(latenciesWhole.begin(), latenciesWhole.end(), 0) / (double(niterPerThread) * 1'000);
+    averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
+    OVMS_InferenceRequestDelete(request);
+}
+
+void triggerInferenceInALoopResetRequest(
+    std::future<void>& startSignal,
+    std::promise<void>& readySignal,
+    const size_t niterPerThread,
+    size_t& wholeThreadTimeUs,
+    double& averageWholeLatency,
+    double& averagePureLatency,
+    OVMS_Server* server,
+    const std::string& servableName, int64_t servableVersion, OVMS_DataType datatype, const signed_shape_t& shape, const std::string& inputName,
+    std::optional<uint64_t> seed) {
+    OVMS_InferenceResponse* response{nullptr};
+    auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
+    std::vector<uint64_t> latenciesWhole(niterPerThread);
+    std::vector<uint64_t> latenciesPure(niterPerThread);
+    std::vector<std::vector<float>> preparedData;
+    prepareData(preparedData, niterPerThread, elementsCount, seed);
+    readySignal.set_value();
+    startSignal.get();
+    auto workloadStart = std::chrono::high_resolution_clock::now();
+    size_t iter = 0;
+    while (iter < niterPerThread) {
+        OVMS_InferenceRequest* request = prepareRequest(server, servableName, servableVersion, datatype, shape, inputName, (const void*)preparedData[iter].data());
+        auto iterationWholeStart = std::chrono::high_resolution_clock::now();
+        auto iterationPureStart = std::chrono::high_resolution_clock::now();
+        OVMS_Inference(server, request, &response);
+        auto iterationPureEnd = std::chrono::high_resolution_clock::now();
+        OVMS_InferenceResponseDelete(response);
+        OVMS_InferenceRequestDelete(request);
+        auto iterationWholeEnd = std::chrono::high_resolution_clock::now();
+        latenciesWhole[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationWholeEnd - iterationWholeStart).count();
+        latenciesPure[iter] = std::chrono::duration_cast<std::chrono::microseconds>(iterationPureEnd - iterationPureStart).count();
+        iter++;
+    }
+    auto workloadEnd = std::chrono::high_resolution_clock::now();
+    wholeThreadTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(workloadEnd - workloadStart).count();
+    averageWholeLatency = std::accumulate(latenciesWhole.begin(), latenciesWhole.end(), 0) / (double(niterPerThread) * 1'000);
+    averagePureLatency = std::accumulate(latenciesPure.begin(), latenciesPure.end(), 0) / (double(niterPerThread) * 1'000);
+}
+
 }  // namespace
+
+enum Mode {
+    INFERENCE_ONLY,
+    RESET_BUFFER,
+    RESET_REQUEST
+};
 
 int main(int argc, char** argv) {
     installSignalHandlers();
@@ -258,13 +378,27 @@ int main(int argc, char** argv) {
     OVMS_ServerSettingsSetLogLevel(serverSettings, logLevel);
     OVMS_ModelsSettingsSetConfigPath(modelsSettings, cliparser.result->operator[]("config_path").as<std::string>().c_str());
 
+    std::string modeParam = cliparser.result->operator[]("mode").as<std::string>();
+    Mode mode;
+    if (modeParam == "INFERENCE_ONLY") {
+        mode = Mode::INFERENCE_ONLY;
+    }else if (modeParam == "RESET_BUFFER") {
+        mode = Mode::RESET_BUFFER;
+    }else if (modeParam == "RESET_REQUEST") {
+        mode = Mode::RESET_REQUEST;
+    }else {
+        std::cerr << "Invalid mode requested: " <<  modeParam << std::endl;
+        return 1;
+    }
+    std::cout << "Mode requested: " <<  modeParam << std::endl;
+
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
 
     if (res) {
         uint32_t code = 0;
         const char* details = nullptr;
-        OVMS_StatusGetCode(res, &code);
-        OVMS_StatusGetDetails(res, &details);
+        OVMS_StatusCode(res, &code);
+        OVMS_StatusDetails(res, &details);
         std::cout << "Error starting the server. Code:" << code
                   << "; details:" << details << std::endl;
         OVMS_ServerDelete(srv);
@@ -279,7 +413,11 @@ int main(int argc, char** argv) {
     // model parameters
     ///////////////////////
     std::string servableName(cliparser.result->operator[]("servable_name").as<std::string>());
-    uint64_t  servableVersion(cliparser.result->operator[]("servable_version").as<uint64_t>());
+    int64_t servableVersion(cliparser.result->operator[]("servable_version").as<int64_t>());
+    if (servableVersion < 0) {
+        std::cerr << "servableVersion cannot be negative" << std::endl;
+        return EX_USAGE;
+    }
     // input names handling
     std::string cliInputsNames(cliparser.result->operator[]("inputs_names").as<std::string>());
     auto inputsNames = ovms::tokenize(cliInputsNames, ',');
@@ -291,7 +429,14 @@ int main(int argc, char** argv) {
     // datatype handling
     OVMS_DataType datatype = OVMS_DATATYPE_FP32;
     // shape handling
-    std::vector<std::size_t> shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
+    signed_shape_t shape;
+    try {
+        shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
+    }
+    catch(...){
+        std::cerr << "Invalid shape parameter.";
+        exit(EX_CONFIG);
+    }
     ///////////////////////
     // benchmark parameters
     ///////////////////////
@@ -301,7 +446,7 @@ int main(int argc, char** argv) {
     size_t threadCount = nireq * threadsPerIreq;
     size_t niterPerThread = niter / threadCount;
 
-    size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+    auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
     std::vector<float> data(elementsCount, 0.1);
 
     ///////////////////////
@@ -324,8 +469,8 @@ int main(int argc, char** argv) {
     if (res != nullptr) {
         uint32_t code = 0;
         const char* details = 0;
-        OVMS_StatusGetCode(res, &code);
-        OVMS_StatusGetDetails(res, &details);
+        OVMS_StatusCode(res, &code);
+        OVMS_StatusDetails(res, &details);
         std::cerr << "Error occured during inference. Code:" << code
                   << ", details:" << details << std::endl;
         OVMS_StatusDelete(res);
@@ -336,65 +481,72 @@ int main(int argc, char** argv) {
         exit(EX_CONFIG);
     }
     OVMS_InferenceResponseDelete(response);
+    std::optional<uint64_t> seed;
+    if (cliparser.result->count("seed")) {
+        seed = cliparser.result->operator[]("seed").as<uint64_t>();
+    }
 
-    ///////////////////////
-    // prepare response data
-    ///////////////////////
-    uint32_t outputCount = 0;
-    const void* voutputData;
-    size_t bytesize = 0;
-    uint32_t outputId = outputCount - 1;
-    OVMS_DataType responseDatatype = (OVMS_DataType) 42;
-    const uint64_t* outputShape{nullptr};
-    uint32_t dimCount = 0;
-    OVMS_BufferType bufferType = (OVMS_BufferType)42;
-    uint32_t deviceId = 42;
-    const char* outputName{nullptr};
     ///////////////////////
     // setup workload machinery
     ///////////////////////
     std::vector<std::unique_ptr<std::thread>> workerThreads;
     std::vector<std::promise<void>> startSignals(threadCount);
-    std::vector<std::promise<void>> stopSignals(threadCount);
+    std::vector<std::promise<void>> readySignals(threadCount);
     std::vector<std::future<void>> futureStartSignals;
-    std::vector<std::future<void>> futureStopSignals;
+    std::vector<std::future<void>> futureReadySignals;
     std::vector<size_t> wholeThreadsTimesUs(threadCount, 0);
     std::transform(startSignals.begin(),
         startSignals.end(),
         std::back_inserter(futureStartSignals),
         [](auto& p) { return p.get_future(); });
-    std::transform(stopSignals.begin(),
-        stopSignals.end(),
-        std::back_inserter(futureStopSignals),
+    std::transform(readySignals.begin(),
+        readySignals.end(),
+        std::back_inserter(futureReadySignals),
         [](auto& p) { return p.get_future(); });
 
     ///////////////////////
     // prepare threads
     ///////////////////////
+    void (*triggerInferenceInALoop)(std::future<void>&, std::promise<void>&, const size_t, size_t&, double&, double&, OVMS_Server*, const std::string&, int64_t, OVMS_DataType, const signed_shape_t&, const std::string&, std::optional<uint64_t>);
+    if (mode == Mode::INFERENCE_ONLY) {
+        triggerInferenceInALoop = triggerInferenceInALoopInferenceOnly;
+    } else if (mode == Mode::RESET_BUFFER){
+        triggerInferenceInALoop = triggerInferenceInALoopResetBuffer;
+    } else if (mode == Mode::RESET_REQUEST) {
+        triggerInferenceInALoop = triggerInferenceInALoopResetRequest;
+    }
     for (size_t i = 0; i < threadCount; ++i) {
         workerThreads.emplace_back(std::make_unique<std::thread>(
             [&futureStartSignals,
-             &futureStopSignals,
-             &niterPerThread,
-             &wholeThreadsTimesUs,
-             &wholeTimes,
-             &pureTimes,
-             &srv,
-             &request,
-             i]() {
+            &readySignals,
+            &niterPerThread,
+            &wholeThreadsTimesUs,
+            &wholeTimes,
+            &pureTimes,
+            &srv,
+            &servableName,
+            &servableVersion,
+            &datatype,
+            &shape,
+            &inputName,
+            &triggerInferenceInALoop,
+            &seed,
+            i]() {
                 triggerInferenceInALoop(
                     futureStartSignals[i],
-                    futureStopSignals[i],
+                    readySignals[i],
                     niterPerThread,
                     wholeThreadsTimesUs[i],
                     wholeTimes[i],
                     pureTimes[i],
                     srv,
-                    request);
+                    servableName, servableVersion, datatype, shape, inputName,
+                    seed);
             }));
     }
-    // sleep to allow all threads to initialize
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // allow all threads to initialize
+    std::for_each(futureReadySignals.begin(), futureReadySignals.end(), [](auto& readySignal) { readySignal.get(); });
     ///////////////////////
     // start workload
     ///////////////////////

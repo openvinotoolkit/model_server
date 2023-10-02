@@ -28,6 +28,7 @@ import random
 import traceback
 import datetime
 import uuid
+import numpy as np
 import png
 import grpc
 import numpy
@@ -294,6 +295,8 @@ class BaseClient(metaclass=abc.ABCMeta):
                 self.load_vehicle_jpeg_data(input_name, dataset_length)
             elif method_name in ("png-xrandom", "xrandom", "xrand"):
                 self.generate_png_xrandom_data(input_name, dataset_length)
+            elif method_name in ("string", ):
+                self.generate_string_data(input_name, dataset_length)
             else: raise ValueError(f"unknown method: {method_name}")
         self.prepare_batch_requests()
 
@@ -329,7 +332,7 @@ class BaseClient(metaclass=abc.ABCMeta):
             batch = self.create_batch_from_data(content, content_offset, input_name, batch_length)
             if batch is None: break
             content_offset += len(batch)
-            xargs = batch, {"shape": list(content.shape[1:])}
+            xargs = batch, {"shape": list(content.shape)}
             self.xdata[input_name].append(xargs)
         self.dataset_length = len(self.xdata[input_name])
 
@@ -363,6 +366,8 @@ class BaseClient(metaclass=abc.ABCMeta):
             dtype = tensorflow.dtypes.int32
         elif dtype == self.DTYPE_INT_64:
             dtype = tensorflow.dtypes.int64
+        elif dtype == self.DTYPE_UINT_8:
+            dtype = tensorflow.dtypes.uint8
         else: raise ValueError(f"not supported type: {dtype}")
         return shape, dtype
 
@@ -495,6 +500,16 @@ class BaseClient(metaclass=abc.ABCMeta):
             with open(filename, "wb") as fd:
                 writ.write(fd, png_image)
         return binary_png
+
+    def generate_string_data(self, input_name, dataset_length):
+        self.__fix_dataset_length(input_name, dataset_length)
+        self.xdata[input_name] = []
+
+        string_data = ["dog",
+                       "Puppies are nice.",
+                       "I enjoy taking long walks along the beach with my dog."]
+        xargs = np.array([str(x).encode("utf-8") for x in string_data], dtype=np.object_)
+        self.xdata[input_name].append((xargs, {"dtype": xargs.dtype, "shape": xargs.shape}))
 
     def generate_png_xrandom_data(self, input_name, dataset_length):
         self.__fix_dataset_length(input_name, dataset_length)

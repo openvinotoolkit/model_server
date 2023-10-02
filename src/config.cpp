@@ -23,9 +23,9 @@
 #include <spdlog/spdlog.h>
 #include <sysexits.h>
 
+#include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
-#include "server_settings.hpp"
 #include "systeminfo.hpp"
 
 namespace ovms {
@@ -179,7 +179,7 @@ uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.v
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
 const std::string& Config::batchSize() const {
-    static const std::string defaultBatch = "0";
+    static const std::string defaultBatch = "";
     return this->modelsSettings.batchSize.empty() ? defaultBatch : this->modelsSettings.batchSize;
 }
 const std::string& Config::Config::shape() const { return this->modelsSettings.shape; }

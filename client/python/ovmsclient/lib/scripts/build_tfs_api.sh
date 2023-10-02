@@ -36,6 +36,7 @@ mkdir compiled_protos
 cp -R tf/tensorflow ovmsclient/tfs_compat/protos/tensorflow
 cp -R tfs/tensorflow_serving ovmsclient/tfs_compat/protos/tensorflow_serving 
 find ovmsclient/tfs_compat/protos -name "*.proto" -exec sed -i -E 's/import "tensorflow/import "ovmsclient\/tfs_compat\/protos\/tensorflow/g' {} \;
+python3 scripts/rename_proto_package.py
 
 protoc --proto_path=$PWD --python_out=$PWD/compiled_protos \
 $PWD/ovmsclient/tfs_compat/protos/tensorflow/core/framework/*.proto \

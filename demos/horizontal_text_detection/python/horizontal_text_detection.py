@@ -72,7 +72,7 @@ def get_text(output):
 
 def draw_boxes_spotting(frame, result):
     output = make_ndarray(result.outputs['boxes'])
-    for i in range(0, 100):  # there is returned 200 detections for each image in the batch
+    for i in range(0, output.shape[0]):  # there is returned a dynamic list of boxes
         detection = output[i,:]
         if detection[4] > 0.3:
             x_min = int(detection[0])

@@ -36,6 +36,10 @@ TEST(Dimension, Match) {
     EXPECT_FALSE(Dimension(10, 20).match(22));
     EXPECT_FALSE(Dimension(10, 20).match(-12));
     EXPECT_FALSE(Dimension(10, 20).match(-1));
+    EXPECT_TRUE(Dimension(-1).match(0));
+    EXPECT_TRUE(Dimension(0, 20).match(0));
+    EXPECT_TRUE(Dimension(0).match(0));
+    EXPECT_FALSE(Dimension(1, 5).match(0));
 }
 
 TEST(Dimension, PartiallyFitsInto) {
@@ -49,6 +53,9 @@ TEST(Dimension, PartiallyFitsInto) {
     EXPECT_TRUE(Dimension::any().partiallyFitsInto(Dimension(10, 20)));
     EXPECT_FALSE(Dimension(1, 2).partiallyFitsInto(Dimension(3, 3)));
     EXPECT_FALSE(Dimension(1, 2).partiallyFitsInto(Dimension(3, 4)));
+    EXPECT_TRUE(Dimension(0, 8).partiallyFitsInto(Dimension(5, 10)));
+    EXPECT_FALSE(Dimension(0, 8).partiallyFitsInto(Dimension(15, 20)));
+    EXPECT_TRUE(Dimension(0, 2).partiallyFitsInto(Dimension::any()));
 }
 
 TEST(Dimension, CreateIntersection) {
@@ -62,6 +69,7 @@ TEST(Dimension, CreateIntersection) {
     EXPECT_EQ(Dimension::any().createIntersection(Dimension(10, 20)), Dimension(10, 20));
     EXPECT_EQ(Dimension(1, 2).createIntersection(Dimension(3)), std::nullopt);
     EXPECT_EQ(Dimension(1, 2).createIntersection(Dimension(3, 4)), std::nullopt);
+    EXPECT_EQ(Dimension(0, 2).createIntersection(Dimension(0, 1)), Dimension(0, 1));
 }
 
 TEST(Dimension, Constructor) {
@@ -90,10 +98,15 @@ TEST(Shape, CreateIntersection) {
     EXPECT_EQ(Shape({{1, 2}, {6, 12}, Dimension::any()}).createIntersection(Shape({1, 8, 100})), Shape({1, 8, 100}));
     EXPECT_EQ(Shape({{3, 5}, {7, 10}, {11, 19}}).createIntersection(Shape({Dimension(4), Dimension(8, 13), Dimension(3, 13)})), Shape({Dimension(4), Dimension(8, 10), Dimension(11, 13)}));
     EXPECT_EQ(Shape({Dimension::any(), {1, 5}, {1, 19}}).createIntersection(Shape({Dimension::any(), {1, 10}, 3})), Shape({Dimension::any(), {1, 5}, 3}));
+    EXPECT_EQ(Shape({0, {0, 1}}).createIntersection(Shape({Dimension::any(), Dimension::any()})), Shape({0, {0, 1}}));
+    EXPECT_EQ(Shape({0, {0, 1}}).createIntersection(Shape({0, 1})), Shape({0, 1}));
+    EXPECT_EQ(Shape({0, {0, 1}}).createIntersection(Shape({0, 2})), std::nullopt);
 }
 
 TEST(Shape, OvShapeMatch) {
+    EXPECT_TRUE(Shape({2, 0}).match(ov::Shape({2, 0})));
     EXPECT_FALSE(Shape({1, 6, 8}).match(ov::Shape({1, 6})));
+    EXPECT_FALSE(Shape({1, 6}).match(ov::Shape({1, 6, 8})));
     EXPECT_TRUE(Shape({1, 6, 8}).match(ov::Shape({1, 6, 8})));
     EXPECT_TRUE(Shape({{1, 2}, {6, 12}, Dimension::any()}).match(ov::Shape({1, 8, 100})));
     size_t skipPosition = 1;

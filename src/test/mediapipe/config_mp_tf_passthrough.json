@@ -1,0 +1,31 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "shape": "(-1, -1)"
+            }
+        },
+        {
+            "config": {
+                "name": "scalar",
+                "base_path": "/ovms/src/test/scalar"
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+        {
+            "name": "mpTfsPassthrough",
+            "graph_path": "/ovms/src/test/mediapipe/graphtfpassthrough.pbtxt"
+        },
+        {
+            "name": "mpTFDummy",
+            "graph_path": "/ovms/src/test/mediapipe/graphdummy_tf.pbtxt"
+        },
+        {
+            "name": "mpTFScalar",
+            "graph_path": "/ovms/src/test/mediapipe/graphscalar_tf.pbtxt"
+        }
+    ]
+}

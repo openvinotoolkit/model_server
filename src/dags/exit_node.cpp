@@ -18,7 +18,7 @@
 #include <string>
 #include <utility>
 
-#include "../inferenceresponse.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
 #include "../serialization.hpp"
@@ -33,6 +33,7 @@
 namespace ovms {
 
 const std::string EXIT_NODE_NAME = "response";
+const std::string DEFAULT_PIPELINE_NAME = "";
 
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
@@ -64,7 +65,7 @@ template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
     OutputGetter<const TensorMap&> outputGetter(inputTensors);
     static const model_version_t version{1};
-    return serializePredictResponse(outputGetter, pipelineName, version, this->outputsInfo, this->response, getOutputMapKeyName);
+    return serializePredictResponse(outputGetter, pipelineName, version, this->outputsInfo, this->response, getOutputMapKeyName, useSharedOutputContent);
 }
 
 template <typename ResponseType>

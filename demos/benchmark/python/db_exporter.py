@@ -70,7 +70,7 @@ class DBExporter:
 
         doc["final_results"] = {}
         doc["execution_date"] = self.exec_date
-        doc["client_version"] = "2.6"
+        doc["client_version"] = "2.7"
         doc["model_name"] = self.args["model_name"]
         doc["model_version"] = self.args["model_version"]
 

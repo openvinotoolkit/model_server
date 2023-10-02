@@ -21,7 +21,7 @@
 
 #include <sysexits.h>
 
-#include "server_settings.hpp"
+#include "capi_frontend/server_settings.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -142,7 +142,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>()->default_value("CPU"),
                 "TARGET_DEVICE")
             ("plugin_config",
-                "A dictionary of plugin configuration keys and their values, eg \"{\\\"NUM_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
+                "A dictionary of plugin configuration keys and their values, eg \"{\\\"NUM_STREAMS\\\": \\\"1\\\"}\". Default number of streams is optimized to optimal latency with low concurrency.",
                 cxxopts::value<std::string>(),
                 "PLUGIN_CONFIG")
             ("stateful",
@@ -169,6 +169,7 @@ void CLIParser::parse(int argc, char** argv) {
             std::string project_version(PROJECT_VERSION);
             std::cout << project_name + " " + project_version << std::endl;
             std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
+            std::cout << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
             exit(EX_OK);
         }
 

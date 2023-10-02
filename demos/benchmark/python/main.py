@@ -50,7 +50,7 @@ def get_client(xargs):
 
 
 # Version used for print only...
-INTERNAL_VERSION="2.6"
+INTERNAL_VERSION="2.7"
 
 # client engine - used for single and multiple client configuration
 def run_single_client(xargs, worker_name_or_client, index, json_flag=None):

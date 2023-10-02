@@ -176,14 +176,6 @@ PREDICT_REQUEST_INVALID_INPUTS = [
         "input1": (1, 2, 3)
     }, 'model_name', 0, TypeError,
      "values type should be (list, np.ndarray, scalar), but is tuple"),
-    ({
-        "input1": [
-            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
-             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])],
-            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
-             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])]
-        ]
-    }, 'model_name', 0, ValueError, "bytes values with dtype DT_STRING must be in shape [N]"),
 ]
 
 # (inputs_dict,
@@ -222,7 +214,9 @@ PREDICT_REQUEST_VALID = [
                                                             TensorShapeProto.Dim(size=3)]),
                               tensor_content=array([1, 2, 3, 4, 5, 6]).tobytes()),
         "input2": 5.0,
-        "input3": bytes([1, 2, 3])
+        "input3": bytes([1, 2, 3]),
+        "input4": [[bytes([1, 2, 3]), bytes([1, 2, 3])], [bytes([1, 2, 3]), bytes([1, 2, 3])]],
+        "input5": [["list", "of", "strings"]],
     }, {
         "input2": {
             "field": "float_val",
@@ -235,7 +229,21 @@ PREDICT_REQUEST_VALID = [
             "shape": TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
             "dtype": DataType.DT_STRING,
             'value': [bytes([1, 2, 3])]
-        }
+        },
+        "input4": {
+            "field": "string_val",
+            "shape": TensorShapeProto(dim=[TensorShapeProto.Dim(size=2),
+                                           TensorShapeProto.Dim(size=2)]),
+            "dtype": DataType.DT_STRING,
+            'value': [bytes([1, 2, 3]), bytes([1, 2, 3]), bytes([1, 2, 3]), bytes([1, 2, 3])]
+        },
+        "input5": {
+            "field": "string_val",
+            "shape": TensorShapeProto(dim=[TensorShapeProto.Dim(size=1),
+                                           TensorShapeProto.Dim(size=3)]),
+            "dtype": DataType.DT_STRING,
+            'value': [b'list', b'of', b'strings']
+        },
     }, 'model_name', 0),
 
     ({
@@ -274,9 +282,20 @@ PREDICT_RESPONSE_VALID = [
         "2": TensorProto(dtype=DataType.DT_STRING,
                          tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
                          string_val=[bytes([1, 2, 3])]),
+        "3": TensorProto(dtype=DataType.DT_STRING,
+                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1),
+                                                            TensorShapeProto.Dim(size=3)]),
+                         string_val=[b'list', b'of', b'strings']),
+        "4": TensorProto(dtype=DataType.DT_STRING,
+                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=2),
+                                                            TensorShapeProto.Dim(size=2)]),
+                         string_val=[bytes([1, 2, 3]), bytes([1, 2, 3]),
+                                     bytes([1, 2, 3]), bytes([1, 2, 3])]),
     }, "model_name", 0, {
         "1463": [bytes([1, 2, 3]), bytes([4, 5])],
-        "2": [bytes([1, 2, 3])]
+        "2": [bytes([1, 2, 3])],
+        "3": [[b'list', b'of', b'strings']],
+        "4": [[bytes([1, 2, 3]), bytes([1, 2, 3])], [bytes([1, 2, 3]), bytes([1, 2, 3])]]
     }),
 ]
 

@@ -109,6 +109,19 @@ TEST(TFSRestParserColumn, ParseValid2Inputs) {
                                                               14.0, 15.0, 16.0));
 }
 
+TEST(TFSRestParserColumn, ValidShape_1d_vector_1elem) {
+    TFSRestParser parser(prepareTensors({{"i", {1}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":[155.0]
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0));
+}
+
 TEST(TFSRestParserColumn, ValidShape_1x1) {
     TFSRestParser parser(prepareTensors({{"i", {1, 1}}}));
 
@@ -135,6 +148,20 @@ TEST(TFSRestParserColumn, ValidShape_1x2) {
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 56.0));
 }
 
+TEST(TFSRestParserColumn, ValidShape_0) {
+    TFSRestParser parser(prepareTensors({{"i", {0}}}, ovms::Precision::FP32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":[]
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_FLOAT);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+}
+
 TEST(TFSRestParserColumn, ValidShape_2x1) {
     TFSRestParser parser(prepareTensors({{"i", {2, 1}}}));
 
@@ -159,6 +186,20 @@ TEST(TFSRestParserColumn, ValidShape_2x2) {
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
     EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 2));
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 9.0, 513.0, -5.0));
+}
+
+TEST(TFSRestParserColumn, ValidShape_2x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 0}}}, ovms::Precision::I64));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":[[],[]]
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_INT64);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
 }
 
 TEST(TFSRestParserColumn, ValidShape_2x1x3) {
@@ -233,6 +274,72 @@ TEST(TFSRestParserColumn, ValidShape_2x1x3x1x5) {
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9,
                                                                                           1.9, 2.9, 3.9, 4.9, 5.9));
+}
+
+TEST(TFSRestParserColumn, ValidShape_2x1x3x1x0) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 0}}}, ovms::Precision::FP32));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i": [
+            [[[[ ]],
+            [[ ]],
+            [[ ]]]],
+            [[[[ ]],
+            [[ ]],
+            [[ ]]]]
+        ]
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3, 1, 0));
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_FLOAT);
+    EXPECT_EQ(parser.getProto().inputs().at("i").tensor_content().size(), 0);
+}
+
+TEST(TFSRestParserColumn, ValidScalar) {
+    TFSRestParser parser(prepareTensors({{"i", {}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":155.0
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre());
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DT_FLOAT);
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0));
+}
+
+TEST(TFSRestParserColumn, ValidScalarNoMetadataInt32) {
+    TFSRestParser parser(prepareTensors({}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":155
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre());
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DT_INT32);
+    EXPECT_THAT(asVector<int>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155));
+}
+
+TEST(TFSRestParserColumn, ValidScalarNoMetadataFloat) {
+    TFSRestParser parser(prepareTensors({}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "i":155.2
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre());
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DT_FLOAT);
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.2));
 }
 
 TEST(TFSRestParserColumn, AllowsDifferent0thDimension) {
@@ -391,7 +498,6 @@ TEST(TFSRestParserColumn, NoInputsFound) {
 TEST(TFSRestParserColumn, CannotParseInput) {
     TFSRestParser parser(prepareTensors({{"i", {2, 1}}}));
 
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":2}})"), StatusCode::REST_COULD_NOT_PARSE_INPUT);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":null}})"), StatusCode::REST_COULD_NOT_PARSE_INPUT);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[1,null]}})"), StatusCode::REST_COULD_NOT_PARSE_INPUT);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[1,2],[3,"str"]]}})"), StatusCode::REST_COULD_NOT_PARSE_INPUT);
@@ -601,7 +707,7 @@ TEST(TFSRestParserColumn, InstancesShapeDiffer_3) {
 }
 
 TEST(TFSRestParserColumn, RemoveUnnecessaryInputs) {
-    TFSRestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}}, ovms::Precision::FP16));
+    TFSRestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}, {"m", {}}}, ovms::Precision::FP16));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
         "k":[[155.0]], "l": [[1.0]]
@@ -609,9 +715,44 @@ TEST(TFSRestParserColumn, RemoveUnnecessaryInputs) {
         StatusCode::OK);
     EXPECT_EQ(parser.getOrder(), Order::COLUMN);
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 0);  // missing in request, expect missing after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("j"), 0);  // missing in request, expect missing after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("k"), 1);  // exists in request, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("l"), 1);  // exists in request, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("m"), 0);  // missing in request, expect missing after conversion
     ASSERT_EQ(parser.getProto().inputs().size(), 2);
-    ASSERT_EQ(parser.getProto().inputs().count("i"), 0);
-    ASSERT_EQ(parser.getProto().inputs().count("j"), 0);
-    ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
-    ASSERT_EQ(parser.getProto().inputs().count("l"), 1);
+}
+
+TEST(TFSRestParserColumn, RemoveUnnecessaryInputs_ExpectedScalarInRequest) {
+    TFSRestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}, {"m", {}}}, ovms::Precision::FP16));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "k":[[155.0]], "l": [[1.0]], "m": 3
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 0);  // missing in request, expect missing after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("j"), 0);  // missing in request, expect missing after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("k"), 1);  // exists in request and endpoint metadata, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("l"), 1);  // exists in request and endpoint metadata, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("m"), 1);  // exists in request and endpoint metadata, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().size(), 3);
+}
+
+TEST(TFSRestParserColumn, RemoveUnnecessaryInputs_UnexpectedScalarInRequest) {
+    TFSRestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, /*{"k", {1, 1}},*/ {"l", {1, 1}} /*,{"m", {}}*/}, ovms::Precision::FP16));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
+        "k":[[155.0]], "l": [[1.0]], "m": 4
+    }})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::COLUMN);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 0);  // missing in request, expect missing after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("j"), 0);  // missing in request, expect missing after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("k"), 1);  // missing in endpoint metadata but exists in request, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("l"), 1);  // exists in request and endpoint metadata, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().count("m"), 1);  // missing in endpoint metadata but exists in request, expect exists after conversion
+    ASSERT_EQ(parser.getProto().inputs().size(), 3);
 }

@@ -40,6 +40,11 @@ TEST(ModelConfig, getters_setters) {
     auto path = config.getBasePath();
     EXPECT_EQ(path, "/path");
 
+    config.setRootDirectoryPath("/pathto/");
+    config.setBasePath("relative/path");
+    path = config.getBasePath();
+    EXPECT_EQ(path, "/pathto/relative/path");
+
     config.setTargetDevice("GPU");
     auto device = config.getTargetDevice();
     EXPECT_EQ(device, "GPU");
@@ -223,6 +228,7 @@ TEST(ModelConfig, parseShapeFromString) {
     std::string auto_str = "auto";
     std::string valid_str1 = "(64,128,256,   300)";
     std::string valid_str2 = "   (     64 , 300   )   ";
+    std::string valid_str3 = "   (   0 , 0   )   ";
     ovms::ShapeInfo shapeInfo;
 
     config.parseShape(shapeInfo, auto_str);
@@ -236,6 +242,10 @@ TEST(ModelConfig, parseShapeFromString) {
     config.parseShape(shapeInfo, valid_str2);
     EXPECT_EQ(shapeInfo.shapeMode, ovms::FIXED);
     EXPECT_EQ(shapeInfo.shape, (ovms::Shape{64, 300}));
+
+    config.parseShape(shapeInfo, valid_str3);
+    EXPECT_EQ(shapeInfo.shapeMode, ovms::FIXED);
+    EXPECT_EQ(shapeInfo.shape, (ovms::Shape{0, 0}));
 
     // Invalid
     std::string invalid_str1 = "(1, 2, 3, 4]";
@@ -262,6 +272,7 @@ TEST(ModelConfig, parseDimParam) {
     std::string valid_str1 = " 24 ";
     std::string valid_str2 = " 30:32 ";
     std::string valid_str3 = " -1 ";
+    std::string valid_str4 = "0";
 
     config.setBatchingParams(auto_str);
     EXPECT_EQ(config.getBatchingMode(), ovms::AUTO);
@@ -279,6 +290,10 @@ TEST(ModelConfig, parseDimParam) {
     EXPECT_EQ(config.getBatchingMode(), ovms::FIXED);
     EXPECT_EQ(config.getBatchSize(), ovms::Dimension::any());
 
+    config.setBatchingParams(valid_str4);
+    EXPECT_EQ(config.getBatchingMode(), ovms::FIXED);
+    EXPECT_EQ(config.getBatchSize(), ovms::Dimension(0));
+
     // Invalid
 
     std::vector<std::string> invalid_str{
@@ -287,7 +302,6 @@ TEST(ModelConfig, parseDimParam) {
         std::string{"9:"},
         std::string{"9-30"},
         std::string{"9..30"},
-        std::string{"0"},
         std::string{"9::30"},
         std::string{"-90:10"},
         std::string{"?"},
@@ -309,6 +323,7 @@ TEST(ModelConfig, parseShapeParam) {
     std::string valid_str1 = "(64,128,256,300)";
     std::string valid_str2 = "{\"input\": \"(1, 3, 3, 200)\"}";
     std::string valid_str3 = "{\"input\": \"auto\", \"extra_input\": \"(10)\"}";
+    std::string valid_str4 = "{\"input\": \"auto\", \"extra_input\": \"(0)\"}";
 
     config.parseShapeParameter(auto_str);
     auto shapes = config.getShapes();
@@ -330,6 +345,10 @@ TEST(ModelConfig, parseShapeParam) {
     EXPECT_EQ(shapes["input"].shape.size(), 0);
     EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
     EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{10}));
+
+    config.parseShapeParameter(valid_str4);
+    shapes = config.getShapes();
+    EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{0}));
 
     // Invalid
 
@@ -354,6 +373,7 @@ TEST(ModelConfig, parseShapeDynamicParam) {
     std::string valid_str1 = "(64:128,128,256:512,300:301)";
     std::string valid_str2 = "{\"input\": \"(1, 3:6, 3, 200:100000)\"}";
     std::string valid_str3 = "{\"input\": \"auto\", \"extra_input\": \"(10:20)\"}";
+    std::string valid_str4 = "{\"input\": \"auto\", \"extra_input\": \"(0:20)\"}";
 
     ASSERT_EQ(config.parseShapeParameter(valid_str1), StatusCode::OK);
     auto shapes = config.getShapes();
@@ -374,6 +394,10 @@ TEST(ModelConfig, parseShapeDynamicParam) {
     EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
     EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{{10, 20}}));
 
+    ASSERT_EQ(config.parseShapeParameter(valid_str4), StatusCode::OK);
+    shapes = config.getShapes();
+    EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{{0, 20}}));
+
     // Invalid
 
     std::vector<std::string> invalid_str{
@@ -383,7 +407,6 @@ TEST(ModelConfig, parseShapeDynamicParam) {
         std::string{"{\"input\": \"auto\", \"extra_input\": \"(9:,20,50)\"}"},
         std::string{"{\"input\": \"auto\", \"extra_input\": \"(9-30,20,50)\"}"},
         std::string{"{\"input\": \"auto\", \"extra_input\": \"(9..30,20,50)\"}"},
-        std::string{"{\"input\": \"auto\", \"extra_input\": \"(0,20,50)\"}"},
         std::string{"{\"input\": \"auto\", \"extra_input\": \"(9::30,20,50)\"}"},
         std::string{"{\"input\": \"auto\", \"extra_input\": \"(-90:10,20,50)\"}"},
         std::string{"{\"input\": \"auto\", \"extra_input\": \"(?,20,50)\"}"},
@@ -399,8 +422,8 @@ TEST(ModelConfig, parseShapeDynamicParam) {
 
 TEST(ModelConfig, dynamicShapeToString) {
     using namespace ovms;
-    Shape shape{1, 5, {10, 20}, Dimension::any(), 3, {1, 290}};
-    EXPECT_EQ(shape.toString(), "(1,5,[10~20],-1,3,[1~290])");
+    Shape shape{1, {0, 3}, 5, {10, 20}, Dimension::any(), 3, {1, 290}};
+    EXPECT_EQ(shape.toString(), "(1,[0~3],5,[10~20],-1,3,[1~290])");
 }
 
 TEST(ModelConfig, parseShapeAnyDimParam) {
@@ -872,6 +895,14 @@ TEST(ModelConfig, modelVersionPolicyIncorrect) {
     ovms::ModelConfig config;
     auto result = config.parseModelVersionPolicy(command);
     EXPECT_EQ(result, ovms::StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY);
+
+    command = "{\"specific\": {\"versions\":1}}";
+    result = config.parseModelVersionPolicy(command);
+    EXPECT_EQ(result, ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    command = "{\"specific\": {\"incorrect\":[1,2]}}";
+    result = config.parseModelVersionPolicy(command);
+    EXPECT_EQ(result, ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
 }
 
 TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {

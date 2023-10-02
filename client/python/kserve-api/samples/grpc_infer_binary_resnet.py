@@ -17,59 +17,19 @@
 import sys
 sys.path.append("../../../../demos/common/python")
 
-import ast
-import grpc
 import numpy as np
 import classes
 import datetime
 import argparse
 from client_utils import print_statistics
-from tritonclient.grpc import service_pb2, service_pb2_grpc
-from tritonclient.utils import *
 
-DataTypeToContentsFieldName = {
-    'BOOL' : 'bool_contents',
-    'BYTES' : 'bytes_contents',
-    'FP32' : 'fp32_contents',
-    'FP64' : 'fp64_contents',
-    'INT64' : 'int64_contents',
-    'INT32' : 'int_contents',
-    'UINT64' : 'uint64_contents',
-    'UINT32' : 'uint_contents',
-    'INT64' : 'int64_contents',
-    'INT32' : 'int_contents',
-}
+import tritonclient.grpc as grpcclient
 
-def as_numpy(response, name):
-    index = 0
-    for output in response.outputs:
-        if output.name == name:
-            shape = []
-            for value in output.shape:
-                shape.append(value)
-            datatype = output.datatype
-            field_name = DataTypeToContentsFieldName[datatype]
-            contents = getattr(output, "contents")
-            contents = getattr(contents, f"{field_name}")
-            if index < len(response.raw_output_contents):
-                np_array = np.frombuffer(
-                    response.raw_output_contents[index], dtype=triton_to_np_dtype(output.datatype))
-            elif len(contents) != 0:
-                np_array = np.array(contents,
-                                    copy=False)
-            else:
-                np_array = np.empty(0)
-            np_array = np_array.reshape(shape)
-            return np_array
-        else:
-            index += 1
-    return None
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sends requests via KServe gRPC API using images in format supported by OpenCV. '
                                                  'It displays performance statistics and optionally the model accuracy')
     parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
-    parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
     parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
     parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
     parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
@@ -82,10 +42,14 @@ if __name__ == '__main__':
                         dest='model_name')
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
+    parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with GRPC endpoint')
 
+    error = False
     args = vars(parser.parse_args())
 
     address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
+    input_name = args['input_name']
+    output_name = args['output_name']
 
     processing_times = np.zeros((0),int)
 
@@ -96,10 +60,6 @@ if __name__ == '__main__':
     while batch_size > len(lines):
         lines += lines
 
-    if args.get('labels_numpy_path') is not None:
-        lbs = np.load(args['labels_numpy_path'], mmap_mode='r', allow_pickle=False)
-        matched_count = 0
-        total_executed = 0
     batch_size = int(args.get('batchsize'))
 
     print('Start processing:')
@@ -108,76 +68,79 @@ if __name__ == '__main__':
     iteration = 0
     is_pipeline_request = bool(args.get('pipeline_name'))
 
-    # Create gRPC stub for communicating with the server
-    channel = grpc.insecure_channel(address)
-    grpc_stub = service_pb2_grpc.GRPCInferenceServiceStub(channel)
+    model_name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
 
+    try:
+        triton_client = grpcclient.InferenceServerClient(
+            url=address,
+            ssl=args['tls'],
+            verbose=False)
+    except Exception as e:
+        print("context creation failed: " + str(e))
+        sys.exit()
+
+    processing_times = np.zeros((0),int)
+
+    total_executed = 0
+    matched_count = 0
     batch_i = 0
     image_data = []
+    image_binary_size = []
     labels = []
     for line in lines:
+        inputs = []
         batch_i += 1
         path, label = line.strip().split(" ")
         with open(path, 'rb') as f:
             image_data.append(f.read())
-        labels.append(label)
+        labels.append(int(label))
         if batch_i < batch_size:
             continue
-        inputs = []
-        inputs.append(service_pb2.ModelInferRequest().InferInputTensor())
-        inputs[0].name = args['input_name']
-        inputs[0].datatype = "BYTES"
-        inputs[0].shape.extend([1])
-        inputs[0].contents.bytes_contents.append(image_data[0])
-
+        inputs.append(grpcclient.InferInput(args['input_name'], [batch_i], "BYTES"))
         outputs = []
-        outputs.append(service_pb2.ModelInferRequest().InferRequestedOutputTensor())
-        outputs[0].name = "prob"
-
-        request = service_pb2.ModelInferRequest()
-        request.model_name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
-        request.inputs.extend(inputs)
-
+        outputs.append(grpcclient.InferRequestedOutput(output_name))
+        
+        nmpy = np.array(image_data , dtype=np.object_)
+        inputs[0].set_data_from_numpy(nmpy)
         start_time = datetime.datetime.now()
-        request.outputs.extend(outputs)
-        response = grpc_stub.ModelInfer(request)
+        results = triton_client.infer(model_name=model_name,
+                                  inputs=inputs,
+                                  outputs=outputs)
         end_time = datetime.datetime.now()
-
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
-        output = as_numpy(response, args['output_name'])
+        output = results.as_numpy(output_name)
         nu = np.array(output)
         # for object classification models show imagenet class
         print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
-                                                                                    round(1000 * batch_size / np.average(duration), 2)
-                                                                                    ))
+                                                                                      round(1000 * batch_size / np.average(duration), 2)
+                                                                                      ))
         # Comment out this section for non imagenet datasets
         print("imagenet top results in a single batch:")
         for i in range(nu.shape[0]):
-            lbs_i = iteration * batch_size
-            single_result = nu[[i],...]
-            offset = 0
-            if nu.shape[1] == 1001:
-                offset = 1
-            ma = np.argmax(single_result) - offset
+            if is_pipeline_request:
+                # shape (1,)
+                print("response shape", output.shape)
+                ma = nu[0] - 1 # indexes needs to be shifted left due to 1x1001 shape
+            else:
+                # shape (1,1000)
+                single_result = nu[[i],...]
+                offset = 0
+                if nu.shape[1] == 1001:
+                    offset = 1
+                ma = np.argmax(single_result) - offset
             mark_message = ""
-            if args.get('labels_numpy_path') is not None:
-                total_executed += 1
-                if ma == lbs[lbs_i + i]:
-                    matched_count += 1
-                    mark_message = "; Correct match."
-                else:
-                    mark_message = "; Incorrect match. Should be {} {}".format(lbs[lbs_i + i], classes.imagenet_classes[lbs[lbs_i + i]] )
-            print("\t",i, classes.imagenet_classes[ma],ma, mark_message)
-
+            total_executed += 1
+            if ma == labels[i]:
+                matched_count += 1
+                mark_message = "; Correct match."
+            else:
+                mark_message = "; Incorrect match. Should be".format(labels[i], classes.imagenet_classes[labels[i]])
+            print("\t", i, classes.imagenet_classes[ma], ma, mark_message)
         # Comment out this section for non imagenet datasets
-        iteration += 1
-        image_data = []
         labels = []
+        image_data = []
         batch_i = 0
 
     print_statistics(processing_times, batch_size)
-
-    if args.get('labels_numpy_path') is not None:
-        print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
-
+    print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))

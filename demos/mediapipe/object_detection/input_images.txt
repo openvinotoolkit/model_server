@@ -1,0 +1,4 @@
+    ../../common/static/images/airliner.jpeg
+    ../../common/static/images/golden_retriever.jpeg
+    ../../common/static/images/pelican.jpeg
+    ../../common/static/images/zebra.jpeg

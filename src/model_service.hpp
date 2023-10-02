@@ -23,6 +23,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "tensorflow_serving/apis/get_model_status.pb.h"
 #include "tensorflow_serving/apis/model_service.grpc.pb.h"
 #include "tensorflow_serving/apis/model_service.pb.h"
@@ -58,7 +59,7 @@ class GetModelStatusImpl {
 public:
     GetModelStatusImpl(ovms::Server& ovmsServer);
     static Status getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response, ModelManager& manager, ExecutionContext context);
-    static Status createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request);
+    static Status createGrpcRequest(const std::string& model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request);
     static Status serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse* response, std::string* output);
 
     static Status getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& models_versions, ModelManager& manager, ExecutionContext context);

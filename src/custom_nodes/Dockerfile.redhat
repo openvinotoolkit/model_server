@@ -23,7 +23,7 @@ COPY opencv_cmake_flags.txt /opt
 COPY install_opencv.sh /opt
 RUN ./install_opencv.sh
 
-ARG OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv"
+ARG OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security"
 ARG NODE_NAME=model_zoo_intel_object_detection
 ARG NODE_TYPE=cpp
 

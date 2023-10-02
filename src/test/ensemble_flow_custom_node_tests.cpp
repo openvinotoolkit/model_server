@@ -71,11 +71,11 @@ protected:
             StatusCode::OK);
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
 
@@ -189,8 +189,8 @@ protected:
     const std::string customNodeOutputName = "output_numbers";
     static constexpr const char* pipelineInputName = "pipeline_input";
     const std::string pipelineOutputName = "pipeline_output";
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo;
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo;
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelOutputTensorInfo;
+    std::shared_ptr<const ovms::TensorInfo> dagDummyModelInputTensorInfo;
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
@@ -288,11 +288,11 @@ protected:
             StatusCode::OK);
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
             ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
+            DUMMY_MODEL_SHAPE_META,
             Layout{"NC"});
     }
 };
@@ -631,6 +631,141 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomAndDLNodes) {
     });
 }
 
+struct LibraryWithScalarOutput {
+    static constexpr float libraryScalarNodeAddValue = 2.1f;
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        if (inputsCount != 1)
+            return 1;
+        *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsNum = 1;
+        (*handle)->name = "output_numbers";
+        (*handle)->precision = CustomNodeTensorPrecision::FP32;
+        (*handle)->dims = (uint64_t*)malloc(0);
+        (*handle)->dimsCount = 0;
+        (*handle)->data = (uint8_t*)malloc(sizeof(float));
+        *((float*)(*handle)->data) = *((float*)inputs[0].data) + libraryScalarNodeAddValue;
+        (*handle)->dataBytes = sizeof(float);
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeScalarsAndScalarDLNodeInTheMiddle) {
+    // input    CN       DL       CN     output
+    //  O------->O------->O--------O------>O
+    //       +const    passthru   +const
+    ConstructorEnabledModelManager modelManager;
+    ModelConfig config = SCALAR_MODEL_CONFIG;
+    modelManager.reloadModelWithVersions(config);
+
+    const std::vector<float> inputValues{5.4f};
+    const std::vector<float> expectedOutputValues{inputValues[0] + LibraryWithScalarOutput::libraryScalarNodeAddValue * 2};
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {});
+    ((*this->request.mutable_inputs())[pipelineInputName]).mutable_tensor_shape()->Clear();
+
+    const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
+                                                          ovms::Precision::FP32,
+                                                          ovms::Shape{},
+                                                          Layout{"..."})}};
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{},
+                                                            Layout{"..."})}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+    auto model_node = std::make_unique<DLNode>(
+        "scalar_node",
+        "scalar",
+        std::nullopt,
+        modelManager);
+    std::unique_ptr<CustomNode> custom_node[] = {
+        std::make_unique<CustomNode>("scalar_node_0", createLibraryMock<LibraryWithScalarOutput>(),
+            parameters_t{}),
+        std::make_unique<CustomNode>("scalar_node_1", createLibraryMock<LibraryWithScalarOutput>(),
+            parameters_t{})};
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *(custom_node[0]), {{pipelineInputName, "anything"}});
+    pipeline.connect(*(custom_node[0]), *model_node, {{"output_numbers", SCALAR_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *(custom_node[1]), {{SCALAR_MODEL_OUTPUT_NAME, "anything"}});
+    pipeline.connect(*(custom_node[1]), *output_node, {{"output_numbers", pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(custom_node[0]));
+    pipeline.push(std::move(custom_node[1]));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    ASSERT_EQ(this->response.mutable_outputs()->count(pipelineOutputName), 1);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim_size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->size(), sizeof(float));
+    ASSERT_EQ(*(float*)(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->data()), expectedOutputValues[0]);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DLNodeScalarsAndScalarCustomNodeInTheMiddle) {
+    // input    DL       CN       DL     output
+    //  O------->O------->O--------O------>O
+    //        passthru   +const   passthru
+    ConstructorEnabledModelManager modelManager;
+    ModelConfig config = SCALAR_MODEL_CONFIG;
+    modelManager.reloadModelWithVersions(config);
+
+    const std::vector<float> inputValues{5.4f};
+    const std::vector<float> expectedOutputValues{inputValues[0] + LibraryWithScalarOutput::libraryScalarNodeAddValue};
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {});
+    ((*this->request.mutable_inputs())[pipelineInputName]).mutable_tensor_shape()->Clear();
+
+    const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
+                                                          ovms::Precision::FP32,
+                                                          ovms::Shape{},
+                                                          Layout{"..."})}};
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{},
+                                                            Layout{"..."})}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+    auto custom_node = std::make_unique<CustomNode>("scalar_node_0", createLibraryMock<LibraryWithScalarOutput>(),
+        parameters_t{});
+    std::unique_ptr<DLNode> model_node[] = {
+        std::make_unique<DLNode>("scalar_model_0", "scalar", std::nullopt, modelManager),
+        std::make_unique<DLNode>("scalar_model_1", "scalar", std::nullopt, modelManager)};
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *(model_node[0]), {{pipelineInputName, SCALAR_MODEL_INPUT_NAME}});
+    pipeline.connect(*(model_node[0]), *custom_node, {{SCALAR_MODEL_OUTPUT_NAME, "anything"}});
+    pipeline.connect(*custom_node, *(model_node[1]), {{"output_numbers", SCALAR_MODEL_INPUT_NAME}});
+    pipeline.connect(*(model_node[1]), *output_node, {{SCALAR_MODEL_OUTPUT_NAME, pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node[0]));
+    pipeline.push(std::move(model_node[1]));
+    pipeline.push(std::move(custom_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    ASSERT_EQ(this->response.mutable_outputs()->count(pipelineOutputName), 1);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim_size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->size(), sizeof(float));
+    ASSERT_EQ(*(float*)(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->data()), expectedOutputValues[0]);
+}
+
 struct LibraryFailInExecute {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
@@ -787,39 +922,40 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvali
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_INVALID_PRECISION);
 }
 
-struct LibraryIncorrectOutputShape {
-    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-        return 0;
-    }
-    static int deinitialize(void* customNodeLibraryInternalManager) {
-        return 0;
-    }
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
-        *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
-        *outputsNum = 1;
-        (*handle)->name = "output_numbers";
-        (*handle)->precision = CustomNodeTensorPrecision::FP32;
-        (*handle)->dims = nullptr;
-        (*handle)->dimsCount = 0;
-        (*handle)->data = (uint8_t*)malloc(sizeof(uint8_t));
-        (*handle)->dataBytes = 1;
-        return 0;
-    }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
-        return 0;
-    }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
-        return 0;
-    }
-    static int release(void* ptr, void* customNodeLibraryInternalManager) {
-        free(ptr);
-        return 0;
-    }
-};
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SuccessLibraryWithScalarOutput) {
+    const std::vector<float> inputValues{3.5f};
+    const std::vector<float> expectedOutputValues{inputValues[0] + LibraryWithScalarOutput::libraryScalarNodeAddValue};
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{},
+        Layout{"..."});
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {});
+    ((*this->request.mutable_inputs())[pipelineInputName]).mutable_tensor_shape()->Clear();
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    auto outputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        ovms::Precision::FP32,
+        ovms::Shape{},
+        Layout{"..."});
+    const tensor_map_t outputsInfo{{pipelineOutputName, outputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+    auto custom_node = std::make_unique<CustomNode>(
+        customNodeName,
+        createLibraryMock<LibraryWithScalarOutput>(),
+        parameters_t{});
 
-TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidShape) {
-    auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputShape>();
-    ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_INVALID_SHAPE);
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node, *this->reporter);
+    pipeline->connect(*input_node, *custom_node, {{pipelineInputName, customNodeInputName}});
+    pipeline->connect(*custom_node, *output_node, {{customNodeOutputName, pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(custom_node));
+    pipeline->push(std::move(output_node));
+    ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    ASSERT_EQ(this->response.mutable_outputs()->count(pipelineOutputName), 1);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim_size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->size(), sizeof(float));
+    ASSERT_EQ(*(float*)(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->data()), expectedOutputValues[0]);
 }
 
 struct LibraryIncorrectOutputContentSize {
@@ -1713,7 +1849,7 @@ enum class Method {
     MAXIMUM_AVERAGE,
 };
 
-std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> input, Method option) {
+static std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> input, Method option) {
     std::vector<float> expectedOutput(DUMMY_MODEL_OUTPUT_SIZE);
     size_t tensorsCount = input.size() / DUMMY_MODEL_OUTPUT_SIZE;
     // perform operations
@@ -2328,7 +2464,7 @@ struct LibraryParamControlledMetadata {
         std::string shapeStr = tokens[0];
         std::string precisionStr = tokens[1];
         tokens = tokenize(shapeStr, ',');
-        EXPECT_GE(tokens.size(), 1);
+        EXPECT_GE(tokens.size(), 0);
         shape_t shape;
         std::transform(tokens.begin(), tokens.end(), std::back_inserter(shape),
             [](const std::string& str) { return std::stoull(str); });
@@ -2426,6 +2562,39 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, SuccessfulConfiguration) {
                 {"in_InputNumbers_1", "1,30,7;I32"},
                 {"in_InputNumbers_2", "1,8;I32"},
                 {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections["custom_node_2"] = {
+        {"custom_node_1", {{"1", "in_InputNumbers_1"},
+                              {"2", "in_InputNumbers_2"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, SuccessfulConfigurationWithScalar) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", ";FP32"},
+                {"out_OutputNumbers_1", ";I32"},
+                {"out_OutputNumbers_2", ";I32"}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", ";I32"},
+                {"in_InputNumbers_2", ";I32"},
+                {"out_OutputNumbers", ";FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -3278,6 +3447,30 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerNodeNotEno
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY);
 }
 
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerCustomNodeNotEnoughDimensionsToDemultiply_Scalar) {
+    const size_t demultiplyCount = 29;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers_1", ";FP32"},
+                {"out_OutputNumbers", ";FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers_1"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY);
+}
+
 class DummyModelWithMockedMetadata : public ovms::ModelInstance {
     ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
 
@@ -3287,7 +3480,7 @@ public:
         mockedInputsInfo(inputsInfo),
         mockedOutputsInfo(outputsInfo) {}
 
-    ovms::Dimension getBatchSize() const override {
+    std::optional<ovms::Dimension> getBatchSize() const override {
         return 1;
     }
 
@@ -4837,7 +5030,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     // Prepare model
     ConstructorEnabledModelManager manager;
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -4875,7 +5068,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
 
     // Execute
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), ovms::StatusCode::OK);
-    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, response, {3, 1, 3, 1, 2});
 }
 
 struct LibraryProduceImages5DimensionsInFP32OutFP64 {
@@ -4943,7 +5136,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     // Prepare model
     ConstructorEnabledModelManager manager;
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -4981,7 +5174,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
 
     // Execute
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), ovms::StatusCode::OK);
-    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, response, {3, 1, 3, 1, 2});
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedFP64TensorsFromCustomNode) {
@@ -5006,7 +5199,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     // Prepare model
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -5043,7 +5236,314 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
 
     // Execute
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), ovms::StatusCode::OK);
-    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {3, 1, 1, 2, 3});
+    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, response, {3, 1, 1, 2, 3});
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FirstZeroDimWithDemultiplexer) {
+    //                 input   (D)DL(-1,1,1,1)                  DL(1,1,1)    output
+    //  ====[0,1,1,1]===>O---------->O-----0x[1,1,1]----STOP
+    ConstructorEnabledModelManager manager;
+
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(config.parseShapeParameter("(-1,1,1,1)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(config.parseShapeParameter("(1,1,1)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    const std::vector<float> inputValues;
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {0, 1, 1, 1});
+
+    const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
+                                                          ovms::Precision::FP32,
+                                                          ovms::Shape{ovms::Dimension::any(), 1, 1, 1},
+                                                          Layout{"N..."})}};
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{ovms::Dimension::any(), 1, 1, 1},
+                                                            Layout{"N..."})}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo, std::set<std::string>{"node_1"});
+    std::optional<int32_t> demultiplyCount{-1};
+    auto model_1 = std::make_unique<DLNode>(
+        "node_1",
+        "increment_1x3x4x5",
+        std::nullopt,
+        manager, std::unordered_map<std::string, std::string>{}, demultiplyCount);
+    auto model_2 = std::make_unique<DLNode>(
+        "node_2",
+        "dummy",
+        std::nullopt,
+        manager);
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_1, {{pipelineInputName, INCREMENT_1x3x4x5_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_1, *model_2, {{INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_1));
+    pipeline.push(std::move(model_2));
+    pipeline.push(std::move(output_node));
+
+    // Expect 0 first dimension to cause pipeline to stop
+    // In future we could gather 0 elements and prepare [0,1,1,1] out of that
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, GatheringZeroDimension) {
+    //                 input   (D)DL(-1,1,1,-1)                  DL(1,1,1)          output
+    //  ====[2,1,1,0]===>O---------->O-----2x[1,1,0]---------------->O----[2,1,1,0]--->0
+    ConstructorEnabledModelManager manager;
+
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(config.parseShapeParameter("(-1,1,1,-1)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(config.parseShapeParameter("(1,1,-1)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    const std::vector<float> inputValues;
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {2, 1, 1, 0});
+
+    const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
+                                                          ovms::Precision::FP32,
+                                                          ovms::Shape{ovms::Dimension::any(), 1, 1, ovms::Dimension::any()},
+                                                          Layout{"N..."})}};
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{ovms::Dimension::any(), 1, 1, ovms::Dimension::any()},
+                                                            Layout{"N..."})}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo, std::set<std::string>{"node_1"});
+    std::optional<int32_t> demultiplyCount{-1};
+    auto model_1 = std::make_unique<DLNode>(
+        "node_1",
+        "increment_1x3x4x5",
+        std::nullopt,
+        manager, std::unordered_map<std::string, std::string>{}, demultiplyCount);
+    auto model_2 = std::make_unique<DLNode>(
+        "node_2",
+        "dummy",
+        std::nullopt,
+        manager);
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_1, {{pipelineInputName, INCREMENT_1x3x4x5_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_1, *model_2, {{INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_1));
+    pipeline.push(std::move(model_2));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    checkIncrement4DimResponse<float>(pipelineOutputName, {}, response, {2, 1, 1, 0});
+}
+
+// Accepting static input [0,10], producing [1,10] (0.0f, 1.0f, ...)
+struct LibraryWithZeroDimInput {
+    static constexpr float libraryScalarNodeAddValue = 2.1f;
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        if (inputsCount != 1)
+            return 1;
+        if (inputs[0].dimsCount != 2)
+            return 2;
+        if (inputs[0].dims[0] != 0 || inputs[0].dims[1] != 10)
+            return 3;
+        *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsNum = 1;
+        (*handle)->name = "output_numbers";
+        (*handle)->precision = CustomNodeTensorPrecision::FP32;
+        (*handle)->dimsCount = 2;
+        (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t) * (*handle)->dimsCount);
+        (*handle)->dims[0] = 1;
+        (*handle)->dims[1] = 10;
+        (*handle)->dataBytes = 10 * sizeof(float);
+        (*handle)->data = (uint8_t*)malloc((*handle)->dataBytes);
+        for (int i = 0; i < 10; i++)
+            *(((float*)(*handle)->data) + i) = (float)i;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AcceptDimZeroInCustomNode) {
+    //             input   DL(-1,-1)       CN             DL(-1,-1)    output
+    //  ====[0,10]==>O------->O---[0,10]--->O---[1,10]----->O---[1,10]---->O
+    ConstructorEnabledModelManager modelManager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(-1,-1)");
+    modelManager.reloadModelWithVersions(config);
+
+    const std::vector<float> inputValues;
+    const std::vector<float> expectedOutputValues;
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {0, 10});
+
+    const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
+                                                          ovms::Precision::FP32,
+                                                          ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+                                                          Layout{"N..."})}};
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+                                                            Layout{"N..."})}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+    auto model_node_before = std::make_unique<DLNode>(
+        "dummy_node_before",
+        "dummy",
+        std::nullopt,
+        modelManager);
+    auto custom_node = std::make_unique<CustomNode>("custom_node_0", createLibraryMock<LibraryWithZeroDimInput>(),
+        parameters_t{});
+    auto model_node_after = std::make_unique<DLNode>(
+        "dummy_node_after",
+        "dummy",
+        std::nullopt,
+        modelManager);
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_node_before, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_before, *custom_node, {{DUMMY_MODEL_OUTPUT_NAME, "anything"}});
+    pipeline.connect(*custom_node, *model_node_after, {{"output_numbers", DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_after, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(custom_node));
+    pipeline.push(std::move(model_node_before));
+    pipeline.push(std::move(model_node_after));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    this->checkResponse<float>(pipelineOutputName, this->response, std::vector<float>{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f}, shape_t{1, 10});
+}
+
+// Accepting any input, producing [5,0]
+struct LibraryWithZeroDimOutput {
+    static constexpr float libraryScalarNodeAddValue = 2.1f;
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        if (inputsCount != 1)
+            return 1;
+        *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsNum = 1;
+        (*handle)->name = "output_numbers";
+        (*handle)->precision = CustomNodeTensorPrecision::FP32;
+        (*handle)->dimsCount = 2;
+        (*handle)->dims = (uint64_t*)malloc(sizeof(uint64_t) * (*handle)->dimsCount);
+        (*handle)->dims[0] = 5;
+        (*handle)->dims[1] = 0;
+        (*handle)->data = (uint8_t*)malloc(0);
+        (*handle)->dataBytes = 0;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReturnDimZeroFromCustomNode) {
+    //             input   DL(-1,-1)       CN             DL(-1,-1)   output
+    //  ====[1,1]===>O------->O---[1,1]---->O---[0,5]----->O---[0,5]---->O
+    //                                      |___[0,5]___________________>
+    ConstructorEnabledModelManager modelManager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("");
+    config.parseShapeParameter("(-1,-1)");
+    modelManager.reloadModelWithVersions(config);
+    const std::string outputNameFromCustomNode{"second_output"};
+
+    const std::vector<float> inputValues{5.4f};
+    const std::vector<float> expectedOutputValues;
+    this->prepareRequest(this->request, inputValues, pipelineInputName, {1, 1});
+
+    const tensor_map_t inputsInfo{{pipelineInputName, std::make_shared<ovms::TensorInfo>(pipelineInputName,
+                                                          ovms::Precision::FP32,
+                                                          ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+                                                          Layout{"N..."})}};
+    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
+    const tensor_map_t outputsInfo{{pipelineOutputName, std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+                                                            ovms::Precision::FP32,
+                                                            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+                                                            Layout{"N..."})},
+        {outputNameFromCustomNode, std::make_shared<ovms::TensorInfo>(outputNameFromCustomNode,
+                                       ovms::Precision::FP32,
+                                       ovms::Shape{5, 0},
+                                       Layout{"..."})}};
+    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+    auto model_node_before = std::make_unique<DLNode>(
+        "dummy_node_before",
+        "dummy",
+        std::nullopt,
+        modelManager);
+    auto custom_node = std::make_unique<CustomNode>("custom_node_0", createLibraryMock<LibraryWithZeroDimOutput>(),
+        parameters_t{});
+    auto model_node_after = std::make_unique<DLNode>(
+        "dummy_node_after",
+        "dummy",
+        std::nullopt,
+        modelManager);
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_node_before, {{pipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_before, *custom_node, {{DUMMY_MODEL_OUTPUT_NAME, "anything"}});
+    pipeline.connect(*custom_node, *model_node_after, {{"output_numbers", DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_after, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
+    pipeline.connect(*custom_node, *output_node, {{"output_numbers", outputNameFromCustomNode}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(custom_node));
+    pipeline.push(std::move(model_node_before));
+    pipeline.push(std::move(model_node_after));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    ASSERT_EQ(this->response.mutable_outputs()->count(pipelineOutputName), 1);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim_size(), 2);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim(0).size(), 5);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_shape()->dim(1).size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->at(pipelineOutputName).mutable_tensor_content()->size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->count(outputNameFromCustomNode), 1);
+    ASSERT_EQ(this->response.mutable_outputs()->at(outputNameFromCustomNode).mutable_tensor_shape()->dim_size(), 2);
+    ASSERT_EQ(this->response.mutable_outputs()->at(outputNameFromCustomNode).mutable_tensor_shape()->dim(0).size(), 5);
+    ASSERT_EQ(this->response.mutable_outputs()->at(outputNameFromCustomNode).mutable_tensor_shape()->dim(1).size(), 0);
+    ASSERT_EQ(this->response.mutable_outputs()->at(outputNameFromCustomNode).mutable_tensor_content()->size(), 0);
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedFP64TensorsFromEntryNode) {
@@ -5069,7 +5569,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
     // Prepare model
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
-    config.setBatchingParams("0");
+    config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(1,2,1,2)"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -5102,7 +5602,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
 
     // Execute
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), ovms::StatusCode::OK);
-    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {2, 1, 2, 1, 2});
+    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, response, {2, 1, 2, 1, 2});
 }
 
 struct LibraryCountDeinitialize {
@@ -5258,4 +5758,214 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     // Each custom node has effectively 1 internalManager initialized, because they use same library instance
     // in order to count whether deinitialize has been called expected number of times
     ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
+}
+
+static constexpr const char* INPUT_TENSOR_NAME = "input_string";
+static constexpr const char* OUTPUT_TENSOR_NAME = "output_string";
+
+struct Passthrough_AnyDim_U8 {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        int numberOfDimensions = 2;  // default
+        for (int i = 0; i < paramsCount; i++) {
+            if (std::strcmp(params[i].key, "num_of_dims") == 0) {
+                numberOfDimensions = std::stoi(params[i].value);
+            }
+        }
+        // // Inputs reading
+        const CustomNodeTensor* input = nullptr;
+
+        for (int i = 0; i < inputsCount; i++) {
+            if (std::strcmp(inputs[i].name, INPUT_TENSOR_NAME) == 0) {
+                input = &(inputs[i]);
+            } else {
+                std::cout << "Unrecognized input: " << inputs[i].name << std::endl;
+                return 1;
+            }
+        }
+
+        // Preparing output tensor
+        float* buffer = (float*)malloc(inputs[0].dataBytes);
+        std::memcpy((uint8_t*)buffer, inputs[0].data, inputs[0].dataBytes);
+
+        *outputsCount = 1;
+        *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
+        if ((*outputs) == nullptr) {
+            std::cout << "malloc has failed" << std::endl;
+            free(buffer);
+            return 1;
+        }
+
+        CustomNodeTensor& output = (*outputs)[0];
+        output.name = OUTPUT_TENSOR_NAME;
+        output.data = reinterpret_cast<uint8_t*>(buffer);
+        output.dataBytes = inputs[0].dataBytes;
+        output.dimsCount = numberOfDimensions;
+        output.dims = (uint64_t*)malloc(output.dimsCount * sizeof(uint64_t));
+        for (int i = 0; i < numberOfDimensions; i++) {
+            output.dims[i] = input->dims[i];
+        }
+        output.precision = U8;
+
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        int numberOfDimensions = 2;  // default
+        for (int i = 0; i < paramsCount; i++) {
+            if (std::strcmp(params[i].key, "num_of_dims") == 0) {
+                numberOfDimensions = std::stoi(params[i].value);
+            }
+        }
+
+        *infoCount = 1;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
+
+        (*info)[0].name = INPUT_TENSOR_NAME;
+        (*info)[0].dimsCount = numberOfDimensions;
+        (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
+        for (int i = 0; i < numberOfDimensions; i++) {
+            (*info)[0].dims[i] = -1;
+        }
+        (*info)[0].precision = U8;
+
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        int numberOfDimensions = 2;  // default
+        for (int i = 0; i < paramsCount; i++) {
+            if (std::strcmp(params[i].key, "num_of_dims") == 0) {
+                numberOfDimensions = std::stoi(params[i].value);
+            }
+        }
+
+        *infoCount = 1;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
+
+        (*info)[0].name = OUTPUT_TENSOR_NAME;
+        (*info)[0].dimsCount = numberOfDimensions;
+        (*info)[0].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
+        for (int i = 0; i < numberOfDimensions; i++) {
+            (*info)[0].dims[i] = -1;
+        }
+
+        (*info)[0].precision = U8;
+
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+template <typename Pair,
+    typename RequestType = typename Pair::first_type,
+    typename ResponseType = typename Pair::second_type>
+class EnsembleFlowStringInput : public ::testing::Test {
+public:
+    void SetUp() override {}
+
+    RequestType request;
+    ResponseType response;
+    std::unique_ptr<ModelMetricReporter> reporter;
+
+    const std::string customNodeName = "passthrough";
+    static constexpr const char* pipelineInputName = "pipeline_input";
+    const std::string pipelineOutputName = "pipeline_output";
+    const std::string pipelineName = "my_pipeline";
+    std::set<std::string> gatherFromNode = {};
+};
+
+using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
+TYPED_TEST_SUITE(EnsembleFlowStringInput, MyTypes);
+
+TYPED_TEST(EnsembleFlowStringInput, positive_2d) {
+    // Most basic configuration, just process single passthrough custom node pipeline request
+    // input  passthrough  output
+    //  O------->O------->O
+    std::vector<std::string> expectedStrings = {"String_123", "zebra", ""};
+    prepareInferStringRequest(this->request, this->pipelineInputName, expectedStrings);
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(this->pipelineInputName,
+        ovms::Precision::U8,
+        ovms::Shape{-1, -1},
+        Layout{"NC"});
+    const tensor_map_t inputsInfo{{this->pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(this->pipelineOutputName,
+        ovms::Precision::U8,
+        ovms::Shape{-1, -1},
+        Layout{"NC"});
+    const tensor_map_t outputsInfo{{this->pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, this->gatherFromNode, false, this->pipelineName);
+    auto mockedLibrary = createLibraryMock<Passthrough_AnyDim_U8>();
+    auto custom_node = std::make_unique<CustomNode>(this->customNodeName, mockedLibrary, parameters_t{});
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *custom_node, {{this->pipelineInputName, INPUT_TENSOR_NAME}});
+    pipeline.connect(*custom_node, *output_node, {{OUTPUT_TENSOR_NAME, this->pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(custom_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    std::vector<uint8_t> expectedData = {
+        'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
+        'z', 'e', 'b', 'r', 'a', 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    std::vector<size_t> expectedShape = {3, 11};
+    bool checkRaw = false;
+    checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->response, expectedShape, checkRaw);
+}
+
+TYPED_TEST(EnsembleFlowStringInput, positive_1d) {
+    // Most basic configuration, just process single passthrough custom node pipeline request
+    // input  passthrough  output
+    //  O------->O------->O
+    std::vector<std::string> expectedStrings = {"ala", "", "ma", "kota"};
+    prepareInferStringRequest(this->request, this->pipelineInputName, expectedStrings);
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(this->pipelineInputName,
+        ovms::Precision::U8,
+        ovms::Shape{-1},
+        Layout{"NC"});
+    const tensor_map_t inputsInfo{{this->pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(this->pipelineOutputName,
+        ovms::Precision::U8,
+        ovms::Shape{-1},
+        Layout{"NC"});
+    const tensor_map_t outputsInfo{{this->pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, this->gatherFromNode, false, this->pipelineName);
+    auto mockedLibrary = createLibraryMock<Passthrough_AnyDim_U8>();
+    auto custom_node = std::make_unique<CustomNode>(this->customNodeName, mockedLibrary, parameters_t{{"num_of_dims", "1"}});
+
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *custom_node, {{this->pipelineInputName, INPUT_TENSOR_NAME}});
+    pipeline.connect(*custom_node, *output_node, {{OUTPUT_TENSOR_NAME, this->pipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(custom_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+    std::vector<uint8_t> expectedData = {
+        4, 0, 0, 0,  // batch size
+        0, 0, 0, 0,  // first string start offset
+        3, 0, 0, 0,  // end of "ala" in condensed content
+        3, 0, 0, 0,  // end of "" in condensed content
+        5, 0, 0, 0,  // end of "ma" in condensed content
+        9, 0, 0, 0,  // end of "kota" in condensed content
+        'a', 'l', 'a',
+        'm', 'a',
+        'k', 'o', 't', 'a'};
+    std::vector<size_t> expectedShape = {33};
+    bool checkRaw = false;
+    checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->response, expectedShape, checkRaw);
 }

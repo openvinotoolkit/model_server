@@ -19,7 +19,7 @@ Implement any CPU layer, that is not support by OpenVINO yet, as a shared librar
 [Learn more](../src/example/SampleCpuExtension/README.md)
 
 ## Model Cache
-Leverage the OpenVINO [model caching](https://docs.openvino.ai/latest/openvino_docs_OV_UG_Model_caching_overview.html) feature to speed up subsequent model loading on a target device.
+Leverage the OpenVINO [model caching](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_Model_caching_overview.html) feature to speed up subsequent model loading on a target device.
 
 [Learn more](model_cache.md)
 
@@ -29,6 +29,6 @@ Write your own custom model loader based on a predefined interface and load it s
 [Learn more](custom_model_loader.md)
 
 ## Securing Model Server with NGINX
-Protect network endpoints with traffic encription and client authorization using a reverse proxy
+Protect network endpoints with traffic encryption and client authorization using a reverse proxy
 
 [Learn more](../extras/nginx-mtls-auth/README.md)

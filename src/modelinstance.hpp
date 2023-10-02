@@ -22,12 +22,11 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <openvino/openvino.hpp>
 
-#include "inferencerequest.hpp"
-#include "inferenceresponse.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
@@ -41,6 +40,8 @@
 namespace ovms {
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
+class InferenceRequest;
+class InferenceResponse;
 class PipelineDefinition;
 class Status;
 template <typename T1, typename T2>
@@ -49,23 +50,23 @@ struct RequestProcessor;
 class DynamicModelParameter {
 public:
     DynamicModelParameter() :
-        batchSize(0),
+        batchSize(std::nullopt),
         shapes({}) {}
     DynamicModelParameter(int batchSize) :
         batchSize(batchSize),
         shapes({}) {}
     DynamicModelParameter(const std::map<std::string, shape_t>& shapes) :
-        batchSize(0),
+        batchSize(std::nullopt),
         shapes(shapes) {}
 
-    bool isBatchSizeRequested() const { return batchSize > 0; }
+    bool isBatchSizeRequested() const { return batchSize.has_value(); }
     bool isShapeRequested(const std::string& name) const { return shapes.count(name) && shapes.at(name).size() > 0; }
 
-    int getBatchSize() const { return batchSize; }
+    int getBatchSize() const { return batchSize.value_or(1); }
     const shape_t& getShape(const std::string& name) const { return shapes.at(name); }
 
 private:
-    int batchSize;
+    std::optional<int> batchSize;
     std::map<std::string, shape_t> shapes;
 };
 
@@ -153,6 +154,11 @@ protected:
     static constexpr std::array<const char*, 1> TF_MODEL_FILES_EXTENSIONS{".pb"};
 
     /**
+      * @brief Stores required tensorflow lite model files extensions to be able to load model
+      */
+    static constexpr std::array<const char*, 1> TFLITE_MODEL_FILES_EXTENSIONS{".tflite"};
+
+    /**
          * @brief Notifies model instance users who wait for loading
          */
     std::condition_variable modelLoadedNotify;
@@ -233,6 +239,11 @@ protected:
 
 private:
     /**
+         * @brief Holds model required file names. First is loaded
+         */
+    std::vector<std::string> modelFiles;
+
+    /**
          * @brief Holds the information about inputs and it's parameters
          */
     tensor_map_t inputsInfo;
@@ -241,11 +252,6 @@ private:
          * @brief Holds the information about outputs and it's parameters
          */
     tensor_map_t outputsInfo;
-
-    /**
-      * @brief Holds model required file names. First is loaded
-      */
-    std::vector<std::string> modelFiles;
 
     /**
          * @brief OpenVINO inference execution stream pool
@@ -368,6 +374,14 @@ public:
     }
 
     /**
+         * @brief Gets model files' paths
+         *
+         * @return vector of paths
+         */
+    const std::vector<std::string>& getModelFiles() const {
+        return modelFiles;
+    }
+    /**
          * @brief Gets version
          *
          * @return version
@@ -413,8 +427,12 @@ public:
          *
          * @return batch size
          */
-    virtual Dimension getBatchSize() const {
-        return Dimension(ov::get_batch(model));
+    virtual std::optional<Dimension> getBatchSize() const {
+        try {
+            return Dimension(ov::get_batch(model));
+        } catch (...) {
+            return std::nullopt;
+        }
     }
 
     const size_t getBatchSizeIndex() const;
@@ -436,6 +454,8 @@ public:
     virtual const tensor_map_t& getInputsInfo() const {
         return inputsInfo;
     }
+
+    virtual ov::AnyMap getRTInfo() const;
 
     /**
          * @brief Get the Outputs Info object

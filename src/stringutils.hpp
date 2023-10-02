@@ -60,7 +60,7 @@ void erase_spaces(std::string& str);
 std::vector<std::string> tokenize(const std::string& str, const char delimiter);
 
 /**
- * @brief Checks if given string ends with another one
+ * @brief Checks if given string ends with another one but disregards upper/lower case difference
  *
  * @param str
  * @param match
@@ -68,6 +68,16 @@ std::vector<std::string> tokenize(const std::string& str, const char delimiter);
  * @return false
  */
 bool endsWith(const std::string& str, const std::string& match);
+
+/**
+ * @brief Checks if given string starts with another one
+ *
+ * @param str
+ * @param match
+ * @return true
+ * @return false
+ */
+bool startsWith(const std::string& str, const std::string& prefix);
 
 /**
  * @brief Converts string to uint32, returns 0 or specified default value if conversion failed, fails if negative number is provided

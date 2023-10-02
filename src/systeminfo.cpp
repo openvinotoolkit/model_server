@@ -20,31 +20,14 @@
 #include <string>
 #include <thread>
 
+#include <openvino/core/parallel.hpp>
+
 #include "logging.hpp"
 #include "status.hpp"
-#include "systeminfo_impl.hpp"
 
 namespace ovms {
-const char* CPUSET_FILENAME = "/sys/fs/cgroup/cpuset/cpuset.cpus";
 uint16_t getCoreCount() {
-    std::ifstream fs;
-    uint16_t coreCount = 1;
-    auto status = getCPUSetFile(fs, CPUSET_FILENAME);
-    if (status.ok()) {
-        std::string cpusets;
-        fs >> cpusets;
-        status = getCoreCountImpl(cpusets, coreCount);
-    }
-    if (status.ok()) {
-        return coreCount;
-    } else {
-        SPDLOG_ERROR("Failed to read system core count from cpuset file. Falling back to std::thread::hardware_concurrency");
-        auto hwConcurrency = std::thread::hardware_concurrency();
-        if (hwConcurrency == 0) {
-            SPDLOG_ERROR("Failed to read core count number of system. Fallback to treating system as 1 core only");
-            return 1;
-        }
-        return hwConcurrency;
-    }
+    // return parallel_get_num_threads();
+    return std::thread::hardware_concurrency();
 }
 }  // namespace ovms

@@ -22,15 +22,14 @@ import classes
 import datetime
 import argparse
 from client_utils import print_statistics
-import requests
-import json
+
+import tritonclient.http as httpclient
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sends requests via KServe REST API using binary encoded images. '
                                                  'It displays performance statistics and optionally the model accuracy')
     parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
-    parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
     parser.add_argument('--http_address',required=False, default='localhost',  help='Specify url to http service. default:localhost')
     parser.add_argument('--http_port',required=False, default=8000, help='Specify port to http service. default: 8000')
     parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
@@ -43,6 +42,10 @@ if __name__ == '__main__':
                         dest='model_name')
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
+    parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with HTTP endpoint')
+    parser.add_argument('--server_cert', required=False, help='Path to server certificate', default=None)
+    parser.add_argument('--client_cert', required=False, help='Path to client certificate', default=None)
+    parser.add_argument('--client_key', required=False, help='Path to client key', default=None)
 
     error = False
     args = vars(parser.parse_args())
@@ -50,6 +53,15 @@ if __name__ == '__main__':
     address = "{}:{}".format(args['http_address'],args['http_port'])
     input_name = args['input_name']
     output_name = args['output_name']
+
+    if args['tls']:
+        ssl_options = {
+            'keyfile':args['client_key'],
+            'cert_file':args['client_cert'],
+            'ca_certs':args['server_cert']
+        }
+    else:
+        ssl_options = None
 
     processing_times = np.zeros((0),int)
 
@@ -60,10 +72,6 @@ if __name__ == '__main__':
     while batch_size > len(lines):
         lines += lines
 
-    if args.get('labels_numpy_path') is not None:
-        lbs = np.load(args['labels_numpy_path'], mmap_mode='r', allow_pickle=False)
-        matched_count = 0
-        total_executed = 0
     batch_size = int(args.get('batchsize'))
 
     print('Start processing:')
@@ -74,72 +82,79 @@ if __name__ == '__main__':
 
     model_name = args.get('pipeline_name') if is_pipeline_request else args.get('model_name')
 
-    url = f"http://{address}/v2/models/{model_name}/infer"
-    http_session = requests.session()
+    try:
+        triton_client = httpclient.InferenceServerClient(
+            url=address,
+            ssl=args['tls'],
+            ssl_options=ssl_options,
+            verbose=False)
+    except Exception as e:
+        print("context creation failed: " + str(e))
+        sys.exit()
 
+    processing_times = np.zeros((0),int)
+
+    total_executed = 0
+    matched_count = 0
     batch_i = 0
     image_data = []
     image_binary_size = []
     labels = []
     for line in lines:
+        inputs = []
         batch_i += 1
         path, label = line.strip().split(" ")
         with open(path, 'rb') as f:
             image_data.append(f.read())
-            image_binary_size.append(len(image_data[-1]))
-        labels.append(label)
+        labels.append(int(label))
         if batch_i < batch_size:
             continue
-        image_binary_size_str = ",".join(map(str, image_binary_size))
-        inference_header = {"inputs":[{"name":input_name,"shape":[batch_i],"datatype":"BYTES","parameters":{"binary_data_size":image_binary_size_str}}]}
-        inference_header_binary = json.dumps(inference_header).encode()
-
+        inputs.append(httpclient.InferInput(args['input_name'], [batch_i], "BYTES"))
+        outputs = []
+        outputs.append(httpclient.InferRequestedOutput(output_name, binary_data=True))
+        
+        nmpy = np.array(image_data , dtype=np.object_)
+        inputs[0].set_data_from_numpy(nmpy)
         start_time = datetime.datetime.now()
-        results = http_session.post(url, inference_header_binary + b''.join(image_data), headers={"Inference-Header-Content-Length":str(len(inference_header_binary))})
+        results = triton_client.infer(model_name=model_name,
+                                  inputs=inputs,
+                                  outputs=outputs)
         end_time = datetime.datetime.now()
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
-        results_dict = json.loads(results.text)
-        if "error" in results_dict.keys():
-            print(f"Error: {results_dict['error']}")
-            error = True
-            break
-            
-        output = np.array(json.loads(results.text)['outputs'][0]['data'])
-        output_shape = tuple(results_dict['outputs'][0]['shape'])
-        nu = np.reshape(output, output_shape)
+        output = results.as_numpy(output_name)
+        nu = np.array(output)
         # for object classification models show imagenet class
         print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
-                                                                                    round(1000 * batch_size / np.average(duration), 2)
-                                                                                    ))
+                                                                                      round(1000 * batch_size / np.average(duration), 2)
+                                                                                      ))
         # Comment out this section for non imagenet datasets
         print("imagenet top results in a single batch:")
         for i in range(nu.shape[0]):
-            lbs_i = iteration * batch_size
-            single_result = nu[[i],...]
-            offset = 0
-            if nu.shape[1] == 1001:
-                offset = 1
-            ma = np.argmax(single_result) - offset
+            if is_pipeline_request:
+                # shape (1,)
+                print("response shape", output.shape)
+                ma = nu[0] - 1 # indexes needs to be shifted left due to 1x1001 shape
+            else:
+                # shape (1,1000)
+                single_result = nu[[i],...]
+                offset = 0
+                if nu.shape[1] == 1001:
+                    offset = 1
+                ma = np.argmax(single_result) - offset
             mark_message = ""
-            if args.get('labels_numpy_path') is not None:
-                total_executed += 1
-                if ma == lbs[lbs_i + i]:
-                    matched_count += 1
-                    mark_message = "; Correct match."
-                else:
-                    mark_message = "; Incorrect match. Should be {} {}".format(lbs[lbs_i + i], classes.imagenet_classes[lbs[lbs_i + i]] )
-            print("\t",i, classes.imagenet_classes[ma],ma, mark_message)
+            total_executed += 1
+            if ma == labels[i]:
+                matched_count += 1
+                mark_message = "; Correct match."
+            else:
+                mark_message = "; Incorrect match. Should be".format(labels[i], classes.imagenet_classes[labels[i]])
+            print("\t", i, classes.imagenet_classes[ma], ma, mark_message)
         # Comment out this section for non imagenet datasets
-        iteration += 1
-        image_data = []
-        image_binary_size = []
         labels = []
+        image_data = []
         batch_i = 0
 
-    if not error:
-        print_statistics(processing_times, batch_size)
-
-        if args.get('labels_numpy_path') is not None:
-            print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
-
+    print_statistics(processing_times, batch_size)
+    print('Classification accuracy: {:.2f}'.format(100*matched_count/total_executed))
+    

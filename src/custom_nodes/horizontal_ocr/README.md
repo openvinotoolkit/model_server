@@ -8,7 +8,7 @@ Additionally to the detected text boxes, in the two additional outputs are retur
 
 This custom node can be used to process video frames via [camera example](../../../demos/horizontal_text_detection/python/README.md).
 
-**NOTE** Examplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/horizontal_text_detection/python/config.json) is available in [demo with camera](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/horizontal_text_detection/python/).
+**NOTE** Exemplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/main/demos/horizontal_text_detection/python/config.json) is available in [demo with camera](https://github.com/openvinotoolkit/model_server/blob/main/demos/horizontal_text_detection/python/).
 
 # Building custom node library
 
@@ -29,7 +29,7 @@ make BASE_OS=redhat NODES=horizontal_ocr
 | Input name       | Description           | Shape  | Precision |
 | ------------- |:-------------:| -----:| ------:|
 | image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters original_image_width and original_image_height. | `1,3,H,W` | FP32 |
-| boxes      | horizontal-text-detection model output `boxes` | `100,5` | FP32 |
+| boxes      | horizontal-text-detection model output `boxes`, where `X` is number of boxes and second dimension contains box info and confidence level | `X,5` | FP32 |
 
 
 # Custom node outputs

@@ -82,8 +82,6 @@ protected:
 private:
     mutable std::shared_mutex metadataMtx;
     std::atomic<uint64_t> requestsHandlesCounter = 0;
-    std::shared_mutex loadMtx;
-
     std::condition_variable loadedNotify;
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
@@ -188,6 +186,7 @@ private:
     }
 
 public:
+    static const std::string SCHEDULER_CLASS_NAME;
     Status waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 };
 }  // namespace ovms

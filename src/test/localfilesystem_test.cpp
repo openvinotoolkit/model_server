@@ -33,7 +33,7 @@ const std::string TMP_CONTENT = "filecontent123\r\n";
 const std::string TMP_DIR1 = "dir1";
 const std::string TMP_DIR2 = "dir2";
 
-void createTmpFiles() {
+static void createTmpFiles() {
     std::ofstream configFile(TMP_PATH + TMP_FILE);
     configFile << TMP_CONTENT << std::endl;
     configFile.close();
@@ -157,4 +157,102 @@ TEST(FileSystem, CreateTempFolder) {
     EXPECT_TRUE((p & fs::perms::group_read) == fs::perms::none);
     EXPECT_TRUE((p & fs::perms::others_read) == fs::perms::none);
     EXPECT_TRUE((p & fs::perms::owner_read) != fs::perms::none);
+}
+
+TEST(FileSystem, CheckIfPathIsEscaped) {
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("/../"));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("/.."));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("../"));
+    ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/..resnet/"));
+    ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/resnet../"));
+}
+
+TEST(FileSystem, IsLocalFilesystem) {
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem(""));
+    ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("s3://"));
+    ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("gs://"));
+    ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("azfs://"));
+    ASSERT_FALSE(ovms::FileSystem::isLocalFilesystem("az://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("nanas3://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("...gs://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("/azfs://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("o_O$az://"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("../"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("/localfilesystem"));
+    ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("/long/local/filesystem"));
+}
+
+TEST(FileSystem, SetRootDirectoryPath) {
+    std::string rootPath = "";
+    std::string givenPath = "/givenpath";
+
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, "/");
+
+    givenPath = "/givenpath/longer";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, "/givenpath/");
+
+    givenPath = "/givenpath/longer/somefile.txt";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, "/givenpath/longer/");
+
+    givenPath = "givenpath";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    std::string currentWorkingDir = std::filesystem::current_path();
+    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+
+    givenPath = "/givenpath/";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, givenPath);
+
+    givenPath = "1";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+
+    givenPath = "";
+    ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
+    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+}
+
+TEST(FileSystem, SetPath) {
+    std::string rootPath = "";
+    std::string testPath = "";
+    std::string givenPath = "";
+
+    try {
+        ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    } catch (std::logic_error& e) {
+    }
+
+    rootPath = "/rootPath";
+    testPath = "";
+    givenPath = "";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, rootPath);
+
+    testPath = "";
+    givenPath = "/givenPath";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, "/givenPath");
+
+    testPath = "";
+    givenPath = "givenPath";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, "/rootPathgivenPath");
+
+    testPath = "";
+    givenPath = "long/givenPath";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, "/rootPathlong/givenPath");
+
+    testPath = "";
+    givenPath = "s3://long/givenPath";
+
+    ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+    ASSERT_EQ(testPath, givenPath);
 }

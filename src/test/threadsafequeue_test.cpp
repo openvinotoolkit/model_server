@@ -73,7 +73,7 @@ TEST(TestThreadSafeQueue, NoElementsPushed) {
 
 const uint ELEMENTS_TO_INSERT = 500;
 
-void producer(ThreadSafeQueue<int>& queue, std::future<void> startSignal) {
+static void producer(ThreadSafeQueue<int>& queue, std::future<void> startSignal) {
     startSignal.get();
     uint counter = 0;
     while (counter < ELEMENTS_TO_INSERT) {
@@ -82,7 +82,7 @@ void producer(ThreadSafeQueue<int>& queue, std::future<void> startSignal) {
     }
 }
 
-void consumer(ThreadSafeQueue<int>& queue, std::future<void> startSignal, std::vector<int>& consumed, const uint elementsToPull) {
+static void consumer(ThreadSafeQueue<int>& queue, std::future<void> startSignal, std::vector<int>& consumed, const uint elementsToPull) {
     startSignal.get();
     uint counter = 0;
     while (counter < elementsToPull) {

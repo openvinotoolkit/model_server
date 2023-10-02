@@ -34,23 +34,28 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
 #include "../config.hpp"
 #include "../dags/node_library.hpp"
 #include "../execution_context.hpp"
-#include "../inferencerequest.hpp"
-#include "../inferenceresponse.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../metric_registry.hpp"
 #include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
+#include "../shape.hpp"
 #include "../tensorinfo.hpp"
 
-using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
+using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
 const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
 const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
 const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
+const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
+const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
+const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
+const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -112,12 +117,73 @@ const ovms::ModelConfig INCREMENT_1x3x4x5_MODEL_CONFIG{
     increment_1x3x4x5_model_location,  // local path
 };
 
+const ovms::ModelConfig PASSTHROUGH_MODEL_CONFIG{
+    "passthrough",
+    passthrough_model_location,  // base path
+    "CPU",                       // target device
+    "1",                         // batchsize
+    1,                           // NIREQ
+    false,                       // is stateful
+    true,                        // idle sequence cleanup enabled
+    false,                       // low latency transformation enabled
+    500,                         // stateful sequence max number
+    "",                          // cache directory
+    1,                           // model_version unused since version are read from path
+    passthrough_model_location,  // local path
+};
+
+const ovms::ModelConfig DUMMY_SAVED_MODEL_CONFIG{
+    "dummy_saved_model",
+    dummy_saved_model_location,  // base path
+    "CPU",                       // target device
+    "1",                         // batchsize
+    1,                           // NIREQ
+    false,                       // is stateful
+    true,                        // idle sequence cleanup enabled
+    false,                       // low latency transformation enabled
+    500,                         // stateful sequence max number
+    "",                          // cache directory
+    1,                           // model_version unused since version are read from path
+    dummy_saved_model_location,  // local path
+};
+
+const ovms::ModelConfig DUMMY_TFLITE_CONFIG{
+    "dummy_tflite",
+    dummy_tflite_location,  // base path
+    "CPU",                  // target device
+    "1",                    // batchsize
+    1,                      // NIREQ
+    false,                  // is stateful
+    true,                   // idle sequence cleanup enabled
+    false,                  // low latency transformation enabled
+    500,                    // stateful sequence max number
+    "",                     // cache directory
+    1,                      // model_version unused since version are read from path
+    dummy_tflite_location,  // local path
+};
+
+const ovms::ModelConfig SCALAR_MODEL_CONFIG{
+    "scalar",
+    scalar_model_location,  // base path
+    "CPU",                  // target device
+    "",                     // batchsize needs to be empty to emulate missing --batch_size param
+    1,                      // NIREQ
+    false,                  // is stateful
+    true,                   // idle sequence cleanup enabled
+    false,                  // low latency transformation enabled
+    500,                    // stateful sequence max number
+    "",                     // cache directory
+    1,                      // model_version unused since version are read from path
+    scalar_model_location,  // local path
+};
+
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 constexpr const float DUMMY_ADDITION_VALUE = 1.0;
-const std::vector<size_t> DUMMY_MODEL_SHAPE{1, 10};
+const ovms::signed_shape_t DUMMY_MODEL_SHAPE{1, 10};
+const ovms::Shape DUMMY_MODEL_SHAPE_META{1, 10};
 
 constexpr const char* DUMMY_FP64_MODEL_INPUT_NAME = "input:0";
 constexpr const char* DUMMY_FP64_MODEL_OUTPUT_NAME = "output:0";
@@ -131,6 +197,12 @@ constexpr const int SUM_MODEL_OUTPUT_SIZE = 10;
 constexpr const char* INCREMENT_1x3x4x5_MODEL_INPUT_NAME = "input";
 constexpr const char* INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME = "output";
 constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
+
+constexpr const char* PASSTHROUGH_MODEL_INPUT_NAME = "input";
+constexpr const char* PASSTHROUGH_MODEL_OUTPUT_NAME = "copy:0";
+
+constexpr const char* SCALAR_MODEL_INPUT_NAME = "model_scalar_input";
+constexpr const char* SCALAR_MODEL_OUTPUT_NAME = "model_scalar_output";
 
 const std::string UNUSED_SERVABLE_NAME = "UNUSED_SERVABLE_NAME";
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
@@ -159,20 +231,30 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
 KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
 
-void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
+void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
     const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
-void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
-void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, OVMS_DataType>& inputInfo,
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, OVMS_DataType>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
-void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 
 void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
 void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data,
     uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
+
+void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content);
+void prepareInferStringTensor(tensorflow::TensorProto& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content);
+void prepareInferStringTensor(ovms::InferenceTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content);
+
+void prepareInferStringRequest(::KFSRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true);
+void prepareInferStringRequest(tensorflow::serving::PredictRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true);
+void prepareInferStringRequest(ovms::InferenceRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true);  // CAPI binary not supported
+
+void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<std::string> expectedStrings);
 
 void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize);
@@ -196,6 +278,12 @@ void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "");
 
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
+
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
     std::stringstream ss;
@@ -208,12 +296,25 @@ std::string readableError(const T* expected_output, const T* actual_output, cons
     return ss.str();
 }
 
+void assertStringOutputProto(const tensorflow::TensorProto& proto, const std::vector<std::string>& expectedStrings);
+void assertStringOutputProto(const KFSTensorOutputProto& proto, const std::vector<std::string>& expectedStrings);
+void assertStringOutputProto(const ovms::InferenceTensor& proto, const std::vector<std::string>& expectedStrings);
+
+void assertStringResponse(const tensorflow::serving::PredictResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName);
+void assertStringResponse(const ::KFSResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName);
+void assertStringResponse(const ovms::InferenceResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName);
+
+void checkAddResponse(const std::string outputName,
+    const std::vector<float>& requestData1,
+    const std::vector<float>& requestData2,
+    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize, const std::string& servableName);
+
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
-    tensorflow::serving::PredictRequest& request,
     tensorflow::serving::PredictResponse& response,
-    const std::vector<size_t>& expectedShape) {
+    const std::vector<size_t>& expectedShape,
+    bool checkRaw = true) {
     ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
     const auto& output_proto = response.outputs().at(outputName);
 
@@ -235,26 +336,33 @@ void checkIncrement4DimResponse(const std::string outputName,
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
-    ::KFSRequest& request,
     ::KFSResponse& response,
-    const std::vector<size_t>& expectedShape) {
+    const std::vector<size_t>& expectedShape,
+    bool checkRaw = true) {
     ASSERT_EQ(response.outputs_size(), 1);
-    ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.mutable_outputs(0)->name(), outputName);
-
-    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
-
-    ASSERT_EQ(response.raw_output_contents(0).size(), elementsCount * sizeof(T));
     ASSERT_EQ(response.outputs(0).shape_size(), expectedShape.size());
     for (size_t i = 0; i < expectedShape.size(); i++) {
         ASSERT_EQ(response.outputs(0).shape(i), expectedShape[i]);
     }
 
-    T* actual_output = (T*)response.raw_output_contents(0).data();
-    T* expected_output = (T*)expectedData.data();
-    const int dataLengthToCheck = elementsCount * sizeof(T);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+    if (checkRaw) {
+        ASSERT_EQ(response.raw_output_contents_size(), 1);
+        auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
+        ASSERT_EQ(response.raw_output_contents(0).size(), elementsCount * sizeof(T));
+        T* actual_output = (T*)response.raw_output_contents(0).data();
+        T* expected_output = (T*)expectedData.data();
+        const int dataLengthToCheck = elementsCount * sizeof(T);
+        EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+            << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+    } else {
+        ASSERT_EQ(response.outputs(0).datatype(), "UINT8") << "other precision testing currently not supported";
+        ASSERT_EQ(sizeof(T), 1) << "other precision testing currently not supported";
+        ASSERT_EQ(response.outputs(0).contents().uint_contents_size(), expectedData.size());
+        for (size_t i = 0; i < expectedData.size(); i++) {
+            ASSERT_EQ(response.outputs(0).contents().uint_contents(i), expectedData[i]);
+        }
+    }
 }
 
 void checkIncrement4DimShape(const std::string outputName,
@@ -312,6 +420,9 @@ public:
     void updateConfigurationWithoutConfigFile() {
         ModelManager::updateConfigurationWithoutConfigFile();
     }
+    void setWaitForModelLoadedTimeoutMs(int value) {
+        this->waitForModelLoadedTimeoutMs = value;
+    }
 };
 
 class MockedMetadataModelIns : public ovms::ModelInstance {
@@ -319,7 +430,7 @@ public:
     MockedMetadataModelIns(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", 42, ieCore) {}
     MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
-    MOCK_METHOD(ovms::Dimension, getBatchSize, (), (const, override));
+    MOCK_METHOD(std::optional<ovms::Dimension>, getBatchSize, (), (const, override));
     MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
@@ -361,6 +472,9 @@ protected:
     std::string directoryPath;
 };
 
+/**
+ * Wait until ModelManager::configFileReloadNeeded returns false or timeout is reached
+ */
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager);
 
@@ -577,8 +691,11 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 };
 
 void randomizePort(std::string& port);
+void randomizePorts(std::string& port1, std::string& port2);
 
 class ConstructorEnabledConfig : public ovms::Config {
 public:
     ConstructorEnabledConfig() {}
 };
+
+std::shared_ptr<const ovms::TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const ovms::TensorInfo> src, ovms::Precision precision);

@@ -31,7 +31,7 @@ RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_* /opt/intel/openvino && \
-    ln -s /opt/intel/l_openvino_* /opt/intel/openvino_2022
+    ln -s /opt/intel/l_openvino_* /opt/intel/openvino_2023
 
 WORKDIR /workspace
 COPY Makefile ov_extension.cpp CustomReluOp.cpp CustomReluOp.hpp ./
