@@ -28,9 +28,10 @@ def test_creating_from_numpy_numerical_array(array_dtype):
     ovms_py_tensor = Tensor("input", npy_arr)
     assert ovms_py_tensor.name == "input"
     assert npy_arr.shape == ovms_py_tensor.shape
+    assert npy_arr.data.shape == ovms_py_tensor.data.shape
     assert npy_arr.data.format == ovms_py_tensor.data.format
-    assert npy_arr.itemsize == ovms_py_tensor.itemsize
-    assert npy_arr.strides == ovms_py_tensor.strides
+    assert npy_arr.data.itemsize == ovms_py_tensor.data.itemsize
+    assert npy_arr.data.strides == ovms_py_tensor.data.strides
     assert npy_arr.data == ovms_py_tensor.data
 
 @pytest.mark.parametrize("data", ["single_string", ["batch", "of", "strings"]])
@@ -39,19 +40,21 @@ def test_creating_from_numpy_string_array(data):
     ovms_py_tensor = Tensor("input", npy_arr)
     assert ovms_py_tensor.name == "input"
     assert npy_arr.shape == ovms_py_tensor.shape
+    assert npy_arr.data.shape == ovms_py_tensor.data.shape
     assert npy_arr.data.format == ovms_py_tensor.data.format
-    assert npy_arr.itemsize == ovms_py_tensor.itemsize
-    assert npy_arr.strides == ovms_py_tensor.strides
+    assert npy_arr.data.itemsize == ovms_py_tensor.data.itemsize
+    assert npy_arr.data.strides == ovms_py_tensor.data.strides
     assert npy_arr.data.tobytes() == ovms_py_tensor.data.tobytes()
 
 def test_creating_from_python_bytes():
     data = "some string encoded with default UTF-8 encoding".encode()
     ovms_py_tensor = Tensor("input", data)
     assert ovms_py_tensor.name == "input"
-    assert ovms_py_tensor.ndim == 1
     assert ovms_py_tensor.shape == (len(data),)
+    assert ovms_py_tensor.data.ndim == 1
+    assert ovms_py_tensor.data.shape == (len(data),)
     assert ovms_py_tensor.data.format == "B" # UINT8
     assert ovms_py_tensor.datatype == "UINT8"
-    assert ovms_py_tensor.itemsize == 1
-    assert ovms_py_tensor.strides == (1,)
+    assert ovms_py_tensor.data.itemsize == 1
+    assert ovms_py_tensor.data.strides == (1,)
     assert ovms_py_tensor.data.tobytes() == data

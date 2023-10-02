@@ -30,7 +30,7 @@ PYBIND11_MODULE(pyovms, m) {
                 m.itemsize,
                 m.format,
                 m.ndim,
-                m.shape,
+                m.bufferShape,
                 m.strides);
         })
         .def(py::init([](std::string name, py::buffer b) {
@@ -39,11 +39,6 @@ PYBIND11_MODULE(pyovms, m) {
         }))
         .def_readonly("name", &OvmsPyTensor::name)
         .def_property_readonly("data", [](const py::object& m) -> py::memoryview { return py::memoryview(m); })
-        .def_property_readonly("shape", [](const OvmsPyTensor& m) -> py::tuple { return py::tuple(py::cast(m.shape)); })
-        .def_readonly("itemsize", &OvmsPyTensor::itemsize)
-        .def_property_readonly("strides", [](const OvmsPyTensor& m) -> py::tuple { return py::tuple(py::cast(m.strides)); })
-        .def_readonly("ndim", &OvmsPyTensor::ndim)
-        .def_readonly("format", &OvmsPyTensor::format)
-        .def_readonly("size", &OvmsPyTensor::size)
+        .def_property_readonly("shape", [](const OvmsPyTensor& m) -> py::tuple { return py::tuple(py::cast(m.userShape)); })
         .def_readonly("datatype", &OvmsPyTensor::datatype);
 }

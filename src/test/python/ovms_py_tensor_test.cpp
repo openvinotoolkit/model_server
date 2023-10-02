@@ -26,8 +26,7 @@ using namespace ovms;
 namespace py = pybind11;
 
 TEST(OvmsPyTensor, BuildKnownFormatMultiDimShape) {
-    // OvmsPyTensor(void *ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size);
-    size_t INPUT_BUFFER_SIZE = 1 * 3 * 300 * 300 * sizeof(float);
+    py::ssize_t INPUT_BUFFER_SIZE = 1 * 3 * 300 * 300 * sizeof(float);
     std::string data(INPUT_BUFFER_SIZE, '1');
     void* ptr = data.data();
     std::vector<py::ssize_t> shape{1, 3, 300, 300};
@@ -40,15 +39,34 @@ TEST(OvmsPyTensor, BuildKnownFormatMultiDimShape) {
 
     EXPECT_EQ(ovmsPyTensor.name, "input");
     EXPECT_EQ(ovmsPyTensor.ptr, ptr);
-    EXPECT_EQ(ovmsPyTensor.shape, shape);
+    EXPECT_EQ(ovmsPyTensor.userShape, shape);
+    EXPECT_EQ(ovmsPyTensor.bufferShape, shape);
     EXPECT_EQ(ovmsPyTensor.strides, expectedStrides);
     EXPECT_EQ(ovmsPyTensor.format, expectedFormat);
     EXPECT_EQ(ovmsPyTensor.datatype, datatype);
     EXPECT_EQ(ovmsPyTensor.itemsize, expectedItemsize);
+
+    OvmsPyTensor recreatedTensor("input", py::buffer_info{
+                                              ovmsPyTensor.ptr,
+                                              ovmsPyTensor.itemsize,
+                                              ovmsPyTensor.format,
+                                              ovmsPyTensor.ndim,
+                                              ovmsPyTensor.bufferShape,
+                                              ovmsPyTensor.strides});
+
+    EXPECT_EQ(recreatedTensor.name, "input");
+    EXPECT_EQ(recreatedTensor.ptr, ovmsPyTensor.ptr);
+    EXPECT_EQ(recreatedTensor.userShape, ovmsPyTensor.userShape);
+    EXPECT_EQ(recreatedTensor.bufferShape, ovmsPyTensor.bufferShape);
+    EXPECT_EQ(recreatedTensor.strides, ovmsPyTensor.strides);
+    EXPECT_EQ(recreatedTensor.format, ovmsPyTensor.format);
+    EXPECT_EQ(recreatedTensor.datatype, ovmsPyTensor.datatype);
+    EXPECT_EQ(recreatedTensor.itemsize, ovmsPyTensor.itemsize);
+    EXPECT_EQ(recreatedTensor.size, ovmsPyTensor.size);
 }
 
 TEST(OvmsPyTensor, BuildKnownFormatSingleDimShape) {
-    size_t INPUT_BUFFER_SIZE = 1 * 3 * 300 * 300 * sizeof(float);
+    py::ssize_t INPUT_BUFFER_SIZE = 1 * 3 * 300 * 300 * sizeof(float);
     std::string data(INPUT_BUFFER_SIZE, '1');
     void* ptr = data.data();
     std::vector<py::ssize_t> shape{1 * 3 * 300 * 300};
@@ -61,51 +79,119 @@ TEST(OvmsPyTensor, BuildKnownFormatSingleDimShape) {
 
     EXPECT_EQ(ovmsPyTensor.name, "input");
     EXPECT_EQ(ovmsPyTensor.ptr, ptr);
-    EXPECT_EQ(ovmsPyTensor.shape, shape);
+    EXPECT_EQ(ovmsPyTensor.userShape, shape);
+    EXPECT_EQ(ovmsPyTensor.bufferShape, shape);
     EXPECT_EQ(ovmsPyTensor.strides, expectedStrides);
     EXPECT_EQ(ovmsPyTensor.format, expectedFormat);
     EXPECT_EQ(ovmsPyTensor.datatype, datatype);
     EXPECT_EQ(ovmsPyTensor.itemsize, expectedItemsize);
+    EXPECT_EQ(ovmsPyTensor.size, INPUT_BUFFER_SIZE);
+
+    OvmsPyTensor recreatedTensor("input", py::buffer_info{
+                                              ovmsPyTensor.ptr,
+                                              ovmsPyTensor.itemsize,
+                                              ovmsPyTensor.format,
+                                              ovmsPyTensor.ndim,
+                                              ovmsPyTensor.bufferShape,
+                                              ovmsPyTensor.strides});
+
+    EXPECT_EQ(recreatedTensor.name, "input");
+    EXPECT_EQ(recreatedTensor.ptr, ovmsPyTensor.ptr);
+    EXPECT_EQ(recreatedTensor.userShape, ovmsPyTensor.userShape);
+    EXPECT_EQ(recreatedTensor.bufferShape, ovmsPyTensor.bufferShape);
+    EXPECT_EQ(recreatedTensor.strides, ovmsPyTensor.strides);
+    EXPECT_EQ(recreatedTensor.format, ovmsPyTensor.format);
+    EXPECT_EQ(recreatedTensor.datatype, ovmsPyTensor.datatype);
+    EXPECT_EQ(recreatedTensor.itemsize, ovmsPyTensor.itemsize);
+    EXPECT_EQ(recreatedTensor.size, ovmsPyTensor.size);
 }
 
 TEST(OvmsPyTensor, BuildUnknownFormatSingleDimShape) {
-    size_t INPUT_BUFFER_SIZE = 3 * 1024;
+    py::ssize_t INPUT_BUFFER_SIZE = 3 * 1024;
     std::string data(INPUT_BUFFER_SIZE, '1');
     void* ptr = data.data();
-    std::vector<py::ssize_t> shape{3 * 1024};
+    std::vector<py::ssize_t> shape{3};
     std::string datatype = "my_string_type";
     OvmsPyTensor ovmsPyTensor("input", ptr, shape, datatype, INPUT_BUFFER_SIZE);
 
-    std::vector<py::ssize_t> expectedStrides{1};
     std::string expectedFormat = datatypeToBufferFormat.at("UINT8");
     size_t expectedItemsize = bufferFormatToItemsize.at(expectedFormat);
+    // For unknown format the underlying buffer is UINT8 1-D with shape (num_bytes,) and strides (1,)
+    std::vector<py::ssize_t> expectedBufferShape{INPUT_BUFFER_SIZE};
+    std::vector<py::ssize_t> expectedStrides{1};
 
     EXPECT_EQ(ovmsPyTensor.name, "input");
     EXPECT_EQ(ovmsPyTensor.ptr, ptr);
-    EXPECT_EQ(ovmsPyTensor.shape, shape);
+    EXPECT_EQ(ovmsPyTensor.userShape, shape);
+    EXPECT_EQ(ovmsPyTensor.bufferShape, expectedBufferShape);
     EXPECT_EQ(ovmsPyTensor.strides, expectedStrides);
     EXPECT_EQ(ovmsPyTensor.format, expectedFormat);
     EXPECT_EQ(ovmsPyTensor.datatype, datatype);
     EXPECT_EQ(ovmsPyTensor.itemsize, expectedItemsize);
+    EXPECT_EQ(ovmsPyTensor.size, INPUT_BUFFER_SIZE);
+
+    OvmsPyTensor recreatedTensor("input", py::buffer_info{
+                                              ovmsPyTensor.ptr,
+                                              ovmsPyTensor.itemsize,
+                                              ovmsPyTensor.format,
+                                              ovmsPyTensor.ndim,
+                                              ovmsPyTensor.bufferShape,
+                                              ovmsPyTensor.strides});
+
+    EXPECT_EQ(recreatedTensor.name, "input");
+    EXPECT_EQ(recreatedTensor.ptr, ovmsPyTensor.ptr);
+    // When creating from another buffer we assing bufferShape to userShape
+    EXPECT_EQ(recreatedTensor.userShape, ovmsPyTensor.bufferShape);
+    EXPECT_EQ(recreatedTensor.bufferShape, ovmsPyTensor.bufferShape);
+    EXPECT_EQ(recreatedTensor.strides, ovmsPyTensor.strides);
+    EXPECT_EQ(recreatedTensor.format, ovmsPyTensor.format);
+    // We cannot recreate known datatype only from buffer info. For unknown types we assume to UINT8
+    EXPECT_EQ(recreatedTensor.datatype, "UINT8");
+    EXPECT_EQ(recreatedTensor.itemsize, ovmsPyTensor.itemsize);
+    EXPECT_EQ(recreatedTensor.size, ovmsPyTensor.size);
 }
 
 TEST(OvmsPyTensor, BuildUnknownFormatMultiDimShape) {
-    size_t INPUT_BUFFER_SIZE = 3 * 1024;
+    py::ssize_t INPUT_BUFFER_SIZE = 10 * 3 * 1024;
     std::string data(INPUT_BUFFER_SIZE, '1');
     void* ptr = data.data();
-    std::vector<py::ssize_t> shape{3, 1024};
+    std::vector<py::ssize_t> shape{10, 3};
     std::string datatype = "my_string_type";
     OvmsPyTensor ovmsPyTensor("input", ptr, shape, datatype, INPUT_BUFFER_SIZE);
 
-    std::vector<py::ssize_t> expectedStrides{1024, 1};
     std::string expectedFormat = datatypeToBufferFormat.at("UINT8");
     size_t expectedItemsize = bufferFormatToItemsize.at(expectedFormat);
+    // For unknown format the underlying buffer is UINT8 1-D with shape (num_bytes,) and strides (1,)
+    std::vector<py::ssize_t> expectedBufferShape{INPUT_BUFFER_SIZE};
+    std::vector<py::ssize_t> expectedStrides{1};
 
     EXPECT_EQ(ovmsPyTensor.name, "input");
     EXPECT_EQ(ovmsPyTensor.ptr, ptr);
-    EXPECT_EQ(ovmsPyTensor.shape, shape);
+    EXPECT_EQ(ovmsPyTensor.userShape, shape);
+    EXPECT_EQ(ovmsPyTensor.bufferShape, expectedBufferShape);
     EXPECT_EQ(ovmsPyTensor.strides, expectedStrides);
     EXPECT_EQ(ovmsPyTensor.format, expectedFormat);
     EXPECT_EQ(ovmsPyTensor.datatype, datatype);
     EXPECT_EQ(ovmsPyTensor.itemsize, expectedItemsize);
+    EXPECT_EQ(ovmsPyTensor.size, INPUT_BUFFER_SIZE);
+
+    OvmsPyTensor recreatedTensor("input", py::buffer_info{
+                                              ovmsPyTensor.ptr,
+                                              ovmsPyTensor.itemsize,
+                                              ovmsPyTensor.format,
+                                              ovmsPyTensor.ndim,
+                                              ovmsPyTensor.bufferShape,
+                                              ovmsPyTensor.strides});
+
+    EXPECT_EQ(recreatedTensor.name, "input");
+    EXPECT_EQ(recreatedTensor.ptr, ovmsPyTensor.ptr);
+    // When creating from another buffer we assing bufferShape to userShape
+    EXPECT_EQ(recreatedTensor.userShape, ovmsPyTensor.bufferShape);
+    EXPECT_EQ(recreatedTensor.bufferShape, ovmsPyTensor.bufferShape);
+    EXPECT_EQ(recreatedTensor.strides, ovmsPyTensor.strides);
+    EXPECT_EQ(recreatedTensor.format, ovmsPyTensor.format);
+    // We cannot recreate known datatype only from buffer info. For unknown types we assume to UINT8
+    EXPECT_EQ(recreatedTensor.datatype, "UINT8");
+    EXPECT_EQ(recreatedTensor.itemsize, ovmsPyTensor.itemsize);
+    EXPECT_EQ(recreatedTensor.size, ovmsPyTensor.size);
 }

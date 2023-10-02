@@ -87,10 +87,16 @@ const std::string RAW_BINARY_FORMAT = "B";
 
 struct OvmsPyTensor {
     std::string name;
+    // Can be one of predefined types (like int8, float32 etc.) or totally custom like numpy (for example "<U83")
+    std::string datatype;
+    // User defined shape read from the request
+    std::vector<py::ssize_t> userShape;
+    // Binary size of the input data
+    size_t size;
 
     // Buffer protocol fields
     void* ptr;
-    std::vector<py::ssize_t> shape;
+    std::vector<py::ssize_t> bufferShape;
     py::ssize_t ndim;
     std::string format;  // Struct-syntax buffer format
     py::ssize_t itemsize;
@@ -98,14 +104,10 @@ struct OvmsPyTensor {
 
     // ---
 
-    // Can be one of predefined types (like int8, float32 etc.) or totally custom like numpy (for example "<U83")
-    std::string datatype;
-    size_t size;
-
     // Construct object from request contents
-    OvmsPyTensor(std::string name, void* ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size);
+    OvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
 
     // Construct object from buffer info
-    OvmsPyTensor(std::string name, py::buffer_info bufferInfo);
+    OvmsPyTensor(const std::string& name, py::buffer_info bufferInfo);
 };
 }  // namespace ovms

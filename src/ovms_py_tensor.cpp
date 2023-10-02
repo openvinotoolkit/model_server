@@ -26,36 +26,45 @@
 namespace py = pybind11;
 using namespace ovms;
 
-OvmsPyTensor::OvmsPyTensor(std::string name, void* ptr, std::vector<py::ssize_t> shape, std::string datatype, size_t size) :
+OvmsPyTensor::OvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) :
     name(name),
-    ptr(ptr),
-    shape(shape),
-    ndim(shape.size()),
-    format(),
-    itemsize(),
     datatype(datatype),
-    size(size) {
+    userShape(shape),
+    size(size),
+    ptr(ptr),
+    bufferShape(),
+    ndim(),
+    format(),
+    itemsize() {
     // Map datatype to struct syntax format if it's known. Otherwise assume raw binary (UINT8 type)
     auto it = datatypeToBufferFormat.find(datatype);
-    format = it != datatypeToBufferFormat.end() ? it->second : RAW_BINARY_FORMAT;
+    if (it != datatypeToBufferFormat.end()) {
+        format = it->second;
+        bufferShape = userShape;
+    } else {
+        format = RAW_BINARY_FORMAT;
+        bufferShape = std::vector<py::ssize_t>{size};
+    }
 
+    ndim = bufferShape.size();
     itemsize = bufferFormatToItemsize.at(format);
     strides.insert(strides.begin(), itemsize);
     for (int i = 1; i < ndim; i++) {
-        py::ssize_t stride = shape[ndim - i] * strides[0];
+        py::ssize_t stride = bufferShape[ndim - i] * strides[0];
         strides.insert(strides.begin(), stride);
     }
 }
 
-OvmsPyTensor::OvmsPyTensor(std::string name, py::buffer_info bufferInfo) :
+OvmsPyTensor::OvmsPyTensor(const std::string& name, py::buffer_info bufferInfo) :
     name(name),
     ptr(bufferInfo.ptr),
-    shape(bufferInfo.shape),
+    bufferShape(bufferInfo.shape),
     ndim(bufferInfo.ndim),
     format(bufferInfo.format),
     itemsize(bufferInfo.itemsize),
     strides(bufferInfo.strides) {
-    size = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<py::ssize_t>()) * itemsize;
+    size = std::accumulate(std::begin(bufferShape), std::end(bufferShape), 1, std::multiplies<py::ssize_t>()) * itemsize;
+    userShape = bufferShape;
     datatype = format;
     auto it = bufferFormatToDatatype.find(format);
     datatype = it != datatypeToBufferFormat.end() ? it->second : format;
