@@ -118,12 +118,12 @@ Use this parameter together with `OV_USE_BINARY=1`.
 
 By default set to `0`. When set to `1`, there will be additional docker image prepared: `openvino/model_server:latest-cuda` which contains environment required to run inference on NVIDIA GPUs. Please note that such image is significantly larger than the base one.
 
-Hint: use together with `OV_USE_BINARY=0` to force building OpenVINO from source. Use `OV_SOURCE_BRANCH` parameter to specify which branch from [OpenVINO repository](https://github.com/openvinotoolkit/openvino) should be used.
-Use together with `OV_CONTRIB_BRANCH` to specify which branch from [OpenVINO contrib](https://github.com/openvinotoolkit/openvino_contrib) repository should be used for NVIDIA plugin.
+Hint: use together with `OV_USE_BINARY=0` to force building OpenVINO from source. Optionally use `OV_SOURCE_BRANCH` parameter to specify which branch from [OpenVINO repository](https://github.com/openvinotoolkit/openvino) should be used
+and `OV_CONTRIB_BRANCH` to choose the branch from [OpenVINO contrib](https://github.com/openvinotoolkit/openvino_contrib) repository for NVIDIA plugin.
 
 Example:
 ```bash
-make docker_build NVIDIA=1 OV_USE_BINARY=0 OV_SOURCE_BRANCH=master OV_CONTRIB_BRANCH=master
+make docker_build NVIDIA=1 OV_USE_BINARY=0
 ```
 
 Note. In order to build the image with redhat UBI8.7 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`. 
