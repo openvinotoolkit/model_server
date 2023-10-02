@@ -29,6 +29,8 @@ class Status;
 class NodeState {
 public:
     NodeState() = delete;
+    NodeState(const NodeState&) = delete;
+    NodeState& operator=(NodeState&) = delete;
 #if (PYTHON_DISABLE == 0)
     NodeState(const google::protobuf::Any& node_options, Status& status);
     py::object pythonNodeState;
