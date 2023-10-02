@@ -20,8 +20,8 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../status.hpp"
 #include "../logging.hpp"
+#include "../status.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
@@ -68,7 +68,7 @@ NodeState::NodeState(const google::protobuf::Any& node_options, Status& status) 
 }
 NodeState::~NodeState() {
     py::gil_scoped_acquire acquire;
-    this->pythonNodeState.dec_ref();
+    ~pythonNodeState;
 }
 #endif
 
