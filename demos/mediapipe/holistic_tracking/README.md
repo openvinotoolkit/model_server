@@ -120,7 +120,7 @@ Then write to the server using ffmpeg, example using video or camera
 ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
 ```
 
-```bash
+```
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
 ```
 
