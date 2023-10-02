@@ -68,7 +68,7 @@ PythonNodeResource::PythonNodeResource(const google::protobuf::Any& node_options
 }
 PythonNodeResource::~PythonNodeResource() {
     py::gil_scoped_acquire acquire;
-    ~nodeResourceObject;
+    this->nodeResourceObject.dec_ref();
 }
 #endif
 
