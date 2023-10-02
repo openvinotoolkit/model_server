@@ -255,6 +255,17 @@ public:
         return (md5sum);
     }
 
+    static std::string getStringMD5(const std::string& str) {
+        unsigned char result[MD5_DIGEST_LENGTH];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        MD5((unsigned char*)str.c_str(), str.size(), result);
+#pragma GCC diagnostic pop
+
+        std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
+        return (md5sum);
+    }
+
     StatusCode CreateLocalDir(const std::string& path) {
         int status =
             mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);

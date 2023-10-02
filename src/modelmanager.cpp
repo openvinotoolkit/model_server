@@ -898,8 +898,10 @@ Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Doc
             std::this_thread::sleep_for(std::chrono::milliseconds(WRONG_CONFIG_FILE_RETRY_DELAY_MS));
             continue;
         }
-        rapidjson::IStreamWrapper isw(ifs);
-        rapidjson::ParseResult parseResult = configJson.ParseStream(isw);
+        std::stringstream config;
+        config << ifs.rdbuf();
+        md5 = FileSystem::getStringMD5(config.str());
+        rapidjson::ParseResult parseResult = configJson.Parse(config.str().c_str());
         if (!parseResult) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
                 rapidjson::GetParseError_En(parseResult.Code()));
@@ -908,15 +910,14 @@ Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Doc
             std::this_thread::sleep_for(std::chrono::milliseconds(WRONG_CONFIG_FILE_RETRY_DELAY_MS));
             continue;
         }
-        md5 = FileSystem::getFileMD5(configFilename);
         intermediateStatus = StatusCode::OK;
         break;
     } while (++counter < MAX_CONFIG_JSON_READ_RETRY_COUNT && !intermediateStatus.ok());
+    lastConfigFileMD5 = md5;
     if (!intermediateStatus.ok()) {
         this->lastLoadConfigStatus = intermediateStatus;
         return this->lastLoadConfigStatus;
     }
-    lastConfigFileMD5 = md5;
     return StatusCode::OK;
 }
 
