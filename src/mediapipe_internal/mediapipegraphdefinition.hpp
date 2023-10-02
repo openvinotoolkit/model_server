@@ -47,7 +47,7 @@ class MetricConfig;
 class MetricRegistry;
 class ModelManager;
 class MediapipeGraphExecutor;
-class NodeState;
+class PythonNodeResource;
 class Status;
 
 class MediapipeGraphDefinition {
@@ -76,7 +76,7 @@ public:
     static std::string getStreamName(const std::string& streamFullName);
     static std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName);
 
-    NodeState* getPythonNodeState(const std::string& nodeName);
+    PythonNodeResource* getPythonNodeResource(const std::string& nodeName);
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
@@ -154,9 +154,7 @@ private:
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 
-    std::map<std::string, std::shared_ptr<NodeState>> pythonNodeStates;
-
-    std::shared_ptr<NodeState> createNodeState(const google::protobuf::Any& node_options, Status& status);
+    std::map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

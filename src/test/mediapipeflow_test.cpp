@@ -30,7 +30,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../mediapipe_internal/nodestate.hpp"
+#include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"

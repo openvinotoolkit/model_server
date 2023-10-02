@@ -31,7 +31,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../mediapipe_internal/nodestate.hpp"
+#include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
@@ -301,7 +301,7 @@ TEST_F(MediapipePythonNodeTest, PythonNodeNameDoesNotExist) {
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-    ASSERT_EQ(mediapipeDummy.getPythonNodeState("pythonNode4"), nullptr);
+    ASSERT_EQ(mediapipeDummy.getPythonNodeResource("pythonNode4"), nullptr);
 }
 
 TEST_F(MediapipePythonNodeTest, PythonNodeInitMembers) {
@@ -331,14 +331,14 @@ TEST_F(MediapipePythonNodeTest, PythonNodeInitMembers) {
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-    NodeState* nodeState = mediapipeDummy.getPythonNodeState("pythonNode2");
-    ASSERT_TRUE(nodeState != nullptr);
+    PythonNodeResource* nodeRes = mediapipeDummy.getPythonNodeResource("pythonNode2");
+    ASSERT_TRUE(nodeRes != nullptr);
 
     try {
         py::gil_scoped_acquire acquire;
         using namespace py::literals;
         py::module_ sys = py::module_::import("sys");
-        py::object model_instance = py::cast<py::object>(nodeState->pythonNodeState);
+        py::object model_instance = py::cast<py::object>(nodeRes->nodeResourceObject);
 
         // Casting and recasting needed for ASSER_EQ to work
         std::string s_model_name = model_instance.attr("model_name").cast<std::string>();
@@ -393,14 +393,14 @@ TEST_F(MediapipePythonNodeTest, PythonNodePassArgumentsToConstructor) {
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-    NodeState* nodeState = mediapipeDummy.getPythonNodeState("pythonNode2");
-    ASSERT_TRUE(nodeState != nullptr);
+    PythonNodeResource* nodeRes = mediapipeDummy.getPythonNodeResource("pythonNode2");
+    ASSERT_TRUE(nodeRes != nullptr);
 
     try {
         py::gil_scoped_acquire acquire;
         using namespace py::literals;
         py::module_ sys = py::module_::import("sys");
-        py::object model_instance = py::cast<py::object>(nodeState->pythonNodeState);
+        py::object model_instance = py::cast<py::object>(nodeRes->nodeResourceObject);
 
         // Casting and recasting needed for ASSER_EQ to work
         py::dict model_outputs = model_instance.attr("model_outputs");

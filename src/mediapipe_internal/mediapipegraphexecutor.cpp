@@ -37,7 +37,7 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
-#include "nodestate.hpp"
+#include "pythonnoderesource.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -450,7 +450,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     stream_types_mapping_t inputTypes,
     stream_types_mapping_t outputTypes,
     std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-    std::map<std::string, std::shared_ptr<NodeState>>& pythonNodeStates) :
+    std::map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources) :
     name(name),
     version(version),
     config(config),
@@ -458,7 +458,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
-    pythonNodeStates(pythonNodeStates) {}
+    pythonNodeResources(pythonNodeResources) {}
 
 namespace {
 enum : unsigned int {

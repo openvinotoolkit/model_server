@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "nodestate.hpp"
+#include "pythonnoderesource.hpp"
 
 #include <filesystem>
 #include <string>
@@ -32,7 +32,7 @@
 namespace ovms {
 
 #if (PYTHON_DISABLE == 0)
-NodeState::NodeState(const google::protobuf::Any& node_options, Status& status) {
+PythonNodeResource::PythonNodeResource(const google::protobuf::Any& node_options, Status& status) {
     mediapipe::PythonBackendCalculatorOptions options;
     node_options.UnpackTo(&options);
     if (!std::filesystem::exists(options.handler_path())) {
@@ -57,7 +57,7 @@ NodeState::NodeState(const google::protobuf::Any& node_options, Status& status) 
         // TODO: check bool if true
         pythonModel.attr("initialize")(kwargsParam);
         status = StatusCode::OK;
-        this->pythonNodeState = pythonModel;
+        this->nodeResourceObject = pythonModel;
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Failed to process python node file {} : {}", options.handler_path(), e.what());
         status = StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
@@ -66,9 +66,9 @@ NodeState::NodeState(const google::protobuf::Any& node_options, Status& status) 
         status = StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
 }
-NodeState::~NodeState() {
+PythonNodeResource::~PythonNodeResource() {
     py::gil_scoped_acquire acquire;
-    ~pythonNodeState;
+    ~nodeResourceObject;
 }
 #endif
 

@@ -26,15 +26,15 @@ namespace py = pybind11;
 namespace ovms {
 class Status;
 
-class NodeState {
+class PythonNodeResource {
 public:
-    NodeState() = delete;
-    NodeState(const NodeState&) = delete;
-    NodeState& operator=(NodeState&) = delete;
+    PythonNodeResource() = delete;
+    PythonNodeResource(const PythonNodeResource&) = delete;
+    PythonNodeResource& operator=(PythonNodeResource&) = delete;
 #if (PYTHON_DISABLE == 0)
-    NodeState(const google::protobuf::Any& node_options, Status& status);
-    py::object pythonNodeState;
-    ~NodeState();
+    PythonNodeResource(const google::protobuf::Any& node_options, Status& status);
+    py::object nodeResourceObject;
+    ~PythonNodeResource();
 #endif
 };
 

@@ -41,7 +41,7 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphexecutor.hpp"
-#include "nodestate.hpp"
+#include "pythonnoderesource.hpp"
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
@@ -235,7 +235,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeStates);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResources);
     return status;
 }
 
@@ -390,9 +390,9 @@ std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFul
     return EMPTY_STREAM_NAME;
 }
 
-NodeState* MediapipeGraphDefinition::getPythonNodeState(const std::string& nodeName) {
-    auto it = this->pythonNodeStates.find(nodeName);
-    if (it == std::end(pythonNodeStates)) {
+PythonNodeResource* MediapipeGraphDefinition::getPythonNodeResource(const std::string& nodeName) {
+    auto it = this->pythonNodeResources.find(nodeName);
+    if (it == std::end(pythonNodeResources)) {
         return nullptr;
     } else {
         return it->second.get();
@@ -449,19 +449,19 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::PYTHON_NODE_MISSING_NAME;
             }
             std::string nodeName = config.node(i).name();
-            if (this->pythonNodeStates.find(nodeName) != this->pythonNodeStates.end()) {
+            if (this->pythonNodeResources.find(nodeName) != this->pythonNodeResources.end()) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
             }
 
             Status status;
-            std::shared_ptr<NodeState> state = std::make_shared<NodeState>(config.node(i).node_options(0), status);
+            std::shared_ptr<PythonNodeResource> state = std::make_shared<PythonNodeResource>(config.node(i).node_options(0), status);
             if (state == nullptr || status != StatusCode::OK) {
                 SPDLOG_ERROR("Failed to process python node graph {}", this->name);
                 return status;
             }
 
-            this->pythonNodeStates.insert(std::pair<std::string, std::shared_ptr<NodeState>>(nodeName, std::move(state)));
+            this->pythonNodeResources.insert(std::pair<std::string, std::shared_ptr<PythonNodeResource>>(nodeName, std::move(state)));
         }
     }
 #endif
