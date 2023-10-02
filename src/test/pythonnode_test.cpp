@@ -22,6 +22,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
+#include <pybind11/embed.h>
 
 #include "../config.hpp"
 #include "../dags/pipelinedefinition.hpp"
@@ -45,18 +46,14 @@
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
-#if (PYTHON_DISABLE == 0)
-#include <pybind11/embed.h>
 namespace py = pybind11;
-using namespace py::literals;
-#endif
-
 using namespace ovms;
+using namespace py::literals;
 
 using testing::HasSubstr;
 using testing::Not;
 
-class MediapipeFlowTest : public ::testing::TestWithParam<std::string> {
+class PythonFlowTest : public ::testing::TestWithParam<std::string> {
 protected:
     ovms::Server& server = ovms::Server::instance();
 
@@ -108,8 +105,7 @@ public:
     }
 };
 
-#if (PYTHON_DISABLE == 0)
-class MediapipeFlowPythonNodeTest : public MediapipeFlowTest {
+class MediapipeFlowPythonNodeTest : public PythonFlowTest {
 public:
     void SetUp() {
         SetUpServer("/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json");
@@ -128,6 +124,10 @@ class MediapipePythonNodeTest : public ::testing::Test {
 };
 
 TEST_F(MediapipePythonNodeTest, PythonNodeFileDoesNotExist) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "in"
@@ -414,5 +414,3 @@ TEST_F(MediapipePythonNodeTest, PythonNodePassArgumentsToConstructor) {
         ASSERT_EQ(1, 0);
     }
 }
-
-#endif

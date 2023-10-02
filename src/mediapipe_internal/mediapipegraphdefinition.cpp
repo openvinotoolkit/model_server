@@ -454,16 +454,9 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
             }
 
-            // Validate what we can before we create py::object so that we do not have to acquire GIL on empty objects
-            auto status = NodeState::validate(config.node(i).node_options(0));
-            if (!status.ok()) {
-                SPDLOG_ERROR("Failed to validate python node graph {}", this->name);
-                return status;
-            }
-
-            std::shared_ptr<NodeState> state = std::make_shared<NodeState>();
-            status = state->create(config.node(i).node_options(0));
-            if (!status.ok()) {
+            Status status;
+            std::shared_ptr<NodeState> state = std::make_shared<NodeState>(config.node(i).node_options(0), status);
+            if (state == nullptr || status != StatusCode::OK) {
                 SPDLOG_ERROR("Failed to process python node graph {}", this->name);
                 return status;
             }
@@ -475,4 +468,5 @@ Status MediapipeGraphDefinition::initializeNodes() {
 
     return StatusCode::OK;
 }
+
 }  // namespace ovms

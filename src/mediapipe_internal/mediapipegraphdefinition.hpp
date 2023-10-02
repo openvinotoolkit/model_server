@@ -155,6 +155,8 @@ private:
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 
     std::map<std::string, std::shared_ptr<NodeState>> pythonNodeStates;
+
+    std::shared_ptr<NodeState> createNodeState(const google::protobuf::Any& node_options, Status& status);
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

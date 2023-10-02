@@ -28,14 +28,12 @@ class Status;
 
 class NodeState {
 public:
-    NodeState();
-    NodeState(const NodeState& other);
+    NodeState() = delete;
 #if (PYTHON_DISABLE == 0)
+    NodeState(const google::protobuf::Any& node_options, Status& status);
     py::object pythonNodeState;
-    Status create(const google::protobuf::Any& node_options);
-    static Status validate(const google::protobuf::Any& node_options);
-#endif
     ~NodeState();
+#endif
 };
 
 }  // namespace ovms

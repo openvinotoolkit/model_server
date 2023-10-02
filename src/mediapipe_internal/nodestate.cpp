@@ -21,6 +21,7 @@
 #include <spdlog/spdlog.h>
 
 #include "../status.hpp"
+#include "../logging.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
@@ -30,22 +31,15 @@
 
 namespace ovms {
 
-NodeState::NodeState() {
 #if (PYTHON_DISABLE == 0)
-    this->pythonNodeState = py::none();
-#endif
-}
-
-NodeState::NodeState(const NodeState& other) {
-#if (PYTHON_DISABLE == 0)
-    this->pythonNodeState = other.pythonNodeState;
-#endif
-}
-
-#if (PYTHON_DISABLE == 0)
-Status NodeState::create(const google::protobuf::Any& node_options) {
+NodeState::NodeState(const google::protobuf::Any& node_options, Status& status) {
     mediapipe::PythonBackendCalculatorOptions options;
     node_options.UnpackTo(&options);
+    if (!std::filesystem::exists(options.handler_path())) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", options.handler_path());
+        status = StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
+        return;
+    }
     auto fs_handler_path = std::filesystem::path(options.handler_path());
     fs_handler_path.replace_extension();
 
@@ -58,38 +52,24 @@ Status NodeState::create(const google::protobuf::Any& node_options) {
         sys.attr("path").attr("append")(parent_path.c_str());
         py::module_ script = py::module_::import(filename.c_str());
         py::object OvmsPythonModel = script.attr("OvmsPythonModel");
-        py::object model_instance = OvmsPythonModel();
-        py::object kwargs_param = pybind11::dict();
-        model_instance.attr("initialize")(kwargs_param);
-        this->pythonNodeState = model_instance;
+        py::object pythonModel = OvmsPythonModel();
+        py::object kwargsParam = pybind11::dict();
+        // TODO: check bool if true
+        pythonModel.attr("initialize")(kwargsParam);
+        status = StatusCode::OK;
+        this->pythonNodeState = pythonModel;
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Failed to process python node file {} : {}", options.handler_path(), e.what());
-        return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
+        status = StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
         SPDLOG_ERROR("Failed to process python node file {}", options.handler_path());
-        return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
+        status = StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
-
-    return StatusCode::OK;
 }
-
-Status NodeState::validate(const google::protobuf::Any& node_options) {
-    mediapipe::PythonBackendCalculatorOptions options;
-    node_options.UnpackTo(&options);
-    if (!std::filesystem::exists(options.handler_path())) {
-        SPDLOG_DEBUG("Python node file: {} does not exist. ", options.handler_path());
-        return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
-    }
-    return StatusCode::OK;
-}
-#endif
-
 NodeState::~NodeState() {
-#if (PYTHON_DISABLE == 0)
-    // pybind requires to acquire gil when destructing objects
     py::gil_scoped_acquire acquire;
-    // This is equivalent to calling ~object
     this->pythonNodeState.dec_ref();
-#endif
 }
+#endif
+
 }  // namespace ovms
