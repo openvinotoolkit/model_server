@@ -140,7 +140,7 @@ TEST(OvmsPyTensor, BuildUnknownFormatSingleDimShape) {
 
     EXPECT_EQ(recreatedTensor.name, "input");
     EXPECT_EQ(recreatedTensor.ptr, ovmsPyTensor.ptr);
-    // When creating from another buffer we assing bufferShape to userShape
+    // When creating from another buffer we assign bufferShape to userShape
     EXPECT_EQ(recreatedTensor.userShape, ovmsPyTensor.bufferShape);
     EXPECT_EQ(recreatedTensor.bufferShape, ovmsPyTensor.bufferShape);
     EXPECT_EQ(recreatedTensor.strides, ovmsPyTensor.strides);
@@ -185,7 +185,7 @@ TEST(OvmsPyTensor, BuildUnknownFormatMultiDimShape) {
 
     EXPECT_EQ(recreatedTensor.name, "input");
     EXPECT_EQ(recreatedTensor.ptr, ovmsPyTensor.ptr);
-    // When creating from another buffer we assing bufferShape to userShape
+    // When creating from another buffer we assign bufferShape to userShape
     EXPECT_EQ(recreatedTensor.userShape, ovmsPyTensor.bufferShape);
     EXPECT_EQ(recreatedTensor.bufferShape, ovmsPyTensor.bufferShape);
     EXPECT_EQ(recreatedTensor.strides, ovmsPyTensor.strides);

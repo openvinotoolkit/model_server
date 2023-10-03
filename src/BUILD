@@ -422,7 +422,6 @@ cc_library(
             "//src:not_disable_python": [
                 "ovms_py_tensor.hpp",
                 "ovms_py_tensor.cpp",
-                "bindings/python/ovms_py_tensor.cpp",
                 ],
             "//src:disable_python": []
         }),
