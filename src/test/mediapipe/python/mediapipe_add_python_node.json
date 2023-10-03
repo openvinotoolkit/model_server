@@ -3,7 +3,7 @@
     "mediapipe_config_list": [
     {
         "name":"mediapipePythonBackend",
-        "graph_path":"/ovms/src/test/mediapipe/python/python_backend.pbtxt"
+        "graph_path":"/ovms/src/test/mediapipe/python/two_python_outputs_graph.pbtxt"
     }
     ]
 }

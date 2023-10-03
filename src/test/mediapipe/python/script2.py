@@ -18,7 +18,7 @@ class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         self.model_outputs = kwargs 
         ...
-        return None
+        return True
 
     def execute(self, inputs: list, kwargs: dict) -> list:
         # This method will be called for every request.

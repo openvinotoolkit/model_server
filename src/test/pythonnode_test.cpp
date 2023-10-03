@@ -222,6 +222,64 @@ TEST_F(MediapipePythonNodeTest, PythonNodeInitFailed) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
 }
 
+TEST_F(MediapipePythonNodeTest, PythonNodeReturnFalse) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/return_false_script.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+}
+
+TEST_F(MediapipePythonNodeTest, PythonNodeInitException) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/exception_script.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+}
+
 TEST_F(MediapipePythonNodeTest, PythonNodeOptionsMissing) {
     // Must be here - does not work when added to test::SetUp
     // Initialize Python interpreter
@@ -338,24 +396,23 @@ TEST_F(MediapipePythonNodeTest, PythonNodeInitMembers) {
         py::gil_scoped_acquire acquire;
         using namespace py::literals;
         py::module_ sys = py::module_::import("sys");
-        py::object model_instance = py::cast<py::object>(nodeRes->nodeResourceObject);
 
         // Casting and recasting needed for ASSER_EQ to work
-        std::string s_model_name = model_instance.attr("model_name").cast<std::string>();
-        std::string s_expected_name = py::str("testModel").cast<std::string>();
+        std::string sModelMame = nodeRes->nodeResourceObject.get()->attr("model_name").cast<std::string>();
+        std::string sExpectedName = py::str("testModel").cast<std::string>();
 
-        ASSERT_EQ(s_model_name, s_expected_name);
-        py::int_ execution_time = model_instance.attr("execution_time");
-        ASSERT_EQ(execution_time, 300);
-        py::list model_inputs = model_instance.attr("model_inputs");
+        ASSERT_EQ(sModelMame, sExpectedName);
+        py::int_ executionTime = nodeRes->nodeResourceObject.get()->attr("execution_time");
+        ASSERT_EQ(executionTime, 300);
+        py::list modelInputs = nodeRes->nodeResourceObject.get()->attr("model_inputs");
 
-        py::list expected_inputs = py::list();
-        expected_inputs.attr("append")(py::str("input1"));
-        expected_inputs.attr("append")(py::str("input2"));
+        py::list expectedInputs = py::list();
+        expectedInputs.attr("append")(py::str("input1"));
+        expectedInputs.attr("append")(py::str("input2"));
 
-        for (pybind11::size_t i = 0; i < model_inputs.size(); i++) {
-            py::str inputName = py::cast<py::str>(model_inputs[i]);
-            ASSERT_EQ(inputName.cast<std::string>(), expected_inputs[i].cast<std::string>());
+        for (pybind11::size_t i = 0; i < modelInputs.size(); i++) {
+            py::str inputName = py::cast<py::str>(modelInputs[i]);
+            ASSERT_EQ(inputName.cast<std::string>(), expectedInputs[i].cast<std::string>());
         }
     } catch (const std::exception& e) {
         std::cout << "Python pybind exception: " << e.what() << std::endl;
@@ -400,11 +457,10 @@ TEST_F(MediapipePythonNodeTest, PythonNodePassArgumentsToConstructor) {
         py::gil_scoped_acquire acquire;
         using namespace py::literals;
         py::module_ sys = py::module_::import("sys");
-        py::object model_instance = py::cast<py::object>(nodeRes->nodeResourceObject);
 
         // Casting and recasting needed for ASSER_EQ to work
-        py::dict model_outputs = model_instance.attr("model_outputs");
-        py::int_ size = model_outputs.size();
+        py::dict modelOutputs = nodeRes->nodeResourceObject.get()->attr("model_outputs");
+        py::int_ size = modelOutputs.size();
         ASSERT_EQ(size, 0);
     } catch (const std::exception& e) {
         std::cout << "Python pybind exception: " << e.what() << std::endl;

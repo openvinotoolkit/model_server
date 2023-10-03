@@ -18,10 +18,6 @@
 // C++ definition part in separate location
 // pybind11 binding part also in separate location
 #pragma once
-#include <string>
-#include <vector>
-
-#include <openvino/openvino.hpp>
 #include <pybind11/embed.h>  // everything needed for embedding
 
 // Temporary added file

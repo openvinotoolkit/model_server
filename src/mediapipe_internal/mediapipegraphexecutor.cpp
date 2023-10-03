@@ -450,7 +450,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     stream_types_mapping_t inputTypes,
     stream_types_mapping_t outputTypes,
     std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-    std::map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources) :
+    const std::map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources) :
     name(name),
     version(version),
     config(config),

@@ -51,7 +51,7 @@ public:
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-        std::map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources);
+        const std::map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 };
 }  // namespace ovms

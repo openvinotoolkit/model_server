@@ -13,16 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
-
 class OvmsPythonModel:
-
     def initialize(self, kwargs: dict):
-        self.model_name = "testModel"
-        self.execution_time = 300
-        self.model_inputs = ["input1","input2"]
-
-        return True
-
+        return False
+    
     def execute(self, inputs: list, kwargs: dict) -> list:
         # This method will be called for every request.
         # It expects a list of inputs (our custom python objects).

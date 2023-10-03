@@ -16,7 +16,6 @@
 #include "mediapipegraphdefinition.hpp"
 
 #include <algorithm>
-#include <filesystem>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -454,14 +453,14 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
             }
 
-            Status status;
-            std::shared_ptr<PythonNodeResource> state = std::make_shared<PythonNodeResource>(config.node(i).node_options(0), status);
-            if (state == nullptr || status != StatusCode::OK) {
+            std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
+            Status status = PythonNodeResource::PythonNodeResourceFactory(nodeResouce, config.node(i).node_options(0));
+            if (nodeResouce == nullptr || !status.ok()) {
                 SPDLOG_ERROR("Failed to process python node graph {}", this->name);
                 return status;
             }
 
-            this->pythonNodeResources.insert(std::pair<std::string, std::shared_ptr<PythonNodeResource>>(nodeName, std::move(state)));
+            this->pythonNodeResources.insert(std::pair<std::string, std::shared_ptr<PythonNodeResource>>(nodeName, std::move(nodeResouce)));
         }
     }
 #endif
