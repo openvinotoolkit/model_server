@@ -162,7 +162,7 @@ class StreamClient:
                 self.pq.put(entry)
 
 
-    def start(self, *, ovms_address : str, input_name : str, model_name : str, datatype : Datatype = FP32(), batch = True, stream_timeout : int = 0, limit_frames : int = 0):
+    def start(self, *, ovms_address : str, input_name : str, model_name : str, datatype : Datatype = FP32(), batch = True, limit_stream_duration : int = 0, limit_frames : int = 0):
         """
         Parameters
         ----------
@@ -176,7 +176,7 @@ class StreamClient:
             Input type of loaded model
         batch : bool
             Determines if client should reserve shape dimension for batching
-        stream_timeout : int
+        limit_stream_duration : int
             Limits how long client could run
         limit_frames : int
             Limits how many frames should be processed
@@ -215,7 +215,7 @@ class StreamClient:
                     callback=partial(self.callback, frame, i, timestamp),
                     inputs=inputs)
                 i += 1
-            if stream_timeout > 0 and time.time() - total_time_start > stream_timeout:
+            if limit_stream_duration > 0 and time.time() - total_time_start > limit_stream_duration:
                 break
             if limit_frames > 0 and i > limit_frames:
                 break

@@ -210,8 +210,10 @@ usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
                       [--input_stream INPUT_STREAM]
                       [--output_stream OUTPUT_STREAM]
                       [--model_name MODEL_NAME] [--width WIDTH]
-                      [--height HEIGHT] [--verbose VERBOSE]
-                      [--input_name INPUT_NAME]
+                      [--height HEIGHT] [--input_name INPUT_NAME] [--verbose]
+                      [--benchmark]
+                      [--limit_stream_duration LIMIT_STREAM_DURATION]
+                      [--limit_frames LIMIT_FRAMES]
 
 options:
   -h, --help            show this help message and exit
@@ -225,9 +227,14 @@ options:
                         Name of the model
   --width WIDTH         Width of model's input image
   --height HEIGHT       Height of model's input image
-  --verbose VERBOSE     Should client dump debug information
   --input_name INPUT_NAME
                         Name of the model's input
+  --verbose             Should client dump debug information
+  --benchmark           Should client collect processing times
+  --limit_stream_duration LIMIT_STREAM_DURATION
+                        Limit how long client should run
+  --limit_frames LIMIT_FRAMES
+                        Limit how many frames should be processed
 ```
 
 - Usage example
