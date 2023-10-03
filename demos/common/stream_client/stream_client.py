@@ -203,7 +203,6 @@ class StreamClient:
         i = 0
         total_time_start = time.time()
         while not self.force_exit:
-            #frame = self.time_frame(self.grab_frame, self.preprocess_time, i)
             timestamp = time.time()
             frame = self.grab_frame()
             if frame is not None:
