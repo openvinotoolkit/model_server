@@ -37,7 +37,7 @@ public:
     PythonNodeResource(const google::protobuf::Any& nodeOptions, Status& status);
     std::unique_ptr<py::object> nodeResourceObject;
     ~PythonNodeResource();
-    static Status PythonNodeResourceFactory(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions);
+    static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions);
 #endif
 };
 

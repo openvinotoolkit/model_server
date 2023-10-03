@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -454,7 +453,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
 
             std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
-            Status status = PythonNodeResource::PythonNodeResourceFactory(nodeResouce, config.node(i).node_options(0));
+            Status status = PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(i).node_options(0));
             if (nodeResouce == nullptr || !status.ok()) {
                 SPDLOG_ERROR("Failed to process python node graph {}", this->name);
                 return status;

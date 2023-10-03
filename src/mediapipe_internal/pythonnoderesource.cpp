@@ -36,18 +36,18 @@ PythonNodeResource::PythonNodeResource() {
 }
 
 #if (PYTHON_DISABLE == 0)
-Status PythonNodeResource::PythonNodeResourceFactory(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions) {
+Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions) {
     mediapipe::PythonBackendCalculatorOptions options;
     nodeOptions.UnpackTo(&options);
     if (!std::filesystem::exists(options.handler_path())) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", options.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }
-    auto fs_handler_path = std::filesystem::path(options.handler_path());
-    fs_handler_path.replace_extension();
+    auto fsHandlerPath = std::filesystem::path(options.handler_path());
+    fsHandlerPath.replace_extension();
 
-    std::string parentPath = fs_handler_path.parent_path();
-    std::string filename = fs_handler_path.filename();
+    std::string parentPath = fsHandlerPath.parent_path();
+    std::string filename = fsHandlerPath.filename();
 
     try {
         py::gil_scoped_acquire acquire;
