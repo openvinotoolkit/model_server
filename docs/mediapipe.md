@@ -222,7 +222,7 @@ If you want to add your own mediapipe calculator to OpenVINO Model Server functi
 If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](../WORKSPACE) file.
 Then you need to add the calculator target as a bazel dependency to the [src/BUILD](./src/BUILD) file. This should be done for:
 
-```bash
+```
 cc_library(
  name = "ovms_lib",
 ...
@@ -230,7 +230,7 @@ cc_library(
 
 in the conditions:default section of the deps property:
 
-```bash
+```
   deps = [
          "//:ovms_dependencies",
         "//src/kfserving_api:kfserving_api_cpp",
