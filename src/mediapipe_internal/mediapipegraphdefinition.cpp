@@ -388,15 +388,6 @@ std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFul
     return EMPTY_STREAM_NAME;
 }
 
-PythonNodeResource* MediapipeGraphDefinition::getPythonNodeResource(const std::string& nodeName) {
-    auto it = this->pythonNodeResources.find(nodeName);
-    if (it == std::end(pythonNodeResources)) {
-        return nullptr;
-    } else {
-        return it->second.get();
-    }
-}
-
 std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::getStreamNamePair(const std::string& streamFullName) {
     static std::unordered_map<std::string, mediapipe_packet_type_enum> prefix2enum{
         {KFS_REQUEST_PREFIX, mediapipe_packet_type_enum::KFS_REQUEST},

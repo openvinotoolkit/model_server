@@ -76,7 +76,6 @@ public:
     static std::string getStreamName(const std::string& streamFullName);
     static std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName);
 
-    PythonNodeResource* getPythonNodeResource(const std::string& nodeName);
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
@@ -92,6 +91,8 @@ public:
     static constexpr model_version_t VERSION = 1;
 
 protected:
+    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
+
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
             status(status),
@@ -153,8 +154,6 @@ private:
     std::vector<std::string> inputSidePacketNames;
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
-
-    std::map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

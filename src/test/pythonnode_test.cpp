@@ -92,6 +92,15 @@ class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
 public:
     std::string inputConfig;
 
+    PythonNodeResource* getPythonNodeResource(const std::string& nodeName) {
+        auto it = this->pythonNodeResources.find(nodeName);
+        if (it == std::end(pythonNodeResources)) {
+            return nullptr;
+        } else {
+            return it->second.get();
+        }
+    }
+
 public:
     DummyMediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config,
