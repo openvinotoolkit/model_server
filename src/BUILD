@@ -422,13 +422,12 @@ cc_library(
             "//src:disable_mediapipe" : [],
         })
         + select({
-            "//:not_disable_python": [
+            "//src:not_disable_python": [
                     "ovms_py_tensor.hpp",
                     "ovms_py_tensor.cpp",
-                    "mediapipe_calculators/pyobject.hpp",
                     "mediapipe_calculators/python_backend_calculator.cc",
                 ],
-            "//:disable_python": []
+            "//src:disable_python": []
         }),
     deps = [
         "//:ovms_dependencies",

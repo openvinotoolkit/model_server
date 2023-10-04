@@ -20,7 +20,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #pragma GCC diagnostic pop
-#include "pyobject.hpp"
+#include "../ovms_py_tensor.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
