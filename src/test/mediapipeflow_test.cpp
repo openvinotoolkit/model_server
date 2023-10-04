@@ -18,6 +18,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <sys/stat.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -1907,12 +1908,14 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
     std::string configFileContent = configFileWithEmptyBasePath;
     std::string configFilePath = directoryPath + "/config.json";
-    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    std::string graphFilePath = directoryPath + "/mediapipeGraph/graph.pbtxt";
 
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
 
     createConfigFileWithContent(configFileContent, configFilePath);
+    std::string defaultGraphDirectoryPath = directoryPath + "/mediapipeGraph";
+    mkdir(defaultGraphDirectoryPath.c_str(),0777);
     createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
