@@ -30,6 +30,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
@@ -43,6 +44,12 @@
 #include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
+
+#if (PYTHON_DISABLE == 0)
+#include <pybind11/embed.h>
+namespace py = pybind11;
+using namespace py::literals;
+#endif
 
 using namespace ovms;
 

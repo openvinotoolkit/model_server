@@ -165,7 +165,8 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["mediapipe_calculators/ovmscalculator.proto"],
+    srcs = ["mediapipe_calculators/ovmscalculator.proto",
+            "mediapipe_calculators/python_backend_calculator.proto"],
     visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
@@ -414,14 +415,17 @@ cc_library(
                 "mediapipe_internal/mediapipegraphdefinition.hpp",
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
+                "mediapipe_internal/pythonnoderesource.cpp",
+                "mediapipe_internal/pythonnoderesource.hpp",
                 "mediapipe_internal/packettypes.hpp",
             ],
             "//src:disable_mediapipe" : [],
         })
-         + select({
+        + select({
             "//src:not_disable_python": [
-                "ovms_py_tensor.hpp",
-                "ovms_py_tensor.cpp",
+                    "ovms_py_tensor.hpp",
+                    "ovms_py_tensor.cpp",
+                    "mediapipe_calculators/python_backend_calculator.cc",
                 ],
             "//src:disable_python": []
         }),
@@ -446,6 +450,7 @@ cc_library(
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
+        "-fvisibility=hidden",# Needed for pybind targets
         ] + select({
             "//conditions:default": [
             ],
@@ -863,6 +868,7 @@ cc_test(
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/mediapipeflow_test.cpp",
+                "test/pythonnode_test.cpp",
                 "test/mediapipe_validation_test.cpp",
                 "test/mediapipe/ovms_kfs_calculator.cc",
                 "test/mediapipe/ovms_image_input_calculator.cc",
@@ -987,6 +993,7 @@ cc_test(
         "-Wno-unknown-pragmas",
         "-Werror",
         "-Isrc",
+        "-fvisibility=hidden",# Needed for pybind targets
     ],
 )
 

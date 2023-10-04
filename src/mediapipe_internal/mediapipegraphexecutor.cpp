@@ -37,6 +37,7 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
+#include "pythonnoderesource.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -448,14 +449,16 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
     stream_types_mapping_t inputTypes,
     stream_types_mapping_t outputTypes,
-    std::vector<std::string> inputNames, std::vector<std::string> outputNames) :
+    std::vector<std::string> inputNames, std::vector<std::string> outputNames,
+    const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources) :
     name(name),
     version(version),
     config(config),
     inputTypes(std::move(inputTypes)),
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
-    outputNames(std::move(outputNames)) {}
+    outputNames(std::move(outputNames)),
+    pythonNodeResources(pythonNodeResources) {}
 
 namespace {
 enum : unsigned int {

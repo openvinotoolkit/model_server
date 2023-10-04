@@ -25,6 +25,8 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=8
 ENV DEBIAN_FRONTEND=noninteractive
+ARG BASE_IMAGE
+ENV BASE_IMAGE=${BASE_IMAGE}
 RUN apt-get update && apt-get install --no-install-recommends -y \
             build-essential \
             gcc-9 \
@@ -95,6 +97,7 @@ RUN ./install_opencv.sh
 FROM base_build as build
 ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
+ENV BASE_IMAGE=${BASE_IMAGE}
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 
