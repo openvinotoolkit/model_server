@@ -30,7 +30,16 @@ STYLE_CHECK_DIRS := src demos/common/cpp/src demos/image_classification/cpp demo
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
-JOBS ?= $(shell python3 -c 'import multiprocessing as mp; print(mp.cpu_count())')
+ifeq ($(shell uname),Darwin)
+    # MacOS
+    CORES_TOTAL := $(shell sysctl -n hw.physicalcpu)
+else
+    # Ubuntu & Redhat
+    CORES_PER_SOCKET := $(shell lscpu | awk '/^Core\(s\) per socket:/ {print $$NF}')
+    SOCKETS := $(shell lscpu | awk '/^Socket\(s\):/ {print $$NF}')
+    CORES_TOTAL := $$(($(SOCKETS) * $(CORES_PER_SOCKET)))
+endif
+JOBS ?= $(CORES_TOTAL)
 
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
