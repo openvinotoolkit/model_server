@@ -18,11 +18,11 @@
 #include <sstream>
 #include <string>
 #include <thread>
-#include <sys/stat.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
+#include <sys/stat.h>
 
 #include "../config.hpp"
 #include "../dags/pipelinedefinition.hpp"
@@ -1915,7 +1915,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
 
     createConfigFileWithContent(configFileContent, configFilePath);
     std::string defaultGraphDirectoryPath = directoryPath + "/mediapipeGraph";
-    mkdir(defaultGraphDirectoryPath.c_str(),0777);
+    mkdir(defaultGraphDirectoryPath.c_str(), 0777);
     createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
