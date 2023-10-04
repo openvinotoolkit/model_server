@@ -27,6 +27,7 @@ enum class mediapipe_packet_type_enum {
     TFLITETENSOR,
     MEDIAPIPE_IMAGE,
     MEDIAPIPE_IMAGE_FRAME,
+    OVMS_PY_TENSOR,
     UNKNOWN
 };
 

@@ -31,6 +31,7 @@
 #include "../metric_module.hpp"
 #include "../ovms.h"
 #include "../servablemanagermodule.hpp"
+#include "../pythoninterpretermodule.hpp"
 #include "../server.hpp"
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"

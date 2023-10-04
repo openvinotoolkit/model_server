@@ -17,15 +17,18 @@
 #include <memory>
 
 #include "module.hpp"
+#include "python/python_backend.hpp"
 
 namespace ovms {
 
 class PythonInterpreterModule : public Module {
+    PythonBackend* pythonBackend;
 public:
     PythonInterpreterModule();
     ~PythonInterpreterModule();
     Status start(const ovms::Config& config) override;
 
     void shutdown() override;
+    PythonBackend * getPythonBackend() const;
 };
 }  // namespace ovms

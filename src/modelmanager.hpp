@@ -55,6 +55,7 @@ class FileSystem;
 class MediapipeGraphExecutor;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
+class PythonBackend;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
@@ -63,7 +64,7 @@ public:
     /**
      * @brief A default constructor is private
      */
-    ModelManager(const std::string& modelCacheDirectory = "", MetricRegistry* registry = nullptr);
+    ModelManager(const std::string& modelCacheDirectory = "", MetricRegistry* registry = nullptr, PythonBackend* pythonBackend = nullptr);
 
 protected:
     void logPluginConfiguration();
@@ -214,6 +215,10 @@ private:
     std::string modelCacheDirectory;
 
     MetricRegistry* metricRegistry;
+
+#if (PYTHON_DISABLE == 0)
+    PythonBackend* pythonBackend;
+#endif
 
     /**
      * @brief Json config directory path

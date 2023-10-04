@@ -23,12 +23,18 @@
 #include "metric_module.hpp"
 #include "modelmanager.hpp"
 #include "server.hpp"
+#include "pythoninterpretermodule.hpp"
 
 namespace ovms {
+class PythonBackend;
 
 ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
+    auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(ovmsServer.getModule(PYTHON_INTERPRETER_MODULE_NAME));
+    PythonBackend * pythonBackend = nullptr;
+    if (pythonModule != nullptr)
+        pythonBackend = pythonModule->getPythonBackend();
     if (auto metricsModule = dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))) {
-        this->servableManager = std::make_unique<ModelManager>("", &metricsModule->getRegistry());
+        this->servableManager = std::make_unique<ModelManager>("", &metricsModule->getRegistry(), pythonBackend);
     } else {
         const char* message = "Tried to create servable manager module without metrics module";
         SPDLOG_ERROR(message);

@@ -54,7 +54,9 @@
 #include "version.hpp"
 
 #if (PYTHON_DISABLE == 0)
+#include <pybind11/embed.h>  // everything needed for embedding
 #include "pythoninterpretermodule.hpp"
+namespace py = pybind11;
 #endif
 
 using grpc::ServerBuilder;
@@ -65,7 +67,7 @@ const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
 const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
 const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
 const std::string METRICS_MODULE_NAME = "MetricsModule";
-const std::string PYTHON_INTERPRETER_MODULE = "PythonInterpreterModule";
+const std::string PYTHON_INTERPRETER_MODULE_NAME = "PythonInterpreterModule";
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
@@ -207,7 +209,7 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
 #if (PYTHON_DISABLE == 0)
-    if (name == PYTHON_INTERPRETER_MODULE)
+    if (name == PYTHON_INTERPRETER_MODULE_NAME)
         return std::make_unique<PythonInterpreterModule>();
 #endif
     if (name == METRICS_MODULE_NAME)
@@ -244,7 +246,7 @@ Status Server::startModules(ovms::Config& config) {
     bool inserted = false;
     auto it = modules.end();
 #if (PYTHON_DISABLE == 0)
-    INSERT_MODULE(PYTHON_INTERPRETER_MODULE, it);
+    INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
     START_MODULE(it);
 #endif
 #if MTR_ENABLED
@@ -297,7 +299,7 @@ void Server::shutdownModules() {
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
 #if (PYTHON_DISABLE == 0)
-    ensureModuleShutdown(PYTHON_INTERPRETER_MODULE);
+    ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
 #endif
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
@@ -327,6 +329,7 @@ int Server::start(int argc, char** argv) {
         // Handle OVMS main() return code
         return statusToExitCode(ret);
     }
+    py::gil_scoped_release release;
     while (!shutdown_request) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
