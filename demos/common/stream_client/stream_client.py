@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import time
 import cv2
 from functools import partial
 import queue
@@ -78,7 +79,7 @@ class StreamClient:
         fp32 = FP32()
         uint8 = UINT8()
 
-    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink : str, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend :OutputBackend = OutputBackends.ffmpeg, verbose : bool = True, exact : bool = True):
+    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink : str, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend :OutputBackend = OutputBackends.ffmpeg, verbose : bool = False, exact : bool = True, benchmark : bool = False):
         """
         Parameters
         ----------
@@ -96,6 +97,8 @@ class StreamClient:
             Should client output debug information.
         exact : bool
             Should client push every frame into output backwend.
+        benchmark : bool
+            Should client collect processing times
         """
 
         self.preprocess_callback = preprocess_callback
@@ -108,13 +111,15 @@ class StreamClient:
         self.output_backend = output_backend
         self.verbose = verbose
         self.exact = exact
+        self.benchmark = benchmark
 
         self.pq = queue.PriorityQueue()
 
     def grab_frame(self):
         success, frame = self.cap.read()
         if not success:
-            print("[WARNING] No Input frame")
+            if self.verbose:
+                print("[WARNING] No Input frame")
             self.force_exit = True
             return None
 
@@ -123,9 +128,12 @@ class StreamClient:
         else:
             return frame
 
-    def callback(self, frame, i, result, error):
+    inference_time = []
+    dropped_frames = 0
+    frames = 0
+    def callback(self, frame, i, timestamp, result, error):
         frame = self.postprocess_callback(frame, result)
-        self.pq.put((i, frame))
+        self.pq.put((i, frame, timestamp))
         if error is not None and self.verbose == True:
             print(error)
 
@@ -141,14 +149,20 @@ class StreamClient:
                 frame = entry[1]
                 if frame is not None:
                     self.output_backend.write(frame)
+                    if self.benchmark:
+                        self.inference_time.insert(i, time.time() - entry[2])
+                        self.frames += 1
                 if self.exact:
                     i += 1
                 else:
+                    if self.benchmark:
+                        self.dropped_frames += entry[0] - i
                     i = entry[0]
             elif self.exact:
                 self.pq.put(entry)
 
-    def start(self, *, ovms_address : str, input_name : str, model_name : str, datatype : Datatype = FP32(), batch = True):
+
+    def start(self, *, ovms_address : str, input_name : str, model_name : str, datatype : Datatype = FP32(), batch = True, limit_stream_duration : int = 0, limit_frames : int = 0):
         """
         Parameters
         ----------
@@ -162,6 +176,10 @@ class StreamClient:
             Input type of loaded model
         batch : bool
             Determines if client should reserve shape dimension for batching
+        limit_stream_duration : int
+            Limits how long client could run
+        limit_frames : int
+            Limits how many frames should be processed
         """
 
         self.cap = cv2.VideoCapture(self.source, cv2.CAP_ANY)
@@ -183,7 +201,9 @@ class StreamClient:
         self.output_backend.init(self.sink, fps, self.width, self.height)
             
         i = 0
+        total_time_start = time.time()
         while not self.force_exit:
+            timestamp = time.time()
             frame = self.grab_frame()
             if frame is not None:
                 np_frame = np.array([frame], dtype=datatype.dtype()) if batch else np.array(frame, dtype=datatype.dtype())
@@ -191,12 +211,20 @@ class StreamClient:
                 inputs[0].set_data_from_numpy(np_frame)
                 triton_client.async_infer(
                     model_name=model_name,
-                    callback=partial(self.callback, frame, i),
+                    callback=partial(self.callback, frame, i, timestamp),
                     inputs=inputs)
                 i += 1
+            if limit_stream_duration > 0 and time.time() - total_time_start > limit_stream_duration:
+                break
+            if limit_frames > 0 and i > limit_frames:
+                break
         self.pq.put((i, "EOS"))
+        sent_all_frames = time.time() - total_time_start
+
 
         self.cap.release()
         display_th.join()
         self.output_backend.release()
-        print(f"Finished.")
+        total_time = time.time() - total_time_start
+        if self.benchmark:
+            print(f"{{\"inference_time\": {sum(self.inference_time)/i}, \"dropped_frames\": {self.dropped_frames}, \"frames\": {self.frames}, \"fps\": {self.frames/total_time}, \"total_time\": {total_time}, \"sent_all_frames\": {sent_all_frames}}}")

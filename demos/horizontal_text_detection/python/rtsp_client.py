@@ -27,8 +27,11 @@ parser.add_argument('--output_stream', required=False, default="rtsp://localhost
 parser.add_argument('--model_name', required=False, default="detect_text_images", type=str, help='Name of the model')
 parser.add_argument('--width', required=False, default=704, type=int, help='Width of model\'s input image')
 parser.add_argument('--height', required=False, default=704, type=int, help='Height of model\'s input image')
-parser.add_argument('--verbose', required=False, default=False, type=bool, help='Should client dump debug information')
 parser.add_argument('--input_name', required=False, default="image", type=str, help='Name of the model\'s input')
+parser.add_argument('--verbose', required=False, default=False, help='Should client dump debug information', action='store_true')
+parser.add_argument('--benchmark', required=False, default=False, help='Should client collect processing times', action='store_true')
+parser.add_argument('--limit_stream_duration', required=False, default=0, type=int, help='Limit how long client should run')
+parser.add_argument('--limit_frames', required=False, default=0, type=int, help='Limit how many frames should be processed')
 args = parser.parse_args()
 
 WIDTH = args.width
@@ -88,6 +91,6 @@ if args.output_stream[:4] == "rtsp":
 else:
     backend = StreamClient.OutputBackends.cv2
     exact = True
-client = StreamClient(postprocess_callback = postprocess, preprocess_callback=preprocess, output_backend=backend, source=args.input_stream, sink=args.output_stream, exact=exact)
-client.start(ovms_address=args.grpc_address, input_name=args.input_name, model_name=args.model_name)
+client = StreamClient(postprocess_callback = postprocess, preprocess_callback=preprocess, output_backend=backend, source=args.input_stream, sink=args.output_stream, exact=exact, benchmark=args.benchmark)
+client.start(ovms_address=args.grpc_address, input_name=args.input_name, model_name=args.model_name, stream_timeout = args.limit_stream_duration, limit_frames = args.limit_frames)
 

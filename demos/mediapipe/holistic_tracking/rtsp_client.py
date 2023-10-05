@@ -25,8 +25,11 @@ parser.add_argument('--grpc_address', required=False, default='localhost:9022', 
 parser.add_argument('--input_stream', required=False, default="rtsp://localhost:8080/channel1", type=str, help='Url of input rtsp stream')
 parser.add_argument('--output_stream', required=False, default="rtsp://localhost:8080/channel2", type=str, help='Url of output rtsp stream')
 parser.add_argument('--model_name', required=False, default="holisticTracking", type=str, help='Name of the model')
-parser.add_argument('--verbose', required=False, default=False, type=bool, help='Should client dump debug information')
 parser.add_argument('--input_name', required=False, default="first_input_video", type=str, help='Name of the model\'s input')
+parser.add_argument('--verbose', required=False, default=False, help='Should client dump debug information', action='store_true')
+parser.add_argument('--benchmark', required=False, default=False, help='Should client collect processing times', action='store_true')
+parser.add_argument('--limit_stream_duration', required=False, default=0, type=int, help='Limit how long client should run')
+parser.add_argument('--limit_frames', required=False, default=0, type=int, help='Limit how many frames should be processed')
 args = parser.parse_args()
 
 def preprocess(frame):
@@ -47,6 +50,6 @@ else:
     backend = StreamClient.OutputBackends.cv2
     exact = True
 
-client = StreamClient(postprocess_callback = postprocess, preprocess_callback=preprocess, output_backend=backend, source=args.input_stream, sink=args.output_stream, exact=exact)
-client.start(ovms_address=args.grpc_address, input_name=args.input_name, model_name=args.model_name, datatype = StreamClient.Datatypes.uint8, batch = False)
+client = StreamClient(postprocess_callback = postprocess, preprocess_callback=preprocess, output_backend=backend, source=args.input_stream, sink=args.output_stream, exact=exact, benchmark=args.benchmark, verbose=args.verbose)
+client.start(ovms_address=args.grpc_address, input_name=args.input_name, model_name=args.model_name, datatype = StreamClient.Datatypes.uint8, batch = False, stream_timeout = args.limit_stream_duration, limit_frames = args.limit_frames)
 
