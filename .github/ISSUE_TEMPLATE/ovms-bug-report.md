@@ -24,7 +24,9 @@ A clear and concise description of what you expected to happen.
 Logs from OVMS, ideally with --log_level DEBUG. Logs from client.
 
 **Configuration files**
-OVMS config.json file + model or publicly available similar model that reproduces the issue
+1. OVMS config.json file
+2. Model repository directory structure
+3. Model or publicly available similar model that reproduces the issue
 
 **Additional context**
 Add any other context about the problem here.
