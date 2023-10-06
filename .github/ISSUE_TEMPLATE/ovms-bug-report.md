@@ -14,7 +14,7 @@ A clear and concise description of what the bug is.
 Steps to reproduce the behavior:
 1. Steps to prepare models repository '...'
 2. OVMS launch command '....'
-3. Client command '....'
+3. Client command (additionally client code if not using official client or demo) '....'
 4. See error
 
 **Expected behavior**
