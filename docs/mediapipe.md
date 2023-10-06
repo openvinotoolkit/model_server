@@ -220,7 +220,7 @@ MediaPipe graphs can include only the calculators built-in the model server duri
 If you want to add your own mediapipe calculator to OpenVINO Model Server functionality you need to add it as a dependency and rebuild the OpenVINO Model Server binary.
 
 If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](../WORKSPACE) file.
-Then you need to add the calculator target as a bazel dependency to the [src/BUILD](./src/BUILD) file. This should be done for:
+Then you need to add the calculator target as a bazel dependency to the [src/BUILD](../src/BUILD) file. This should be done for:
 
 ```
 cc_library(
