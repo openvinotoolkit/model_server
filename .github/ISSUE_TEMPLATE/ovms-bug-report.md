@@ -23,10 +23,12 @@ A clear and concise description of what you expected to happen.
 **Logs**
 Logs from OVMS, ideally with --log_level DEBUG. Logs from client.
 
-**Configuration files**
-1. OVMS config.json file
-2. Model repository directory structure
-3. Model or publicly available similar model that reproduces the issue
+**Configuration**
+1. OVMS version
+2. OVMS config.json file
+3. CPU, accelerator's versions if applicable
+4. Model repository directory structure
+5. Model or publicly available similar model that reproduces the issue
 
 **Additional context**
 Add any other context about the problem here.
