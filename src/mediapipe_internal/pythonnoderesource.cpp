@@ -31,11 +31,12 @@
 #endif
 
 namespace ovms {
+
+#if (PYTHON_DISABLE == 0)
 PythonNodeResource::PythonNodeResource() {
     this->nodeResourceObject = nullptr;
 }
 
-#if (PYTHON_DISABLE == 0)
 Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions) {
     mediapipe::PythonBackendCalculatorOptions options;
     nodeOptions.UnpackTo(&options);
