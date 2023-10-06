@@ -104,6 +104,7 @@ Results saved to :image_0.jpg
 Mediapipe graph can be used for remote analysis of individual images but the client can use it for a complete video stream processing.
 Below is an example how to run a client reading encoded rtsp video stream.
 
+![rtsp](rtsp.png)
 
 Build docker image containing rtsp client along with its dependencies
 The rtsp client app needs to have access to RTSP stream to read from and write to.
