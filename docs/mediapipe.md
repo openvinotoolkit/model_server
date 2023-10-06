@@ -1,12 +1,11 @@
 # Integration with mediapipe {#ovms_docs_mediapipe}
 
-@sphinxdirective
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-@endsphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+```
 
 ## Introduction
 MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. Using MediaPipe in the OpenVINO Model Server enables user to define a powerful graph from a lot of ready calculators/nodes that come with the MediaPipe which support all the needed features for running a stable graph like e.g. flow limiter node. User can also run the graph in a server or run it inside application host. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)

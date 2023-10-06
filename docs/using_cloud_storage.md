@@ -4,20 +4,7 @@
 
 OpenVINO Model Server supports a range of cloud storage options. In general, "read" and "list" permissions are required for a model repository.
 
-@sphinxdirective
-
--  `Azure Cloud Storage <#-azure>`__
--  `Google Cloud Storage <#-gcs>`__
--  `Amazon S3 and MinIO Storage <#-s3>`__
-
-.. raw:: html
-
-   <a name='-azure' id='-azure'/>
-
-`Azure Cloud Storage`_
-======================
-
-@endsphinxdirective
+### Azure Cloud Storage
 
 Add the Azure Storage path as the model_path and pass the Azure Storage credentials to the Docker container.
 
@@ -48,16 +35,7 @@ Add `-e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy"` to docker run co
 
 By default, the `https_proxy` variable will be used. If you want to use `http_proxy` please set the `AZURE_STORAGE_USE_HTTP_PROXY` environment variable to any value and pass it to the container.
 
-@sphinxdirective
-
-.. raw:: html
-
-   <a name='-gcs' id='-gcs'/>
-
-`Google Cloud Storage`_
-=======================
-
-@endsphinxdirective
+### Google Cloud Storage
 
 Add the Google Cloud Storage path as the model_path and pass the Google Cloud Storage credentials to the Docker container.
 Exception: This is not required if you use GKE Kubernetes cluster. GKE Kubernetes clusters handle authorization.
@@ -73,16 +51,7 @@ openvino/model_server:latest \
 --model_path gs://bucket/model_path --model_name gs_model --port 9001
 ```
 
-@sphinxdirective
-
-.. raw:: html
-
-   <a name='-s3' id='-s3'/>
-
-`Amazon S3 and MinIO Storage`_
-==============================
-
-@endsphinxdirective
+### Amazon S3 and MinIO Storage
 
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
 `S3_ENDPOINT` is optional for Amazon S3 storage and mandatory for MinIO and other S3-compatible storage types.
