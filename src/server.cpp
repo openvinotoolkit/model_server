@@ -55,6 +55,7 @@
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>
+#include "pythoninterpretermodule.hpp"
 namespace py = pybind11;
 using namespace py::literals;
 #endif
@@ -67,6 +68,7 @@ const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
 const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
 const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
 const std::string METRICS_MODULE_NAME = "MetricsModule";
+const std::string PYTHON_INTERPRETER_MODULE = "PythonInterpreterModule";
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
@@ -207,6 +209,8 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
+    if (name == PYTHON_INTERPRETER_MODULE)
+        return std::make_unique<PythonInterpreterModule>(*this);
     if (name == METRICS_MODULE_NAME)
         return std::make_unique<MetricModule>();
     return nullptr;
@@ -261,6 +265,9 @@ Status Server::startModules(ovms::Config& config) {
         INSERT_MODULE(HTTP_SERVER_MODULE_NAME, itHttp);
         START_MODULE(itHttp);
     }
+    auto itPython = modules.end();
+    INSERT_MODULE(PYTHON_INTERPRETER_MODULE, itPython);
+    START_MODULE(itPython);
     START_MODULE(itServable);
     return status;
 }
@@ -289,6 +296,7 @@ void Server::shutdownModules() {
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
+    ensureModuleShutdown(PYTHON_INTERPRETER_MODULE);
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     modules.clear();
@@ -305,17 +313,6 @@ static int statusToExitCode(const Status& status) {
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
-#if (PYTHON_DISABLE == 0)
-    // Initialize Python interpreter
-    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
-    py::exec(R"(
-        import sys
-        print("Python version")
-        print (sys.version)
-    )");
-    py::gil_scoped_release release;  // GIL only needed in Python custom node
-#endif
-
     installSignalHandlers();
     CLIParser parser;
     ServerSettingsImpl serverSettings;
