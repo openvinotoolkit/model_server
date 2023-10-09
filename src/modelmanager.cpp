@@ -924,7 +924,7 @@ Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Doc
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     rapidjson::Document configJson;
     Status status = parseConfig(jsonFilename, configJson);
-    if(!status.ok())
+    if (!status.ok())
         return status;
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA.c_str()) != StatusCode::OK) {
