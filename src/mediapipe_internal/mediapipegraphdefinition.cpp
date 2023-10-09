@@ -26,6 +26,7 @@
 
 #include "../deserialization.hpp"
 #include "../execution_context.hpp"
+#include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
@@ -36,7 +37,6 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
-#include "../filesystem.hpp"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphexecutor.hpp"
