@@ -372,7 +372,7 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
-Status ModelManager::processMediapipeConfig(rapidjson::Document& configJson, const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
+Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
     if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
         return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
@@ -564,7 +564,7 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
-Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
+Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     if (mediapipesInConfigFile.size() == 0) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
         mediapipeFactory.retireOtherThan({}, *this);
@@ -574,7 +574,7 @@ Status ModelManager::loadMediapipeGraphsConfig(rapidjson::Document& configJson, 
     Status firstErrorStatus = StatusCode::OK;
     try {
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
-            auto status = processMediapipeConfig(configJson, mediapipeGraphConfig, mediapipesInConfigFileNames, mediapipeFactory);
+            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesInConfigFileNames, mediapipeFactory);
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             }
@@ -982,7 +982,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
 
 #if (MEDIAPIPE_DISABLE == 0)
-    status = loadMediapipeGraphsConfig(configJson, mediapipesInConfigFile);
+    status = loadMediapipeGraphsConfig(mediapipesInConfigFile);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }

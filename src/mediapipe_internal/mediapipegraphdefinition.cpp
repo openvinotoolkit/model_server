@@ -69,9 +69,10 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     ifs.seekg(0, std::ios::end);
     this->chosenConfig.reserve(ifs.tellg());
     ifs.seekg(0, std::ios::beg);
-
-    this->chosenConfig.assign((std::istreambuf_iterator<char>(ifs)),
-        std::istreambuf_iterator<char>());
+    std::stringstream config;
+    config << ifs.rdbuf();
+    this->mgconfig.setCurrentGraphPbTxtMD5(FileSystem::getStringMD5(config.str()));
+    this->chosenConfig.assign(config.str());
     return StatusCode::OK;
 }
 
