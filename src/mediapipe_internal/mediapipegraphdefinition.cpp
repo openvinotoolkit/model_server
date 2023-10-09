@@ -36,6 +36,7 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
+#include "../filesystem.hpp"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphexecutor.hpp"
@@ -71,7 +72,7 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     ifs.seekg(0, std::ios::beg);
     std::stringstream config;
     config << ifs.rdbuf();
-    this->mgconfig.setCurrentGraphPbTxtMD5(FileSystem::getStringMD5(config.str()));
+    this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(config.str()));
     this->chosenConfig.assign(config.str());
     return StatusCode::OK;
 }
