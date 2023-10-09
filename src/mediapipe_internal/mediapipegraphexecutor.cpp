@@ -230,14 +230,13 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             rawShape.emplace_back(requestInputItr->shape()[i]);
         }
         int64_t dimsCount = rawShape.size();
-        // TODO error messaging
         auto abslStatus = tensorflow::TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
-        if (abslStatus.ok()) {
+        if (!abslStatus.ok()) {
             auto stringViewAbslMessage = abslStatus.message();
             return Status(StatusCode::UNKNOWN_ERROR, std::string{stringViewAbslMessage});
         }
         abslStatus = TensorShape::BuildTensorShapeBase(rawShape, static_cast<tensorflow::TensorShapeBase<TensorShape>*>(&tensorShape));
-        if (abslStatus.ok()) {
+        if (!abslStatus.ok()) {
             auto stringViewAbslMessage = abslStatus.message();
             return Status(StatusCode::UNKNOWN_ERROR, std::string{stringViewAbslMessage});
         }
