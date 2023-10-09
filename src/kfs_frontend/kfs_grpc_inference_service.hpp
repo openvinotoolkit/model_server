@@ -71,6 +71,7 @@ public:
     ::grpc::Status ServerMetadata(::grpc::ServerContext* context, const KFSServerMetadataRequest* request, KFSServerMetadataResponse* response) override;
     ::grpc::Status ModelMetadata(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response) override;
     ::grpc::Status ModelInfer(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response) override;
+    ::grpc::Status ModelStreamInfer(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) override;
     static Status buildResponse(Model& model, ModelInstance& instance, KFSModelMetadataResponse* response);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSModelMetadataResponse* response);
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, KFSGetModelStatusResponse* response);
