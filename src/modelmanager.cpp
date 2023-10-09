@@ -882,7 +882,6 @@ public:
 };
 
 Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson) {
-    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
     std::string md5;
     uint16_t counter = 0;
@@ -900,8 +899,9 @@ Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Doc
         }
         std::stringstream config;
         config << ifs.rdbuf();
-        md5 = FileSystem::getStringMD5(config.str());
-        rapidjson::ParseResult parseResult = configJson.Parse(config.str().c_str());
+        auto configContent = config.str();
+        md5 = FileSystem::getStringMD5(configContent);
+        rapidjson::ParseResult parseResult = configJson.Parse(configContent.c_str());
         if (!parseResult) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
                 rapidjson::GetParseError_En(parseResult.Code()));
@@ -923,10 +923,10 @@ Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Doc
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     rapidjson::Document configJson;
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     Status status = parseConfig(jsonFilename, configJson);
     if (!status.ok())
         return status;
-    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA.c_str()) != StatusCode::OK) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not in valid configuration format");
         this->lastLoadConfigStatus = StatusCode::JSON_INVALID;

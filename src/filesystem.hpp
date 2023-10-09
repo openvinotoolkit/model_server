@@ -244,15 +244,7 @@ public:
         strStream << ifs.rdbuf();
         std::string str = strStream.str();
         ifs.close();
-
-        unsigned char result[MD5_DIGEST_LENGTH];
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        MD5((unsigned char*)str.c_str(), str.size(), result);
-#pragma GCC diagnostic pop
-
-        std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
-        return (md5sum);
+        return getStringMD5(str);
     }
 
     static std::string getStringMD5(const std::string& str) {
