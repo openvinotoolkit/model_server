@@ -1908,14 +1908,15 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
     std::string configFileContent = configFileWithEmptyBasePath;
     std::string configFilePath = directoryPath + "/config.json";
-    std::string graphFilePath = directoryPath + "/mediapipeGraph/graph.pbtxt";
+    std::string graphName = "mediapipeGraph";
+    std::string graphFilePath = directoryPath + "/" + graphName + "/" + MediapipeGraphConfig::DEFAULT_GRAPH_CONFIG_FILE_NAME;
 
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
 
     createConfigFileWithContent(configFileContent, configFilePath);
-    std::string defaultGraphDirectoryPath = directoryPath + "/mediapipeGraph";
-    mkdir(defaultGraphDirectoryPath.c_str(), 0777);
+    std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
+    std::filesystem::create_directories(defaultGraphDirectoryPath);
     createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
