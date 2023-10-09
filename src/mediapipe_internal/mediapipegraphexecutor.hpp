@@ -53,5 +53,8 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
+
+    template <typename FirstRequestType, typename ReaderWriterType>
+    Status inferStream(const FirstRequestType* firstRequest, ReaderWriterType* stream) const;
 };
 }  // namespace ovms

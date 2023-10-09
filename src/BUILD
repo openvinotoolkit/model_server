@@ -855,6 +855,7 @@ cc_test(
         "test/stateful_test_utils.hpp",
         "test/status_test.cpp",
         "test/stringutils_test.cpp",
+        "test/streaming_test.cpp",
         "test/systeminfo_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
