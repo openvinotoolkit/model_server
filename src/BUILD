@@ -868,7 +868,6 @@ cc_test(
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/mediapipeflow_test.cpp",
-                "test/pythonnode_test.cpp",
                 "test/mediapipe_validation_test.cpp",
                 "test/mediapipe/ovms_kfs_calculator.cc",
                 "test/mediapipe/ovms_image_input_calculator.cc",
@@ -877,6 +876,7 @@ cc_test(
             "//src:disable_mediapipe" : [],
         }) + select({
             "//src:not_disable_python": [
+                "test/pythonnode_test.cpp",
                 "test/python/ovms_py_tensor_test.cpp",
             ],
             "//src:disable_python" : [],
