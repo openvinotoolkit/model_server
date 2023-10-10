@@ -47,6 +47,7 @@ class MediapipeGraphExecutor {
     std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
 
     ::mediapipe::Timestamp currentStreamTimestamp{0};
+
     Status partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph);
 
 public:

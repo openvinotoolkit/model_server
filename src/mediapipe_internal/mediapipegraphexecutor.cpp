@@ -913,12 +913,37 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         } \
     }
 
+// Like Holder, but does not own its data.
+template <typename T>
+class MyHolder : public ::mediapipe::packet_internal::Holder<T> {
+    std::shared_ptr<::inference::ModelInferRequest> req;
+public:
+    // using ::mediapipe::packet_internal::Holder<T>::Holder;
+    explicit MyHolder(const T* ptr, const std::shared_ptr<::inference::ModelInferRequest>& req) : ::mediapipe::packet_internal::Holder<T>(ptr), req(req) {}
+//   ~ForeignHolder() override {
+//     // Null out ptr_ so it doesn't get deleted by ~Holder.
+//     // Note that ~Holder cannot call HasForeignOwner because the subclass's
+//     // destructor runs first.
+//     this->ptr_ = nullptr;
+//   }
+  //bool HasForeignOwner() const final { return true; }
+};
+
 // TODO: To be exchanged with proper deserialization
 Status MediapipeGraphExecutor::partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph) {
     for (const auto& input : request.inputs()) {
         std::unique_ptr<ov::Tensor> tensor;
         OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), request, tensor), "ov::Tensor deserialization"); 
-        MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(input.name(), ::mediapipe::Adopt<ov::Tensor>(tensor.release()).At(currentStreamTimestamp)),
+        MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
+            input.name(),
+            //::mediapipe::Adopt<ov::Tensor>(tensor.release())
+            //    .At(currentStreamTimestamp)),
+            ::mediapipe::packet_internal::Create(
+                new MyHolder<ov::Tensor>(
+                        tensor.release(),
+                        std::make_shared<::inference::ModelInferRequest>()  // TODO
+                        ))
+                    .At(currentStreamTimestamp)),
             "adding packet to input stream", StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     }
     currentStreamTimestamp = currentStreamTimestamp.NextAllowedInStream();  // TODO: Take from request when available
@@ -947,12 +972,19 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
     // Deserialize first request
     OVMS_RETURN_ON_FAIL(this->partialDeserialize(firstRequest, graph), "partial deserialization of first request");
 
-    // Read loop
-    ::inference::ModelInferRequest req;
-    while (stream.Read(&req)) {
+    // Read loop start
+    // ::inference::ModelInferRequest req;
+    // while (stream.Read(&req)) {
+    //     // TODO: Possibly check for MP graph errors?
+    //     OVMS_RETURN_ON_FAIL(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
+    // }
+    auto* req = new ::inference::ModelInferRequest();
+    while (stream.Read(req)) {
         // TODO: Possibly check for MP graph errors?
-        OVMS_RETURN_ON_FAIL(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
+        OVMS_RETURN_ON_FAIL(this->partialDeserialize(*req, graph), "partial deserialization of subsequent requests");
+        req = new ::inference::ModelInferRequest();
     }
+    // Read loop end
 
     // Close input streams
     for (const auto& name : this->inputNames) {
