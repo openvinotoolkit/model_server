@@ -22,6 +22,7 @@
 
 #include "config.hpp"
 #include "logging.hpp"
+#include "server.hpp"
 #include "status.hpp"
 
 namespace py = pybind11;
