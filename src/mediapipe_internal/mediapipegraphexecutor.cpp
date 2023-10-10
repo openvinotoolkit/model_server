@@ -916,33 +916,23 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
 // Like Holder, but does not own its data.
 template <typename T>
 class MyHolder : public ::mediapipe::packet_internal::Holder<T> {
-    std::shared_ptr<::inference::ModelInferRequest> req;
+    std::shared_ptr<const ::inference::ModelInferRequest> req;
 public:
-    // using ::mediapipe::packet_internal::Holder<T>::Holder;
-    explicit MyHolder(const T* ptr, const std::shared_ptr<::inference::ModelInferRequest>& req) : ::mediapipe::packet_internal::Holder<T>(ptr), req(req) {}
-//   ~ForeignHolder() override {
-//     // Null out ptr_ so it doesn't get deleted by ~Holder.
-//     // Note that ~Holder cannot call HasForeignOwner because the subclass's
-//     // destructor runs first.
-//     this->ptr_ = nullptr;
-//   }
-  //bool HasForeignOwner() const final { return true; }
+    explicit MyHolder(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req)
+        : ::mediapipe::packet_internal::Holder<T>(ptr), req(req) {}
 };
 
 // TODO: To be exchanged with proper deserialization
-Status MediapipeGraphExecutor::partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph) {
-    for (const auto& input : request.inputs()) {
+Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph) {
+    for (const auto& input : request->inputs()) {
         std::unique_ptr<ov::Tensor> tensor;
-        OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), request, tensor), "ov::Tensor deserialization"); 
+        OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), *request, tensor), "ov::Tensor deserialization"); 
         MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
             input.name(),
-            //::mediapipe::Adopt<ov::Tensor>(tensor.release())
-            //    .At(currentStreamTimestamp)),
             ::mediapipe::packet_internal::Create(
                 new MyHolder<ov::Tensor>(
                         tensor.release(),
-                        std::make_shared<::inference::ModelInferRequest>()  // TODO
-                        ))
+                        request))
                     .At(currentStreamTimestamp)),
             "adding packet to input stream", StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     }
@@ -970,21 +960,19 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
     MP_RETURN_ON_FAIL(graph.StartRun({}), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);  // TODO: Input side packets
 
     // Deserialize first request
-    OVMS_RETURN_ON_FAIL(this->partialDeserialize(firstRequest, graph), "partial deserialization of first request");
+    OVMS_RETURN_ON_FAIL(this->partialDeserialize(
+        std::shared_ptr<const ::inference::ModelInferRequest>(
+            &firstRequest, [](const ::inference::ModelInferRequest*) {}),  // Custom deleter
+            graph),
+        "partial deserialization of first request");
 
-    // Read loop start
-    // ::inference::ModelInferRequest req;
-    // while (stream.Read(&req)) {
-    //     // TODO: Possibly check for MP graph errors?
-    //     OVMS_RETURN_ON_FAIL(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
-    // }
-    auto* req = new ::inference::ModelInferRequest();
-    while (stream.Read(req)) {
+    // Read loop
+    auto req = std::make_shared<::inference::ModelInferRequest>();
+    while (stream.Read(req.get())) {
         // TODO: Possibly check for MP graph errors?
-        OVMS_RETURN_ON_FAIL(this->partialDeserialize(*req, graph), "partial deserialization of subsequent requests");
-        req = new ::inference::ModelInferRequest();
+        OVMS_RETURN_ON_FAIL(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
+        req = std::make_shared<::inference::ModelInferRequest>();
     }
-    // Read loop end
 
     // Close input streams
     for (const auto& name : this->inputNames) {

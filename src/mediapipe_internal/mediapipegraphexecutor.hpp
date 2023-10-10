@@ -48,7 +48,7 @@ class MediapipeGraphExecutor {
 
     ::mediapipe::Timestamp currentStreamTimestamp{0};
 
-    Status partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph);
+    Status partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph);
 
 public:
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
