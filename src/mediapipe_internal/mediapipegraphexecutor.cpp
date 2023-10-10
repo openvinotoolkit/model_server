@@ -882,14 +882,75 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     return StatusCode::OK;
 }
 
-Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest* firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) const {
+#define MP_RETURN_ON_FAIL(code, message, errorCode) \
+    { \
+        auto absStatus = code; \
+        if (!absStatus.ok()) { \
+            const std::string absMessage = absStatus.ToString(); \
+            SPDLOG_DEBUG("MediapipeGraphExecutor::inferStream {} error with message: {}", message, absMessage); \
+            return Status(errorCode, std::move(absMessage)); \
+        } \
+    }
+
+#define OVMS_RETURN_ON_FAIL(code, message) \
+    { \
+        auto status = code; \
+        if (!status.ok()) { \
+            const std::string msg = status.string(); \
+            SPDLOG_DEBUG("MediapipeGraphExecutor::inferStream {} error with message: {}", message, msg); \
+            return status; \
+        } \
+    }
+
+// TODO: To be exchanged with proper deserialization
+Status MediapipeGraphExecutor::partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph) const {
+    static int bb = 0;  // TODO: Have automatic timestamping or take timestamp from request.id() or param
+    for (const auto& input : request.inputs()) {
+        MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(input.name(), ::mediapipe::Adopt<ov::Tensor>(
+            new ov::Tensor(ov::element::Type_t::f32, ov::Shape{1})).At(::mediapipe::Timestamp(bb++))),
+            "adding packet to input stream", StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+    }
+    return StatusCode::OK;
+}
+
+Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream) const {
+    // Init
+    ::mediapipe::CalculatorGraph graph;
+    MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+
+    // Observers
+    for (const auto& name : this->outputNames) {
+        MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream] (const ::mediapipe::Packet& packet) -> absl::Status {
+            ::inference::ModelStreamInferResponse resp;
+            // TODO: Add serialization
+            stream.Write(resp);
+            return absl::OkStatus();
+        }), "output stream observer installation", StatusCode::UNKNOWN_ERROR);  // TODO: specific error code
+    }
+
+    // Run
+    MP_RETURN_ON_FAIL(graph.StartRun({}), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);  // TODO: Input side packets
+
+    // Deserialize first request
+    OVMS_RETURN_ON_FAIL(this->partialDeserialize(firstRequest, graph), "partial deserialization of first request");
+
+    // Read loop
     ::inference::ModelInferRequest req;
-    ::inference::ModelStreamInferResponse resp;
-    while (stream->Read(&req))
-        stream->Write(resp);
-        //return StatusCode::OK;
-    // stream->Write(resp);
-    // stream->Write(resp);
+    while (stream.Read(&req)) {
+        // TODO: Possibly check for MP graph errors?
+        OVMS_RETURN_ON_FAIL(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
+    }
+
+    // Close input streams
+    for (const auto& name : this->inputNames) {
+        MP_RETURN_ON_FAIL(graph.CloseInputStream(name), "closing input stream", StatusCode::UNKNOWN_ERROR); // TODO: Proper error
+    }
+
+    // Wait until done
+    MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::UNKNOWN_ERROR); // TODO: Proper error
+
+    // TODO: Handle exceptions
+
     return StatusCode::OK;
 }
 

@@ -82,12 +82,6 @@ node {
             return true;
         })
         .WillOnce([](::inference::ModelInferRequest* req) {
-            preparePredictRequest(*req, inputs_info_t{
-                {"in", {{1}, Precision::FP32}}
-            }, {56.1f}, false);
-            return true;
-        })
-        .WillOnce([](::inference::ModelInferRequest* req) {
             return false;
         });
 
@@ -105,5 +99,5 @@ node {
             return false;
         });
 
-    ASSERT_EQ(executor.inferStream(&firstRequest, &stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(firstRequest, stream), StatusCode::OK);
 }
