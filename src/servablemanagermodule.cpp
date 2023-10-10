@@ -54,6 +54,9 @@ void ServableManagerModule::shutdown() {
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", SERVABLE_MANAGER_MODULE_NAME);
     getServableManager().join();
+
+    // Cleanup all objects from modelmanager
+    this->servableManager.reset();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", SERVABLE_MANAGER_MODULE_NAME);
 }
