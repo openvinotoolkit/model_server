@@ -191,7 +191,7 @@ class TestModelVerPolicy:
                 metadata_pb = get_model_metadata_pb2. \
                     GetModelMetadataResponse()
                 response = Parse(output_json, metadata_pb,
-                                 ignore_unknown_fields=False)
+                                 ignore_unknown_fields=True)
                 input_metadata, output_metadata = model_metadata_response(
                     response=response)
 
@@ -224,7 +224,7 @@ class TestModelVerPolicy:
                 output_json = result.text
                 status_pb = get_model_status_pb2.GetModelStatusResponse()
                 response = Parse(output_json, status_pb,
-                                 ignore_unknown_fields=True)
+                                 ignore_unknown_fields=False)
                 versions_statuses = response.model_version_status
                 version_status = versions_statuses[0]
                 assert version_status.version == versions[x]
