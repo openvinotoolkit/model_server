@@ -210,8 +210,10 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
+#if (PYTHON_DISABLE == 0)
     if (name == PYTHON_INTERPRETER_MODULE)
         return std::make_unique<PythonInterpreterModule>(*this);
+#endif
     if (name == METRICS_MODULE_NAME)
         return std::make_unique<MetricModule>();
     return nullptr;
@@ -244,6 +246,11 @@ Status Server::startModules(ovms::Config& config) {
     // GRPC & REST
     Status status;
     bool inserted = false;
+#if (PYTHON_DISABLE == 0)
+    auto itPython = modules.end();
+    INSERT_MODULE(PYTHON_INTERPRETER_MODULE, itPython);
+    START_MODULE(itPython);
+#endif
     auto it = modules.end();
 #if MTR_ENABLED
     INSERT_MODULE(PROFILER_MODULE_NAME, it);
@@ -266,9 +273,6 @@ Status Server::startModules(ovms::Config& config) {
         INSERT_MODULE(HTTP_SERVER_MODULE_NAME, itHttp);
         START_MODULE(itHttp);
     }
-    auto itPython = modules.end();
-    INSERT_MODULE(PYTHON_INTERPRETER_MODULE, itPython);
-    START_MODULE(itPython);
     START_MODULE(itServable);
     return status;
 }
@@ -297,7 +301,9 @@ void Server::shutdownModules() {
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
+#if (PYTHON_DISABLE == 0)
     ensureModuleShutdown(PYTHON_INTERPRETER_MODULE);
+#endif
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     modules.clear();
