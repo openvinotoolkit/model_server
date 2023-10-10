@@ -1909,7 +1909,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     std::string configFileContent = configFileWithEmptyBasePath;
     std::string configFilePath = directoryPath + "/config.json";
     std::string graphName = "mediapipeGraph";
-    std::string graphFilePath = directoryPath + "/" + graphName + "/" + DEFAULT_GRAPH_FILENAME;
+    std::string graphFilePath = directoryPath + "/" + graphName + "/" + MediapipeGraphConfig::DEFAULT_GRAPH_FILENAME;
 
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
