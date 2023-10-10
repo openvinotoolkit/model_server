@@ -22,6 +22,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
+#include <sys/stat.h>
 
 #include "../config.hpp"
 #include "../dags/pipelinedefinition.hpp"
@@ -1907,12 +1908,15 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
     std::string configFileContent = configFileWithEmptyBasePath;
     std::string configFilePath = directoryPath + "/config.json";
-    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    std::string graphName = "mediapipeGraph";
+    std::string graphFilePath = directoryPath + "/" + graphName + "/graph.pbtxt";
 
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
 
     createConfigFileWithContent(configFileContent, configFilePath);
+    std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
+    std::filesystem::create_directories(defaultGraphDirectoryPath);
     createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
