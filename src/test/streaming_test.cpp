@@ -21,6 +21,8 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 
+#include "test_utils.hpp"
+
 using namespace ovms;
 using namespace ::testing;
 
@@ -60,13 +62,48 @@ node {
     };
 
     ::inference::ModelInferRequest firstRequest;
+    preparePredictRequest(firstRequest, inputs_info_t{
+        {"in", {{1}, Precision::FP32}}
+    }, {3.5f}, false);
+
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 
-    ON_CALL(stream, Read(_))
-        .WillByDefault([](::inference::ModelInferRequest* req) {
+    EXPECT_CALL(stream, Read(_))
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            preparePredictRequest(*req, inputs_info_t{
+                {"in", {{1}, Precision::FP32}}
+            }, {7.2f}, false);
             return true;
+        })
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            preparePredictRequest(*req, inputs_info_t{
+                {"in", {{1}, Precision::FP32}}
+            }, {102.4f}, false);
+            return true;
+        })
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            preparePredictRequest(*req, inputs_info_t{
+                {"in", {{1}, Precision::FP32}}
+            }, {56.1f}, false);
+            return true;
+        })
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            return false;
         });
-    EXPECT_CALL(stream, Write(_, _)).Times(3);
+
+    EXPECT_CALL(stream, Write(_, _))
+        .WillOnce([](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            EXPECT_EQ(1, 1);
+            return true;
+        })
+        .WillOnce([](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            EXPECT_EQ(1, 1);
+            return true;
+        })
+        .WillOnce([](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            EXPECT_EQ(1, 1);
+            return false;
+        });
 
     ASSERT_EQ(executor.inferStream(&firstRequest, &stream), StatusCode::OK);
 }

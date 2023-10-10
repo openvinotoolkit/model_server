@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include <openvino/openvino.hpp>
-#include <pybind11/embed.h>  // everything needed for embedding
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -23,13 +22,17 @@
 
 namespace mediapipe {
 
+/*
+    Adds 1 to all bytes in input tensor.
+    // TODO: Make it dynamic with multiple inputs/outputs
+*/
 class DummyCalculator : public CalculatorBase {
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         LOG(INFO) << "DummyCalculator::GetContract";
-        cc->Inputs().Index(0).Set<int>();
-        cc->Outputs().Index(0).Set<int>();
+        cc->Inputs().Index(0).Set<ov::Tensor>();
+        cc->Outputs().Index(0).Set<ov::Tensor>();
         return absl::OkStatus();
     }
 
@@ -43,8 +46,12 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        int input = cc->Inputs().Index(0).Get<int>();
-        cc->Outputs().Index(0).Add(new int{input + 1}, cc->InputTimestamp());
+        ov::Tensor input = cc->Inputs().Index(0).Get<ov::Tensor>();
+        for (size_t i = 0; i < input.get_byte_size() / 4; i++) {
+            ((float*)(input.data()))[i] += 1.0;
+        }
+        ov::Tensor output(input.get_element_type(), input.get_shape());
+        cc->Outputs().Index(0).Add(new ov::Tensor(output), cc->InputTimestamp());
 
         LOG(INFO) << "DummyCalculator::Process";
         return absl::OkStatus();

@@ -885,11 +885,11 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
 Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest* firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) const {
     ::inference::ModelInferRequest req;
     ::inference::ModelStreamInferResponse resp;
-    if (!stream->Read(&req))
-        return StatusCode::OK;
-    stream->Write(resp);
-    stream->Write(resp);
-    stream->Write(resp);
+    while (stream->Read(&req))
+        stream->Write(resp);
+        //return StatusCode::OK;
+    // stream->Write(resp);
+    // stream->Write(resp);
     return StatusCode::OK;
 }
 
