@@ -26,6 +26,7 @@
 
 #include "../deserialization.hpp"
 #include "../execution_context.hpp"
+#include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
@@ -69,9 +70,10 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     ifs.seekg(0, std::ios::end);
     this->chosenConfig.reserve(ifs.tellg());
     ifs.seekg(0, std::ios::beg);
-
-    this->chosenConfig.assign((std::istreambuf_iterator<char>(ifs)),
-        std::istreambuf_iterator<char>());
+    std::stringstream config;
+    config << ifs.rdbuf();
+    this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(config.str()));
+    this->chosenConfig.assign(config.str());
     return StatusCode::OK;
 }
 
