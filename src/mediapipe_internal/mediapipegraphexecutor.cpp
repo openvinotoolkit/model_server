@@ -622,10 +622,10 @@ Status createPacketAndPushIntoGraph<KFSRequest*>(const std::string& name, const 
     }
 
 template <typename T>
-static Status receiveAndSerializePacket(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName);
+static Status receiveAndSerializePacket(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName);
 
 template <>
-Status receiveAndSerializePacket<tensorflow::Tensor>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+Status receiveAndSerializePacket<tensorflow::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
         auto received = packet.Get<tensorflow::Tensor>();
         auto* output = response.add_outputs();
@@ -645,7 +645,7 @@ Status receiveAndSerializePacket<tensorflow::Tensor>(::mediapipe::Packet& packet
 }
 
 template <>
-Status receiveAndSerializePacket<::mediapipe::Tensor>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+Status receiveAndSerializePacket<::mediapipe::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
         const ::mediapipe::Tensor& received = packet.Get<::mediapipe::Tensor>();
         auto* output = response.add_outputs();
@@ -664,7 +664,7 @@ Status receiveAndSerializePacket<::mediapipe::Tensor>(::mediapipe::Packet& packe
 }
 
 template <>
-Status receiveAndSerializePacket<ov::Tensor>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+Status receiveAndSerializePacket<ov::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
         auto received = packet.Get<ov::Tensor>();
         auto* output = response.add_outputs();
@@ -684,7 +684,7 @@ Status receiveAndSerializePacket<ov::Tensor>(::mediapipe::Packet& packet, KFSRes
 }
 
 template <>
-Status receiveAndSerializePacket<KFSResponse*>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+Status receiveAndSerializePacket<KFSResponse*>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
         auto received = packet.Get<KFSResponse*>();
         if (received == nullptr) {
@@ -720,7 +720,7 @@ static KFSDataType convertImageFormatToKFSDataType(const mediapipe::ImageFormat:
 }
 
 template <>
-Status receiveAndSerializePacket<mediapipe::ImageFrame>(::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+Status receiveAndSerializePacket<mediapipe::ImageFrame>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
         const auto& received = packet.Get<mediapipe::ImageFrame>();
         auto* output = response.add_outputs();
@@ -902,12 +902,24 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         } \
     }
 
+// TODO: Add proper error status
+#define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message) \
+    { \
+        auto status = code; \
+        if (!status.ok()) { \
+            const std::string msg = status.string(); \
+            SPDLOG_DEBUG("MediapipeGraphExecutor::inferStream {} error with message: {}", message, msg); \
+            return absl::InvalidArgumentError("todo"); \
+        } \
+    }
+
 // TODO: To be exchanged with proper deserialization
 Status MediapipeGraphExecutor::partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph) const {
     static int bb = 0;  // TODO: Have automatic timestamping or take timestamp from request.id() or param
     for (const auto& input : request.inputs()) {
-        MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(input.name(), ::mediapipe::Adopt<ov::Tensor>(
-            new ov::Tensor(ov::element::Type_t::f32, ov::Shape{1})).At(::mediapipe::Timestamp(bb++))),
+        std::unique_ptr<ov::Tensor> tensor;
+        OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), request, tensor), "ov::Tensor deserialization"); 
+        MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(input.name(), ::mediapipe::Adopt<ov::Tensor>(tensor.release()).At(::mediapipe::Timestamp(bb++))),
             "adding packet to input stream", StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     }
     return StatusCode::OK;
@@ -920,9 +932,10 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
 
     // Observers
     for (const auto& name : this->outputNames) {
-        MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream] (const ::mediapipe::Packet& packet) -> absl::Status {
+        MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name] (const ::mediapipe::Packet& packet) -> absl::Status {
             ::inference::ModelStreamInferResponse resp;
-            // TODO: Add serialization
+            // TODO: Add proper serialization
+            OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");
             stream.Write(resp);
             return absl::OkStatus();
         }), "output stream observer installation", StatusCode::UNKNOWN_ERROR);  // TODO: specific error code
