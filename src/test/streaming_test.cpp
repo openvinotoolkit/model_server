@@ -87,15 +87,27 @@ node {
 
     EXPECT_CALL(stream, Write(_, _))
         .WillOnce([](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            EXPECT_EQ(1, 1);
+            const ::inference::ModelInferResponse& ir = msg.infer_response();
+            EXPECT_EQ(ir.raw_output_contents_size(), 1);
+            EXPECT_EQ(ir.raw_output_contents(0).size(), sizeof(float));
+            float* buffer = (float*)(ir.raw_output_contents(0).data());
+            EXPECT_EQ(*buffer, 4.5f);
             return true;
         })
         .WillOnce([](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            EXPECT_EQ(1, 1);
+            const ::inference::ModelInferResponse& ir = msg.infer_response();
+            EXPECT_EQ(ir.raw_output_contents_size(), 1);
+            EXPECT_EQ(ir.raw_output_contents(0).size(), sizeof(float));
+            float* buffer = (float*)(ir.raw_output_contents(0).data());
+            EXPECT_EQ(*buffer, 8.2f);
             return true;
         })
         .WillOnce([](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            EXPECT_EQ(1, 1);
+            const ::inference::ModelInferResponse& ir = msg.infer_response();
+            EXPECT_EQ(ir.raw_output_contents_size(), 1);
+            EXPECT_EQ(ir.raw_output_contents(0).size(), sizeof(float));
+            float* buffer = (float*)(ir.raw_output_contents(0).data());
+            EXPECT_EQ(*buffer, 103.4f);
             return false;
         });
 

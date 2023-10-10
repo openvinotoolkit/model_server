@@ -47,10 +47,10 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         ov::Tensor input = cc->Inputs().Index(0).Get<ov::Tensor>();
-        for (size_t i = 0; i < input.get_byte_size() / 4; i++) {
-            ((float*)(input.data()))[i] += 1.0;
-        }
         ov::Tensor output(input.get_element_type(), input.get_shape());
+        for (size_t i = 0; i < input.get_byte_size() / 4; i++) {
+            ((float*)(output.data()))[i] = ((float*)(input.data()))[i] + 1.0f;
+        }
         cc->Outputs().Index(0).Add(new ov::Tensor(output), cc->InputTimestamp());
 
         LOG(INFO) << "DummyCalculator::Process";

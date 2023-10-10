@@ -46,7 +46,8 @@ class MediapipeGraphExecutor {
 
     std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
 
-    Status partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph) const;
+    ::mediapipe::Timestamp currentStreamTimestamp{0};
+    Status partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph);
 
 public:
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
@@ -56,6 +57,6 @@ public:
         const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 
-    Status inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream) const;
+    Status inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream);
 };
 }  // namespace ovms

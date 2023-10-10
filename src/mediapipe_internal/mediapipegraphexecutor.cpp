@@ -914,18 +914,18 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     }
 
 // TODO: To be exchanged with proper deserialization
-Status MediapipeGraphExecutor::partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph) const {
-    static int bb = 0;  // TODO: Have automatic timestamping or take timestamp from request.id() or param
+Status MediapipeGraphExecutor::partialDeserialize(const ::inference::ModelInferRequest& request, ::mediapipe::CalculatorGraph& graph) {
     for (const auto& input : request.inputs()) {
         std::unique_ptr<ov::Tensor> tensor;
         OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), request, tensor), "ov::Tensor deserialization"); 
-        MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(input.name(), ::mediapipe::Adopt<ov::Tensor>(tensor.release()).At(::mediapipe::Timestamp(bb++))),
+        MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(input.name(), ::mediapipe::Adopt<ov::Tensor>(tensor.release()).At(currentStreamTimestamp)),
             "adding packet to input stream", StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     }
+    currentStreamTimestamp = currentStreamTimestamp.NextAllowedInStream();  // TODO: Take from request when available
     return StatusCode::OK;
 }
 
-Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream) const {
+Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream) {
     // Init
     ::mediapipe::CalculatorGraph graph;
     MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
@@ -960,6 +960,7 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
     }
 
     // Wait until done
+    // TODO: Add guard that closes input streams and waits until done
     MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::UNKNOWN_ERROR); // TODO: Proper error
 
     // TODO: Handle exceptions
