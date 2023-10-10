@@ -18,15 +18,17 @@
 #include <string>
 #include <utility>
 
+#include <pybind11/embed.h>  // everything needed for embedding
+
 #include "config.hpp"
 #include "logging.hpp"
-#include "server.hpp"
 #include "status.hpp"
+
+namespace py = pybind11;
 
 namespace ovms {
 
-PythonInterpreterModule::PythonInterpreterModule(ovms::Server& ovmsServer) {
-}
+PythonInterpreterModule::PythonInterpreterModule() {}
 
 Status PythonInterpreterModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
@@ -43,6 +45,7 @@ Status PythonInterpreterModule::start(const ovms::Config& config) {
     SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE);
     return StatusCode::OK;
 }
+
 void PythonInterpreterModule::shutdown() {
     if (state == ModuleState::SHUTDOWN)
         return;

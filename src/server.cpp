@@ -54,11 +54,7 @@
 #include "version.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include <pybind11/embed.h>
-
 #include "pythoninterpretermodule.hpp"
-namespace py = pybind11;
-using namespace py::literals;
 #endif
 
 using grpc::ServerBuilder;
@@ -212,7 +208,7 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<ServableManagerModule>(*this);
 #if (PYTHON_DISABLE == 0)
     if (name == PYTHON_INTERPRETER_MODULE)
-        return std::make_unique<PythonInterpreterModule>(*this);
+        return std::make_unique<PythonInterpreterModule>();
 #endif
     if (name == METRICS_MODULE_NAME)
         return std::make_unique<MetricModule>();
@@ -246,12 +242,11 @@ Status Server::startModules(ovms::Config& config) {
     // GRPC & REST
     Status status;
     bool inserted = false;
-#if (PYTHON_DISABLE == 0)
-    auto itPython = modules.end();
-    INSERT_MODULE(PYTHON_INTERPRETER_MODULE, itPython);
-    START_MODULE(itPython);
-#endif
     auto it = modules.end();
+#if (PYTHON_DISABLE == 0)
+    INSERT_MODULE(PYTHON_INTERPRETER_MODULE, it);
+    START_MODULE(it);
+#endif
 #if MTR_ENABLED
     INSERT_MODULE(PROFILER_MODULE_NAME, it);
     START_MODULE(it);

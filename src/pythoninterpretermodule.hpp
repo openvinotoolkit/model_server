@@ -16,18 +16,13 @@
 #pragma once
 #include <memory>
 
-#include <pybind11/embed.h>  // everything needed for embedding
-
 #include "module.hpp"
 
-namespace py = pybind11;
-
 namespace ovms {
-class Server;
 
 class PythonInterpreterModule : public Module {
 public:
-    PythonInterpreterModule(ovms::Server& ovmsServer);
+    PythonInterpreterModule();
     ~PythonInterpreterModule();
     Status start(const ovms::Config& config) override;
 
