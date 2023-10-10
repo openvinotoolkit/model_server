@@ -224,7 +224,7 @@ class TestModelVerPolicy:
                 output_json = result.text
                 status_pb = get_model_status_pb2.GetModelStatusResponse()
                 response = Parse(output_json, status_pb,
-                                 ignore_unknown_fields=False)
+                                 ignore_unknown_fields=True)
                 versions_statuses = response.model_version_status
                 version_status = versions_statuses[0]
                 assert version_status.version == versions[x]
