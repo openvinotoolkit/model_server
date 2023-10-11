@@ -264,7 +264,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
 
 # Set up Bazel
-ENV BAZEL_VERSION 5.3.1
+ENV BAZEL_VERSION 6.0.0
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \

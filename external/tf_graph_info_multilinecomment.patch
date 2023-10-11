@@ -1,17 +1,17 @@
 diff --git a/tensorflow/lite/graph_info.h b/tensorflow/lite/graph_info.h
-index a771f1a1365..8f92464879c 100644
+index 1093aa8bb72..07cb161adfb 100644
 --- a/tensorflow/lite/graph_info.h
 +++ b/tensorflow/lite/graph_info.h
-@@ -108,7 +108,7 @@ TfLiteStatus PartitionGraphIntoIndependentNodeSubsets(
+@@ -122,7 +122,7 @@ using ControlEdges = std::vector<ControlEdge>;
+ // (Example: with `greedily`, `control_edges.empty()`, and `nodes_to_partition
+ // == {2, 3}`, the graph
  //
- // (Example: with `control_edges.empty()` and `nodes_to_partition == {2, 3}`,
- // the graph
 -//                    /------------\
 +//                    /------------|
  //                    |            v
  // 0 --> 1 --> 2* --> 3*     4 --> 5
  //       |                   ^
-@@ -120,7 +120,7 @@ TfLiteStatus PartitionGraphIntoIndependentNodeSubsets(
+@@ -134,7 +134,7 @@ using ControlEdges = std::vector<ControlEdge>;
  // With an additional control dependency `control_edges == {{3, 4}}` (notated
  // '==>'), execution of node 4 requires prior execution of node 3:
  //

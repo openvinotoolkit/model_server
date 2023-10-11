@@ -230,8 +230,16 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             rawShape.emplace_back(requestInputItr->shape()[i]);
         }
         int64_t dimsCount = rawShape.size();
-        tensorflow::TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
-        TensorShape::BuildTensorShapeBase(rawShape, static_cast<tensorflow::TensorShapeBase<TensorShape>*>(&tensorShape));
+        auto abslStatus = tensorflow::TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
+        if (!abslStatus.ok()) {
+            auto stringViewAbslMessage = abslStatus.message();
+            return Status(StatusCode::UNKNOWN_ERROR, std::string{stringViewAbslMessage});
+        }
+        abslStatus = TensorShape::BuildTensorShapeBase(rawShape, static_cast<tensorflow::TensorShapeBase<TensorShape>*>(&tensorShape));
+        if (!abslStatus.ok()) {
+            auto stringViewAbslMessage = abslStatus.message();
+            return Status(StatusCode::UNKNOWN_ERROR, std::string{stringViewAbslMessage});
+        }
         outTensor = std::make_unique<tensorflow::Tensor>(datatype, tensorShape);
         if (outTensor->TotalBytes() != bufferLocation.size()) {
             std::stringstream ss;
