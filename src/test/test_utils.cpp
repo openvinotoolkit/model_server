@@ -46,6 +46,18 @@ void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, c
     }
 }
 
+void preparePredictRequest(::KFSRequest& request, inputs_info_vec_t requestInputs, const std::vector<float>& data, bool putBufferInInputTensorContent) {
+    request.mutable_inputs()->Clear();
+    request.mutable_raw_input_contents()->Clear();
+    for (auto const& it : requestInputs) {
+        prepareKFSInferInputTensor(request, std::get<0>(it) /* name */, std::tuple<ovms::signed_shape_t, const ovms::Precision>{
+                                                                            std::get<1>(it),  // shape
+                                                                            std::get<2>(it)   // precision
+                                                                        },
+            data, putBufferInInputTensorContent);
+    }
+}
+
 void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     request.removeAllInputs();
     for (auto const& it : requestInputs) {

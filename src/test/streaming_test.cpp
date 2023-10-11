@@ -34,13 +34,36 @@ public:
     MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
 };
 
-bool my_func(::inference::ModelInferRequest* msg) {
-    return false;
-}
-
-TEST(StreamingTest, Ok) {
+class StreamingTest : public Test {
+protected:
+    // Defaults for executor
     const std::string name{"my_graph"};
     const std::string version{"1"};
+
+    void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content) {
+        request.Clear();
+        for (auto const& it : content) {
+            prepareKFSInferInputTensor(request, std::get<0>(it) /* name */, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {std::get<1>(it)}, false);
+        }
+    }
+    void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent) {
+        ASSERT_EQ(resp.infer_response().outputs_size(), expectedContent.size());
+        ASSERT_EQ(resp.infer_response().raw_output_contents_size(), expectedContent.size());
+        for (const auto& [name, value] : expectedContent) {
+            auto it = std::find_if(resp.infer_response().outputs().begin(), resp.infer_response().outputs().end(), [name](const auto& input) {
+                return name == input.name();
+            });
+            ASSERT_NE(it, resp.infer_response().outputs().end());
+            auto index = it - resp.infer_response().outputs().begin();
+            const auto& content = resp.infer_response().raw_output_contents(index);
+            ASSERT_EQ(content.size(), sizeof(float));
+            ASSERT_EQ(*((float*)content.data()), value);
+        }
+    }
+};
+
+// Regula case
+TEST_F(StreamingTest, RequestX_ReceiveX) {
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -54,65 +77,116 @@ node {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     MediapipeGraphExecutor executor{
-        name, version, config,
-        {{"in", mediapipe_packet_type_enum::UNKNOWN}},
-        {{"out", mediapipe_packet_type_enum::UNKNOWN}},
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}};
 
     ::inference::ModelInferRequest firstRequest;
-    preparePredictRequest(firstRequest, inputs_info_t{{"in", {{1}, Precision::FP32}}}, {3.5f}, false);
-
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 
+    // Mock receiving 3 requests
+    prepareRequest(firstRequest, {{"in", 3.5f}});
     EXPECT_CALL(stream, Read(_))
-        .WillOnce([](::inference::ModelInferRequest* req) {
-            preparePredictRequest(*req, inputs_info_t{{"in", {{1}, Precision::FP32}}}, {7.2f}, false);
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            this->prepareRequest(*req, {{"in", 7.2f}});
             return true;
         })
-        .WillOnce([](::inference::ModelInferRequest* req) {
-            preparePredictRequest(*req, inputs_info_t{{"in", {{1}, Precision::FP32}}}, {102.4f}, false);
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            this->prepareRequest(*req, {{"in", 102.4f}});
             return true;
         })
-        .WillOnce([](::inference::ModelInferRequest* req) {
+        .WillOnce([this](::inference::ModelInferRequest* req) {
             return false;
         });
 
+    // Expect 3 responses
     EXPECT_CALL(stream, Write(_, _))
-        .WillOnce([](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            const ::inference::ModelInferResponse& ir = msg.infer_response();
-            EXPECT_EQ(ir.raw_output_contents_size(), 1);
-            EXPECT_EQ(ir.raw_output_contents(0).size(), sizeof(float));
-            float* buffer = (float*)(ir.raw_output_contents(0).data());
-            EXPECT_EQ(*buffer, 4.5f);
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            this->assertResponse(msg, {{"out", 4.5f}});
             return true;
         })
-        .WillOnce([](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            const ::inference::ModelInferResponse& ir = msg.infer_response();
-            EXPECT_EQ(ir.raw_output_contents_size(), 1);
-            EXPECT_EQ(ir.raw_output_contents(0).size(), sizeof(float));
-            float* buffer = (float*)(ir.raw_output_contents(0).data());
-            EXPECT_EQ(*buffer, 8.2f);
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            this->assertResponse(msg, {{"out", 8.2f}});
             return true;
         })
-        .WillOnce([](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            const ::inference::ModelInferResponse& ir = msg.infer_response();
-            EXPECT_EQ(ir.raw_output_contents_size(), 1);
-            EXPECT_EQ(ir.raw_output_contents(0).size(), sizeof(float));
-            float* buffer = (float*)(ir.raw_output_contents(0).data());
-            EXPECT_EQ(*buffer, 103.4f);
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            this->assertResponse(msg, {{"out", 103.4f}});
             return false;
         });
 
     ASSERT_EQ(executor.inferStream(firstRequest, stream), StatusCode::OK);
 }
 
+// Generative AI case
+TEST_F(StreamingTest, Request1_ReceiveX) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "DummyCalculator"
+  input_stream: "in"
+  input_stream: "signal"
+  input_stream_info: {
+    tag_index: ':1',
+    back_edge: true
+  }
+  input_stream_handler {
+    input_stream_handler: 'ImmediateInputStreamHandler'
+  }
+  output_stream: "out"
+  output_stream: "signal"
+  node_options: {
+    [type.googleapis.com / mediapipe.DummyCalculatorOptions]: {
+      kind: "cycle"
+    }
+  }
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    ::inference::ModelInferRequest firstRequest;
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+
+    // Mock only 1 request
+    prepareRequest(firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(stream, Read(_))
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            return false;
+        });
+
+    // Expect 3 responses (cycle)
+    EXPECT_CALL(stream, Write(_, _))
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            this->assertResponse(msg, {{"out", 4.5f}});
+            return true;
+        })
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            this->assertResponse(msg, {{"out", 5.5f}});
+            return true;
+        })
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            this->assertResponse(msg, {{"out", 6.5f}});
+            return false;  // TODO: handle client disconnection?
+        });
+
+    ASSERT_EQ(executor.inferStream(firstRequest, stream), StatusCode::OK);
+}
+
 // Positive:
-// Send X requests receive X responses (regular)
-// Send 1 request receive X responses (cycle)
+// [x] Send X requests receive X responses (regular)
+// [x] Send 1 request receive X responses (cycle)
+// Send X requests with same timestamp, receive Y responses (partial, sync MP side)
 
 // Automatic timestamping
 // Manual timestamping
-
 
 // Negative:
 // Error during graph initialization (bad pbtxt)
@@ -124,3 +198,4 @@ node {
 // Error during subsequent deserializations
 // Error when closing all packet sources
 // Error waiting until done
+// Error when writing to disconnected client
