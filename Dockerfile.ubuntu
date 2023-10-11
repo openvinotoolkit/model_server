@@ -214,7 +214,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 
 WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
-RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="sentence_piece" && cmake --build . --parallel $JOBS
+RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="tokenizer" && cmake --build . --parallel $JOBS
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
