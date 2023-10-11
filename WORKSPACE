@@ -31,7 +31,7 @@ http_archive(
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
-versions.check(minimum_bazel_version = "3.7.2")
+versions.check(minimum_bazel_version = "6.0.0")
 
 # overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
