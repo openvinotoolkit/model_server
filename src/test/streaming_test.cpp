@@ -40,29 +40,53 @@ protected:
     const std::string name{"my_graph"};
     const std::string version{"1"};
 
-    void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content) {
-        request.Clear();
-        for (auto const& it : content) {
-            prepareKFSInferInputTensor(request, std::get<0>(it) /* name */, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {std::get<1>(it)}, false);
-        }
-    }
-    void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent) {
-        ASSERT_EQ(resp.infer_response().outputs_size(), expectedContent.size());
-        ASSERT_EQ(resp.infer_response().raw_output_contents_size(), expectedContent.size());
-        for (const auto& [name, value] : expectedContent) {
-            auto it = std::find_if(resp.infer_response().outputs().begin(), resp.infer_response().outputs().end(), [name](const auto& input) {
-                return name == input.name();
-            });
-            ASSERT_NE(it, resp.infer_response().outputs().end());
-            auto index = it - resp.infer_response().outputs().begin();
-            const auto& content = resp.infer_response().raw_output_contents(index);
-            ASSERT_EQ(content.size(), sizeof(float));
-            ASSERT_EQ(*((float*)content.data()), value);
-        }
-    }
+    ::inference::ModelInferRequest firstRequest;
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 };
 
-// Regula case
+static void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content) {
+    request.Clear();
+    for (auto const& it : content) {
+        prepareKFSInferInputTensor(request, std::get<0>(it) /* name */, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {std::get<1>(it) /* data */}, false);
+    }
+}
+
+static void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent) {
+    ASSERT_EQ(resp.infer_response().outputs_size(), expectedContent.size());
+    ASSERT_EQ(resp.infer_response().raw_output_contents_size(), expectedContent.size());
+    for (const auto& [name, value] : expectedContent) {
+        auto it = std::find_if(resp.infer_response().outputs().begin(), resp.infer_response().outputs().end(), [name](const auto& input) {
+            return name == input.name();
+        });
+        ASSERT_NE(it, resp.infer_response().outputs().end());
+        auto index = it - resp.infer_response().outputs().begin();
+        const auto& content = resp.infer_response().raw_output_contents(index);
+        ASSERT_EQ(content.size(), sizeof(float));
+        ASSERT_EQ(*((float*)content.data()), value);
+    }
+}
+
+static auto Disconnect() {
+    return [](::inference::ModelInferRequest* req) {
+        return false;
+    };
+}
+
+static auto Receive(std::vector<std::tuple<std::string, float>> content) {
+    return [content](::inference::ModelInferRequest* req) {
+        prepareRequest(*req, content);
+        return true;
+    };
+}
+
+static auto Send(std::vector<std::tuple<std::string, float>> content) {
+    return [content](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponse(msg, content);
+        return true;
+    };
+}
+
+// Regular case
 TEST_F(StreamingTest, RequestX_ReceiveX) {
     const std::string pbTxt{R"(
 input_stream: "in"
@@ -82,40 +106,20 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}};
 
-    ::inference::ModelInferRequest firstRequest;
-    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
-
-    // Mock receiving 3 requests
-    prepareRequest(firstRequest, {{"in", 3.5f}});
-    EXPECT_CALL(stream, Read(_))
-        .WillOnce([this](::inference::ModelInferRequest* req) {
-            this->prepareRequest(*req, {{"in", 7.2f}});
-            return true;
-        })
-        .WillOnce([this](::inference::ModelInferRequest* req) {
-            this->prepareRequest(*req, {{"in", 102.4f}});
-            return true;
-        })
-        .WillOnce([this](::inference::ModelInferRequest* req) {
-            return false;
-        });
+    // Mock receiving 3 requests and disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Receive({{"in", 7.2f}}))
+        .WillOnce(Receive({{"in", 102.4f}}))
+        .WillOnce(Disconnect());
 
     // Expect 3 responses
-    EXPECT_CALL(stream, Write(_, _))
-        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            this->assertResponse(msg, {{"out", 4.5f}});
-            return true;
-        })
-        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            this->assertResponse(msg, {{"out", 8.2f}});
-            return true;
-        })
-        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            this->assertResponse(msg, {{"out", 103.4f}});
-            return false;
-        });
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(Send({{"out", 4.5f}}))
+        .WillOnce(Send({{"out", 8.2f}}))
+        .WillOnce(Send({{"out", 103.4f}}));
 
-    ASSERT_EQ(executor.inferStream(firstRequest, stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
 // Generative AI case
@@ -152,32 +156,18 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}};
 
-    ::inference::ModelInferRequest firstRequest;
-    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
-
-    // Mock only 1 request
-    prepareRequest(firstRequest, {{"in", 3.5f}});
-    EXPECT_CALL(stream, Read(_))
-        .WillOnce([this](::inference::ModelInferRequest* req) {
-            return false;
-        });
+    // Mock only 1 request and disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Disconnect());
 
     // Expect 3 responses (cycle)
-    EXPECT_CALL(stream, Write(_, _))
-        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            this->assertResponse(msg, {{"out", 4.5f}});
-            return true;
-        })
-        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            this->assertResponse(msg, {{"out", 5.5f}});
-            return true;
-        })
-        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            this->assertResponse(msg, {{"out", 6.5f}});
-            return false;  // TODO: handle client disconnection?
-        });
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(Send({{"out", 4.5f}}))
+        .WillOnce(Send({{"out", 5.5f}}))
+        .WillOnce(Send({{"out", 6.5f}}));
 
-    ASSERT_EQ(executor.inferStream(firstRequest, stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
 // Positive:

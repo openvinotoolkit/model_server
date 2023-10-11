@@ -996,6 +996,7 @@ cc_test(
         "-Wno-unknown-pragmas",
         "-Werror",
         "-Isrc",
+        "-fconcepts",
         "-fvisibility=hidden",# Needed for pybind targets
     ],
 )
