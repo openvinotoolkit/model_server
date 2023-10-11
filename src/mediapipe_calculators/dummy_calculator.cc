@@ -27,7 +27,6 @@ namespace mediapipe {
     // TODO: Make it dynamic with multiple inputs/outputs
 */
 class DummyCalculator : public CalculatorBase {
-
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         LOG(INFO) << "DummyCalculator::GetContract";

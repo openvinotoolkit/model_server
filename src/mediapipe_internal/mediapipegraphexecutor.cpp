@@ -882,58 +882,60 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     return StatusCode::OK;
 }
 
-#define MP_RETURN_ON_FAIL(code, message, errorCode) \
-    { \
-        auto absStatus = code; \
-        if (!absStatus.ok()) { \
-            const std::string absMessage = absStatus.ToString(); \
+#define MP_RETURN_ON_FAIL(code, message, errorCode)                                                             \
+    {                                                                                                           \
+        auto absStatus = code;                                                                                  \
+        if (!absStatus.ok()) {                                                                                  \
+            const std::string absMessage = absStatus.ToString();                                                \
             SPDLOG_DEBUG("MediapipeGraphExecutor::inferStream {} error with message: {}", message, absMessage); \
-            return Status(errorCode, std::move(absMessage)); \
-        } \
+            return Status(errorCode, std::move(absMessage));                                                    \
+        }                                                                                                       \
     }
 
-#define OVMS_RETURN_ON_FAIL(code, message) \
-    { \
-        auto status = code; \
-        if (!status.ok()) { \
-            const std::string msg = status.string(); \
+#define OVMS_RETURN_ON_FAIL(code, message)                                                               \
+    {                                                                                                    \
+        auto status = code;                                                                              \
+        if (!status.ok()) {                                                                              \
+            const std::string msg = status.string();                                                     \
             SPDLOG_DEBUG("MediapipeGraphExecutor::inferStream {} error with message: {}", message, msg); \
-            return status; \
-        } \
+            return status;                                                                               \
+        }                                                                                                \
     }
 
 // TODO: Add proper error status
-#define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message) \
-    { \
-        auto status = code; \
-        if (!status.ok()) { \
-            const std::string msg = status.string(); \
+#define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message)                                                      \
+    {                                                                                                    \
+        auto status = code;                                                                              \
+        if (!status.ok()) {                                                                              \
+            const std::string msg = status.string();                                                     \
             SPDLOG_DEBUG("MediapipeGraphExecutor::inferStream {} error with message: {}", message, msg); \
-            return absl::InvalidArgumentError("todo"); \
-        } \
+            return absl::InvalidArgumentError("todo");                                                   \
+        }                                                                                                \
     }
 
 // Like Holder, but does not own its data.
 template <typename T>
 class MyHolder : public ::mediapipe::packet_internal::Holder<T> {
     std::shared_ptr<const ::inference::ModelInferRequest> req;
+
 public:
-    explicit MyHolder(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req)
-        : ::mediapipe::packet_internal::Holder<T>(ptr), req(req) {}
+    explicit MyHolder(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
+        ::mediapipe::packet_internal::Holder<T>(ptr),
+        req(req) {}
 };
 
 // TODO: To be exchanged with proper deserialization
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph) {
     for (const auto& input : request->inputs()) {
         std::unique_ptr<ov::Tensor> tensor;
-        OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), *request, tensor), "ov::Tensor deserialization"); 
+        OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), *request, tensor), "ov::Tensor deserialization");
         MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
-            input.name(),
-            ::mediapipe::packet_internal::Create(
-                new MyHolder<ov::Tensor>(
-                        tensor.release(),
-                        request))
-                    .At(currentStreamTimestamp)),
+                              input.name(),
+                              ::mediapipe::packet_internal::Create(
+                                  new MyHolder<ov::Tensor>(
+                                      tensor.release(),
+                                      request))
+                                  .At(currentStreamTimestamp)),
             "adding packet to input stream", StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     }
     currentStreamTimestamp = currentStreamTimestamp.NextAllowedInStream();  // TODO: Take from request when available
@@ -947,13 +949,14 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
 
     // Observers
     for (const auto& name : this->outputNames) {
-        MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name] (const ::mediapipe::Packet& packet) -> absl::Status {
+        MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name](const ::mediapipe::Packet& packet) -> absl::Status {
             ::inference::ModelStreamInferResponse resp;
             // TODO: Add proper serialization
             OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");
             stream.Write(resp);
             return absl::OkStatus();
-        }), "output stream observer installation", StatusCode::UNKNOWN_ERROR);  // TODO: specific error code
+        }),
+            "output stream observer installation", StatusCode::UNKNOWN_ERROR);  // TODO: specific error code
     }
 
     // Run
@@ -961,9 +964,9 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
 
     // Deserialize first request
     OVMS_RETURN_ON_FAIL(this->partialDeserialize(
-        std::shared_ptr<const ::inference::ModelInferRequest>(
-            &firstRequest, [](const ::inference::ModelInferRequest*) {}),  // Custom deleter
-            graph),
+                            std::shared_ptr<const ::inference::ModelInferRequest>(
+                                &firstRequest, [](const ::inference::ModelInferRequest*) {}),  // Custom deleter
+                            graph),
         "partial deserialization of first request");
 
     // Read loop
@@ -976,12 +979,12 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
 
     // Close input streams
     for (const auto& name : this->inputNames) {
-        MP_RETURN_ON_FAIL(graph.CloseInputStream(name), "closing input stream", StatusCode::UNKNOWN_ERROR); // TODO: Proper error
+        MP_RETURN_ON_FAIL(graph.CloseInputStream(name), "closing input stream", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
     }
 
     // Wait until done
     // TODO: Add guard that closes input streams and waits until done
-    MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::UNKNOWN_ERROR); // TODO: Proper error
+    MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
 
     // TODO: Handle exceptions
 

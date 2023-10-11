@@ -17,10 +17,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../status.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-
+#include "../status.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -28,11 +27,11 @@ using namespace ::testing;
 
 template <class W, class R>
 class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
- public:
-  MOCK_METHOD(void, SendInitialMetadata, (), (override));
-  MOCK_METHOD(bool, NextMessageSize, (uint32_t* sz), (override));
-  MOCK_METHOD(bool, Read, (R* msg), (override));
-  MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
+public:
+    MOCK_METHOD(void, SendInitialMetadata, (), (override));
+    MOCK_METHOD(bool, NextMessageSize, (uint32_t * sz), (override));
+    MOCK_METHOD(bool, Read, (R * msg), (override));
+    MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
 };
 
 bool my_func(::inference::ModelInferRequest* msg) {
@@ -56,29 +55,22 @@ node {
 
     MediapipeGraphExecutor executor{
         name, version, config,
-        {{"in",mediapipe_packet_type_enum::UNKNOWN}},
-        {{"out",mediapipe_packet_type_enum::UNKNOWN}},
-        {"in"}, {"out"}, {}
-    };
+        {{"in", mediapipe_packet_type_enum::UNKNOWN}},
+        {{"out", mediapipe_packet_type_enum::UNKNOWN}},
+        {"in"}, {"out"}, {}};
 
     ::inference::ModelInferRequest firstRequest;
-    preparePredictRequest(firstRequest, inputs_info_t{
-        {"in", {{1}, Precision::FP32}}
-    }, {3.5f}, false);
+    preparePredictRequest(firstRequest, inputs_info_t{{"in", {{1}, Precision::FP32}}}, {3.5f}, false);
 
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 
     EXPECT_CALL(stream, Read(_))
         .WillOnce([](::inference::ModelInferRequest* req) {
-            preparePredictRequest(*req, inputs_info_t{
-                {"in", {{1}, Precision::FP32}}
-            }, {7.2f}, false);
+            preparePredictRequest(*req, inputs_info_t{{"in", {{1}, Precision::FP32}}}, {7.2f}, false);
             return true;
         })
         .WillOnce([](::inference::ModelInferRequest* req) {
-            preparePredictRequest(*req, inputs_info_t{
-                {"in", {{1}, Precision::FP32}}
-            }, {102.4f}, false);
+            preparePredictRequest(*req, inputs_info_t{{"in", {{1}, Precision::FP32}}}, {102.4f}, false);
             return true;
         })
         .WillOnce([](::inference::ModelInferRequest* req) {
