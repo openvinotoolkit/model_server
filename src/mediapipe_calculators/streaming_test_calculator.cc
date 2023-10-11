@@ -19,23 +19,23 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #pragma GCC diagnostic pop
-#include "src/mediapipe_calculators/dummy_calculator_options.pb.h"
+#include "src/mediapipe_calculators/streaming_test_calculator_options.pb.h"
 
 namespace mediapipe {
 
 /*
     Adds 1 to all bytes in input tensor.
-    // TODO: Make it dynamic with multiple inputs/outputs
+    Behavior depends on options.kind
 */
-class DummyCalculator : public CalculatorBase {
+class StreamingTestCalculator : public CalculatorBase {
     int cycle_iteration = 0;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        LOG(INFO) << "DummyCalculator::GetContract";
+        LOG(INFO) << "StreamingTestCalculator::GetContract";
         cc->Inputs().Index(0).Set<ov::Tensor>();
         cc->Outputs().Index(0).Set<ov::Tensor>();
-        if (cc->Options<DummyCalculatorOptions>().kind() == "cycle") {
+        if (cc->Options<StreamingTestCalculatorOptions>().kind() == "cycle") {
             cc->Inputs().Index(1).Set<ov::Tensor>();   // signal
             cc->Outputs().Index(1).Set<ov::Tensor>();  // signal
         }
@@ -43,16 +43,18 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
+        LOG(INFO) << "StreamingTestCalculator::Close";
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        LOG(INFO) << "DummyCalculator::Open";
+        LOG(INFO) << "StreamingTestCalculator::Open";
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        if (cc->Options<DummyCalculatorOptions>().kind() == "cycle") {
+        if (cc->Options<StreamingTestCalculatorOptions>().kind() == "cycle") {
+            LOG(INFO) << "StreamingTestCalculator::Process Cycle";
             if (++cycle_iteration > 3) {
                 return absl::OkStatus();
             }
@@ -65,20 +67,18 @@ public:
             }
             cc->Outputs().Index(0).Add(new ov::Tensor(output1), Timestamp(cycle_iteration));  // TODO: ?
             cc->Outputs().Index(1).Add(new ov::Tensor(output2), Timestamp(cycle_iteration));  // TODO: ?
-            LOG(INFO) << "DummyCalculator::Process Cycle";
         } else {
+            LOG(INFO) << "StreamingTestCalculator::Process Default";
             ov::Tensor input = cc->Inputs().Index(0).Get<ov::Tensor>();
             ov::Tensor output(input.get_element_type(), input.get_shape());
             for (size_t i = 0; i < input.get_byte_size() / 4; i++) {
                 ((float*)(output.data()))[i] = ((float*)(input.data()))[i] + 1.0f;
             }
             cc->Outputs().Index(0).Add(new ov::Tensor(output), cc->InputTimestamp());
-
-            LOG(INFO) << "DummyCalculator::Process Regular";
         }
         return absl::OkStatus();
     }
 };
 
-REGISTER_CALCULATOR(DummyCalculator);
+REGISTER_CALCULATOR(StreamingTestCalculator);
 }  // namespace mediapipe

@@ -92,7 +92,7 @@ TEST_F(StreamingTest, RequestX_ReceiveX) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "DummyCalculator"
+  calculator: "StreamingTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -128,7 +128,7 @@ TEST_F(StreamingTest, Request1_ReceiveX) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "DummyCalculator"
+  calculator: "StreamingTestCalculator"
   input_stream: "in"
   input_stream: "signal"
   input_stream_info: {
@@ -141,7 +141,7 @@ node {
   output_stream: "out"
   output_stream: "signal"
   node_options: {
-    [type.googleapis.com / mediapipe.DummyCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.StreamingTestCalculatorOptions]: {
       kind: "cycle"
     }
   }
@@ -170,6 +170,7 @@ node {
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
+// TODO
 // Positive:
 // [x] Send X requests receive X responses (regular)
 // [x] Send 1 request receive X responses (cycle)

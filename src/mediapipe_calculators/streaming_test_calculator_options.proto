@@ -19,9 +19,9 @@ package mediapipe;
 
 import "mediapipe/framework/calculator.proto";
 
-message DummyCalculatorOptions {
+message StreamingTestCalculatorOptions {
   extend mediapipe.CalculatorOptions {
-      optional DummyCalculatorOptions ext = 113420742;
+      optional StreamingTestCalculatorOptions ext = 113420742;
   }
   optional string kind = 1;
 }

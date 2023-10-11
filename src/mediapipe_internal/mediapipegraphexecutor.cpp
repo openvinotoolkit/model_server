@@ -915,11 +915,11 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
 
 // Like Holder, but does not own its data.
 template <typename T>
-class MyHolder : public ::mediapipe::packet_internal::Holder<T> {
+class HolderWithRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
     std::shared_ptr<const ::inference::ModelInferRequest> req;
 
 public:
-    explicit MyHolder(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
+    explicit HolderWithRequestOwnership(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
         ::mediapipe::packet_internal::Holder<T>(ptr),
         req(req) {}
 };
@@ -936,7 +936,7 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::infere
         MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
                               input.name(),
                               ::mediapipe::packet_internal::Create(
-                                  new MyHolder<ov::Tensor>(
+                                  new HolderWithRequestOwnership<ov::Tensor>(
                                       tensor.release(),
                                       request))
                                   .At(currentStreamTimestamp)),
