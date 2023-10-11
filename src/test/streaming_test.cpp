@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <chrono>
+#include <thread>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -24,6 +26,7 @@
 
 using namespace ovms;
 using namespace ::testing;
+using namespace std::chrono_literals;
 
 template <class W, class R>
 class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
@@ -51,7 +54,7 @@ static void prepareRequest(::inference::ModelInferRequest& request, const std::v
     }
 }
 
-static void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent) {
+static void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent, std::optional<int64_t> expectedTimestamp = std::nullopt) {
     ASSERT_EQ(resp.infer_response().outputs_size(), expectedContent.size());
     ASSERT_EQ(resp.infer_response().raw_output_contents_size(), expectedContent.size());
     for (const auto& [name, value] : expectedContent) {
@@ -64,10 +67,20 @@ static void assertResponse(const ::inference::ModelStreamInferResponse& resp, co
         ASSERT_EQ(content.size(), sizeof(float));
         ASSERT_EQ(*((float*)content.data()), value);
     }
+    if (expectedTimestamp.has_value()) {
+        ASSERT_EQ(std::to_string(expectedTimestamp.value()), resp.infer_response().id());
+    }
 }
 
 static auto Disconnect() {
     return [](::inference::ModelInferRequest* req) {
+        return false;
+    };
+}
+
+static auto DisconnectDelayed(int milliseconds) {
+    return [milliseconds](::inference::ModelInferRequest* req) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         return false;
     };
 }
@@ -79,9 +92,24 @@ static auto Receive(std::vector<std::tuple<std::string, float>> content) {
     };
 }
 
+static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> content, int64_t timestamp) {
+    return [content, timestamp](::inference::ModelInferRequest* req) {
+        prepareRequest(*req, content);
+        req->set_id(std::to_string(timestamp));
+        return true;
+    };
+}
+
 static auto Send(std::vector<std::tuple<std::string, float>> content) {
     return [content](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponse(msg, content);
+        return true;
+    };
+}
+
+static auto SendWithTimestamp(std::vector<std::tuple<std::string, float>> content, int64_t timestamp) {
+    return [content, timestamp](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponse(msg, content, timestamp);
         return true;
     };
 }
@@ -128,7 +156,7 @@ TEST_F(StreamingTest, Request1_ReceiveX) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "StreamingCycleTestCalculator"
   input_stream: "in"
   input_stream: "signal"
   input_stream_info: {
@@ -140,11 +168,6 @@ node {
   }
   output_stream: "out"
   output_stream: "signal"
-  node_options: {
-    [type.googleapis.com / mediapipe.StreamingTestCalculatorOptions]: {
-      kind: "cycle"
-    }
-  }
 }
     )"};
     ::mediapipe::CalculatorGraphConfig config;
@@ -166,6 +189,50 @@ node {
         .WillOnce(Send({{"out", 4.5f}}))
         .WillOnce(Send({{"out", 5.5f}}))
         .WillOnce(Send({{"out", 6.5f}}));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+// Sending inputs separately for synchronized graph
+TEST_F(StreamingTest, RequestX_ReceiveY) {
+    const std::string pbTxt{R"(
+input_stream: "in1"
+input_stream: "in2"
+input_stream: "in3"
+output_stream: "out1"
+output_stream: "out2"
+output_stream: "out3"
+node {
+  calculator: "StreamingMultiInputsOutputsTestCalculator"
+  input_stream: "in1"
+  input_stream: "in2"
+  input_stream: "in3"
+  output_stream: "out1"
+  output_stream: "out2"
+  output_stream: "out3"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in1", mediapipe_packet_type_enum::OVTENSOR}, {"in2", mediapipe_packet_type_enum::OVTENSOR}, {"in3", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out1", mediapipe_packet_type_enum::OVTENSOR}, {"out2", mediapipe_packet_type_enum::OVTENSOR}, {"out3", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in1", "in2", "in3"}, {"out1", "out2", "out3"}, {}};
+
+    prepareRequest(this->firstRequest, {{"in1", 3.5f}});
+    this->firstRequest.set_id("64");
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWithTimestamp({{"in2", 7.2f}}, 64))
+        .WillOnce(ReceiveWithTimestamp({{"in3", 102.4f}}, 64))
+        // This is needed in order to not close input streams too quick
+        .WillOnce(DisconnectDelayed(200));  // TODO: Do not sleep in test?
+
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out1", 4.5f}}, 64))
+        .WillOnce(SendWithTimestamp({{"out2", 8.2f}}, 64))
+        .WillOnce(SendWithTimestamp({{"out3", 103.4f}}, 64));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }

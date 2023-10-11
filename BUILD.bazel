@@ -81,6 +81,7 @@ cc_library(
         ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework:calculator_framework",
+                "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
                 "@mediapipe//mediapipe/framework/port:logging",
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework/port:status",

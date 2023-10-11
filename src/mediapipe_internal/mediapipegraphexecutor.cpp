@@ -931,6 +931,7 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::infere
         currentStreamTimestamp = ::mediapipe::Timestamp(requestTimestamp.value());
     }
     for (const auto& input : request->inputs()) {
+        SPDLOG_INFO("Deserializing {} with timestamp {}", input.name(), currentStreamTimestamp.DebugString());
         std::unique_ptr<ov::Tensor> tensor;
         OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), *request, tensor), "ov::Tensor deserialization");
         MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
@@ -957,6 +958,7 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
             ::inference::ModelStreamInferResponse resp;
             // TODO: Add proper serialization
             OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");
+            resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
             stream.Write(resp);
             return absl::OkStatus();
         }),
