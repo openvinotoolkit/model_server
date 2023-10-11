@@ -105,3 +105,22 @@ node {
 
     ASSERT_EQ(executor.inferStream(firstRequest, stream), StatusCode::OK);
 }
+
+// Positive:
+// Send X requests receive X responses (regular)
+// Send 1 request receive X responses (cycle)
+
+// Automatic timestamping
+// Manual timestamping
+
+
+// Negative:
+// Error during graph initialization (bad pbtxt)
+// Error installing observer (wrong outputName)
+// Error during serialization - how to mock such packet?
+// Error during startrun - how?
+// Error during graph execution - Process() returning non Ok?
+// Error during first deserialization
+// Error during subsequent deserializations
+// Error when closing all packet sources
+// Error waiting until done

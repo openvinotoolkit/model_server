@@ -985,9 +985,10 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
     }
 
     // Close input streams
-    for (const auto& name : this->inputNames) {
-        MP_RETURN_ON_FAIL(graph.CloseInputStream(name), "closing input stream", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
-    }
+    MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "closing all packet sources", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
+    // for (const auto& name : this->inputNames) {
+    //     MP_RETURN_ON_FAIL(graph.CloseInputStream(name), "closing input stream", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
+    // }
 
     // Wait until done
     // TODO: Add guard that closes input streams and waits until done
