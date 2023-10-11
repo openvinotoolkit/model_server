@@ -926,6 +926,10 @@ public:
 
 // TODO: To be exchanged with proper deserialization
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph) {
+    auto requestTimestamp = stoi64(request->id());  // TODO: Decide if deserialize from id or int parameter
+    if (requestTimestamp.has_value()) {
+        currentStreamTimestamp = ::mediapipe::Timestamp(requestTimestamp.value());
+    }
     for (const auto& input : request->inputs()) {
         std::unique_ptr<ov::Tensor> tensor;
         OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), *request, tensor), "ov::Tensor deserialization");
@@ -938,7 +942,7 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::infere
                                   .At(currentStreamTimestamp)),
             "adding packet to input stream", StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     }
-    currentStreamTimestamp = currentStreamTimestamp.NextAllowedInStream();  // TODO: Take from request when available
+    currentStreamTimestamp = currentStreamTimestamp.NextAllowedInStream();
     return StatusCode::OK;
 }
 
@@ -964,8 +968,11 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
 
     // Deserialize first request
     OVMS_RETURN_ON_FAIL(this->partialDeserialize(
-                            std::shared_ptr<const ::inference::ModelInferRequest>(
-                                &firstRequest, [](const ::inference::ModelInferRequest*) {}),  // Custom deleter
+                            std::shared_ptr<const ::inference::ModelInferRequest>(&firstRequest,
+                                // Custom deleter to avoid deallocation by custom holder
+                                // Conversion to shared_ptr is required for single deserialization method
+                                // for first and subsequent requests
+                                [](const ::inference::ModelInferRequest*) {}),
                             graph),
         "partial deserialization of first request");
 
