@@ -58,8 +58,8 @@ public:
         MediapipeGraphDefinition(name, config, nullptr, nullptr) {}
 
     // Do not read from path - use predefined config contents
-    Status validateForConfigFileExistence() override {
-        this->chosenConfig = this->inputConfig;
+    Status readConfigFileContent() override {
+        this->configContent = this->inputConfig;
         return StatusCode::OK;
     }
 };

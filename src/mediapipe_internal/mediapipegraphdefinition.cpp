@@ -60,32 +60,32 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
     return this->outputsInfo;
 }
 
-Status MediapipeGraphDefinition::validateForConfigFileExistence() {
+Status MediapipeGraphDefinition::readConfigFileContent() {
     std::ifstream ifs(this->mgconfig.getGraphPath());
     if (!ifs.is_open()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to open mediapipe graph definition: {}, file: {}\n", this->getName(), this->mgconfig.getGraphPath());
         return StatusCode::FILE_INVALID;
     }
-    this->chosenConfig.clear();
+    this->configContent.clear();
     ifs.seekg(0, std::ios::end);
-    this->chosenConfig.reserve(ifs.tellg());
+    this->configContent.reserve(ifs.tellg());
     ifs.seekg(0, std::ios::beg);
     std::stringstream config;
     config << ifs.rdbuf();
     this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(config.str()));
-    this->chosenConfig.assign(config.str());
+    this->configContent.assign(config.str());
     return StatusCode::OK;
 }
 
-Status MediapipeGraphDefinition::validateForConfigLoadableness() {
-    if (chosenConfig.empty()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
+Status MediapipeGraphDefinition::parseConfigFile() {
+    if (configContent.empty()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->configContent);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
 
-    bool success = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
+    bool success = ::google::protobuf::TextFormat::ParseFromString(configContent, &this->config);
     if (!success) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->configContent);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
     return StatusCode::OK;
@@ -108,11 +108,11 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
         return StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED;
     }
-    Status validationResult = validateForConfigFileExistence();
+    Status validationResult = readConfigFileContent();
     if (!validationResult.ok()) {
         return validationResult;
     }
-    validationResult = validateForConfigLoadableness();
+    validationResult = parseConfigFile();
     if (!validationResult.ok()) {
         return validationResult;
     }
