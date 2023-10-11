@@ -135,7 +135,6 @@ cc_shared_library(
         "@FP16//:__subpackages__",
         "@flatbuffers//:__subpackages__",
         "@ruy//:__subpackages__",
-
         "@azure//:__subpackages__",
         "@cpprest//:__subpackages__",
         "@boringssl//:__subpackages__",
