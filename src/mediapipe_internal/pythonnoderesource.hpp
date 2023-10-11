@@ -30,10 +30,10 @@ class Status;
 
 class PythonNodeResource {
 public:
-    PythonNodeResource();
     PythonNodeResource(const PythonNodeResource&) = delete;
     PythonNodeResource& operator=(PythonNodeResource&) = delete;
 #if (PYTHON_DISABLE == 0)
+    PythonNodeResource();
     PythonNodeResource(const google::protobuf::Any& nodeOptions, Status& status);
     std::unique_ptr<py::object> nodeResourceObject;
     ~PythonNodeResource();
