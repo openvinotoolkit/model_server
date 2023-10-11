@@ -101,7 +101,7 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
     }
     return StatusCode::OK;
 }
-Status MediapipeGraphDefinition::validate(ModelManager& manager) {
+Status MediapipeGraphDefinition::reload(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
     if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
@@ -317,7 +317,7 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     this->mgconfig = config;
-    return validate(manager);
+    return reload(manager);
 }
 
 void MediapipeGraphDefinition::retire(ModelManager& manager) {
