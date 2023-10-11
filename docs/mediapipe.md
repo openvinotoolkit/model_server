@@ -199,6 +199,8 @@ the predictions. The request format must match the pipeline definition inputs.
 Graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md)
 and [REST Model Status](model_server_rest_api_kfs.md)
 
+The difference in using the mediapipes and individual models is in version management. In all calls to the mediapipes,
+the version parameter is ignored. Mediapipes are not versioned. Though, they can reference a particular version of the models in the graph.
 
 ## MediaPipe Graphs Examples <a name="graphs-examples"></a>
 
