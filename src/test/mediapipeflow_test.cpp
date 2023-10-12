@@ -1929,7 +1929,6 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
 
     createConfigFileWithContent(configFileContent, configFilePath);
     std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
-    std::cout<< "PATH: " << defaultGraphDirectoryPath;
     std::filesystem::create_directories(defaultGraphDirectoryPath);
     createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
