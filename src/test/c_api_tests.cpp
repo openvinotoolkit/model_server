@@ -13,9 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
+#include <algorithm>
 #include <exception>
 #include <filesystem>
+#include <future>
 #include <memory>
 #include <string>
 #include <thread>
@@ -1693,4 +1694,77 @@ TEST(CAPI, ApiVersion) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ApiVersion(&major, &minor));
     ASSERT_EQ(major, OVMS_API_VERSION_MAJOR);
     ASSERT_EQ(minor, OVMS_API_VERSION_MINOR);
+}
+
+TEST(CAPI, MultipleThreadsStarting) {
+    std::vector<std::unique_ptr<std::thread>> threads;
+    size_t threadsCount = std::thread::hardware_concurrency();
+    std::vector<std::promise<void>> promises(threadsCount);
+    std::vector<std::future<void>> futures;
+    futures.reserve(threadsCount);
+    std::vector<std::promise<void>> promisesThreadReady(threadsCount);
+    std::vector<std::future<void>> futuresThreadReady;
+    futuresThreadReady.reserve(threadsCount);
+    std::vector<uint32_t> retCodes(threadsCount);
+    for (size_t i = 0; i < threadsCount; ++i) {
+        futures.emplace_back(promises[i].get_future());
+        futuresThreadReady.emplace_back(promisesThreadReady[i].get_future());
+        threads.emplace_back(std::make_unique<std::thread>([i, &promisesThreadReady, &futures, &retCodes]() {
+            OVMS_Server* cserver = nullptr;
+            OVMS_ServerSettings* serverSettings = nullptr;
+            OVMS_ModelsSettings* modelsSettings = nullptr;
+            ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+            ASSERT_NE(cserver, nullptr);
+            ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+            ASSERT_NE(serverSettings, nullptr);
+            ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+            ASSERT_NE(modelsSettings, nullptr);
+
+            ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 8000 + i));
+            ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json"));
+            promisesThreadReady[i].set_value();
+            futures[i].get();
+            OVMS_Status* cstatus = OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings);
+            uint32_t code = 0;
+            OVMS_StatusCode(cstatus, &code);
+            OVMS_StatusDelete(cstatus);
+            retCodes[i] = code;
+        }));
+    }
+
+    for (size_t i = 0; i < threadsCount; ++i) {
+        futuresThreadReady[i].get();
+    }
+    for (size_t i = 0; i < threadsCount; ++i) {
+        promises[i].set_value();
+    }
+    for (size_t i = 0; i < threadsCount; ++i) {
+        threads[i]->join();
+    }
+    std::stringstream ss;
+    ss << "[";
+    for (size_t i = 0; i < threadsCount; ++i) {
+        ss << retCodes[i] << ", ";
+    }
+    ss << "]";
+    SPDLOG_ERROR("ER: {}", ss.str());
+    SPDLOG_ERROR("ER");
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    OVMS_ServerDelete(cserver);
+    auto started = std::count_if(retCodes.begin(), retCodes.end(),
+        [](const uint32_t v) {
+            return v == (uint32_t)(ovms::StatusCode::OK);
+        });
+    auto alreadyStarting = std::count_if(retCodes.begin(), retCodes.end(),
+        [](const uint32_t v) {
+            return v == (uint32_t)(ovms::StatusCode::SERVER_ALREADY_STARTING);
+        });
+    auto alreadyStarted = std::count_if(retCodes.begin(), retCodes.end(),
+        [](const uint32_t v) {
+            return v == (uint32_t)(ovms::StatusCode::SERVER_ALREADY_STARTED);
+        });
+    SPDLOG_INFO("Started: {}, alreadyStarting: {}, alreadyStarted: {}", started, alreadyStarting, alreadyStarted);
+    EXPECT_EQ(started, 1);
+    EXPECT_EQ(alreadyStarted + alreadyStarting, threadsCount - 1);
 }

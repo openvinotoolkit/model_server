@@ -23,6 +23,8 @@
 #include "../capi_frontend/inferenceparameter.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../servablemanagermodule.hpp"
+#include "../server.hpp"
 #include "../tensorinfo.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 
@@ -764,6 +766,27 @@ void randomizePorts(std::string& port1, std::string& port2) {
     randomizePort(port2);
     while (port2 == port1) {
         randomizePort(port2);
+    }
+}
+
+const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 5;
+
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath) {
+    server.setShutdownRequest(0);
+    randomizePort(port);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--config_path",
+        (char*)configPath,
+        (char*)"--port",
+        (char*)port.c_str()};
+    int argc = 5;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (!server.isReady()) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
     }
 }
 

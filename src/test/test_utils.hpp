@@ -21,6 +21,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -692,6 +693,10 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 
 void randomizePort(std::string& port);
 void randomizePorts(std::string& port1, std::string& port2);
+
+extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
+
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath);
 
 class ConstructorEnabledConfig : public ovms::Config {
 public:
