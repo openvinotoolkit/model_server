@@ -960,11 +960,14 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
 
     // Observers
     for (const auto& name : this->outputNames) {
-        MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name](const ::mediapipe::Packet& packet) -> absl::Status {
+        MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name, this](const ::mediapipe::Packet& packet) -> absl::Status {
             ::inference::ModelStreamInferResponse resp;
-            // TODO: Add proper serialization
-            OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");
-            resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
+            auto response = resp.mutable_infer_response();
+            Status status = partialSerialize(name, *response, packet);
+            if (!status.ok()) {
+                return absl::InvalidArgumentError(status.string());
+            }
+            response->set_id(std::to_string(packet.Timestamp().Value()));
             stream.Write(resp);
             return absl::OkStatus();
         }),
