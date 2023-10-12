@@ -191,7 +191,7 @@ class TestModelVerPolicy:
                 metadata_pb = get_model_metadata_pb2. \
                     GetModelMetadataResponse()
                 response = Parse(output_json, metadata_pb,
-                                 ignore_unknown_fields=False)
+                                 ignore_unknown_fields=True)
                 input_metadata, output_metadata = model_metadata_response(
                     response=response)
 

@@ -355,7 +355,8 @@ TEST_F(GetModelMetadataScalarResponseBuild, serializeScalarToJson) {
        "name": "Output_Scalar"
       }
      },
-     "methodName": ""
+     "methodName": "",
+     "defaults": {}
     }
    }
   }

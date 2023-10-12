@@ -135,6 +135,10 @@ cc_shared_library(
         "@FP16//:__subpackages__",
         "@flatbuffers//:__subpackages__",
         "@ruy//:__subpackages__",
+        "@azure//:__subpackages__",
+        "@cpprest//:__subpackages__",
+        "@boringssl//:__subpackages__",
+        "@linux_opencv//:__subpackages__",
     ] + select({
         "//:not_disable_mediapipe": [
             "@mediapipe//:__subpackages__",
@@ -449,8 +453,8 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        "-Werror",
         "-fvisibility=hidden",# Needed for pybind targets
+        "-Werror",
         ] + select({
             "//conditions:default": [
             ],
