@@ -15,19 +15,24 @@
 #
 
 def _python_repository_impl(repository_ctx):
-    result = repository_ctx.execute(["find","/", "-iname", "libpython3.*.so"],quiet=False)
-    split = result.stdout.partition("\n")
-    lib_path = split[0].removeprefix("/usr/")
+    result = repository_ctx.execute(["cat","/etc/os-release"],quiet=False)
+    ubuntu20Count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
+    ubuntu22Count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
 
-    result = repository_ctx.execute(["python3","--version"],quiet=False)
-    full_version = result.stdout
-    split = full_version.removeprefix("Python ").rpartition(".")
-    version = split[0]
+    if ubuntu20Count == 1 or ubuntu22Count == 1:
+        lib_path = "lib/x86_64-linux-gnu"
+        if ubuntu20Count == 1:
+            version = "3.8"
+        else:
+            version = "3.10"
+    else: # for redhat
+        lib_path = "lib64"
+        version = "3.9"
 
     build_file_content = """
 cc_library(
     name = "python3-lib",
-    srcs = ["{lib_path}"],
+    srcs = ["{lib_path}/libpython{version}.so"],
     hdrs = glob(["include/python{version}/*.h"]),
     includes = ["include/python{version}"],
     visibility = ["//visibility:public"]
