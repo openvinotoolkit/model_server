@@ -102,7 +102,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "a0a8f4dcdedba1bf4cc776edca3ba9884d1f2551", # mediapipe bump to 0.10.3
+    commit = "afe513dd209171f1273d00a8a4cfdb42f1322720", # Model API full build
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -145,16 +145,15 @@ http_archive(
     urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.2.tar.gz"],
 )
 
-http_archive(
+git_repository( # Using commit past 0.9.0 that adds cmake 3.26.2 for model api. Be sure to update to 0.10.0 when available.
     name = "rules_foreign_cc",
-    sha256 = "2a4d07cd64b0719b39a7c12218a3e507672b82a97b98c6a89d38565894cf7c51",
-    strip_prefix = "rules_foreign_cc-0.9.0",
-    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/refs/tags/0.9.0.tar.gz",
+    remote = "https://github.com/bazelbuild/rules_foreign_cc.git",
+    commit = "1fb8a1e",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
-rules_foreign_cc_dependencies()
+rules_foreign_cc_dependencies(cmake_version="3.26.2")
 
 # gflags needed by glog
 http_archive(
@@ -412,19 +411,14 @@ http_archive(
 load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
 prometheus_cpp_repositories()
 
+load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
+load("@mediapipe//third_party/model_api:model_api.bzl", "model_api_repository")
+model_api_repository(name="_model-api")
 new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",
-    build_file_content = """
-cc_library(
-    name = "adapter_api",
-    hdrs = ["model_api/cpp/adapters/include/adapters/inference_adapter.h",],
-    includes = ["model_api/cpp/adapters/include"],
-    deps = ["@linux_openvino//:openvino"],
-    visibility = ["//visibility:public"],
-)
-    """,
-    commit = "ca5a91ed5b3dbf428dc4de6b72f0a3da93d2aa0a" # using the same model_api sha as MP fork
+    build_file = "@_model-api//:BUILD",
+    commit = "03a6cee5d486ee9eabb625e4388e69fe9c50ef20"
 )
 
 git_repository(
