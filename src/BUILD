@@ -429,6 +429,8 @@ cc_library(
             "//src:not_disable_python": [
                     "ovms_py_tensor.hpp",
                     "ovms_py_tensor.cpp",
+                    "pythoninterpretermodule.hpp",
+                    "pythoninterpretermodule.cpp",
                     "mediapipe_calculators/python_backend_calculator.cc",
                 ],
             "//src:disable_python": []

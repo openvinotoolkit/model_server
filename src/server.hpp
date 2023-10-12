@@ -34,6 +34,7 @@ extern const std::string GRPC_SERVER_MODULE_NAME;
 extern const std::string HTTP_SERVER_MODULE_NAME;
 extern const std::string SERVABLE_MANAGER_MODULE_NAME;
 extern const std::string METRICS_MODULE_NAME;
+extern const std::string PYTHON_INTERPRETER_MODULE;
 
 class Server {
     mutable std::shared_mutex modulesMtx;
