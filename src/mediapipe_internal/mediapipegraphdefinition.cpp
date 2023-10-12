@@ -271,18 +271,6 @@ Status MediapipeGraphDefinition::setStreamTypes() {
     for (auto& outputStreamName : this->config.output_stream()) {
         outputTypes.emplace(getStreamNamePair(outputStreamName));
     }
-    bool anyInputTfLite = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
-        const auto& [k, v] = p;
-        return v == mediapipe_packet_type_enum::TFLITETENSOR;
-    });
-    bool anyOutputTfLite = std::any_of(outputTypes.begin(), outputTypes.end(), [](const auto& p) {
-        const auto& [k, v] = p;
-        return v == mediapipe_packet_type_enum::TFLITETENSOR;
-    });
-    if (anyInputTfLite || anyOutputTfLite) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "There is no support for TfLiteTensor deserialization & serialization");
-        return StatusCode::NOT_IMPLEMENTED;
-    }
     bool kfsRequestPass = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
         const auto& [k, v] = p;
         return v == mediapipe_packet_type_enum::KFS_REQUEST;
