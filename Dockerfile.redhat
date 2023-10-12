@@ -21,7 +21,6 @@ ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.8
 
 FROM $BASE_IMAGE as base_build
 ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.8
-ENV BASE_IMAGE=${BASE_IMAGE}
 
 LABEL version="1.0.0"
 
@@ -100,7 +99,6 @@ RUN ./install_opencv.sh
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM base_build as build
 ARG BASE_IMAGE
-ENV BASE_IMAGE=${BASE_IMAGE}
 LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]

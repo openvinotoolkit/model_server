@@ -15,24 +15,19 @@
 #
 
 def _python_repository_impl(repository_ctx):
-    base_os_image = repository_ctx.os.environ.get("BASE_IMAGE", "")
-    version = None
-    lib_path = None
+    result = repository_ctx.execute(["find","/", "-iname", "libpython3.*.so"],quiet=False)
+    split = result.stdout.partition("\n")
+    lib_path = split[0].removeprefix("/usr/")
 
-    if "ubuntu" in base_os_image:
-        lib_path = "lib/x86_64-linux-gnu"
-        if base_os_image == "ubuntu:20.04" or base_os_image == "docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04":
-            version = "3.8"
-        else:
-            version = "3.10"
-    else: # for redhat
-        lib_path = "lib64"
-        version = "3.9"
+    result = repository_ctx.execute(["python3","--version"],quiet=False)
+    full_version = result.stdout
+    split = full_version.removeprefix("Python ").rpartition(".")
+    version = split[0]
 
     build_file_content = """
 cc_library(
     name = "python3-lib",
-    srcs = ["{lib_path}/libpython{version}.so"],
+    srcs = ["{lib_path}"],
     hdrs = glob(["include/python{version}/*.h"]),
     includes = ["include/python{version}"],
     visibility = ["//visibility:public"]
