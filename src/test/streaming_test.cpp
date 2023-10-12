@@ -77,19 +77,23 @@ static void assertResponse(const ::inference::ModelStreamInferResponse& resp, co
 
 static auto Disconnect() {
     return [](::inference::ModelInferRequest* req) {
+        SPDLOG_DEBUG("Disconnecting on read");
         return false;
     };
 }
 
 static auto DisconnectWhenNotified(std::mutex& mtx) {
     return [&mtx](::inference::ModelInferRequest* req) {
+        SPDLOG_DEBUG("Waiting to disconnect on read...");
         std::lock_guard<std::mutex> lock(mtx);  // waits for lock to be released
+        SPDLOG_DEBUG("Disconnecting on read after waiting");
         return false;
     };
 }
 
 static auto Receive(std::vector<std::tuple<std::string, float>> content) {
     return [content](::inference::ModelInferRequest* req) {
+        SPDLOG_DEBUG("Preparing the request with no timestamp");
         prepareRequest(*req, content);
         return true;
     };
@@ -97,6 +101,7 @@ static auto Receive(std::vector<std::tuple<std::string, float>> content) {
 
 static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> content, int64_t timestamp) {
     return [content, timestamp](::inference::ModelInferRequest* req) {
+        SPDLOG_DEBUG("Preparing the request with timestamp: {}", timestamp);
         prepareRequest(*req, content);
         req->set_id(std::to_string(timestamp));
         return true;
@@ -105,7 +110,9 @@ static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> con
 
 static auto ReceiveWithTimestampWhenNotified(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::mutex& mtx) {
     return [content, timestamp, &mtx](::inference::ModelInferRequest* req) {
+        SPDLOG_DEBUG("Waiting to preparing the request with timestamp: {}", timestamp);
         std::lock_guard<std::mutex> lock(mtx);
+        SPDLOG_DEBUG("Preparing the request with timestamp: {} after waiting", timestamp);
         prepareRequest(*req, content);
         req->set_id(std::to_string(timestamp));
         return true;
@@ -119,16 +126,26 @@ static auto ReceiveWithTimestampWhenNotified(std::vector<std::tuple<std::string,
 //     };
 // }
 
+static auto DisconnectOnWrite() {
+    return [](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        SPDLOG_DEBUG("Disconnecting on write");
+        return false;
+    };
+}
+
 static auto SendWithTimestamp(std::vector<std::tuple<std::string, float>> content, int64_t timestamp) {
     return [content, timestamp](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        SPDLOG_DEBUG("Assuring response is sent with timestamp: {}", timestamp);
         assertResponse(msg, content, timestamp);
         return true;
     };
 }
 
 static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::mutex& mtx) {
+    SPDLOG_DEBUG("Temporarily disabling Read operation");
     mtx.lock();
     return [content, timestamp, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        SPDLOG_DEBUG("Assuring response is sent with timestamp: {} and enabling Read operation", timestamp);
         assertResponse(msg, content, timestamp);
         mtx.unlock();
         return true;
@@ -372,6 +389,61 @@ node {
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
 }
 
+TEST_F(StreamingTest, ErrorInstallingObserver) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "StreamingTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"wrong_name"}, {}};  // cannot install observer due to wrong name
+
+    EXPECT_CALL(this->stream, Read(_)).Times(0);
+    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
+}
+
+TEST_F(StreamingTest, WritingToDisconnectedClient) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "StreamingTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Disconnect());
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(DisconnectOnWrite());
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
 // TODO
 // Positive:
 // [x] Send X requests receive X responses (regular)
@@ -384,13 +456,13 @@ node {
 
 // Negative:
 // Error during graph initialization (bad pbtxt)
-// Error installing observer (wrong outputName)
+// [x] Error installing observer (wrong outputName)
 // Error during serialization - how to mock such packet?
 // Error during startrun - how?
 // Error during graph execution - Process() returning non Ok?
 // Error during first deserialization
 // Error during subsequent deserializations
-// Error when closing all packet sources
-// Error waiting until done
-// Error when writing to disconnected client
+// Error when closing all packet sources (cannot, this function never fails)
+// Error waiting until done (this will return any an error during execution - has list of errors)
+// [x] Error when writing to disconnected client
 // [x] Wrong timestamping (non monotonous) on client side
