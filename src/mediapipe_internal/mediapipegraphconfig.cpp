@@ -80,7 +80,6 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
         this->setGraphName(v["name"].GetString());
         if (v.HasMember("base_path")) {
             std::string providedBasePath(v["base_path"].GetString());
-            SPDLOG_ERROR("GRAPH NAME: {}", this->getGraphName());
             if (providedBasePath.size() == 0)
                 this->setBasePath(this->getGraphName() + "/");
             else if (providedBasePath.back() == '/')
@@ -89,7 +88,7 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
                 this->setBasePath(providedBasePath + "/");
         } else {
             if (!getRootDirectoryPath().empty()) {
-                this->setBasePathWithRootPath();
+                this->setBasePath(this->getGraphName() + "/");
                 SPDLOG_DEBUG("base_path not defined in config so it will be set to default based on main config directory: {}", this->getBasePath());
             } else {
                 SPDLOG_ERROR("Mediapipe {} root directory path is not set.", getGraphName());
