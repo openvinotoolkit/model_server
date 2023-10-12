@@ -834,29 +834,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
         while (poller.Next(&packet)) {
             SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
-            if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::KFS_RESPONSE) {
-                SPDLOG_DEBUG("Response processing packet type KFSPass name: {}", outputStreamName);
-                status = receiveAndSerializePacket<KFSResponse*>(packet, *response, outputStreamName);
-            } else if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::TFTENSOR) {
-                SPDLOG_DEBUG("Response processing packet type TF Tensor name: {}", outputStreamName);
-                status = receiveAndSerializePacket<tensorflow::Tensor>(packet, *response, outputStreamName);
-            } else if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::TFLITETENSOR) {
-                SPDLOG_DEBUG("Response processing packet type TFLite Tensor name: {}", outputStreamName);
-                std::string details{"Response processing packet type TFLite Tensor is not supported"};
-                return Status(StatusCode::NOT_IMPLEMENTED, std::move(details));
-            } else if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::MPTENSOR) {
-                SPDLOG_DEBUG("Response processing packet type MP Tensor name: {}", outputStreamName);
-                status = receiveAndSerializePacket<mediapipe::Tensor>(packet, *response, outputStreamName);
-            } else if (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
-                SPDLOG_DEBUG("Response processing Mediapipe Image Frame: {}", outputStreamName);
-                status = receiveAndSerializePacket<mediapipe::ImageFrame>(packet, *response, outputStreamName);
-            } else if ((this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::OVTENSOR) ||
-                       (this->outputTypes.at(outputStreamName) == mediapipe_packet_type_enum::UNKNOWN)) {
-                SPDLOG_DEBUG("Response processing packet type:  OVTensor name: {}", outputStreamName);
-                status = receiveAndSerializePacket<ov::Tensor>(packet, *response, outputStreamName);
-            } else {
-                return Status(StatusCode::UNKNOWN_ERROR, "Unreachable code");
-            }
+            Status status = partialSerialize(outputStreamName, *response, packet);
             if (!status.ok()) {
                 return status;
             }
@@ -945,6 +923,34 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::infere
     }
     currentStreamTimestamp = currentStreamTimestamp.NextAllowedInStream();
     return StatusCode::OK;
+}
+Status MediapipeGraphExecutor::partialSerialize(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const {
+    Status status;
+    SPDLOG_DEBUG("Received packet from output stream: {}", name);
+    if (this->outputTypes.at(name) == mediapipe_packet_type_enum::KFS_RESPONSE) {
+        SPDLOG_DEBUG("Response processing packet type KFSPass name: {}", name);
+        status = receiveAndSerializePacket<KFSResponse*>(packet, response, name);
+    } else if (this->outputTypes.at(name) == mediapipe_packet_type_enum::TFTENSOR) {
+        SPDLOG_DEBUG("Response processing packet type TF Tensor name: {}", name);
+        status = receiveAndSerializePacket<tensorflow::Tensor>(packet, response, name);
+    } else if (this->outputTypes.at(name) == mediapipe_packet_type_enum::TFLITETENSOR) {
+        SPDLOG_DEBUG("Response processing packet type TFLite Tensor name: {}", name);
+        std::string details{"Response processing packet type TFLite Tensor is not supported"};
+        status = Status(StatusCode::NOT_IMPLEMENTED, std::move(details));
+    } else if (this->outputTypes.at(name) == mediapipe_packet_type_enum::MPTENSOR) {
+        SPDLOG_DEBUG("Response processing packet type MP Tensor name: {}", name);
+        status = receiveAndSerializePacket<mediapipe::Tensor>(packet, response, name);
+    } else if (this->outputTypes.at(name) == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
+        SPDLOG_DEBUG("Response processing Mediapipe Image Frame: {}", name);
+        status = receiveAndSerializePacket<mediapipe::ImageFrame>(packet, response, name);
+    } else if ((this->outputTypes.at(name) == mediapipe_packet_type_enum::OVTENSOR) ||
+               (this->outputTypes.at(name) == mediapipe_packet_type_enum::UNKNOWN)) {
+        SPDLOG_DEBUG("Response processing packet type:  OVTensor name: {}", name);
+        status = receiveAndSerializePacket<ov::Tensor>(packet, response, name);
+    } else {
+        status = Status(StatusCode::UNKNOWN_ERROR, "Unreachable code");
+    }
+    return status;
 }
 
 Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream) {
