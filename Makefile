@@ -129,10 +129,10 @@ ifeq ($(BASE_OS),ubuntu)
   endif
   ifeq ($(BASE_OS_TAG_UBUNTU),20.04)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/b3ead626310b1eff3fe2d5374b287bc908c162f4/swf_drop/packages/releases/l_openvino_toolkit_ubuntu20_2023.2.0.12778.b3ead626310_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.2.0.12778.b3ead626310_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG_UBUNTU),22.04)
 	INSTALL_DRIVER_VERSION ?= "23.22.26516"
-	DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/b3ead626310b1eff3fe2d5374b287bc908c162f4/swf_drop/packages/releases/l_openvino_toolkit_ubuntu22_2023.2.0.12778.b3ead626310_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2023.2.0.12778.b3ead626310_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -146,7 +146,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/private_builds/dldt/master/commit/b3ead626310b1eff3fe2d5374b287bc908c162f4/swf_drop/packages/releases/l_openvino_toolkit_rhel8_2023.2.0.12778.b3ead626310_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.2.0.12778.b3ead626310_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
