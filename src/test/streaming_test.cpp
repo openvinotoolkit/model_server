@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <chrono>
 #include <thread>
+#include <mutex>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -47,10 +48,13 @@ protected:
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 };
 
-static void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content) {
+static void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content, std::optional<int64_t> timestamp = std::nullopt) {
     request.Clear();
     for (auto const& it : content) {
         prepareKFSInferInputTensor(request, std::get<0>(it) /* name */, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {std::get<1>(it) /* data */}, false);
+    }
+    if (timestamp.has_value()) {
+        request.set_id(std::to_string(timestamp.value()));
     }
 }
 
@@ -78,9 +82,16 @@ static auto Disconnect() {
     };
 }
 
-static auto DisconnectDelayed(int milliseconds) {
-    return [milliseconds](::inference::ModelInferRequest* req) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+// static auto DisconnectDelayed(int milliseconds) {
+//     return [milliseconds](::inference::ModelInferRequest* req) {
+//         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+//         return false;
+//     };
+// }
+
+static auto DisconnectWhenNotified(std::mutex& mtx) {
+    return [&mtx](::inference::ModelInferRequest* req) {
+        std::lock_guard<std::mutex> lock(mtx);  // waits for lock to be released
         return false;
     };
 }
@@ -114,8 +125,17 @@ static auto SendWithTimestamp(std::vector<std::tuple<std::string, float>> conten
     };
 }
 
+static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::mutex& mtx) {
+    mtx.lock();
+    return [content, timestamp, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponse(msg, content, timestamp);
+        mtx.unlock();
+        return true;
+    };
+}
+
 // Regular case
-TEST_F(StreamingTest, RequestX_ReceiveX) {
+TEST_F(StreamingTest, SingleStreamSend3Receive3) {
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -151,7 +171,7 @@ node {
 }
 
 // Generative AI case
-TEST_F(StreamingTest, Request1_ReceiveX) {
+TEST_F(StreamingTest, SingleStreamSend1Receive3) {
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -194,7 +214,7 @@ node {
 }
 
 // Sending inputs separately for synchronized graph
-TEST_F(StreamingTest, RequestX_ReceiveY) {
+TEST_F(StreamingTest, MultipleStreamsDeliveredViaMultipleRequests) {
     const std::string pbTxt{R"(
 input_stream: "in1"
 input_stream: "in2"
@@ -221,18 +241,62 @@ node {
         {{"out1", mediapipe_packet_type_enum::OVTENSOR}, {"out2", mediapipe_packet_type_enum::OVTENSOR}, {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"}, {"out1", "out2", "out3"}, {}};
 
-    prepareRequest(this->firstRequest, {{"in1", 3.5f}});
-    this->firstRequest.set_id("64");
+    std::mutex mtx;
+    const int64_t timestamp = 64;
+
+    prepareRequest(this->firstRequest, {{"in1", 3.5f}}, timestamp);
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWithTimestamp({{"in2", 7.2f}}, 64))
-        .WillOnce(ReceiveWithTimestamp({{"in3", 102.4f}}, 64))
-        // This is needed in order to not close input streams too quick
-        .WillOnce(DisconnectDelayed(200));  // TODO: Do not sleep in test?
+        .WillOnce(ReceiveWithTimestamp({{"in2", 7.2f}}, timestamp))
+        .WillOnce(ReceiveWithTimestamp({{"in3", 102.4f}}, timestamp))
+        .WillOnce(DisconnectWhenNotified(mtx));
 
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"out1", 4.5f}}, 64))
-        .WillOnce(SendWithTimestamp({{"out2", 8.2f}}, 64))
-        .WillOnce(SendWithTimestamp({{"out3", 103.4f}}, 64));
+        .WillOnce(SendWithTimestamp({{"out1", 4.5f}}, timestamp))
+        .WillOnce(SendWithTimestamp({{"out2", 8.2f}}, timestamp))
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out3", 103.4f}}, timestamp, mtx));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+// Sending inputs together for synchronized graph
+TEST_F(StreamingTest, MultipleStreamsDeliveredViaSingleRequest) {
+    const std::string pbTxt{R"(
+input_stream: "in1"
+input_stream: "in2"
+input_stream: "in3"
+output_stream: "out1"
+output_stream: "out2"
+output_stream: "out3"
+node {
+  calculator: "StreamingMultiInputsOutputsTestCalculator"
+  input_stream: "in1"
+  input_stream: "in2"
+  input_stream: "in3"
+  output_stream: "out1"
+  output_stream: "out2"
+  output_stream: "out3"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in1", mediapipe_packet_type_enum::OVTENSOR}, {"in2", mediapipe_packet_type_enum::OVTENSOR}, {"in3", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out1", mediapipe_packet_type_enum::OVTENSOR}, {"out2", mediapipe_packet_type_enum::OVTENSOR}, {"out3", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in1", "in2", "in3"}, {"out1", "out2", "out3"}, {}};
+
+    std::mutex mtx;
+    const int64_t timestamp = 64;
+
+    prepareRequest(this->firstRequest, {{"in1", 3.5f}, {"in2", 7.2f}, {"in3", 102.4f}}, timestamp);
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(DisconnectWhenNotified(mtx));
+
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out1", 4.5f}}, timestamp))
+        .WillOnce(SendWithTimestamp({{"out2", 8.2f}}, timestamp))
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out3", 103.4f}}, timestamp, mtx));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
@@ -241,7 +305,8 @@ node {
 // Positive:
 // [x] Send X requests receive X responses (regular)
 // [x] Send 1 request receive X responses (cycle)
-// Send X requests with same timestamp, receive Y responses (partial, sync MP side)
+// [x] Send X requests with same timestamp, receive Y responses (partial, sync MP side)
+// [x] Send 1 request, receive Y responses (sync client side)
 
 // Automatic timestamping
 // Manual timestamping
@@ -257,3 +322,4 @@ node {
 // Error when closing all packet sources
 // Error waiting until done
 // Error when writing to disconnected client
+// Wrong timestamping (non monotonous) on client side
