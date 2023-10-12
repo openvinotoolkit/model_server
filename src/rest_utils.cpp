@@ -27,6 +27,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include "tensorflow_serving/util/json_tensor.h"
 #pragma GCC diagnostic pop
 #include "kfs_frontend/kfs_utils.hpp"
@@ -203,7 +204,7 @@ Status makeJsonFromPredictResponse(
     SPDLOG_DEBUG("MakeJsonFromTensors call: {:.3f} ms", timer.elapsed<microseconds>(MAKE_JSON_FROM_TENSORS) / 1000);
 
     if (!tf_status.ok()) {
-        SPDLOG_ERROR("Creating json from tensors failed: {}", tf_status.error_message());
+        SPDLOG_ERROR("Creating json from tensors failed: {}", tf_status.message());
         return StatusCode::REST_PROTO_TO_STRING_ERROR;
     }
 

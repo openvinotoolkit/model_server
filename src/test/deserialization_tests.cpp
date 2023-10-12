@@ -164,6 +164,8 @@ TEST_F(CAPIPredictRequest, ShouldSuccessForSupportedPrecision) {
 class DeserializeCAPITensor : public CAPIPredict {};
 class DeserializeCAPITensorProtoNegative : public CAPIPredict {};
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(GRPCPredictRequest);
+
 class GRPCPredictRequest : public TensorflowGRPCPredict {
 public:
     void SetUp() {
@@ -478,8 +480,7 @@ TEST_F(KserveGRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
-    EXPECT_TRUE(status.ok());
-    std::cout << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
 
 class KserveGRPCPredictRequestNegative : public KserveGRPCPredictRequest {
@@ -555,7 +556,6 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<KserveGRPCPredictRequestNegative::ParamType>& info) {
         return toString(info.param);
     });
-
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
     GRPCPredictRequestNegative,
@@ -563,17 +563,6 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<GRPCPredictRequestNegative::ParamType>& info) {
         return toString(info.param);
     });
-
-std::vector<std::pair<ovms::Precision, bool>> KserveGRPCPredictRequestParams = cartesianProduct(SUPPORTED_KFS_INPUT_PRECISIONS, {true, false});
-
-INSTANTIATE_TEST_SUITE_P(
-    TestDeserialize,
-    KserveGRPCPredictRequest,
-    ::testing::ValuesIn(KserveGRPCPredictRequestParams),
-    [](const ::testing::TestParamInfo<KserveGRPCPredictRequest::ParamType>& info) {
-        return toString(info.param);
-    });
-
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
     GRPCPredictRequest,

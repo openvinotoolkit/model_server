@@ -135,6 +135,10 @@ cc_shared_library(
         "@FP16//:__subpackages__",
         "@flatbuffers//:__subpackages__",
         "@ruy//:__subpackages__",
+        "@azure//:__subpackages__",
+        "@cpprest//:__subpackages__",
+        "@boringssl//:__subpackages__",
+        "@linux_opencv//:__subpackages__",
     ] + select({
         "//:not_disable_mediapipe": [
             "@mediapipe//:__subpackages__",
@@ -425,6 +429,8 @@ cc_library(
             "//src:not_disable_python": [
                     "ovms_py_tensor.hpp",
                     "ovms_py_tensor.cpp",
+                    "pythoninterpretermodule.hpp",
+                    "pythoninterpretermodule.cpp",
                     "mediapipe_calculators/python_backend_calculator.cc",
                 ],
             "//src:disable_python": []
@@ -449,8 +455,8 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
-        "-Werror",
         "-fvisibility=hidden",# Needed for pybind targets
+        "-Werror",
         ] + select({
             "//conditions:default": [
             ],
@@ -869,6 +875,7 @@ cc_test(
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/mediapipeflow_test.cpp",
+                "test/mediapipe_framework_test.cpp",
                 "test/mediapipe_validation_test.cpp",
                 "test/mediapipe/ovms_kfs_calculator.cc",
                 "test/mediapipe/ovms_image_input_calculator.cc",
@@ -935,6 +942,10 @@ cc_test(
         "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
         "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
         "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
+        "test/mediapipe/negative/config_exception_during_process.json",
+        "test/mediapipe/negative/config_no_calc_output_stream.json",
+        "test/mediapipe/negative/graph_exception_during_process.pbtxt",
+        "test/mediapipe/negative/graph_no_calc_output_stream.pbtxt",
         "test/mediapipe/relative_paths/config_mp_passthrough.json",
         "test/mediapipe/relative_paths/config_relative_dummy_negative.json",
         "test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json",
@@ -986,6 +997,7 @@ cc_test(
         "@com_google_googletest//:gtest",
         ] + select({
             "//conditions:default": [
+                "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
             ],
             "//src:disable_mediapipe" : [],

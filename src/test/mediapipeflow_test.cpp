@@ -13,9 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <chrono>
 #include <fstream>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <thread>
 
@@ -23,6 +25,12 @@
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
 #include <sys/stat.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/port/canonical_errors.h"
+#pragma GCC diagnostic pop
 
 #include "../config.hpp"
 #include "../dags/pipelinedefinition.hpp"
@@ -64,23 +72,9 @@ protected:
     const Precision precision = Precision::FP32;
     std::unique_ptr<std::thread> t;
     std::string port = "9178";
+
     void SetUpServer(const char* configPath) {
-        server.setShutdownRequest(0);
-        randomizePort(this->port);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
-        t.reset(new std::thread([&argc, &argv, this]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (!server.isReady()) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        ::SetUpServer(this->t, this->server, this->port, configPath);
     }
 
     void SetUp() override {
@@ -971,7 +965,8 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
     preparePredictRequest(request, inputsMeta, requestData1);
     request.mutable_model_name()->assign(modelName);
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    auto status = impl.ModelInfer(nullptr, &request, &response);
+    ASSERT_EQ(status.error_code(), grpc::StatusCode::OK) << status.error_message();
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
@@ -2096,6 +2091,141 @@ TEST(MediapipeStreamTypes, Recognition) {
 //     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 //     manager.join();
 // }
+//
+
+std::promise<void> unblockLoading2ndGraph;
+namespace mediapipe {
+class LongLoadingCalculator : public CalculatorBase {
+public:
+    static absl::Status GetContract(CalculatorContract* cc) {
+        auto signal = unblockLoading2ndGraph.get_future();
+        signal.get();
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            cc->Inputs().Tag(tag).Set<ov::Tensor>();
+        }
+        for (const std::string& tag : cc->Outputs().GetTags()) {
+            cc->Outputs().Tag(tag).Set<ov::Tensor>();
+        }
+        return absl::OkStatus();
+    }
+    absl::Status Close(CalculatorContext* cc) final {
+        return absl::OkStatus();
+    }
+    absl::Status Open(CalculatorContext* cc) final {
+        return absl::OkStatus();
+    }
+    absl::Status Process(CalculatorContext* cc) final {
+        return absl::OkStatus();
+    }
+};
+REGISTER_CALCULATOR(LongLoadingCalculator);
+}  // namespace mediapipe
+class MediapipeFlowStartTest : public TestWithTempDir {
+protected:
+    bool isMpReady(const std::string name) {
+        ovms::Server& server = ovms::Server::instance();
+        SPDLOG_ERROR("serverReady:{}", server.isReady());
+        const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+        if (!servableModule) {
+            return false;
+        }
+        ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+        auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName(name);
+        if (!mediapipeGraphDefinition) {
+            return false;
+        }
+        return mediapipeGraphDefinition->getStatus().isAvailable();
+    }
+    void stopServer() {
+        OVMS_Server* cserver;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+    }
+    void TearDown() {
+        OVMS_Server* cserver = nullptr;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+        bool serverLive = false;
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerLive(cserver, &serverLive));
+        if (serverLive) {
+            stopServer();
+        }
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(0);
+    }
+};
+
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPass) {
+    // 1st thread starts to load OVMS with C-API but we make it stuck on 2nd graph
+    // 2nd thread as soon as sees that 1st MP graph is ready executest inference
+    std::string configFilePath = directoryPath + "/config.json";
+    const std::string configContent = R"(
+{
+    "model_config_list": [
+        {"config": {
+            "name": "dummy",
+            "base_path": "/ovms/src/test/dummy"
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeDummy",
+        "graph_path": "/ovms/src/test/mediapipe/graphdummyadapterfull.pbtxt"
+    },
+    {
+        "name": "mediapipeLongLoading",
+        "graph_path": "/ovms/src/test/mediapipe/negative/graph_long_loading.pbtxt"
+    }
+    ]
+}
+)";
+
+    createConfigFileWithContent(configContent, configFilePath);
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    std::string port{"9000"};
+    randomizePort(port);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--config_path",
+        (char*)configFilePath.c_str(),
+        (char*)"--port",
+        (char*)port.c_str()};
+    int argc = 5;
+    std::thread t([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    });
+
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string servableName{"mediapipeDummy"};
+    request.Clear();
+    response.Clear();
+    const Precision precision = Precision::FP32;
+    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData{13.5, 0., 0, 0., 0., 0., 0., 0, 3., 67.};
+    preparePredictRequest(request, inputsMeta, requestData);
+    request.mutable_model_name()->assign(servableName);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    while (!isMpReady(servableName) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
+    }
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    if (!grpcModule) {
+        this->stopServer();
+        t.join();
+        throw 42;
+    }
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    unblockLoading2ndGraph.set_value();
+    size_t dummysInTheGraph = 1;
+    checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, servableName);
+    this->stopServer();
+    t.join();
+}
 
 INSTANTIATE_TEST_SUITE_P(
     Test,

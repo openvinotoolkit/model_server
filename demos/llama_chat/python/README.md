@@ -67,16 +67,16 @@ General knowledge:
 ```bash
 python3 client.py --url localhost:9000 --question "How many corners there are in square?" --seed 14140 --actor general-knowledge
 
- Four. [EOS]%
+ Four. [EOS]
 ```
 
 Python programmer:
 ```bash
-python3 client.py --url localhost:90000 --question "Write python function to sum 3 numbers." --seed 1332 --actor python-programmer
+python3 client.py --url localhost:9000 --question "Write python function to sum 3 numbers." --seed 1332 --actor python-programmer
 
 def sum_three_numbers(a,b,c):
    result = a + b + c
-   return result [EOS]%
+   return result [EOS]
 ```
 
 >NOTE: You can edit the pre-prompt in `client.py` for your use case.

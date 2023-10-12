@@ -997,7 +997,8 @@ TEST_F(TestCustomLoader, CustomLoaderGetMetaData) {
        "name": "a"
       }
      },
-     "methodName": ""
+     "methodName": "",
+     "defaults": {}
     }
    }
   }
