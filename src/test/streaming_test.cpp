@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
-#include <thread>
 #include <mutex>
 
 #include <gmock/gmock.h>
@@ -82,13 +81,6 @@ static auto Disconnect() {
     };
 }
 
-// static auto DisconnectDelayed(int milliseconds) {
-//     return [milliseconds](::inference::ModelInferRequest* req) {
-//         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-//         return false;
-//     };
-// }
-
 static auto DisconnectWhenNotified(std::mutex& mtx) {
     return [&mtx](::inference::ModelInferRequest* req) {
         std::lock_guard<std::mutex> lock(mtx);  // waits for lock to be released
@@ -111,12 +103,21 @@ static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> con
     };
 }
 
-static auto Send(std::vector<std::tuple<std::string, float>> content) {
-    return [content](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-        assertResponse(msg, content);
+static auto ReceiveWithTimestampWhenNotified(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::mutex& mtx) {
+    return [content, timestamp, &mtx](::inference::ModelInferRequest* req) {
+        std::lock_guard<std::mutex> lock(mtx);
+        prepareRequest(*req, content);
+        req->set_id(std::to_string(timestamp));
         return true;
     };
 }
+
+// static auto Send(std::vector<std::tuple<std::string, float>> content) {
+//     return [content](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+//         assertResponse(msg, content);
+//         return true;
+//     };
+// }
 
 static auto SendWithTimestamp(std::vector<std::tuple<std::string, float>> content, int64_t timestamp) {
     return [content, timestamp](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
@@ -134,8 +135,8 @@ static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, fl
     };
 }
 
-// Regular case
-TEST_F(StreamingTest, SingleStreamSend3Receive3) {
+// Regular case + automatic timestamping server-side
+TEST_F(StreamingTest, SingleStreamSend3Receive3AutomaticTimestamp) {
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -155,22 +156,58 @@ node {
         {"in"}, {"out"}, {}};
 
     // Mock receiving 3 requests and disconnection
-    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});  // no timestamp specified, server will assign one
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(Receive({{"in", 7.2f}}))
-        .WillOnce(Receive({{"in", 102.4f}}))
+        .WillOnce(Receive({{"in", 7.2f}}))    // no timestamp specified, server will assign one
+        .WillOnce(Receive({{"in", 102.4f}}))  // no timestamp specified, server will assign one
         .WillOnce(Disconnect());
 
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(Send({{"out", 4.5f}}))
-        .WillOnce(Send({{"out", 8.2f}}))
-        .WillOnce(Send({{"out", 103.4f}}));
+        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"out", 8.2f}}, 1))
+        .WillOnce(SendWithTimestamp({{"out", 103.4f}}, 2));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
-// Generative AI case
+// Regular case + manual timestamping client-side
+TEST_F(StreamingTest, SingleStreamSend3Receive3ManualTimestamp) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "StreamingTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    // Mock receiving 3 requests with manually (client) assigned descending order of timestamp and disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);  // first request with timestamp 3
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 12))   // this is correct because 12 > 3
+        .WillOnce(ReceiveWithTimestamp({{"in", 99.9f}}, 99))  // this is also correct because 99 > 12
+        .WillOnce(Disconnect());
+
+    // Expect 1 response because first request had not malformed the timestamp
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 3))
+        .WillOnce(SendWithTimestamp({{"out", 8.2f}}, 12))
+        .WillOnce(SendWithTimestamp({{"out", 100.9f}}, 99));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+// Generative AI case + automatic timestamping server-side
 TEST_F(StreamingTest, SingleStreamSend1Receive3) {
     const std::string pbTxt{R"(
 input_stream: "in"
@@ -205,10 +242,11 @@ node {
         .WillOnce(Disconnect());
 
     // Expect 3 responses (cycle)
+    // The StreamingCycleTestCalculator produces increasing timestamps
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(Send({{"out", 4.5f}}))
-        .WillOnce(Send({{"out", 5.5f}}))
-        .WillOnce(Send({{"out", 6.5f}}));
+        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 1))
+        .WillOnce(SendWithTimestamp({{"out", 5.5f}}, 2))
+        .WillOnce(SendWithTimestamp({{"out", 6.5f}}, 3));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
@@ -301,6 +339,39 @@ node {
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
+TEST_F(StreamingTest, WrongOrderOfManualTimestamps) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "StreamingTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    std::mutex mtx;
+
+    // Mock receiving 3 requests with manually (client) assigned descending order of timestamp and disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);  // first request with timestamp 3
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWithTimestampWhenNotified({{"in", 7.2f}}, 2, mtx));  // This should break the execution loop because 2<3
+
+    // Expect 1 response because first request had not malformed the timestamp
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, 3, mtx));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
+}
+
 // TODO
 // Positive:
 // [x] Send X requests receive X responses (regular)
@@ -308,8 +379,8 @@ node {
 // [x] Send X requests with same timestamp, receive Y responses (partial, sync MP side)
 // [x] Send 1 request, receive Y responses (sync client side)
 
-// Automatic timestamping
-// Manual timestamping
+// [x] Automatic timestamping
+// [x] Manual timestamping
 
 // Negative:
 // Error during graph initialization (bad pbtxt)
@@ -322,4 +393,4 @@ node {
 // Error when closing all packet sources
 // Error waiting until done
 // Error when writing to disconnected client
-// Wrong timestamping (non monotonous) on client side
+// [x] Wrong timestamping (non monotonous) on client side
