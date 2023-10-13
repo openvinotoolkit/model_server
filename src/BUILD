@@ -943,7 +943,7 @@ cc_test(
         "test/mediapipe/negative/config_exception_during_process.json",
         "test/mediapipe/negative/config_no_calc_output_stream.json",
         "test/mediapipe/negative/graph_exception_during_process.pbtxt",
-        "test/mediapipe/negative/graph_no_calc_output_stream.pbtxt",
+        "test/mediapipe/negative/graph_no_calc_output_stream/graph_no_calc_output_stream.pbtxt",
         "test/mediapipe/relative_paths/config_mp_passthrough.json",
         "test/mediapipe/relative_paths/config_relative_dummy_negative.json",
         "test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json",

@@ -1607,11 +1607,11 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePaths) {
     auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
-    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("graph1");
     ASSERT_NE(definitionAdd, nullptr);
     EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
 
-    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graph2");
     ASSERT_NE(definitionFull, nullptr);
     EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
 
@@ -1625,14 +1625,14 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
     auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_add_subconfig.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
-    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graph1");
     ASSERT_NE(definitionFull, nullptr);
     EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
     auto model = manager.findModelByName("dummy1");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
 
-    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("graph2");
     ASSERT_NE(definitionAdd, nullptr);
     EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
     model = manager.findModelByName("dummy2");
