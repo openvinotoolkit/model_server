@@ -965,6 +965,7 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
             OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");
             resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
             stream.Write(resp);
+            // log writing to disconnected client
             return absl::OkStatus();
         }),
             "output stream observer installation", StatusCode::UNKNOWN_ERROR);  // TODO: specific error code
@@ -984,6 +985,7 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
         "partial deserialization of first request");
 
     // Read loop
+    // TODO: WHy
     auto req = std::make_shared<::inference::ModelInferRequest>();
     while (stream.Read(req.get())) {
         OVMS_RETURN_ON_FAIL(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
