@@ -962,17 +962,18 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
         MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name](const ::mediapipe::Packet& packet) -> absl::Status {
             ::inference::ModelStreamInferResponse resp;
             // TODO: Add proper serialization
-            OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");
+            OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");  // TODO: Missing test
             resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
-            stream.Write(resp);
-            // log writing to disconnected client
+            if (!stream.Write(resp)) {
+                return absl::Status(absl::StatusCode::kCancelled, "client disconnected");
+            }
             return absl::OkStatus();
         }),
             "output stream observer installation", StatusCode::UNKNOWN_ERROR);  // TODO: specific error code
     }
 
     // Run
-    MP_RETURN_ON_FAIL(graph.StartRun({}), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);  // TODO: Input side packets
+    MP_RETURN_ON_FAIL(graph.StartRun({}), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);  // TODO: Input side packets / missing test
 
     // Deserialize first request
     OVMS_RETURN_ON_FAIL(this->partialDeserialize(
@@ -997,16 +998,11 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
     }
 
     // Close input streams
-    MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "closing all packet sources", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
-    // for (const auto& name : this->inputNames) {
-    //     MP_RETURN_ON_FAIL(graph.CloseInputStream(name), "closing input stream", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
-    // }
+    MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "closing all packet sources", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error / missing test
 
     // Wait until done
     // TODO: Add guard that closes input streams and waits until done
     MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
-
-    // TODO: Handle exceptions
 
     return StatusCode::OK;
 }

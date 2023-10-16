@@ -57,6 +57,18 @@ static void prepareRequest(::inference::ModelInferRequest& request, const std::v
     }
 }
 
+static void prepareInvalidRequest(::inference::ModelInferRequest& request, const std::vector<std::string>& inputs, std::optional<int64_t> timestamp = std::nullopt) {
+    request.Clear();
+    int i = 0;
+    for (auto const& name : inputs) {
+        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {1.0f /*data*/}, false);
+        request.mutable_raw_input_contents()->Mutable(i++)->clear();
+    }
+    if (timestamp.has_value()) {
+        request.set_id(std::to_string(timestamp.value()));
+    }
+}
+
 static void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent, std::optional<int64_t> expectedTimestamp = std::nullopt) {
     ASSERT_EQ(resp.infer_response().outputs_size(), expectedContent.size());
     ASSERT_EQ(resp.infer_response().raw_output_contents_size(), expectedContent.size());
@@ -119,16 +131,22 @@ static auto ReceiveWithTimestampWhenNotified(std::vector<std::tuple<std::string,
     };
 }
 
-// static auto Send(std::vector<std::tuple<std::string, float>> content) {
-//     return [content](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-//         assertResponse(msg, content);
-//         return true;
-//     };
-// }
+static auto ReceiveInvalidWithTimestampWhenNotified(std::vector<std::string> inputs, int64_t timestamp, std::mutex& mtx) {
+    return [inputs, timestamp, &mtx](::inference::ModelInferRequest* req) {
+        SPDLOG_DEBUG("Waiting to preparing the request with timestamp: {}", timestamp);
+        std::lock_guard<std::mutex> lock(mtx);
+        SPDLOG_DEBUG("Preparing the request with timestamp: {} after waiting", timestamp);
+        prepareInvalidRequest(*req, inputs);
+        req->set_id(std::to_string(timestamp));
+        return true;
+    };
+}
 
-static auto DisconnectOnWrite() {
-    return [](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+static auto DisconnectOnWriteAndNotifyEnd(std::mutex& mtx) {
+    mtx.lock();
+    return [&mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         SPDLOG_DEBUG("Disconnecting on write");
+        mtx.unlock();
         return false;
     };
 }
@@ -414,7 +432,7 @@ node {
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
 }
 
-TEST_F(StreamingTest, WritingToDisconnectedClient) {
+TEST_F(StreamingTest, ExitOnDisconnectionDuringRead) {
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -433,15 +451,133 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}};
 
-    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    prepareRequest(this->firstRequest, {});
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(Disconnect());
 
-    // Expect 3 responses
-    EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(DisconnectOnWrite());
+    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+TEST_F(StreamingTest, ErrorOnDisconnectionDuringWrite) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "StreamingTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    std::mutex mtx;
+
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(DisconnectWhenNotified(mtx));
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(DisconnectOnWriteAndNotifyEnd(mtx));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::UNKNOWN_ERROR);  // TODO
+}
+
+TEST_F(StreamingTest, InvalidGraph) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "StreamingTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+  input_stream_handler {
+    input_stream_handler: 'NonExistingStreamHandler'
+  }
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(StreamingTest, ErrorDuringFirstRequestDeserialization) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "StreamingTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    prepareInvalidRequest(this->firstRequest, {"in"});  // no timestamp specified, server will assign one
+
+    EXPECT_CALL(this->stream, Read(_)).Times(0);
+    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::INVALID_CONTENT_SIZE);
+}
+
+TEST_F(StreamingTest, ErrorDuringSubsequentRequestDeserializations) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "StreamingTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    std::mutex mtx;
+
+    // Mock receiving 3 requests, the last one malicious, then disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // no timestamp specified, server will assign one
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                   // no timestamp specified, server will assign one
+        .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx));  // no timestamp specified, server will assign one
+
+    // Expect 2 responses, no more due to error
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0))
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 8.2f}}, 1, mtx));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::INVALID_CONTENT_SIZE);
 }
 
 // TODO
@@ -455,14 +591,16 @@ node {
 // [x] Manual timestamping
 
 // Negative:
-// Error during graph initialization (bad pbtxt)
+// [:] Calculators throwing - MP does not allow catching
+// [x] Error during graph initialization (bad pbtxt)
 // [x] Error installing observer (wrong outputName)
+// Timestamp not an int64 ?
 // Error during serialization - how to mock such packet?
 // Error during startrun - how?
 // Error during graph execution - Process() returning non Ok?
-// Error during first deserialization
-// Error during subsequent deserializations
-// Error when closing all packet sources (cannot, this function never fails)
+// [x] Error during first deserialization
+// [x] Error during subsequent deserializations
+// [:] Error when closing all packet sources (cannot, this function never fails)
 // Error waiting until done (this will return any an error during execution - has list of errors)
 // [x] Error when writing to disconnected client
 // [x] Wrong timestamping (non monotonous) on client side
