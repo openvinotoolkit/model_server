@@ -14,16 +14,16 @@
 # limitations under the License.
 #
 
-FROM golang:1.17.10
+#FROM golang:1.17.10
+FROM golang:1.18
 ARG http_proxy
 
 RUN echo "Acquire::http::Proxy \"$http_proxy\";" > /etc/apt/apt.conf.d/proxy.conf
 RUN apt-get update && \
     apt-get -y install git unzip build-essential autoconf libtool protobuf-compiler libprotobuf-dev
-RUN go get github.com/golang/protobuf/protoc-gen-go
 
-# Install Go OpenCV (to simplify postprocessing)
-RUN apt-get install -y sudo && \
+RUN apt-get update && apt-get install -y sudo && \
+    rm -rf /var/lib/apt/lists/* && \
     git clone https://github.com/hybridgroup/gocv.git && \
     cd gocv && \
     make install
@@ -32,21 +32,18 @@ RUN mkdir /app
 COPY . /app
 WORKDIR /app
 
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3
+
 # Compile API
-RUN protoc -I apis/ apis/tensorflow_serving/apis/*.proto --go_out=plugins=grpc:.
-RUN protoc -I apis/ apis/tensorflow/core/framework/*.proto --go_out=plugins=grpc:.
+RUN protoc -I apis/ apis/tensorflow_serving/apis/*.proto --go_out="./" --go-grpc_out="./"
+RUN protoc -I apis/ apis/tensorflow/core/framework/*.proto --go_out="./" --go-grpc_out="./"
 
 # Move compiled protos under GOROOT
 RUN mv tensorflow /usr/local/go/src/
 RUN mv tensorflow_serving /usr/local/go/src/
 
-## we run go build to compile the binary
-RUN go mod init ovmsclient
 RUN go mod tidy
-# Version <=v1.57 needed due to old golang 1.17
-# It also needs to be installed after "go mod tidy", otherwise version is somehow overriden to latest
-RUN go get google.golang.org/grpc@v1.57.0
 RUN go build .
-
 
 ENTRYPOINT ["/app/ovmsclient"]
