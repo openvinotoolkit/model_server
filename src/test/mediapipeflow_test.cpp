@@ -1607,11 +1607,11 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePaths) {
     auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
-    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("graph1");
     ASSERT_NE(definitionAdd, nullptr);
     EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
 
-    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graph2");
     ASSERT_NE(definitionFull, nullptr);
     EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
 
@@ -1625,14 +1625,14 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
     auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_add_subconfig.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
-    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPTFULL");
+    auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graph1");
     ASSERT_NE(definitionFull, nullptr);
     EXPECT_EQ(definitionFull->getStatus().isAvailable(), true);
     auto model = manager.findModelByName("dummy1");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
 
-    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
+    auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("graph2");
     ASSERT_NE(definitionAdd, nullptr);
     EXPECT_EQ(definitionAdd->getStatus().isAvailable(), true);
     model = manager.findModelByName("dummy2");
@@ -1706,6 +1706,7 @@ public:
     static const std::string configFileWithGraphPathToReplaceWithoutModel;
     static const std::string configFileWithGraphPathToReplaceAndSubconfig;
     static const std::string configFileWithEmptyBasePath;
+    static const std::string configFileWithNoBasePath;
     static const std::string configFileWithoutGraph;
     static const std::string pbtxtContent;
     static const std::string pbtxtContentNonexistentCalc;
@@ -1750,6 +1751,23 @@ const std::string MediapipeConfigChanges::configFileWithEmptyBasePath = R"(
     {
         "name":"mediapipeGraph",
         "base_path":""
+    }
+    ]
+}
+)";
+
+const std::string MediapipeConfigChanges::configFileWithNoBasePath = R"(
+{
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeGraph"
     }
     ]
 }
@@ -1902,6 +1920,34 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
 TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
     std::string configFileContent = configFileWithEmptyBasePath;
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphName = "mediapipeGraph";
+    std::string graphFilePath = directoryPath + "/" + graphName + "/graph.pbtxt";
+
+    const std::string inputName{"in\""};
+    const std::string newInputName{"in2\""};
+
+    createConfigFileWithContent(configFileContent, configFilePath);
+    std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
+    std::filesystem::create_directories(defaultGraphDirectoryPath);
+    createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
+    ConstructorEnabledModelManager modelManager;
+    modelManager.loadConfig(configFilePath);
+    auto model = modelManager.findModelByName("dummy");
+    ASSERT_NE(nullptr, model->getDefaultModelInstance());
+    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    auto definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
+    EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+}
+
+TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
+    std::string graphPbtxtFileContent = pbtxtContent;
+    std::string configFileContent = configFileWithNoBasePath;
     std::string configFilePath = directoryPath + "/config.json";
     std::string graphName = "mediapipeGraph";
     std::string graphFilePath = directoryPath + "/" + graphName + "/graph.pbtxt";

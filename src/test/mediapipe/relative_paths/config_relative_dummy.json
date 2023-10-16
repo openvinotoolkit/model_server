@@ -14,12 +14,12 @@
     ],
     "mediapipe_config_list": [
         {
-            "name":"mediapipeAddADAPTFULL",
-            "graph_path":"graph1/graphaddadapterfull.pbtxt"
+            "name":"graph1",
+            "graph_path":"graphaddadapterfull.pbtxt"
         },
         {
-            "name":"mediapipeAddADAPT",
-            "graph_path":"graph2/graphadd.pbtxt"
+            "name":"graph2",
+            "graph_path":"graphadd.pbtxt"
         }
     ]
 }
