@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-#FROM golang:1.17.10
 FROM golang:1.18
 ARG http_proxy
 
