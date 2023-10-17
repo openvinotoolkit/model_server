@@ -1007,7 +1007,7 @@ cc_test(
         "-Wno-unknown-pragmas",
         "-Werror",
         "-Isrc",
-        "-fconcepts",
+        "-fconcepts", # for gmock related utils
         "-fvisibility=hidden",# Needed for pybind targets
     ],
 )
