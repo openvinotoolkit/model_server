@@ -153,7 +153,33 @@ public:
     }
 };
 
+class ErrorInProcessTestCalculator : public CalculatorBase {
+public:
+    static absl::Status GetContract(CalculatorContract* cc) {
+        LOG(INFO) << "ErrorInProcessTestCalculator::GetContract";
+        cc->Inputs().Index(0).Set<ov::Tensor>();
+        cc->Outputs().Index(0).Set<ov::Tensor>();
+        return absl::OkStatus();
+    }
+
+    absl::Status Close(CalculatorContext* cc) final {
+        LOG(INFO) << "ErrorInProcessTestCalculator::Close";
+        return absl::OkStatus();
+    }
+
+    absl::Status Open(CalculatorContext* cc) final {
+        LOG(INFO) << "ErrorInProcessTestCalculator::Open";
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(CalculatorContext* cc) final {
+        LOG(INFO) << "ErrorInProcessTestCalculator::Process";
+        return absl::Status(absl::StatusCode::kInvalidArgument, "Error");
+    }
+};
+
 REGISTER_CALCULATOR(StreamingTestCalculator);
 REGISTER_CALCULATOR(StreamingCycleTestCalculator);
 REGISTER_CALCULATOR(StreamingMultiInputsOutputsTestCalculator);
+REGISTER_CALCULATOR(ErrorInProcessTestCalculator);
 }  // namespace mediapipe

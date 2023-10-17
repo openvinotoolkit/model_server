@@ -909,17 +909,15 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         }                                                                        \
     }
 
-// TODO: Add proper error status
 #define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message)                                       \
     {                                                                                     \
         auto status = code;                                                               \
         if (!status.ok()) {                                                               \
             SPDLOG_DEBUG("OVMS_RETURN_MP_ERROR_ON_FAIL {} {}", message, status.string()); \
-            return absl::InvalidArgumentError("TODO");                                    \
+            return absl::Status(absl::StatusCode::kCancelled, message);                   \
         }                                                                                 \
     }
 
-// Like Holder, but does not own its data.
 template <typename T>
 class HolderWithRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
     std::shared_ptr<const ::inference::ModelInferRequest> req;
@@ -930,11 +928,15 @@ public:
         req(req) {}
 };
 
-// TODO: To be exchanged with proper deserialization
+// TODO: Add support for other types CVS-122328/CVS-122329
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph) {
-    auto requestTimestamp = stoi64(request->id());  // TODO: Decide if deserialize from id or int parameter
-    if (requestTimestamp.has_value()) {
-        currentStreamTimestamp = ::mediapipe::Timestamp(requestTimestamp.value());
+    if (!request->id().empty()) {
+        auto requestTimestamp = stoi64(request->id());  // TODO: Decide if deserialize from id or int parameter
+        if (requestTimestamp.has_value()) {
+            currentStreamTimestamp = ::mediapipe::Timestamp(requestTimestamp.value());
+        } else {
+            return StatusCode::MEDIAPIPE_INVALID_TIMESTAMP;
+        }
     }
     for (const auto& input : request->inputs()) {
         std::unique_ptr<ov::Tensor> tensor;
@@ -953,58 +955,66 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::infere
 }
 
 Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream) {
-    // Init
-    ::mediapipe::CalculatorGraph graph;
-    MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+    try {
+        // Init
+        ::mediapipe::CalculatorGraph graph;
+        MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 
-    // Observers
-    for (const auto& name : this->outputNames) {
-        MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name](const ::mediapipe::Packet& packet) -> absl::Status {
-            ::inference::ModelStreamInferResponse resp;
-            // TODO: Add proper serialization
-            OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");  // TODO: Missing test
-            resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
-            if (!stream.Write(resp)) {
-                return absl::Status(absl::StatusCode::kCancelled, "client disconnected");
-            }
-            return absl::OkStatus();
-        }),
-            "output stream observer installation", StatusCode::UNKNOWN_ERROR);  // TODO: specific error code
-    }
-
-    // Run
-    MP_RETURN_ON_FAIL(graph.StartRun({}), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);  // TODO: Input side packets / missing test
-
-    // Deserialize first request
-    OVMS_RETURN_ON_FAIL(this->partialDeserialize(
-                            std::shared_ptr<const ::inference::ModelInferRequest>(&firstRequest,
-                                // Custom deleter to avoid deallocation by custom holder
-                                // Conversion to shared_ptr is required for single deserialization method
-                                // for first and subsequent requests
-                                [](const ::inference::ModelInferRequest*) {}),
-                            graph),
-        "partial deserialization of first request");
-
-    // Read loop
-    // TODO: WHy
-    auto req = std::make_shared<::inference::ModelInferRequest>();
-    while (stream.Read(req.get())) {
-        OVMS_RETURN_ON_FAIL(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
-        // TODO: Why after deserialization?
-        if (graph.HasError()) {
-            break;
+        // Installing observers
+        for (const auto& name : this->outputNames) {
+            MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name](const ::mediapipe::Packet& packet) -> absl::Status {
+                try {
+                    ::inference::ModelStreamInferResponse resp;
+                    // TODO: Add support for other types CVS-122327/CVS-122329
+                    OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");  // TODO: Missing test
+                    resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
+                    if (!stream.Write(resp)) {
+                        return absl::Status(absl::StatusCode::kCancelled, "client disconnected");
+                    }
+                    return absl::OkStatus();
+                } catch (...) {
+                    return absl::Status(absl::StatusCode::kCancelled, "error in serialization");
+                }
+            }),
+                "output stream observer installation", StatusCode::INTERNAL_ERROR);  // Should never happen for validated graphs
         }
-        req = std::make_shared<::inference::ModelInferRequest>();
+
+        // Launch
+        MP_RETURN_ON_FAIL(graph.StartRun({}), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);  // TODO: Input side packets / missing test
+
+        // Deserialize first request
+        OVMS_RETURN_ON_FAIL(this->partialDeserialize(
+                                std::shared_ptr<const ::inference::ModelInferRequest>(&firstRequest,
+                                    // Custom deleter to avoid deallocation by custom holder
+                                    // Conversion to shared_ptr is required for unified deserialization method
+                                    // for first and subsequent requests
+                                    [](const ::inference::ModelInferRequest*) {}),
+                                graph),
+            "partial deserialization of first request");
+
+        // Read loop
+        // Here we create ModelInferRequest with shared ownership,
+        // and move it down to custom packet holder to ensure
+        // lifetime is extended to lifetime of deserialized Packets.
+        auto req = std::make_shared<::inference::ModelInferRequest>();
+        while (stream.Read(req.get())) {
+            OVMS_RETURN_ON_FAIL(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
+            if (graph.HasError()) {
+                break;
+            }
+            req = std::make_shared<::inference::ModelInferRequest>();
+        }
+
+        // Close input streams
+        MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "closing all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
+
+        // Wait until done
+        MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+
+        return StatusCode::OK;
+    } catch (...) {
+        return StatusCode::UNKNOWN_ERROR;
     }
-
-    // Close input streams
-    MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "closing all packet sources", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error / missing test
-
-    // Wait until done
-    // TODO: Add guard that closes input streams and waits until done
-    MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
-
-    return StatusCode::OK;
 }
 
 }  // namespace ovms
