@@ -95,8 +95,8 @@ public:
             ((float*)(output1.data()))[i] = ((float*)(input.data()))[i] + 1.0f;
             ((float*)(output2.data()))[i] = ((float*)(input.data()))[i] + 1.0f;
         }
-        cc->Outputs().Index(0).Add(new ov::Tensor(output1), Timestamp(cycle_iteration));  // TODO: ?
-        cc->Outputs().Index(1).Add(new ov::Tensor(output2), Timestamp(cycle_iteration));  // TODO: ?
+        cc->Outputs().Index(0).Add(new ov::Tensor(output1), Timestamp(cycle_iteration));
+        cc->Outputs().Index(1).Add(new ov::Tensor(output2), Timestamp(cycle_iteration));
         return absl::OkStatus();
     }
 };
@@ -146,9 +146,9 @@ public:
             ((float*)(output2.data()))[i] = ((float*)(input2.data()))[i] + 1.0f;
             ((float*)(output3.data()))[i] = ((float*)(input3.data()))[i] + 1.0f;
         }
-        cc->Outputs().Index(0).Add(new ov::Tensor(output1), cc->InputTimestamp());  // TODO: ?
-        cc->Outputs().Index(1).Add(new ov::Tensor(output2), cc->InputTimestamp());  // TODO: ?
-        cc->Outputs().Index(2).Add(new ov::Tensor(output3), cc->InputTimestamp());  // TODO: ?
+        cc->Outputs().Index(0).Add(new ov::Tensor(output1), cc->InputTimestamp());
+        cc->Outputs().Index(1).Add(new ov::Tensor(output2), cc->InputTimestamp());
+        cc->Outputs().Index(2).Add(new ov::Tensor(output3), cc->InputTimestamp());
         return absl::OkStatus();
     }
 };

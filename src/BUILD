@@ -880,7 +880,6 @@ cc_test(
                 "test/mediapipe/ovms_kfs_calculator.cc",
                 "test/mediapipe/ovms_image_input_calculator.cc",
                 "mediapipe_calculators/ovms_calculator.cc",
-                "mediapipe_calculators/streaming_test_calculator.cc",
             ],
             "//src:disable_mediapipe" : [],
         }) + select({
