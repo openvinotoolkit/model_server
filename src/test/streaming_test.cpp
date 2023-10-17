@@ -557,7 +557,7 @@ node {
     // Mock receiving 3 requests, the last one malicious
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // correct request
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))  // correct request
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                   // correct request
         .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx));  // invalid request - missing data in buffer
 
     // Expect 2 responses, no more due to error
