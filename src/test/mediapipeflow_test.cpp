@@ -39,6 +39,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
@@ -1944,6 +1945,17 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
+class MockedMediapipeGraphExecutor : public ovms::MediapipeGraphExecutor {
+public:
+    ovms::stream_types_mapping_t a;
+    const std::vector<std::string> inputNames;
+    const std::vector<std::string> outputNames;
+    const ::mediapipe::CalculatorGraphConfig config;
+    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
+    Status partialSerialize(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const;
+    MockedMediapipeGraphExecutor(stream_types_mapping_t outputs) :
+        ovms::MediapipeGraphExecutor(std::string(""), std::string(""), config, a, outputs, inputNames, outputNames, pythonNodeResources) {}
+};
 
 TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
@@ -1971,6 +1983,13 @@ TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+}
+
+TEST(MediapipeSerialization, aaa) {
+    ovms::stream_types_mapping_t mapping;
+    mapping["aaa"] = mediapipe_packet_type_enum::UNKNOWN;
+    MockedMediapipeGraphExecutor mge(mapping);
+    ::mediapipe::Packet packet;
 }
 
 TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
