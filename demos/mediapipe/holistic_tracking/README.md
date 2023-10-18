@@ -139,8 +139,10 @@ docker run -v $(pwd):/workspace rtsp_client --help
 usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
                       [--input_stream INPUT_STREAM]
                       [--output_stream OUTPUT_STREAM]
-                      [--model_name MODEL_NAME] [--verbose VERBOSE]
-                      [--input_name INPUT_NAME]
+                      [--model_name MODEL_NAME] [--input_name INPUT_NAME]
+                      [--verbose] [--benchmark]
+                      [--limit_stream_duration LIMIT_STREAM_DURATION]
+                      [--limit_frames LIMIT_FRAMES]
 
 options:
   -h, --help            show this help message and exit
@@ -152,9 +154,14 @@ options:
                         Url of output rtsp stream
   --model_name MODEL_NAME
                         Name of the model
-  --verbose VERBOSE     Should client dump debug information
   --input_name INPUT_NAME
                         Name of the model's input
+  --verbose             Should client dump debug information
+  --benchmark           Should client collect processing times
+  --limit_stream_duration LIMIT_STREAM_DURATION
+                        Limit how long client should run
+  --limit_frames LIMIT_FRAMES
+                        Limit how many frames should be processed
 ```
 
 - Usage example
@@ -168,7 +175,7 @@ docker run --network="host" -v $(pwd):/workspace rtsp_client --grpc_address loca
 Then read rtsp stream using ffplay
 
 ```bash
-ffplay -pix_fmt yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
 ```
 
 ### Inference using prerecorded video
