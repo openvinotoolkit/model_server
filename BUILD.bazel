@@ -85,7 +85,7 @@ cc_library(
                 "@mediapipe//mediapipe/framework/port:logging",
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework/port:status",
-                "@model_api//:adapter_api",],
+                "@model_api//:model_api",],
             "//:disable_mediapipe": []
             })
          + select({
