@@ -104,15 +104,24 @@ Results saved to :image_0.jpg
 Mediapipe graph can be used for remote analysis of individual images but the client can use it for a complete video stream processing.
 Below is an example how to run a client reading encoded rtsp video stream.
 
+![rtsp](rtsp.png)
 
 Build docker image containing rtsp client along with its dependencies
 The rtsp client app needs to have access to RTSP stream to read from and write to.
 
 Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
 
-Then write to the server using ffmpeg, example using camera
+```bash
+docker run --rm -d -p 8080:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
+```
+
+Then write to the server using ffmpeg, example using video or camera
 
 ```bash
+ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
+
+```
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
 ```
 
@@ -130,8 +139,10 @@ docker run -v $(pwd):/workspace rtsp_client --help
 usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
                       [--input_stream INPUT_STREAM]
                       [--output_stream OUTPUT_STREAM]
-                      [--model_name MODEL_NAME] [--verbose VERBOSE]
-                      [--input_name INPUT_NAME]
+                      [--model_name MODEL_NAME] [--input_name INPUT_NAME]
+                      [--verbose] [--benchmark]
+                      [--limit_stream_duration LIMIT_STREAM_DURATION]
+                      [--limit_frames LIMIT_FRAMES]
 
 options:
   -h, --help            show this help message and exit
@@ -143,9 +154,14 @@ options:
                         Url of output rtsp stream
   --model_name MODEL_NAME
                         Name of the model
-  --verbose VERBOSE     Should client dump debug information
   --input_name INPUT_NAME
                         Name of the model's input
+  --verbose             Should client dump debug information
+  --benchmark           Should client collect processing times
+  --limit_stream_duration LIMIT_STREAM_DURATION
+                        Limit how long client should run
+  --limit_frames LIMIT_FRAMES
+                        Limit how many frames should be processed
 ```
 
 - Usage example
@@ -153,13 +169,13 @@ options:
 ### Inference using RTSP stream
 
 ```bash
-docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+docker run --network="host" -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
 
 Then read rtsp stream using ffplay
 
 ```bash
-ffplay -pix_fmt yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
 ```
 
 ### Inference using prerecorded video
@@ -168,5 +184,5 @@ One might as well use prerecorded video and schedule it for inference.
 Replace horizontal_text.mp4 with your video file.
 
 ```bash
-docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/video.mp4' --output_stream 'workspace/output.mp4'
+docker run --network="host" -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/video.mp4' --output_stream 'workspace/output.mp4'
 ```
