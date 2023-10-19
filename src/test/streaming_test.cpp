@@ -213,7 +213,7 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}};
 
-    // Mock receiving 3 requests with manually (client) assigned descending order of timestamp and disconnection
+    // Mock receiving 3 requests with manually (client) assigned ascending order of timestamp and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);  // first request with timestamp 3
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 12))   // this is correct because 12 > 3
