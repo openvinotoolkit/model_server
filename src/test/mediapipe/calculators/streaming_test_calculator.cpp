@@ -25,30 +25,30 @@ namespace mediapipe {
 /*
     Adds 1 to all bytes input tensor.
 */
-class StreamingTestCalculator : public CalculatorBase {
+class AddOneSingleStreamTestCalculator : public CalculatorBase {
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        LOG(INFO) << "StreamingTestCalculator::GetContract";
+        LOG(INFO) << "AddOneSingleStreamTestCalculator::GetContract";
         cc->Inputs().Index(0).Set<ov::Tensor>();
         cc->Outputs().Index(0).Set<ov::Tensor>();
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        LOG(INFO) << "StreamingTestCalculator::Close";
+        LOG(INFO) << "AddOneSingleStreamTestCalculator::Close";
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        LOG(INFO) << "StreamingTestCalculator::Open";
+        LOG(INFO) << "AddOneSingleStreamTestCalculator::Open";
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        LOG(INFO) << "StreamingTestCalculator::Process";
+        LOG(INFO) << "AddOneSingleStreamTestCalculator::Process";
         ov::Tensor input = cc->Inputs().Index(0).Get<ov::Tensor>();
         ov::Tensor output(input.get_element_type(), input.get_shape());
-        for (size_t i = 0; i < input.get_byte_size() / 4; i++) {
+        for (size_t i = 0; i < input.get_byte_size() / sizeof(float); i++) {
             ((float*)(output.data()))[i] = ((float*)(input.data()))[i] + 1.0f;
         }
         cc->Outputs().Index(0).Add(new ov::Tensor(output), cc->InputTimestamp());
@@ -60,12 +60,12 @@ public:
     Adds 1 to all bytes to one of non empty input tensors
     Produces 2 the same copies of added tensor
 */
-class StreamingCycleTestCalculator : public CalculatorBase {
+class AddOne3CycleIterationsTestCalculator : public CalculatorBase {
     int cycle_iteration = 0;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        LOG(INFO) << "StreamingCycleTestCalculator::GetContract";
+        LOG(INFO) << "AddOne3CycleIterationsTestCalculator::GetContract";
         cc->Inputs().Index(0).Set<ov::Tensor>();
         cc->Outputs().Index(0).Set<ov::Tensor>();
         cc->Inputs().Index(1).Set<ov::Tensor>();   // signal
@@ -74,17 +74,17 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        LOG(INFO) << "StreamingCycleTestCalculator::Close";
+        LOG(INFO) << "AddOne3CycleIterationsTestCalculator::Close";
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        LOG(INFO) << "StreamingCycleTestCalculator::Open";
+        LOG(INFO) << "AddOne3CycleIterationsTestCalculator::Open";
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        LOG(INFO) << "StreamingCycleTestCalculator::Process";
+        LOG(INFO) << "AddOne3CycleIterationsTestCalculator::Process";
         if (++cycle_iteration > 3) {
             return absl::OkStatus();
         }
@@ -107,10 +107,10 @@ public:
     Index 1 +2
     Index 2 +3
 */
-class StreamingMultiInputsOutputsTestCalculator : public CalculatorBase {
+class AddNumbersMultiInputsOutputsTestCalculator : public CalculatorBase {
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        LOG(INFO) << "StreamingMultiInputsOutputsTestCalculator::GetContract";
+        LOG(INFO) << "AddNumbersMultiInputsOutputsTestCalculator::GetContract";
         cc->Inputs().Index(0).Set<ov::Tensor>();
         cc->Inputs().Index(1).Set<ov::Tensor>();
         cc->Inputs().Index(2).Set<ov::Tensor>();
@@ -121,23 +121,23 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        LOG(INFO) << "StreamingMultiInputsOutputsTestCalculator::Close";
+        LOG(INFO) << "AddNumbersMultiInputsOutputsTestCalculator::Close";
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        LOG(INFO) << "StreamingMultiInputsOutputsTestCalculator::Open";
+        LOG(INFO) << "AddNumbersMultiInputsOutputsTestCalculator::Open";
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        LOG(INFO) << "StreamingMultiInputsOutputsTestCalculator::Process";
+        LOG(INFO) << "AddNumbersMultiInputsOutputsTestCalculator::Process";
         ov::Tensor input1 = cc->Inputs().Index(0).Get<ov::Tensor>();
-        LOG(INFO) << "StreamingMultiInputsOutputsTestCalculator::Process";
+        LOG(INFO) << "AddNumbersMultiInputsOutputsTestCalculator::Process";
         ov::Tensor input2 = cc->Inputs().Index(1).Get<ov::Tensor>();
-        LOG(INFO) << "StreamingMultiInputsOutputsTestCalculator::Process";
+        LOG(INFO) << "AddNumbersMultiInputsOutputsTestCalculator::Process";
         ov::Tensor input3 = cc->Inputs().Index(2).Get<ov::Tensor>();
-        LOG(INFO) << "StreamingMultiInputsOutputsTestCalculator::Process";
+        LOG(INFO) << "AddNumbersMultiInputsOutputsTestCalculator::Process";
         ov::Tensor output1(input1.get_element_type(), input1.get_shape());
         ov::Tensor output2(input2.get_element_type(), input2.get_shape());
         ov::Tensor output3(input3.get_element_type(), input3.get_shape());
@@ -178,8 +178,8 @@ public:
     }
 };
 
-REGISTER_CALCULATOR(StreamingTestCalculator);
-REGISTER_CALCULATOR(StreamingCycleTestCalculator);
-REGISTER_CALCULATOR(StreamingMultiInputsOutputsTestCalculator);
+REGISTER_CALCULATOR(AddOneSingleStreamTestCalculator);
+REGISTER_CALCULATOR(AddOne3CycleIterationsTestCalculator);
+REGISTER_CALCULATOR(AddNumbersMultiInputsOutputsTestCalculator);
 REGISTER_CALCULATOR(ErrorInProcessTestCalculator);
 }  // namespace mediapipe

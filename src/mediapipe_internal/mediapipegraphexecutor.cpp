@@ -466,7 +466,8 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
-    pythonNodeResources(pythonNodeResources) {}
+    pythonNodeResources(pythonNodeResources),
+    currentStreamTimestamp(0) {}
 
 namespace {
 enum : unsigned int {
@@ -895,7 +896,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         auto absStatus = code;                                            \
         if (!absStatus.ok()) {                                            \
             const std::string absMessage = absStatus.ToString();          \
-            SPDLOG_DEBUG("MP_RETURN_ON_FAIL {} {}", message, absMessage); \
+            SPDLOG_DEBUG("{} {}", message, absMessage); \
             return Status(errorCode, std::move(absMessage));              \
         }                                                                 \
     }
@@ -904,7 +905,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     {                                                                            \
         auto status = code;                                                      \
         if (!status.ok()) {                                                      \
-            SPDLOG_DEBUG("OVMS_RETURN_ON_FAIL {} {}", message, status.string()); \
+            SPDLOG_DEBUG("{} {}", message, status.string()); \
             return status;                                                       \
         }                                                                        \
     }
@@ -913,9 +914,23 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     {                                                                                     \
         auto status = code;                                                               \
         if (!status.ok()) {                                                               \
-            SPDLOG_DEBUG("OVMS_RETURN_MP_ERROR_ON_FAIL {} {}", message, status.string()); \
+            SPDLOG_DEBUG("{} {}", message, status.string()); \
             return absl::Status(absl::StatusCode::kCancelled, message);                   \
         }                                                                                 \
+    }
+
+#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message) \
+    { \
+        auto status = code; \
+        if (!status.ok()) { \
+            ::inference::ModelStreamInferResponse resp; \
+            std::stringstream ss; \
+            ss << status.string() << "; " << message; \
+            *resp.mutable_error_message() = ss.str(); \
+            if (!stream.Write(resp)) {\
+                SPDLOG_INFO("Writing error to disconnected client"); \
+            } \
+        } \
     }
 
 template <typename T>
@@ -930,14 +945,26 @@ public:
 
 // TODO: Add support for other types CVS-122328/CVS-122329
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph) {
+    // Deserialize optional manual timestamp
     if (!request->id().empty()) {
         auto requestTimestamp = stoi64(request->id());  // TODO: Decide if deserialize from id or int parameter
         if (requestTimestamp.has_value()) {
-            currentStreamTimestamp = ::mediapipe::Timestamp(requestTimestamp.value());
+            // Cannot create with error checking since error check = abseil death test
+            currentStreamTimestamp = ::mediapipe::Timestamp::CreateNoErrorChecking(requestTimestamp.value());
         } else {
-            return StatusCode::MEDIAPIPE_INVALID_TIMESTAMP;
+            auto status = Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request id field");
+            SPDLOG_DEBUG(status.string());
+            return status;
         }
     }
+
+    // Validate current timestamp (can be manual or automatic at this point)
+    if (!currentStreamTimestamp.IsRangeValue()) {
+        SPDLOG_DEBUG("Timestamp not in range: {}", currentStreamTimestamp.DebugString());
+        return Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, currentStreamTimestamp.DebugString());
+    }
+
+    // Deserialize each input separately
     for (const auto& input : request->inputs()) {
         std::unique_ptr<ov::Tensor> tensor;
         OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), *request, tensor), "ov::Tensor deserialization");
@@ -950,6 +977,8 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::infere
                                   .At(currentStreamTimestamp)),
             "adding packet to input stream", StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     }
+
+    // Increment timestamp automatically for next request
     currentStreamTimestamp = currentStreamTimestamp.NextAllowedInStream();
     return StatusCode::OK;
 }
@@ -983,7 +1012,7 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
         MP_RETURN_ON_FAIL(graph.StartRun({}), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);  // TODO: Input side packets / missing test
 
         // Deserialize first request
-        OVMS_RETURN_ON_FAIL(this->partialDeserialize(
+        OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(this->partialDeserialize(
                                 std::shared_ptr<const ::inference::ModelInferRequest>(&firstRequest,
                                     // Custom deleter to avoid deallocation by custom holder
                                     // Conversion to shared_ptr is required for unified deserialization method
@@ -998,8 +1027,9 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
         // lifetime is extended to lifetime of deserialized Packets.
         auto req = std::make_shared<::inference::ModelInferRequest>();
         while (stream.Read(req.get())) {
-            OVMS_RETURN_ON_FAIL(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
+            OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
             if (graph.HasError()) {
+                SPDLOG_DEBUG("Graph encountered an error, stopping the execution");
                 break;
             }
             req = std::make_shared<::inference::ModelInferRequest>();
@@ -1013,7 +1043,7 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
 
         return StatusCode::OK;
     } catch (...) {
-        return StatusCode::UNKNOWN_ERROR;
+        return Status(StatusCode::UNKNOWN_ERROR, "Exception while processing MediaPipe graph");  // To be displayed in method level above
     }
 }
 

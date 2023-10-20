@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,8 +49,8 @@ protected:
 
 static void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content, std::optional<int64_t> timestamp = std::nullopt) {
     request.Clear();
-    for (auto const& it : content) {
-        prepareKFSInferInputTensor(request, std::get<0>(it) /* name */, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {std::get<1>(it) /* data */}, false);
+    for (auto const& [name, val] : content) {
+        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {val}, false);
     }
     if (timestamp.has_value()) {
         request.set_id(std::to_string(timestamp.value()));
@@ -70,6 +70,7 @@ static void prepareInvalidRequest(::inference::ModelInferRequest& request, const
 }
 
 static void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent, std::optional<int64_t> expectedTimestamp = std::nullopt) {
+    ASSERT_EQ(resp.error_message().size(), 0);
     ASSERT_EQ(resp.infer_response().outputs_size(), expectedContent.size());
     ASSERT_EQ(resp.infer_response().raw_output_contents_size(), expectedContent.size());
     for (const auto& [name, value] : expectedContent) {
@@ -85,6 +86,13 @@ static void assertResponse(const ::inference::ModelStreamInferResponse& resp, co
     if (expectedTimestamp.has_value()) {
         ASSERT_EQ(std::to_string(expectedTimestamp.value()), resp.infer_response().id());
     }
+}
+
+static void assertResponseError(const ::inference::ModelStreamInferResponse& resp, const std::string& expectedErrorMesssage) {
+    ASSERT_EQ(resp.error_message(), expectedErrorMesssage);
+    ASSERT_EQ(resp.infer_response().outputs_size(), 0);
+    ASSERT_EQ(resp.infer_response().raw_output_contents_size(), 0);
+    // TODO: response id?
 }
 
 static auto Disconnect() {
@@ -111,6 +119,14 @@ static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> con
     return [content, timestamp](::inference::ModelInferRequest* req) {
         prepareRequest(*req, content);
         req->set_id(std::to_string(timestamp));
+        return true;
+    };
+}
+
+static auto ReceiveWhenNotified(std::vector<std::tuple<std::string, float>> content, std::mutex& mtx) {
+    return [content, &mtx](::inference::ModelInferRequest* req) {
+        std::lock_guard<std::mutex> lock(mtx);
+        prepareRequest(*req, content);
         return true;
     };
 }
@@ -157,13 +173,43 @@ static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, fl
     };
 }
 
+static auto SendErrorAndNotifyEnd(const std::string& expectedMessage, std::mutex& mtx) {
+    mtx.lock();
+    return [expectedMessage, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponseError(msg, expectedMessage);
+        mtx.unlock();
+        return true;
+    };
+}
+
+// Positive:
+// Send X requests receive X responses (regular)
+// Send 1 request receive X responses (cycle)
+// Send X requests with same timestamp, receive Y responses (partial, sync MP side)
+// Send 1 request, receive Y responses (sync client side)
+// Automatic timestamping
+// Manual timestamping
+
+// Negative:
+// Error during graph initialization (bad pbtxt)
+// Error installing observer (wrong outputName)
+// Error during graph execution - Process() returning non Ok?
+// Error during first deserialization
+// Error during subsequent deserializations
+// Error waiting until done (this will return any an error during execution - has list of errors)
+// Error when writing to disconnected client
+// Wrong timestamping (non monotonous) on client side
+// Error when using reserved timestamps (Unset, Unstarted, PreStream, PostStream, OneOverPostStream, Done)
+// Error when timestamp not an int64
+
+
 // Regular case + automatic timestamping server-side
 TEST_F(StreamingTest, SingleStreamSend3Receive3AutomaticTimestamp) {
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -199,7 +245,7 @@ TEST_F(StreamingTest, SingleStreamSend3Receive3ManualTimestamp) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -235,7 +281,7 @@ TEST_F(StreamingTest, SingleStreamSend1Receive3) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingCycleTestCalculator"
+  calculator: "AddOne3CycleIterationsTestCalculator"
   input_stream: "in"
   input_stream: "signal"
   input_stream_info: {
@@ -264,7 +310,7 @@ node {
         .WillOnce(Disconnect());
 
     // Expect 3 responses (cycle)
-    // The StreamingCycleTestCalculator produces increasing timestamps
+    // The AddOne3CycleIterationsTestCalculator produces increasing timestamps
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 1))
         .WillOnce(SendWithTimestamp({{"out", 5.5f}}, 2))
@@ -283,7 +329,7 @@ output_stream: "out1"
 output_stream: "out2"
 output_stream: "out3"
 node {
-  calculator: "StreamingMultiInputsOutputsTestCalculator"
+  calculator: "AddNumbersMultiInputsOutputsTestCalculator"
   input_stream: "in1"
   input_stream: "in2"
   input_stream: "in3"
@@ -297,9 +343,15 @@ node {
 
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
-        {{"in1", mediapipe_packet_type_enum::OVTENSOR}, {"in2", mediapipe_packet_type_enum::OVTENSOR}, {"in3", mediapipe_packet_type_enum::OVTENSOR}},
-        {{"out1", mediapipe_packet_type_enum::OVTENSOR}, {"out2", mediapipe_packet_type_enum::OVTENSOR}, {"out3", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in1", "in2", "in3"}, {"out1", "out2", "out3"}, {}};
+        {{"in1", mediapipe_packet_type_enum::OVTENSOR},
+         {"in2", mediapipe_packet_type_enum::OVTENSOR},
+         {"in3", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out1", mediapipe_packet_type_enum::OVTENSOR},
+         {"out2", mediapipe_packet_type_enum::OVTENSOR},
+         {"out3", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in1", "in2", "in3"},
+        {"out1", "out2", "out3"},
+        {}};
 
     std::mutex mtx;
     const int64_t timestamp = 64;
@@ -328,7 +380,7 @@ output_stream: "out1"
 output_stream: "out2"
 output_stream: "out3"
 node {
-  calculator: "StreamingMultiInputsOutputsTestCalculator"
+  calculator: "AddNumbersMultiInputsOutputsTestCalculator"
   input_stream: "in1"
   input_stream: "in2"
   input_stream: "in3"
@@ -342,9 +394,15 @@ node {
 
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
-        {{"in1", mediapipe_packet_type_enum::OVTENSOR}, {"in2", mediapipe_packet_type_enum::OVTENSOR}, {"in3", mediapipe_packet_type_enum::OVTENSOR}},
-        {{"out1", mediapipe_packet_type_enum::OVTENSOR}, {"out2", mediapipe_packet_type_enum::OVTENSOR}, {"out3", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in1", "in2", "in3"}, {"out1", "out2", "out3"}, {}};
+        {{"in1", mediapipe_packet_type_enum::OVTENSOR},
+         {"in2", mediapipe_packet_type_enum::OVTENSOR},
+         {"in3", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out1", mediapipe_packet_type_enum::OVTENSOR},
+         {"out2", mediapipe_packet_type_enum::OVTENSOR},
+         {"out3", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in1", "in2", "in3"},
+        {"out1", "out2", "out3"},
+        {}};
 
     std::mutex mtx;
     const int64_t timestamp = 64;
@@ -366,7 +424,7 @@ TEST_F(StreamingTest, WrongOrderOfManualTimestamps) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -399,7 +457,7 @@ TEST_F(StreamingTest, ErrorInstallingObserver) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -424,7 +482,7 @@ TEST_F(StreamingTest, ExitOnDisconnectionDuringRead) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -452,7 +510,7 @@ TEST_F(StreamingTest, ErrorOnDisconnectionDuringWrite) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -484,7 +542,7 @@ TEST_F(StreamingTest, InvalidGraph) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
   input_stream_handler {
@@ -510,7 +568,7 @@ TEST_F(StreamingTest, ErrorDuringFirstRequestDeserialization) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -527,10 +585,17 @@ node {
     // Invalid request - missing data in buffer
     prepareInvalidRequest(this->firstRequest, {"in"});  // no timestamp specified, server will assign one
 
-    EXPECT_CALL(this->stream, Read(_)).Times(0);
-    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
+    std::mutex mtx;
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::INVALID_CONTENT_SIZE);
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(DisconnectWhenNotified(mtx));
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendErrorAndNotifyEnd(
+            Status(StatusCode::INVALID_CONTENT_SIZE).string()
+                + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of first request"},
+            mtx));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, ErrorDuringSubsequentRequestDeserializations) {
@@ -538,7 +603,7 @@ TEST_F(StreamingTest, ErrorDuringSubsequentRequestDeserializations) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -552,20 +617,25 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}};
 
-    std::mutex mtx;
+    std::mutex mtx[2];
 
     // Mock receiving 3 requests, the last one malicious
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // correct request
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                   // correct request
-        .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx));  // invalid request - missing data in buffer
+        .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx[0]))  // invalid request - missing data in buffer
+        .WillOnce(DisconnectWhenNotified(mtx[1]));
 
     // Expect 2 responses, no more due to error
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0))
-        .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 8.2f}}, 1, mtx));
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 8.2f}}, 1, mtx[0]))
+        .WillOnce(SendErrorAndNotifyEnd(
+            Status(StatusCode::INVALID_CONTENT_SIZE).string()
+                + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of subsequent requests"},
+            mtx[1]));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::INVALID_CONTENT_SIZE);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, ErrorInProcessStopsStream) {
@@ -601,7 +671,7 @@ TEST_F(StreamingTest, ManualTimestampWrongType) {
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "StreamingTestCalculator"
+  calculator: "AddOneSingleStreamTestCalculator"
   input_stream: "in"
   output_stream: "out"
 }
@@ -618,33 +688,109 @@ node {
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     this->firstRequest.set_id("not an int");
 
-    EXPECT_CALL(this->stream, Read(_)).Times(0);
-    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
+    std::mutex mtx;
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_INVALID_TIMESTAMP);
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(DisconnectWhenNotified(mtx));
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendErrorAndNotifyEnd(
+            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request id field").string()
+                + std::string{"; partial deserialization of first request"},
+            mtx));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
-// TODO
-// Positive:
-// [x] Send X requests receive X responses (regular)
-// [x] Send 1 request receive X responses (cycle)
-// [x] Send X requests with same timestamp, receive Y responses (partial, sync MP side)
-// [x] Send 1 request, receive Y responses (sync client side)
+TEST_F(StreamingTest, ManualTimestampNotInRange) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOneSingleStreamTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-// [x] Automatic timestamping
-// [x] Manual timestamping
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
 
-// Negative:
-// [:] Calculators throwing - MP does not allow catching
-// [x] Error during graph initialization (bad pbtxt)
-// [x] Error installing observer (wrong outputName)
-// [x] Timestamp not an int64 ?
-// [:] Error during serialization - cannot write test, wrong serialization type=death instead of exception
-// [:] Error during startrun - cannot write test, startrun cannot fail
-// [x] Error during graph execution - Process() returning non Ok?
-// [x] Error during first deserialization
-// [x] Error during subsequent deserializations
-// [:] Error when closing all packet sources - cannot, this function never fails
-// [x] Error waiting until done (this will return any an error during execution - has list of errors)
-// [x] Error when writing to disconnected client
-// [x] Wrong timestamping (non monotonous) on client side
+    // Timestamps not allowed in stream
+    // Expect continuity of operation and response with error message
+    for (auto timestamp : std::vector<int64_t>{
+        ::mediapipe::kint64min,     // ::mediapipe::Timestamp::Unset()
+        ::mediapipe::kint64min + 1, // ::mediapipe::Timestamp::Unstarted()
+        ::mediapipe::kint64min + 2, // ::mediapipe::Timestamp::PreStream()
+        ::mediapipe::kint64max - 2, // ::mediapipe::Timestamp::PostStream()
+        ::mediapipe::kint64max - 1, // ::mediapipe::Timestamp::OneOverPostStream()
+        ::mediapipe::kint64max,     // ::mediapipe::Timestamp::Done()
+    }) {
+        std::mutex mtx;
+        prepareRequest(this->firstRequest, {{"in", 3.5f}}, timestamp);
+        EXPECT_CALL(this->stream, Read(_))
+            .WillOnce(DisconnectWhenNotified(mtx));
+        EXPECT_CALL(this->stream, Write(_, _))
+            .WillOnce(SendErrorAndNotifyEnd(
+                Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() 
+                    + std::string{" - "} 
+                    + ::mediapipe::Timestamp::CreateNoErrorChecking(timestamp).DebugString() 
+                    + std::string{"; partial deserialization of first request"},
+                mtx));
+        ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    }
+
+    // Allowed in stream
+    for (auto timestamp : std::vector<::mediapipe::Timestamp>{
+        ::mediapipe::Timestamp::Min(),
+        ::mediapipe::Timestamp::Max(),
+    }) {
+        std::mutex mtx;
+        prepareRequest(this->firstRequest, {{"in", 3.5f}}, timestamp.Value());
+        EXPECT_CALL(this->stream, Read(_))
+            .WillOnce(DisconnectWhenNotified(mtx));  // To ensure the read loop is stopped
+        EXPECT_CALL(this->stream, Write(_, _))
+            .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, timestamp.Value(), mtx));
+        ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    }
+}
+
+TEST_F(StreamingTest, AutomaticTimestampingExceedsMax) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOneSingleStreamTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    std::mutex mtx[2];
+
+    prepareRequest(this->firstRequest, {{"in", 3.5f}}, ::mediapipe::Timestamp::Max().Value());  // valid
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWhenNotified({{"in", 10.f}}, mtx[0]))  // automatic timestamping overflow
+        .WillOnce(DisconnectWhenNotified(mtx[1]));  // automatic timestamping overflow
+
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, ::mediapipe::Timestamp::Max().Value(), mtx[0]))
+        .WillOnce(SendErrorAndNotifyEnd(
+            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string()
+                + std::string{" - Timestamp::OneOverPostStream(); partial deserialization of subsequent requests"},
+            mtx[1]));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
