@@ -1,2 +1,2 @@
--r ../../common/python/requirements.txt
+opencv-python>=4.6.0
 ovmsclient
