@@ -79,6 +79,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
 @sphinxdirective
 
 .. tab:: Ubuntu 20.04  
+   :sync: ubuntu-20-04
 
    Download precompiled package:
    
@@ -105,6 +106,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
       sudo apt update -y && apt install -y libpugixml1v5 libtbb2
 
 .. tab:: Ubuntu 22.04  
+   :sync: ubuntu-22-04
 
    Download precompiled package:
    
@@ -131,6 +133,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
       sudo apt update -y && apt install -y libpugixml1v5
 
 .. tab:: RHEL 8.7 
+   :sync: rhel-8-7
 
    Download precompiled package:
    
