@@ -59,7 +59,11 @@ void CLIParser::parse(int argc, char** argv) {
             ("grpc_max_threads",
                 "Maximum number of threads which can be handled by the grpc server. Default value depends on number of CPUs.",
                 cxxopts::value<uint32_t>(),
-                "GRPC_WORKERS")                
+                "GRPC_MAX_THREADS")
+            ("grpc_memory_quota",
+                "GRPC server buffer memory quota. Default value set to 2147483648 (2GB).",
+                cxxopts::value<size_t>(),
+                "GRPC_MEMORY_QUOTA")
             ("rest_workers",
                 "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
                 cxxopts::value<uint32_t>(),

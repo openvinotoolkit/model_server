@@ -36,6 +36,7 @@ struct ServerSettingsImpl {
 #ifdef MTR_ENABLED
     std::string tracePath;
 #endif
+    std::optional<std::size_t> grpcMemoryQuota;
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitSeconds = 1;
     uint32_t sequenceCleanerPollWaitMinutes = 5;
