@@ -891,46 +891,46 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     return StatusCode::OK;
 }
 
-#define MP_RETURN_ON_FAIL(code, message, errorCode)                       \
-    {                                                                     \
-        auto absStatus = code;                                            \
-        if (!absStatus.ok()) {                                            \
-            const std::string absMessage = absStatus.ToString();          \
-            SPDLOG_DEBUG("{} {}", message, absMessage); \
-            return Status(errorCode, std::move(absMessage));              \
-        }                                                                 \
+#define MP_RETURN_ON_FAIL(code, message, errorCode)              \
+    {                                                            \
+        auto absStatus = code;                                   \
+        if (!absStatus.ok()) {                                   \
+            const std::string absMessage = absStatus.ToString(); \
+            SPDLOG_DEBUG("{} {}", message, absMessage);          \
+            return Status(errorCode, std::move(absMessage));     \
+        }                                                        \
     }
 
-#define OVMS_RETURN_ON_FAIL(code, message)                                       \
-    {                                                                            \
-        auto status = code;                                                      \
-        if (!status.ok()) {                                                      \
+#define OVMS_RETURN_ON_FAIL(code, message)                   \
+    {                                                        \
+        auto status = code;                                  \
+        if (!status.ok()) {                                  \
             SPDLOG_DEBUG("{} {}", message, status.string()); \
-            return status;                                                       \
-        }                                                                        \
+            return status;                                   \
+        }                                                    \
     }
 
-#define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message)                                       \
-    {                                                                                     \
-        auto status = code;                                                               \
-        if (!status.ok()) {                                                               \
-            SPDLOG_DEBUG("{} {}", message, status.string()); \
-            return absl::Status(absl::StatusCode::kCancelled, message);                   \
-        }                                                                                 \
+#define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message)                     \
+    {                                                                   \
+        auto status = code;                                             \
+        if (!status.ok()) {                                             \
+            SPDLOG_DEBUG("{} {}", message, status.string());            \
+            return absl::Status(absl::StatusCode::kCancelled, message); \
+        }                                                               \
     }
 
-#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message) \
-    { \
-        auto status = code; \
-        if (!status.ok()) { \
-            ::inference::ModelStreamInferResponse resp; \
-            std::stringstream ss; \
-            ss << status.string() << "; " << message; \
-            *resp.mutable_error_message() = ss.str(); \
-            if (!stream.Write(resp)) {\
+#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)         \
+    {                                                                \
+        auto status = code;                                          \
+        if (!status.ok()) {                                          \
+            ::inference::ModelStreamInferResponse resp;              \
+            std::stringstream ss;                                    \
+            ss << status.string() << "; " << message;                \
+            *resp.mutable_error_message() = ss.str();                \
+            if (!stream.Write(resp)) {                               \
                 SPDLOG_INFO("Writing error to disconnected client"); \
-            } \
-        } \
+            }                                                        \
+        }                                                            \
     }
 
 template <typename T>
@@ -1013,12 +1013,12 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
 
         // Deserialize first request
         OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(this->partialDeserialize(
-                                std::shared_ptr<const ::inference::ModelInferRequest>(&firstRequest,
-                                    // Custom deleter to avoid deallocation by custom holder
-                                    // Conversion to shared_ptr is required for unified deserialization method
-                                    // for first and subsequent requests
-                                    [](const ::inference::ModelInferRequest*) {}),
-                                graph),
+                                                  std::shared_ptr<const ::inference::ModelInferRequest>(&firstRequest,
+                                                      // Custom deleter to avoid deallocation by custom holder
+                                                      // Conversion to shared_ptr is required for unified deserialization method
+                                                      // for first and subsequent requests
+                                                      [](const ::inference::ModelInferRequest*) {}),
+                                                  graph),
             "partial deserialization of first request");
 
         // Read loop

@@ -202,7 +202,6 @@ static auto SendErrorAndNotifyEnd(const std::string& expectedMessage, std::mutex
 // Error when using reserved timestamps (Unset, Unstarted, PreStream, PostStream, OneOverPostStream, Done)
 // Error when timestamp not an int64
 
-
 // Regular case + automatic timestamping server-side
 TEST_F(StreamingTest, SingleStreamSend3Receive3AutomaticTimestamp) {
     const std::string pbTxt{R"(
@@ -344,11 +343,11 @@ node {
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in1", mediapipe_packet_type_enum::OVTENSOR},
-         {"in2", mediapipe_packet_type_enum::OVTENSOR},
-         {"in3", mediapipe_packet_type_enum::OVTENSOR}},
+            {"in2", mediapipe_packet_type_enum::OVTENSOR},
+            {"in3", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out1", mediapipe_packet_type_enum::OVTENSOR},
-         {"out2", mediapipe_packet_type_enum::OVTENSOR},
-         {"out3", mediapipe_packet_type_enum::OVTENSOR}},
+            {"out2", mediapipe_packet_type_enum::OVTENSOR},
+            {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
         {}};
@@ -395,11 +394,11 @@ node {
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in1", mediapipe_packet_type_enum::OVTENSOR},
-         {"in2", mediapipe_packet_type_enum::OVTENSOR},
-         {"in3", mediapipe_packet_type_enum::OVTENSOR}},
+            {"in2", mediapipe_packet_type_enum::OVTENSOR},
+            {"in3", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out1", mediapipe_packet_type_enum::OVTENSOR},
-         {"out2", mediapipe_packet_type_enum::OVTENSOR},
-         {"out3", mediapipe_packet_type_enum::OVTENSOR}},
+            {"out2", mediapipe_packet_type_enum::OVTENSOR},
+            {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
         {}};
@@ -591,8 +590,7 @@ node {
         .WillOnce(DisconnectWhenNotified(mtx));
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendErrorAndNotifyEnd(
-            Status(StatusCode::INVALID_CONTENT_SIZE).string()
-                + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of first request"},
+            Status(StatusCode::INVALID_CONTENT_SIZE).string() + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of first request"},
             mtx));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
@@ -622,7 +620,7 @@ node {
     // Mock receiving 3 requests, the last one malicious
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // correct request
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                   // correct request
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                     // correct request
         .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx[0]))  // invalid request - missing data in buffer
         .WillOnce(DisconnectWhenNotified(mtx[1]));
 
@@ -631,8 +629,7 @@ node {
         .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0))
         .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 8.2f}}, 1, mtx[0]))
         .WillOnce(SendErrorAndNotifyEnd(
-            Status(StatusCode::INVALID_CONTENT_SIZE).string()
-                + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of subsequent requests"},
+            Status(StatusCode::INVALID_CONTENT_SIZE).string() + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of subsequent requests"},
             mtx[1]));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
@@ -694,8 +691,7 @@ node {
         .WillOnce(DisconnectWhenNotified(mtx));
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendErrorAndNotifyEnd(
-            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request id field").string()
-                + std::string{"; partial deserialization of first request"},
+            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request id field").string() + std::string{"; partial deserialization of first request"},
             mtx));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
@@ -723,32 +719,29 @@ node {
     // Timestamps not allowed in stream
     // Expect continuity of operation and response with error message
     for (auto timestamp : std::vector<int64_t>{
-        ::mediapipe::kint64min,     // ::mediapipe::Timestamp::Unset()
-        ::mediapipe::kint64min + 1, // ::mediapipe::Timestamp::Unstarted()
-        ::mediapipe::kint64min + 2, // ::mediapipe::Timestamp::PreStream()
-        ::mediapipe::kint64max - 2, // ::mediapipe::Timestamp::PostStream()
-        ::mediapipe::kint64max - 1, // ::mediapipe::Timestamp::OneOverPostStream()
-        ::mediapipe::kint64max,     // ::mediapipe::Timestamp::Done()
-    }) {
+             ::mediapipe::kint64min,      // ::mediapipe::Timestamp::Unset()
+             ::mediapipe::kint64min + 1,  // ::mediapipe::Timestamp::Unstarted()
+             ::mediapipe::kint64min + 2,  // ::mediapipe::Timestamp::PreStream()
+             ::mediapipe::kint64max - 2,  // ::mediapipe::Timestamp::PostStream()
+             ::mediapipe::kint64max - 1,  // ::mediapipe::Timestamp::OneOverPostStream()
+             ::mediapipe::kint64max,      // ::mediapipe::Timestamp::Done()
+         }) {
         std::mutex mtx;
         prepareRequest(this->firstRequest, {{"in", 3.5f}}, timestamp);
         EXPECT_CALL(this->stream, Read(_))
             .WillOnce(DisconnectWhenNotified(mtx));
         EXPECT_CALL(this->stream, Write(_, _))
             .WillOnce(SendErrorAndNotifyEnd(
-                Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() 
-                    + std::string{" - "} 
-                    + ::mediapipe::Timestamp::CreateNoErrorChecking(timestamp).DebugString() 
-                    + std::string{"; partial deserialization of first request"},
+                Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() + std::string{" - "} + ::mediapipe::Timestamp::CreateNoErrorChecking(timestamp).DebugString() + std::string{"; partial deserialization of first request"},
                 mtx));
         ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
     }
 
     // Allowed in stream
     for (auto timestamp : std::vector<::mediapipe::Timestamp>{
-        ::mediapipe::Timestamp::Min(),
-        ::mediapipe::Timestamp::Max(),
-    }) {
+             ::mediapipe::Timestamp::Min(),
+             ::mediapipe::Timestamp::Max(),
+         }) {
         std::mutex mtx;
         prepareRequest(this->firstRequest, {{"in", 3.5f}}, timestamp.Value());
         EXPECT_CALL(this->stream, Read(_))
@@ -783,13 +776,12 @@ node {
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, ::mediapipe::Timestamp::Max().Value());  // valid
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(ReceiveWhenNotified({{"in", 10.f}}, mtx[0]))  // automatic timestamping overflow
-        .WillOnce(DisconnectWhenNotified(mtx[1]));  // automatic timestamping overflow
+        .WillOnce(DisconnectWhenNotified(mtx[1]));              // automatic timestamping overflow
 
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, ::mediapipe::Timestamp::Max().Value(), mtx[0]))
         .WillOnce(SendErrorAndNotifyEnd(
-            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string()
-                + std::string{" - Timestamp::OneOverPostStream(); partial deserialization of subsequent requests"},
+            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() + std::string{" - Timestamp::OneOverPostStream(); partial deserialization of subsequent requests"},
             mtx[1]));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
