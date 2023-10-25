@@ -31,6 +31,7 @@ cc_library(
         "exceptionduringopencalculator.cpp",
         "exceptionduringclosecalculator.cpp",
         "exceptionduringgetcontractcalculator.cpp",
+        "streaming_test_calculator.cpp",
     ],
     copts = [
         "-Wall",

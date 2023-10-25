@@ -82,6 +82,7 @@ cc_library(
         ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework:calculator_framework",
+                "@mediapipe//mediapipe/framework/stream_handler:immediate_input_stream_handler",  # added directly for python yielding (cycle), add more if needed
                 "@mediapipe//mediapipe/framework/port:logging",
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework/port:status",
