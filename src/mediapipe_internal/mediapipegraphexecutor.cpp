@@ -922,18 +922,18 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         }                                                               \
     }
 
-#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)         \
-    {                                                                \
-        auto status = code;                                          \
-        if (!status.ok()) {                                          \
-            ::inference::ModelStreamInferResponse resp;              \
-            std::stringstream ss;                                    \
-            ss << status.string() << "; " << message;                \
-            *resp.mutable_error_message() = ss.str();                \
-            if (!stream.Write(resp)) {                               \
+#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)          \
+    {                                                                 \
+        auto status = code;                                           \
+        if (!status.ok()) {                                           \
+            ::inference::ModelStreamInferResponse resp;               \
+            std::stringstream ss;                                     \
+            ss << status.string() << "; " << message;                 \
+            *resp.mutable_error_message() = ss.str();                 \
+            if (!stream.Write(resp)) {                                \
                 SPDLOG_DEBUG("Writing error to disconnected client"); \
-            }                                                        \
-        }                                                            \
+            }                                                         \
+        }                                                             \
     }
 
 template <typename T>
