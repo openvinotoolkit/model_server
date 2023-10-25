@@ -59,6 +59,9 @@
 #pragma GCC diagnostic pop
 
 namespace ovms {
+
+const ::mediapipe::Timestamp DEFAULT_STARTING_STREAM_TIMESTAMP = ::mediapipe::Timestamp(0);
+
 static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
     auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
     if (requestInputItr == request.inputs().end()) {
@@ -467,7 +470,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
     pythonNodeResources(pythonNodeResources),
-    currentStreamTimestamp(0) {}
+    currentStreamTimestamp(DEFAULT_STARTING_STREAM_TIMESTAMP) {}
 
 namespace {
 enum : unsigned int {
@@ -928,7 +931,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
             ss << status.string() << "; " << message;                \
             *resp.mutable_error_message() = ss.str();                \
             if (!stream.Write(resp)) {                               \
-                SPDLOG_INFO("Writing error to disconnected client"); \
+                SPDLOG_DEBUG("Writing error to disconnected client"); \
             }                                                        \
         }                                                            \
     }

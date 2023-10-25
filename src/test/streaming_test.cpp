@@ -736,6 +736,26 @@ node {
                 mtx));
         ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
     }
+}
+
+TEST_F(StreamingTest, ManualTimestampInRange) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOneSingleStreamTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
 
     // Allowed in stream
     for (auto timestamp : std::vector<::mediapipe::Timestamp>{
