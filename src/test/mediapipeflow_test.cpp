@@ -1945,17 +1945,53 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
-class MockedMediapipeGraphExecutor : public ovms::MediapipeGraphExecutor {
-public:
-    ovms::stream_types_mapping_t a;
-    const std::vector<std::string> inputNames;
-    const std::vector<std::string> outputNames;
-    const ::mediapipe::CalculatorGraphConfig config;
-    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
-    Status partialSerialize(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const;
-    MockedMediapipeGraphExecutor(stream_types_mapping_t outputs) :
-        ovms::MediapipeGraphExecutor(std::string(""), std::string(""), config, a, outputs, inputNames, outputNames, pythonNodeResources) {}
+class MediapipeSerialization : public ::testing::Test {
+    class MockedMediapipeGraphExecutor : public ovms::MediapipeGraphExecutor {
+    public:
+        Status partialSerialize(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const {
+            return ovms::MediapipeGraphExecutor::partialSerialize(name, response, packet);
+        }
+
+        MockedMediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
+            stream_types_mapping_t inputTypes,
+            stream_types_mapping_t outputTypes,
+            std::vector<std::string> inputNames, std::vector<std::string> outputNames,
+            const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources) :
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResources) {}
+    };
+
+protected:
+    MockedMediapipeGraphExecutor* executor;
+    ::inference::ModelInferResponse mp_response;
+    void SetUp() {
+        ovms::stream_types_mapping_t mapping;
+        mapping["kfs_response"] = mediapipe_packet_type_enum::KFS_RESPONSE;
+        mapping["tf_response"] = mediapipe_packet_type_enum::TFTENSOR;
+        const std::vector<std::string> inputNames;
+        const std::vector<std::string> outputNames;
+        const ::mediapipe::CalculatorGraphConfig config;
+        std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
+        executor = new MockedMediapipeGraphExecutor("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResources);
+    }
+    void TearDown() {
+        delete executor;
+    }
 };
+
+TEST_F(MediapipeSerialization, KFSResponse) {
+    KFSResponse response;
+    response.set_id("1");
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<KFSResponse*>(&response);
+    ASSERT_EQ(executor->partialSerialize("kfs_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
+}
+
+TEST_F(MediapipeSerialization, TFTensor) {
+    tensorflow::Tensor tf_response(TFSDataType::DT_FLOAT);
+    ::mediapipe::Packet tf_packet = ::mediapipe::MakePacket<tensorflow::Tensor>(tf_response);
+    ASSERT_EQ(executor->partialSerialize("tf_response", mp_response, tf_packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
+}
 
 TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
@@ -1983,13 +2019,6 @@ TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
-}
-
-TEST(MediapipeSerialization, aaa) {
-    ovms::stream_types_mapping_t mapping;
-    mapping["aaa"] = mediapipe_packet_type_enum::UNKNOWN;
-    MockedMediapipeGraphExecutor mge(mapping);
-    ::mediapipe::Packet packet;
 }
 
 TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
