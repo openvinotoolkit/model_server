@@ -92,5 +92,5 @@ else:
     backend = StreamClient.OutputBackends.cv2
     exact = True
 client = StreamClient(postprocess_callback = postprocess, preprocess_callback=preprocess, output_backend=backend, source=args.input_stream, sink=args.output_stream, exact=exact, benchmark=args.benchmark)
-client.start(ovms_address=args.grpc_address, input_name=args.input_name, model_name=args.model_name, stream_timeout = args.limit_stream_duration, limit_frames = args.limit_frames)
+client.start(ovms_address=args.grpc_address, input_name=args.input_name, model_name=args.model_name, limit_stream_duration = args.limit_stream_duration, limit_frames = args.limit_frames)
 

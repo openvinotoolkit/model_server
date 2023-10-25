@@ -190,12 +190,22 @@ The rtsp client app needs to have access to RTSP stream to read from and write t
 
 Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
 
-Then write to the server using ffmpeg
+```bash
+docker run --rm -d -p 8080:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
+```
+
+Then write to the server using ffmpeg, example using video or camera
 
 ```bash
+ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
+
+
+```
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
 ```
 
+Build the docker image with the python client for video stream reading an remote analysis:
 ```bash
 docker build ../../common/stream_client/ -t rtsp_client
 ```
@@ -240,13 +250,13 @@ options:
 - Usage example
 
 ```bash
-docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+docker run --network="host" -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
 
 Then read rtsp stream using ffplay
 
 ```bash
-ffplay -pix_fmt yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
 ```
 
 
@@ -254,16 +264,5 @@ One might as well use prerecorded video and schedule it for inference.
 Replace horizontal_text.mp4 with your video file.
 
 ```bash
-docker run -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/horizontal_text.mp4' --output_stream 'workspace/output.mp4'
-```
-
-Validate inference output
-```bash
-cat output.mp4 | sha256 -x
-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-```
-
-Preview video using ffplay 
-```bash
-ffplay output.mp4
+docker run --network="host" -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/horizontal_text.mp4' --output_stream 'workspace/output.mp4'
 ```

@@ -350,4 +350,6 @@ For detailed description of request and response contents see [KServe API docs](
 
 > Note: More efficient way of running inference via REST is sending data in a binary format outside of the JSON object, by using [binary data extension](./binary_input_kfs.md). 
 
+> Note: Using //.. at the end of request URI results in truncated path, which might result in different response than expected. 
+
 See also [code samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples) for running inference with KServe API on HTTP Inference endpoint.
