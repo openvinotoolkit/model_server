@@ -274,7 +274,7 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     return grpc(status);
 }
 
-::grpc::Status KFSInferenceServiceImpl::ModelStreamInfer(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) {
+::grpc::Status KFSInferenceServiceImpl::ModelStreamInfer(::grpc::ServerContext* context, ::grpc::ServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) {
     SPDLOG_DEBUG("KFSInferenceServiceImpl::ModelStreamInfer");
     return grpc(StatusCode::NOT_IMPLEMENTED);
 }

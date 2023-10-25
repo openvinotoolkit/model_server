@@ -93,11 +93,19 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
 
 Status MediapipeGraphDefinition::dryInitializeTest() {
     ::mediapipe::CalculatorGraph graph;
-    auto absStatus = graph.Initialize(this->config);
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}. Check if all required calculators are registered in OVMS", this->getName(), absMessage);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+    try {
+        auto absStatus = graph.Initialize(this->config);
+        if (!absStatus.ok()) {
+            const std::string absMessage = absStatus.ToString();
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}. Check if all required calculators are registered in OVMS", this->getName(), absMessage);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+        }
+    } catch (std::exception& e) {
+        SPDLOG_ERROR("Exception caught whilie trying to initialize MediaPipe graph: {}", e.what());
+        return StatusCode::UNKNOWN_ERROR;
+    } catch (...) {
+        SPDLOG_ERROR("Exception caught whilie trying to initialize MediaPipe graph.");
+        return StatusCode::UNKNOWN_ERROR;
     }
     return StatusCode::OK;
 }

@@ -60,7 +60,7 @@ public:
         return modelName;
     }
     void SetUp() override {
-        SetUpServerInstance(initialClearConfig);
+        SetUpCAPIServerInstance(initialClearConfig);
     }
 };
 

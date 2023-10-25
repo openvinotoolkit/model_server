@@ -2,14 +2,14 @@
     "model_config_list": [],
     "mediapipe_config_list": [
         {
-            "name":"mediapipeAddADAPTFULL",
-            "graph_path":"graph1/graphaddadapterfull.pbtxt",
-            "subconfig":"graph1/subconfig.json"
+            "name":"graph1",
+            "graph_path":"graphaddadapterfull.pbtxt",
+            "subconfig":"subconfig.json"
         },
         {
-            "name":"mediapipeAddADAPT",
-            "graph_path":"graph2/graphadd.pbtxt",
-            "subconfig":"graph2/subconfig.json"
+            "name":"graph2",
+            "graph_path":"graphadd.pbtxt",
+            "subconfig":"subconfig.json"
         }
     ]
 }

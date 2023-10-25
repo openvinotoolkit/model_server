@@ -28,7 +28,7 @@ try:
     print('Authorization token already provided')
 except OSError:
     if args.token is None:
-        "need to provide HF authorization --token param"
+        print("need to provide HF authorization --token param")
         exit(1)
     login(args.token)
 

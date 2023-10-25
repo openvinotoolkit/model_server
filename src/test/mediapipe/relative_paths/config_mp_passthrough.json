@@ -4,7 +4,8 @@
     {
         "name":"mpTensorDummy",
         "graph_path":"/ovms/src/test/mediapipe/graphdummy_mp.pbtxt",
-        "subconfig":"only_subconfig/subconfig.json"
+        "base_path":"/ovms/src/test/mediapipe/relative_paths/only_subconfig",
+        "subconfig":"subconfig.json"
     }
     ]
 }

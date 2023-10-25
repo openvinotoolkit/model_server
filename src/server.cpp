@@ -54,9 +54,7 @@
 #include "version.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include <pybind11/embed.h>
-namespace py = pybind11;
-using namespace py::literals;
+#include "pythoninterpretermodule.hpp"
 #endif
 
 using grpc::ServerBuilder;
@@ -67,6 +65,7 @@ const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
 const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
 const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
 const std::string METRICS_MODULE_NAME = "MetricsModule";
+const std::string PYTHON_INTERPRETER_MODULE = "PythonInterpreterModule";
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
@@ -207,6 +206,10 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
+#if (PYTHON_DISABLE == 0)
+    if (name == PYTHON_INTERPRETER_MODULE)
+        return std::make_unique<PythonInterpreterModule>();
+#endif
     if (name == METRICS_MODULE_NAME)
         return std::make_unique<MetricModule>();
     return nullptr;
@@ -240,6 +243,10 @@ Status Server::startModules(ovms::Config& config) {
     Status status;
     bool inserted = false;
     auto it = modules.end();
+#if (PYTHON_DISABLE == 0)
+    INSERT_MODULE(PYTHON_INTERPRETER_MODULE, it);
+    START_MODULE(it);
+#endif
 #if MTR_ENABLED
     INSERT_MODULE(PROFILER_MODULE_NAME, it);
     START_MODULE(it);
@@ -289,6 +296,9 @@ void Server::shutdownModules() {
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
+#if (PYTHON_DISABLE == 0)
+    ensureModuleShutdown(PYTHON_INTERPRETER_MODULE);
+#endif
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     modules.clear();
@@ -305,17 +315,6 @@ static int statusToExitCode(const Status& status) {
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
-#if (PYTHON_DISABLE == 0)
-    // Initialize Python interpreter
-    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
-    py::exec(R"(
-        import sys
-        print("Python version")
-        print (sys.version)
-    )");
-    py::gil_scoped_release release;  // GIL only needed in Python custom node
-#endif
-
     installSignalHandlers();
     CLIParser parser;
     ServerSettingsImpl serverSettings;
