@@ -26,6 +26,7 @@
 
 #include "../deserialization.hpp"
 #include "../execution_context.hpp"
+#include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
@@ -39,11 +40,13 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphexecutor.hpp"
+#include "pythonnoderesource.hpp"
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
+const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonBackendCalculator"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
@@ -67,9 +70,10 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     ifs.seekg(0, std::ios::end);
     this->chosenConfig.reserve(ifs.tellg());
     ifs.seekg(0, std::ios::beg);
-
-    this->chosenConfig.assign((std::istreambuf_iterator<char>(ifs)),
-        std::istreambuf_iterator<char>());
+    std::stringstream config;
+    config << ifs.rdbuf();
+    this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(config.str()));
+    this->chosenConfig.assign(config.str());
     return StatusCode::OK;
 }
 
@@ -89,11 +93,19 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
 
 Status MediapipeGraphDefinition::dryInitializeTest() {
     ::mediapipe::CalculatorGraph graph;
-    auto absStatus = graph.Initialize(this->config);
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}. Check if all required calculators are registered in OVMS", this->getName(), absMessage);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+    try {
+        auto absStatus = graph.Initialize(this->config);
+        if (!absStatus.ok()) {
+            const std::string absMessage = absStatus.ToString();
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}. Check if all required calculators are registered in OVMS", this->getName(), absMessage);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+        }
+    } catch (std::exception& e) {
+        SPDLOG_ERROR("Exception caught whilie trying to initialize MediaPipe graph: {}", e.what());
+        return StatusCode::UNKNOWN_ERROR;
+    } catch (...) {
+        SPDLOG_ERROR("Exception caught whilie trying to initialize MediaPipe graph.");
+        return StatusCode::UNKNOWN_ERROR;
     }
     return StatusCode::OK;
 }
@@ -116,7 +128,6 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     // 3 validate 1<= outputs
     // 4 validate 1<= inputs
     // 5 validate no side_packets? push into executor check params vs expected side packets
-    ::mediapipe::CalculatorGraphConfig proto;
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
     if (!status.ok()) {
@@ -143,6 +154,12 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!status.ok()) {
         return status;
     }
+
+    status = this->initializeNodes();
+    if (!status.ok()) {
+        return status;
+    }
+
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
@@ -225,7 +242,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResources);
     return status;
 }
 
@@ -415,4 +432,39 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", "", "UNKNOWN", streamFullName);
     return {"", mediapipe_packet_type_enum::UNKNOWN};
 }
+
+Status MediapipeGraphDefinition::initializeNodes() {
+#if (PYTHON_DISABLE == 0)
+    SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
+    for (int i = 0; i < config.node().size(); i++) {
+        if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node missing options in graph: {}. ", this->name);
+                return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
+            }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name is missing in graph: {}. ", this->name);
+                return StatusCode::PYTHON_NODE_MISSING_NAME;
+            }
+            std::string nodeName = config.node(i).name();
+            if (this->pythonNodeResources.find(nodeName) != this->pythonNodeResources.end()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
+            }
+
+            std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
+            Status status = PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(i).node_options(0));
+            if (nodeResouce == nullptr || !status.ok()) {
+                SPDLOG_ERROR("Failed to process python node graph {}", this->name);
+                return status;
+            }
+
+            this->pythonNodeResources.insert(std::pair<std::string, std::shared_ptr<PythonNodeResource>>(nodeName, std::move(nodeResouce)));
+        }
+    }
+#endif
+
+    return StatusCode::OK;
+}
+
 }  // namespace ovms

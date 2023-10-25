@@ -153,7 +153,7 @@ public:
         return modelName;
     }
     void SetUp() override {
-        SetUpServerInstance(initialClearConfig);
+        SetUpCAPIServerInstance(initialClearConfig);
     }
 };
 
@@ -607,7 +607,7 @@ public:
         return modelName;
     }
     void SetUp() override {
-        SetUpServerInstance(createStressTestPipelineOneDummyConfig());
+        SetUpCAPIServerInstance(createStressTestPipelineOneDummyConfig());
     }
 };
 TEST_F(StressMediapipeChanges, AddGraphDuringPredictLoad) {

@@ -244,7 +244,10 @@ public:
         strStream << ifs.rdbuf();
         std::string str = strStream.str();
         ifs.close();
+        return getStringMD5(str);
+    }
 
+    static std::string getStringMD5(const std::string& str) {
         unsigned char result[MD5_DIGEST_LENGTH];
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

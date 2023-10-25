@@ -20,6 +20,19 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
+    urls = [
+        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+    ],
+)
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+bazel_skylib_workspace()
+load("@bazel_skylib//lib:versions.bzl", "versions")
+versions.check(minimum_bazel_version = "6.0.0")
+
 # overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead
@@ -61,7 +74,7 @@ cc_library(
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.6.5",
+    tag = "2.13.0",
     patch_args = ["-p1"],
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
@@ -89,7 +102,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "576df1403d2861d3308d229ff0e2f31c4d7277c9", # Fix tensors handling (#34)
+    commit = "afe513dd209171f1273d00a8a4cfdb42f1322720", # Model API full build
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -132,15 +145,15 @@ http_archive(
     urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.2.tar.gz"],
 )
 
-http_archive(
-   name = "rules_foreign_cc",
-   strip_prefix = "rules_foreign_cc-0.1.0",
-   url = "https://github.com/bazelbuild/rules_foreign_cc/archive/0.1.0.zip",
+git_repository( # Using commit past 0.9.0 that adds cmake 3.26.2 for model api. Be sure to update to 0.10.0 when available.
+    name = "rules_foreign_cc",
+    remote = "https://github.com/bazelbuild/rules_foreign_cc.git",
+    commit = "1fb8a1e",
 )
 
-load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
-rules_foreign_cc_dependencies()
+rules_foreign_cc_dependencies(cmake_version="3.26.2")
 
 # gflags needed by glog
 http_archive(
@@ -199,6 +212,28 @@ http_archive(
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 python_configure(name = "local_config_python")
 
+http_archive(
+    name = "rules_python",
+    sha256 = "29a801171f7ca190c543406f9894abf2d483c206e14d6acbd695623662320097",
+    strip_prefix = "rules_python-0.18.1",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
+load("@rules_python//python:pip.bzl", "pip_parse")
+
+pip_parse(
+    name = "pip_deps",
+    requirements_lock = "//src:bindings/python/tests/requirements.txt",
+)
+
+load("@pip_deps//:requirements.bzl", "install_deps")
+
+install_deps()
+
 ########################################################### Python support end
 
 # minitrace
@@ -228,9 +263,9 @@ cc_library(
 #)
 
 # TensorFlow repo should always go after the other external dependencies.
-# TF on 2022-08-10.
-_TENSORFLOW_GIT_COMMIT = "af1d5bc4fbb66d9e6cc1cf89503014a99233583b"
-_TENSORFLOW_SHA256 = "f85a5443264fc58a12d136ca6a30774b5bc25ceaf7d114d97f252351b3c3a2cb"
+# TF on 2023-06-13.
+_TENSORFLOW_GIT_COMMIT = "491681a5620e41bf079a582ac39c585cc86878b9"
+_TENSORFLOW_SHA256 = "9f76389af7a2835e68413322c1eaabfadc912f02a76d71dc16be507f9ca3d3ac"
 http_archive(
     name = "org_tensorflow",
     urls = [
@@ -253,13 +288,6 @@ http_archive(
 
 load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
 tf_serving_workspace()
-
-# Check bazel version requirement, which is stricter than TensorFlow's.
-load(
-    "@org_tensorflow//tensorflow:version_check.bzl",
-    "check_bazel_version_at_least"
-)
-check_bazel_version_at_least("5.3.1")
 
 # Initialize TensorFlow's external dependencies.
 load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
@@ -329,9 +357,6 @@ google_cloud_cpp_common_deps()
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
 
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-grpc_extra_deps()
-
 # cxxopts
 http_archive(
     name = "com_github_jarro2783_cxxopts",
@@ -386,24 +411,19 @@ http_archive(
 load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
 prometheus_cpp_repositories()
 
+load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
+load("@mediapipe//third_party/model_api:model_api.bzl", "model_api_repository")
+model_api_repository(name="_model-api")
 new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",
-    build_file_content = """
-cc_library(
-    name = "adapter_api",
-    hdrs = ["model_api/cpp/adapters/include/adapters/inference_adapter.h",],
-    includes = ["model_api/cpp/adapters/include"],
-    deps = ["@linux_openvino//:openvino"],
-    visibility = ["//visibility:public"],
-)
-    """,
-    commit = "ca5a91ed5b3dbf428dc4de6b72f0a3da93d2aa0a" # using the same model_api sha as MP fork
+    build_file = "@_model-api//:BUILD",
+    commit = "03a6cee5d486ee9eabb625e4388e69fe9c50ef20"
 )
 
 git_repository(
     name = "oneTBB",
-    branch = "v2021.8.0",
+    branch = "v2021.10.0", # need newer version to be compatible with bazel 6.0
     remote = "https://github.com/oneapi-src/oneTBB/",
     patch_args = ["-p1"],
     patches = ["mwaitpkg.patch",]

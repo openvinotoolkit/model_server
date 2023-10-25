@@ -59,6 +59,7 @@ cc_library(
         "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
         "@org_tensorflow//tensorflow/core:framework",
+        "@org_tensorflow//tensorflow/lite/c:c_api",
         "@org_tensorflow//tensorflow/lite:framework_stable",
         "@com_github_tencent_rapidjson//:rapidjson",
         "@com_github_gabime_spdlog//:spdlog",
@@ -81,10 +82,11 @@ cc_library(
         ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework:calculator_framework",
+                "@mediapipe//mediapipe/framework/stream_handler:immediate_input_stream_handler",  # added directly for python yielding (cycle), add more if needed
                 "@mediapipe//mediapipe/framework/port:logging",
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework/port:status",
-                "@model_api//:adapter_api",],
+                "@model_api//:model_api",],
             "//:disable_mediapipe": []
             })
          + select({

@@ -42,6 +42,9 @@ service GRPCInferenceService
   // indicated by the google.rpc.Status returned for the request. The OK code 
   // indicates success and other codes indicate failure.
   rpc ModelInfer(ModelInferRequest) returns (ModelInferResponse) {}
+
+  // Streaming endpoint
+  rpc ModelStreamInfer(stream ModelInferRequest) returns (stream ModelStreamInferResponse) {}
 }
 
 message ServerLiveRequest {}
@@ -256,6 +259,13 @@ message ModelInferResponse
   // If this field is specified then InferOutputTensor::contents must
   // not be specified for any output tensor.
   repeated bytes raw_output_contents = 6;
+}
+
+// Partial response for streaming inference
+message ModelStreamInferResponse
+{
+  string error_message = 1;
+  ModelInferResponse infer_response = 2;
 }
 
 // An inference parameter value. The Parameters message describes a 

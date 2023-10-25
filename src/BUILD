@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2022 Intel Corporation
+# Copyright (c) 2020-2023 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -135,6 +135,10 @@ cc_shared_library(
         "@FP16//:__subpackages__",
         "@flatbuffers//:__subpackages__",
         "@ruy//:__subpackages__",
+        "@azure//:__subpackages__",
+        "@cpprest//:__subpackages__",
+        "@boringssl//:__subpackages__",
+        "@linux_opencv//:__subpackages__",
     ] + select({
         "//:not_disable_mediapipe": [
             "@mediapipe//:__subpackages__",
@@ -165,7 +169,8 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["mediapipe_calculators/ovmscalculator.proto"],
+    srcs = ["mediapipe_calculators/ovmscalculator.proto",
+            "mediapipe_calculators/python_backend_calculator.proto"],
     visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
@@ -405,7 +410,7 @@ cc_library(
         "tensor_conversion.hpp",
         "tensor_conversion.cpp",
          ] + select({
-            "//conditions:default": [
+            "//src:not_disable_mediapipe": [
                 "mediapipe_internal/mediapipefactory.cpp",
                 "mediapipe_internal/mediapipefactory.hpp",
                 "mediapipe_internal/mediapipegraphconfig.hpp",
@@ -414,9 +419,21 @@ cc_library(
                 "mediapipe_internal/mediapipegraphdefinition.hpp",
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
+                "mediapipe_internal/pythonnoderesource.cpp",
+                "mediapipe_internal/pythonnoderesource.hpp",
                 "mediapipe_internal/packettypes.hpp",
             ],
             "//src:disable_mediapipe" : [],
+        })
+        + select({
+            "//src:not_disable_python": [
+                    "ovms_py_tensor.hpp",
+                    "ovms_py_tensor.cpp",
+                    "pythoninterpretermodule.hpp",
+                    "pythoninterpretermodule.cpp",
+                    "mediapipe_calculators/python_backend_calculator.cc",
+                ],
+            "//src:disable_python": []
         }),
     deps = [
         "//:ovms_dependencies",
@@ -438,6 +455,7 @@ cc_library(
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
+        "-fvisibility=hidden",# Needed for pybind targets
         "-Werror",
         ] + select({
             "//conditions:default": [
@@ -467,6 +485,24 @@ cc_library(
         ],
     }),
     alwayslink = 1,
+)
+
+pybind_extension(
+    name = "pyovms",
+    srcs = ["bindings/python/ovms_py_tensor.cpp",
+            "ovms_py_tensor.hpp",
+            "ovms_py_tensor.cpp"],
+)
+
+load("@pip_deps//:requirements.bzl", "all_requirements")
+
+py_test(
+    name = "test_python_binding",
+    srcs = glob(["bindings/python/tests/*.py"]),
+    main = "bindings/python/tests/run.py",
+    imports=["."],
+    data = [":pyovms.so"],
+    deps = all_requirements
 )
 
 cc_binary(
@@ -745,10 +781,10 @@ cc_binary(
         "//src:libcustom_node_model_zoo_intel_object_detection.so",
         "//src:libcustom_node_image_transformation.so",
 	    ] + select({
-        "//conditions:default": [
-            "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
-        ],
-        "//src:disable_mediapipe" : [],
+            "//conditions:default": [
+                "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+            ],
+            "//src:disable_mediapipe" : [],
         }),
 
         # "//src:cpp_headers",  # Use for dynamic linking when necessary
@@ -825,6 +861,7 @@ cc_test(
         "test/stateful_test_utils.hpp",
         "test/status_test.cpp",
         "test/stringutils_test.cpp",
+        "test/streaming_test.cpp",
         "test/systeminfo_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
@@ -834,16 +871,23 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
-        "//conditions:default": [
-            "test/get_mediapipe_graph_metadata_response_test.cpp",
-            "test/mediapipe/inputsidepacketusertestcalc.cc",
-            "test/mediapipeflow_test.cpp",
-            "test/mediapipe_validation_test.cpp",
-            "test/mediapipe/ovms_kfs_calculator.cc",
-            "test/mediapipe/ovms_image_input_calculator.cc",
-            "mediapipe_calculators/ovms_calculator.cc",
-        ],
-        "//src:disable_mediapipe" : [],
+            "//src:not_disable_mediapipe": [
+                "test/get_mediapipe_graph_metadata_response_test.cpp",
+                "test/mediapipe/inputsidepacketusertestcalc.cc",
+                "test/mediapipeflow_test.cpp",
+                "test/mediapipe_framework_test.cpp",
+                "test/mediapipe_validation_test.cpp",
+                "test/mediapipe/ovms_kfs_calculator.cc",
+                "test/mediapipe/ovms_image_input_calculator.cc",
+                "mediapipe_calculators/ovms_calculator.cc",
+            ],
+            "//src:disable_mediapipe" : [],
+        }) + select({
+            "//src:not_disable_python": [
+                "test/pythonnode_test.cpp",
+                "test/python/ovms_py_tensor_test.cpp",
+            ],
+            "//src:disable_python" : [],
         }),
     data = [
         "test/add_two_inputs_model/1/add.xml",
@@ -897,6 +941,10 @@ cc_test(
         "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
         "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
         "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
+        "test/mediapipe/negative/config_exception_during_process.json",
+        "test/mediapipe/negative/config_no_calc_output_stream.json",
+        "test/mediapipe/negative/graph_exception_during_process.pbtxt",
+        "test/mediapipe/negative/graph_no_calc_output_stream/graph_no_calc_output_stream.pbtxt",
         "test/mediapipe/relative_paths/config_mp_passthrough.json",
         "test/mediapipe/relative_paths/config_relative_dummy_negative.json",
         "test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json",
@@ -947,16 +995,19 @@ cc_test(
         "//src:libcustom_node_horizontal_ocr.so",
         "@com_google_googletest//:gtest",
         ] + select({
-        "//conditions:default": [
-            "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
-        ],
-        "//src:disable_mediapipe" : [],
+            "//conditions:default": [
+                "//src/test/mediapipe/calculators:mediapipe_test_calculators",
+                "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+            ],
+            "//src:disable_mediapipe" : [],
         }),
     copts = [
         "-Wall",
         "-Wno-unknown-pragmas",
         "-Werror",
         "-Isrc",
+        "-fconcepts", # for gmock related utils
+        "-fvisibility=hidden",# Needed for pybind targets
     ],
 )
 

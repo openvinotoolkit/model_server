@@ -25,6 +25,8 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=8
 ENV DEBIAN_FRONTEND=noninteractive
+ARG BASE_IMAGE
+ENV BASE_IMAGE=${BASE_IMAGE}
 RUN apt-get update && apt-get install --no-install-recommends -y \
             build-essential \
             gcc-9 \
@@ -95,6 +97,7 @@ RUN ./install_opencv.sh
 FROM base_build as build
 ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
+ENV BASE_IMAGE=${BASE_IMAGE}
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 
@@ -261,7 +264,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
 
 # Set up Bazel
-ENV BAZEL_VERSION 5.3.1
+ENV BAZEL_VERSION 6.0.0
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
@@ -273,6 +276,9 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
+# This path is required for namespace to setup Python dependencies for testing the binding
+COPY src/BUILD /ovms/src/BUILD
+COPY src/bindings/python/tests/requirements.txt /ovms/src/bindings/python/tests/requirements.txt
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/
 
@@ -332,8 +338,9 @@ ARG CHECK_COVERAGE=0
 
 ARG RUN_TESTS=1
 RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" == "1" ] ; then \
-    bazel coverage --combined_report=lcov --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
-    bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
+    bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
+    bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; \ 
+    bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:test_python_binding; fi ;
 
 # C api shared library
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_shared

@@ -199,6 +199,8 @@ the predictions. The request format must match the pipeline definition inputs.
 Graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md)
 and [REST Model Status](model_server_rest_api_kfs.md)
 
+The difference in using the mediapipes and individual models is in version management. In all calls to the mediapipes,
+the version parameter is ignored. Mediapipes are not versioned. Though, they can reference a particular version of the models in the graph.
 
 ## MediaPipe Graphs Examples <a name="graphs-examples"></a>
 
@@ -220,9 +222,9 @@ MediaPipe graphs can include only the calculators built-in the model server duri
 If you want to add your own mediapipe calculator to OpenVINO Model Server functionality you need to add it as a dependency and rebuild the OpenVINO Model Server binary.
 
 If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](../WORKSPACE) file.
-Then you need to add the calculator target as a bazel dependency to the [src/BUILD](,./src/BUILD) file. This should be done for:
+Then you need to add the calculator target as a bazel dependency to the [src/BUILD](../src/BUILD) file. This should be done for:
 
-```bash
+```
 cc_library(
  name = "ovms_lib",
 ...
@@ -230,7 +232,7 @@ cc_library(
 
 in the conditions:default section of the deps property:
 
-```bash
+```
   deps = [
          "//:ovms_dependencies",
         "//src/kfserving_api:kfserving_api_cpp",
