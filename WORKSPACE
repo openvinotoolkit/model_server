@@ -418,7 +418,12 @@ new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",
     build_file = "@_model-api//:BUILD",
-    commit = "03a6cee5d486ee9eabb625e4388e69fe9c50ef20"
+    commit = "cb69cd2e9cfc8e9963e952d5027b528af1c734a0"
+)
+
+local_repository(
+    name = "geti_calculators",
+    path = "/geti_calculators",
 )
 
 git_repository(
