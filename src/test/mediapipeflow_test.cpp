@@ -24,6 +24,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 #include <sys/stat.h>
 
 #pragma GCC diagnostic push
@@ -52,6 +53,8 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
 #include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
+#include "mediapipe/framework/formats/image_frame.h"
+#include "mediapipe/framework/formats/tensor.h"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
@@ -1967,6 +1970,9 @@ protected:
         ovms::stream_types_mapping_t mapping;
         mapping["kfs_response"] = mediapipe_packet_type_enum::KFS_RESPONSE;
         mapping["tf_response"] = mediapipe_packet_type_enum::TFTENSOR;
+        mapping["ov_response"] = mediapipe_packet_type_enum::OVTENSOR;
+        mapping["mp_response"] = mediapipe_packet_type_enum::MPTENSOR;
+        mapping["mp_img_response"] = mediapipe_packet_type_enum::MEDIAPIPE_IMAGE;
         const std::vector<std::string> inputNames;
         const std::vector<std::string> outputNames;
         const ::mediapipe::CalculatorGraphConfig config;
@@ -1981,16 +1987,72 @@ protected:
 TEST_F(MediapipeSerialization, KFSResponse) {
     KFSResponse response;
     response.set_id("1");
+    auto output = response.add_outputs();
+    output->add_shape(1);
+    output->set_datatype("FP32");
+    std::vector<float> data = {1.0f};
+    response.add_raw_output_contents()->assign(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<KFSResponse*>(&response);
     ASSERT_EQ(executor->partialSerialize("kfs_response", mp_response, packet), StatusCode::OK);
     ASSERT_EQ(mp_response.id(), "1");
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.datatype(), "FP32");
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 4);
+    ASSERT_EQ(reinterpret_cast<const float*>(mp_response.raw_output_contents().at(0).data())[0], 1.0f);
 }
 
 TEST_F(MediapipeSerialization, TFTensor) {
-    tensorflow::Tensor tf_response(TFSDataType::DT_FLOAT);
-    ::mediapipe::Packet tf_packet = ::mediapipe::MakePacket<tensorflow::Tensor>(tf_response);
-    ASSERT_EQ(executor->partialSerialize("tf_response", mp_response, tf_packet), StatusCode::OK);
+    tensorflow::Tensor response(TFSDataType::DT_FLOAT, {1});
+    response.flat<float>()(0) = 1.0f;
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<tensorflow::Tensor>(response);
+    ASSERT_EQ(executor->partialSerialize("tf_response", mp_response, packet), StatusCode::OK);
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 4);
+    ASSERT_EQ(reinterpret_cast<const float*>(mp_response.raw_output_contents().at(0).data())[0], 1.0f);
+}
+
+TEST_F(MediapipeSerialization, OVTensor) {
+    std::vector<float> data = {1.0f};
+    ov::element::Type type(ov::element::Type_t::f32);
+    ov::Tensor response(type, {1}, data.data());
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<ov::Tensor>(response);
+    ASSERT_EQ(executor->partialSerialize("ov_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 4);
+    ASSERT_EQ(reinterpret_cast<const float*>(mp_response.raw_output_contents().at(0).data())[0], 1.0f);
+}
+
+TEST_F(MediapipeSerialization, MPTensor) {
+    mediapipe::Tensor response(mediapipe::Tensor::ElementType::kFloat32, {1});
+    response.GetCpuWriteView().buffer<float>()[0] = 1.0f;
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::Tensor>(std::move(response));
+    ASSERT_EQ(executor->partialSerialize("mp_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 4);
+    ASSERT_EQ(reinterpret_cast<const float*>(mp_response.raw_output_contents().at(0).data())[0], 1.0f);
+}
+
+TEST_F(MediapipeSerialization, MPImageTensor) {
+    mediapipe::ImageFrame response(static_cast<mediapipe::ImageFormat::Format>(1), 1, 1);
+    response.MutablePixelData()[0] = (char)1;
+    response.MutablePixelData()[1] = (char)1;
+    response.MutablePixelData()[2] = (char)1;
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::ImageFrame>(std::move(response));
+    ASSERT_EQ(executor->partialSerialize("mp_img_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.outputs(0).datatype(), "UINT8");
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 3);
+    EXPECT_EQ(mp_response.raw_output_contents().at(0).data()[0], 1);
+    EXPECT_EQ(mp_response.raw_output_contents().at(0).data()[1], 1);
+    EXPECT_EQ(mp_response.raw_output_contents().at(0).data()[2], 1);
 }
 
 TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
