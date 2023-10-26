@@ -846,7 +846,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
         while (poller.Next(&packet)) {
             SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
-            Status status = partialSerialize(outputStreamName, *response, packet);
+            Status status = serializePacket(outputStreamName, *response, packet);
             if (!status.ok()) {
                 return status;
             }
@@ -975,10 +975,7 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
             MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name, this](const ::mediapipe::Packet& packet) -> absl::Status {
                 try {
                     ::inference::ModelStreamInferResponse resp;
-                    Status status = partialSerialize(name, *resp.mutable_infer_response(), packet);
-                    if (!status.ok()) {
-                        return absl::Status(absl::StatusCode::kCancelled, "error in serialization");
-                    }
+                    OVMS_RETURN_MP_ERROR_ON_FAIL(serializePacket(name, *resp.mutable_infer_response(), packet), "error in serialization");
                     resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
                     if (!stream.Write(resp)) {
                         return absl::Status(absl::StatusCode::kCancelled, "client disconnected");
@@ -1030,7 +1027,7 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
     }
 }
 
-Status MediapipeGraphExecutor::partialSerialize(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const {
+Status MediapipeGraphExecutor::serializePacket(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const {
     Status status;
     SPDLOG_DEBUG("Received packet from output stream: {}", name);
     if (this->outputTypes.at(name) == mediapipe_packet_type_enum::KFS_RESPONSE) {
