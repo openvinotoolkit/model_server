@@ -972,11 +972,13 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
 
         // Installing observers
         for (const auto& name : this->outputNames) {
-            MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name](const ::mediapipe::Packet& packet) -> absl::Status {
+            MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name, this](const ::mediapipe::Packet& packet) -> absl::Status {
                 try {
                     ::inference::ModelStreamInferResponse resp;
-                    // TODO: Add support for other types CVS-122327/CVS-122329
-                    OVMS_RETURN_MP_ERROR_ON_FAIL(receiveAndSerializePacket<ov::Tensor>(packet, *resp.mutable_infer_response(), name), "ov::Tensor serialization");  // TODO: Missing test
+                    Status status = partialSerialize(name, *resp.mutable_infer_response(), packet);
+                    if (!status.ok()) {
+                        return absl::Status(absl::StatusCode::kCancelled, "error in serialization");
+                    }
                     resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
                     if (!stream.Write(resp)) {
                         return absl::Status(absl::StatusCode::kCancelled, "client disconnected");
