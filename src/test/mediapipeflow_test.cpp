@@ -121,6 +121,15 @@ public:
     }
 };
 
+template <class W, class R>
+class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
+public:
+    MOCK_METHOD(void, SendInitialMetadata, (), (override));
+    MOCK_METHOD(bool, NextMessageSize, (uint32_t * sz), (override));
+    MOCK_METHOD(bool, Read, (R * msg), (override));
+    MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
+};
+
 TEST_F(MediapipeFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -145,6 +154,44 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
 
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
+
+// TODO: Enable when deserializaiton/serialization is merged
+TEST_F(MediapipeFlowKfsTest, DISABLED_InferStream) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipeDummyKFS";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([request](::inference::ModelInferRequest* req) {
+            *req = request;
+            return true;
+        })
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            return false;
+        });
+    ASSERT_EQ(impl.ModelStreamInferImpl(nullptr, &stream), StatusCode::OK);
+    // TODO: More reads
+    // TODO: Assert writes
+    //auto outputs = response.outputs();
+    //ASSERT_EQ(outputs.size(), 1);
+    //ASSERT_EQ(outputs[0].name(), "out");
+    //ASSERT_EQ(outputs[0].shape().size(), 2);
+    //ASSERT_EQ(outputs[0].shape()[0], 1);
+    //ASSERT_EQ(outputs[0].shape()[1], 10);
+//
+    //// Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
+    //checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
 TEST_F(MediapipeTFTest, Passthrough) {
@@ -882,6 +929,28 @@ TEST_F(MediapipeFlowDummyNegativeTest, NegativeShouldNotReachInferDueToNonexiste
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::UNAVAILABLE);
 }
 
+TEST_F(MediapipeFlowDummyNegativeTest, NegativeShouldNotReachInferStreamDueToNonexistentCalculator) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName = "mediaDummyNonexistentCaclulator";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+    preparePredictRequest(request, inputsMeta);
+    request.mutable_model_name()->assign(modelName);
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([request](::inference::ModelInferRequest* req) {
+            *req = request;
+            return true;  // sending 1st request with wrong endpoint name
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_)).Times(0);
+    ASSERT_EQ(impl.ModelStreamInferImpl(nullptr, &stream), StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET);
+}
+
 TEST_F(MediapipeFlowScalarTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -968,6 +1037,91 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     auto status = impl.ModelInfer(nullptr, &request, &response);
     ASSERT_EQ(status.error_code(), grpc::StatusCode::OK) << status.error_message();
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
+
+// Smoke test - send multiple requests with ov::Tensor, receive multiple responses
+TEST_P(MediapipeFlowAddTest, InferStream) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    const size_t NUM_REQUESTS = 3;
+    ::KFSRequest request[NUM_REQUESTS];
+    ::KFSResponse response[NUM_REQUESTS];
+    const std::string modelName = GetParam();
+    for (size_t i = 0; i < NUM_REQUESTS; i++) {
+        request[i].Clear();
+        response[i].Clear();
+    }
+    inputs_info_t inputsMeta{
+        {"in1", {DUMMY_MODEL_SHAPE, precision}},
+        {"in2", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1[NUM_REQUESTS] = {
+        {3., 7., 1., 6., 4., 2., 0, 5., 9., 8.},
+        {6., 1., 4., 2., 0., 1., 9, 8., 9., 2.},
+        {4., 2., 0., 1., 9., 8., 5, 1., 4., 6.},
+    };
+    for (size_t i = 0; i < NUM_REQUESTS; i++) {
+        preparePredictRequest(request[i], inputsMeta, requestData1[i]);
+        request[i].mutable_model_name()->assign(modelName);
+    }
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([request](::inference::ModelInferRequest* req) {
+            *req = request[0];
+            return true;  // correct sending 1st request
+        })
+        .WillOnce([request](::inference::ModelInferRequest* req) {
+            *req = request[1];
+            return true;  // correct sending 2nd request
+        })
+        .WillOnce([request](::inference::ModelInferRequest* req) {
+            *req = request[2];
+            return true;  // correct sending 3rd request
+        })
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            return false;  // disconnection
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_))
+        .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            [&msg]() {
+                const auto& outputs = msg.infer_response().outputs();
+                ASSERT_EQ(outputs.size(), 1);
+                ASSERT_EQ(outputs[0].name(), "out");
+                ASSERT_EQ(outputs[0].shape().size(), 2);
+                ASSERT_EQ(outputs[0].shape()[0], 1);
+                ASSERT_EQ(outputs[0].shape()[1], 10);
+            }();
+            // expect first response
+            checkAddResponse("out", requestData1[0], requestData1[0], request[0], msg.infer_response(), 1, 1, modelName);
+            return true;
+        })
+        .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            [&msg]() {
+                const auto& outputs = msg.infer_response().outputs();
+                ASSERT_EQ(outputs.size(), 1);
+                ASSERT_EQ(outputs[0].name(), "out");
+                ASSERT_EQ(outputs[0].shape().size(), 2);
+                ASSERT_EQ(outputs[0].shape()[0], 1);
+                ASSERT_EQ(outputs[0].shape()[1], 10);
+            }();
+            // expect second response
+            checkAddResponse("out", requestData1[1], requestData1[1], request[1], msg.infer_response(), 1, 1, modelName);
+            return true;
+        })
+        .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            [&msg]() {
+                const auto& outputs = msg.infer_response().outputs();
+                ASSERT_EQ(outputs.size(), 1);
+                ASSERT_EQ(outputs[0].name(), "out");
+                ASSERT_EQ(outputs[0].shape().size(), 2);
+                ASSERT_EQ(outputs[0].shape()[0], 1);
+                ASSERT_EQ(outputs[0].shape()[1], 10);
+            }();
+            // expect third and no more responses
+            checkAddResponse("out", requestData1[2], requestData1[2], request[2], msg.infer_response(), 1, 1, modelName);
+            return true;
+        });
+    auto status = impl.ModelStreamInferImpl(nullptr, &stream);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
 }
 
 TEST_F(MediapipeFlowTest, InferWithParams) {
@@ -1695,6 +1849,7 @@ INSTANTIATE_TEST_SUITE_P(
         return info.param;
     });
 
+// TODO: Stream
 class MediapipeConfigChanges : public TestWithTempDir {
     void SetUp() override {
         TestWithTempDir::SetUp();
@@ -2272,6 +2427,8 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     this->stopServer();
     t.join();
 }
+
+// TODO: Add stream tests for unloading/reloading
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
