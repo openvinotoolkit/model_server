@@ -67,7 +67,7 @@ cc_library(
         "@awssdk//:s3",
         "@awssdk//:core",
         "@awssdk//:deps",
-        "@azure//:storage",
+        #"@azure//:storage",
         "@cpprest//:sdk",
         "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
