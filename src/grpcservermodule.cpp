@@ -150,10 +150,18 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         } catch (std::out_of_range const& e) {
             SPDLOG_WARN("Out of range parameter {} : {}", it->first, it->second);
         }
-        ::grpc::ResourceQuota res_quota;
-        res_quota.SetMaxThreads(config.grpcMaxThreads());
-        res_quota.Resize(config.grpcMemoryQuota());
-        builder.SetResourceQuota(res_quota);
+    }
+    ::grpc::ResourceQuota resource_quota;
+    if (config.grpcMaxThreads() != 0) {
+        resource_quota.SetMaxThreads(config.grpcMaxThreads());
+        SPDLOG_DEBUG("setting grpc MaxThreads ResourceQuota {}", config.grpcMaxThreads());
+    }
+    if (config.grpcMemoryQuota() != 0) {
+        resource_quota.Resize(config.grpcMemoryQuota());
+        SPDLOG_DEBUG("setting grpc Memory ResourceQuota {}", config.grpcMemoryQuota());
+    }
+    if ((config.grpcMemoryQuota() != 0) || (config.grpcMaxThreads() != 0)) {
+        builder.SetResourceQuota(resource_quota);
     }
     uint grpcServersCount = getGRPCServersCount(config);
     servers.reserve(grpcServersCount);

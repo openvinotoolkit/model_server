@@ -342,3 +342,42 @@ TEST(Server, ProperShutdownInCaseOfStartError) {
     t.join();
     // this test should not hang
 }
+
+TEST(Server, grpcArguments) {
+    std::string port = "9000";
+    std::string channel_arguments_str = "grpc.max_connection_age_ms=2000,grpc.max_concurrent_streams=10";
+    std::string grpc_max_threads = "";
+    std::string grpc_memory_quota = "";
+    randomizePort(port);
+    char* argv[] = {
+        (char*)"OpenVINO Model Server",
+        (char*)"--model_name",
+        (char*)"dummy",
+        (char*)"--model_path",
+        (char*)"/ovms/src/test/dummy",
+        (char*)"--port",
+        (char*)port.c_str(),
+        (char*)"--grpc_channel_arguments",
+        (char*)channel_arguments_str.c_str(),
+        (char*)"--grpc_max_threads",
+        (char*)grpc_max_threads.c_str(),
+        (char*)"--grpc_memory_quota",
+        (char*)grpc_memory_quota.c_str(),
+        nullptr};
+
+    ovms::Server& server = ovms::Server::instance();
+    std::thread t([&argv, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(7, argv));
+    });
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+    }
+
+    std::string address = std::string("localhost:") + port;
+    requestServerAlive(port.c_str(), grpc::StatusCode::OK, true);
+    checkServerMetadata(port.c_str(), grpc::StatusCode::OK);
+    server.setShutdownRequest(1);
+    t.join();
+    server.setShutdownRequest(0);
+}
