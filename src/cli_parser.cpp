@@ -218,6 +218,12 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     serverSettings->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
+    if (result->count("grpc_max_threads"))
+        serverSettings->grpcMaxThreads = result->operator[]("grpc_max_threads").as<uint32_t>();
+
+    if (result->count("grpc_memory_quota"))
+        serverSettings->grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
+
     if (result->count("rest_workers"))
         serverSettings->restWorkers = result->operator[]("rest_workers").as<uint32_t>();
 

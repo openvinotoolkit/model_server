@@ -146,7 +146,7 @@ public:
     /**
          * @brief Gets the rest workers count
          * 
-         * @return uint
+         * @return size_t
          */
     uint32_t restWorkers() const;
 
