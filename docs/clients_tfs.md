@@ -95,9 +95,9 @@ When creating a Python-based client application, there are two packages on PyPi 
    .. tab-item::  curl    
       :sync: curl   
    
-       .. code-block:: sh  
-   
-           curl http://localhost:8000/v1/models/my_model
+      .. code-block:: sh  
+
+         curl http://localhost:8000/v1/models/my_model
        
 @endsphinxdirective
 
