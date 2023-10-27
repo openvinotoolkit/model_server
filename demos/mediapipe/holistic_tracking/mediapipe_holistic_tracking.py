@@ -28,6 +28,8 @@ import shutil
 import urllib.request
 
 import tritonclient.grpc as grpcclient
+
+# required for streaming
 from tritonclient.utils import *
 from functools import partial
 import queue
@@ -92,10 +94,10 @@ if __name__ == '__main__':
 
     processing_times = np.zeros((0),int)
 
-    response_queue = queue.Queue()
-    def callback(response_queue, result, error):
-        response_queue.put(error if error else result)
-    triton_client.start_stream(callback=partial(callback, response_queue))
+    #response_queue = queue.Queue()
+    #def callback(response_queue, result, error):
+    #    response_queue.put(error if error else result)
+    #triton_client.start_stream(callback=partial(callback, response_queue))
     for line in lines:
         inputs = []
         if not os.path.exists(line.strip()):
@@ -109,16 +111,16 @@ if __name__ == '__main__':
         
         inputs[0].set_data_from_numpy(img)
         start_time = datetime.datetime.now()
-        #results = triton_client.infer(model_name=graph_name,
-        #                          inputs=inputs,
-        #                          outputs=outputs)
-        triton_client.async_stream_infer(model_name=graph_name,
+        results = triton_client.infer(model_name=graph_name,
                                   inputs=inputs,
                                   outputs=outputs)
-        response = response_queue.get()
-        if type(response) == InferenceServerException:
-            raise response
-        results = response
+        #triton_client.async_stream_infer(model_name=graph_name,
+        #                          inputs=inputs,
+        #                          outputs=outputs)
+        #response = response_queue.get()
+        #if type(response) == InferenceServerException:
+        #    raise response
+        #results = response
         end_time = datetime.datetime.now()
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
@@ -132,4 +134,4 @@ if __name__ == '__main__':
         cv2.imwrite("image_" + str(iteration) + ".jpg", out)
         print("Results saved to :"+ "image_" + str(iteration) + ".jpg")
         iteration = iteration + 1
-    triton_client.stop_stream()
+    #triton_client.stop_stream()
