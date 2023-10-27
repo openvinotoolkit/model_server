@@ -14,16 +14,17 @@
 # limitations under the License.
 #
 
-FROM golang:1.18
+FROM golang:1.20.10
 ARG http_proxy
 
 RUN echo "Acquire::http::Proxy \"$http_proxy\";" > /etc/apt/apt.conf.d/proxy.conf
 RUN apt-get update && \
-    apt-get -y install git unzip build-essential autoconf libtool protobuf-compiler libprotobuf-dev
+    apt-get -y install git unzip build-essential autoconf libtool protobuf-compiler libdc1394-dev libprotobuf-dev
 
-RUN apt-get update && apt-get install -y sudo && \
-    rm -rf /var/lib/apt/lists/* && \
-    git clone https://github.com/hybridgroup/gocv.git && \
+RUN apt-get update && apt-get install -y sudo
+
+RUN rm -rf /var/lib/apt/lists/*
+RUN git clone https://github.com/hybridgroup/gocv.git && \
     cd gocv && \
     make install
 
