@@ -16,7 +16,7 @@
 
 module github.com/openvinotoolkit/model_sever/client/go/kserve-api
 
-go 1.18
+go 1.20
 
 require (
 	google.golang.org/grpc v1.51.0
