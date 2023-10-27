@@ -976,7 +976,7 @@ Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest&
             MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&stream, &outputName, &servableName, this](const ::mediapipe::Packet& packet) -> absl::Status {
                 try {
                     ::inference::ModelStreamInferResponse resp;
-                    OVMS_RETURN_MP_ERROR_ON_FAIL(serializePacket(name, *resp.mutable_infer_response(), packet), "error in serialization");
+                    OVMS_RETURN_MP_ERROR_ON_FAIL(serializePacket(outputName, *resp.mutable_infer_response(), packet), "error in serialization");
                     resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
                     *resp.mutable_infer_response()->mutable_model_name() = servableName;  // TODO: Add test to streaming_tests.cpp
                     if (!stream.Write(resp)) {
