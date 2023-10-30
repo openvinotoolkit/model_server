@@ -1093,6 +1093,8 @@ TEST_P(MediapipeFlowAddTest, InferStream) {
 }
 
 // Inference on unloaded mediapipe graph
+// Expect old stream to continue responding until closure
+// Expect new stream to be rejected
 TEST_P(MediapipeFlowAddTest, InferStreamOnUnloadedGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -1188,7 +1190,7 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnUnloadedGraph) {
             checkAddResponse("out", requestData1[2], requestData1[2], request[2], msg.infer_response(), 1, 1, modelName);
             return true;
         });
-    std::thread unloader([&startUnloading, &finishedUnloading, &definition, &modelManager] () {
+    std::thread unloader([&startUnloading, &finishedUnloading, &definition, &modelManager]() {
         // Wait till first response notifies that we should start unloading
         startUnloading.get_future().get();
         definition->retire(modelManager);
@@ -1212,8 +1214,8 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnUnloadedGraph) {
 }
 
 // Inference on reloaded mediapipe graph, completely different pipeline
-// Expects stream to still use old configuration
-// Expect new configuration after stream re-initialization
+// Expects old stream to still use old configuration
+// Expect new stream to use new configuration
 TEST_P(MediapipeFlowAddTest, InferStreamOnReloadedGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -1309,16 +1311,49 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnReloadedGraph) {
             checkAddResponse("out", requestData1[2], requestData1[2], request[2], msg.infer_response(), 1, 1, modelName);
             return true;
         });
-    std::thread unloader([&startReloading, &finishedReloading, &definition, &modelManager] () {
+    std::thread reloader([&startReloading, &finishedReloading, &definition, &modelManager, &modelName]() {
         // Wait till first response notifies that we should start reloading
         startReloading.get_future().get();
-        definition->retire(modelManager);
+        MediapipeGraphConfig mgc{
+            modelName,
+            "",                                               // default base path
+            "/ovms/src/test/mediapipe/graphscalar_tf.pbtxt",  // graphPath - valid but includes missing models, will fail for new streams
+            "",                                               // default subconfig path
+            ""                                                // dummy md5
+        };
+        auto status = definition->reload(modelManager, mgc);
+        ASSERT_EQ(status, StatusCode::OK) << status.string();
         // Notify second request to arrive because we unloaded the graph
         finishedReloading.set_value();
     });
     auto status = impl.ModelStreamInferImpl(nullptr, &stream);
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    unloader.join();
+    reloader.join();
+
+    // Opening new stream, expect new graph to be available but errors in processing
+    std::promise<void> canDisconnect;
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> newStream;
+    EXPECT_CALL(newStream, Read(::testing::_))
+        .WillOnce([request](::inference::ModelInferRequest* req) {
+            *req = request[0];
+            return true;  // sending 1st request which should fail creating new graph
+        })
+        .WillOnce([&canDisconnect](::inference::ModelInferRequest* req) {
+            canDisconnect.get_future().get();
+            return false;
+        });
+    EXPECT_CALL(newStream, Write(::testing::_, ::testing::_))
+        .WillOnce([&canDisconnect](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            [&msg]() {
+                const auto& outputs = msg.infer_response().outputs();
+                ASSERT_EQ(outputs.size(), 0);
+                ASSERT_EQ(msg.error_message(), Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM).string() + " - INTERNAL: ; partial deserialization of first request");
+            }();
+            canDisconnect.set_value();
+            return true;
+        });
+    status = impl.ModelStreamInferImpl(nullptr, &newStream);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
 TEST_F(MediapipeFlowTest, InferWithParams) {
