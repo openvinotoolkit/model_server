@@ -46,11 +46,11 @@
     "mediapipe_config_list": [
         {
             "name":"holisticTracking",
-            "graph_path":"/ovms/demos/mediapipe/holistic_tracking/holistic_tracking.pbtxt"
+            "graph_path":"holistic_tracking.pbtxt"
         },
         {
             "name":"irisTracking",
-            "graph_path":"/ovms/demos/mediapipe/holistic_tracking/iris_tracking.pbtxt"
+            "graph_path":"iris_tracking.pbtxt"
         }
     ]
 }
