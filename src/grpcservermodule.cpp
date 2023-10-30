@@ -137,18 +137,18 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     builder.RegisterService(&tfsPredictService);
     builder.RegisterService(&tfsModelService);
     builder.RegisterService(&kfsGrpcInferenceService);
-    for (auto it = channel_arguments.begin(); it != channel_arguments.end(); it++) {
+    for (auto& [name, value] : channel_arguments) {
         // gRPC accept arguments of two types, int and string. We will attempt to
         // parse each arg as int and pass it on as such if successful. Otherwise we
         // will pass it as a string. gRPC will log arguments that were not accepted.
-        SPDLOG_DEBUG("setting grpc channel argument {}: {}", it->first, it->second);
+        SPDLOG_DEBUG("setting grpc channel argument {}: {}", name, value);
         try {
-            int i = std::stoi(it->second);
-            builder.AddChannelArgument(it->first, i);
+            int i = std::stoi(value);
+            builder.AddChannelArgument(name, i);
         } catch (std::invalid_argument const& e) {
-            builder.AddChannelArgument(it->first, it->second);
+            builder.AddChannelArgument(name, value);
         } catch (std::out_of_range const& e) {
-            SPDLOG_WARN("Out of range parameter {} : {}", it->first, it->second);
+            SPDLOG_WARN("Out of range parameter {} : {}", name, value);
         }
     }
     ::grpc::ResourceQuota resource_quota;
