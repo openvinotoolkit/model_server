@@ -1354,8 +1354,38 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnReloadedGraph) {
     ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
-TEST_P(MediapipeFlowAddTest, InferStreamFirstRequestUnavailableGraphCancelsStream) {
+TEST_P(MediapipeFlowAddTest, InferStreamFirstRequestRetiredGraphCancelsStream) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+    ModelManager& modelManager = smm->getServableManager();
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const std::string modelName = GetParam();
+    auto* definition = factory.findDefinitionByName(modelName);
+    ASSERT_NE(definition, nullptr);
+    definition->retire(modelManager);
 
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    request.Clear();
+    inputs_info_t inputsMeta{
+        {"in1", {DUMMY_MODEL_SHAPE, precision}},
+        {"in2", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{3., 7., 1., 6., 4., 2., 0, 5., 9., 8.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+
+    // Opening new stream, expect graph to be unavailable
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([request](::inference::ModelInferRequest* req) {
+            *req = request;
+            return true;  // sending 1st request which should fail creating new graph
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_)).Times(0);
+    auto status = impl.ModelStreamInferImpl(nullptr, &stream);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
 }
 
 TEST_P(MediapipeFlowAddTest, InferStreamDisconnectionBeforeFirstRequest) {
