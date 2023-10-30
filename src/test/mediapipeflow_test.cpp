@@ -1099,7 +1099,6 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnUnloadedGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
-    (void)smm;
     ModelManager& modelManager = smm->getServableManager();
     const MediapipeFactory& factory = modelManager.getMediapipeFactory();
 
@@ -1220,7 +1219,6 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnReloadedGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
-    (void)smm;
     ModelManager& modelManager = smm->getServableManager();
     const MediapipeFactory& factory = modelManager.getMediapipeFactory();
 
@@ -1354,6 +1352,24 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnReloadedGraph) {
         });
     status = impl.ModelStreamInferImpl(nullptr, &newStream);
     ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
+TEST_P(MediapipeFlowAddTest, InferStreamFirstRequestUnavailableGraphCancelsStream) {
+
+}
+
+TEST_P(MediapipeFlowAddTest, InferStreamDisconnectionBeforeFirstRequest) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            return false;  // immediate disconnection
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_)).Times(0);
+    auto status = impl.ModelStreamInferImpl(nullptr, &stream);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE) << status.string();
 }
 
 TEST_F(MediapipeFlowTest, InferWithParams) {

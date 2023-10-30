@@ -329,9 +329,10 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
     OVMS_PROFILE_FUNCTION();
 #if (MEDIAPIPE_DISABLE == 0)
     ::inference::ModelInferRequest firstRequest;
-    if (!stream->Read(&firstRequest)) {  // TODO: Do not wait forever
-        SPDLOG_DEBUG("Client disconnected during reading first streaming request");
-        return Status(StatusCode::UNKNOWN_ERROR);  // TODO: Proper error
+    if (!stream->Read(&firstRequest)) {
+        Status status = StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE;
+        SPDLOG_DEBUG(status.string());
+        return status;
     }
     std::shared_ptr<MediapipeGraphExecutor> executor;
     auto status = this->modelManager.createPipeline(executor, firstRequest.model_name(), &firstRequest, nullptr /* response not present in streaming api */);
