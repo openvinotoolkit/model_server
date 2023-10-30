@@ -265,7 +265,7 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcMaxThreads(OVMS_ServerSettings* settings,
 // \param grpc_memory_quota The value to be set
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServerSettingsSetGrpcMemoryQuota(OVMS_ServerSettings* settings,
-    const size_t grpc_memory_quota); 
+    const size_t grpc_memory_quota);
 
 // Set config check interval server setting.
 // Equivalent of starting server with
