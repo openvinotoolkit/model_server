@@ -57,7 +57,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "GRPC_WORKERS")
             ("grpc_max_threads",
-                "Maximum number of threads which can be handled by the grpc server. Default value depends on number of CPUs.",
+                "Maximum number of threads which can be used by the grpc server. Default value depends on number of CPUs.",
                 cxxopts::value<uint32_t>(),
                 "GRPC_MAX_THREADS")
             ("grpc_memory_quota",

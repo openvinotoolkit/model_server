@@ -23,10 +23,10 @@ See also:
 
 ---
 
-OpenVINO Model Server has a set mechanisms preventing denial of service attacks from the client applications. They include the following:
-- setting the number of inference execution streams which can limit the number of parallel inference calls in progress in each model. It can be tuned with `INFER_STREAM` or `PERFORMANCE_HINT` plugin config.
+OpenVINO Model Server has a set of mechanisms preventing denial of service attacks from the client applications. They include the following:
+- setting the number of inference execution streams which can limit the number of parallel inference calls in progress for each model. It can be tuned with `NUM_STREAMS` or `PERFORMANCE_HINT` plugin config.
 - setting the maximum number of gRPC threads which is, by default, configured to the number 4 * number_of_cores. It can be changes with the parameter `--grpc_max_threads`.
-- maximum number of REST and GRPC message which is 1GB is size - bigger messages will be rejected
+- maximum size of REST and GRPC message which is 1GB - bigger messages will be rejected
 - setting max_concurrent_streams which defines how many concurrent threads can be initiated from a single client - the remaining will be queued. The default is equal to the number of CPU cores. It can be changes with the `--grpc_channel_arguments grpc.max_concurrent_streams=8`.
 - setting the gRPC memory quota for the requests buffer - the default is 2GB. It can be changed with `--grpc_memory_quota=2147483648`. Value `0` invalidates the quota.
 - there is defined also a default grpc parameter `grpc.http2.lookahead_bytes=4194304` but it is related to communication tuning for the typical message sizes of the inference requests.
