@@ -1354,7 +1354,7 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnReloadedGraph) {
     ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
-TEST_P(MediapipeFlowAddTest, InferStreamFirstRequestRetiredGraphCancelsStream) {
+TEST_P(MediapipeFlowAddTest, NegativeShouldNotReachInferStreamDueToRetiredGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
@@ -2127,7 +2127,6 @@ INSTANTIATE_TEST_SUITE_P(
         return info.param;
     });
 
-// TODO: Stream
 class MediapipeConfigChanges : public TestWithTempDir {
     void SetUp() override {
         TestWithTempDir::SetUp();
@@ -2823,11 +2822,6 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     this->stopServer();
     t.join();
 }
-
-// TODO: Add stream tests for unloading/reloading
-// Test MP graph unloading during active stream
-// Test MP graph added back with different settings during active stream
-// Test creating next stream after graph is added back with different settings
 
 INSTANTIATE_TEST_SUITE_P(
     Test,

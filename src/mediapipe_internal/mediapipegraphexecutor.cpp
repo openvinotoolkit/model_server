@@ -948,7 +948,7 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::infere
     // Deserialize each input separately
     for (const auto& input : request->inputs()) {
         std::unique_ptr<ov::Tensor> tensor;
-        OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), *request, tensor), "mediapipe::ImageFrame deserialization");
+        OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), *request, tensor), "ov::Tensor deserialization");
         MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
                               input.name(),
                               ::mediapipe::packet_internal::Create(
