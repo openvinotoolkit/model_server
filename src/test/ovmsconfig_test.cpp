@@ -331,9 +331,8 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--log_level", "ERROR",
         "--grpc_max_threads", "100",
         "--grpc_memory_quota", "1000000",
-
         "--config_path", "/config.json"};
-    int arg_count = 31;
+    int arg_count = 35;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
