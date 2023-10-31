@@ -329,8 +329,8 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--cache_dir", "/tmp/model_cache",
         "--log_path", "/tmp/log_path",
         "--log_level", "ERROR",
-        "--grpcMaxThreads", "100",
-        "--grpcMemoryQuota", "1000000",
+        "--grpc_max_threads", "100",
+        "--grpc_memory_quota", "1000000",
 
         "--config_path", "/config.json"};
     int arg_count = 31;
