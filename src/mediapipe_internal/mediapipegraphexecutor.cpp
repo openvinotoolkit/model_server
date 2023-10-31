@@ -485,16 +485,9 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
         return status;
     }
     auto absStatus = graph.AddPacketToInputStream(
-                              name,
-                              //::mediapipe::packet_internal::Create(new ::mediapipe::packet_internal::Holder<T>(inputTensor.release())
-                              ::mediapipe::packet_internal::Create(new Holder<T>(inputTensor.release(), request))
-//                              ::mediapipe::Adopt<T>(inputTensor.release())
-                              .At(timestamp));
- /*   absStatus = graph.AddPacketToInputStream(
-                              input.name(),
-                              ::mediapipe::packet_internal::Create(
-                                  new HolderWithRequestOwnership<T>(inputTensor.release(), request))
-                                  .At(timestamp)),*/
+                         name,
+                         ::mediapipe::packet_internal::Create(
+                             new Holder<T>(inputTensor.release(), request)).At(timestamp));
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
@@ -512,14 +505,8 @@ Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<con
     }
     SPDLOG_DEBUG("Request to passthrough:\"{}\"", name);
     auto absStatus = graph.AddPacketToInputStream(
-        name, 
-              //::mediapipe::MakePacket<const KFSRequest*>(&request).At(timestamp));
-              ::mediapipe::packet_internal::Create(new Holder<const KFSRequest>(static_cast<const KFSRequest*>(request.get()), request)).At(timestamp));
-    /*auto absStatus = graph.AddPacketToInputStream(
-                              name,
-                              ::mediapipe::packet_internal::Create(new Holder<KFSRequest*>(inputTensor.release()))
-//                              ::mediapipe::Adopt<T>(inputTensor.release())
-                              .At(timestamp));*/
+        name, ::mediapipe::packet_internal::Create(
+            new Holder<const KFSRequest>(static_cast<const KFSRequest*>(request.get()), request)).At(timestamp));
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
@@ -689,7 +676,8 @@ public:
     //explicit HolderWithRequestOwnership(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
     HolderWithRequestOwnership(const T* ptr, const std::shared_ptr<const KFSRequest>& req) :
         ::mediapipe::packet_internal::Holder<T>(ptr),
-        req(req) {}
+        req(req) {
+        }
 };
 // Second is required for unary-unary where it is gRPC who creates the request and musn't clean up
 template <typename T>
@@ -697,10 +685,9 @@ class HolderWithNoRequestOwnership : public ::mediapipe::packet_internal::Holder
 public:
     //explicit HolderWithNoRequestOwnership(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
     HolderWithNoRequestOwnership(const T* ptr, const std::shared_ptr<const KFSRequest>& req) :
-        ::mediapipe::packet_internal::Holder<T>(ptr) {}
+        ::mediapipe::packet_internal::Holder<T>(ptr) {
+        }
 };
-
-auto someL = [](const KFSRequest*){ return;};
 
 template <template<typename X> typename Holder>
 Status selectPacketType(const std::string& inputName, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp, const stream_types_mapping_t& inputTypes) {
@@ -723,7 +710,7 @@ Status selectPacketType(const std::string& inputName, std::shared_ptr<const KFSR
         SPDLOG_DEBUG("Request processing OVTensor: {}", inputName);
         status = createPacketAndPushIntoGraph<ov::Tensor, Holder>(inputName, request, graph, timestamp);
     }
-    return StatusCode::OK;
+    return status;
 }
 
 Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
@@ -772,11 +759,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
 
     ovms::Status status;
     size_t insertedStreamPackets = 0;
-    //std::shared_ptr<const KFSRequest> request(requestPtr, [](const KFSRequest* r){ return;});  // here we don't actually own nor delete the request
-    std::shared_ptr<const KFSRequest> request(requestPtr, someL);  // here we don't actually own nor delete the request
-    const mediapipe::Timestamp timestamp(DEFAULT_STARTING_STREAM_TIMESTAMP);
+    std::shared_ptr<const KFSRequest> request(requestPtr, [](const KFSRequest* r){ return;});  // here we don't actually own nor delete the request
     for (auto& inputName : this->inputNames) {
-        status = selectPacketType<HolderWithNoRequestOwnership>(inputName, request, graph, timestamp, this->inputTypes);
+        status = selectPacketType<HolderWithNoRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes);
         if (!status.ok()) {
             return status;
         }
@@ -896,29 +881,11 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSReque
     for (const auto& input : request->inputs()) {
         const auto& inputName = input.name();
         // TODO write test that request contains not existing stream
-        if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto e){ return e == inputName;}) == this->inputNames.end()) {
+        if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName){ return streamName == inputName;}) == this->inputNames.end()) {
             SPDLOG_DEBUG("Request for {}, contains not expected input name: {}", request->model_name(), inputName);
             return Status(StatusCode::INVALID_UNEXPECTED_INPUT, std::string(inputName) + "is unexpected");
         }
-        auto inputPacketType = this->inputTypes.at(inputName);
-        ovms::Status status;
-        if (inputPacketType == mediapipe_packet_type_enum::KFS_REQUEST) {
-            SPDLOG_DEBUG("Request processing KFS passthrough: {}", inputName);
-            status = createPacketAndPushIntoGraph<HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
-        } else if (inputPacketType == mediapipe_packet_type_enum::TFTENSOR) {
-            SPDLOG_DEBUG("Request processing TF tensor: {}", inputName);
-            status = createPacketAndPushIntoGraph<tensorflow::Tensor, HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
-        } else if (inputPacketType == mediapipe_packet_type_enum::MPTENSOR) {
-            SPDLOG_DEBUG("Request processing MP tensor: {}", inputName);
-            status = createPacketAndPushIntoGraph<mediapipe::Tensor, HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
-        } else if (inputPacketType == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
-            SPDLOG_DEBUG("Request processing Mediapipe ImageFrame: {}", inputName);
-            status = createPacketAndPushIntoGraph<mediapipe::ImageFrame, HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
-        } else if ((inputPacketType == mediapipe_packet_type_enum::OVTENSOR) ||
-                   (inputPacketType == mediapipe_packet_type_enum::UNKNOWN)) {
-            SPDLOG_DEBUG("Request processing OVTensor: {}", inputName);
-            status = createPacketAndPushIntoGraph<ov::Tensor, HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
-        }
+        status = selectPacketType<HolderWithRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes);
         if (!status.ok()) {
             return status;
         }
@@ -959,11 +926,11 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
 
         // Deserialize first request
         OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(this->partialDeserialize(
-                                                  std::shared_ptr<const ::inference::ModelInferRequest>(&firstRequest,
+                                                  std::shared_ptr<const KFSRequest>(&firstRequest,
                                                       // Custom deleter to avoid deallocation by custom holder
                                                       // Conversion to shared_ptr is required for unified deserialization method
                                                       // for first and subsequent requests
-                                                      [](const ::inference::ModelInferRequest*) {}),
+                                                      [](const KFSRequest*) {}),
                                                   graph),
             "partial deserialization of first request");
 
