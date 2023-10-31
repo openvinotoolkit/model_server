@@ -40,38 +40,41 @@ const std::string INPUT_SIDE_PACKET_TAG = "PYTHON_NODE_RESOURCES";
 
 typedef std::unique_ptr<OvmsPyTensor> OvmsPyTensorPtr;
 
-void pushOutputs(CalculatorContext* cc, py::list pyOutputs) {
-    py::gil_scoped_acquire acquire;
-    for (const std::string& tag : cc->Outputs().GetTags()) {
-        for (py::handle pyOutputHandle : pyOutputs) {
-            if (pyOutputHandle.attr("name").cast<std::string>() == tag) {
-                py::object pyOutput = pyOutputHandle.cast<py::object>();
-                std::unique_ptr<PyObjectWrapper> outputPtr = std::make_unique<PyObjectWrapper>(pyOutput);
-                cc->Outputs().Tag(tag).Add(outputPtr.release(), cc->InputTimestamp());
-            }
-        }
-    }
-}
-
 class PythonExecutorCalculator : public CalculatorBase {
-std::shared_ptr<PythonNodeResource> nodeResources;
-std::unique_ptr<py::iterator> pyIterator;
 
 /* 
 TODO: Streaming support:
     - timestamping
     - loopback input
 */ 
+
+std::shared_ptr<PythonNodeResource> nodeResources;
+std::unique_ptr<PyObjectWrapper<py::iterator>> pyIteratorPtr;
+
+void pushOutputs(CalculatorContext* cc, py::list pyOutputs) {
+    py::gil_scoped_acquire acquire;
+    for (const std::string& tag : cc->Outputs().GetTags()) {
+        for (py::handle pyOutputHandle : pyOutputs) {
+            py::object pyOutput = pyOutputHandle.cast<py::object>();
+            nodeResources->pythonBackend->validateOvmsPyTensor(pyOutput);
+            if (pyOutput.attr("name").cast<std::string>() == tag) {
+                std::unique_ptr<PyObjectWrapper<py::object>> outputPtr = std::make_unique<PyObjectWrapper<py::object>>(pyOutput);
+                cc->Outputs().Tag(tag).Add(outputPtr.release(), cc->InputTimestamp());
+            }
+        }
+    }
+}
+
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->GetNodeName() << "] GetContract start";
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         for (auto& input : cc->Inputs()) {
-            input.Set<PyObjectWrapper>();
+            input.Set<PyObjectWrapper<py::object>>();
         }
         for (auto& output : cc->Outputs()) {
-            output.Set<PyObjectWrapper>();
+            output.Set<PyObjectWrapper<py::object>>();
         }
         cc->InputSidePackets().Tag(INPUT_SIDE_PACKET_TAG).Set<PythonNodesResources>();
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
@@ -80,10 +83,6 @@ public:
 
     absl::Status Close(CalculatorContext* cc) final {
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Close";
-        if (pyIterator) {
-            py::gil_scoped_acquire acquire;
-            pyIterator.reset();
-        }
         return absl::OkStatus();
     }
 
@@ -95,7 +94,7 @@ public:
             LOG(INFO) << "Could not find initialized Python node named: " << cc->NodeName();
             RET_CHECK(false);
         }
-        nodeResources =  it->second;
+        nodeResources = it->second;
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Open end";
         return absl::OkStatus();
     }
@@ -105,19 +104,20 @@ public:
         py::gil_scoped_acquire acquire;
         try {
             py::print("PYTHON: Acquired GIL");
-            if (pyIterator) { // Iterator initialized
+            if (pyIteratorPtr) { // Iterator initialized
                 py::print("PyIterator initialized block");
-                if (*pyIterator != py::iterator::sentinel()) {
-                    py::list pyOutputs = py::cast<py::list>(**pyIterator);
+                if (pyIteratorPtr->getImmutableObject() != py::iterator::sentinel()) {
+                    py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getImmutableObject());
                     pushOutputs(cc, pyOutputs);
-                ++(*pyIterator);
+                    ++(pyIteratorPtr->getMutableObject());
                 }
             } else { // Iterator not initialized, either first iteration or execute is not yielding
                 py::print("PyIterator uninitialized block");
                 std::vector<py::object> pyInputs;
                 for (const std::string& tag : cc->Inputs().GetTags()) {
-                    const py::object& pyTensor = cc->Inputs().Tag(tag).Get<PyObjectWrapper>().getObject();
-                    pyInputs.push_back(pyTensor);
+                    const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getImmutableObject();
+                    nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
+                    pyInputs.push_back(pyInput);
                 }
             
                 py::object executeResult = std::move(nodeResources->nodeResourceObject->attr("execute")(pyInputs));
@@ -128,18 +128,19 @@ public:
                     pushOutputs(cc, executeResult);
                 } else if (py::isinstance<py::iterator>(executeResult)) {
                     py::print("Iterator initialization (execute yielded)");
-                    pyIterator = std::make_unique<py::iterator>(executeResult);
-                    py::list pyOutputs = py::cast<py::list>(**pyIterator);
+                    pyIteratorPtr = std::make_unique<PyObjectWrapper<py::iterator>>(executeResult);
+                    py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getImmutableObject());
                     pushOutputs(cc, pyOutputs);
-                ++(*pyIterator);
+                    ++(pyIteratorPtr->getMutableObject());
                 } else {
                     throw UnexpectedPythonObjectError(executeResult, "list or generator");
                 }
             }
             py::print("PYTHON: Released GIL");
         } catch (const UnexpectedPythonObjectError& e) {
-            LOG(INFO) << "Bad return value from Python execute function. " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Python execute function returned bad value");
+            // TODO: maybe some more descriptive information where to seek the issue.
+            LOG(INFO) << "Wrong object on node " << cc->NodeName() << " execute input or output: " << e.what();
+            return absl::Status(absl::StatusCode::kInternal, "Python execute function received or returned bad value");
         } catch (const pybind11::error_already_set& e) {
             LOG(INFO) << "Python error occurred during node " << cc->NodeName() << " execution: " << e.what();
             return absl::Status(absl::StatusCode::kInternal, "Error occurred during Python code execution");

@@ -31,11 +31,13 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
 #include "../precision.hpp"
+#include "../pythoninterpretermodule.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
@@ -95,6 +97,8 @@ protected:
     }
 };
 
+
+// --------------------------------------- OVMS initializing Python nodes tests
 
 TEST_F(PythonFlowTest, InitializationPass) {
     ModelManager* manager;
@@ -439,21 +443,123 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
     }
 }
 
-
-// ---------------------------------- PythonExecutorCalculcator tests
-
 #include <iostream>
 #include <filesystem>
-#include "../pythoninterpretermodule.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_runner.h"
 #pragma GCC diagnostic pop
 
-void addInputItem(const std::string& tag, std::unique_ptr<PyObjectWrapper>& input, int64_t timestamp,
+PythonBackend * getPythonBackend() {
+    return dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend();
+}
+
+// Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements) 
+// where num_elements is the size of C++ float array. See createTensor static method.
+template<typename T>
+class SimpleTensor {
+public:
+    std::string name;
+    std::string datatype;
+    void* data;
+    int numElements;
+    size_t size;
+    std::vector<py::ssize_t> shape;
+    std::unique_ptr<PyObjectWrapper<py::object>> pyTensor;
+
+    static SimpleTensor createTensor(const std::string& name, T* data, const std::string& datatype, int numElements) {
+        SimpleTensor tensor;
+        tensor.name = name;
+        tensor.data = (void*)data;
+        tensor.datatype = datatype;
+        tensor.numElements = numElements;
+        tensor.size = numElements * sizeof(T);
+        tensor.shape = std::vector<py::ssize_t>{1, numElements};
+        getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor);
+        return tensor;
+
+    }
+
+    static std::vector<T> readVectorFromOutput(const std::string& outputName, int numElements, const mediapipe::CalculatorRunner* runner) {
+        const PyObjectWrapper<py::object>& pyOutput = runner->Outputs().Tag(outputName).packets[0].Get<PyObjectWrapper<py::object>>();
+        T * outputData = (T*)pyOutput.getProperty<void*>("ptr");
+        std::vector<T> output;
+        output.assign(outputData, outputData + numElements);
+        return output;
+    }
+
+    std::vector<T> getIncrementedVector() {
+        std::vector<T> output;
+        T * fpData = (T*)data;
+        for (int i = 0; i < shape[1]; i++) {
+            output.push_back(fpData[i] + 1);
+        }
+        return output;
+    }
+};
+
+// ---------------------------------- OVMS deserialize and serialize tests
+
+// This part duplicates some parts of tests in mediapipeflow_test.cpp file. 
+// We could think about moving them there in the future, but for now we need to keep 
+// all tests involving Python interpreter in a single test suite. 
+
+class MockedMediapipeGraphExecutorPy : public ovms::MediapipeGraphExecutor {
+public:
+    Status serializePacket(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const {
+        return ovms::MediapipeGraphExecutor::serializePacket(name, response, packet);
+    }
+
+    MockedMediapipeGraphExecutorPy(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
+        stream_types_mapping_t inputTypes,
+        stream_types_mapping_t outputTypes,
+        std::vector<std::string> inputNames, std::vector<std::string> outputNames,
+        const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources,
+        PythonBackend* pythonBackend) :
+        MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResources, pythonBackend) {}
+};
+
+
+TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
+    ovms::stream_types_mapping_t mapping;
+    mapping["python_result"] = mediapipe_packet_type_enum::OVMS_PY_TENSOR;
+    const std::vector<std::string> inputNames;
+    const std::vector<std::string> outputNames;
+    const ::mediapipe::CalculatorGraphConfig config;
+    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
+    auto executor = MockedMediapipeGraphExecutorPy("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResources, getPythonBackend());
+
+    std::string datatype = "FP32";
+    std::string name = "python_result";
+    int numElements = 3;
+    float input[] = {1.0, 2.0, 3.0};
+    SimpleTensor<float> tensor = SimpleTensor<float>::createTensor(name, input, datatype, numElements);
+
+    ::inference::ModelInferResponse response;
+
+    ::mediapipe::Packet packet = ::mediapipe::Adopt<PyObjectWrapper<py::object>>(tensor.pyTensor.release());
+    ASSERT_EQ(executor.serializePacket(name, response, packet), StatusCode::OK);
+    ASSERT_EQ(response.outputs_size(), 1);
+    auto output = response.outputs(0);
+    ASSERT_EQ(output.datatype(), "FP32");
+    ASSERT_EQ(output.shape_size(), 2);
+    ASSERT_EQ(output.shape(0), 1);
+    ASSERT_EQ(output.shape(1), 3);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.raw_output_contents().at(0).size(), 3 * sizeof(float));
+    std::vector<float> expectedOutputData {1.0, 2.0, 3.0};
+    std::vector<float> outputData;
+    const float* outputDataPtr = reinterpret_cast<const float*>(response.raw_output_contents().at(0).data());
+    outputData.assign(outputDataPtr, outputDataPtr + numElements);
+    ASSERT_EQ(expectedOutputData, outputData);
+}
+
+// ---------------------------------- PythonExecutorCalculcator tests
+
+void addInputItem(const std::string& tag, std::unique_ptr<PyObjectWrapper<py::object>>& input, int64_t timestamp,
                   mediapipe::CalculatorRunner* runner) {
     runner->MutableInputs()->Tag(tag).packets.push_back(
-        mediapipe::Adopt<PyObjectWrapper>(input.release()).At(mediapipe::Timestamp(timestamp)));
+        mediapipe::Adopt<PyObjectWrapper<py::object>>(input.release()).At(mediapipe::Timestamp(timestamp)));
 }
 
 void clearInputStream(std::string tag, mediapipe::CalculatorRunner* runner) {
@@ -487,54 +593,6 @@ std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> prepareInpu
     std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> nodesResources {{"pythonNode", nodeResource}};
     return nodesResources;
 }
-
-PythonBackend * getPythonBackend() {
-    return dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend();
-}
-
-// Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements) 
-// where num_elements is the size of C++ float array. See createTensor static method.
-template<typename T>
-class SimpleTensor {
-public:
-    std::string name;
-    std::string datatype;
-    void* data;
-    int numElements;
-    size_t size;
-    std::vector<py::ssize_t> shape;
-    std::unique_ptr<PyObjectWrapper> pyTensor;
-
-    static SimpleTensor createTensor(const std::string& name, T* data, const std::string& datatype, int numElements){
-        SimpleTensor tensor;
-        tensor.name = name;
-        tensor.data = (void*)data;
-        tensor.datatype = datatype;
-        tensor.numElements = numElements;
-        tensor.size = numElements * sizeof(T);
-        tensor.shape = std::vector<py::ssize_t>{1, numElements};
-        getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor);
-        return tensor;
-
-    }
-
-    static std::vector<T> readVectorFromOutput(const std::string& outputName, int numElements, const mediapipe::CalculatorRunner* runner) {
-        const PyObjectWrapper& pyOutput = runner->Outputs().Tag(outputName).packets[0].Get<PyObjectWrapper>();
-        T * outputData = (T*)pyOutput.getProperty<void*>("ptr");
-        std::vector<T> output;
-        output.assign(outputData, outputData + numElements);
-        return output;
-    }
-
-    std::vector<T> getIncrementedVector() {
-        std::vector<T> output;
-        T * fpData = (T*)data;
-        for (int i = 0; i < shape[1]; i++) {
-            output.push_back(fpData[i] + 1);
-        }
-        return output;
-    }
-};
 
 TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
     std::string testPbtxt = R"(
@@ -658,7 +716,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
         {"bad_execute_wrong_signature", "Error occurred during Python code execution"},
         {"bad_execute_illegal_operation", "Error occurred during Python code execution"},
         {"bad_execute_import_error", "Error occurred during Python code execution"},
-        {"bad_execute_wrong_return_value", "Python execute function returned bad value"}
+        {"bad_execute_wrong_return_value", "Python execute function received or returned bad value"}
     };
 
     for (const auto& testCase : BAD_EXECUTE_SCRIPTS_CASES) {
@@ -780,3 +838,8 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
         ASSERT_EQ(1,0);
     }
 }
+
+/* TODO: 
+    - bad input stream element (py::object that is not pyovms.Tensor)
+    - bad output stream element (py::object that is not pyovms.Tensor)
+/*

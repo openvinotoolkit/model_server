@@ -419,7 +419,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 typedef std::unique_ptr<OvmsPyTensor> OvmsPyTensorPtr;
 
 #if (PYTHON_DISABLE == 0)
-static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<PyObjectWrapper>& outTensor, PythonBackend * pythonBackend) {
+static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, PythonBackend * pythonBackend) {
     auto requestInputItr = request.inputs().begin();
     auto status = getRequestInput(requestInputItr, requestedName, request);
     if (!status.ok()) {
@@ -728,9 +728,9 @@ Status receiveAndSerializePacket<mediapipe::ImageFrame>(const ::mediapipe::Packe
 }
 
 template <>
-Status receiveAndSerializePacket<PyObjectWrapper>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+Status receiveAndSerializePacket<PyObjectWrapper<py::object>>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
-        const PyObjectWrapper& pyOutput = packet.Get<PyObjectWrapper>();
+        const PyObjectWrapper<py::object>& pyOutput = packet.Get<PyObjectWrapper<py::object>>();
         auto* output = response.add_outputs();
         output->set_name(pyOutput.getProperty<std::string>("name"));
         output->set_datatype(pyOutput.getProperty<std::string>("datatype"));
@@ -1116,8 +1116,8 @@ Status MediapipeGraphExecutor::serializePacket(const std::string& name, ::infere
         SPDLOG_DEBUG("Response processing Mediapipe Image Frame: {}", name);
         status = receiveAndSerializePacket<mediapipe::ImageFrame>(packet, response, name);
     } else if (this->outputTypes.at(name) == mediapipe_packet_type_enum::OVMS_PY_TENSOR) {
-        SPDLOG_DEBUG("Response processing Ovms Python tensor: {}", outputStreamName);
-        status = receiveAndSerializePacket<PyObjectWrapper>(packet, *response, name);
+        SPDLOG_DEBUG("Response processing Ovms Python Tensor name: {}", name);
+        status = receiveAndSerializePacket<PyObjectWrapper<py::object>>(packet, response, name);
     } else if ((this->outputTypes.at(name) == mediapipe_packet_type_enum::OVTENSOR) ||
                (this->outputTypes.at(name) == mediapipe_packet_type_enum::UNKNOWN)) {
         SPDLOG_DEBUG("Response processing packet type:  OVTensor name: {}", name);

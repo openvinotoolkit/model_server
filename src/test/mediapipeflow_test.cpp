@@ -2265,8 +2265,9 @@ class MediapipeSerialization : public ::testing::Test {
             stream_types_mapping_t inputTypes,
             stream_types_mapping_t outputTypes,
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-            const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResources) {}
+            const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources,
+            PythonBackend* pythonBackend) :
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResources, pythonBackend) {}
     };
 
 protected:
@@ -2283,7 +2284,7 @@ protected:
         const std::vector<std::string> outputNames;
         const ::mediapipe::CalculatorGraphConfig config;
         std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
-        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResources);
+        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResources, nullptr);
     }
 };
 

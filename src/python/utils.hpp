@@ -2,27 +2,55 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
-
 namespace py = pybind11;
 using namespace py::literals;
 
 namespace ovms {
 
+template <class T = py::object>
 class PyObjectWrapper {
-    std::unique_ptr<py::object> obj;
+    std::unique_ptr<T> obj;
 public:
     PyObjectWrapper() = delete;
     PyObjectWrapper(const PyObjectWrapper& other) = delete;
-    PyObjectWrapper(const py::object& other);
-    ~PyObjectWrapper();
 
-    const py::object& getObject() const;
+    PyObjectWrapper(const T& other) {
+        py::gil_scoped_acquire acquire;
+        std::cout << "PyObjectWrapper constructor start" << std::endl;
+        obj = std::make_unique<T>(other);
+        std::cout << "PyObjectWrapper constructor end" << std::endl;
+    };
 
-    template <typename T> 
-    T getProperty(const std::string& name) const {
+    ~PyObjectWrapper() {
+        py::gil_scoped_acquire acquire;
+        std::cout << "PyObjectWrapper destructor start " << std::endl;
+        obj.reset();
+        std::cout << "PyObjectWrapper destructor end " << std::endl;
+    }
+
+    const T& getImmutableObject() const {
+        py::gil_scoped_acquire acquire;
+        if (obj) {
+            return *obj;
+        } else {
+            throw std::exception();
+        }
+    };
+
+    T& getMutableObject() const {
+        py::gil_scoped_acquire acquire;
+        if (obj) {
+            return *obj;
+        } else {
+            throw std::exception();
+        }
+    };
+
+    template <typename U> 
+    inline U getProperty(const std::string& name) const {
         py::gil_scoped_acquire acquire;
         try {
-            T property = obj->attr(name.c_str()).cast<T>();
+            U property = obj->attr(name.c_str()).template cast<U>();
             return property;
         } catch (const pybind11::error_already_set& e) {
             std::cout << "PyObjectWrapper::getProperty failed: " << e.what() << std::endl;
