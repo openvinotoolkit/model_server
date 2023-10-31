@@ -378,6 +378,16 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetGrpcMemoryQuota(OVMS_ServerSetting
     return nullptr;
 }
 
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings* settings,
+    uint32_t seconds) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->filesystemPollWaitSeconds = seconds;
+    return nullptr;
+}
+
 DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSettings* settings,
     uint32_t minutes) {
     if (settings == nullptr) {

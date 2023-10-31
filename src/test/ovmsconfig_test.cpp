@@ -449,7 +449,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.idleSequenceCleanup(), false);
     EXPECT_EQ(config.lowLatencyTransformation(), true);
     EXPECT_EQ(config.maxSequenceNumber(), 52);
-    EXPECT_EQ(config.grpcMaxThreads(), ovms::getCoreCount() * 8.0;);
+    EXPECT_EQ(config.grpcMaxThreads(), ovms::getCoreCount() * 8.0);
     EXPECT_EQ(config.grpcMemoryQuota(), (size_t)2 * 1024 * 1024 * 1024);
 }
 
