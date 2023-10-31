@@ -258,49 +258,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     return StatusCode::OK;
 }
 
-static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, TfLiteTensor** outTensor, const std::unique_ptr<tflite::Interpreter>& interpreter, size_t tfLiteTensorIdx) {
-    auto requestInputItr = request.inputs().begin();
-    auto status = getRequestInput(requestInputItr, requestedName, request);
-    if (!status.ok()) {
-        return status;
-    }
-    auto inputIndex = requestInputItr - request.inputs().begin();
-    auto& bufferLocation = request.raw_input_contents().at(inputIndex);
-    try {
-        auto datatype = getPrecisionAsTfLiteDataType(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
-        if (datatype == kTfLiteNoType) {
-            std::stringstream ss;
-            ss << "Not supported precision for Tensorflow Lite tensor deserialization: " << requestInputItr->datatype();
-            const std::string details = ss.str();
-            SPDLOG_DEBUG(details);
-            return Status(StatusCode::INVALID_PRECISION, std::move(details));
-        }
-        std::vector<int> rawShape;
-        for (int i = 0; i < requestInputItr->shape().size(); i++) {
-            if (requestInputItr->shape()[i] < 0) {
-                std::stringstream ss;
-                ss << "Negative dimension size is not acceptable: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
-                return Status(StatusCode::INVALID_SHAPE, details);
-            }
-            rawShape.emplace_back(requestInputItr->shape()[i]);
-        }
-        interpreter->SetTensorParametersReadWrite(
-            tfLiteTensorIdx,
-            datatype,
-            requestedName.c_str(),
-            rawShape,
-            TfLiteQuantization());
-        // we shouldn't need to allocate tensors since we use buffer from request
-        auto tensor = interpreter->tensor(tfLiteTensorIdx);
-        tensor->data.data = reinterpret_cast<void*>(const_cast<char*>((bufferLocation.data())));
-        *outTensor = tensor;
-    }
-    HANDLE_DESERIALIZATION_EXCEPTION("Tensorflow Lite tensor")
-    return StatusCode::OK;
-}
-
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<ov::Tensor>& outTensor) {
     auto requestInputItr = request.inputs().begin();
     auto status = getRequestInput(requestInputItr, requestedName, request);
@@ -502,111 +459,82 @@ static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFS
     return inputSidePackets;
 }
 
-template <typename T>
-static Status createPacketAndPushIntoGraph(const std::string& name, const KFSRequest& request, ::mediapipe::CalculatorGraph& graph) {
+template <typename T, template<typename X> typename Holder>
+static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp) {
     if (name.empty()) {
         SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
     }
     SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
-    if (request.raw_input_contents().size() == 0) {
+    if (request->raw_input_contents().size() == 0) {
         const std::string details = "Invalid message structure - raw_input_content is empty";
-        SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+        SPDLOG_DEBUG("[servable name: {} version: {}] {}", request->model_name(), request->model_version(), details);
         return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
     }
-    if (request.raw_input_contents().size() != request.inputs().size()) {
+    if (request->raw_input_contents().size() != request->inputs().size()) {
         std::stringstream ss;
-        ss << "Size of raw_input_contents: " << request.raw_input_contents().size() << " is different than number of inputs: " << request.inputs().size();
+        ss << "Size of raw_input_contents: " << request->raw_input_contents().size() << " is different than number of inputs: " << request->inputs().size();
         const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request->model_name(), request->model_version(), details);
         return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
     }
-    std::unique_ptr<T> input_tensor;
-    auto status = deserializeTensor(name, request, input_tensor);
+    std::unique_ptr<T> inputTensor;
+    auto status = deserializeTensor(name, *request, inputTensor);
     if (!status.ok()) {
         SPDLOG_DEBUG("Failed to deserialize tensor: {}", name);
         return status;
     }
     auto absStatus = graph.AddPacketToInputStream(
-        name, ::mediapipe::Adopt<T>(input_tensor.release()).At(::mediapipe::Timestamp(STARTING_TIMESTAMP)));
+                              name,
+                              //::mediapipe::packet_internal::Create(new ::mediapipe::packet_internal::Holder<T>(inputTensor.release())
+                              ::mediapipe::packet_internal::Create(new Holder<T>(inputTensor.release(), request))
+//                              ::mediapipe::Adopt<T>(inputTensor.release())
+                              .At(timestamp));
+ /*   absStatus = graph.AddPacketToInputStream(
+                              input.name(),
+                              ::mediapipe::packet_internal::Create(
+                                  new HolderWithRequestOwnership<T>(inputTensor.release(), request))
+                                  .At(timestamp)),*/
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
-            name, request.model_name(), absStatus.message(), absStatus.raw_code());
+            name, request->model_name(), absStatus.message(), absStatus.raw_code());
         return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
-    }
-    absStatus = graph.CloseInputStream(name);
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
-            name, request.model_name(), absMessage);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
     }
     return StatusCode::OK;
 }
 
-static Status createPacketAndPushIntoGraphTfLiteTensor(const std::string& name, const KFSRequest& request, ::mediapipe::CalculatorGraph& graph, const std::unique_ptr<tflite::Interpreter>& interpreter, size_t tfLiteTensorIdx) {
-    if (name.empty()) {
-        SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
-        return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
-    }
-    SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
-    if (request.raw_input_contents().size() == 0) {
-        const std::string details = "Invalid message structure - raw_input_content is empty";
-        SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
-    }
-    if (request.raw_input_contents().size() != request.inputs().size()) {
-        std::stringstream ss;
-        ss << "Size of raw_input_contents: " << request.raw_input_contents().size() << " is different than number of inputs: " << request.inputs().size();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request.model_name(), request.model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
-    }
-    TfLiteTensor* input_tensor = nullptr;
-    auto status = deserializeTensor(name, request, &input_tensor, interpreter, tfLiteTensorIdx);
-    if (!status.ok() || (!input_tensor)) {
-        SPDLOG_DEBUG("Failed to deserialize tensor: {}", name);
-        return status;
-    }
-    auto absStatus = graph.AddPacketToInputStream(  // potential need for fix when TfLite tensors enabled
-        name, ::mediapipe::Adopt<TfLiteTensor>(input_tensor).At(::mediapipe::Timestamp(STARTING_TIMESTAMP)));
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
-            name, request.model_name(), absStatus.message(), absStatus.raw_code());
-        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
-    }
-    absStatus = graph.CloseInputStream(name);
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
-            name, request.model_name(), absMessage);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
-    }
-    return StatusCode::OK;
-}
-
-template <>
-Status createPacketAndPushIntoGraph<KFSRequest*>(const std::string& name, const KFSRequest& request, ::mediapipe::CalculatorGraph& graph) {
+template <template<typename X> typename Holder>
+Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp) {
     if (name.empty()) {
         SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
     }
     SPDLOG_DEBUG("Request to passthrough:\"{}\"", name);
     auto absStatus = graph.AddPacketToInputStream(
-        name, ::mediapipe::MakePacket<const KFSRequest*>(&request).At(::mediapipe::Timestamp(STARTING_TIMESTAMP)));
+        name, 
+              //::mediapipe::MakePacket<const KFSRequest*>(&request).At(timestamp));
+              ::mediapipe::packet_internal::Create(new Holder<const KFSRequest>(static_cast<const KFSRequest*>(request.get()), request)).At(timestamp));
+    /*auto absStatus = graph.AddPacketToInputStream(
+                              name,
+                              ::mediapipe::packet_internal::Create(new Holder<KFSRequest*>(inputTensor.release()))
+//                              ::mediapipe::Adopt<T>(inputTensor.release())
+                              .At(timestamp));*/
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
-            name, request.model_name(), absStatus.message(), absStatus.raw_code());
+            name, request->model_name(), absStatus.message(), absStatus.raw_code());
         return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
     }
-    absStatus = graph.CloseInputStream(name);
+    return StatusCode::OK;
+}
+
+Status closeInputStream(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph) {
+    auto absStatus = graph.CloseInputStream(name);
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
-            name, request.model_name(), absMessage);
+            name, request->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
     }
     return StatusCode::OK;
@@ -751,14 +679,61 @@ Status receiveAndSerializePacket<mediapipe::ImageFrame>(const ::mediapipe::Packe
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
 }
 
-Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
+// Two types of holders
+// One is required for streaming where it is OVMS who creates the request and we have to clean up
+template <typename T>
+class HolderWithRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
+    std::shared_ptr<const KFSRequest> req;
+
+public:
+    //explicit HolderWithRequestOwnership(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
+    HolderWithRequestOwnership(const T* ptr, const std::shared_ptr<const KFSRequest>& req) :
+        ::mediapipe::packet_internal::Holder<T>(ptr),
+        req(req) {}
+};
+// Second is required for unary-unary where it is gRPC who creates the request and musn't clean up
+template <typename T>
+class HolderWithNoRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
+public:
+    //explicit HolderWithNoRequestOwnership(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
+    HolderWithNoRequestOwnership(const T* ptr, const std::shared_ptr<const KFSRequest>& req) :
+        ::mediapipe::packet_internal::Holder<T>(ptr) {}
+};
+
+auto someL = [](const KFSRequest*){ return;};
+
+template <template<typename X> typename Holder>
+Status selectPacketType(const std::string& inputName, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp, const stream_types_mapping_t& inputTypes) {
+    auto inputPacketType = inputTypes.at(inputName);
+    ovms::Status status;
+    if (inputPacketType == mediapipe_packet_type_enum::KFS_REQUEST) {
+        SPDLOG_DEBUG("Request processing KFS passthrough: {}", inputName);
+        status = createPacketAndPushIntoGraph<Holder>(inputName, request, graph, timestamp);
+    } else if (inputPacketType == mediapipe_packet_type_enum::TFTENSOR) {
+        SPDLOG_DEBUG("Request processing TF tensor: {}", inputName);
+        status = createPacketAndPushIntoGraph<tensorflow::Tensor, Holder>(inputName, request, graph, timestamp);
+    } else if (inputPacketType == mediapipe_packet_type_enum::MPTENSOR) {
+        SPDLOG_DEBUG("Request processing MP tensor: {}", inputName);
+        status = createPacketAndPushIntoGraph<mediapipe::Tensor, Holder>(inputName, request, graph, timestamp);
+    } else if (inputPacketType == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
+        SPDLOG_DEBUG("Request processing Mediapipe ImageFrame: {}", inputName);
+        status = createPacketAndPushIntoGraph<mediapipe::ImageFrame, Holder>(inputName, request, graph, timestamp);
+    } else if ((inputPacketType == mediapipe_packet_type_enum::OVTENSOR) ||
+               (inputPacketType == mediapipe_packet_type_enum::UNKNOWN)) {
+        SPDLOG_DEBUG("Request processing OVTensor: {}", inputName);
+        status = createPacketAndPushIntoGraph<ov::Tensor, Holder>(inputName, request, graph, timestamp);
+    }
+    return StatusCode::OK;
+}
+
+Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
     Timer<TIMER_END> timer;
-    SPDLOG_DEBUG("Start KServe request mediapipe graph: {} execution", request->model_name());
+    SPDLOG_DEBUG("Start KServe request mediapipe graph: {} execution", requestPtr->model_name());
     ::mediapipe::CalculatorGraph graph;
     auto absStatus = graph.Initialize(this->config);
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("KServe request for mediapipe graph: {} initialization failed with message: {}", request->model_name(), absMessage);
+        SPDLOG_DEBUG("KServe request for mediapipe graph: {} initialization failed with message: {}", requestPtr->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
     }
 
@@ -771,24 +746,24 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
         if (!absStatusOrPoller.ok()) {
             const std::string absMessage = absStatusOrPoller.status().ToString();
-            SPDLOG_DEBUG("Failed to add mediapipe graph output stream poller: {} with error: {}", request->model_name(), absMessage);
+            SPDLOG_DEBUG("Failed to add mediapipe graph output stream poller: {} with error: {}", requestPtr->model_name(), absMessage);
             return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, std::move(absMessage));
         }
         outputPollers.emplace(name, std::move(absStatusOrPoller).value());
     }
 
-    std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(request)};
+    std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(requestPtr)};
     absStatus = graph.StartRun(inputSidePackets);
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", request->model_name(), absMessage);
+        SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", requestPtr->model_name(), absMessage);
         return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, std::move(absMessage));
     }
-    if (static_cast<int>(this->inputNames.size()) != request->inputs().size()) {
+    if (static_cast<int>(this->inputNames.size()) != requestPtr->inputs().size()) {
         std::stringstream ss;
-        ss << "Expected: " << this->inputNames.size() << "; Actual: " << request->inputs().size();
+        ss << "Expected: " << this->inputNames.size() << "; Actual: " << requestPtr->inputs().size();
         const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", request->model_name(), version, details);
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", requestPtr->model_name(), version, details);
         return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
     }
 
@@ -796,38 +771,16 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     std::set<std::string> outputPollersWithReceivedPacket;
 
     ovms::Status status;
-    size_t tfLiteTensors = std::count_if(this->inputTypes.begin(), this->inputTypes.end(), [](const auto& pair) {
-        return pair.second == mediapipe_packet_type_enum::TFLITETENSOR;
-    });
-    std::unique_ptr<tflite::Interpreter> interpreter = nullptr;
-    if (tfLiteTensors) {
-        interpreter = std::make_unique<tflite::Interpreter>();
-        interpreter->AddTensors(tfLiteTensors);
-    }
-    size_t tfLiteTensorIdx = 0;
     size_t insertedStreamPackets = 0;
-    for (auto& name : this->inputNames) {
-        if (this->inputTypes.at(name) == mediapipe_packet_type_enum::KFS_REQUEST) {
-            SPDLOG_DEBUG("Request processing KFS passthrough: {}", name);
-            status = createPacketAndPushIntoGraph<KFSRequest*>(name, *request, graph);
-        } else if (this->inputTypes.at(name) == mediapipe_packet_type_enum::TFTENSOR) {
-            SPDLOG_DEBUG("Request processing TF tensor: {}", name);
-            status = createPacketAndPushIntoGraph<tensorflow::Tensor>(name, *request, graph);
-        } else if (this->inputTypes.at(name) == mediapipe_packet_type_enum::TFLITETENSOR) {
-            SPDLOG_DEBUG("Request processing TfLite tensor: {}", name);
-            status = createPacketAndPushIntoGraphTfLiteTensor(name, *request, graph, interpreter, tfLiteTensorIdx);
-            ++tfLiteTensorIdx;
-        } else if (this->inputTypes.at(name) == mediapipe_packet_type_enum::MPTENSOR) {
-            SPDLOG_DEBUG("Request processing MP tensor: {}", name);
-            status = createPacketAndPushIntoGraph<mediapipe::Tensor>(name, *request, graph);
-        } else if (this->inputTypes.at(name) == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
-            SPDLOG_DEBUG("Request processing Mediapipe ImageFrame: {}", name);
-            status = createPacketAndPushIntoGraph<mediapipe::ImageFrame>(name, *request, graph);
-        } else if ((this->inputTypes.at(name) == mediapipe_packet_type_enum::OVTENSOR) ||
-                   (this->inputTypes.at(name) == mediapipe_packet_type_enum::UNKNOWN)) {
-            SPDLOG_DEBUG("Request processing OVTensor: {}", name);
-            status = createPacketAndPushIntoGraph<ov::Tensor>(name, *request, graph);
+    //std::shared_ptr<const KFSRequest> request(requestPtr, [](const KFSRequest* r){ return;});  // here we don't actually own nor delete the request
+    std::shared_ptr<const KFSRequest> request(requestPtr, someL);  // here we don't actually own nor delete the request
+    const mediapipe::Timestamp timestamp(DEFAULT_STARTING_STREAM_TIMESTAMP);
+    for (auto& inputName : this->inputNames) {
+        status = selectPacketType<HolderWithNoRequestOwnership>(inputName, request, graph, timestamp, this->inputTypes);
+        if (!status.ok()) {
+            return status;
         }
+        status = closeInputStream(inputName, request, graph);
         if (!status.ok()) {
             return status;
         }
@@ -914,21 +867,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         }                                                             \
     }
 
-template <typename T>
-class HolderWithRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
-    std::shared_ptr<const ::inference::ModelInferRequest> req;
-
-public:
-    explicit HolderWithRequestOwnership(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
-        ::mediapipe::packet_internal::Holder<T>(ptr),
-        req(req) {}
-};
-
-// TODO: Add support for other types CVS-122328/CVS-122329
-Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph) {
-    // Deserialize optional manual timestamp
-    if (!request->id().empty()) {
-        auto requestTimestamp = stoi64(request->id());  // TODO: Decide if deserialize from id or int parameter
+Status MediapipeGraphExecutor::acquireTimestamp(const KFSRequest& request) {
+    if (!request.id().empty()) {
+        auto requestTimestamp = stoi64(request.id());  // TODO: Decide if deserialize from id or int parameter
         if (requestTimestamp.has_value()) {
             // Cannot create with error checking since error check = abseil death test
             currentStreamTimestamp = ::mediapipe::Timestamp::CreateNoErrorChecking(requestTimestamp.value());
@@ -938,33 +879,56 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::infere
             return status;
         }
     }
-
     // Validate current timestamp (can be manual or automatic at this point)
     if (!currentStreamTimestamp.IsRangeValue()) {
         SPDLOG_DEBUG("Timestamp not in range: {}", currentStreamTimestamp.DebugString());
         return Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, currentStreamTimestamp.DebugString());
     }
-
+    return StatusCode::OK;
+}
+// TODO: Add support for other types CVS-122328/CVS-122329
+Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
+    auto status = acquireTimestamp(*request);
+    if (!status.ok()){
+        return status;
+    }
     // Deserialize each input separately
     for (const auto& input : request->inputs()) {
-        std::unique_ptr<ov::Tensor> tensor;
-        OVMS_RETURN_ON_FAIL(deserializeTensor(input.name(), *request, tensor), "ov::Tensor deserialization");
-        MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
-                              input.name(),
-                              ::mediapipe::packet_internal::Create(
-                                  new HolderWithRequestOwnership<ov::Tensor>(
-                                      tensor.release(),
-                                      request))
-                                  .At(currentStreamTimestamp)),
-            "adding packet to input stream", StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+        const auto& inputName = input.name();
+        // TODO write test that request contains not existing stream
+        if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto e){ return e == inputName;}) == this->inputNames.end()) {
+            SPDLOG_DEBUG("Request for {}, contains not expected input name: {}", request->model_name(), inputName);
+            return Status(StatusCode::INVALID_UNEXPECTED_INPUT, std::string(inputName) + "is unexpected");
+        }
+        auto inputPacketType = this->inputTypes.at(inputName);
+        ovms::Status status;
+        if (inputPacketType == mediapipe_packet_type_enum::KFS_REQUEST) {
+            SPDLOG_DEBUG("Request processing KFS passthrough: {}", inputName);
+            status = createPacketAndPushIntoGraph<HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
+        } else if (inputPacketType == mediapipe_packet_type_enum::TFTENSOR) {
+            SPDLOG_DEBUG("Request processing TF tensor: {}", inputName);
+            status = createPacketAndPushIntoGraph<tensorflow::Tensor, HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
+        } else if (inputPacketType == mediapipe_packet_type_enum::MPTENSOR) {
+            SPDLOG_DEBUG("Request processing MP tensor: {}", inputName);
+            status = createPacketAndPushIntoGraph<mediapipe::Tensor, HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
+        } else if (inputPacketType == mediapipe_packet_type_enum::MEDIAPIPE_IMAGE) {
+            SPDLOG_DEBUG("Request processing Mediapipe ImageFrame: {}", inputName);
+            status = createPacketAndPushIntoGraph<mediapipe::ImageFrame, HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
+        } else if ((inputPacketType == mediapipe_packet_type_enum::OVTENSOR) ||
+                   (inputPacketType == mediapipe_packet_type_enum::UNKNOWN)) {
+            SPDLOG_DEBUG("Request processing OVTensor: {}", inputName);
+            status = createPacketAndPushIntoGraph<ov::Tensor, HolderWithRequestOwnership>(inputName, request, graph, currentStreamTimestamp);
+        }
+        if (!status.ok()) {
+            return status;
+        }
     }
-
     // Increment timestamp automatically for next request
     currentStreamTimestamp = currentStreamTimestamp.NextAllowedInStream();
     return StatusCode::OK;
 }
 
-Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream) {
+Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, KFSRequest>& stream) {
     const std::string& servableName = firstRequest.model_name();  // TODO: Validate subsequent requests to match first servable name
     try {
         // Init

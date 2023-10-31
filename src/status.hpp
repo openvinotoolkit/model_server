@@ -90,6 +90,7 @@ enum class StatusCode {
     // Predict request validation
     INVALID_NO_OF_INPUTS,             /*!< Invalid number of inputs */
     INVALID_MISSING_INPUT,            /*!< Missing one or more of inputs */
+    INVALID_UNEXPECTED_INPUT,         /*!< Unexpected one or more of inputs */
     INVALID_MISSING_OUTPUT,           /*!< Missing one or more of outputs */
     INVALID_NO_OF_SHAPE_DIMENSIONS,   /*!< Invalid number of shape dimensions */
     INVALID_BATCH_SIZE,               /*!< Input batch size other than required */
