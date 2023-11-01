@@ -504,9 +504,10 @@ Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<con
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
     }
     SPDLOG_DEBUG("Request to passthrough:\"{}\"", name);
+    const KFSRequest* lvaluePtr = request.get();
     auto absStatus = graph.AddPacketToInputStream(
         name, ::mediapipe::packet_internal::Create(
-            new Holder<const KFSRequest>(static_cast<const KFSRequest*>(request.get()), request)).At(timestamp));
+            new Holder<const KFSRequest*>(lvaluePtr, request)).At(timestamp));
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
@@ -667,26 +668,41 @@ Status receiveAndSerializePacket<mediapipe::ImageFrame>(const ::mediapipe::Packe
 }
 
 // Two types of holders
-// One is required for streaming where it is OVMS who creates the request and we have to clean up
+// One (HolderWithRequestOwnership) is required for streaming where it is OVMS who creates the request but it is not the packet type and we have to clean up
+// Second (HolderWithNoRequestOwnership) is required for unary-unary where it is gRPC who creates the request and musn't clean up
+// Specializations are for special case when the request itsef is the packet and we need to ensure there is no double free
 template <typename T>
 class HolderWithRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
     std::shared_ptr<const KFSRequest> req;
-
 public:
-    //explicit HolderWithRequestOwnership(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
-    HolderWithRequestOwnership(const T* ptr, const std::shared_ptr<const KFSRequest>& req) :
-        ::mediapipe::packet_internal::Holder<T>(ptr),
-        req(req) {
-        }
+    //explicit HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
+    HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const KFSRequest>& req) :
+        ::mediapipe::packet_internal::Holder<T>(barePtr), req(req) {}
 };
-// Second is required for unary-unary where it is gRPC who creates the request and musn't clean up
+template <>
+class HolderWithRequestOwnership<const KFSRequest*> : public ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*> {
+    std::shared_ptr<const KFSRequest> req;
+public:
+    //explicit HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
+    HolderWithRequestOwnership(const KFSRequest* barePtr, const std::shared_ptr<const KFSRequest>& req) :
+        ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*>(&barePtr), req(req) { }
+};
+
 template <typename T>
 class HolderWithNoRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
 public:
-    //explicit HolderWithNoRequestOwnership(const T* ptr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
-    HolderWithNoRequestOwnership(const T* ptr, const std::shared_ptr<const KFSRequest>& req) :
-        ::mediapipe::packet_internal::Holder<T>(ptr) {
-        }
+    explicit HolderWithNoRequestOwnership(const T* barePtr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
+    //HolderWithNoRequestOwnership(const T* barePtr, const std::shared_ptr<const KFSRequest>& req) :
+        ::mediapipe::packet_internal::Holder<T>(barePtr) { SPDLOG_ERROR("ER"); }
+};
+template <>
+class HolderWithNoRequestOwnership<const KFSRequest*> : public ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*> {
+public:
+   const  KFSRequest* hiddenPtr = nullptr;
+    //explicit HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
+// TODO work with barePtr
+    HolderWithNoRequestOwnership(const KFSRequest* barePtr, const std::shared_ptr<const KFSRequest>& req) :
+        ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*>(&hiddenPtr), hiddenPtr(barePtr) { SPDLOG_ERROR("ER"); }
 };
 
 template <template<typename X> typename Holder>
@@ -759,7 +775,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
 
     ovms::Status status;
     size_t insertedStreamPackets = 0;
-    std::shared_ptr<const KFSRequest> request(requestPtr, [](const KFSRequest* r){ return;});  // here we don't actually own nor delete the request
+    std::shared_ptr<const KFSRequest> request(requestPtr, [](const KFSRequest* r){ SPDLOG_ERROR("ERper"); return;});  // here we don't actually own nor delete the request
     for (auto& inputName : this->inputNames) {
         status = selectPacketType<HolderWithNoRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes);
         if (!status.ok()) {
