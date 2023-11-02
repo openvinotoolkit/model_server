@@ -1050,40 +1050,16 @@ TEST_P(MediapipeFlowAddTest, InferStream) {
         });
     EXPECT_CALL(stream, Write(::testing::_, ::testing::_))
         .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            [&msg]() {
-                const auto& outputs = msg.infer_response().outputs();
-                ASSERT_EQ(outputs.size(), 1);
-                ASSERT_EQ(outputs[0].name(), "out");
-                ASSERT_EQ(outputs[0].shape().size(), 2);
-                ASSERT_EQ(outputs[0].shape()[0], 1);
-                ASSERT_EQ(outputs[0].shape()[1], 10);
-            }();
             // expect first response
             checkAddResponse("out", requestData1[0], requestData1[0], request[0], msg.infer_response(), 1, 1, modelName);
             return true;
         })
         .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            [&msg]() {
-                const auto& outputs = msg.infer_response().outputs();
-                ASSERT_EQ(outputs.size(), 1);
-                ASSERT_EQ(outputs[0].name(), "out");
-                ASSERT_EQ(outputs[0].shape().size(), 2);
-                ASSERT_EQ(outputs[0].shape()[0], 1);
-                ASSERT_EQ(outputs[0].shape()[1], 10);
-            }();
             // expect second response
             checkAddResponse("out", requestData1[1], requestData1[1], request[1], msg.infer_response(), 1, 1, modelName);
             return true;
         })
         .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            [&msg]() {
-                const auto& outputs = msg.infer_response().outputs();
-                ASSERT_EQ(outputs.size(), 1);
-                ASSERT_EQ(outputs[0].name(), "out");
-                ASSERT_EQ(outputs[0].shape().size(), 2);
-                ASSERT_EQ(outputs[0].shape()[0], 1);
-                ASSERT_EQ(outputs[0].shape()[1], 10);
-            }();
             // expect third and no more responses
             checkAddResponse("out", requestData1[2], requestData1[2], request[2], msg.infer_response(), 1, 1, modelName);
             return true;
@@ -1149,14 +1125,6 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnUnloadedGraph) {
         });
     EXPECT_CALL(stream, Write(::testing::_, ::testing::_))
         .WillOnce([requestData1, &request, modelName, &startUnloading](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            [&msg, &startUnloading]() {
-                const auto& outputs = msg.infer_response().outputs();
-                ASSERT_EQ(outputs.size(), 1);
-                ASSERT_EQ(outputs[0].name(), "out");
-                ASSERT_EQ(outputs[0].shape().size(), 2);
-                ASSERT_EQ(outputs[0].shape()[0], 1);
-                ASSERT_EQ(outputs[0].shape()[1], 10);
-            }();
             // expect first response
             checkAddResponse("out", requestData1[0], requestData1[0], request[0], msg.infer_response(), 1, 1, modelName);
             // notify that we should start unloading (first request is processed and response is sent)
@@ -1164,27 +1132,11 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnUnloadedGraph) {
             return true;
         })
         .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            [&msg]() {
-                const auto& outputs = msg.infer_response().outputs();
-                ASSERT_EQ(outputs.size(), 1);
-                ASSERT_EQ(outputs[0].name(), "out");
-                ASSERT_EQ(outputs[0].shape().size(), 2);
-                ASSERT_EQ(outputs[0].shape()[0], 1);
-                ASSERT_EQ(outputs[0].shape()[1], 10);
-            }();
             // expect second response
             checkAddResponse("out", requestData1[1], requestData1[1], request[1], msg.infer_response(), 1, 1, modelName);
             return true;
         })
         .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            [&msg]() {
-                const auto& outputs = msg.infer_response().outputs();
-                ASSERT_EQ(outputs.size(), 1);
-                ASSERT_EQ(outputs[0].name(), "out");
-                ASSERT_EQ(outputs[0].shape().size(), 2);
-                ASSERT_EQ(outputs[0].shape()[0], 1);
-                ASSERT_EQ(outputs[0].shape()[1], 10);
-            }();
             // expect third and no more responses
             checkAddResponse("out", requestData1[2], requestData1[2], request[2], msg.infer_response(), 1, 1, modelName);
             return true;
@@ -1269,14 +1221,6 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnReloadedGraph) {
         });
     EXPECT_CALL(stream, Write(::testing::_, ::testing::_))
         .WillOnce([requestData1, &request, modelName, &startReloading](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            [&msg, &startReloading]() {
-                const auto& outputs = msg.infer_response().outputs();
-                ASSERT_EQ(outputs.size(), 1);
-                ASSERT_EQ(outputs[0].name(), "out");
-                ASSERT_EQ(outputs[0].shape().size(), 2);
-                ASSERT_EQ(outputs[0].shape()[0], 1);
-                ASSERT_EQ(outputs[0].shape()[1], 10);
-            }();
             // expect first response
             checkAddResponse("out", requestData1[0], requestData1[0], request[0], msg.infer_response(), 1, 1, modelName);
             // notify that we should start reloading (first request is processed and response is sent)
@@ -1284,27 +1228,11 @@ TEST_P(MediapipeFlowAddTest, InferStreamOnReloadedGraph) {
             return true;
         })
         .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            [&msg]() {
-                const auto& outputs = msg.infer_response().outputs();
-                ASSERT_EQ(outputs.size(), 1);
-                ASSERT_EQ(outputs[0].name(), "out");
-                ASSERT_EQ(outputs[0].shape().size(), 2);
-                ASSERT_EQ(outputs[0].shape()[0], 1);
-                ASSERT_EQ(outputs[0].shape()[1], 10);
-            }();
             // expect second response
             checkAddResponse("out", requestData1[1], requestData1[1], request[1], msg.infer_response(), 1, 1, modelName);
             return true;
         })
         .WillOnce([requestData1, &request, modelName](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-            [&msg]() {
-                const auto& outputs = msg.infer_response().outputs();
-                ASSERT_EQ(outputs.size(), 1);
-                ASSERT_EQ(outputs[0].name(), "out");
-                ASSERT_EQ(outputs[0].shape().size(), 2);
-                ASSERT_EQ(outputs[0].shape()[0], 1);
-                ASSERT_EQ(outputs[0].shape()[1], 10);
-            }();
             // expect third and no more responses
             checkAddResponse("out", requestData1[2], requestData1[2], request[2], msg.infer_response(), 1, 1, modelName);
             return true;
