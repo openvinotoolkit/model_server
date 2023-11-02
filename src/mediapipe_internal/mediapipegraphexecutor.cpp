@@ -499,7 +499,7 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
 }
 
 template <template <typename X> typename Holder>
-Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp) {
+static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp) {
     if (name.empty()) {
         SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
@@ -519,7 +519,7 @@ Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<con
     return StatusCode::OK;
 }
 
-Status closeInputStream(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph) {
+static Status closeInputStream(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph) {
     auto absStatus = graph.CloseInputStream(name);
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
@@ -710,7 +710,7 @@ public:
 };
 
 template <template <typename X> typename Holder>
-Status createPacketAndPushIntoGraph(const std::string& inputName, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp, const stream_types_mapping_t& inputTypes) {
+static Status createPacketAndPushIntoGraph(const std::string& inputName, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp, const stream_types_mapping_t& inputTypes) {
     auto inputPacketType = inputTypes.at(inputName);
     ovms::Status status;
     if (inputPacketType == mediapipe_packet_type_enum::KFS_REQUEST) {
