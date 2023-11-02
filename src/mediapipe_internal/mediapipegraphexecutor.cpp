@@ -459,7 +459,7 @@ static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFS
     return inputSidePackets;
 }
 
-template <typename T, template<typename X> typename Holder>
+template <typename T, template <typename X> typename Holder>
 static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp) {
     if (name.empty()) {
         SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
@@ -485,9 +485,10 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
         return status;
     }
     auto absStatus = graph.AddPacketToInputStream(
-                         name,
-                         ::mediapipe::packet_internal::Create(
-                             new Holder<T>(inputTensor.release(), request)).At(timestamp));
+        name,
+        ::mediapipe::packet_internal::Create(
+            new Holder<T>(inputTensor.release(), request))
+            .At(timestamp));
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
@@ -497,7 +498,7 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
     return StatusCode::OK;
 }
 
-template <template<typename X> typename Holder>
+template <template <typename X> typename Holder>
 Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp) {
     if (name.empty()) {
         SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
@@ -507,7 +508,8 @@ Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<con
     const KFSRequest* lvaluePtr = request.get();
     auto absStatus = graph.AddPacketToInputStream(
         name, ::mediapipe::packet_internal::Create(
-            new Holder<const KFSRequest*>(lvaluePtr, request)).At(timestamp));
+                  new Holder<const KFSRequest*>(lvaluePtr, request))
+                  .At(timestamp));
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
@@ -674,17 +676,22 @@ Status receiveAndSerializePacket<mediapipe::ImageFrame>(const ::mediapipe::Packe
 template <typename T>
 class HolderWithRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
     std::shared_ptr<const KFSRequest> req;
+
 public:
     explicit HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const KFSRequest>& req) :
-        ::mediapipe::packet_internal::Holder<T>(barePtr), req(req) {}
+        ::mediapipe::packet_internal::Holder<T>(barePtr),
+        req(req) {}
 };
 template <>
 class HolderWithRequestOwnership<const KFSRequest*> : public ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*> {
-    const  KFSRequest* hiddenPtr = nullptr;
+    const KFSRequest* hiddenPtr = nullptr;
     std::shared_ptr<const KFSRequest> req;
+
 public:
     explicit HolderWithRequestOwnership(const KFSRequest* barePtr, const std::shared_ptr<const KFSRequest>& req) :
-        ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*>(&hiddenPtr), hiddenPtr(barePtr), req(req) { }
+        ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*>(&hiddenPtr),
+        hiddenPtr(barePtr),
+        req(req) {}
 };
 
 template <typename T>
@@ -696,12 +703,13 @@ public:
 template <>
 class HolderWithNoRequestOwnership<const KFSRequest*> : public ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*> {
 public:
-    const  KFSRequest* hiddenPtr = nullptr;
+    const KFSRequest* hiddenPtr = nullptr;
     explicit HolderWithNoRequestOwnership(const KFSRequest* barePtr, const std::shared_ptr<const KFSRequest>& req) :
-        ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*>(&hiddenPtr), hiddenPtr(barePtr) {}
+        ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*>(&hiddenPtr),
+        hiddenPtr(barePtr) {}
 };
 
-template <template<typename X> typename Holder>
+template <template <typename X> typename Holder>
 Status createPacketAndPushIntoGraph(const std::string& inputName, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp, const stream_types_mapping_t& inputTypes) {
     auto inputPacketType = inputTypes.at(inputName);
     ovms::Status status;
@@ -771,7 +779,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
 
     ovms::Status status;
     size_t insertedStreamPackets = 0;
-    std::shared_ptr<const KFSRequest> request(requestPtr, [](const KFSRequest* r){});  // here we don't actually own nor delete the request
+    std::shared_ptr<const KFSRequest> request(requestPtr, [](const KFSRequest* r) {});  // here we don't actually own nor delete the request
     for (auto& inputName : this->inputNames) {
         status = createPacketAndPushIntoGraph<HolderWithNoRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes);
         if (!status.ok()) {
@@ -888,13 +896,13 @@ Status MediapipeGraphExecutor::acquireTimestamp(const KFSRequest& request) {
 // TODO create test for streaming with KFS passthrough
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
     auto status = acquireTimestamp(*request);
-    if (!status.ok()){
+    if (!status.ok()) {
         return status;
     }
     // Deserialize each input separately
     for (const auto& input : request->inputs()) {
         const auto& inputName = input.name();
-        if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName){ return streamName == inputName;}) == this->inputNames.end()) {
+        if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName) { return streamName == inputName; }) == this->inputNames.end()) {
             SPDLOG_DEBUG("Request for {}, contains not expected input name: {}", request->model_name(), inputName);
             return Status(StatusCode::INVALID_UNEXPECTED_INPUT, std::string(inputName) + "is unexpected");
         }
