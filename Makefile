@@ -81,14 +81,16 @@ BAZEL_BUILD_TYPE ?= opt
 CMAKE_BUILD_TYPE ?= Release
 MINITRACE ?= OFF
 
-DISABLE_MEDIAPIPE_PARAMS ?= ""
 ifeq ($(MEDIAPIPE_DISABLE),1)
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1"
+else
+	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=0 --cxxopt=-DMEDIAPIPE_DISABLE=0"
 endif
 
-DISABLE_PYTHON_PARAMS ?= ""
 ifeq ($(PYTHON_DISABLE),1)
 	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1"
+else
+	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0"
 endif
 
 FUZZER_BUILD_PARAMS ?= ""
@@ -329,7 +331,7 @@ endif
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
 	@cd src/custom_nodes && make USE_BUILDX=$(USE_BUILDX) NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
-	@cd src/custom_nodes/tokenizer && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
+	@cd src/custom_nodes/tokenizer && make USE_BUILDX=$(USE_BUILDX) NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
 endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
