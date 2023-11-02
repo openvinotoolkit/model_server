@@ -675,38 +675,34 @@ template <typename T>
 class HolderWithRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
     std::shared_ptr<const KFSRequest> req;
 public:
-    //explicit HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
-    HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const KFSRequest>& req) :
+    explicit HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const KFSRequest>& req) :
         ::mediapipe::packet_internal::Holder<T>(barePtr), req(req) {}
 };
 template <>
 class HolderWithRequestOwnership<const KFSRequest*> : public ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*> {
+    const  KFSRequest* hiddenPtr = nullptr;
     std::shared_ptr<const KFSRequest> req;
 public:
-    //explicit HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
-    HolderWithRequestOwnership(const KFSRequest* barePtr, const std::shared_ptr<const KFSRequest>& req) :
-        ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*>(&barePtr), req(req) { }
+    explicit HolderWithRequestOwnership(const KFSRequest* barePtr, const std::shared_ptr<const KFSRequest>& req) :
+        ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*>(&hiddenPtr), hiddenPtr(barePtr), req(req) { }
 };
 
 template <typename T>
 class HolderWithNoRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
 public:
     explicit HolderWithNoRequestOwnership(const T* barePtr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
-    //HolderWithNoRequestOwnership(const T* barePtr, const std::shared_ptr<const KFSRequest>& req) :
         ::mediapipe::packet_internal::Holder<T>(barePtr) {}
 };
 template <>
 class HolderWithNoRequestOwnership<const KFSRequest*> : public ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*> {
 public:
-   const  KFSRequest* hiddenPtr = nullptr;
-    //explicit HolderWithRequestOwnership(const T* barePtr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
-// TODO work with barePtr
-    HolderWithNoRequestOwnership(const KFSRequest* barePtr, const std::shared_ptr<const KFSRequest>& req) :
+    const  KFSRequest* hiddenPtr = nullptr;
+    explicit HolderWithNoRequestOwnership(const KFSRequest* barePtr, const std::shared_ptr<const KFSRequest>& req) :
         ::mediapipe::packet_internal::ForeignHolder<const KFSRequest*>(&hiddenPtr), hiddenPtr(barePtr) {}
 };
 
 template <template<typename X> typename Holder>
-Status selectPacketType(const std::string& inputName, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp, const stream_types_mapping_t& inputTypes) {
+Status createPacketAndPushIntoGraph(const std::string& inputName, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp, const stream_types_mapping_t& inputTypes) {
     auto inputPacketType = inputTypes.at(inputName);
     ovms::Status status;
     if (inputPacketType == mediapipe_packet_type_enum::KFS_REQUEST) {
@@ -777,7 +773,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
     size_t insertedStreamPackets = 0;
     std::shared_ptr<const KFSRequest> request(requestPtr, [](const KFSRequest* r){});  // here we don't actually own nor delete the request
     for (auto& inputName : this->inputNames) {
-        status = selectPacketType<HolderWithNoRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes);
+        status = createPacketAndPushIntoGraph<HolderWithNoRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes);
         if (!status.ok()) {
             return status;
         }
@@ -888,6 +884,8 @@ Status MediapipeGraphExecutor::acquireTimestamp(const KFSRequest& request) {
     return StatusCode::OK;
 }
 // TODO: Add support for other types CVS-122328/CVS-122329
+// TODO write test that request contains not existing stream
+// TODO create test for streaming with KFS passthrough
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
     auto status = acquireTimestamp(*request);
     if (!status.ok()){
@@ -896,12 +894,11 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSReque
     // Deserialize each input separately
     for (const auto& input : request->inputs()) {
         const auto& inputName = input.name();
-        // TODO write test that request contains not existing stream
         if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName){ return streamName == inputName;}) == this->inputNames.end()) {
             SPDLOG_DEBUG("Request for {}, contains not expected input name: {}", request->model_name(), inputName);
             return Status(StatusCode::INVALID_UNEXPECTED_INPUT, std::string(inputName) + "is unexpected");
         }
-        status = selectPacketType<HolderWithRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes);
+        status = createPacketAndPushIntoGraph<HolderWithRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes);
         if (!status.ok()) {
             return status;
         }
