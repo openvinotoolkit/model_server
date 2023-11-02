@@ -56,6 +56,14 @@ void CLIParser::parse(int argc, char** argv) {
                 "Number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "GRPC_WORKERS")
+            ("grpc_max_threads",
+                "Maximum number of threads which can be used by the gRPC server. Default value depends on number of CPUs.",
+                cxxopts::value<uint32_t>(),
+                "GRPC_MAX_THREADS")
+            ("grpc_memory_quota",
+                "GRPC server buffer memory quota. Default value set to 2147483648 (2GB).",
+                cxxopts::value<size_t>(),
+                "GRPC_MEMORY_QUOTA")
             ("rest_workers",
                 "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
                 cxxopts::value<uint32_t>(),
@@ -72,7 +80,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(), "TRACE_PATH")
 #endif
             ("grpc_channel_arguments",
-                "A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000)",
+                "A comma separated list of arguments to be passed to the gRPC server. (e.g. grpc.max_connection_age_ms=2000)",
                 cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS")
             ("file_system_poll_wait_seconds",
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
@@ -209,6 +217,12 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         serverSettings->restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
 
     serverSettings->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
+
+    if (result->count("grpc_max_threads"))
+        serverSettings->grpcMaxThreads = result->operator[]("grpc_max_threads").as<uint32_t>();
+
+    if (result->count("grpc_memory_quota"))
+        serverSettings->grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
 
     if (result->count("rest_workers"))
         serverSettings->restWorkers = result->operator[]("rest_workers").as<uint32_t>();

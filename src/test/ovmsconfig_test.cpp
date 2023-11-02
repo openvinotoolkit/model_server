@@ -25,6 +25,7 @@
 #include "spdlog/spdlog.h"
 
 #include "../config.hpp"
+#include "systeminfo.hpp"
 #include "test_utils.hpp"
 
 using testing::_;
@@ -328,9 +329,10 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--cache_dir", "/tmp/model_cache",
         "--log_path", "/tmp/log_path",
         "--log_level", "ERROR",
-
+        "--grpc_max_threads", "100",
+        "--grpc_memory_quota", "1000000",
         "--config_path", "/config.json"};
-    int arg_count = 31;
+    int arg_count = 35;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -348,8 +350,9 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     EXPECT_EQ(config.logPath(), "/tmp/log_path");
     EXPECT_EQ(config.logLevel(), "ERROR");
-
     EXPECT_EQ(config.configPath(), "/config.json");
+    EXPECT_EQ(config.grpcMaxThreads(), 100);
+    EXPECT_EQ(config.grpcMemoryQuota(), (size_t)1000000);
 }
 
 TEST(OvmsConfigTest, positiveSingle) {
@@ -445,6 +448,8 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.idleSequenceCleanup(), false);
     EXPECT_EQ(config.lowLatencyTransformation(), true);
     EXPECT_EQ(config.maxSequenceNumber(), 52);
+    EXPECT_EQ(config.grpcMaxThreads(), ovms::getCoreCount() * 8.0);
+    EXPECT_EQ(config.grpcMemoryQuota(), (size_t)2 * 1024 * 1024 * 1024);
 }
 
 #pragma GCC diagnostic pop
