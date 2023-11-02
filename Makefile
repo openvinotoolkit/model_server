@@ -81,14 +81,16 @@ BAZEL_BUILD_TYPE ?= opt
 CMAKE_BUILD_TYPE ?= Release
 MINITRACE ?= OFF
 
-DISABLE_MEDIAPIPE_PARAMS ?= ""
 ifeq ($(MEDIAPIPE_DISABLE),1)
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1"
+else
+	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=0 --cxxopt=-DMEDIAPIPE_DISABLE=0"
 endif
 
-DISABLE_PYTHON_PARAMS ?= ""
 ifeq ($(PYTHON_DISABLE),1)
 	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1"
+else
+	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0"
 endif
 
 FUZZER_BUILD_PARAMS ?= ""
@@ -118,25 +120,33 @@ BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIP
 DIST_OS ?= $(BASE_OS)
 DIST_OS_TAG ?= $(BASE_OS_TAG)
 
-ifeq ($(BASE_OS),ubuntu)
+ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
+  ifeq ($(BASE_OS),ubuntu22)
+	BASE_OS_TAG=22.04
+  endif
+  ifeq ($(BASE_OS),ubuntu20)
+	BASE_OS_TAG=20.04
+  endif
+  OS=ubuntu
   ifeq ($(NVIDIA),1)
-	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04
+	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu$(BASE_OS_TAG)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   else
-	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
+	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
-  ifeq ($(BASE_OS_TAG_UBUNTU),20.04)
+  ifeq ($(BASE_OS_TAG),20.04)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.2.0.12778.b3ead626310_x86_64.tgz
-  else ifeq  ($(BASE_OS_TAG_UBUNTU),22.04)
+  else ifeq  ($(BASE_OS_TAG),22.04)
 	INSTALL_DRIVER_VERSION ?= "23.22.26516"
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2023.2.0.12778.b3ead626310_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
+  OS=redhat
   ifeq ($(NVIDIA),1)
     BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi8
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
@@ -194,6 +204,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg NVIDIA=$(NVIDIA)\
 	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
+	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
 	--build-arg GPU=$(GPU)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)
@@ -313,10 +324,14 @@ ifeq ($(NO_DOCKER_CACHE),true)
     endif
   endif
 endif
+ifeq ($(USE_BUILDX),true)
+	$(eval BUILDX:=buildx)
+endif
+
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
-	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS) BASE_IMAGE=$(BASE_IMAGE) 
-	@cd src/custom_nodes/tokenizer && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(BASE_OS) BASE_IMAGE=$(BASE_IMAGE) 
+	@cd src/custom_nodes && make USE_BUILDX=$(USE_BUILDX) NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
+	@cd src/custom_nodes/tokenizer && make USE_BUILDX=$(USE_BUILDX) NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
 endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
@@ -327,13 +342,13 @@ else
 	@touch .workspace/metadata.json
 endif
 	@cat .workspace/metadata.json
-	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=build
 
 targz_package:
-	docker build -f Dockerfile.$(BASE_OS) . \
+	docker $(BUILDX) build -f Dockerfile.$(OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
@@ -346,11 +361,15 @@ targz_package:
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
 
 ovms_release_images:
-	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+ifeq ($(USE_BUILDX),true)
+	$(eval BUILDX:=buildx)
+	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
+endif
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
-	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(OS) . \
 		$(BUILD_ARGS) \
 		--build-arg GPU=1 \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
@@ -358,18 +377,22 @@ ovms_release_images:
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
 ifeq ($(BUILD_NGINX), 1)
 	cd extras/nginx-mtls-auth && \
-	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(BASE_OS)" && \
+	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OS)" && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
 endif
 
 release_image:
-	docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+ifeq ($(USE_BUILDX),true)
+	$(eval BUILDX:=buildx)
+	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
+endif
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 		--target=release
 ifeq ($(BUILD_NGINX), 1)
 	cd extras/nginx-mtls-auth && \
-	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
+	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(OS)" && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
 endif
 
@@ -519,23 +542,23 @@ test_client_lib:
 		make clean
 
 tools_get_deps:
-	cd tools/deps/$(BASE_OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
+	cd tools/deps/$(OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
 	-docker rm -f ovms-$(BASE_OS)-deps
 	docker run -d --rm --name  ovms-$(BASE_OS)-deps  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG)
 	sleep 5
-	docker cp ovms-$(BASE_OS)-deps:/root/rpms.tar.xz ./
+	docker cp ovms-$(OS)-deps:/root/rpms.tar.xz ./
 	sleep 5
-	-docker rm -f ovms-$(BASE_OS)-deps
+	-docker rm -f ovms-$(OS)-deps
 	@echo "Success! Dependencies saved to rpms.tar.xz in this directory"
 
 cpu_extension:
 	cd src/example/SampleCpuExtension && \
-	docker build -f Dockerfile.$(BASE_OS) -t sample_cpu_extension:latest \
+	docker build -f Dockerfile.$(OS) -t sample_cpu_extension:latest \
 		--build-arg http_proxy=${http_proxy} \
 		--build-arg https_proxy=${https_proxy} \
 		--build-arg no_proxy=${no_proxy} \
 		--build-arg DLDT_PACKAGE_URL=${DLDT_PACKAGE_URL} \
 		--build-arg APT_OV_PACKAGE=${APT_OV_PACKAGE} \
 		--build-arg BASE_IMAGE=${BASE_IMAGE} .
-	mkdir -p ./lib/${BASE_OS}
-	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${BASE_OS}
+	mkdir -p ./lib/${OS}
+	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${OS}
