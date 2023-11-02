@@ -25,7 +25,7 @@ mkdir -vp /ovms_release/lib/custom_nodes
 cp /ovms/src/custom_nodes/tokenizer/build/src/lib*tokenizer.so /ovms_release/lib/custom_nodes/
 if [ -f /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so ]; then cp -v /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so /ovms_release/lib/ ; fi
 
-find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "*params" ! -name "lib_node_*" ! -name "*test_python_binding*" -exec cp -v {} /ovms_release/lib/ \;
+find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "*params" ! -name "lib_node_*" ! -path "*test_python_binding*" -exec cp -v {} /ovms_release/lib/ \;
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
