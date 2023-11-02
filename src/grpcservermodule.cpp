@@ -70,7 +70,6 @@ static bool isPortAvailable(uint64_t port) {
 }
 
 static Status setDefaultGrpcChannelArgs(std::map<std::string, std::string>& result) {
-    result["grpc.http2.lookahead_bytes"] = "4194304";  // 4MB to tune throughput for typical message sizes
     uint16_t cores = getCoreCount();
     result["grpc.max_concurrent_streams"] = std::to_string(cores);  // concurrent streams from a single client set to #cores by default
     return StatusCode::OK;
