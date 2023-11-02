@@ -57,7 +57,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "GRPC_WORKERS")
             ("grpc_max_threads",
-                "Maximum number of threads which can be used by the grpc server. Default value depends on number of CPUs.",
+                "Maximum number of threads which can be used by the gRPC server. Default value depends on number of CPUs.",
                 cxxopts::value<uint32_t>(),
                 "GRPC_MAX_THREADS")
             ("grpc_memory_quota",
@@ -80,7 +80,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(), "TRACE_PATH")
 #endif
             ("grpc_channel_arguments",
-                "A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000)",
+                "A comma separated list of arguments to be passed to the gRPC server. (e.g. grpc.max_connection_age_ms=2000)",
                 cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS")
             ("file_system_poll_wait_seconds",
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
