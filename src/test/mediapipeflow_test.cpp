@@ -1241,7 +1241,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
             [&msg]() {
                 const auto& outputs = msg.infer_response().outputs();
                 ASSERT_EQ(outputs.size(), 0);
-                ASSERT_EQ(msg.error_message(), Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM).string() + " - INTERNAL: ; partial deserialization of first request");
+                ASSERT_EQ(msg.error_message(), Status(StatusCode::INVALID_UNEXPECTED_INPUT).string() + " - in1 is unexpected; partial deserialization of first request");
             }();
             canDisconnect.set_value();
             return true;
