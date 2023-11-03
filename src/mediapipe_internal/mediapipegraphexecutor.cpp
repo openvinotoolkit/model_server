@@ -891,7 +891,7 @@ Status MediapipeGraphExecutor::deserializeTimestamp(const KFSRequest& request) {
     }
     return StatusCode::OK;
 }
-// TODO write test that request contains not existing stream
+
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
     auto status = deserializeTimestamp(*request);
     if (!status.ok()) {
@@ -902,7 +902,7 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSReque
         const auto& inputName = input.name();
         if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName) { return streamName == inputName; }) == this->inputNames.end()) {
             SPDLOG_DEBUG("Request for {}, contains not expected input name: {}", request->model_name(), inputName);
-            return Status(StatusCode::INVALID_UNEXPECTED_INPUT, std::string(inputName) + "is unexpected");
+            return Status(StatusCode::INVALID_UNEXPECTED_INPUT, std::string(inputName) + " is unexpected");
         }
         status = createPacketAndPushIntoGraph<HolderWithRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes);
         if (!status.ok()) {
