@@ -447,11 +447,11 @@ static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFS
     std::map<std::string, mediapipe::Packet> inputSidePackets;
     for (const auto& [name, valueChoice] : request->parameters()) {
         if (valueChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
-            inputSidePackets[name] = mediapipe::MakePacket<std::string>(valueChoice.string_param()).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+            inputSidePackets[name] = mediapipe::MakePacket<std::string>(valueChoice.string_param());
         } else if (valueChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
-            inputSidePackets[name] = mediapipe::MakePacket<int64_t>(valueChoice.int64_param()).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+            inputSidePackets[name] = mediapipe::MakePacket<int64_t>(valueChoice.int64_param());
         } else if (valueChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) {
-            inputSidePackets[name] = mediapipe::MakePacket<bool>(valueChoice.bool_param()).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+            inputSidePackets[name] = mediapipe::MakePacket<bool>(valueChoice.bool_param());
         } else {
             SPDLOG_DEBUG("Handling parameters of different types than: bool, string, int64 is not supported");
         }
@@ -942,7 +942,7 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
         }
 
         // Launch
-        MP_RETURN_ON_FAIL(graph.StartRun({}), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);  // TODO: Input side packets / missing test
+        MP_RETURN_ON_FAIL(graph.StartRun(createInputSidePackets(&firstRequest)), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         // Deserialize first request
         OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(this->partialDeserialize(

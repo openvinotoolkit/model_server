@@ -178,8 +178,42 @@ public:
     }
 };
 
+class AddSidePacketToSingleStreamTestCalculator : public CalculatorBase {
+public:
+    static absl::Status GetContract(CalculatorContract* cc) {
+        LOG(INFO) << "AddSidePacketToSingleStreamTestCalculator::GetContract";
+        cc->Inputs().Index(0).Set<ov::Tensor>();
+        cc->Outputs().Index(0).Set<ov::Tensor>();
+        cc->InputSidePackets().Index(0).Set<int64_t>();
+        return absl::OkStatus();
+    }
+
+    absl::Status Close(CalculatorContext* cc) final {
+        LOG(INFO) << "AddSidePacketToSingleStreamTestCalculator::Close";
+        return absl::OkStatus();
+    }
+
+    absl::Status Open(CalculatorContext* cc) final {
+        LOG(INFO) << "AddSidePacketToSingleStreamTestCalculator::Open";
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(CalculatorContext* cc) final {
+        LOG(INFO) << "AddSidePacketToSingleStreamTestCalculator::Process";
+        ov::Tensor input = cc->Inputs().Index(0).Get<ov::Tensor>();
+        ov::Tensor output(input.get_element_type(), input.get_shape());
+        int64_t valueToAdd = cc->InputSidePackets().Index(0).Get<int64_t>();
+        for (size_t i = 0; i < input.get_byte_size() / sizeof(float); i++) {
+            ((float*)(output.data()))[i] = ((float*)(input.data()))[i] + valueToAdd;
+        }
+        cc->Outputs().Index(0).Add(new ov::Tensor(output), cc->InputTimestamp());
+        return absl::OkStatus();
+    }
+};
+
 REGISTER_CALCULATOR(AddOneSingleStreamTestCalculator);
 REGISTER_CALCULATOR(AddOne3CycleIterationsTestCalculator);
 REGISTER_CALCULATOR(AddNumbersMultiInputsOutputsTestCalculator);
 REGISTER_CALCULATOR(ErrorInProcessTestCalculator);
+REGISTER_CALCULATOR(AddSidePacketToSingleStreamTestCalculator);
 }  // namespace mediapipe
