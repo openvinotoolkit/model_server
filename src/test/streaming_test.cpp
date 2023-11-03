@@ -57,6 +57,19 @@ static void prepareRequest(::inference::ModelInferRequest& request, const std::v
     }
 }
 
+static void prepareRequestWithParam(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content, std::tuple<std::string, int64_t> param, std::optional<int64_t> timestamp = std::nullopt) {
+    request.Clear();
+    auto& [paramName, paramVal] = param;
+    for (auto const& [name, val] : content) {
+        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {val}, false);
+    }
+    if (timestamp.has_value()) {
+        request.set_id(std::to_string(timestamp.value()));
+    }
+    (*request.mutable_parameters())[paramName] = inference::InferParameter();
+    (*request.mutable_parameters())[paramName].set_int64_param(paramVal);
+}
+
 static void prepareInvalidRequest(::inference::ModelInferRequest& request, const std::vector<std::string>& inputs, std::optional<int64_t> timestamp = std::nullopt) {
     request.Clear();
     int i = 0;
@@ -845,4 +858,67 @@ node {
             mtx[1]));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+TEST_F(StreamingTest, FirstRequestParametersPassedAsSidePackets) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddSidePacketToSingleStreamTestCalculator"
+  input_stream: "in"
+  input_side_packet: "val"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    // Mock receiving 3 requests and disconnection
+    prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"val", 65});  // request with parameter val
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Receive({{"in", 7.2f}}))    // subsequent requests without parameters
+        .WillOnce(Receive({{"in", 102.4f}}))  // subsequent requests without parameters
+        .WillOnce(Disconnect());
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out", 68.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"out", 72.2f}}, 1))
+        .WillOnce(SendWithTimestamp({{"out", 167.4f}}, 2));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+TEST_F(StreamingTest, FirstRequestMissingRequiredParameter) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddSidePacketToSingleStreamTestCalculator"
+  input_stream: "in"
+  input_side_packet: "val"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});  // missing required request param
+    EXPECT_CALL(this->stream, Read(_)).Times(0);
+    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 }
