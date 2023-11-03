@@ -22,6 +22,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../status.hpp"
+#include "../stringutils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -50,6 +51,20 @@ protected:
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 };
 
+static void setRequestTimestamp(KFSRequest& request, const std::string& value) {
+    request.clear_parameters();
+    auto intOpt = ovms::stoi64(value);
+    if (intOpt.has_value()) {
+        request.mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_int64_param(intOpt.value());
+    } else {
+        request.mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_string_param(value);
+    }
+}
+// TODO what to do if several inputs have different timestamp
+static int64_t getResponseTimestamp(const KFSResponse& response) {
+    return response.parameters().at(MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).int64_param();
+}
+
 static void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content, std::optional<int64_t> timestamp = std::nullopt, const std::string& servableName = "", const std::string& servableVersion = "") {
     request.Clear();
     if (!servableName.empty()) {
@@ -66,7 +81,7 @@ static void prepareRequest(::inference::ModelInferRequest& request, const std::v
         prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {val}, false);
     }
     if (timestamp.has_value()) {
-        request.set_id(std::to_string(timestamp.value()));
+        setRequestTimestamp(request, std::to_string(timestamp.value()));
     }
 }
 
@@ -101,7 +116,7 @@ static void prepareInvalidRequest(::inference::ModelInferRequest& request, const
         request.mutable_raw_input_contents()->Mutable(i++)->clear();
     }
     if (timestamp.has_value()) {
-        request.set_id(std::to_string(timestamp.value()));
+        setRequestTimestamp(request, std::to_string(timestamp.value()));
     }
 }
 
@@ -126,7 +141,7 @@ static void assertResponse(const ::inference::ModelStreamInferResponse& resp, co
         ASSERT_EQ(*((float*)content.data()), value);
     }
     if (expectedTimestamp.has_value()) {
-        ASSERT_EQ(std::to_string(expectedTimestamp.value()), resp.infer_response().id());
+        ASSERT_EQ(expectedTimestamp.value(), getResponseTimestamp(resp.infer_response()));
     }
 }
 
@@ -175,7 +190,7 @@ static auto ReceiveWithServableNameAndVersionWhenNotified(std::vector<std::tuple
 static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> content, int64_t timestamp) {
     return [content, timestamp](::inference::ModelInferRequest* req) {
         prepareRequest(*req, content);
-        req->set_id(std::to_string(timestamp));
+        setRequestTimestamp(*req, std::to_string(timestamp));
         return true;
     };
 }
@@ -192,7 +207,7 @@ static auto ReceiveWithTimestampWhenNotified(std::vector<std::tuple<std::string,
     return [content, timestamp, &mtx](::inference::ModelInferRequest* req) {
         std::lock_guard<std::mutex> lock(mtx);
         prepareRequest(*req, content);
-        req->set_id(std::to_string(timestamp));
+        setRequestTimestamp(*req, std::to_string(timestamp));
         return true;
     };
 }
@@ -201,7 +216,7 @@ static auto ReceiveInvalidWithTimestampWhenNotified(std::vector<std::string> inp
     return [inputs, timestamp, &mtx](::inference::ModelInferRequest* req) {
         std::lock_guard<std::mutex> lock(mtx);
         prepareInvalidRequest(*req, inputs);
-        req->set_id(std::to_string(timestamp));
+        setRequestTimestamp(*req, std::to_string(timestamp));
         return true;
     };
 }
@@ -803,7 +818,7 @@ node {
         {"in"}, {"out"}, {}};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
-    this->firstRequest.set_id("not an int");
+    setRequestTimestamp(this->firstRequest, std::string("not an int"));
 
     std::mutex mtx;
 
@@ -811,7 +826,7 @@ node {
         .WillOnce(DisconnectWhenNotified(mtx));
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendErrorAndNotifyEnd(
-            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request id field").string() + std::string{"; partial deserialization of first request"},
+            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request parameter OVMS_MP_TIMESTAMP. Should be int64").string() + std::string{"; partial deserialization of first request"},
             mtx));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);

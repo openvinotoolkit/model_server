@@ -48,7 +48,7 @@ class MediapipeGraphExecutor {
 
     ::mediapipe::Timestamp currentStreamTimestamp;
 
-    Status deserializeTimestamp(const KFSRequest& request);
+    static Status deserializeTimestampIfAvailable(const KFSRequest& request, ::mediapipe::Timestamp& timestamp);
     Status partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph);
     Status validateSubsequentRequest(const ::inference::ModelInferRequest& request) const;
 
@@ -56,6 +56,7 @@ protected:
     Status serializePacket(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const;
 
 public:
+    static const std::string TIMESTAMP_PARAMETER_NAME;
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,
