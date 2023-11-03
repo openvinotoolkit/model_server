@@ -697,7 +697,7 @@ public:
 template <typename T>
 class HolderWithNoRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
 public:
-    explicit HolderWithNoRequestOwnership(const T* barePtr, const std::shared_ptr<const ::inference::ModelInferRequest>& req) :
+    explicit HolderWithNoRequestOwnership(const T* barePtr, const std::shared_ptr<const KFSRequest>& req) :
         ::mediapipe::packet_internal::Holder<T>(barePtr) {}
 };
 template <>
@@ -735,7 +735,7 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
 
 Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
     Timer<TIMER_END> timer;
-    SPDLOG_DEBUG("Start KServe request mediapipe graph: {} execution", requestPtr->model_name());
+    SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", requestPtr->model_name());
     ::mediapipe::CalculatorGraph graph;
     auto absStatus = graph.Initialize(this->config);
     if (!absStatus.ok()) {
@@ -916,6 +916,7 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSReque
 
 Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, KFSRequest>& stream) {
     const std::string& servableName = firstRequest.model_name();  // TODO: Validate subsequent requests to match first servable name
+    SPDLOG_DEBUG("Start streaming KServe request mediapipe graph: {} execution", servableName);
     try {
         // Init
         ::mediapipe::CalculatorGraph graph;

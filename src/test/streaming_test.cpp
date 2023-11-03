@@ -653,12 +653,12 @@ node {
 
     std::mutex mtx[3];
 
-    // Mock receiving 3 requests, the last one malicious
+    // Mock receiving 4 requests, the last two malicious
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // correct request
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                                             // correct request
         .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx[0]))                          // invalid request - missing data in buffer
-        .WillOnce(ReceiveWithTimestampWhenNotified({{"NONEXISTING", 13.f}, {"in", 2.3f}}, 2, mtx[1]))  // invalid request - missing data in buffer
+        .WillOnce(ReceiveWithTimestampWhenNotified({{"NONEXISTING", 13.f}, {"in", 2.3f}}, 2, mtx[1]))  // invalid request - non existing input
         .WillOnce(DisconnectWhenNotified(mtx[2]));
 
     // Expect 2 responses, no more due to error
