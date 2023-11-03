@@ -48,7 +48,7 @@ class MediapipeGraphExecutor {
 
     ::mediapipe::Timestamp currentStreamTimestamp;
 
-    Status acquireTimestamp(const KFSRequest& request);
+    Status deserializeTimestamp(const KFSRequest& request);
     Status partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph);
 
 protected:

@@ -872,7 +872,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
         }                                                             \
     }
 
-Status MediapipeGraphExecutor::acquireTimestamp(const KFSRequest& request) {
+Status MediapipeGraphExecutor::deserializeTimestamp(const KFSRequest& request) {
     if (!request.id().empty()) {
         auto requestTimestamp = stoi64(request.id());  // TODO: Decide if deserialize from id or int parameter
         if (requestTimestamp.has_value()) {
@@ -891,11 +891,9 @@ Status MediapipeGraphExecutor::acquireTimestamp(const KFSRequest& request) {
     }
     return StatusCode::OK;
 }
-// TODO: Add support for other types CVS-122328/CVS-122329
 // TODO write test that request contains not existing stream
-// TODO create test for streaming with KFS passthrough
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
-    auto status = acquireTimestamp(*request);
+    auto status = deserializeTimestamp(*request);
     if (!status.ok()) {
         return status;
     }
