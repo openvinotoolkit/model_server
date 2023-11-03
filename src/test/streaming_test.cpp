@@ -181,7 +181,43 @@ static auto SendErrorAndNotifyEnd(const std::string& expectedMessage, std::mutex
         return true;
     };
 }
+// Purpose of this test is to verify specific case of KFSRequest* as a packet type pushed into graph
+// as we do use different Packet handler in case of KFSRequest
+TEST_F(StreamingTest, SingleStreamSend3Receive3KFSRequestsAsPackets) {
+    const std::string pbTxt{R"(
+input_stream: "REQUEST:in"
+output_stream: "RESPONSE:out"
+node {
+  calculator: "OVMSTestKFSPassCalculator"
+  input_stream: "REQUEST:in"
+  output_stream: "RESPONSE:out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::KFS_REQUEST}},
+        {{"out", mediapipe_packet_type_enum::KFS_RESPONSE}},
+        {"in"}, {"out"}, {}};
+
+    // Mock receiving 3 requests and disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Receive({{"in", 7.2f}}))
+        .WillOnce(Receive({{"in", 102.4f}}))
+        .WillOnce(Disconnect());
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out", 3.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"out", 7.2f}}, 1))
+        .WillOnce(SendWithTimestamp({{"out", 102.4f}}, 2));
+
+    auto status = executor.inferStream(this->firstRequest, this->stream);
+    EXPECT_EQ(status, StatusCode::OK) << status.string();
+}
 // Positive:
 // Send X requests receive X responses (regular)
 // Send 1 request receive X responses (cycle)
@@ -615,14 +651,15 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}};
 
-    std::mutex mtx[2];
+    std::mutex mtx[3];
 
-    // Mock receiving 3 requests, the last one malicious
+    // Mock receiving 4 requests, the last two malicious
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // correct request
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                     // correct request
-        .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx[0]))  // invalid request - missing data in buffer
-        .WillOnce(DisconnectWhenNotified(mtx[1]));
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                                             // correct request
+        .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx[0]))                          // invalid request - missing data in buffer
+        .WillOnce(ReceiveWithTimestampWhenNotified({{"NONEXISTING", 13.f}, {"in", 2.3f}}, 2, mtx[1]))  // invalid request - non existing input
+        .WillOnce(DisconnectWhenNotified(mtx[2]));
 
     // Expect 2 responses, no more due to error
     EXPECT_CALL(this->stream, Write(_, _))
@@ -630,7 +667,10 @@ node {
         .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 8.2f}}, 1, mtx[0]))
         .WillOnce(SendErrorAndNotifyEnd(
             Status(StatusCode::INVALID_CONTENT_SIZE).string() + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of subsequent requests"},
-            mtx[1]));
+            mtx[1]))
+        .WillOnce(SendErrorAndNotifyEnd(
+            Status(StatusCode::INVALID_UNEXPECTED_INPUT).string() + " - NONEXISTING is unexpected; partial deserialization of subsequent requests",
+            mtx[2]));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }

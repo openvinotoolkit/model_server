@@ -1755,11 +1755,12 @@ TEST(CAPI, MultipleThreadsStarting) {
         ss << retCodes[i] << ", ";
     }
     ss << "]";
-    SPDLOG_ERROR("ER: {}", ss.str());
-    SPDLOG_ERROR("ER");
+    SPDLOG_ERROR("Error codes: {}", ss.str());
+    SPDLOG_DEBUG("Will close server now");
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
     OVMS_ServerDelete(cserver);
+    SPDLOG_DEBUG("Closed server now");
     auto started = std::count_if(retCodes.begin(), retCodes.end(),
         [](const uint32_t v) {
             return v == (uint32_t)(ovms::StatusCode::OK);

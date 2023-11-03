@@ -77,6 +77,7 @@ const grpc::Status grpc(const Status& status) {
         // Predict request validation
         {StatusCode::INVALID_NO_OF_INPUTS, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_MISSING_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
+        {StatusCode::INVALID_UNEXPECTED_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_BATCH_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_SHAPE, grpc::StatusCode::INVALID_ARGUMENT},

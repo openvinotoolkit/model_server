@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 #
 # Copyright 2022 Intel Corporation
 #
@@ -35,38 +35,37 @@ echo "Number of warnings in tests about not using forward delares:" ${NO_WARNING
 echo "Number of warnings in tests about not direct includes:" ${NO_WARNINGS_TEST_DIRECT}
 echo "Number of warnings in tests about not used: " ${NO_WARNINGS_TEST_NOTUSED}
 
-trap "cat ${CPPCLEAN_RESULTS_FILE_SRC}" err exit
+errors=""
 if [ ${NO_WARNINGS_FORWARD} -gt 7 ]; then
-    echo "Failed due to not using forward declarations where possible: ${NO_WARNINGS_FORWARD}";
-    exit 1;
+    errors+="Failed due to not using forward declarations where possible: ${NO_WARNINGS_FORWARD}"$'\n'
 fi
-if [ ${NO_WARNINGS_DIRECT} -gt 19 ]; then
-    echo "Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}";
-    exit 1;
+if [ ${NO_WARNINGS_DIRECT} -gt 18 ]; then
+    errors+="Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}"$'\n'
 fi
 if [ ${NO_WARNINGS_NOTUSED} -gt 4 ]; then
-    echo "Failed probably due to unnecessary forward includes: ${NO_WARNINGS_NOTUSED}";
-    exit 1;
+    errors+="Failed probably due to unnecessary forward includes: ${NO_WARNINGS_NOTUSED}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST_FORWARD} -gt 1 ]; then
-    echo "Failed due to not using forward declarations where possible: ${NO_WARNINGS_TEST_FORWARD}";
-    exit 1;
+    errors+="Failed due to not using forward declarations where possible: ${NO_WARNINGS_TEST_FORWARD}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST_DIRECT} -gt 15 ]; then
-    echo "Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_TEST_DIRECT}";
-    exit 1;
+    errors+="Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_TEST_DIRECT}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST_NOTUSED} -gt 0 ]; then
-    echo "Failed probably due to unnecessary forward includes: ${NO_WARNINGS_TEST_NOTUSED}";
-    exit 1;
+    errors+="Failed probably due to unnecessary forward includes: ${NO_WARNINGS_TEST_NOTUSED}"$'\n'
 fi
-if [ ${NO_WARNINGS} -gt  160 ]; then
-    echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
-    exit 1
+if [ ${NO_WARNINGS} -gt  156 ]; then
+    errors+="Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST} -gt  51 ]; then
-    echo "Failed due to higher than allowed number of issues in test code: ${NO_WARNINGS_TEST}"
-    cat ${CPPCLEAN_RESULTS_FILE_TEST}
-    exit 1
+    errors+="Failed due to higher than allowed number of issues in test code: ${NO_WARNINGS_TEST}"$'\n'
 fi
-exit 0
+if [ -n "$errors" ]; then
+    cat ${CPPCLEAN_RESULTS_FILE_SRC}
+    cat ${CPPCLEAN_RESULTS_FILE_TEST}
+    echo "$errors"
+    echo "Compare results with clean main branch to narrow down where the issues lie"
+    exit 1
+else
+    exit 0
+fi
