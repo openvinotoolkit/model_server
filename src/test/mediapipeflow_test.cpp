@@ -150,13 +150,6 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     preparePredictRequest(request, inputsMeta, requestData1);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    auto outputs = response.outputs();
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(outputs[0].name(), "out");
-    ASSERT_EQ(outputs[0].shape().size(), 2);
-    ASSERT_EQ(outputs[0].shape()[0], 1);
-    ASSERT_EQ(outputs[0].shape()[1], 10);
-
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }

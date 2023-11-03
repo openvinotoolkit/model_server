@@ -72,7 +72,7 @@ public:
             response->add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
         }
 
-        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse*>(response.get()).At(::mediapipe::Timestamp(0)));
+        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse*>(response.get()).At(cc->InputTimestamp()));
 
         return absl::OkStatus();
     }
