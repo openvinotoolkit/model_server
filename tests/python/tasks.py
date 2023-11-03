@@ -15,7 +15,7 @@
 #
 from invoke import task
 
-supported_clients = {"ovmsclient":["3.7", "3.8", "3.9"],
+supported_clients = {"ovmsclient":["3.7", "3.8", "3.9", "3.10", "3.11"],
                      "kserve-api":["3.8", "3.9", "3.10", "3.11"],
                      "tensorflow-serving-api":["3.7", "3.8", "3.9", "3.10"]}
 
