@@ -518,6 +518,25 @@ test_client_lib:
 		make test TEST_TYPE=FULL || exit 1 && \
 		make clean
 
+test_python_clients:
+	@docker image rm --force python_client_test || true
+	@docker build . -f tests/python/Dockerfile -t python_client_test
+	@echo "Dropping test container if exist"
+	@docker rm --force python_client_test_ovms || true
+	@docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python:/models openvino/ubuntu20_dev:latest rm -rf /models/models || true
+	@cd tests/python && \
+		mkdir models && \
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models && \
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:latest mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1
+	@docker run -d --rm --name python_client_test_ovms -v ${PWD}/tests/python/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8223:8000 -p 9223:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 && \
+		sleep 10
+	@docker run --network="host" python_client_test --grpc=9223 --rest=8223 --verbose --fastFail
+	@docker image rm --force python_client_test
+	@echo "Removing test container"
+	@docker rm --force python_client_test_ovms
+	@docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python:/models openvino/ubuntu20_dev:latest rm -rf /models/models || true
+
 tools_get_deps:
 	cd tools/deps/$(BASE_OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
 	-docker rm -f ovms-$(BASE_OS)-deps
