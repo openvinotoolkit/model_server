@@ -247,6 +247,26 @@ OVMS_Status* OVMS_ServerSettingsSetRestBindAddress(OVMS_ServerSettings* settings
 OVMS_Status* OVMS_ServerSettingsSetGrpcChannelArguments(OVMS_ServerSettings* settings,
     const char* grpc_channel_arguments);
 
+// Set the gRPC max threads quota server setting.
+// Equivalent of starting server with
+// --grpc_max_threads.
+//
+// \param settings The server settings object to be set
+// \param grpc_max_threads The value to be set
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetGrpcMaxThreads(OVMS_ServerSettings* settings,
+    const uint32_t grpc_max_threads);
+
+// Set the gRPC memory quota server setting.
+// Equivalent of starting server with
+// --grpc_memory_quota.
+//
+// \param settings The server settings object to be set
+// \param grpc_memory_quota The value to be set
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetGrpcMemoryQuota(OVMS_ServerSettings* settings,
+    const size_t grpc_memory_quota);
+
 // Set config check interval server setting.
 // Equivalent of starting server with
 // --file_system_poll_wait_seconds.

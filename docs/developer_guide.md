@@ -47,12 +47,12 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 
 3. In the docker container context compile the source code via :
 	```bash
-	bazel build //src:ovms
+	bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
 	```
 
 4. From the container, run a single unit test :
 	```bash
-	bazel test --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |

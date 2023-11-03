@@ -51,21 +51,12 @@ dist/ubuntu
 ### `BASE_OS`
 
 Select base OS:
-- `ubuntu` for Ubuntu 20.04 (default)
+- `ubuntu20` for Ubuntu 20.04 (default)
+- `ubuntu22` for Ubuntu 22.04
 - `redhat` for Red Hat UBI 8.7
 
 ```bash
 make docker_build BASE_OS=redhat
-```
-
-### `BASE_OS_TAG_UBUNTU`
-
-Select ubuntu base image version:
-- `20.04` ubuntu:20.04 (default value)
-- `22.04` ubuntu:22.04
-
-```bash
-make docker_build BASE_OS_TAG_UBUNTU=22.04
 ```
 
 <hr />

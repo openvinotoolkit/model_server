@@ -358,6 +358,26 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetGrpcChannelArguments(OVMS_ServerSe
     return nullptr;
 }
 
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetGrpcMaxThreads(OVMS_ServerSettings* settings,
+    uint32_t grpc_max_threads) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->grpcMaxThreads = grpc_max_threads;
+    return nullptr;
+}
+
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetGrpcMemoryQuota(OVMS_ServerSettings* settings,
+    size_t grpc_memory_quota) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->grpcMemoryQuota = grpc_memory_quota;
+    return nullptr;
+}
+
 DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds) {
     if (settings == nullptr) {
