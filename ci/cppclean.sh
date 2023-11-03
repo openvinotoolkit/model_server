@@ -16,8 +16,8 @@
 #
 CPPCLEAN_RESULTS_FILE_SRC="cppclean_src"
 CPPCLEAN_RESULTS_FILE_TEST="cppclean_test"
-cppclean ./src/ 2>&1 | grep -v "unable to find\|Exception while processing" | grep -v test > ${CPPCLEAN_RESULTS_FILE_SRC};
-cppclean ./src/ 2>&1 | grep -v "unable to find\|Exception while processing" | grep test > ${CPPCLEAN_RESULTS_FILE_TEST};
+cppclean ./src/ 2>&1 | grep -v "unable to find\|Exception while processing\|parsing error:" | grep -v test > ${CPPCLEAN_RESULTS_FILE_SRC};
+cppclean ./src/ 2>&1 | grep -v "unable to find\|Exception while processing\|parsing error:" | grep test > ${CPPCLEAN_RESULTS_FILE_TEST};
 NO_WARNINGS=$(wc -l ${CPPCLEAN_RESULTS_FILE_SRC} | awk '{print $1}')
 NO_WARNINGS_FORWARD=$(grep "use a forward declaration instead" ${CPPCLEAN_RESULTS_FILE_SRC} | wc -l)
 NO_WARNINGS_DIRECT=$(grep "not found in any directly #included header" ${CPPCLEAN_RESULTS_FILE_SRC} | wc -l)
@@ -64,7 +64,7 @@ if [ ${NO_WARNINGS} -gt  160 ]; then
     echo "Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"
     exit 1
 fi
-if [ ${NO_WARNINGS_TEST} -gt  57 ]; then
+if [ ${NO_WARNINGS_TEST} -gt  51 ]; then
     echo "Failed due to higher than allowed number of issues in test code: ${NO_WARNINGS_TEST}"
     cat ${CPPCLEAN_RESULTS_FILE_TEST}
     exit 1

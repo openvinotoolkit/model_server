@@ -235,15 +235,15 @@ void checkScalarResponse(const std::string outputName,
 void checkAddResponse(const std::string outputName,
     const std::vector<float>& requestData1,
     const std::vector<float>& requestData2,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize, const std::string& servableName) {
+    ::KFSRequest& request, const ::KFSResponse& response, int seriesLength, int batchSize, const std::string& servableName) {
     ASSERT_EQ(response.model_name(), servableName);
     ASSERT_EQ(response.outputs_size(), 1);
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.outputs().begin()->name(), outputName) << "Did not find:" << outputName;
     const auto& output_proto = *response.outputs().begin();
-    std::string* content = response.mutable_raw_output_contents(0);
+    const std::string& content = response.raw_output_contents(0);
 
-    ASSERT_EQ(content->size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+    ASSERT_EQ(content.size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
     ASSERT_EQ(output_proto.shape_size(), 2);
     ASSERT_EQ(output_proto.shape(0), batchSize);
     ASSERT_EQ(output_proto.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
@@ -253,7 +253,7 @@ void checkAddResponse(const std::string outputName,
         responseData[i] += requestData2[i];
     }
 
-    float* actual_output = (float*)content->data();
+    const float* actual_output = (const float*)content.data();
     float* expected_output = responseData.data();
     const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
     EXPECT_EQ(actual_output[0], expected_output[0]);

@@ -965,18 +965,20 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const ::infere
 }
 
 Status MediapipeGraphExecutor::inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream) {
+    const std::string& servableName = firstRequest.model_name();  // TODO: Validate subsequent requests to match first servable name
     try {
         // Init
         ::mediapipe::CalculatorGraph graph;
         MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 
         // Installing observers
-        for (const auto& name : this->outputNames) {
-            MP_RETURN_ON_FAIL(graph.ObserveOutputStream(name, [&stream, &name, this](const ::mediapipe::Packet& packet) -> absl::Status {
+        for (const auto& outputName : this->outputNames) {
+            MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&stream, &outputName, &servableName, this](const ::mediapipe::Packet& packet) -> absl::Status {
                 try {
                     ::inference::ModelStreamInferResponse resp;
-                    OVMS_RETURN_MP_ERROR_ON_FAIL(serializePacket(name, *resp.mutable_infer_response(), packet), "error in serialization");
+                    OVMS_RETURN_MP_ERROR_ON_FAIL(serializePacket(outputName, *resp.mutable_infer_response(), packet), "error in serialization");
                     resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
+                    *resp.mutable_infer_response()->mutable_model_name() = servableName;  // TODO: Add test to streaming_tests.cpp
                     if (!stream.Write(resp)) {
                         return absl::Status(absl::StatusCode::kCancelled, "client disconnected");
                     }
