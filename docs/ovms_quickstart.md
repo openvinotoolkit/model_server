@@ -110,8 +110,9 @@ python3 object_detection.py --image coco_bike.jpg --output output.jpg --service_
 
 ### Step 8: Review the Results
 
-In the `results` folder, you can find files containing inference results. 
+In the current folder, you can find files containing inference results. 
 In our case, it will be a modified input image with bounding boxes indicating detected faces.
+
 ![Inference results](quickstart_result.jpeg)
 
 Note: Similar steps can be performed with an ONNX model. Check the inference [use case example](../demos/using_onnx_model/python/README.md) with a public ResNet model in ONNX format
