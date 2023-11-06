@@ -324,7 +324,7 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
 
 Start OVMS container with `config.json` including mediapipe servable. OVMS should be built with MediaPipe enabled.
 ```bash
-cp -r ${PWD}/model_server/demos/benchmark/python/sample_data ${PWD}/workspace/sample_data
+cp -r ${PWD}/sample_data ${PWD}/workspace/sample_data
 docker run -u $(id -u) -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --port 30001 --rest_port 30002 --config_path /workspace/sample_data/config.json
 ```
 Requests for benchmarking are prepared basing on array from numpy file. This data file is fed to Benchmark Client by specifing switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. You can create sample data with `Python3`, specifying array shape and precision. Generated .npy file should be saved to workspace/sample_data directory for this example.
