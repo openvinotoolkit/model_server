@@ -914,9 +914,20 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSReque
     return StatusCode::OK;
 }
 
+Status MediapipeGraphExecutor::validateSubsequentRequest(const ::inference::ModelInferRequest& request) const {
+    if (request.model_name() != this->name) {
+        return StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME;
+    }
+    if (request.model_version() != this->version &&
+        request.model_version() != "0" &&    // default version does not matter for user
+        !request.model_version().empty()) {  // empty the same as default
+        return StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION;
+    }
+    return StatusCode::OK;
+}
+
 Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, KFSRequest>& stream) {
-    const std::string& servableName = firstRequest.model_name();  // TODO: Validate subsequent requests to match first servable name
-    SPDLOG_DEBUG("Start streaming KServe request mediapipe graph: {} execution", servableName);
+    SPDLOG_DEBUG("Start streaming KServe request mediapipe graph: {} execution", this->name);
     try {
         // Init
         ::mediapipe::CalculatorGraph graph;
@@ -924,12 +935,13 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
 
         // Installing observers
         for (const auto& outputName : this->outputNames) {
-            MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&stream, &outputName, &servableName, this](const ::mediapipe::Packet& packet) -> absl::Status {
+            MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&stream, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
                 try {
                     ::inference::ModelStreamInferResponse resp;
                     OVMS_RETURN_MP_ERROR_ON_FAIL(serializePacket(outputName, *resp.mutable_infer_response(), packet), "error in serialization");
                     resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
-                    *resp.mutable_infer_response()->mutable_model_name() = servableName;  // TODO: Add test to streaming_tests.cpp
+                    *resp.mutable_infer_response()->mutable_model_name() = this->name;
+                    *resp.mutable_infer_response()->mutable_model_version() = this->version;
                     if (!stream.Write(resp)) {
                         return absl::Status(absl::StatusCode::kCancelled, "client disconnected");
                     }
@@ -960,7 +972,12 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
         // lifetime is extended to lifetime of deserialized Packets.
         auto req = std::make_shared<::inference::ModelInferRequest>();
         while (stream.Read(req.get())) {
-            OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
+            auto pstatus = this->validateSubsequentRequest(*req);
+            if (pstatus.ok()) {
+                OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(this->partialDeserialize(req, graph), "partial deserialization of subsequent requests");
+            } else {
+                OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(pstatus, "validate subsequent requests");
+            }
             if (graph.HasError()) {
                 SPDLOG_DEBUG("Graph encountered an error, stopping the execution");
                 break;

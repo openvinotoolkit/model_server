@@ -50,6 +50,7 @@ class MediapipeGraphExecutor {
 
     Status deserializeTimestamp(const KFSRequest& request);
     Status partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph);
+    Status validateSubsequentRequest(const ::inference::ModelInferRequest& request) const;
 
 protected:
     Status serializePacket(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const;
