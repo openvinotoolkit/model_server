@@ -25,8 +25,8 @@ parser.add_argument('--image', required=True,
                     help='Path to a image in JPG or PNG format')
 parser.add_argument('--service_url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000', dest='service_url')
-parser.add_argument('--model_name', default='resnet',
-                    help='Model name to query. default: faster_rcnn_resnet50')
+parser.add_argument('--model_name', default='faster_rcnn',
+                    help='Model name to query. default: faster_rcnn')
 parser.add_argument('--input_name', default='input_tensor',
                     help='Input name to query. default: input_tensor')
 parser.add_argument('--model_version', default=0, type=int,
