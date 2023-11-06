@@ -288,7 +288,7 @@ cd ../../..
 ```
 Next start OVMS having dynamic input shape specified.
 ```bash
-docker run -u $(id -u) -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path workspace/face-detection-retail-0005 --model_name face-detection-retail-0005 --shape "(-1,3,-1,-1)" --port 30001 --rest_port 30002
+docker run -u $(id -u) -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path /workspace/face-detection-retail-0005 --model_name face-detection-retail-0005 --shape "(-1,3,-1,-1)" --port 30001 --rest_port 30002
 ```
 To generate request with specified shape, it is necessary to set input shape explicitly. It is done by specifying `-s` or `--shape` parameter, followed by desired numbers.
 ```bash
