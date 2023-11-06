@@ -59,8 +59,8 @@
 #pragma GCC diagnostic pop
 
 namespace ovms {
-
-const ::mediapipe::Timestamp DEFAULT_STARTING_STREAM_TIMESTAMP = ::mediapipe::Timestamp(0);
+using ::mediapipe::Timestamp;
+const Timestamp DEFAULT_STARTING_STREAM_TIMESTAMP = Timestamp(0);
 
 static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
     auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
@@ -442,10 +442,16 @@ enum : unsigned int {
 }  // namespace
 
 constexpr size_t STARTING_TIMESTAMP = 0;
+const std::string MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME = "OVMS_MP_TIMESTAMP";
 
 static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFSRequest* request) {
     std::map<std::string, mediapipe::Packet> inputSidePackets;
     for (const auto& [name, valueChoice] : request->parameters()) {
+        SPDLOG_DEBUG("Found: {}; parameter in request for: {};", name, request->model_name());
+        if (name == MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME) {
+            SPDLOG_DEBUG("Ignored: {}; parameter in request for: {}; Paremeter is reserved for MediaPipe input packet timestamps", name, request->model_name());
+            continue;
+        }
         if (valueChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kStringParam) {
             inputSidePackets[name] = mediapipe::MakePacket<std::string>(valueChoice.string_param());
         } else if (valueChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
@@ -460,7 +466,7 @@ static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFS
 }
 
 template <typename T, template <typename X> typename Holder>
-static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp) {
+static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const Timestamp& timestamp) {
     if (name.empty()) {
         SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
@@ -499,7 +505,7 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
 }
 
 template <template <typename X> typename Holder>
-static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp) {
+static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const Timestamp& timestamp) {
     if (name.empty()) {
         SPDLOG_DEBUG("Creating Mediapipe graph inputs name failed for: {}", name);
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
@@ -710,7 +716,7 @@ public:
 };
 
 template <template <typename X> typename Holder>
-static Status createPacketAndPushIntoGraph(const std::string& inputName, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const ::mediapipe::Timestamp& timestamp, const stream_types_mapping_t& inputTypes) {
+static Status createPacketAndPushIntoGraph(const std::string& inputName, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph, const Timestamp& timestamp, const stream_types_mapping_t& inputTypes) {
     auto inputPacketType = inputTypes.at(inputName);
     ovms::Status status;
     if (inputPacketType == mediapipe_packet_type_enum::KFS_REQUEST) {
@@ -758,9 +764,8 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
         }
         outputPollers.emplace(name, std::move(absStatusOrPoller).value());
     }
-
-    std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(requestPtr)};
-    absStatus = graph.StartRun(inputSidePackets);
+    std::map<std::string, mediapipe::Packet> sideInputPackets{createInputSidePackets(requestPtr)};
+    absStatus = graph.StartRun(sideInputPackets);
     if (!absStatus.ok()) {
         const std::string absMessage = absStatus.ToString();
         SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", requestPtr->model_name(), absMessage);
@@ -872,28 +877,40 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
         }                                                             \
     }
 
-Status MediapipeGraphExecutor::deserializeTimestamp(const KFSRequest& request) {
-    if (!request.id().empty()) {
-        auto requestTimestamp = stoi64(request.id());  // TODO: Decide if deserialize from id or int parameter
-        if (requestTimestamp.has_value()) {
+Status MediapipeGraphExecutor::deserializeTimestampIfAvailable(const KFSRequest& request, Timestamp& timestamp) {
+    auto timestampParamIt = request.parameters().find(TIMESTAMP_PARAMETER_NAME);
+    if (timestampParamIt != request.parameters().end()) {
+        SPDLOG_DEBUG("Found {} timestamp parameter in request for: {}", TIMESTAMP_PARAMETER_NAME, request.model_name());
+        auto& parameterChoice = timestampParamIt->second;
+        if (parameterChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
             // Cannot create with error checking since error check = abseil death test
-            currentStreamTimestamp = ::mediapipe::Timestamp::CreateNoErrorChecking(requestTimestamp.value());
+            timestamp = Timestamp::CreateNoErrorChecking(parameterChoice.int64_param());
         } else {
-            auto status = Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request id field");
+            auto status = Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request parameter OVMS_MP_TIMESTAMP. Should be int64");
             SPDLOG_DEBUG(status.string());
             return status;
         }
     }
-    // Validate current timestamp (can be manual or automatic at this point)
-    if (!currentStreamTimestamp.IsRangeValue()) {
-        SPDLOG_DEBUG("Timestamp not in range: {}", currentStreamTimestamp.DebugString());
-        return Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, currentStreamTimestamp.DebugString());
+    return StatusCode::OK;
+}
+
+static inline Status checkTimestamp(const KFSRequest& request, const Timestamp& timestamp) {
+    if (!timestamp.IsRangeValue()) {
+        // TODO we could check it after automatic incrementing and disconnect from server side?
+        // to avoid unnecessary processing of next request. We would have to return information
+        // that it's last response
+        SPDLOG_DEBUG("Timestamp not in range: {}; for request to: {};", timestamp.DebugString(), request.model_name());
+        return Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, timestamp.DebugString());
     }
     return StatusCode::OK;
 }
 
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
-    auto status = deserializeTimestamp(*request);
+    auto status = deserializeTimestampIfAvailable(*request, this->currentStreamTimestamp);
+    if (!status.ok()) {
+        return status;
+    }
+    status = checkTimestamp(*request, this->currentStreamTimestamp);
     if (!status.ok()) {
         return status;
     }
@@ -939,9 +956,9 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
                 try {
                     ::inference::ModelStreamInferResponse resp;
                     OVMS_RETURN_MP_ERROR_ON_FAIL(serializePacket(outputName, *resp.mutable_infer_response(), packet), "error in serialization");
-                    resp.mutable_infer_response()->set_id(std::to_string(packet.Timestamp().Value()));
                     *resp.mutable_infer_response()->mutable_model_name() = this->name;
                     *resp.mutable_infer_response()->mutable_model_version() = this->version;
+                    resp.mutable_infer_response()->mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_int64_param(packet.Timestamp().Value());
                     if (!stream.Write(resp)) {
                         return absl::Status(absl::StatusCode::kCancelled, "client disconnected");
                     }
