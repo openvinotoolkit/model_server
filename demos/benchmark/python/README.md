@@ -34,7 +34,7 @@ cd ../../..
 
 Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](https://docs.openvino.ai/2023.1/ovms_what_is_openvino_model_server.html)):
 ```bash
-docker run -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
+docker run -u $(id -u) -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
                      /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 30001 --rest_port 30002
 ```
 where a model directory looks like that:
