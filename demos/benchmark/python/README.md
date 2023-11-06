@@ -282,8 +282,8 @@ In order to test dynamic models, `-s` (shape) parameter needs to be specified. Y
 ```bash
 mkdir -p workspace/face-detection-retail-0005/1
 cd workspace/face-detection-retail-0005/1
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/face-detection-retail-0005/FP32/face-dtection-retail-0005.bin
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/face-detection-retail-0005/FP32/face-dtection-retail-0005.xml
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/face-detection-retail-0005/FP32/face-detection-retail-0005.bin
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/face-detection-retail-0005/FP32/face-detection-retail-0005.xml
 cd ../../..
 ```
 Next start OVMS having dynamic input shape specified.
