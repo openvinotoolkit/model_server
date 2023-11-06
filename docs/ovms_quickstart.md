@@ -79,6 +79,7 @@ Client scripts are available for quick access to the Model Server. Run an exampl
 ```bash
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/object_detection.py
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/requirements.py
+wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
 ```
 
 For more information, check these links:
@@ -90,10 +91,10 @@ For more information, check these links:
 
 Put the files in a separate folder to provide inference data, as inference will be performed on all the files it contains.
 
-You can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/static/images/people). This example uses the file [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/static/images/people/people1.jpeg). Run the following command to download the image:
+You can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/static/images). This example uses the file [coco_bike.jpg](https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg). Run the following command to download the image:
 
 ```bash
-curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
+wget https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg
 ```
 
 ### Step 7: Run Inference
@@ -104,16 +105,14 @@ Go to the folder with the client script and install dependencies. Create a folde
 pip install --upgrade pip
 pip install -r requirements.txt
 
-mkdir results
-
-python3 object_detection.py --image images/people1.jpeg --output results/output.png --service_url localhost:9000
+python3 object_detection.py --image coco_bike.jpg --output output.jpg --service_url localhost:9000
 ```
 
 ### Step 8: Review the Results
 
 In the `results` folder, you can find files containing inference results. 
 In our case, it will be a modified input image with bounding boxes indicating detected faces.
-![Inference results](quickstart_result.png)
+![Inference results](quickstart_result.jpeg)
 
 Note: Similar steps can be performed with an ONNX model. Check the inference [use case example](../demos/using_onnx_model/python/README.md) with a public ResNet model in ONNX format
 or [TensorFlow model demo](../demos/image_classification_using_tf_model/python/README.md ).

@@ -31,6 +31,8 @@ parser.add_argument('--input_name', default='input_tensor',
                     help='Input name to query. default: input_tensor')
 parser.add_argument('--model_version', default=0, type=int,
                     help='Model version to query. default: latest available')
+parser.add_argument('--labels', default="coco_91cl.txt", type=str,
+                    help='Path to COCO dataset labels with human readable class names')
 parser.add_argument('--output', required=True,
                     help='Path to store output.')
 args = parser.parse_args()
@@ -67,7 +69,7 @@ def add_detection_box(box, image, label):
     """
     ymin, xmin, ymax, xmax = box
     point1, point2 = (int(xmin), int(ymin)), (int(xmax), int(ymax))
-    box_color = [random.randint(0, 255) for _ in range(3)]
+    box_color = [random.randint(0, 255) for _ in range(3)] # nosec
     line_thickness = round(0.002 * (image.shape[0] + image.shape[1]) / 2) + 1
 
     cv2.rectangle(img=image, pt1=point1, pt2=point2, color=box_color, thickness=line_thickness, lineType=cv2.LINE_AA)
@@ -137,7 +139,7 @@ def visualize_inference_result(inference_result, image: np.ndarray, labels_map: 
         )
     return image_with_detection_boxex
 
-with open("coco.txt", "r") as file:
+with open(args.labels, "r") as file:
     coco_labels = file.read().strip().split("\n")
     coco_labels_map = dict(enumerate(coco_labels, 1))
     img = visualize_inference_result(response, image, coco_labels_map, 10)
