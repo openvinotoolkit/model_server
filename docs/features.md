@@ -17,6 +17,7 @@
    ovms_docs_model_version_policy
    ovms_docs_metrics
    ovms_docs_c_api
+   ovms_docs_streaming_endpoints
    ovms_docs_advanced
 
 @endsphinxdirective
