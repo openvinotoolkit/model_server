@@ -14,11 +14,26 @@ Furthermore the client supports multiple precisions: `FP16`, `FP32`, `FP64`, `IN
 
 A single docker container can run many parallel clients in separate processes. Measured metrics (especially throughput, latency,
 and counters) are collected from all client processes and then combined upon which they can be printed in JSON format/syntax for
-the entire parallel workload. If the docker container is run in the deamon mode the final logs can be shown using the `docker logs`
+the entire parallel workload. If the docker container is run in the daemon mode the final logs can be shown using the `docker logs`
 command. Results can also be exported to a Mongo database. In order to do this the appropriate identification metadata has to
 be specified in the command line.
 
-Since 2.7 update, these Benchmark Client measurement options were introduced: language models testing with in-built string data input and support for testing `MediaPipe` graphs in the OVMS. For each of them, there is a need to specify the input data method. Data method `-d string` creates sample text data. Benchmarking of OVMS integrated with MediaPipe is possible for KServe API via gRPC protocol. In this case there is also a necessity to feed client with a pre-prepared `numpy` file consisting of a numpy array. There is also an option to test dynamic models using `shape` parameter. Last two usecases are furthermore described in this document.
+Since 2.7 update, these Benchmark Client measurement options were introduced: language models testing with in-built string data input and support for testing `MediaPipe` graphs in the OVMS. For each of them, there is a need to specify the input data method. Data method `-d string` creates sample text data. 
+
+Benchmarking of OVMS integrated with MediaPipe is possible for KServe API via gRPC protocol. In this case there is also a necessity to feed client with a pre-prepared `numpy` file consisting of a numpy array. 
+
+There is also an option to test dynamic models using `shape` parameter. 
+
+Last two use cases are furthermore described in this document.
+
+## Build Benchmark Client Docker Image
+
+To build the docker image and tag it as `benchmark_client` run:
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/benchmark/python
+docker build . -t benchmark_client
+```
 
 ## OVMS Deployment
 
@@ -32,12 +47,7 @@ wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/mode
 cd ../../..
 ```
 
-Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](https://docs.openvino.ai/2023.1/ovms_what_is_openvino_model_server.html)):
-```bash
-docker run -u $(id -u) -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
-                     /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 30001 --rest_port 30002
-```
-where a model directory looks like that:
+Model directory looks like that:
 ```bash
 workspace
 └── resnet50-binary-0001
@@ -46,13 +56,10 @@ workspace
         └── resnet50-binary-0001.xml
 ```
 
-## Build Benchmark Client Docker Image
-
-To build the docker image and tag it as `benchmark_client` run:
+Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](https://docs.openvino.ai/2023.1/ovms_what_is_openvino_model_server.html)):
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/benchmark/python
-docker build . -t benchmark_client
+docker run -u $(id -u) -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
+                     /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 30001 --rest_port 30002
 ```
 
 ## Selected Commands
@@ -327,7 +334,7 @@ Start OVMS container with `config.json` including mediapipe servable. OVMS shoul
 cp -r ${PWD}/sample_data ${PWD}/workspace/sample_data
 docker run -u $(id -u) -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --port 30001 --rest_port 30002 --config_path /workspace/sample_data/config.json
 ```
-Requests for benchmarking are prepared basing on array from numpy file. This data file is fed to Benchmark Client by specifing switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. You can create sample data with `Python3`, specifying array shape and precision. Generated .npy file should be saved to workspace/sample_data directory for this example.
+Requests for benchmarking are prepared basing on array from a numpy file. This data file is fed to Benchmark Client by specifying switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. You can create sample data with `Python3`, specifying array shape and precision. Generated .npy file should be saved to workspace/sample_data directory for this example.
 ```bash
 python -c 'import numpy as np ; \
 arr = np.ones((1,3,224,224),dtype=np.float32); \
