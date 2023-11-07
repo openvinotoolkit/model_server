@@ -8,6 +8,7 @@
 
    ovms_docs_dag
    ovms_docs_mediapipe
+   ovms_docs_streaming_endpoints
    ovms_docs_stateful_models
    ovms_docs_binary_input
    ovms_docs_text
@@ -17,7 +18,6 @@
    ovms_docs_model_version_policy
    ovms_docs_metrics
    ovms_docs_c_api
-   ovms_docs_streaming_endpoints
    ovms_docs_advanced
 
 @endsphinxdirective
