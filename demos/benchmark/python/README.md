@@ -323,7 +323,7 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
           XI worker: --> dim: 300
           XI worker: Generated data shape: (1, 3, 300, 300)
           XI worker: start workload...
-(...)
+...
 ```
 
 ## MediaPipe benchmarking
