@@ -21,27 +21,30 @@ However, in streaming inference RPC MediaPipe graph is created only once per con
 ![diagram](streaming_diagram.svg)
 
 ## Graph Selection
-Opening stream is not enough to create execution graph. Instead, the first gRPC request after the opening defines which graph definition will be selected for execution (`model_name` and `model_version` proto fields). The server closes the stream in case the graph is non-existent or retired.
-Subsequent requests are required to match the servable name and version, otherwise the error is reported and input packets are not pushed to the graph. However, the graph remains in available for correct requests.
+Opening stream is not enough to create execution graph. Instead, the first gRPC request after the opening defines which graph definition will be selected for execution (`model_name` and `model_version` proto fields).
+Afterwards, subsequent requests are required to match the servable name and version, otherwise the error is reported and input packets are not pushed to the graph. However, the graph remains in available for correct requests.
+
+> NOTE: The server closes the stream after the first request if requested graph is non-existent or retired.
 
 ## Timestamping
-MediaPipe Graphs require packets to include timestamp information for synchronization. Each input stream in the graph requires packets to be monotonically increasing. Read further about [MediaPipe timestamping](https://developers.google.com/mediapipe/framework/framework_concepts/synchronization#timestamp_synchronization).
+MediaPipe Graphs require packets to include timestamp information for synchronization purposes. Each input stream in the graph requires timestamps to be monotonically increasing. Read further about [MediaPipe timestamping](https://developers.google.com/mediapipe/framework/framework_concepts/synchronization#timestamp_synchronization).
 
 ### Automatic timestamping
-By default OpenVINO Model Server assigns timestamps automatically. Each gRPC request is treated as separate point on the timeline, starting from 0. Each request increases the timestamp by 1.
+By default OpenVINO Model Server assigns timestamps automatically. Each gRPC request is treated as separate point on the timeline, starting from 0. Each request is deserialized sequentially and increases the timestamp by 1.
+
+> NOTE: It means that in order to send multiple inputs with the same timestamp, client needs to pack it into single request (or use manual timestamping).
 
 ### Manual timestamping
-At any point in time, client is allowed to manually timestamp the request by attaching it in request parameter `OVMS_MP_TIMESTAMP`.
+Optionally, the client is allowed to include timestamp manually via request parameter `OVMS_MP_TIMESTAMP`. It is applied to all the packets deserialized from the request.
 
-### Preserving State Between Requests
-Note that subsequent requests access the same MediaPipe graph, so it is possible to preserve state between multiple requests from the same client. It might be an advantage for object tracking use cases.
+It is possible to mix manual/automatic timestamping. After correct deserialization step, default automatic timestamp is always equal to `previous_timestamp + 1`.
 
+## Preserving State Between Requests
+Note that subsequent requests in a stream have access to the same instance of MediaPipe graph. It means that it is possible implement graph that saves intermediate state and act in stateful manner. It might be an advantage f.e. for object tracking use cases.
 
-TODO:
-- [ ] first request creates graph
-- [ ] preserving state
-- [ ] timestamping
-- [ ] client code
+## Useful links
+- example client snippets TODO
+- [complete demo with streaming](../demos/mediapipe/holistic_tracking/README.md)
 
 > NOTE: Streaming API does not support requesting single models nor DAGs (Directed Acyclic Graphs) - those need to be included in MediaPipe Graph in order to use streaming.
 
