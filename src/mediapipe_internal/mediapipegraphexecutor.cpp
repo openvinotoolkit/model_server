@@ -51,12 +51,6 @@
 #pragma GCC diagnostic pop
 #include "mediapipegraphdefinition.hpp"  // for version in response
 #include "opencv2/opencv.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wcomment"
-#include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/interpreter.h"
-#pragma GCC diagnostic pop
 
 namespace ovms {
 using ::mediapipe::Timestamp;
