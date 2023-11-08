@@ -353,6 +353,38 @@ When creating a Python-based client application, you can use Triton client libra
                                   inputs=inputs,
                                   outputs=outputs)
 
+.. tab:: python [GRPC Streaming]
+    .. code-block:: python
+
+        import tritonclient.grpc as grpcclient
+
+        triton_client = grpcclient.InferenceServerClient(
+            url="address",
+            ssl=False,
+            verbose=False)
+            
+        def callback(result):
+                ...
+                # Process inference results
+                
+        triton_client.start_stream(callback)
+        
+        image_data = []
+        with open("image_path", 'rb') as f:
+            image_data.append(f.read())
+            
+        inputs = []
+        inputs.append(grpcclient.InferInput('input_name', 1, "BYTES"))
+        nmpy = np.array(image_data , dtype=np.object_)
+        inputs[0].set_data_from_numpy(nmpy)
+
+        outputs = []
+        outputs.append(grpcclient.InferRequestedOutput("output_name"))
+
+        triton_client.async_stream_infer(model_name="model_name",
+                                  inputs=inputs,
+                                  outputs=outputs)
+
 .. tab:: python [REST]
 
     .. code-block:: python
