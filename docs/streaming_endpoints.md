@@ -46,5 +46,5 @@ Note that subsequent requests in a stream have access to the same instance of Me
 - example client snippets TODO
 - [complete demo with streaming](../demos/mediapipe/holistic_tracking/README.md)
 
-> NOTE: Streaming API does not support requesting single models nor DAGs (Directed Acyclic Graphs) - those need to be included in MediaPipe Graph in order to use streaming.
+> NOTE: gRPC Streaming API supports only MediaPipe Graph servables via KServe API compatible client like `tritonclient`.
 
