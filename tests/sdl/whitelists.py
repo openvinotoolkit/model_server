@@ -25,7 +25,7 @@ class OvmsImageType(Enum):
     UBUNTU_NGINX = auto()
     REDHAT_GENERIC = auto()
     REDHAT_GPU = auto()
-    REDHAT_CUDA     = auto()
+    REDHAT_CUDA = auto()
 
 
 class OvmsBaseImageType(Enum):
