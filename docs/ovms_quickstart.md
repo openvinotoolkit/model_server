@@ -40,16 +40,14 @@ docker pull openvino/model_server:latest
 Store components of the model in the `models/1` directory. Here is an example command using curl and a face detection model:
 
 ```bash
-mkdir models && mkdir models/1
+mkdir -p model/1
 wget https://storage.googleapis.com/tfhub-modules/tensorflow/faster_rcnn/resnet50_v1_640x640/1.tar.gz
-tar xzf models/1/1.tar.gz -Cmodels/1
+tar xzf 1.tar.gz -C model/1
 ```
 
-> **NOTE**: For ONNX models additional steps are required. For a detailed description refer to our [ONNX format example](../demos/using_onnx_model/python/README.md).
-
-OpenVINO Model Server expects a particular folder structure for models - in this case `models` directory has the following content: 
+OpenVINO Model Server expects a particular folder structure for models - in this case `model` directory has the following content: 
 ```bash
-models
+model
 └── 1
     ├── saved_model.pb
     └── variables
@@ -68,9 +66,9 @@ For more information about the directory structure and how to deploy multiple mo
 Start the container:
 
 ```bash
-docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /models --port 9000
+docker run -d --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /model --port 9000
 ```
-During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage from which the server will access models.
+During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.
 
 ### Step 5: Prepare the Example Client Components
 
@@ -83,7 +81,6 @@ wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/dat
 ```
 
 For more information, check these links:
-- [Information on the face detection script](../demos/face_detection/python/README.md)
 - [More Model Server client scripts](../demos/README.md)
 - [Clients](./clients.md)
 
