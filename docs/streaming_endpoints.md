@@ -21,7 +21,7 @@ However, in streaming inference RPC MediaPipe graph is created only once per con
 ![diagram](streaming_diagram.svg)
 
 ## Graph Selection
-Opening stream is not enough to create execution graph. Instead, the first gRPC request after the opening defines which graph definition will be selected for execution (`model_name` and `model_version` proto fields).
+After opening a stream, the first gRPC request defines which graph definition will be selected for execution (`model_name` proto fields).
 Afterwards, subsequent requests are required to match the servable name and version, otherwise the error is reported and input packets are not pushed to the graph. However, the graph remains available for correct requests.
 
 > NOTE: The server closes the stream after the first request if requested graph is non-existent or retired.
