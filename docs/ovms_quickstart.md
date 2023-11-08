@@ -76,7 +76,7 @@ Client scripts are available for quick access to the Model Server. Run an exampl
 
 ```bash
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/updated_quickstart_demo/demos/object_detection/python/object_detection.py
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/updated_quickstart_demo/demos/object_detection/python/requirements.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/updated_quickstart_demo/demos/object_detection/python/requirements.txt
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
 ```
 
