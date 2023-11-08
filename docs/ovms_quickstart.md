@@ -66,7 +66,7 @@ For more information about the directory structure and how to deploy multiple mo
 Start the container:
 
 ```bash
-docker run -d --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /model --port 9000
+docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /model --port 9000
 ```
 During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.
 
