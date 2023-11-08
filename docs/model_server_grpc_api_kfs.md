@@ -11,6 +11,7 @@ The API includes following endpoints:
 * <a href="#kfs-model-ready">Model Ready API </a>
 * <a href="#kfs-model-metadata">Model Metadata API </a>
 * <a href="#kfs-model-infer"> Inference API </a>
+* <a href="#kfs-model-stream-infer"> Streaming Inference API </a>
 
 > **NOTE**: Examples of using each of above endpoints can be found in [KServe samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples/README.md).
 
@@ -41,13 +42,18 @@ Gets information about the specific model.
 Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata-1).
 
 ## Inference API <a name="kfs-model-infer"></a>
-Run inference with requested model or [DAG](./dag_scheduler.md).
+Run inference with requested model, [DAG](./dag_scheduler.md) or [MediaPipe Graph](./mediapipe.md).
 
 Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-1).
 
 > **NOTE**: Inference supports putting tensor buffers either in `ModelInferRequest`'s [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155) and [raw_input_contents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202). There is no support for BF16 data type and there is no support for using FP16 in `InferTensorContents`. In case of sending images files or strings BYTES data type should be used and data should be put in `InferTensorContents`'s `bytes_contents` or `raw_input_contents`.
 
 Also, using `BYTES` datatype it is possible to send to model or pipeline, that have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions, binary encoded images that would be preprocessed by OVMS using opencv and converted to OpenVINO-friendly format. For more information check [how binary data is handled in OpenVINO Model Server](./binary_input_kfs.md)
+
+## Streaming Inference API (extension) <a name="kfs-model-stream-infer"></a>
+Run streaming inference with [MediaPipe Graph](./mediapipe.md).
+
+Check documentation for more [details](./streaming_endpoints.md).
 
 ## See Also
 
