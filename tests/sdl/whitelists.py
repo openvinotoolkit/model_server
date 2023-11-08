@@ -38,7 +38,6 @@ class OvmsBaseImageType(Enum):
     UBUNTU_20_04_PYTHON = "ubuntu_20_04_python"
     UBUNTU_22_04_PYTHON = "ubuntu_22_04_python"   
     REDHAT_PYTHON = "redhat_python"
-    UBUNTU_22_04_NO_PYTHON = "ubuntu_22_04_no_python"
     UBUNTU_GPU = "ubuntu_gpu"
     UBUNTU_NGINX = "ubuntu_nginx"
     REDHAT_GPU = "redhat_gpu"
@@ -52,9 +51,8 @@ dynamic_libraries = {
     OvmsBaseImageType.UBUNTU_PYTHON: {'libexpat.so',},
     OvmsBaseImageType.UBUNTU_20_04: {'librt.so', 'libtbb.so',},
     OvmsBaseImageType.UBUNTU_20_04_PYTHON: {'libpython3.8.so', 'libutil.so',},
-    OvmsBaseImageType.UBUNTU_22_04: {'libm.so', 'libdl.so', 'libpthread.so',},
+    OvmsBaseImageType.UBUNTU_22_04: {'libm.so', 'libdl.so', 'libpthread.so', 'libpugixml.so',},
     OvmsBaseImageType.UBUNTU_22_04_PYTHON: {'libpython3.10.so',},
-    OvmsBaseImageType.UBUNTU_22_04_NO_PYTHON: {'libpugixml.so',},
     OvmsBaseImageType.REDHAT: {'libtbb.so',},
     OvmsBaseImageType.REDHAT_PYTHON:{'libpython3.9.so', 'libutil.so',},
 }
@@ -65,11 +63,9 @@ whitelisted_dynamic_libraries = {
     OvmsImageType.UBUNTU_NGINX: {"default": dynamic_libraries[OvmsBaseImageType.COMMON]  | dynamic_libraries[OvmsBaseImageType.UBUNTU] | dynamic_libraries[OvmsBaseImageType.UBUNTU_20_04],
                                  "python": dynamic_libraries[OvmsBaseImageType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseImageType.UBUNTU_20_04_PYTHON]},
     OvmsImageType.UBUNTU_22_GENERIC: {"default": dynamic_libraries[OvmsBaseImageType.COMMON] | dynamic_libraries[OvmsBaseImageType.UBUNTU] | dynamic_libraries[OvmsBaseImageType.UBUNTU_22_04],
-                                      "python": dynamic_libraries[OvmsBaseImageType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseImageType.UBUNTU_22_04_PYTHON],
-                                      "no_python": dynamic_libraries[OvmsBaseImageType.UBUNTU_22_04_NO_PYTHON]},
+                                      "python": dynamic_libraries[OvmsBaseImageType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseImageType.UBUNTU_22_04_PYTHON]},
     OvmsImageType.UBUNTU_22_GPU: {"default": dynamic_libraries[OvmsBaseImageType.COMMON] | dynamic_libraries[OvmsBaseImageType.UBUNTU] | dynamic_libraries[OvmsBaseImageType.UBUNTU_22_04],
-                                  "python": dynamic_libraries[OvmsBaseImageType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseImageType.UBUNTU_22_04_PYTHON],
-                                  "no_python": dynamic_libraries[OvmsBaseImageType.UBUNTU_22_04_NO_PYTHON]},
+                                  "python": dynamic_libraries[OvmsBaseImageType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseImageType.UBUNTU_22_04_PYTHON]},
     OvmsImageType.REDHAT_GENERIC: {"default": dynamic_libraries[OvmsBaseImageType.COMMON] | dynamic_libraries[OvmsBaseImageType.REDHAT],
                                    "python": dynamic_libraries[OvmsBaseImageType.REDHAT_PYTHON]},
     OvmsImageType.REDHAT_GPU: {"default": dynamic_libraries[OvmsBaseImageType.COMMON] | dynamic_libraries[OvmsBaseImageType.REDHAT],
