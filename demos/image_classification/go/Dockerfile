@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y sudo
 RUN rm -rf /var/lib/apt/lists/*
 RUN git clone https://github.com/hybridgroup/gocv.git && \
     cd gocv && \
-    sed -i "s:libdc1394-22-dev:libdc1394-dev:g" Makefile \
+    sed -i "s:libdc1394-22-dev:libdc1394-dev:g; s:libtbb2:libtbb12:g" Makefile && \
     make install
 
 RUN mkdir /app
