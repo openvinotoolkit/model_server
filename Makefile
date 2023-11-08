@@ -353,7 +353,7 @@ targz_package:
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
-	rm -vrf dist/$(OS) && \
+	rm -vrf dist/$(OS) && mkdir -p dist/$(OS) && \
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
 	docker cp $$ID:/ovms_pkg/$(OS) dist/ && \
 	docker rm $$ID
