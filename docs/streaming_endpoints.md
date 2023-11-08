@@ -15,7 +15,7 @@ service GRPCInferenceService
 }
 ```
 
-This becomes very useful for endpoints serving [MediaPipe Graphs](./mediapipe.md). In unary inference RPC each request initializes new MediaPipe graph, inputs are deserialized into MediaPipe packets and pushed into the graph. After the graph is done, it is deleted.
+This becomes very useful for serving [MediaPipe Graphs](./mediapipe.md). In unary inference RPC, each request is using separate and independent MediaPipe graph instance.
 However, in streaming inference RPC MediaPipe graph is created only once per connection, and is reused by subsequent requests to the same gRPC stream. This avoids graph initialization overhead and increases its overall throughput.
 
 ![diagram](streaming_diagram.svg)
