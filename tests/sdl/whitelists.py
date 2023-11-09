@@ -36,7 +36,7 @@ class OvmsBaseImageType(Enum):
     REDHAT = "redhat"
     UBUNTU_PYTHON = "ubuntu_python"
     UBUNTU_20_04_PYTHON = "ubuntu_20_04_python"
-    UBUNTU_22_04_PYTHON = "ubuntu_22_04_python"   
+    UBUNTU_22_04_PYTHON = "ubuntu_22_04_python"
     REDHAT_PYTHON = "redhat_python"
     UBUNTU_GPU = "ubuntu_gpu"
     UBUNTU_NGINX = "ubuntu_nginx"
@@ -118,7 +118,7 @@ packages = {
     },
     OvmsBaseImageType.UBUNTU_PYTHON: {
         'libexpat1',
-        'libreadline8', 
+        'libreadline8',
         'libsqlite3-0',
         'readline-common',
     },
@@ -156,24 +156,24 @@ packages = {
         'libpkgconf',
         'libsemanage',
         'numactl',
+        'numactl-debuginfo',
+        'numactl-debugsource',
+        'numactl-devel',
         'numactl-libs',
+        'numactl-libs-debuginfo',
         'ocl-icd',
+        'opencl-headers',
         'pkgconf',
         'pkgconf-m4',
         'pkgconf-pkg-config',
         'shadow-utils',
-        'tbb',  
+        'tbb',
     },
     OvmsBaseImageType.REDHAT_PYTHON: {
         'expat',
         'gdbm-libs',
         'libnsl2',
         'libtirpc',
-        'numactl-debuginfo',
-        'numactl-debugsource',
-        'numactl-devel',
-        'numactl-libs-debuginfo',
-        'opencl-headers',
         'python39-libs',
         'python39-pip-wheel',
         'python39-setuptools-wheel',
@@ -195,11 +195,12 @@ whitelisted_packages = {
                                  "python": packages[OvmsBaseImageType.UBUNTU_PYTHON] | packages[OvmsBaseImageType.UBUNTU_20_04_PYTHON]},
     OvmsImageType.UBUNTU_22_GENERIC: {"default": packages[OvmsBaseImageType.UBUNTU] | packages[OvmsBaseImageType.UBUNTU_22_04],
                                       "python": packages[OvmsBaseImageType.UBUNTU_PYTHON] | packages[OvmsBaseImageType.UBUNTU_22_04_PYTHON]},
-    OvmsImageType.UBUNTU_22_GPU: {"default": packages[OvmsBaseImageType.UBUNTU] | packages[OvmsBaseImageType.UBUNTU_22_04] | packages[OvmsBaseImageType.UBUNTU_GPU], 
+    OvmsImageType.UBUNTU_22_GPU: {"default": packages[OvmsBaseImageType.UBUNTU] | packages[OvmsBaseImageType.UBUNTU_22_04] | packages[OvmsBaseImageType.UBUNTU_GPU],
                                   "python": packages[OvmsBaseImageType.UBUNTU_PYTHON] | packages[OvmsBaseImageType.UBUNTU_22_04_PYTHON]},
     OvmsImageType.REDHAT_GENERIC: {"default":   packages[OvmsBaseImageType.REDHAT],
                                    "python": packages[OvmsBaseImageType.REDHAT_PYTHON]},
     OvmsImageType.REDHAT_GPU: {"default":  packages[OvmsBaseImageType.REDHAT] | packages[OvmsBaseImageType.REDHAT_GPU],
                                "python": packages[OvmsBaseImageType.REDHAT_PYTHON]},
 }
+
 
