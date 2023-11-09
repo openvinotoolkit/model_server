@@ -132,10 +132,12 @@ class StreamClient:
     dropped_frames = 0
     frames = 0
     def callback(self, frame, i, timestamp, result, error):
+        if error is not None and self.verbose:
+            print(error)
+        if i == None:
+            i = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
         frame = self.postprocess_callback(frame, result)
         self.pq.put((i, frame, timestamp))
-        if error is not None and self.verbose == True:
-            print(error)
 
     def display(self):
         i = 0 
@@ -143,7 +145,7 @@ class StreamClient:
             if self.pq.empty():
                 continue
             entry = self.pq.get()
-            if (entry[0] == i and self.exact) or (entry[0] > i and self.exact is not True):
+            if (entry[0] == i and self.exact and self.streaming_api is not True) or (entry[0] > i and (self.exact is not True or self.streaming_api is True)):
                 if isinstance(entry[1], str) and entry[1] == "EOS":
                     break
                 frame = entry[1]
@@ -162,7 +164,7 @@ class StreamClient:
                 self.pq.put(entry)
 
 
-    def start(self, *, ovms_address : str, input_name : str, model_name : str, datatype : Datatype = FP32(), batch = True, limit_stream_duration : int = 0, limit_frames : int = 0):
+    def start(self, *, ovms_address : str, input_name : str, model_name : str, datatype : Datatype = FP32(), batch = True, limit_stream_duration : int = 0, limit_frames : int = 0, streaming_api: bool = False):
         """
         Parameters
         ----------
@@ -180,12 +182,15 @@ class StreamClient:
             Limits how long client could run
         limit_frames : int
             Limits how many frames should be processed
+        streaming_api : bool
+            Use experimental streaming endpoint
         """
 
         self.cap = cv2.VideoCapture(self.source, cv2.CAP_ANY)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
         fps = self.cap.get(cv2.CAP_PROP_FPS)
         triton_client = grpcclient.InferenceServerClient(url=ovms_address, verbose=False)
+        self.streaming_api = streaming_api
 
         display_th = threading.Thread(target=self.display)
         display_th.start()
@@ -199,26 +204,36 @@ class StreamClient:
             if self.height is None:
                 self.height = np_test_frame.shape[0]
         self.output_backend.init(self.sink, fps, self.width, self.height)
+
+        if streaming_api:
+            triton_client.start_stream(partial(self.callback, None, None, None))
             
         i = 0
         total_time_start = time.time()
-        while not self.force_exit:
-            timestamp = time.time()
-            frame = self.grab_frame()
-            if frame is not None:
-                np_frame = np.array([frame], dtype=datatype.dtype()) if batch else np.array(frame, dtype=datatype.dtype())
-                inputs=[grpcclient.InferInput(input_name, np_frame.shape, datatype.string())]
-                inputs[0].set_data_from_numpy(np_frame)
-                triton_client.async_infer(
-                    model_name=model_name,
-                    callback=partial(self.callback, frame, i, timestamp),
-                    inputs=inputs)
-                i += 1
-            if limit_stream_duration > 0 and time.time() - total_time_start > limit_stream_duration:
-                break
-            if limit_frames > 0 and i > limit_frames:
-                break
-        self.pq.put((i, "EOS"))
+        try:
+            while not self.force_exit:
+                timestamp = time.time()
+                frame = self.grab_frame()
+                if frame is not None:
+                    np_frame = np.array([frame], dtype=datatype.dtype()) if batch else np.array(frame, dtype=datatype.dtype())
+                    inputs=[grpcclient.InferInput(input_name, np_frame.shape, datatype.string())]
+                    inputs[0].set_data_from_numpy(np_frame)
+                    if streaming_api:
+                        triton_client.async_stream_infer(model_name=model_name, inputs=inputs, parameters={"OVMS_MP_TIMESTAMP":int(cv2.getTickCount() / cv2.getTickFrequency() * 1e6)})
+                    else:
+                        triton_client.async_infer(
+                            model_name=model_name,
+                            callback=partial(self.callback, frame, i, timestamp),
+                            inputs=inputs)
+                    i += 1
+                if limit_stream_duration > 0 and time.time() - total_time_start > limit_stream_duration:
+                    break
+                if limit_frames > 0 and i > limit_frames:
+                    break
+        finally:
+            self.pq.put((i, "EOS"))
+            if streaming_api:
+                triton_client.stop_stream()
         sent_all_frames = time.time() - total_time_start
 
 
