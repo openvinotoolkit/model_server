@@ -16,7 +16,12 @@ service GRPCInferenceService
 ```
 
 This becomes very useful for serving [MediaPipe Graphs](./mediapipe.md). In unary inference RPC, each request is using separate and independent MediaPipe graph instance.
-However, in streaming inference RPC MediaPipe graph is created only once per the client session, and is reused by subsequent requests to the same gRPC stream. This avoids graph initialization overhead and increases its overall throughput.
+However, in streaming inference RPC MediaPipe graph is created only once per the client session, and is reused by subsequent requests to the same gRPC stream.
+
+- This avoids graph initialization overhead and increases its overall throughput
+- Allows to preserve state between subsequent incoming requests
+- Enables source calculators to stream multiple responses without feeding input packets
+
 
 ![diagram](streaming_diagram.svg)
 
@@ -41,13 +46,14 @@ It is possible to mix manual/automatic timestamping. After correct deserializati
 
 Adding timestamp to the request using `tritonclient` (python pip package):
 ```
-TIMESTAMP = 42
+FRAME_TIMESTAMP_US = 43166520112  # example value
 TIMESTAMP_PARAM_NAME = 'OVMS_MP_TIMESTAMP'
 
 triton_client.async_stream_infer(model_name=graph_name,
                                  inputs=inputs,
-                                 parameters={TIMESTAMP_PARAM_NAME: TIMESTAMP})
+                                 parameters={TIMESTAMP_PARAM_NAME: FRAME_TIMESTAMP_US})
 ```
+
 
 ### Reading stream responses
 Once MediaPipe graph has single output packet ready, it is immediately serialized into gRPC response and sent back to the client. Since all MediaPipe packets contain timestamp information, OpenVINO Model Server includes it in the message. It is useful for synchronization purposes on the client side of an application.
