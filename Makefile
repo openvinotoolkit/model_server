@@ -177,7 +177,7 @@ $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
 $(eval PROJECT_NAME:=${PRODUCT_NAME})
 $(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})
 
-OVMS_CPP_CONTAINER_NAME ?= server-test$(shell date +%Y-%m-%d-%H.%M.%S)
+OVMS_CPP_CONTAINER_NAME ?= "server-test-${PROJECT_VER_PATCH}-$(shell date +%Y-%m-%d-%H.%M.%S)"
 OVMS_CPP_CONTAINER_PORT ?= 9178
 
 TEST_PATH ?= tests/functional/
