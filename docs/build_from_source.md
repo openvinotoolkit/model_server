@@ -117,7 +117,7 @@ Example:
 make docker_build NVIDIA=1 OV_USE_BINARY=0
 ```
 
-Note. In order to build the image with redhat UBI8.7 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`. 
+Note. In order to build the image with redhat UBI8.8 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`. 
 That is required to install several building dependencies.
 
 <hr />
