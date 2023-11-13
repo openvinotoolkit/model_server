@@ -22,6 +22,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../status.hpp"
+#include "../stringutils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -37,40 +38,96 @@ public:
     MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
 };
 
+const std::string DEFAULT_GRAPH_NAME{"my_graph"};
+const std::string DEFAULT_GRAPH_VERSION{"1"};
+
 class StreamingTest : public Test {
 protected:
     // Defaults for executor
-    const std::string name{"my_graph"};
-    const std::string version{"1"};
+    const std::string name{DEFAULT_GRAPH_NAME};
+    const std::string version{DEFAULT_GRAPH_VERSION};
 
     ::inference::ModelInferRequest firstRequest;
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 };
 
-static void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content, std::optional<int64_t> timestamp = std::nullopt) {
+static void setRequestTimestamp(KFSRequest& request, const std::string& value) {
+    request.clear_parameters();
+    auto intOpt = ovms::stoi64(value);
+    if (intOpt.has_value()) {
+        request.mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_int64_param(intOpt.value());
+    } else {
+        request.mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_string_param(value);
+    }
+}
+// TODO what to do if several inputs have different timestamp
+static int64_t getResponseTimestamp(const KFSResponse& response) {
+    return response.parameters().at(MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).int64_param();
+}
+
+static void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content, std::optional<int64_t> timestamp = std::nullopt, const std::string& servableName = "", const std::string& servableVersion = "") {
     request.Clear();
+    if (!servableName.empty()) {
+        *request.mutable_model_name() = servableName;
+    } else {
+        *request.mutable_model_name() = DEFAULT_GRAPH_NAME;
+    }
+    if (!servableVersion.empty()) {
+        *request.mutable_model_version() = servableVersion;
+    } else {
+        *request.mutable_model_version() = DEFAULT_GRAPH_VERSION;
+    }
+    for (auto const& [name, val] : content) {
+        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {val}, false);
+    }
+    if (timestamp.has_value()) {
+        setRequestTimestamp(request, std::to_string(timestamp.value()));
+    }
+}
+
+static void prepareRequestWithParam(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content, std::tuple<std::string, int64_t> param, std::optional<int64_t> timestamp = std::nullopt) {
+    request.Clear();
+    auto& [paramName, paramVal] = param;
     for (auto const& [name, val] : content) {
         prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {val}, false);
     }
     if (timestamp.has_value()) {
         request.set_id(std::to_string(timestamp.value()));
     }
+    (*request.mutable_parameters())[paramName] = inference::InferParameter();
+    (*request.mutable_parameters())[paramName].set_int64_param(paramVal);
 }
 
-static void prepareInvalidRequest(::inference::ModelInferRequest& request, const std::vector<std::string>& inputs, std::optional<int64_t> timestamp = std::nullopt) {
+static void prepareInvalidRequest(::inference::ModelInferRequest& request, const std::vector<std::string>& inputs, std::optional<int64_t> timestamp = std::nullopt, const std::string& servableName = "", const std::string& servableVersion = "") {
     request.Clear();
+    if (!servableName.empty()) {
+        *request.mutable_model_name() = servableName;
+    } else {
+        *request.mutable_model_name() = DEFAULT_GRAPH_NAME;
+    }
+    if (!servableVersion.empty()) {
+        *request.mutable_model_version() = servableVersion;
+    } else {
+        *request.mutable_model_version() = DEFAULT_GRAPH_VERSION;
+    }
     int i = 0;
     for (auto const& name : inputs) {
         prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {1.0f /*data*/}, false);
         request.mutable_raw_input_contents()->Mutable(i++)->clear();
     }
     if (timestamp.has_value()) {
-        request.set_id(std::to_string(timestamp.value()));
+        setRequestTimestamp(request, std::to_string(timestamp.value()));
     }
 }
 
-static void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent, std::optional<int64_t> expectedTimestamp = std::nullopt) {
-    ASSERT_EQ(resp.error_message().size(), 0);
+static void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent, std::optional<int64_t> expectedTimestamp = std::nullopt, const std::string& servableName = "", const std::string& servableVersion = "") {
+    ASSERT_EQ(resp.error_message().size(), 0) << resp.error_message();
+    if (!servableName.empty()) {
+        ASSERT_EQ(resp.infer_response().model_name(), servableName);
+    }
+    if (!servableVersion.empty()) {
+        ASSERT_EQ(resp.infer_response().model_version(), servableVersion);
+    }
     ASSERT_EQ(resp.infer_response().outputs_size(), expectedContent.size());
     ASSERT_EQ(resp.infer_response().raw_output_contents_size(), expectedContent.size());
     for (const auto& [name, value] : expectedContent) {
@@ -84,7 +141,7 @@ static void assertResponse(const ::inference::ModelStreamInferResponse& resp, co
         ASSERT_EQ(*((float*)content.data()), value);
     }
     if (expectedTimestamp.has_value()) {
-        ASSERT_EQ(std::to_string(expectedTimestamp.value()), resp.infer_response().id());
+        ASSERT_EQ(expectedTimestamp.value(), getResponseTimestamp(resp.infer_response()));
     }
 }
 
@@ -115,10 +172,25 @@ static auto Receive(std::vector<std::tuple<std::string, float>> content) {
     };
 }
 
+static auto ReceiveWithServableNameAndVersion(std::vector<std::tuple<std::string, float>> content, const std::string& servableName, const std::string& servableVersion) {
+    return [content, servableName, servableVersion](::inference::ModelInferRequest* req) {
+        prepareRequest(*req, content, std::nullopt, servableName, servableVersion);
+        return true;
+    };
+}
+
+static auto ReceiveWithServableNameAndVersionWhenNotified(std::vector<std::tuple<std::string, float>> content, const std::string& servableName, const std::string& servableVersion, std::mutex& mtx) {
+    return [content, servableName, servableVersion, &mtx](::inference::ModelInferRequest* req) {
+        std::lock_guard<std::mutex> lock(mtx);
+        prepareRequest(*req, content, std::nullopt, servableName, servableVersion);
+        return true;
+    };
+}
+
 static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> content, int64_t timestamp) {
     return [content, timestamp](::inference::ModelInferRequest* req) {
         prepareRequest(*req, content);
-        req->set_id(std::to_string(timestamp));
+        setRequestTimestamp(*req, std::to_string(timestamp));
         return true;
     };
 }
@@ -135,7 +207,7 @@ static auto ReceiveWithTimestampWhenNotified(std::vector<std::tuple<std::string,
     return [content, timestamp, &mtx](::inference::ModelInferRequest* req) {
         std::lock_guard<std::mutex> lock(mtx);
         prepareRequest(*req, content);
-        req->set_id(std::to_string(timestamp));
+        setRequestTimestamp(*req, std::to_string(timestamp));
         return true;
     };
 }
@@ -144,7 +216,7 @@ static auto ReceiveInvalidWithTimestampWhenNotified(std::vector<std::string> inp
     return [inputs, timestamp, &mtx](::inference::ModelInferRequest* req) {
         std::lock_guard<std::mutex> lock(mtx);
         prepareInvalidRequest(*req, inputs);
-        req->set_id(std::to_string(timestamp));
+        setRequestTimestamp(*req, std::to_string(timestamp));
         return true;
     };
 }
@@ -164,11 +236,34 @@ static auto SendWithTimestamp(std::vector<std::tuple<std::string, float>> conten
     };
 }
 
+static auto SendWithTimestampServableNameAndVersion(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, const std::string& servableName, const std::string& servableVersion) {
+    return [content, timestamp, servableName, servableVersion](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponse(msg, content, timestamp, servableName, servableVersion);
+        return true;
+    };
+}
+
+static auto SendWithTimestampServableNameAndVersionAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, const std::string& servableName, const std::string& servableVersion, std::mutex& mtx) {
+    mtx.lock();
+    return [content, timestamp, servableName, servableVersion, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponse(msg, content, timestamp, servableName, servableVersion);
+        mtx.unlock();
+        return true;
+    };
+}
+
 static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::mutex& mtx) {
     mtx.lock();
     return [content, timestamp, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponse(msg, content, timestamp);
         mtx.unlock();
+        return true;
+    };
+}
+
+static auto SendError(const std::string& expectedMessage) {
+    return [expectedMessage](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponseError(msg, expectedMessage);
         return true;
     };
 }
@@ -181,7 +276,43 @@ static auto SendErrorAndNotifyEnd(const std::string& expectedMessage, std::mutex
         return true;
     };
 }
+// Purpose of this test is to verify specific case of KFSRequest* as a packet type pushed into graph
+// as we do use different Packet handler in case of KFSRequest
+TEST_F(StreamingTest, SingleStreamSend3Receive3KFSRequestsAsPackets) {
+    const std::string pbTxt{R"(
+input_stream: "REQUEST:in"
+output_stream: "RESPONSE:out"
+node {
+  calculator: "OVMSTestKFSPassCalculator"
+  input_stream: "REQUEST:in"
+  output_stream: "RESPONSE:out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::KFS_REQUEST}},
+        {{"out", mediapipe_packet_type_enum::KFS_RESPONSE}},
+        {"in"}, {"out"}, {}};
+
+    // Mock receiving 3 requests and disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Receive({{"in", 7.2f}}))
+        .WillOnce(Receive({{"in", 102.4f}}))
+        .WillOnce(Disconnect());
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out", 3.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"out", 7.2f}}, 1))
+        .WillOnce(SendWithTimestamp({{"out", 102.4f}}, 2));
+
+    auto status = executor.inferStream(this->firstRequest, this->stream);
+    EXPECT_EQ(status, StatusCode::OK) << status.string();
+}
 // Positive:
 // Send X requests receive X responses (regular)
 // Send 1 request receive X responses (cycle)
@@ -615,14 +746,15 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}};
 
-    std::mutex mtx[2];
+    std::mutex mtx[3];
 
-    // Mock receiving 3 requests, the last one malicious
+    // Mock receiving 4 requests, the last two malicious
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // correct request
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                     // correct request
-        .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx[0]))  // invalid request - missing data in buffer
-        .WillOnce(DisconnectWhenNotified(mtx[1]));
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                                             // correct request
+        .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, mtx[0]))                          // invalid request - missing data in buffer
+        .WillOnce(ReceiveWithTimestampWhenNotified({{"NONEXISTING", 13.f}, {"in", 2.3f}}, 2, mtx[1]))  // invalid request - non existing input
+        .WillOnce(DisconnectWhenNotified(mtx[2]));
 
     // Expect 2 responses, no more due to error
     EXPECT_CALL(this->stream, Write(_, _))
@@ -630,7 +762,10 @@ node {
         .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 8.2f}}, 1, mtx[0]))
         .WillOnce(SendErrorAndNotifyEnd(
             Status(StatusCode::INVALID_CONTENT_SIZE).string() + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of subsequent requests"},
-            mtx[1]));
+            mtx[1]))
+        .WillOnce(SendErrorAndNotifyEnd(
+            Status(StatusCode::INVALID_UNEXPECTED_INPUT).string() + " - NONEXISTING is unexpected; partial deserialization of subsequent requests",
+            mtx[2]));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
@@ -683,7 +818,7 @@ node {
         {"in"}, {"out"}, {}};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
-    this->firstRequest.set_id("not an int");
+    setRequestTimestamp(this->firstRequest, std::string("not an int"));
 
     std::mutex mtx;
 
@@ -691,7 +826,7 @@ node {
         .WillOnce(DisconnectWhenNotified(mtx));
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendErrorAndNotifyEnd(
-            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request id field").string() + std::string{"; partial deserialization of first request"},
+            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request parameter OVMS_MP_TIMESTAMP. Should be int64").string() + std::string{"; partial deserialization of first request"},
             mtx));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
@@ -803,6 +938,143 @@ node {
         .WillOnce(SendErrorAndNotifyEnd(
             Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() + std::string{" - Timestamp::OneOverPostStream(); partial deserialization of subsequent requests"},
             mtx[1]));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+TEST_F(StreamingTest, FirstRequestParametersPassedAsSidePackets) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddSidePacketToSingleStreamTestCalculator"
+  input_stream: "in"
+  input_side_packet: "val"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    // Mock receiving 3 requests and disconnection
+    prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"val", 65});  // request with parameter val
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Receive({{"in", 7.2f}}))    // subsequent requests without parameters
+        .WillOnce(Receive({{"in", 102.4f}}))  // subsequent requests without parameters
+        .WillOnce(Disconnect());
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out", 68.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"out", 72.2f}}, 1))
+        .WillOnce(SendWithTimestamp({{"out", 167.4f}}, 2));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+TEST_F(StreamingTest, FirstRequestMissingRequiredParameter) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddSidePacketToSingleStreamTestCalculator"
+  input_stream: "in"
+  input_side_packet: "val"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});  // missing required request param
+    EXPECT_CALL(this->stream, Read(_)).Times(0);
+    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
+}
+
+TEST_F(StreamingTest, ServableNameAndVersionPassedFromFirstRequestToAllResponses) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOneSingleStreamTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    // Mock receiving 2 requests and disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 7.2f}}, this->name, this->version))  // no timestamp specified, server will assign one
+        .WillOnce(Disconnect());
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 4.5f}}, 0, this->name, this->version))
+        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 8.2f}}, 1, this->name, this->version));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+TEST_F(StreamingTest, SubsequentRequestsDoNotMatchServableNameAndVersion) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOneSingleStreamTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}};
+
+    std::mutex mtx;
+    // Mock receiving 2 requests and disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWithServableNameAndVersionWhenNotified({{"in", 7.2f}}, "wrong name", this->version, mtx))  // no timestamp specified, server will assign one
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 8.2f}}, this->name, "wrong version"))                   // no timestamp specified, server will assign one
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 9.2f}}, this->name, this->version))                     // correct
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 10.4f}}, this->name, "0"))                              // default - user does not care - correct
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 12.5f}}, this->name, ""))                               // empty = default - correct
+        .WillOnce(Disconnect());
+
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestampServableNameAndVersionAndNotifyEnd({{"out", 4.5f}}, 0, this->name, this->version, mtx))
+        .WillOnce(SendError(Status(StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME).string() + "; validate subsequent requests"))
+        .WillOnce(SendError(Status(StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION).string() + "; validate subsequent requests"))
+        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 10.2f}}, 1, this->name, this->version))
+        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 11.4f}}, 2, this->name, this->version))
+        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 13.5f}}, 3, this->name, this->version));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }

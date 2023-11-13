@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.7
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.8
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
-ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.7
+ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.8
 
 FROM $BASE_IMAGE as base_build
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.7
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.8
 ENV BASE_IMAGE=${BASE_IMAGE}
 
 LABEL version="1.0.0"
@@ -308,7 +308,7 @@ RUN make
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2023.1"
+ARG PROJECT_VERSION="2023.2"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags
@@ -394,7 +394,7 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2023.1"
+LABEL "version"="2023.2"
 LABEL "release"="2023"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"

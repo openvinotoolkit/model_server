@@ -91,6 +91,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
     {StatusCode::INVALID_MISSING_INPUT, "Missing input with specific name"},
+    {StatusCode::INVALID_UNEXPECTED_INPUT, "Unexpected input"},
     {StatusCode::INVALID_MISSING_OUTPUT, "Missing output with specific name"},
     {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Invalid number of shape dimensions"},
     {StatusCode::INVALID_BATCH_SIZE, "Invalid input batch size"},
@@ -211,6 +212,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG, "Mediapipe KFS pass through graph is missing REQUEST: string in the input name"},
     {StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED, "Given mediapipe graph name is already occupied"},
     {StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Malformed packet timestamp"},
+    {StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE, "Client disconnected during reading first streaming request"},
+    {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME, "Subsequent request with incorrect servable name"},
+    {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION, "Subsequent request with incorrect servable version"},
 
     // Python Nodes
     {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node name is already present in nodes list"},
