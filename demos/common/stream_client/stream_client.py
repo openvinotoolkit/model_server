@@ -137,7 +137,7 @@ class StreamClient:
         if i == None:
             i = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
         frame = self.postprocess_callback(frame, result)
-        self.pq.put((i, frame, timestamp))
+        self.pq.put((i, frame, i))
 
     def display(self):
         i = 0 
