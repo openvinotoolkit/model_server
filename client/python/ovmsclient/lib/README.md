@@ -100,7 +100,7 @@ model_status = client.get_model_status(model_name="model")
 model_metadata = client.get_model_metadata(model_name="model")
 
 # Exemplary model_metadata. Values for model:
-# https://docs.openvino.ai/2023.1/omz_models_model_resnet_50_tf.html
+# https://docs.openvino.ai/2023.2/omz_models_model_resnet_50_tf.html
 #
 #{
 #   "model_version": 1,
@@ -123,7 +123,7 @@ model_metadata = client.get_model_metadata(model_name="model")
 **Create and send predict request with binary input data:**
 ```python
 # Assuming requesting model with inputs and outputs as in:
-# https://docs.openvino.ai/2023.1/omz_models_model_resnet_50_tf.html
+# https://docs.openvino.ai/2023.2/omz_models_model_resnet_50_tf.html
 
 with open(<path_to_img>, 'rb') as f:
     img = f.read()
