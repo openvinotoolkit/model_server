@@ -1,0 +1,10 @@
+images/airliner.jpeg 404
+images/arctic-fox.jpeg 279
+images/bee.jpeg 309
+images/golden_retriever.jpeg 207
+images/gorilla.jpeg 366
+images/magnetic_compass.jpeg 635
+images/peacock.jpeg 84
+images/pelican.jpeg 144
+images/snail.jpeg 113
+images/zebra.jpeg 340
