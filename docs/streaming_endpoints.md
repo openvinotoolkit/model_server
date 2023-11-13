@@ -74,7 +74,7 @@ Note that subsequent requests in a stream have access to the same instance of Me
 The MediaPipe graph is checked for internal processing errors in-between subsequent client stream read operations. In case the graph encountered unrecoverable error, its message is returned to the client and the stream is closed.
 
 ## Useful links
-- example client snippets TODO
+- [example client snippets](./clients_kfs.md)
 - [complete demo with streaming](../demos/mediapipe/holistic_tracking/README.md)
 
 > **NOTE**: gRPC Streaming API supports only MediaPipe Graph servables via KServe API compatible client like `tritonclient`.
