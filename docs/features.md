@@ -8,6 +8,7 @@
 
    ovms_docs_dag
    ovms_docs_mediapipe
+   ovms_docs_streaming_endpoints
    ovms_docs_stateful_models
    ovms_docs_binary_input
    ovms_docs_text
