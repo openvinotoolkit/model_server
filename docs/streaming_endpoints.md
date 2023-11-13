@@ -29,7 +29,7 @@ However, in streaming inference RPC MediaPipe graph is created only once per the
 After opening a stream, the first gRPC request defines which graph definition will be selected for execution (`model_name` proto field).
 Afterwards, subsequent requests are required to match the servable name and version, otherwise the error is reported and input packets are not pushed to the graph. However, the graph remains available for correct requests.
 
-> **NOTE**: The server closes the stream after the first request if requested graph is non-existent or retired.
+> **NOTE**: The server closes the stream after the first request if requested graph does not exist or is retired.
 
 ## Timestamping
 MediaPipe Graphs require packets to include timestamp information for synchronization purposes. Each input stream in the graph requires timestamps to be monotonically increasing. Read further about [MediaPipe timestamping](https://developers.google.com/mediapipe/framework/framework_concepts/synchronization#timestamp_synchronization).
