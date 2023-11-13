@@ -180,6 +180,10 @@ $(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})
 OVMS_CPP_CONTAINER_NAME ?= "server-test-${PROJECT_VER_PATCH}-$(shell date +%Y-%m-%d-%H.%M.%S)"
 OVMS_CPP_CONTAINER_PORT ?= 9178
 
+PYTHON_CLIENT_TEST_GRPC_PORT ?= 9279
+PYTHON_CLIENT_TEST_REST_PORT ?= 9280
+PYTHON_CLIENT_TEST_CONTAINER_NAME ?= python-client-test$(shell date +%Y-%m-%d-%H.%M.%S)
+
 TEST_PATH ?= tests/functional/
 
 BUILD_CUSTOM_NODES ?= false
@@ -540,6 +544,25 @@ test_client_lib:
 		. .venv-ovmsclient/bin/activate; make build || exit 1 && \
 		make test TEST_TYPE=FULL || exit 1 && \
 		make clean
+
+test_python_clients:
+	@echo "Prepare docker image"
+	@docker build . -f tests/python/Dockerfile -t python_client_test
+	@echo "Dropping test container if exist"
+	@docker rm --force $(PYTHON_CLIENT_TEST_CONTAINER_NAME) || true
+	@echo "Download models"
+	@if [ ! -d "tests/python/models" ]; then cd tests/python && \
+		mkdir models && \
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models && \
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:latest mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
+	@echo "Start test container"
+	@docker run -d --rm --name $(PYTHON_CLIENT_TEST_CONTAINER_NAME) -v ${PWD}/tests/python/models/public/resnet-50-tf:/models/public/resnet-50-tf -p $(PYTHON_CLIENT_TEST_REST_PORT):8000 -p $(PYTHON_CLIENT_TEST_GRPC_PORT):9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 && \
+		sleep 10
+	@echo "Run tests"
+	@docker run --network="host" python_client_test --grpc=$(PYTHON_CLIENT_TEST_GRPC_PORT) --rest=$(PYTHON_CLIENT_TEST_REST_PORT) --verbose --fastFail
+	@echo "Removing test container"
+	@docker rm --force $(PYTHON_CLIENT_TEST_CONTAINER_NAME)
 
 tools_get_deps:
 	cd tools/deps/$(OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
