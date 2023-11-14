@@ -843,4 +843,38 @@ When creating a Python-based client application, you can use Triton client libra
    
 @endsphinxdirective
 
+### Request Streaming Prediction
+
+@sphinxdirective
+
+.. tab-set::
+   
+   .. tab-item::  python [GRPC]
+      :sync: python-grpc
+   
+      .. code-block:: python
+                   
+         import numpy as np
+         import tritonclient.grpc as grpcclient
+         
+         def callback(result, error):
+            if error:
+                raise error
+            # ... process result
+
+         client = grpcclient.InferenceServerClient("localhost:9000")
+         
+         data = np.array([1.0, 2.0, ..., 1000.0])
+         infer_input = grpcclient.InferInput("input_name", data.shape, "FP32")
+         infer_input.set_data_from_numpy(data)
+
+         client.start_stream(callback=callback)
+
+         for _ in range(5):  # re-use opened stream
+             client.async_stream_infer("model_name", inputs=[infer_input])
+
+         client.stop_stream()
+
+@endsphinxdirective
+
 For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples).
