@@ -357,12 +357,12 @@ targz_package:
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
-	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && \
+	rm -vrf dist/$(OS) && mkdir -p dist/$(OS) && \
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
-	docker cp $$ID:/ovms_pkg/$(DIST_OS) dist/ && \
+	docker cp $$ID:/ovms_pkg/$(OS) dist/ && \
 	docker rm $$ID
-	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
-	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
+	cd dist/$(OS) && sha256sum --check ovms.tar.gz.sha256
+	cd dist/$(OS) && sha256sum --check ovms.tar.xz.sha256
 
 ovms_release_images:
 ifeq ($(USE_BUILDX),true)
