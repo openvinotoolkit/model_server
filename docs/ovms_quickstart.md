@@ -37,7 +37,7 @@ docker pull openvino/model_server:latest
 
 ### Step 3: Provide a Model
 
-Store components of the model in the `models/1` directory. Here is an example command using curl and a face detection model:
+Store components of the model in the `model/1` directory. Here is an example command using curl and a face detection model:
 
 ```bash
 mkdir -p model/1
@@ -75,8 +75,8 @@ During this step, the `model` folder is mounted to the Docker container.  This f
 Client scripts are available for quick access to the Model Server. Run an example command to download all required components:
 
 ```bash
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/updated_quickstart_demo/demos/object_detection/python/object_detection.py
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/updated_quickstart_demo/demos/object_detection/python/requirements.txt
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/object_detection.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/requirements.txt
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
 ```
 
@@ -112,7 +112,7 @@ In our case, it will be a modified input image with bounding boxes indicating de
 
 ![Inference results](quickstart_result.jpeg)
 
-Note: Similar steps can be performed with an ONNX model. Check the inference [use case example](../demos/using_onnx_model/python/README.md) with a public ResNet model in ONNX format
+**Note**: Similar steps can be performed with an ONNX model. Check the inference [use case example](../demos/using_onnx_model/python/README.md) with a public ResNet model in ONNX format
 or [TensorFlow model demo](../demos/image_classification_using_tf_model/python/README.md ).
 
 Congratulations, you have completed the Quickstart guide. Try Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.
