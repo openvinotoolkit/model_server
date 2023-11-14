@@ -51,21 +51,12 @@ dist/ubuntu
 ### `BASE_OS`
 
 Select base OS:
-- `ubuntu` for Ubuntu 20.04 (default)
+- `ubuntu20` for Ubuntu 20.04 (default)
+- `ubuntu22` for Ubuntu 22.04
 - `redhat` for Red Hat UBI 8.7
 
 ```bash
 make docker_build BASE_OS=redhat
-```
-
-### `BASE_OS_TAG_UBUNTU`
-
-Select ubuntu base image version:
-- `20.04` ubuntu:20.04 (default value)
-- `22.04` ubuntu:22.04
-
-```bash
-make docker_build BASE_OS_TAG_UBUNTU=22.04
 ```
 
 <hr />
@@ -126,7 +117,7 @@ Example:
 make docker_build NVIDIA=1 OV_USE_BINARY=0
 ```
 
-Note. In order to build the image with redhat UBI8.7 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`. 
+Note. In order to build the image with redhat UBI8.8 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`. 
 That is required to install several building dependencies.
 
 <hr />

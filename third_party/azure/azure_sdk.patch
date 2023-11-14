@@ -38,7 +38,7 @@ index d775d23..850046e 100644
  add_library(${AZURESTORAGE_LIBRARY} ${SOURCES})
  
 -target_link_libraries(${AZURESTORAGE_LIBRARIES})
-+target_link_libraries(${AZURESTORAGE_LIBRARY} PRIVATE "-Wl,--exclude-libs,ALL")
++target_link_libraries(${AZURESTORAGE_LIBRARIES} "-Wl,--exclude-libs,ALL")
  
  if(WIN32)
    target_link_libraries(${AZURESTORAGE_LIBRARY} Ws2_32.lib rpcrt4.lib xmllite.lib bcrypt.lib)

@@ -17,7 +17,6 @@
 
 #include <string>
 
-#include "tensorflow/lite/c/common.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wall"
@@ -37,8 +36,6 @@ class Status;
 
 Precision TFSPrecisionToOvmsPrecision(const TFSDataType& s);
 TFSDataType getPrecisionAsDataType(Precision precision);
-Precision TfLitePrecisionToOvmsPrecision(TfLiteType t);
-TfLiteType getPrecisionAsTfLiteDataType(Precision precision);
 std::string getDataTypeAsString(TFSDataType dataType);
 
 std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);

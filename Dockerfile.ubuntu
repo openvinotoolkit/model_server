@@ -320,7 +320,7 @@ RUN make
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2023.1"
+ARG PROJECT_VERSION="2023.2"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags

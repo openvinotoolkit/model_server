@@ -275,8 +275,7 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelStreamInfer(::grpc::ServerContext* context, ::grpc::ServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) {
-    SPDLOG_DEBUG("KFSInferenceServiceImpl::ModelStreamInfer");
-    return grpc(StatusCode::NOT_IMPLEMENTED);
+    return grpc(ModelStreamInferImpl(context, stream));
 }
 
 Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
@@ -324,6 +323,27 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     }
     response->set_id(request->id());
     return StatusCode::OK;
+}
+
+Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* context, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) {
+    OVMS_PROFILE_FUNCTION();
+#if (MEDIAPIPE_DISABLE == 0)
+    ::inference::ModelInferRequest firstRequest;
+    if (!stream->Read(&firstRequest)) {
+        Status status = StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE;
+        SPDLOG_DEBUG(status.string());
+        return status;
+    }
+    std::shared_ptr<MediapipeGraphExecutor> executor;
+    auto status = this->modelManager.createPipeline(executor, firstRequest.model_name(), &firstRequest, nullptr /* response not present in streaming api */);
+    if (!status.ok()) {
+        return status;
+    }
+    return executor->inferStream(firstRequest, *stream);
+#else
+    SPDLOG_DEBUG("Mediapipe support was disabled during build process...");
+    return StatusCode::NOT_IMPLEMENTED;
+#endif
 }
 
 Status KFSInferenceServiceImpl::buildResponse(

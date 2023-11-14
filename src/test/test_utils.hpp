@@ -308,7 +308,7 @@ void assertStringResponse(const ovms::InferenceResponse& proto, const std::vecto
 void checkAddResponse(const std::string outputName,
     const std::vector<float>& requestData1,
     const std::vector<float>& requestData2,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize, const std::string& servableName);
+    ::KFSRequest& request, const ::KFSResponse& response, int seriesLength, int batchSize, const std::string& servableName);
 
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,

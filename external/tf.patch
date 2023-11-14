@@ -47,10 +47,10 @@ index 3542c8ae3e8..ea7b8e4db8f 100644
  
 diff --git a/tensorflow/tsl/platform/default/log_macros.h b/tensorflow/tsl/platform/default/log_macros.h
 new file mode 100644
-index 00000000000..31ba58594cc
+index 00000000000..05dba0a2f7a
 --- /dev/null
 +++ b/tensorflow/tsl/platform/default/log_macros.h
-@@ -0,0 +1,99 @@
+@@ -0,0 +1,101 @@
 +#pragma once
 +#define LOG(severity) _TF_LOG_##severity
 +
@@ -87,7 +87,9 @@ index 00000000000..31ba58594cc
 +// `DVLOG` behaves like `VLOG` in debug mode (i.e. `#ifndef NDEBUG`).
 +// Otherwise, it compiles away and does nothing.
 +#ifndef NDEBUG
++#ifndef DVLOG
 +#define DVLOG VLOG
++#endif
 +#else
 +#ifndef DVLOG
 +#define DVLOG(verbose_level) \

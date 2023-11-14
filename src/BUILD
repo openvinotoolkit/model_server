@@ -878,6 +878,7 @@ cc_test(
                 "test/mediapipe_validation_test.cpp",
                 "test/mediapipe/ovms_kfs_calculator.cc",
                 "test/mediapipe/ovms_image_input_calculator.cc",
+                "test/streaming_test.cpp",
                 "mediapipe_calculators/ovms_calculator.cc",
             ],
             "//src:disable_mediapipe" : [],
@@ -1005,6 +1006,7 @@ cc_test(
         "-Wno-unknown-pragmas",
         "-Werror",
         "-Isrc",
+        "-fconcepts", # for gmock related utils
         "-fvisibility=hidden",# Needed for pybind targets
     ],
 )

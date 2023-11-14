@@ -417,7 +417,8 @@ python rest_get_model_metadata.py --rest_port 8000
        "name": "1463"
       }
      },
-     "methodName": ""
+     "methodName": "",
+     "defaults": {}
     }
    }
   }
