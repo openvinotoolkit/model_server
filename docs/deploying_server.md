@@ -43,8 +43,8 @@ docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_serv
 --layout NHWC:NCHW --port 9000 
 
 # download input files: an image and a label mapping file
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/zebra.jpeg
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/classes.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/2/demos/common/static/images/zebra.jpeg
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/2/demos/common/python/classes.py
 
 # install the Python-based ovmsclient package
 pip3 install ovmsclient
@@ -179,11 +179,11 @@ Learn more about model server [starting parameters](parameters.md).
 ## Deploying Model Server in Kubernetes 
 
 There are three recommended methods for deploying OpenVINO Model Server in Kubernetes:
-1. [helm chart](https://github.com/openvinotoolkit/operator/tree/main/helm-charts/ovms) - deploys Model Server instances using the [helm](https://helm.sh) package manager for Kubernetes
+1. [helm chart](https://github.com/openvinotoolkit/operator/tree/releases/2023/2/helm-charts/ovms) - deploys Model Server instances using the [helm](https://helm.sh) package manager for Kubernetes
 2. [Kubernetes Operator](https://operatorhub.io/operator/ovms-operator) - manages Model Server using a Kubernetes Operator
-3. [OpenShift Operator](https://github.com/openvinotoolkit/operator/blob/main/docs/operator_installation.md#openshift) - manages Model Server instances in Red Hat OpenShift
+3. [OpenShift Operator](https://github.com/openvinotoolkit/operator/blob/releases/2023/2/docs/operator_installation.md#openshift) - manages Model Server instances in Red Hat OpenShift
 
-For operators mentioned in 2. and 3. see the [description of the deployment process](https://github.com/openvinotoolkit/operator/blob/main/docs/modelserver.md)
+For operators mentioned in 2. and 3. see the [description of the deployment process](https://github.com/openvinotoolkit/operator/blob/releases/2023/2/docs/modelserver.md)
 
 ## Next Steps
 
