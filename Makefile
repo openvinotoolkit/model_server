@@ -560,7 +560,7 @@ test_python_clients:
 	@docker run -d --rm --name $(PYTHON_CLIENT_TEST_CONTAINER_NAME) -v ${PWD}/tests/python/models/public/resnet-50-tf:/models/public/resnet-50-tf -p $(PYTHON_CLIENT_TEST_REST_PORT):8000 -p $(PYTHON_CLIENT_TEST_GRPC_PORT):9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 && \
 		sleep 10
 	@echo "Run tests"
-	@docker run --network="host" python_client_test --grpc=$(PYTHON_CLIENT_TEST_GRPC_PORT) --rest=$(PYTHON_CLIENT_TEST_REST_PORT) --verbose --fastFail
+	@docker run --rm --network="host" python_client_test --grpc=$(PYTHON_CLIENT_TEST_GRPC_PORT) --rest=$(PYTHON_CLIENT_TEST_REST_PORT) --verbose --fastFail
 	@echo "Removing test container"
 	@docker rm --force $(PYTHON_CLIENT_TEST_CONTAINER_NAME)
 
