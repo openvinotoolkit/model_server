@@ -202,7 +202,7 @@ sequence_id = response.outputs['sequence_id'].uint64_val[0]
 
 ```
 
-See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/speech_recognition_with_kaldi_model/python/grpc_stateful_client.py) example client for reference.
+See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/2/demos/speech_recognition_with_kaldi_model/python/grpc_stateful_client.py) example client for reference.
 
 ### Inference via HTTP <a name="stateful_http"></a>
 
@@ -272,7 +272,7 @@ response_body = json.loads(response.text)
 sequence_id = response_body["outputs"]["sequence_id"]
 
 ```
-See [rest_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/speech_recognition_with_kaldi_model/python/rest_stateful_client.py) example client for reference.
+See [rest_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/2/demos/speech_recognition_with_kaldi_model/python/rest_stateful_client.py) example client for reference.
 
 ### Error Codes <a name="stateful_errors"></a>
 

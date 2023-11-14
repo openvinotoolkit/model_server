@@ -43,8 +43,8 @@ docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_serv
 --layout NHWC:NCHW --port 9000 
 
 # download input files: an image and a label mapping file
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/zebra.jpeg
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/classes.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/2/demos/common/static/images/zebra.jpeg
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/2/demos/common/python/classes.py
 
 # install the Python-based ovmsclient package
 pip3 install ovmsclient
