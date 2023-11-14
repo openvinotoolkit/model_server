@@ -560,9 +560,10 @@ test_python_clients:
 	@docker run -d --rm --name $(PYTHON_CLIENT_TEST_CONTAINER_NAME) -v ${PWD}/tests/python/models/public/resnet-50-tf:/models/public/resnet-50-tf -p $(PYTHON_CLIENT_TEST_REST_PORT):8000 -p $(PYTHON_CLIENT_TEST_GRPC_PORT):9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 && \
 		sleep 10
 	@echo "Run tests"
-	@docker run --network="host" python_client_test --grpc=$(PYTHON_CLIENT_TEST_GRPC_PORT) --rest=$(PYTHON_CLIENT_TEST_REST_PORT) --verbose --fastFail
+	@exit_status=0 docker run --rm --network="host" python_client_test --grpc=$(PYTHON_CLIENT_TEST_GRPC_PORT) --rest=$(PYTHON_CLIENT_TEST_REST_PORT) --verbose --fastFail || exit_status=$?
 	@echo "Removing test container"
 	@docker rm --force $(PYTHON_CLIENT_TEST_CONTAINER_NAME)
+	@exit $(exit_status)
 
 tools_get_deps:
 	cd tools/deps/$(OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
