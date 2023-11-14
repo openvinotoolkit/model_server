@@ -861,6 +861,7 @@ When creating a Python-based client application, you can use Triton client libra
             if error:
                 raise error
             # ... process result
+            timestamp = result.get_response().parameters['OVMS_MP_TIMESTAMP'].int64_param  # optional
 
          client = grpcclient.InferenceServerClient("localhost:9000")
          
@@ -871,7 +872,10 @@ When creating a Python-based client application, you can use Triton client libra
          client.start_stream(callback=callback)
 
          for _ in range(5):  # re-use opened stream
-             client.async_stream_infer("model_name", inputs=[infer_input])
+             client.async_stream_infer(
+                model_name="model_name",
+                inputs=[infer_input],
+                parameters={'OVMS_MP_TIMESTAMP': 43166520112})  # optional
 
          client.stop_stream()
 
