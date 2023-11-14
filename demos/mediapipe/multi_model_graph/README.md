@@ -15,8 +15,8 @@ cd model_server/demos/mediapipe/multi_model_graph
 ## Download ResNet50 model
 
 ```bash
-cp -r ../../../src/test/add_two_inputs_model ./
-cp -r ../../../src/test/dummy ./
+cp -r ../../../src/test/add_two_inputs_model ./dummyAdd/
+cp -r ../../../src/test/dummy ./dummyAdd/
 ```
 
 ## Run OpenVINO Model Server
