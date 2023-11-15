@@ -295,7 +295,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::KFS_REQUEST}},
         {{"out", mediapipe_packet_type_enum::KFS_RESPONSE}},
-        {"in"}, {"out"}, {}};
+        {"in"}, {"out"}, {}, nullptr};
 
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
@@ -960,7 +960,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}};
+        {"in"}, {"out"}, {}, nullptr};
 
     // Mock receiving 3 requests and disconnection
     prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"val", 65});  // request with parameter val
@@ -996,7 +996,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}};
+        {"in"}, {"out"}, {}, nullptr};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // missing required request param
     EXPECT_CALL(this->stream, Read(_)).Times(0);
@@ -1022,7 +1022,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}};
+        {"in"}, {"out"}, {}, nullptr};
 
     // Mock receiving 2 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
@@ -1055,7 +1055,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}};
+        {"in"}, {"out"}, {}, nullptr};
 
     std::mutex mtx;
     // Mock receiving 2 requests and disconnection

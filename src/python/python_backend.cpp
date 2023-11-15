@@ -1,5 +1,5 @@
 #include "python_backend.hpp"
-#include <iostream>
+#include "../logging.hpp"
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
@@ -9,13 +9,12 @@ using namespace ovms;
 bool PythonBackend::createPythonBackend(PythonBackend** pythonBackend) {
     py::gil_scoped_acquire acquire;
     try {
-    *pythonBackend = new PythonBackend();
-    std::cout << pythonBackend;
+        *pythonBackend = new PythonBackend();
     } catch (const pybind11::error_already_set& e) {
-        std::cout << "PythonBackend initialization failed: " << e.what() << std::endl;
+        SPDLOG_DEBUG("PythonBackend initialization failed: {}", e.what());
         return false;
     } catch (std::exception& e) {
-        std::cout << "PythonBackend initialization failed: " << e.what() << std::endl;
+        SPDLOG_DEBUG("PythonBackend initialization failed: {}", e.what());
         return false;
     }
     return true;
@@ -42,10 +41,10 @@ bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const
         outTensor = std::make_unique<PyObjectWrapper<py::object>>(ovmsPyTensor);
         return true;
     } catch (const pybind11::error_already_set& e) {
-        std::cout << "PythonBackend::createOvmsPyTensor - Py Error: " << e.what();
+        SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Py Error: {}", e.what());
         return false;
     } catch (std::exception& e) {
-        std::cout << "PythonBackend::createOvmsPyTensor - Error: " << e.what();
+        SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Error: {}", e.what());
         return false;
     }
 }

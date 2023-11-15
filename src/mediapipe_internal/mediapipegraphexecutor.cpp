@@ -493,7 +493,6 @@ constexpr size_t STARTING_TIMESTAMP = 0;
 const std::string MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME = "OVMS_MP_TIMESTAMP";
 
 const std::string INPUT_SIDE_PACKET_TAG = "py";
-typedef std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> PythonNodesResources;
 
 static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFSRequest* request) {
     std::map<std::string, mediapipe::Packet> inputSidePackets;

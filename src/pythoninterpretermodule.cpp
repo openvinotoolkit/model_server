@@ -28,9 +28,6 @@
 namespace py = pybind11;
 
 namespace ovms {
-
-PythonInterpreterModule::PythonInterpreterModule() {pythonBackend = nullptr;}
-
 Status PythonInterpreterModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);

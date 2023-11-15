@@ -34,36 +34,33 @@ using namespace ovms;
 
 namespace mediapipe {
 
-typedef std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> PythonNodesResources;
-
 const std::string INPUT_SIDE_PACKET_TAG = "PYTHON_NODE_RESOURCES";
 
 typedef std::unique_ptr<OvmsPyTensor> OvmsPyTensorPtr;
 
 class PythonExecutorCalculator : public CalculatorBase {
 
-/* 
-TODO: Streaming support:
-    - timestamping
-    - loopback input
-*/ 
+    /* 
+    TODO: Streaming support:
+        - timestamping
+        - loopback input
+    */ 
 
-std::shared_ptr<PythonNodeResource> nodeResources;
-std::unique_ptr<PyObjectWrapper<py::iterator>> pyIteratorPtr;
+    std::shared_ptr<PythonNodeResource> nodeResources;
+    std::unique_ptr<PyObjectWrapper<py::iterator>> pyIteratorPtr;
 
-void pushOutputs(CalculatorContext* cc, py::list pyOutputs) {
-    py::gil_scoped_acquire acquire;
-    for (const std::string& tag : cc->Outputs().GetTags()) {
+    void pushOutputs(CalculatorContext* cc, py::list pyOutputs) {
+        py::gil_scoped_acquire acquire;
         for (py::handle pyOutputHandle : pyOutputs) {
             py::object pyOutput = pyOutputHandle.cast<py::object>();
             nodeResources->pythonBackend->validateOvmsPyTensor(pyOutput);
-            if (pyOutput.attr("name").cast<std::string>() == tag) {
+            std::string outputName = pyOutput.attr("name").cast<std::string>();
+            if (cc->Outputs().HasTag(outputName)) {
                 std::unique_ptr<PyObjectWrapper<py::object>> outputPtr = std::make_unique<PyObjectWrapper<py::object>>(pyOutput);
-                cc->Outputs().Tag(tag).Add(outputPtr.release(), cc->InputTimestamp());
+                cc->Outputs().Tag(outputName).Add(outputPtr.release(), cc->InputTimestamp());
             }
         }
     }
-}
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -110,6 +107,9 @@ public:
                     py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getImmutableObject());
                     pushOutputs(cc, pyOutputs);
                     ++(pyIteratorPtr->getMutableObject());
+                } else {
+                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Reseting the iterator.";
+                    pyIteratorPtr.reset();
                 }
             } else { // Iterator not initialized, either first iteration or execute is not yielding
                 py::print("PyIterator uninitialized block");

@@ -16,6 +16,8 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
+#include <string>
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
@@ -29,7 +31,7 @@ namespace ovms {
 class Status;
 class PythonBackend;
 
-class PythonNodeResource {
+struct PythonNodeResource {
 public:
     PythonNodeResource(const PythonNodeResource&) = delete;
     PythonNodeResource& operator=(PythonNodeResource&) = delete;
@@ -42,5 +44,7 @@ public:
     static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions,  PythonBackend* pythonBackend);
 #endif
 };
+
+typedef std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> PythonNodesResources;
 
 }  // namespace ovms

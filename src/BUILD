@@ -488,6 +488,7 @@ cc_library(
             "-static-libasan",
         ],
     }),
+    data = [":pyovms.so"],
     alwayslink = 1,
 )
 

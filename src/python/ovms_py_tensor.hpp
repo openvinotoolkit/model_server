@@ -65,7 +65,7 @@ const std::unordered_map<std::string, std::string> bufferFormatToDatatype{
     // {X, "BF16"} to be considered, for now it shall be treated as a custom datatype
 };
 
-// TO DO: Note that for numpy for example np.int64 translates to "l" not "q" on 64 bit linux systems.
+// TODO: Note that for numpy for example np.int64 translates to "l" not "q" on 64 bit linux systems.
 // We should consider an alternative to hardcoding those characters if it becomes an issue.
 
 const std::unordered_map<std::string, py::ssize_t> bufferFormatToItemsize{

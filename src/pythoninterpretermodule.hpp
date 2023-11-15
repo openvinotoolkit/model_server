@@ -22,9 +22,8 @@
 namespace ovms {
 
 class PythonInterpreterModule : public Module {
-    PythonBackend* pythonBackend;
+    PythonBackend* pythonBackend{nullptr};
 public:
-    PythonInterpreterModule();
     ~PythonInterpreterModule();
     Status start(const ovms::Config& config) override;
 

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <filesystem>
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -48,6 +49,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator_runner.h"
 #pragma GCC diagnostic pop
 
 #include "opencv2/opencv.hpp"
@@ -211,6 +213,31 @@ TEST_F(PythonFlowTest, PythonNodeInitFailed) {
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
                     handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_no_method.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+}
+
+TEST_F(PythonFlowTest, PythonNodeInitFailedImportOutsideTheClassError) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_import_outside_class_error.py"
                 }
             }
         }
@@ -390,12 +417,10 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
             py::str inputName = py::cast<py::str>(modelInputs[i]);
             ASSERT_EQ(inputName.cast<std::string>(), expectedInputs[i].cast<std::string>());
         }
-    } catch (const std::exception& e) {
-        std::cout << "Python pybind exception: " << e.what() << std::endl;
-        ASSERT_EQ(1, 0);
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << "Python pybind exception: " << e.what();
     } catch (...) {
-        std::cout << "Python pybind exception: " << std::endl;
-        ASSERT_EQ(1, 0);
+        ASSERT_EQ(1, 0) << "General error ";
     }
 }
 
@@ -434,21 +459,12 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
         py::dict modelOutputs = nodeRes->nodeResourceObject.get()->attr("model_outputs");
         py::int_ size = modelOutputs.size();
         ASSERT_EQ(size, 0);
-    } catch (const std::exception& e) {
-        std::cout << "Python pybind exception: " << e.what() << std::endl;
-        ASSERT_EQ(1, 0);
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << "Python pybind exception: " << e.what();
     } catch (...) {
-        std::cout << "Python pybind exception: " << std::endl;
-        ASSERT_EQ(1, 0);
+        ASSERT_EQ(1, 0) << "General error";
     }
 }
-
-#include <iostream>
-#include <filesystem>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_runner.h"
-#pragma GCC diagnostic pop
 
 PythonBackend * getPythonBackend() {
     return dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend();
@@ -457,8 +473,7 @@ PythonBackend * getPythonBackend() {
 // Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements) 
 // where num_elements is the size of C++ float array. See createTensor static method.
 template<typename T>
-class SimpleTensor {
-public:
+struct SimpleTensor {
     std::string name;
     std::string datatype;
     void* data;
@@ -489,6 +504,8 @@ public:
     }
 
     std::vector<T> getIncrementedVector() {
+        // SimpleTensor is expected to hold data in shape (1, X), 
+        // therefore we iterate over the second dimension as it holds the actual data
         std::vector<T> output;
         T * fpData = (T*)data;
         for (int i = 0; i < shape[1]; i++) {
@@ -636,8 +653,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
         EXPECT_EQ(output1, tensor1.getIncrementedVector());
 
     } catch (const pybind11::error_already_set& e) {
-        std::cout << e.what() << std::endl;
-        ASSERT_EQ(1,0);
+        ASSERT_EQ(1,0) << e.what();
     }
 }
 
@@ -704,8 +720,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
         EXPECT_EQ(output3, tensor3.getIncrementedVector());
 
     } catch (const pybind11::error_already_set& e) {
-        std::cout << e.what() << std::endl;
-        ASSERT_EQ(1,0);
+        ASSERT_EQ(1,0) << e.what();
     }
 }
 
@@ -761,8 +776,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
                 ASSERT_TRUE(status.message().find(expectedMessage) != std::string::npos);
             }
         } catch (const pybind11::error_already_set& e) {
-            std::cout << e.what() << std::endl;
-            ASSERT_EQ(1,0);
+            ASSERT_EQ(1,0) << e.what();
         }
     }
 }
@@ -834,12 +848,11 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
 
 
     } catch (const pybind11::error_already_set& e) {
-        std::cout << e.what() << std::endl;
-        ASSERT_EQ(1,0);
+        ASSERT_EQ(1,0) << e.what();
     }
 }
 
 /* TODO: 
     - bad input stream element (py::object that is not pyovms.Tensor)
     - bad output stream element (py::object that is not pyovms.Tensor)
-/*
+*/

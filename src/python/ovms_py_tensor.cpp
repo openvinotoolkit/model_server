@@ -31,11 +31,7 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* ptr, const std::vector
     datatype(datatype),
     userShape(shape),
     size(size),
-    ptr(ptr),
-    bufferShape(),
-    ndim(),
-    format(),
-    itemsize() {
+    ptr(ptr) {
     // Map datatype to struct syntax format if it's known. Otherwise assume raw binary (UINT8 type)
     std::cout << "Calling OvmsPyTensor constructor from data" << std::endl;
     auto it = datatypeToBufferFormat.find(datatype);
@@ -58,12 +54,6 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* ptr, const std::vector
 
 OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer) :
     name(name),
-    ptr(),
-    bufferShape(),
-    ndim(),
-    format(),
-    itemsize(),
-    strides(),
     refObj(buffer) {
     std::cout << "Calling OvmsPyTensor constructor from buffer" << std::endl;
     py::buffer_info bufferInfo = buffer.request();

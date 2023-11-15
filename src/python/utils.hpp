@@ -1,4 +1,4 @@
-#include <iostream>
+#include "../logging.hpp"
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
@@ -7,7 +7,7 @@ using namespace py::literals;
 
 namespace ovms {
 
-template <class T = py::object>
+template <class T>
 class PyObjectWrapper {
     std::unique_ptr<T> obj;
 public:
@@ -16,16 +16,16 @@ public:
 
     PyObjectWrapper(const T& other) {
         py::gil_scoped_acquire acquire;
-        std::cout << "PyObjectWrapper constructor start" << std::endl;
+        SPDLOG_DEBUG("PyObjectWrapper constructor start");
         obj = std::make_unique<T>(other);
-        std::cout << "PyObjectWrapper constructor end" << std::endl;
+        SPDLOG_DEBUG("PyObjectWrapper constructor end");
     };
 
     ~PyObjectWrapper() {
         py::gil_scoped_acquire acquire;
-        std::cout << "PyObjectWrapper destructor start " << std::endl;
+        SPDLOG_DEBUG("PyObjectWrapper destructor start ");
         obj.reset();
-        std::cout << "PyObjectWrapper destructor end " << std::endl;
+        SPDLOG_DEBUG("PyObjectWrapper destructor end ");
     }
 
     const T& getImmutableObject() const {
@@ -53,10 +53,10 @@ public:
             U property = obj->attr(name.c_str()).template cast<U>();
             return property;
         } catch (const pybind11::error_already_set& e) {
-            std::cout << "PyObjectWrapper::getProperty failed: " << e.what() << std::endl;
+            SPDLOG_DEBUG("PyObjectWrapper::getProperty failed: {}", e.what());
             throw e;
         } catch (std::exception& e) {
-            std::cout << "PyObjectWrapper::getProperty failed: " << e.what() << std::endl;
+            SPDLOG_DEBUG("PyObjectWrapper::getProperty failed: {}", e.what());
             throw e;
         }
     }
