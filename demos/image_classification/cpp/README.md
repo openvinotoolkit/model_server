@@ -36,20 +36,43 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet50-binary:/model -p 9001:9001
 
 ## Start the client:
 ```bash
-docker run --rm --network host -e "no_proxy=localhost" ovms_cpp_image_classification ./classification_client_sync --grpc_port=9001 --iterations=10 --layout="binary"
+docker run --rm --network host -e "no_proxy=localhost" -v ${PWD}/input_images.txt:/clients/input_images.txt ovms_cpp_image_classification ./classification_client_sync --grpc_port=9001 --iterations=10 --layout="binary"
 
+Address: localhost
+Images list path: input_images.txt
+Layout: binary
 call predict ok
-call predict time: 24ms
+call predict time: 6ms
 outputs size is 1
 call predict ok
-call predict time: 23ms
+call predict time: 5ms
 outputs size is 1
 call predict ok
-call predict time: 23ms
+call predict time: 4ms
 outputs size is 1
-...
-Overall accuracy: 90%
-Total time divided by number of requests: 25ms
+call predict ok
+call predict time: 4ms
+outputs size is 1
+call predict ok
+call predict time: 4ms
+outputs size is 1
+call predict ok
+call predict time: 4ms
+outputs size is 1
+call predict ok
+call predict time: 5ms
+outputs size is 1
+call predict ok
+call predict time: 4ms
+outputs size is 1
+call predict ok
+call predict time: 4ms
+outputs size is 1
+call predict ok
+call predict time: 5ms
+outputs size is 1
+Overall accuracy: 100%
+Total time divided by number of requests: 5ms
 ```
 
 # Clients requesting predictions asynchronously
@@ -83,7 +106,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet50-binary:/model -p 9001:9001
 
 ### Start the client:
 ```bash
-docker run --rm --network host -e "no_proxy=localhost" ovms_cpp_image_classification ./classification_client_async_benchmark --grpc_port=9001 --layout="nchw" --iterations=2000 --batch_size=1 --max_parallel_requests=100 --consumers=8 --producers=1 --benchmark_mode=1
+docker run --rm --network host -e "no_proxy=localhost"  -v ${PWD}/input_images.txt:/clients/input_images.txt ovms_cpp_image_classification ./classification_client_async_benchmark --grpc_port=9001 --layout="nchw" --iterations=2000 --batch_size=1 --max_parallel_requests=100 --consumers=8 --producers=1 --benchmark_mode=1
 
 Address: localhost:9001
 Model name: resnet
