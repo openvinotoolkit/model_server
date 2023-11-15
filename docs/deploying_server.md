@@ -78,83 +78,88 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
 
 @sphinxdirective
 
-.. tab:: Ubuntu 20.04  
+.. tab-set::
 
-   Download precompiled package:
+   .. tab-item::  Ubuntu 20.04  
+      :sync: ubuntu-20-04
    
-   .. code-block:: sh
-
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu20.tar.gz
+      Download precompiled package:
+      
+      .. code-block:: sh
    
-   or build it yourself:
+         wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu20.tar.gz
+      
+      or build it yourself:
+      
+      .. code-block:: sh
    
-   .. code-block:: sh
-
-      # Clone the model server repository
-      git clone https://github.com/openvinotoolkit/model_server
-      cd model_server
-      # Build docker images (the binary is one of the artifacts)
-      make docker_build
-      # Unpack the package
-      tar -xzvf dist/ubuntu/ovms.tar.gz
-
-   Install required libraries:
-
-   .. code-block:: sh
-
-      sudo apt update -y && apt install -y libpugixml1v5 libtbb2
-
-.. tab:: Ubuntu 22.04  
-
-   Download precompiled package:
+         # Clone the model server repository
+         git clone https://github.com/openvinotoolkit/model_server
+         cd model_server
+         # Build docker images (the binary is one of the artifacts)
+         make docker_build
+         # Unpack the package
+         tar -xzvf dist/ubuntu/ovms.tar.gz
    
-   .. code-block:: sh
-
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu22.tar.gz
+      Install required libraries:
    
-   or build it yourself:
+      .. code-block:: sh
    
-   .. code-block:: sh
-
-      # Clone the model server repository
-      git clone https://github.com/openvinotoolkit/model_server
-      cd model_server
-      # Build docker images (the binary is one of the artifacts)
-      make docker_build BASE_OS_TAG_UBUNTU=22.04
-      # Unpack the package
-      tar -xzvf dist/ubuntu/ovms.tar.gz
-
-   Install required libraries:
-
-   .. code-block:: sh
-
-      sudo apt update -y && apt install -y libpugixml1v5
-
-.. tab:: RHEL 8.7 
-
-   Download precompiled package:
+         sudo apt update -y && apt install -y libpugixml1v5 libtbb2
    
-   .. code-block:: sh
-
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_redhat.tar.gz
+   .. tab-item::  Ubuntu 22.04  
+      :sync: ubuntu-22-04
    
-   or build it yourself:
-
-   .. code-block:: sh  
-
-      # Clone the model server repository
-      git clone https://github.com/openvinotoolkit/model_server
-      cd model_server
-      # Build docker images (the binary is one of the artifacts)
-      make docker_build BASE_OS=redhat
-      # Unpack the package
-      tar -xzvf dist/redhat/ovms.tar.gz
-
-   Install required libraries:
-
-   .. code-block:: sh
-
-      sudo dnf install -y pkg-config && sudo rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
+      Download precompiled package:
+      
+      .. code-block:: sh
+   
+         wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu22.tar.gz
+      
+      or build it yourself:
+      
+      .. code-block:: sh
+   
+         # Clone the model server repository
+         git clone https://github.com/openvinotoolkit/model_server
+         cd model_server
+         # Build docker images (the binary is one of the artifacts)
+         make docker_build BASE_OS_TAG_UBUNTU=22.04
+         # Unpack the package
+         tar -xzvf dist/ubuntu/ovms.tar.gz
+   
+      Install required libraries:
+   
+      .. code-block:: sh
+   
+         sudo apt update -y && apt install -y libpugixml1v5
+   
+   .. tab-item::  RHEL 8.7 
+      :sync: rhel-8-7
+   
+      Download precompiled package:
+      
+      .. code-block:: sh
+   
+         wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_redhat.tar.gz
+      
+      or build it yourself:
+   
+      .. code-block:: sh  
+   
+         # Clone the model server repository
+         git clone https://github.com/openvinotoolkit/model_server
+         cd model_server
+         # Build docker images (the binary is one of the artifacts)
+         make docker_build BASE_OS=redhat
+         # Unpack the package
+         tar -xzvf dist/redhat/ovms.tar.gz
+   
+      Install required libraries:
+   
+      .. code-block:: sh
+   
+         sudo dnf install -y pkg-config && sudo rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
 
 @endsphinxdirective
 
