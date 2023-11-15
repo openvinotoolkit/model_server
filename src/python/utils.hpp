@@ -1,7 +1,8 @@
-#include "../logging.hpp"
-#include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
+#include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+
+#include "../logging.hpp"
 namespace py = pybind11;
 using namespace py::literals;
 
@@ -10,6 +11,7 @@ namespace ovms {
 template <class T>
 class PyObjectWrapper {
     std::unique_ptr<T> obj;
+
 public:
     PyObjectWrapper() = delete;
     PyObjectWrapper(const PyObjectWrapper& other) = delete;
@@ -46,7 +48,7 @@ public:
         }
     };
 
-    template <typename U> 
+    template <typename U>
     inline U getProperty(const std::string& name) const {
         py::gil_scoped_acquire acquire;
         try {
@@ -70,15 +72,12 @@ public:
     UnexpectedPythonObjectError(const py::object& obj, const std::string& expectedType) {
         py::gil_scoped_acquire acquire;
         std::string objectType = obj.attr("__class__").attr("__name__").cast<std::string>();
-        this->message = "Unexpected Python object type. Expected: " + expectedType
-                        + ". Received: " + objectType;
+        this->message = "Unexpected Python object type. Expected: " + expectedType + ". Received: " + objectType;
     };
 
-    const char* what() const throw() override
-    {
+    const char* what() const throw() override {
         return message.c_str();
     };
 };
 
-
-} // namespace ovms
+}  // namespace ovms

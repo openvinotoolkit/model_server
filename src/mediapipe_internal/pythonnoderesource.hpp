@@ -16,8 +16,8 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
@@ -37,11 +37,11 @@ public:
     PythonNodeResource& operator=(PythonNodeResource&) = delete;
 #if (PYTHON_DISABLE == 0)
     std::unique_ptr<py::object> nodeResourceObject;
-    PythonBackend * pythonBackend;
+    PythonBackend* pythonBackend;
 
     PythonNodeResource(PythonBackend* pythonBackend);
     ~PythonNodeResource();
-    static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions,  PythonBackend* pythonBackend);
+    static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions, PythonBackend* pythonBackend);
 #endif
 };
 

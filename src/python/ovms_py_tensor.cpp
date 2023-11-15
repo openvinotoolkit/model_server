@@ -71,7 +71,6 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer) :
     datatype = it != datatypeToBufferFormat.end() ? it->second : format;
 }
 
-
 OvmsPyTensor::~OvmsPyTensor() {
     std::cout << "Calling OvmsPyTensor destructor" << std::endl;
 }

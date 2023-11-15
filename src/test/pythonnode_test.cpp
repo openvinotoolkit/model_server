@@ -55,7 +55,6 @@
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
-
 namespace py = pybind11;
 using namespace ovms;
 using namespace py::literals;
@@ -99,7 +98,6 @@ protected:
     }
 };
 
-
 // --------------------------------------- OVMS initializing Python nodes tests
 
 TEST_F(PythonFlowTest, InitializationPass) {
@@ -109,7 +107,6 @@ TEST_F(PythonFlowTest, InitializationPass) {
     ASSERT_NE(graphDefinition, nullptr);
     EXPECT_TRUE(graphDefinition->getStatus().isAvailable());
 }
-
 
 class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
 public:
@@ -466,13 +463,13 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
     }
 }
 
-PythonBackend * getPythonBackend() {
+PythonBackend* getPythonBackend() {
     return dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend();
 }
 
-// Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements) 
+// Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements)
 // where num_elements is the size of C++ float array. See createTensor static method.
-template<typename T>
+template <typename T>
 struct SimpleTensor {
     std::string name;
     std::string datatype;
@@ -492,22 +489,21 @@ struct SimpleTensor {
         tensor.shape = std::vector<py::ssize_t>{1, numElements};
         getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor);
         return tensor;
-
     }
 
     static std::vector<T> readVectorFromOutput(const std::string& outputName, int numElements, const mediapipe::CalculatorRunner* runner) {
         const PyObjectWrapper<py::object>& pyOutput = runner->Outputs().Tag(outputName).packets[0].Get<PyObjectWrapper<py::object>>();
-        T * outputData = (T*)pyOutput.getProperty<void*>("ptr");
+        T* outputData = (T*)pyOutput.getProperty<void*>("ptr");
         std::vector<T> output;
         output.assign(outputData, outputData + numElements);
         return output;
     }
 
     std::vector<T> getIncrementedVector() {
-        // SimpleTensor is expected to hold data in shape (1, X), 
+        // SimpleTensor is expected to hold data in shape (1, X),
         // therefore we iterate over the second dimension as it holds the actual data
         std::vector<T> output;
-        T * fpData = (T*)data;
+        T* fpData = (T*)data;
         for (int i = 0; i < shape[1]; i++) {
             output.push_back(fpData[i] + 1);
         }
@@ -517,9 +513,9 @@ struct SimpleTensor {
 
 // ---------------------------------- OVMS deserialize and serialize tests
 
-// This part duplicates some parts of tests in mediapipeflow_test.cpp file. 
-// We could think about moving them there in the future, but for now we need to keep 
-// all tests involving Python interpreter in a single test suite. 
+// This part duplicates some parts of tests in mediapipeflow_test.cpp file.
+// We could think about moving them there in the future, but for now we need to keep
+// all tests involving Python interpreter in a single test suite.
 
 class MockedMediapipeGraphExecutorPy : public ovms::MediapipeGraphExecutor {
 public:
@@ -535,7 +531,6 @@ public:
         PythonBackend* pythonBackend) :
         MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResources, pythonBackend) {}
 };
-
 
 TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     ovms::stream_types_mapping_t mapping;
@@ -564,7 +559,7 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     ASSERT_EQ(output.shape(1), 3);
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.raw_output_contents().at(0).size(), 3 * sizeof(float));
-    std::vector<float> expectedOutputData {1.0, 2.0, 3.0};
+    std::vector<float> expectedOutputData{1.0, 2.0, 3.0};
     std::vector<float> outputData;
     const float* outputDataPtr = reinterpret_cast<const float*>(response.raw_output_contents().at(0).data());
     outputData.assign(outputDataPtr, outputDataPtr + numElements);
@@ -574,7 +569,7 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
 // ---------------------------------- PythonExecutorCalculcator tests
 
 void addInputItem(const std::string& tag, std::unique_ptr<PyObjectWrapper<py::object>>& input, int64_t timestamp,
-                  mediapipe::CalculatorRunner* runner) {
+    mediapipe::CalculatorRunner* runner) {
     runner->MutableInputs()->Tag(tag).packets.push_back(
         mediapipe::Adopt<PyObjectWrapper<py::object>>(input.release()).At(mediapipe::Timestamp(timestamp)));
 }
@@ -584,12 +579,11 @@ void clearInputStream(std::string tag, mediapipe::CalculatorRunner* runner) {
 }
 
 void addInputSidePacket(std::string tag, std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& input,
-                  int64_t timestamp, mediapipe::CalculatorRunner* runner) {
+    int64_t timestamp, mediapipe::CalculatorRunner* runner) {
     runner->MutableSidePackets()->Tag(tag) = mediapipe::MakePacket<std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>>(input).At(mediapipe::Timestamp(timestamp));
 }
 
-
-std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> prepareInputSidePacket(const std::string& handlerPath, PythonBackend * pythonBackend) {
+std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> prepareInputSidePacket(const std::string& handlerPath, PythonBackend* pythonBackend) {
     // Create side packets
     auto fsHandlerPath = std::filesystem::path(handlerPath);
     fsHandlerPath.replace_extension();
@@ -607,7 +601,7 @@ std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> prepareInpu
     std::shared_ptr<PythonNodeResource> nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
     nodeResource->nodeResourceObject = std::make_unique<py::object>(pythonModel);
 
-    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> nodesResources {{"pythonNode", nodeResource}};
+    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> nodesResources{{"pythonNode", nodeResource}};
     return nodesResources;
 }
 
@@ -641,7 +635,6 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
         SimpleTensor<float> tensor1 = SimpleTensor<float>::createTensor(inputName, input1, datatype, numElements);
         addInputItem(inputName, tensor1.pyTensor, 0, &runner);
 
-
         // Run calculator
         {
             py::gil_scoped_release release;
@@ -653,7 +646,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
         EXPECT_EQ(output1, tensor1.getIncrementedVector());
 
     } catch (const pybind11::error_already_set& e) {
-        ASSERT_EQ(1,0) << e.what();
+        ASSERT_EQ(1, 0) << e.what();
     }
 }
 
@@ -720,19 +713,17 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
         EXPECT_EQ(output3, tensor3.getIncrementedVector());
 
     } catch (const pybind11::error_already_set& e) {
-        ASSERT_EQ(1,0) << e.what();
+        ASSERT_EQ(1, 0) << e.what();
     }
 }
 
-
 TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
-    
+
     const std::vector<std::pair<std::string, std::string>> BAD_EXECUTE_SCRIPTS_CASES{
         {"bad_execute_wrong_signature", "Error occurred during Python code execution"},
         {"bad_execute_illegal_operation", "Error occurred during Python code execution"},
         {"bad_execute_import_error", "Error occurred during Python code execution"},
-        {"bad_execute_wrong_return_value", "Python execute function received or returned bad value"}
-    };
+        {"bad_execute_wrong_return_value", "Python execute function received or returned bad value"}};
 
     for (const auto& testCase : BAD_EXECUTE_SCRIPTS_CASES) {
         std::string handlerPath = testCase.first;
@@ -776,11 +767,10 @@ TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
                 ASSERT_TRUE(status.message().find(expectedMessage) != std::string::npos);
             }
         } catch (const pybind11::error_already_set& e) {
-            ASSERT_EQ(1,0) << e.what();
+            ASSERT_EQ(1, 0) << e.what();
         }
     }
 }
-
 
 TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) {
     std::string testPbtxt = R"(
@@ -846,9 +836,8 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
             clearInputStream(inputName, &runner);
         }
 
-
     } catch (const pybind11::error_already_set& e) {
-        ASSERT_EQ(1,0) << e.what();
+        ASSERT_EQ(1, 0) << e.what();
     }
 }
 

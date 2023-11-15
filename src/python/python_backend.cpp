@@ -1,6 +1,8 @@
 #include "python_backend.hpp"
-#include "../logging.hpp"
+
 #include <pybind11/stl.h>
+
+#include "../logging.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -33,8 +35,8 @@ PythonBackend::~PythonBackend() {
     pyovmsModule.reset();
 }
 
-bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, 
-                                       const std::string& datatype, py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor) {
+bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape,
+    const std::string& datatype, py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor) {
     py::gil_scoped_acquire acquire;
     try {
         py::object ovmsPyTensor = tensorClass->attr("create_from_data")(name, ptr, shape, datatype, size);

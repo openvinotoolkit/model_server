@@ -22,15 +22,15 @@
 #include "logging.hpp"
 #include "metric_module.hpp"
 #include "modelmanager.hpp"
-#include "server.hpp"
 #include "pythoninterpretermodule.hpp"
+#include "server.hpp"
 
 namespace ovms {
 class PythonBackend;
 
 ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
     auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(ovmsServer.getModule(PYTHON_INTERPRETER_MODULE_NAME));
-    PythonBackend * pythonBackend = nullptr;
+    PythonBackend* pythonBackend = nullptr;
     if (pythonModule != nullptr)
         pythonBackend = pythonModule->getPythonBackend();
     if (auto metricsModule = dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))) {

@@ -15,10 +15,10 @@
 //*****************************************************************************
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <iostream>
 
 #include <pybind11/pybind11.h>
 
@@ -119,6 +119,5 @@ struct OvmsPyTensor {
     OvmsPyTensor(const std::string& name, const py::buffer& buffer);
 
     ~OvmsPyTensor();
-
 };
 }  // namespace ovms

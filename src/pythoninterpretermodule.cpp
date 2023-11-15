@@ -38,7 +38,7 @@ Status PythonInterpreterModule::start(const ovms::Config& config) {
         print("Python version")
         print (sys.version)
     )");
-    if(!PythonBackend::createPythonBackend(&pythonBackend))
+    if (!PythonBackend::createPythonBackend(&pythonBackend))
         return StatusCode::INTERNAL_ERROR;
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE_NAME);
@@ -54,13 +54,12 @@ void PythonInterpreterModule::shutdown() {
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", PYTHON_INTERPRETER_MODULE_NAME);
     py::gil_scoped_acquire acquire;
-    if (pythonBackend != nullptr) 
+    if (pythonBackend != nullptr)
         delete pythonBackend;
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
     py::finalize_interpreter();
 }
-
 
 PythonBackend* PythonInterpreterModule::getPythonBackend() const {
     return pythonBackend;

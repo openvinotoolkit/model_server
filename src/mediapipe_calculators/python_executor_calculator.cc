@@ -14,8 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #include <unordered_map>
-#include "../python/ovms_py_tensor.hpp"
+
 #include "../mediapipe_internal/pythonnoderesource.hpp"
+#include "../python/ovms_py_tensor.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -23,7 +24,7 @@
 #pragma GCC diagnostic pop
 
 #include <Python.h>
-#include <pybind11/embed.h> // everything needed for embedding
+#include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
 
 #include "../python/python_backend.hpp"
@@ -44,7 +45,7 @@ class PythonExecutorCalculator : public CalculatorBase {
     TODO: Streaming support:
         - timestamping
         - loopback input
-    */ 
+    */
 
     std::shared_ptr<PythonNodeResource> nodeResources;
     std::unique_ptr<PyObjectWrapper<py::iterator>> pyIteratorPtr;
@@ -101,7 +102,7 @@ public:
         py::gil_scoped_acquire acquire;
         try {
             py::print("PYTHON: Acquired GIL");
-            if (pyIteratorPtr) { // Iterator initialized
+            if (pyIteratorPtr) {  // Iterator initialized
                 py::print("PyIterator initialized block");
                 if (pyIteratorPtr->getImmutableObject() != py::iterator::sentinel()) {
                     py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getImmutableObject());
@@ -111,7 +112,7 @@ public:
                     LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Reseting the iterator.";
                     pyIteratorPtr.reset();
                 }
-            } else { // Iterator not initialized, either first iteration or execute is not yielding
+            } else {  // Iterator not initialized, either first iteration or execute is not yielding
                 py::print("PyIterator uninitialized block");
                 std::vector<py::object> pyInputs;
                 for (const std::string& tag : cc->Inputs().GetTags()) {
@@ -119,7 +120,7 @@ public:
                     nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
                     pyInputs.push_back(pyInput);
                 }
-            
+
                 py::object executeResult = std::move(nodeResources->nodeResourceObject->attr("execute")(pyInputs));
                 py::print(executeResult.attr("__class__").attr("__name__"));
 

@@ -32,7 +32,7 @@ PYBIND11_MODULE(pyovms, m) {
                 m.ndim,
                 m.bufferShape,
                 m.strides,
-                true); // Underlying buffer is readonly
+                true);  // Underlying buffer is readonly
         })
         .def(py::init<std::string, const py::buffer&>())
         .def_static("create_from_data", [](const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) {
