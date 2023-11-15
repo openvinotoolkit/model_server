@@ -70,10 +70,19 @@ class CvOutputBackend(OutputBackend):
     def release(self):
         self.cv_sink.release()
 
+class ImshowOutputBackend(OutputBackend):
+    def init(self, sink, fps, width, height):
+        ...
+    def write(self, frame):
+        cv2.imshow("OVMS StreamClient", frame)
+    def release(self):
+        cv2.destroyAllWindows()
+
 class StreamClient:
     class OutputBackends():
         ffmpeg = FfmpegOutputBackend()
         cv2 = CvOutputBackend()
+        imshow = ImshowOutputBackend()
         none = OutputBackend()
     class Datatypes():
         fp32 = FP32()
@@ -132,12 +141,17 @@ class StreamClient:
     dropped_frames = 0
     frames = 0
     def callback(self, frame, i, timestamp, result, error):
-        if error is not None and self.verbose:
-            print(error)
+        if error is not None:
+            if self.benchmark:
+                self.dropped_frames += 1
+            if self.verbose:
+                print(error)
         if i == None:
             i = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
+        if timestamp == None:
+            timestamp = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
         frame = self.postprocess_callback(frame, result)
-        self.pq.put((i, frame, i))
+        self.pq.put((i, frame, timestamp))
 
     def display(self):
         i = 0 
@@ -163,6 +177,8 @@ class StreamClient:
             elif self.exact:
                 self.pq.put(entry)
 
+    def get_timestamp(self) -> int:
+        return int(cv2.getTickCount() / cv2.getTickFrequency() * 1e6)
 
     def start(self, *, ovms_address : str, input_name : str, model_name : str, datatype : Datatype = FP32(), batch = True, limit_stream_duration : int = 0, limit_frames : int = 0, streaming_api: bool = False):
         """
@@ -186,7 +202,7 @@ class StreamClient:
             Use experimental streaming endpoint
         """
 
-        self.cap = cv2.VideoCapture(self.source, cv2.CAP_ANY)
+        self.cap = cv2.VideoCapture(int(self.source) if len(self.source) == 1 and self.source[0].is_digit() else self.source, cv2.CAP_ANY)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
         fps = self.cap.get(cv2.CAP_PROP_FPS)
         triton_client = grpcclient.InferenceServerClient(url=ovms_address, verbose=False)
@@ -208,7 +224,7 @@ class StreamClient:
         if streaming_api:
             triton_client.start_stream(partial(self.callback, None, None, None))
             
-        i = 0
+        frame_number = 0
         total_time_start = time.time()
         try:
             while not self.force_exit:
@@ -219,19 +235,19 @@ class StreamClient:
                     inputs=[grpcclient.InferInput(input_name, np_frame.shape, datatype.string())]
                     inputs[0].set_data_from_numpy(np_frame)
                     if streaming_api:
-                        triton_client.async_stream_infer(model_name=model_name, inputs=inputs, parameters={"OVMS_MP_TIMESTAMP":int(cv2.getTickCount() / cv2.getTickFrequency() * 1e6)})
+                        triton_client.async_stream_infer(model_name=model_name, inputs=inputs, parameters={"OVMS_MP_TIMESTAMP":self.get_timestamp()}, request_id=str(frame_number))
                     else:
                         triton_client.async_infer(
                             model_name=model_name,
-                            callback=partial(self.callback, frame, i, timestamp),
+                            callback=partial(self.callback, frame, frame_number, timestamp),
                             inputs=inputs)
-                    i += 1
+                    frame_number += 1
                 if limit_stream_duration > 0 and time.time() - total_time_start > limit_stream_duration:
                     break
-                if limit_frames > 0 and i > limit_frames:
+                if limit_frames > 0 and frame_number > limit_frames:
                     break
         finally:
-            self.pq.put((i, "EOS"))
+            self.pq.put((frame_number, "EOS"))
             if streaming_api:
                 triton_client.stop_stream()
         sent_all_frames = time.time() - total_time_start
@@ -242,4 +258,4 @@ class StreamClient:
         self.output_backend.release()
         total_time = time.time() - total_time_start
         if self.benchmark:
-            print(f"{{\"inference_time\": {sum(self.inference_time)/i}, \"dropped_frames\": {self.dropped_frames}, \"frames\": {self.frames}, \"fps\": {self.frames/total_time}, \"total_time\": {total_time}, \"sent_all_frames\": {sent_all_frames}}}")
+            print(f"{{\"inference_time\": {sum(self.inference_time)/frame_number}, \"dropped_frames\": {self.dropped_frames}, \"frames\": {self.frames}, \"fps\": {self.frames/total_time}, \"total_time\": {total_time}, \"sent_all_frames\": {sent_all_frames}}}")
