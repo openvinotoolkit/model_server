@@ -1150,7 +1150,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesInte
 }
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSequenceIntervalIsShorterAndWaitTimeIsGreaterThanResurcesInterval) {
-    uint32_t resourcesIntervalMiliseconds = 237;
+    uint32_t resourcesIntervalMiliseconds = 247;
     uint32_t sequenceIntervalMiliseconds = 229;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
