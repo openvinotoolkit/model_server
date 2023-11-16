@@ -187,3 +187,12 @@ Recommended steps to investigate achievable performance and discover bottlenecks
 2. [Launch OVMS benchmark client](https://docs.openvino.ai/2023.1/ovms_demo_benchmark_client.html) on the same machine as OVMS
 3. [Launch OVMS benchmark client](https://docs.openvino.ai/2023.1/ovms_demo_benchmark_client.html) from remote machine
 4. Measure achievable network bandwidth with tools such as [iperf](https://github.com/esnet/iperf)
+
+## Analyzing accuracy issues
+
+It is recommended to compare accuracy results versus benchmark app.
+
+1. Launch OV benchmark app with **the same** plugin parameters as when starting OVMS container *--plugin_config*.
+2. Confirm that in both cases you are using the same `INFERENCE_PRECISION_HINT` parameter which by default may optimize inner layers by changing its precision.
+
+
