@@ -23,7 +23,6 @@
 #include "mediapipe/framework/calculator_framework.h"
 #pragma GCC diagnostic pop
 
-#include <Python.h>
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
 
@@ -36,8 +35,6 @@ using namespace ovms;
 namespace mediapipe {
 
 const std::string INPUT_SIDE_PACKET_TAG = "PYTHON_NODE_RESOURCES";
-
-typedef std::unique_ptr<OvmsPyTensor> OvmsPyTensorPtr;
 
 class PythonExecutorCalculator : public CalculatorBase {
 

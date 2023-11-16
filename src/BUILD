@@ -432,7 +432,6 @@ cc_library(
                     "python/ovms_py_tensor.hpp",
                     "python/ovms_py_tensor.cpp",
                     "python/utils.hpp",
-                    #"python/utils.cpp",
                     "pythoninterpretermodule.hpp",
                     "pythoninterpretermodule.cpp",
                     "mediapipe_calculators/python_executor_calculator.cc",
