@@ -88,7 +88,7 @@ class StreamClient:
         fp32 = FP32()
         uint8 = UINT8()
 
-    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink : str, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend :OutputBackend = OutputBackends.ffmpeg, verbose : bool = False, exact : bool = True, benchmark : bool = False):
+    def __init__(self, *, preprocess_callback = None, postprocess_callback, source, sink: str, ffmpeg_output_width = None, ffmpeg_output_height = None, output_backend: OutputBackend = OutputBackends.ffmpeg, verbose: bool = False, exact: bool = True, benchmark: bool = False, max_inflight_packets: int = 4):
         """
         Parameters
         ----------
@@ -123,6 +123,7 @@ class StreamClient:
         self.benchmark = benchmark
 
         self.pq = queue.PriorityQueue()
+        self.req_q = queue.Queue(max_inflight_packets)
 
     def grab_frame(self):
         success, frame = self.cap.read()
@@ -152,12 +153,11 @@ class StreamClient:
             timestamp = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
         frame = self.postprocess_callback(frame, result)
         self.pq.put((i, frame, timestamp))
+        self.req_q.get()
 
     def display(self):
         i = 0 
         while True:
-            if self.pq.empty():
-                continue
             entry = self.pq.get()
             if (entry[0] == i and self.exact and self.streaming_api is not True) or (entry[0] > i and (self.exact is not True or self.streaming_api is True)):
                 if isinstance(entry[1], str) and entry[1] == "EOS":
@@ -228,6 +228,7 @@ class StreamClient:
         total_time_start = time.time()
         try:
             while not self.force_exit:
+                self.req_q.put(frame_number)
                 timestamp = time.time()
                 frame = self.grab_frame()
                 if frame is not None:
