@@ -53,6 +53,8 @@
 #pragma GCC diagnostic pop
 
 #include "opencv2/opencv.hpp"
+#include "python/python_backend.hpp"
+#include "pythoninterpretermodule.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;
@@ -470,7 +472,8 @@ PythonBackend* getPythonBackend() {
 // Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements)
 // where num_elements is the size of C++ float array. See createTensor static method.
 template <typename T>
-struct SimpleTensor {
+class SimpleTensor {
+public:
     std::string name;
     std::string datatype;
     void* data;

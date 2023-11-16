@@ -332,7 +332,9 @@ int Server::start(int argc, char** argv) {
         // Handle OVMS main() return code
         return statusToExitCode(ret);
     }
+#if (PYTHON_DISABLE == 0)
     py::gil_scoped_release release;
+#endif
     while (!shutdown_request) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }

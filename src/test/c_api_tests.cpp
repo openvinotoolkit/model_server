@@ -30,7 +30,6 @@
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../metric_module.hpp"
 #include "../ovms.h"
-#include "../pythoninterpretermodule.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../version.hpp"

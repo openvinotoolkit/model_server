@@ -83,7 +83,7 @@ public:
             throw e;
         }
     }
-}
+};
 
 class UnexpectedPythonObjectError : public std::exception {
     std::string message;
@@ -99,6 +99,6 @@ public:
     const char* what() const throw() override {
         return message.c_str();
     }
-}
+};
 
 }  // namespace ovms

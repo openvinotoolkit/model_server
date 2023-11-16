@@ -216,9 +216,7 @@ private:
 
     MetricRegistry* metricRegistry;
 
-#if (PYTHON_DISABLE == 0)
     PythonBackend* pythonBackend;
-#endif
 
     /**
      * @brief Json config directory path

@@ -22,6 +22,7 @@
 
 #include "config.hpp"
 #include "logging.hpp"
+#include "python/python_backend.hpp"
 #include "server.hpp"
 #include "status.hpp"
 
