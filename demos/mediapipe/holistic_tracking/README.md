@@ -4,8 +4,7 @@ This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph 
 
 Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
-The demo is based on the [upstream Mediapipe holistic demo](https://github.com/google/mediapipe/blob/master/docs/solutions/holistic.md)
-and [Mediapipe Iris demo](https://github.com/google/mediapipe/blob/master/docs/solutions/iris.md)
+The demo is based on the [upstream Mediapipe holistic demo](https://github.com/google/mediapipe/blob/master/docs/solutions/holistic.md).
 
 ## Prepare the server deployment
 
@@ -81,23 +80,6 @@ Results saved to :image_0.jpg
 ```
 ## Output image
 ![output](output_image.jpg)
-
-## Run client application for iris tracking
-In a similar way can be executed the iris image analysis:
-
-```bash
-python mediapipe_holistic_tracking.py --graph_name irisTracking --images_list input_images.txt --grpc_port 9000
-Running demo application.
-Start processing:
-        Graph name: irisTracking
-(640, 960, 3)
-Iteration 0; Processing time: 77.03 ms; speed 12.98 fps
-Results saved to :image_0.jpg
-```
-
-## Output image
-![output](output_image1.jpg)
-
 
 
 ## RTSP Client
