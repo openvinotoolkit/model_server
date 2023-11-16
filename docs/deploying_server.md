@@ -134,8 +134,8 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
    
          sudo apt update -y && apt install -y libpugixml1v5
    
-   .. tab-item::  RHEL 8.7 
-      :sync: rhel-8-7
+   .. tab-item::  RHEL 8.8
+      :sync: rhel-8-8
    
       Download precompiled package:
       
