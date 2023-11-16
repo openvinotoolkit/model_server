@@ -17,9 +17,9 @@
 #include <memory>
 
 #include "module.hpp"
-#include "python/python_backend.hpp"
 
 namespace ovms {
+class PythonBackend;
 
 class PythonInterpreterModule : public Module {
     PythonBackend* pythonBackend{nullptr};

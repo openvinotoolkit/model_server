@@ -30,16 +30,11 @@
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
 #include "packettypes.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../python/python_backend.hpp"
-#endif
 
 namespace ovms {
 class Status;
 class PythonNodeResource;
-#if (PYTHON_DISABLE == 1)
 class PythonBackend;
-#endif
 
 class MediapipeGraphExecutor {
     const std::string name;

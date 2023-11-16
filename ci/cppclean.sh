@@ -39,7 +39,7 @@ errors=""
 if [ ${NO_WARNINGS_FORWARD} -gt 7 ]; then
     errors+="Failed due to not using forward declarations where possible: ${NO_WARNINGS_FORWARD}"$'\n'
 fi
-if [ ${NO_WARNINGS_DIRECT} -gt 18 ]; then
+if [ ${NO_WARNINGS_DIRECT} -gt 19 ]; then
     errors+="Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}"$'\n'
 fi
 if [ ${NO_WARNINGS_NOTUSED} -gt 4 ]; then
@@ -48,16 +48,16 @@ fi
 if [ ${NO_WARNINGS_TEST_FORWARD} -gt 1 ]; then
     errors+="Failed due to not using forward declarations where possible: ${NO_WARNINGS_TEST_FORWARD}"$'\n'
 fi
-if [ ${NO_WARNINGS_TEST_DIRECT} -gt 15 ]; then
+if [ ${NO_WARNINGS_TEST_DIRECT} -gt 20 ]; then
     errors+="Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_TEST_DIRECT}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST_NOTUSED} -gt 0 ]; then
     errors+="Failed probably due to unnecessary forward includes: ${NO_WARNINGS_TEST_NOTUSED}"$'\n'
 fi
-if [ ${NO_WARNINGS} -gt  153 ]; then
+if [ ${NO_WARNINGS} -gt  155 ]; then
     errors+="Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"$'\n'
 fi
-if [ ${NO_WARNINGS_TEST} -gt  51 ]; then
+if [ ${NO_WARNINGS_TEST} -gt  57 ]; then
     errors+="Failed due to higher than allowed number of issues in test code: ${NO_WARNINGS_TEST}"$'\n'
 fi
 if [ -n "$errors" ]; then

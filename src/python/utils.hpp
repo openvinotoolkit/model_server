@@ -99,6 +99,6 @@ public:
     const char* what() const throw() override {
         return message.c_str();
     }
-};
+}
 
 }  // namespace ovms
