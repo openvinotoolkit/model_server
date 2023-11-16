@@ -75,6 +75,7 @@ class ImshowOutputBackend(OutputBackend):
         ...
     def write(self, frame):
         cv2.imshow("OVMS StreamClient", frame)
+        cv2.waitKey(1)
     def release(self):
         cv2.destroyAllWindows()
 
