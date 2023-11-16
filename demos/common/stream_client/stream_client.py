@@ -202,7 +202,7 @@ class StreamClient:
             Use experimental streaming endpoint
         """
 
-        self.cap = cv2.VideoCapture(int(self.source) if len(self.source) == 1 and self.source[0].is_digit() else self.source, cv2.CAP_ANY)
+        self.cap = cv2.VideoCapture(int(self.source) if len(self.source) == 1 and self.source[0].isdigit() else self.source, cv2.CAP_ANY)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
         fps = self.cap.get(cv2.CAP_PROP_FPS)
         triton_client = grpcclient.InferenceServerClient(url=ovms_address, verbose=False)
