@@ -644,7 +644,6 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
         // Read and check outputs
         std::vector<float> output1 = SimpleTensor<float>::readVectorFromOutput("OUTPUT", tensor1.numElements, &runner);
         EXPECT_EQ(output1, tensor1.getIncrementedVector());
-
     } catch (const pybind11::error_already_set& e) {
         ASSERT_EQ(1, 0) << e.what();
     }
@@ -711,14 +710,12 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
 
         std::vector<float> output3 = SimpleTensor<float>::readVectorFromOutput("OUTPUT3", tensor3.numElements, &runner);
         EXPECT_EQ(output3, tensor3.getIncrementedVector());
-
     } catch (const pybind11::error_already_set& e) {
         ASSERT_EQ(1, 0) << e.what();
     }
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
-
     const std::vector<std::pair<std::string, std::string>> BAD_EXECUTE_SCRIPTS_CASES{
         {"bad_execute_wrong_signature", "Error occurred during Python code execution"},
         {"bad_execute_illegal_operation", "Error occurred during Python code execution"},
@@ -835,7 +832,6 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
             ASSERT_EQ(runner.Run(), absl::OkStatus());
             clearInputStream(inputName, &runner);
         }
-
     } catch (const pybind11::error_already_set& e) {
         ASSERT_EQ(1, 0) << e.what();
     }

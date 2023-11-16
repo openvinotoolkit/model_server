@@ -37,13 +37,11 @@ namespace mediapipe {
 const std::string INPUT_SIDE_PACKET_TAG = "PYTHON_NODE_RESOURCES";
 
 class PythonExecutorCalculator : public CalculatorBase {
-
     /* 
     TODO: Streaming support:
         - timestamping
         - loopback input
     */
-
     std::shared_ptr<PythonNodeResource> nodeResources;
     std::unique_ptr<PyObjectWrapper<py::iterator>> pyIteratorPtr;
 
