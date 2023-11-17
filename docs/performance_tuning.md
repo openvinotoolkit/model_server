@@ -190,9 +190,8 @@ Recommended steps to investigate achievable performance and discover bottlenecks
 
 ## Analyzing accuracy issues
 
-It is recommended to compare accuracy results versus benchmark app.
+Please note that the target devices GPU and NVIDIA usually change the default model execution preicision from FP32 to FP16.  
+It is recommended to compare accuracy results versus OpenVINO benchmark app.
 
-1. Launch OV benchmark app with **the same** plugin parameters as when starting OVMS container *--plugin_config*.
-2. Confirm that in both cases you are using the same `INFERENCE_PRECISION_HINT` parameter which by default may optimize inner layers by changing its precision.
-
-
+It is possible to enforce a specific runtime precision by using a plugin config parameter `INFERENCE_PRECISION_HINT`. For example:  
+ `--plugin_config '{"INFERENCE_PRECISION_HINT": "f32"}'`.
