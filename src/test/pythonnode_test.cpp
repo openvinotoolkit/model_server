@@ -844,3 +844,156 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
     - bad input stream element (py::object that is not pyovms.Tensor)
     - bad output stream element (py::object that is not pyovms.Tensor)
 */
+class PythonNodeResourceTest : public ::testing::Test {};
+
+TEST(PythonNodeResourceTest, FinalizePassTest) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizePass.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
+    ASSERT_EQ(nodeResouce->finalize(), StatusCode::OK);
+}
+
+TEST(PythonNodeResourceTest, FinalizeMissingPassTest) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizeMissingPass.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
+    ASSERT_EQ(nodeResouce->finalize(), StatusCode::OK);
+}
+
+TEST(PythonNodeResourceTest, FinalizeDestructorRemoveFileTest) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizeRemoveFile.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
+    {
+        std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
+        ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
+
+        ASSERT_TRUE(std::filesystem::exists(path));
+        // nodeResource destructor calls finalize and removes the file
+    }
+
+    ASSERT_TRUE(!std::filesystem::exists(path));
+}
+
+TEST(PythonNodeResourceTest, FinalizeFalseFail) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizeFalseFail.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
+    ASSERT_EQ(nodeResouce->finalize(), StatusCode::PYTHON_NODE_FINALIZE_FAILED);
+}
+
+TEST(PythonNodeResourceTest, FinalizeException) {
+    // Must be here - does not work when added to test::SetUp
+    // Initialize Python interpreter
+    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
+    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizeException.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
+    ASSERT_EQ(nodeResouce->finalize(), StatusCode::PYTHON_NODE_FINALIZE_FAILED);
+}

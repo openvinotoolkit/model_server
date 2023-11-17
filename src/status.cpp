@@ -220,6 +220,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node name is already present in nodes list"},
     {StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST, "The Python Node file path does not exist"},
     {StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED, "The Python Node state initialization failed"},
+    {StatusCode::PYTHON_NODE_FINALIZE_FAILED, "The Python Node finalize method failed"},
     {StatusCode::PYTHON_NODE_MISSING_OPTIONS, "The Python Node is missing options definition"},
     {StatusCode::PYTHON_NODE_MISSING_NAME, "The Python Node is missing name definition"},
 

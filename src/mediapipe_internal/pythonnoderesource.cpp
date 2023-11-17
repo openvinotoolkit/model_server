@@ -38,8 +38,34 @@ PythonNodeResource::PythonNodeResource(PythonBackend* pythonBackend) {
     this->pythonBackend = pythonBackend;
 }
 
-Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions, PythonBackend* pythonBackend) {
-    mediapipe::PythonExecutorCalculatorOptions options;
+Status PythonNodeResource::finalize() {
+    if (this->nodeResourceObject) {
+        py::gil_scoped_acquire acquire;
+        try {
+            if (!py::hasattr(*nodeResourceObject.get(), "finalize")) {
+                SPDLOG_DEBUG("Python node resource does not have a finalize method. Python node path {} ", this->pythonNodeFilePath);
+                return StatusCode::OK;
+            }
+
+            py::bool_ success = nodeResourceObject.get()->attr("finalize")();
+            if (!success) {
+                SPDLOG_ERROR("Python node finalize script call returned false. Python node path {} ", this->pythonNodeFilePath);
+                return StatusCode::PYTHON_NODE_FINALIZE_FAILED;
+            }
+        } catch (const pybind11::error_already_set& e) {
+            SPDLOG_ERROR("Failed to process python node finalize method. {}  Python node path {} ", e.what(), this->pythonNodeFilePath);
+            return StatusCode::PYTHON_NODE_FINALIZE_FAILED;
+        } catch (...) {
+            SPDLOG_ERROR("Failed to process python node finalize method. Python node path {} ", this->pythonNodeFilePath);
+            return StatusCode::PYTHON_NODE_FINALIZE_FAILED;
+        }
+    }
+
+    return StatusCode::OK;
+}
+
+Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions) {
+    mediapipe::PythonBackendCalculatorOptions options;
     nodeOptions.UnpackTo(&options);
     if (!std::filesystem::exists(options.handler_path())) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", options.handler_path());
@@ -68,6 +94,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
         nodeResource->nodeResourceObject = std::make_unique<py::object>(pythonModel);
+        nodeResource->pythonNodeFilePath = options.handler_path();
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_ERROR("Failed to process python node file {} : {}", options.handler_path(), e.what());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
@@ -81,6 +108,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
 
 PythonNodeResource::~PythonNodeResource() {
     SPDLOG_DEBUG("Calling Python node resource destructor");
+    this->finalize();
     py::gil_scoped_acquire acquire;
     this->nodeResourceObject.reset();
 }
