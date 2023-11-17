@@ -99,10 +99,10 @@ public:
             py::print("PYTHON: Acquired GIL");
             if (pyIteratorPtr) {  // Iterator initialized
                 py::print("PyIterator initialized block");
-                if (pyIteratorPtr->getImmutableObject() != py::iterator::sentinel()) {
-                    py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getImmutableObject());
+                if (pyIteratorPtr->getObject() != py::iterator::sentinel()) {
+                    py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getObject());
                     pushOutputs(cc, pyOutputs);
-                    ++(pyIteratorPtr->getMutableObject());
+                    ++(pyIteratorPtr->getObject());
                 } else {
                     LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Reseting the iterator.";
                     pyIteratorPtr.reset();
@@ -111,7 +111,7 @@ public:
                 py::print("PyIterator uninitialized block");
                 std::vector<py::object> pyInputs;
                 for (const std::string& tag : cc->Inputs().GetTags()) {
-                    const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getImmutableObject();
+                    const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
                     nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
                     pyInputs.push_back(pyInput);
                 }
@@ -125,9 +125,9 @@ public:
                 } else if (py::isinstance<py::iterator>(executeResult)) {
                     py::print("Iterator initialization (execute yielded)");
                     pyIteratorPtr = std::make_unique<PyObjectWrapper<py::iterator>>(executeResult);
-                    py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getImmutableObject());
+                    py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getObject());
                     pushOutputs(cc, pyOutputs);
-                    ++(pyIteratorPtr->getMutableObject());
+                    ++(pyIteratorPtr->getObject());
                 } else {
                     throw UnexpectedPythonObjectError(executeResult, "list or generator");
                 }

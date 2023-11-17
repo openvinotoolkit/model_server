@@ -48,7 +48,7 @@ fi
 if [ ${NO_WARNINGS_TEST_FORWARD} -gt 1 ]; then
     errors+="Failed due to not using forward declarations where possible: ${NO_WARNINGS_TEST_FORWARD}"$'\n'
 fi
-if [ ${NO_WARNINGS_TEST_DIRECT} -gt 20 ]; then
+if [ ${NO_WARNINGS_TEST_DIRECT} -gt 15 ]; then
     errors+="Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_TEST_DIRECT}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST_NOTUSED} -gt 0 ]; then

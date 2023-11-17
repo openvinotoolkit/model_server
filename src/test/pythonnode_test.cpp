@@ -465,7 +465,7 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
     }
 }
 
-PythonBackend* getPythonBackend() {
+static PythonBackend* getPythonBackend() {
     return dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend();
 }
 
@@ -571,22 +571,22 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
 
 // ---------------------------------- PythonExecutorCalculcator tests
 
-void addInputItem(const std::string& tag, std::unique_ptr<PyObjectWrapper<py::object>>& input, int64_t timestamp,
+static void addInputItem(const std::string& tag, std::unique_ptr<PyObjectWrapper<py::object>>& input, int64_t timestamp,
     mediapipe::CalculatorRunner* runner) {
     runner->MutableInputs()->Tag(tag).packets.push_back(
         mediapipe::Adopt<PyObjectWrapper<py::object>>(input.release()).At(mediapipe::Timestamp(timestamp)));
 }
 
-void clearInputStream(std::string tag, mediapipe::CalculatorRunner* runner) {
+static void clearInputStream(std::string tag, mediapipe::CalculatorRunner* runner) {
     runner->MutableInputs()->Tag(tag).packets.clear();
 }
 
-void addInputSidePacket(std::string tag, std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& input,
+static void addInputSidePacket(std::string tag, std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& input,
     int64_t timestamp, mediapipe::CalculatorRunner* runner) {
     runner->MutableSidePackets()->Tag(tag) = mediapipe::MakePacket<std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>>(input).At(mediapipe::Timestamp(timestamp));
 }
 
-std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> prepareInputSidePacket(const std::string& handlerPath, PythonBackend* pythonBackend) {
+static std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> prepareInputSidePacket(const std::string& handlerPath, PythonBackend* pythonBackend) {
     // Create side packets
     auto fsHandlerPath = std::filesystem::path(handlerPath);
     fsHandlerPath.replace_extension();

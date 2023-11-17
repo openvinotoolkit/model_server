@@ -51,16 +51,7 @@ public:
         SPDLOG_DEBUG("PyObjectWrapper destructor end ");
     }
 
-    const T& getImmutableObject() const {
-        py::gil_scoped_acquire acquire;
-        if (obj) {
-            return *obj;
-        } else {
-            throw std::exception();
-        }
-    }
-
-    T& getMutableObject() const {
+    T& getObject() const {
         py::gil_scoped_acquire acquire;
         if (obj) {
             return *obj;

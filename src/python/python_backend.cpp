@@ -40,7 +40,7 @@ bool PythonBackend::createPythonBackend(PythonBackend** pythonBackend) {
 
 PythonBackend::PythonBackend() {
     py::gil_scoped_acquire acquire;
-    py::print("Creating python backend");
+    SPDLOG_DEBUG("Creating python backend");
     pyovmsModule = std::make_unique<py::module_>(py::module_::import("pyovms"));
     tensorClass = std::make_unique<py::object>(pyovmsModule->attr("Tensor"));
 }
