@@ -35,7 +35,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "azurefilesystem.hpp"
+//#include "azurefilesystem.hpp"
 #include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderconfig.hpp"
@@ -1298,12 +1298,12 @@ std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& baseP
     if (basePath.rfind(FileSystem::GCS_URL_PREFIX, 0) == 0) {
         return std::make_shared<ovms::GCSFileSystem>();
     }
-    if (basePath.rfind(FileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
-        return std::make_shared<ovms::AzureFileSystem>();
-    }
-    if (basePath.rfind(FileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
-        return std::make_shared<ovms::AzureFileSystem>();
-    }
+   // if (basePath.rfind(FileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
+   //     return std::make_shared<ovms::AzureFileSystem>();
+   // }
+   // if (basePath.rfind(FileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
+   //     return std::make_shared<ovms::AzureFileSystem>();
+   // }
     return std::make_shared<LocalFileSystem>();
 }
 

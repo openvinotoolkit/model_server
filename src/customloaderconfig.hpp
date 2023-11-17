@@ -25,6 +25,7 @@
 
 #include "status.hpp"
 #include "stringutils.hpp"
+#include "filesystem.hpp"
 
 namespace ovms {
 
