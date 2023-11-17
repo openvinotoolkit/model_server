@@ -17,7 +17,7 @@ As part of postprocessing, inference results can be visualized. The demo can opt
 ## Prerequisites
 
 In order to make this demo work you need to:
-- use Python 3.6+
+- use Python 3.7+
 - have access to live RTSP stream
 - have access to OpenVINO Model Server with your model of choice deployed
 - have a use case implementation

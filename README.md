@@ -22,17 +22,17 @@ Read [release notes](https://github.com/openvinotoolkit/model_server/releases) t
 
 Key features: 
 - support for multiple frameworks, such as Caffe, TensorFlow, MXNet, PaddlePaddle and ONNX
-- online deployment of new [model versions](https://docs.openvino.ai/2023.1/ovms_docs_model_version_policy.html)
-- [configuration updates in runtime](https://docs.openvino.ai/2023.1/ovms_docs_online_config_changes.html)
-- support for [AI accelerators](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_supported_plugins_Supported_Devices.html)
-- works with Bare Metal Hosts as well as [Docker containers](https://docs.openvino.ai/2023.1/ovms_docs_deploying_server.html) 
-- [model reshaping](https://docs.openvino.ai/2023.1/ovms_docs_shape_batch_layout.html) in runtime
-- [directed Acyclic Graph Scheduler](https://docs.openvino.ai/2023.1/ovms_docs_dag.html) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
-- [custom nodes in DAG pipelines](https://docs.openvino.ai/2023.1/ovms_docs_custom_node_development.html) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
-- [serving stateful models](https://docs.openvino.ai/2023.1/ovms_docs_stateful_models.html) - models that operate on sequences of data and maintain their state between inference requests
-- [binary format of the input data](https://docs.openvino.ai/2023.1/ovms_docs_binary_input.html) - data can be sent in JPEG or PNG formats to reduce traffic and offload the client applications
-- [model caching](https://docs.openvino.ai/2023.1/ovms_docs_model_cache.html) - cache the models on first load and re-use models from cache on subsequent loads
-- [metrics](https://docs.openvino.ai/2023.1/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
+- online deployment of new [model versions](https://docs.openvino.ai/2023.2/ovms_docs_model_version_policy.html)
+- [configuration updates in runtime](https://docs.openvino.ai/2023.2/ovms_docs_online_config_changes.html)
+- support for [AI accelerators](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_supported_plugins_Supported_Devices.html)
+- works with Bare Metal Hosts as well as [Docker containers](https://docs.openvino.ai/2023.2/ovms_docs_deploying_server.html) 
+- [model reshaping](https://docs.openvino.ai/2023.2/ovms_docs_shape_batch_layout.html) in runtime
+- [directed Acyclic Graph Scheduler](https://docs.openvino.ai/2023.2/ovms_docs_dag.html) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
+- [custom nodes in DAG pipelines](https://docs.openvino.ai/2023.2/ovms_docs_custom_node_development.html) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
+- [serving stateful models](https://docs.openvino.ai/2023.2/ovms_docs_stateful_models.html) - models that operate on sequences of data and maintain their state between inference requests
+- [binary format of the input data](https://docs.openvino.ai/2023.2/ovms_docs_binary_input.html) - data can be sent in JPEG or PNG formats to reduce traffic and offload the client applications
+- [model caching](https://docs.openvino.ai/2023.2/ovms_docs_model_cache.html) - cache the models on first load and re-use models from cache on subsequent loads
+- [metrics](https://docs.openvino.ai/2023.2/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
 
 
 **Note:** OVMS has been tested on RedHat, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.
@@ -43,26 +43,26 @@ They are stored in:
 
 ## Run OpenVINO Model Server
 
-A demonstration on how to use OpenVINO Model Server can be found in [our quick-start guide](https://docs.openvino.ai/2023.1/ovms_docs_quick_start_guide.html). 
+A demonstration on how to use OpenVINO Model Server can be found in [our quick-start guide](https://docs.openvino.ai/2023.2/ovms_docs_quick_start_guide.html). 
 For more information on using Model Server in various scenarios you can check the following guides:
 
-* [Model repository configuration](https://docs.openvino.ai/2023.1/ovms_docs_models_repository.html)
+* [Model repository configuration](https://docs.openvino.ai/2023.2/ovms_docs_models_repository.html)
 
-* [Deployment options](https://docs.openvino.ai/2023.1/ovms_docs_deploying_server.html)
+* [Deployment options](https://docs.openvino.ai/2023.2/ovms_docs_deploying_server.html)
 
-* [Performance tuning](https://docs.openvino.ai/2023.1/ovms_docs_performance_tuning.html)
+* [Performance tuning](https://docs.openvino.ai/2023.2/ovms_docs_performance_tuning.html)
 
-* [Directed Acyclic Graph Scheduler](https://docs.openvino.ai/2023.1/ovms_docs_dag.html)
+* [Directed Acyclic Graph Scheduler](https://docs.openvino.ai/2023.2/ovms_docs_dag.html)
 
-* [Custom nodes development](https://docs.openvino.ai/2023.1/ovms_docs_custom_node_development.html)
+* [Custom nodes development](https://docs.openvino.ai/2023.2/ovms_docs_custom_node_development.html)
 
-* [Serving stateful models](https://docs.openvino.ai/2023.1/ovms_docs_stateful_models.html)
+* [Serving stateful models](https://docs.openvino.ai/2023.2/ovms_docs_stateful_models.html)
 
 * [Deploy using a Kubernetes Helm Chart](https://github.com/openvinotoolkit/operator/tree/main/helm-charts/ovms)
 
 * [Deployment using Kubernetes Operator](https://operatorhub.io/operator/ovms-operator)
 
-* [Using binary input data](https://docs.openvino.ai/2023.1/ovms_docs_binary_input.html)
+* [Using binary input data](https://docs.openvino.ai/2023.2/ovms_docs_binary_input.html)
 
 
 
@@ -76,7 +76,7 @@ For more information on using Model Server in various scenarios you can check th
 
 * [RESTful API](https://restfulapi.net/)
 
-* [Benchmarking results](https://docs.openvino.ai/2023.1/openvino_docs_performance_benchmarks.html)
+* [Benchmarking results](https://docs.openvino.ai/2023.2/openvino_docs_performance_benchmarks.html)
 
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 

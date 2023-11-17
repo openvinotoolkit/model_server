@@ -15,7 +15,7 @@ cd model_server/client/python/ovmsclient/lib
 
 ## Installation
 
-**Note:** The client library requires Python in version >= 3.6.
+**Note:** The client library requires Python in version >= 3.7.
 
 ```bash
 pip3 install ovmsclient
@@ -26,7 +26,7 @@ pip3 install ovmsclient
 ### Linux
 
 Prerequisites:
- - Python 3.6 +
+ - Python 3.7 +
  - Python package [setuptools](https://pypi.org/project/setuptools/)
  - Protoc 3.19.2 + [protobuf-compiler](https://grpc.io/docs/protoc-installation/)
  We recommend to install [pre-compiled binaries](https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os) to get newest protoc version

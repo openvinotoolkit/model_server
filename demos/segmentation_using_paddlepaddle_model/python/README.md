@@ -7,7 +7,7 @@ As an example, we will use [ocrnet-hrnet-w48-paddle](https://github.com/openvino
 
 - [Docker](https://docs.docker.com/engine/install/) installed
 
-- Python 3.6 or newer installed
+- Python 3.7 or newer installed
 
 ## Preparing to Run
 
