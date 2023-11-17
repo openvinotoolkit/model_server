@@ -871,10 +871,6 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
         if (!status.ok()) {
             return status;
         }
-        status = closeInputStream(inputName, request, graph);
-        if (!status.ok()) {
-            return status;
-        }
         ++insertedStreamPackets;
     }
     if (this->inputNames.size() > insertedStreamPackets) {
@@ -888,7 +884,7 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
     for (auto& [outputStreamName, poller] : outputPollers) {
         size_t receivedOutputs = 0;
         SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
-        while (poller.Next(&packet)) {
+        if (poller.Next(&packet)) {
             SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
             Status status = serializePacket(outputStreamName, *response, packet);
             if (!status.ok()) {
@@ -898,6 +894,13 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
             ++receivedOutputs;
         }
         SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
+    }
+    absStatus = graph.WaitUntilIdle();
+    for (auto& inputName : this->inputNames) {
+        status = closeInputStream(inputName, request, graph);
+        if (!status.ok()) {
+            return status;
+        }
     }
     absStatus = graph.WaitUntilDone();
     if (!absStatus.ok()) {
