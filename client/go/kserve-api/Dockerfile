@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-FROM golang:1.18
+FROM golang:1.20.10
 
 RUN apt-get update && \
     apt-get -y install git unzip build-essential autoconf libtool protobuf-compiler libprotobuf-dev && \
@@ -22,7 +21,6 @@ RUN apt-get update && \
 
 RUN mkdir /app
 WORKDIR /app
-
 
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
 RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
