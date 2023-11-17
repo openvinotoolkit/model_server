@@ -408,6 +408,7 @@ LABEL bazel-build-flags=${debug_bazel_flags}
 LABEL supported-devices="CPU=1 GNA=1 GPU=${GPU} NVIDIA=${NVIDIA}"
 ARG RELEASE_BASE_IMAGE
 LABEL base-image=${RELEASE_BASE_IMAGE}
+ENV PYTHONPATH=/ovms/lib
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
