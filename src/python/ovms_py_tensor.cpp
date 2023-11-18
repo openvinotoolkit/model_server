@@ -31,12 +31,9 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* ptr, const std::vector
     datatype(datatype),
     userShape(shape),
     size(size),
-    ptr(ptr),
-    bufferShape(),
-    ndim(),
-    format(),
-    itemsize() {
+    ptr(ptr) {
     // Map datatype to struct syntax format if it's known. Otherwise assume raw binary (UINT8 type)
+    std::cout << "Calling OvmsPyTensor constructor from data" << std::endl;
     auto it = datatypeToBufferFormat.find(datatype);
     if (it != datatypeToBufferFormat.end()) {
         format = it->second;
@@ -55,17 +52,25 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* ptr, const std::vector
     }
 }
 
-OvmsPyTensor::OvmsPyTensor(const std::string& name, py::buffer_info bufferInfo) :
+OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer) :
     name(name),
-    ptr(bufferInfo.ptr),
-    bufferShape(bufferInfo.shape),
-    ndim(bufferInfo.ndim),
-    format(bufferInfo.format),
-    itemsize(bufferInfo.itemsize),
-    strides(bufferInfo.strides) {
+    refObj(buffer) {
+    std::cout << "Calling OvmsPyTensor constructor from buffer" << std::endl;
+    py::buffer_info bufferInfo = buffer.request();
+    ptr = bufferInfo.ptr;
+    bufferShape = bufferInfo.shape;
+    ndim = bufferInfo.ndim;
+    format = bufferInfo.format;
+    itemsize = bufferInfo.itemsize;
+    strides = bufferInfo.strides;
+
     size = std::accumulate(std::begin(bufferShape), std::end(bufferShape), 1, std::multiplies<py::ssize_t>()) * itemsize;
     userShape = bufferShape;
     datatype = format;
     auto it = bufferFormatToDatatype.find(format);
     datatype = it != datatypeToBufferFormat.end() ? it->second : format;
+}
+
+OvmsPyTensor::~OvmsPyTensor() {
+    std::cout << "Calling OvmsPyTensor destructor" << std::endl;
 }

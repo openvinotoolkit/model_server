@@ -170,7 +170,7 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["mediapipe_calculators/ovmscalculator.proto",
-            "mediapipe_calculators/python_backend_calculator.proto"],
+            "mediapipe_calculators/python_executor_calculator_options.proto"],
     visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
@@ -427,11 +427,14 @@ cc_library(
         })
         + select({
             "//src:not_disable_python": [
-                    "ovms_py_tensor.hpp",
-                    "ovms_py_tensor.cpp",
+                    "python/python_backend.hpp",
+                    "python/python_backend.cpp",
+                    "python/ovms_py_tensor.hpp",
+                    "python/ovms_py_tensor.cpp",
+                    "python/utils.hpp",
                     "pythoninterpretermodule.hpp",
                     "pythoninterpretermodule.cpp",
-                    "mediapipe_calculators/python_backend_calculator.cc",
+                    "mediapipe_calculators/python_executor_calculator.cc",
                 ],
             "//src:disable_python": []
         }),
@@ -484,14 +487,15 @@ cc_library(
             "-static-libasan",
         ],
     }),
+    data = [":pyovms.so"],
     alwayslink = 1,
 )
 
 pybind_extension(
     name = "pyovms",
     srcs = ["bindings/python/ovms_py_tensor.cpp",
-            "ovms_py_tensor.hpp",
-            "ovms_py_tensor.cpp"],
+            "python/ovms_py_tensor.hpp",
+            "python/ovms_py_tensor.cpp"],
 )
 
 load("@pip_deps//:requirements.bzl", "all_requirements")
@@ -786,6 +790,7 @@ cc_binary(
             ],
             "//src:disable_mediapipe" : [],
         }),
+    data = [":pyovms.so"],
 
         # "//src:cpp_headers",  # Use for dynamic linking when necessary
     # linkstatic = False,  # Use for dynamic linking when necessary
@@ -885,7 +890,8 @@ cc_test(
         }) + select({
             "//src:not_disable_python": [
                 "test/pythonnode_test.cpp",
-                "test/python/ovms_py_tensor_test.cpp",
+                # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
+                # "test/python/ovms_py_tensor_test.cpp",
             ],
             "//src:disable_python" : [],
         }),
@@ -998,6 +1004,7 @@ cc_test(
             "//conditions:default": [
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+                "@mediapipe//mediapipe/framework:calculator_runner",
             ],
             "//src:disable_mediapipe" : [],
         }),

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -64,7 +65,7 @@ const std::unordered_map<std::string, std::string> bufferFormatToDatatype{
     // {X, "BF16"} to be considered, for now it shall be treated as a custom datatype
 };
 
-// TO DO: Note that for numpy for example np.int64 gets translates to "l" not "q" on 64 bit linux systems.
+// TODO: Note that for numpy for example np.int64 translates to "l" not "q" on 64 bit linux systems.
 // We should consider an alternative to hardcoding those characters if it becomes an issue.
 
 const std::unordered_map<std::string, py::ssize_t> bufferFormatToItemsize{
@@ -87,11 +88,12 @@ const std::string RAW_BINARY_FORMAT = "B";
 
 struct OvmsPyTensor {
     std::string name;
-    // Can be one of predefined types (like int8, float32 etc.) or totally custom like numpy (for example "<U83")
+    // Can be one of Kserve datatypes (like UINT8, FP32 etc.) or totally custom like numpy (for example "<U83")
     std::string datatype;
-    // User defined shape read from the request
+    // User defined shape read from the request if object is created during request deserialization
+    // For object created in python nodes it's the same as bufferShape
     std::vector<py::ssize_t> userShape;
-    // Binary size of the input data
+    // Binary size of the input data.
     size_t size;
 
     // Buffer protocol fields
@@ -102,12 +104,20 @@ struct OvmsPyTensor {
     py::ssize_t itemsize;
     std::vector<py::ssize_t> strides;
 
+    // Reference to the Python object that owns underlaying data buffer
+    py::object refObj;
+
     // ---
+
+    OvmsPyTensor(const OvmsPyTensor& other) = delete;
+    OvmsPyTensor() = delete;
 
     // Construct object from request contents
     OvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
 
     // Construct object from buffer info
-    OvmsPyTensor(const std::string& name, py::buffer_info bufferInfo);
+    OvmsPyTensor(const std::string& name, const py::buffer& buffer);
+
+    ~OvmsPyTensor();
 };
 }  // namespace ovms

@@ -22,18 +22,16 @@
 
 #include "config.hpp"
 #include "logging.hpp"
+#include "python/python_backend.hpp"
 #include "server.hpp"
 #include "status.hpp"
 
 namespace py = pybind11;
 
 namespace ovms {
-
-PythonInterpreterModule::PythonInterpreterModule() {}
-
 Status PythonInterpreterModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
-    SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE);
+    SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);
     // Initialize Python interpreter
     py::initialize_interpreter();
     py::exec(R"(
@@ -41,20 +39,31 @@ Status PythonInterpreterModule::start(const ovms::Config& config) {
         print("Python version")
         print (sys.version)
     )");
-    py::gil_scoped_release release;  // GIL only needed in Python custom node
+    if (!PythonBackend::createPythonBackend(&pythonBackend))
+        return StatusCode::INTERNAL_ERROR;
     state = ModuleState::INITIALIZED;
-    SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE);
+    SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE_NAME);
     return StatusCode::OK;
 }
 
 void PythonInterpreterModule::shutdown() {
     if (state == ModuleState::SHUTDOWN)
         return;
+    else if (state == ModuleState::NOT_INITIALIZED)
+        throw std::runtime_error("PythonInterpreterModule has not been initialized. Could not shut down.");
+
     state = ModuleState::STARTED_SHUTDOWN;
-    SPDLOG_INFO("{} shutting down", PYTHON_INTERPRETER_MODULE);
-    py::finalize_interpreter();
+    SPDLOG_INFO("{} shutting down", PYTHON_INTERPRETER_MODULE_NAME);
+    py::gil_scoped_acquire acquire;
+    if (pythonBackend != nullptr)
+        delete pythonBackend;
     state = ModuleState::SHUTDOWN;
-    SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE);
+    SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
+    py::finalize_interpreter();
+}
+
+PythonBackend* PythonInterpreterModule::getPythonBackend() const {
+    return pythonBackend;
 }
 
 PythonInterpreterModule::~PythonInterpreterModule() {

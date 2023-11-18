@@ -19,11 +19,11 @@ package mediapipe;
 
 import "mediapipe/framework/calculator.proto";
 
-message PythonBackendCalculatorOptions {
+message PythonExecutorCalculatorOptions {
   extend mediapipe.CalculatorOptions {
     // https://github.com/google/mediapipe/issues/634 have to be unique in app
     // no rule to obtain this
-    optional PythonBackendCalculatorOptions ext = 113473748;
+    optional PythonExecutorCalculatorOptions ext = 113473748;
     }
     required string handler_path = 1;
 }

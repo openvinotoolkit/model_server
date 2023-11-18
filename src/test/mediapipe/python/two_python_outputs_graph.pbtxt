@@ -19,25 +19,25 @@ output_stream: "out2"
 
 node {
   name: "pythonNode1"
-  calculator: "PythonBackendCalculator"
-  input_side_packet: "PYOBJECT:pyobject"
-  input_stream: "in"
-  output_stream: "out"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:in"
+  output_stream: "OUTPUT:out"
   node_options: {
-    [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
-      handler_path: "/ovms/src/test/mediapipe/python/script.py"
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_execute_wrong_return_value.py"
     }
   }
 }
 node {
   name: "pythonNode2"
-  calculator: "PythonBackendCalculator"
-  input_side_packet: "PYOBJECT:pyobject"
-  input_stream: "in"
-  output_stream: "out2"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:in"
+  output_stream: "OUTPUT:out2"
   node_options: {
-    [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
-      handler_path: "/ovms/src/test/mediapipe/python/script2.py"
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
     }
   }
 }

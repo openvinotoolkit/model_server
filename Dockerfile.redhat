@@ -312,6 +312,7 @@ ARG PROJECT_VERSION="2023.2"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags
+ENV PYTHONPATH=/ovms/bazel-bin/src
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp" && \
@@ -407,6 +408,7 @@ LABEL bazel-build-flags=${debug_bazel_flags}
 LABEL supported-devices="CPU=1 GNA=1 GPU=${GPU} NVIDIA=${NVIDIA}"
 ARG RELEASE_BASE_IMAGE
 LABEL base-image=${RELEASE_BASE_IMAGE}
+ENV PYTHONPATH=/ovms/lib
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

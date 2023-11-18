@@ -49,6 +49,7 @@ class ModelManager;
 class MediapipeGraphExecutor;
 class PythonNodeResource;
 class Status;
+class PythonBackend;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -58,7 +59,8 @@ public:
     MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,
-        const MetricConfig* metricConfig = nullptr);
+        const MetricConfig* metricConfig = nullptr,
+        PythonBackend* pythonBackend = nullptr);
 
     const std::string& getName() const { return name; }
     const PipelineDefinitionStatus& getStatus() const {
@@ -154,6 +156,8 @@ private:
     std::vector<std::string> inputSidePacketNames;
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
+
+    PythonBackend* pythonBackend;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

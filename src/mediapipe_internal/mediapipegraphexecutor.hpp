@@ -34,6 +34,7 @@
 namespace ovms {
 class Status;
 class PythonNodeResource;
+class PythonBackend;
 
 class MediapipeGraphExecutor {
     const std::string name;
@@ -45,6 +46,7 @@ class MediapipeGraphExecutor {
     const std::vector<std::string> outputNames;
 
     std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
+    PythonBackend* pythonBackend;
 
     ::mediapipe::Timestamp currentStreamTimestamp;
 
@@ -61,7 +63,8 @@ public:
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-        const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources);
+        const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources,
+        PythonBackend* pythonBackend);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 
     Status inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream);

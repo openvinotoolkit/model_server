@@ -16,29 +16,35 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <unordered_map>
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
 
-#include "src/mediapipe_calculators/python_backend_calculator.pb.h"
+#include "src/mediapipe_calculators/python_executor_calculator_options.pb.h"
 
 namespace py = pybind11;
 #endif
 
 namespace ovms {
 class Status;
+class PythonBackend;
 
-class PythonNodeResource {
+struct PythonNodeResource {
 public:
     PythonNodeResource(const PythonNodeResource&) = delete;
     PythonNodeResource& operator=(PythonNodeResource&) = delete;
 #if (PYTHON_DISABLE == 0)
-    PythonNodeResource();
-    PythonNodeResource(const google::protobuf::Any& nodeOptions, Status& status);
     std::unique_ptr<py::object> nodeResourceObject;
+    PythonBackend* pythonBackend;
+
+    PythonNodeResource(PythonBackend* pythonBackend);
     ~PythonNodeResource();
-    static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions);
+    static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions, PythonBackend* pythonBackend);
 #endif
 };
+
+typedef std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> PythonNodesResources;
 
 }  // namespace ovms
