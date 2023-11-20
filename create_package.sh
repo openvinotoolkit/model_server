@@ -48,7 +48,8 @@ if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then \
 	/ovms_release/lib/libovms_shared.so-2.params ; \
 fi
 
-find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then find /opt/intel/openvino/python/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \; ; fi ;
+if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then cp -r /opt/intel/openvino/python/openvino-2023.2.dist-info /ovms_release/lib/ \; ; fi ;
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
 if [ -d /opt/intel/openvino/runtime/3rdparty ] ; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*libtbb.so.*' -exec cp -vP {} /ovms_release/lib/ \;; fi
