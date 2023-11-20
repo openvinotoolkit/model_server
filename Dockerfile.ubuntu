@@ -531,6 +531,8 @@ COPY --from=pkg /ovms_release /ovms
 
 # For image with Python enabled install Python library
 RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
+    mkdir -p /ovms/lib/openvino-2023.2.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.2' > /ovms/lib/openvino-2023.2.dist-info/METADATA ; \
     apt-get update -y ; \
     case $BASE_IMAGE in \
         "ubuntu:20.04") \
