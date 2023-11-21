@@ -511,6 +511,8 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
         libcutensor1-1.6.1.5-1 && \
         dnf clean all
 
+ENV LD_LIBRARY_PATH=/ovms/lib
+
 COPY --from=pkg /ovms_release /ovms
 COPY --from=pkg /licenses /licenses
 USER ovms
