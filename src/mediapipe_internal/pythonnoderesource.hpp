@@ -42,7 +42,7 @@ public:
     PythonNodeResource(PythonBackend* pythonBackend);
     ~PythonNodeResource();
     static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions, PythonBackend* pythonBackend);
-    Status finalize();
+    void finalize();
 #endif
 };
 

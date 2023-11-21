@@ -38,30 +38,26 @@ PythonNodeResource::PythonNodeResource(PythonBackend* pythonBackend) {
     this->pythonBackend = pythonBackend;
 }
 
-Status PythonNodeResource::finalize() {
+void PythonNodeResource::finalize() {
     if (this->nodeResourceObject) {
         py::gil_scoped_acquire acquire;
         try {
             if (!py::hasattr(*nodeResourceObject.get(), "finalize")) {
                 SPDLOG_DEBUG("Python node resource does not have a finalize method. Python node path {} ", this->pythonNodeFilePath);
-                return StatusCode::OK;
+                return;
             }
 
-            py::bool_ success = nodeResourceObject.get()->attr("finalize")();
-            if (!success) {
-                SPDLOG_ERROR("Python node finalize script call returned false. Python node path {} ", this->pythonNodeFilePath);
-                return StatusCode::PYTHON_NODE_FINALIZE_FAILED;
-            }
+            nodeResourceObject.get()->attr("finalize")();
         } catch (const pybind11::error_already_set& e) {
             SPDLOG_ERROR("Failed to process python node finalize method. {}  Python node path {} ", e.what(), this->pythonNodeFilePath);
-            return StatusCode::PYTHON_NODE_FINALIZE_FAILED;
+            return;
         } catch (...) {
             SPDLOG_ERROR("Failed to process python node finalize method. Python node path {} ", this->pythonNodeFilePath);
-            return StatusCode::PYTHON_NODE_FINALIZE_FAILED;
+            return;
         }
     }
 
-    return StatusCode::OK;
+    return;
 }
 
 Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions) {

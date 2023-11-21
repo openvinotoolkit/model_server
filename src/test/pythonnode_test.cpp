@@ -872,7 +872,7 @@ TEST(PythonNodeResourceTest, FinalizePassTest) {
 
     std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
     ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
-    ASSERT_EQ(nodeResouce->finalize(), StatusCode::OK);
+    nodeResouce->finalize();
 }
 
 TEST(PythonNodeResourceTest, FinalizeMissingPassTest) {
@@ -901,7 +901,7 @@ TEST(PythonNodeResourceTest, FinalizeMissingPassTest) {
 
     std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
     ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
-    ASSERT_EQ(nodeResouce->finalize(), StatusCode::OK);
+    nodeResouce->finalize();
 }
 
 TEST(PythonNodeResourceTest, FinalizeDestructorRemoveFileTest) {
@@ -940,35 +940,6 @@ TEST(PythonNodeResourceTest, FinalizeDestructorRemoveFileTest) {
     ASSERT_TRUE(!std::filesystem::exists(path));
 }
 
-TEST(PythonNodeResourceTest, FinalizeFalseFail) {
-    // Must be here - does not work when added to test::SetUp
-    // Initialize Python interpreter
-    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
-    py::gil_scoped_release release;  // GIL only needed in Python custom node
-    const std::string pbTxt{R"(
-    input_stream: "in"
-    output_stream: "out"
-        node {
-            name: "pythonNode2"
-            calculator: "PythonBackendCalculator"
-            input_side_packet: "PYOBJECT:pyobject"
-            input_stream: "in"
-            output_stream: "out2"
-            node_options: {
-                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizeFalseFail.py"
-                }
-            }
-        }
-    )"};
-    ::mediapipe::CalculatorGraphConfig config;
-    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
-
-    std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
-    ASSERT_EQ(nodeResouce->finalize(), StatusCode::PYTHON_NODE_FINALIZE_FAILED);
-}
-
 TEST(PythonNodeResourceTest, FinalizeException) {
     // Must be here - does not work when added to test::SetUp
     // Initialize Python interpreter
@@ -995,5 +966,5 @@ TEST(PythonNodeResourceTest, FinalizeException) {
 
     std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
     ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
-    ASSERT_EQ(nodeResouce->finalize(), StatusCode::PYTHON_NODE_FINALIZE_FAILED);
+    nodeResouce->finalize();
 }
