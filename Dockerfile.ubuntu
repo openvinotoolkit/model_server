@@ -318,13 +318,17 @@ RUN cp /ovms/src/custom_node_interface.h /ovms/src/custom_nodes/tokenizer/ && \
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
+RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
+    mkdir -p /opt/intel/openvino/python/openvino-2023.2.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.2' > /opt/intel/openvino/python/openvino-2023.2.dist-info/METADATA
+
 WORKDIR /ovms
 
 ARG PROJECT_VERSION="2023.2"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags
-ENV PYTHONPATH=/ovms/bazel-bin/src
+ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp" && \
     bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
@@ -379,6 +383,7 @@ COPY client /client
 RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM $BUILD_IMAGE as pkg
 
@@ -393,6 +398,7 @@ WORKDIR /
 ARG BASE_OS=ubuntu
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
+ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg 
 COPY create_package.sh /
 RUN ./create_package.sh
 
@@ -415,8 +421,9 @@ LABEL bazel-build-flags=${debug_bazel_flags}
 LABEL supported-devices="CPU=1 GNA=1 GPU=${GPU} NVIDIA=${NVIDIA}"
 ARG BASE_IMAGE
 LABEL base-image=${BASE_IMAGE}
-ENV PYTHONPATH=/ovms/lib
+ENV PYTHONPATH=/ovms/lib/python
 SHELL ["/bin/bash", "-c"]
+
 WORKDIR /
 
 COPY release_files/drivers /drivers
@@ -534,6 +541,8 @@ RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit
         ;; \          
     esac ; \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
+ENV LD_LIBRARY_PATH=/ovms/lib
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
