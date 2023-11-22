@@ -123,7 +123,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             vim \
             xz-utils && \
             apt-get clean && \
-            rm -rf /var/lib/apt/lists/*
+            rm -rf /var/lib/apt/lists/* && \
+    python3 -m pip install numpy==1.21.0 --no-cache-dir
 
 ARG JOBS
 ARG ov_use_binary=0
@@ -282,8 +283,6 @@ COPY third_party /ovms/third_party/
 COPY BUILD.bazel /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
-
-RUN python3 -m pip install numpy==1.21.0 --no-cache-dir
 
 # prebuild dependencies before copying sources
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
