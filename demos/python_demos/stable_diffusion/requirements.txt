@@ -3,3 +3,4 @@ onnx
 tritonclient[grpc]
 openvino==2023.2
 pillow
+optimum[diffusers]
