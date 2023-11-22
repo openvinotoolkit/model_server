@@ -14,15 +14,28 @@
 # limitations under the License.
 #*****************************************************************************
 
+import os
 from pyovms import Tensor
 from optimum.intel import OVModelForCausalLM
 from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList
+from huggingface_hub import login, whoami
 
 import threading
 
+HF_TOKEN = os.getenv("HF_ACCESS_TOKEN", "")
+
+if HF_TOKEN:
+    try:
+        whoami()
+        print('Authorization token already provided')
+    except OSError:
+        login(HF_TOKEN)
+
 from config import SUPPORTED_MODELS
 
+
 SELECTED_MODEL = 'red-pajama-3b-chat'
+#SELECTED_MODEL = 'llama-2-chat-7b'
 model_configuration = SUPPORTED_MODELS[SELECTED_MODEL]
 
 MODEL_PATH = "/model"  # relative to container
@@ -37,6 +50,7 @@ stop_tokens = model_configuration.get("stop_tokens")
 tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
 text_processor = model_configuration.get("partial_text_processor")
 
+tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 
 # HF class that is capable of stopping the generation
 # when given tokens appear in specific order
@@ -48,6 +62,13 @@ class StopOnTokens(StoppingCriteria):
             if input_ids[0][-1] == stop_id:
                 return True
         return False
+
+
+if stop_tokens is not None:
+    if isinstance(stop_tokens[0], str):
+        stop_tokens = tok.convert_tokens_to_ids(stop_tokens)
+
+    stop_tokens = [StopOnTokens(stop_tokens)]
 
 
 # For multi Q&A use cases
@@ -88,18 +109,12 @@ def convert_history_to_text(history):
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         print("-------- Running initialize")
-        # model_id = "echarlaix/t5-small-openvino"
-        # model = OVModelForSeq2SeqLM.from_pretrained(model_id)
-        # tokenizer = AutoTokenizer.from_pretrained(model_id)
-        # self.pipe = pipeline("translation_en_to_fr", model=model, tokenizer=tokenizer)
         self.ov_model = OVModelForCausalLM.from_pretrained(
             MODEL_PATH,
             device="CPU",
             ov_config=OV_CONFIG,
             config=AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True))
-        print("-------- Model loaded, loading tokenizer")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-        print("-------- Tokenizer loaded")
+        print("-------- Model loaded")
         return True
 
     def execute(self, inputs: list):
@@ -109,8 +124,8 @@ class OvmsPythonModel:
 
         messages = convert_history_to_text(temporal_history)
         print('------------------- ', messages)
-        input_ids = self.tokenizer(messages, return_tensors="pt", **tokenizer_kwargs).input_ids
-        streamer = TextIteratorStreamer(self.tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+        input_ids = tokenizer(messages, return_tensors="pt", **tokenizer_kwargs).input_ids
+        streamer = TextIteratorStreamer(tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
         generate_kwargs = dict(
             input_ids=input_ids,
             max_new_tokens=1024,
@@ -122,9 +137,7 @@ class OvmsPythonModel:
             streamer=streamer,
         )
         if stop_tokens is not None:
-            generate_kwargs["stopping_criteria"] = StoppingCriteriaList([
-                StopOnTokens(stop_tokens)  # TODO: Stop tokens might be string as well
-            ])
+            generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
         
         def generate():
             self.ov_model.generate(**generate_kwargs)
@@ -135,15 +148,12 @@ class OvmsPythonModel:
         partial_text = ""
         for new_text in streamer:
             partial_text = text_processor(partial_text, new_text)
-            print('----', partial_text)
+            try:
+                print('----', partial_text)
+            except UnicodeEncodeError:
+                print('error encoding')
+                pass
         
 
         return [Tensor("OUTPUT", partial_text.encode())]
-        #return [Tensor("OUTPUT", b'asd')]
-        # text = bytes(inputs[0]).decode()
-        # print(text)
-        # results = self.pipe(text)
-        # translation = results[0]["translation_text"]
-        # print(translation)
-        # return [Tensor("OUTPUT", translation.encode())]
 

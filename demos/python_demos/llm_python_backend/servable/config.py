@@ -18,7 +18,7 @@
 # For now only red pajama is supported.
 # More info: https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot/config.py
 
-# TODO: This will be useful for other models,
+# TODO: This is useful for other models,
 # which DO require prompting.
 # Red pajama does not need it. Llama does.
 DEFAULT_SYSTEM_PROMPT = """\
@@ -40,10 +40,10 @@ def red_pijama_partial_text_processor(partial_text, new_text):
     return partial_text.split("<bot>:")[-1]
 
 
-# def llama_partial_text_processor(partial_text, new_text):
-#     new_text = new_text.replace("[INST]", "").replace("[/INST]", "")
-#     partial_text += new_text
-#     return partial_text
+def llama_partial_text_processor(partial_text, new_text):
+    new_text = new_text.replace("[INST]", "").replace("[/INST]", "")
+    partial_text += new_text
+    return partial_text
 
 
 SUPPORTED_MODELS = {
@@ -56,14 +56,14 @@ SUPPORTED_MODELS = {
         "partial_text_processor": red_pijama_partial_text_processor,
         "current_message_template": "\n<human>:{user}\n<bot>:{assistant}",
     },
-    # "llama-2-chat-7b": {
-    #     "model_id": "meta-llama/Llama-2-7b-chat-hf",
-    #     #"remote": False,
-    #     "start_message": f"<s>[INST] <<SYS>>\n{DEFAULT_SYSTEM_PROMPT }\n<</SYS>>\n\n",
-    #     "history_template": "{user}[/INST]{assistant}</s><s>[INST]",
-    #     "current_message_template": "{user} [/INST]{assistant}",
-    #     "tokenizer_kwargs": {"add_special_tokens": False},
-    #     "partial_text_processor": llama_partial_text_processor,
-    #     #"revision": "5514c85fedd6c4fc0fc66fa533bc157de520da73",
-    # }
+    "llama-2-chat-7b": {
+        "model_id": "meta-llama/Llama-2-7b-chat-hf",
+        #"remote": False,
+        "start_message": f"<s>[INST] <<SYS>>\n{DEFAULT_SYSTEM_PROMPT }\n<</SYS>>\n\n",
+        "history_template": "{user}[/INST]{assistant}</s><s>[INST]",
+        "current_message_template": "{user} [/INST]{assistant}",
+        "tokenizer_kwargs": {"add_special_tokens": False},
+        "partial_text_processor": llama_partial_text_processor,
+        #"revision": "5514c85fedd6c4fc0fc66fa533bc157de520da73",
+    }
 }

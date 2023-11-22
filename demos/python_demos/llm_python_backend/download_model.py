@@ -1,5 +1,7 @@
 from optimum.intel.openvino import OVModelForCausalLM
 
+model_name = 'togethercomputer/RedPajama-INCITE-Chat-3B-v1'
+#model_name = 'meta-llama/Llama-2-7b-chat-hf'  # Edit for other models, for example llama
 MODEL_PATH = './model'
 OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
 
