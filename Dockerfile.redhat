@@ -306,13 +306,17 @@ RUN cp /ovms/src/custom_node_interface.h /ovms/src/custom_nodes/tokenizer/ && \
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
+RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
+    mkdir -p /opt/intel/openvino/python/openvino-2023.2.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.2' > /opt/intel/openvino/python/openvino-2023.2.dist-info/METADATA
+ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src
+
 WORKDIR /ovms
 
 ARG PROJECT_VERSION="2023.2"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags
-ENV PYTHONPATH=/ovms/bazel-bin/src
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp" && \
@@ -408,7 +412,8 @@ LABEL bazel-build-flags=${debug_bazel_flags}
 LABEL supported-devices="CPU=1 GNA=1 GPU=${GPU} NVIDIA=${NVIDIA}"
 ARG RELEASE_BASE_IMAGE
 LABEL base-image=${RELEASE_BASE_IMAGE}
-ENV PYTHONPATH=/ovms/lib
+
+ENV PYTHONPATH=/ovms/lib/python
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -491,6 +496,8 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
         # For image with Python enabled install Python library
         if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
             $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0; \
+            mkdir -p /ovms/lib/openvino-2023.2.dist-info && \
+            echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.2' > /ovms/lib/openvino-2023.2.dist-info/METADATA ; \
         fi ; \
         $DNF_TOOL install -y shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
@@ -503,6 +510,8 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 && \
         dnf clean all
+
+ENV LD_LIBRARY_PATH=/ovms/lib
 
 COPY --from=pkg /ovms_release /ovms
 COPY --from=pkg /licenses /licenses

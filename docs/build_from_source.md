@@ -5,7 +5,7 @@ This document gives information how to build docker images and the binary packag
 ## Prerequisites
 
 1. [Docker Engine](https://docs.docker.com/engine/)
-1. Ubuntu 20.04, Ubuntu 22.04 or RedHat 8.7 host
+1. Ubuntu 20.04, Ubuntu 22.04 or RedHat 8.8 host
 1. make
 1. bash
 
@@ -53,7 +53,7 @@ dist/ubuntu
 Select base OS:
 - `ubuntu20` for Ubuntu 20.04 (default)
 - `ubuntu22` for Ubuntu 22.04
-- `redhat` for Red Hat UBI 8.7
+- `redhat` for Red Hat UBI 8.8
 
 ```bash
 make docker_build BASE_OS=redhat
