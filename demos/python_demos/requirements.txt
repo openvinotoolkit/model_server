@@ -1,0 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu 
+git+https://github.com/mzegla/optimum-intel.git@infer_request_pool
+onnx
+pillow
+optimum[diffusers]

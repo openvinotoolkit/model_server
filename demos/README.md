@@ -32,6 +32,9 @@ ovms_demo_stable_diffusion
 ovms_demo_universal-sentence-encoder
 ovms_demo_speech_recognition
 ovms_demo_benchmark_client
+ovms_demo_python_llama
+ovms_demo_python_seq2seq
+ovms_demo_python_stable_diffusion
 ```
 
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities. Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
