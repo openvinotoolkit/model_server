@@ -11,7 +11,7 @@ It covers following topics:
 
 ## Requirement
 
-**Note**: Provided examples and their dependencies are updated and validated for Python 3.6+ version. For older versions of Python, dependencies versions adjustment might be required.
+**Note**: Provided examples and their dependencies are updated and validated for Python 3.7+ version. For older versions of Python, dependencies versions adjustment might be required.
 
 Clone the repository and enter directory:
 
