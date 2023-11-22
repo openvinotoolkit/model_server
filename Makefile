@@ -400,6 +400,10 @@ ifeq ($(BUILD_NGINX), 1)
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
 endif
 
+python_image: release_image
+	@docker build demos/python_demos -t $(OVMS_CPP_DOCKER_IMAGE):py
+
+
 # Ci build expects index.html in genhtml directory
 get_coverage:
 	@echo "Copying coverage report from build image to genhtml if exist..."
