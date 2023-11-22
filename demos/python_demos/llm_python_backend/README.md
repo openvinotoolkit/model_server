@@ -19,10 +19,8 @@ Mount the `./servable` which contains:
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 
 ```bash
-docker run -it --rm -p 11339:11339 -v /home/dkalinow/model_server/demos/llm_python_backend/servable:/work:rw -v /home/dkalinow/model_server/demos/llm_python_backend/model:/model/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy <IMAGE> --config_path /work/config.json --log_level DEBUG --port 11339
+docker run -it --rm -p 11339:11339 -v $PWD/servable:/workspace -v $PWD/model:/model -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy openvino/model_server:py --config_path /workspace/config.json --log_level DEBUG --port 11339
 ```
-
-Replace `<IMAGE>` with pre-built OVMS image containing required pip packages.
 
 ## Requesting the LLM
 
