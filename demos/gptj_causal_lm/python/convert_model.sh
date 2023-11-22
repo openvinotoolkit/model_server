@@ -14,13 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-python3 -m transformers.onnx \
-    --feature causal-lm \
-    --atol 1e-04 \
-    --preprocessor tokenizer \
-    --model=local-pt-checkpoint/ \
-    --framework pt \
-    onnx/1
+optimum-cli export openvino --model local-pt-checkpoint/ model/1 --task causal-lm --framework pt
 
 # Desired output:
 # Validating ONNX model...
