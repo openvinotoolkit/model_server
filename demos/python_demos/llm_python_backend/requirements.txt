@@ -1,0 +1,3 @@
+git+https://github.com/huggingface/optimum-intel.git
+onnx
+tritonclient[grpc]
