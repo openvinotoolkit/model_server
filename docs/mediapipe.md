@@ -11,25 +11,26 @@
 ## Introduction
 MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. If comes with a wide range of calculators/nodes which can be applied for unlimited number of scenarios in image and media analytics, generative AI, transformers and many more. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
 
-Thanks to the integration between Mediapipe and OpenVINO Model server, the graphs can be exposed over the network and the complete load can be delegated to a remote host or a microservice service.
+Thanks to the integration between MediaPipe and OpenVINO Model server, the graphs can be exposed over the network and the complete load can be delegated to a remote host or a microservice.
 We support the following scenarios:
 - stateless execution via unary to unary gRPC calls 
-- stateful graph execution via [gRPC streaming](./streaming_endpoints.md) to streaming sessions.
+- stateful graph execution via [gRPC streaming sessions](./streaming_endpoints.md).
 
-With the introduction of OpenVINO calculator it is possible to optimize inference execution in the OpenVINO Runtime backend. This calculator can be employed both in the graphs deployed inside the Model Server but also in the standalone applications using the Mediapipe framework.
+With the introduction of OpenVINO calculator it is possible to optimize inference execution in the OpenVINO Runtime backend. This calculator can be applied both in the graphs deployed inside the Model Server but also in the standalone applications using the MediaPipe framework.
+
 ![mp_graph_modes](./mp_graph_modes.png)
 
-Check [this github repository](https://github.com/openvinotoolkit/mediapipe) to learn how to use the OpenVINO calculator inside standalone Mediapipe application. 
+Check [our MediaPipe github fork](https://github.com/openvinotoolkit/mediapipe) to learn how to use the OpenVINO calculator inside standalone MediaPipe application. 
 
 This guide gives information about:
 
-* <a href="#ovms-calculators">OVMS Calculators</a>
-* <a href="#create-graph">How to create the graph for deployment in OVMS</a>
+* <a href="#ovms-calculators">OpenVINO Model Server Calculators</a>
+* <a href="#create-graph">How to create the graph for deployment in OpenVINO Model Server</a>
 * <a href="#graph-deploy">Graph deployment</a>
 * <a href="#testing">Deployment testing</a>
 * <a href="#client">Using MediaPipe graphs from the remote client </a>
 * <a href="#updating-graph">How to update existing graphs to use OV for inference </a>
-* <a href="#adding-calculator">Adding your own mediapipe calculator to OpenVINO Model Server </a>
+* <a href="#adding-calculator">Adding your own MediaPipe calculator to OpenVINO Model Server </a>
 * <a href="#graph-examples">Demos and examples</a>
 * <a href="#current-limitations">Current Limitations</a>
 
@@ -39,31 +40,33 @@ This guide gives information about:
 
 We are introducing a set of calculators which can bring to the graphs execution the advantage of OpenVINO Runtime.
 
-Check their documentation on https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/calculators.md
+Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms]
 
 
 ## Python calculator
 TBD
 
-## How to create the graph for deployment in OVMS <a name="create-graph"></a>
+## How to create the graph for deployment in OpenVINO Model Server <a name="create-graph"></a>
 
 ### Supported graph input/output streams packet types
 OpenVINO Model Server supports processing several packet types at the inputs and outputs of the graph.
-Following table lists supported tag and packet types based on pbtxt configuration file line:
+Following table lists supported tag and packet types in pbtxt graph definition:
 
 |pbtxt line|input/output|tag|packet type|stream name|
 |:---|:---|:---|:---|:---|
 |input_stream: "a"|input|none|ov::Tensor|a|
+|output_stream: "b"|input|none|ov::Tensor|b|
 |input_stream: "IMAGE:a"|input|IMAGE|mediapipe::ImageFrame|a|
+|output_stream: "IMAGE:b"|output|IMAGE|mediapipe::ImageFrame|b|
+|input_stream: "OVTENSOR:a"|output|OVTENSOR|ov::Tensor|a|
 |output_stream: "OVTENSOR:b"|output|OVTENSOR|ov::Tensor|b|
 |input_stream: "REQUEST:req"|input|REQUEST|KServe inference::ModelInferRequest|req|
 |output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
 
-In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor'.
-For list of supported packet types and tags of OpenVINOInferenceCalculator check documentation of [OpenVINO Model Server calculators](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/calculators.md).
+In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor'. The stream name can be arbitrary but the convention is to use a lower case word.
 
 Input serialization to MediaPipe ImageFrame format, requires the data in the KServe request to be encapsulated in `raw_input_contents` field. That is the default behavior in the client libs like `triton-client`.
-The required data layout for the Mediapipe Image conversion is HWC and the supported precisions are:
+The required data layout for the MediaPipe Image conversion is HWC and the supported precisions are:
 |Datatype|Allowed number of channels|
 |:---|:---|
 |FP16|1,3,4|
@@ -78,19 +81,20 @@ For example when the graph has the input type IMAGE, the gRPC client could send 
 
 When the input graph would be set as OVTENSOR, an arbitrary shape and precisions on the input would be allowed. It will be converted to OV::Tensor object and passed to the graph. For example input with shape (1,3,300,300) FP32 assuming that format would be accepted by the graph calculators.
 
-There is also an option to avoid any data conversions in the serialization and deserialization by the OpenVINO Model Server. When the input stream is of type REQUEST, it will be passed through to the calculator. The receiving calculator will be in charge to deserialize it and interpret all the content. Likewise, the output format RESPONSE delegate to the calculator creating a complete KServe response message to the client. That gives extra flexibility in the data format.
+TBD code snippets for ovtensor and image
+
+There is also an option to avoid any data conversions in the serialization and deserialization by the OpenVINO Model Server. When the input stream is of type REQUEST, it will be passed-through to the calculator. The receiving calculator will be in charge of deserializing it and interpreting all the content. Likewise, the output format RESPONSE delegate to the calculator creating a complete KServe response message to the client. That gives extra flexibility in the data format.
+
+**Note:** For list of supported packet types and tags of OpenVINOInferenceCalculator, including graph examples, check documentation of [OpenVINO Model Server calculators](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/).
 
 ### Side packets
 Side packets are special parameters which can be passed to the calculators at the beginning of the graph initialization. It can tune the behavior of the calculator like set the object detection threshold or number of objects to process.
 With KServe gRPC API you are also able to push side input packets into graph. They are to be passed as KServe request parameters. They can be of type string, int64 or boolean.
 Note that with the gRPC stream connection, only the first request in the stream can include the side package parameters.
 
-
-Review also an example in [object detection demo](../demos/mediapipe/object_detection/README.md)
-
 ### List of default calculators
 Beside OpenVINO inference calculators, there are included, by default, in the public image also all the calculators used in the enabled demos. 
-They can be identified in the bazel [BUILD](../src/BUILD) file in the target `ovms_lib` directly or in the nested dependencies in the included support for mediapipe graphs like:
+They can be identified in the bazel [BUILD](../src/BUILD) file in the target `ovms_lib` directly or in the nested dependencies in the included support for MediaPipe graphs like:
 [holistic](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/graphs/holistic_tracking/BUILD),
 [object detection](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/graphs/object_detection/BUILD) etc.
 
@@ -98,14 +102,14 @@ TBD how the list calculators with bazel cmd
 
 
 ### CPU and GPU execution
-As of now, the calculators included in the public docker images supports only CPU execution. They exchange between nodes objects and memory buffers form the host memory. While the GPU buffers are not supported in the mediapipe graphs, it is still possible to run the inference operation on GPU target device.
+As of now, the calculators included in the public docker images supports only CPU execution. They exchange between nodes objects and memory buffers form the host memory. While the GPU buffers are not supported in the MediaPipe graphs, it is still possible to run the inference operation on GPU target device.
 The input data and the response will be automatically exchanges between GPU and host memory. For that scenarios, make sure to use the build image with `-gpu` suffix in the tag as it includes required dependencies for Intel discrete and integrated GPU.
 
 Full pipeline execution on the GPU is expected to be added in future releases.
 
 ## Graph deployment <a name="graph-deploy"></a>
 ### How to package the graph and models
-in order to simplify distribution of the graph artefacts and the deploymment process in various environments,
+In order to simplify distribution of the graph artifacts and the deployment process in various environments,
 it is recommended to create a specific folders structure:
 ```bash
 mediapipe_graph_name/
@@ -122,8 +126,8 @@ mediapipe_graph_name/
 ```
 
 The `graph.pbtxt` should include the definition of the mediapipe graph. 
-The `subconfig.json` is an extension to the main model server `config.json` configuration file. The subconfig should include the definition of the models used in the graph nodes. They will be loaded during the model server intialization and ready to use when the graph starts executing.
-Included OpenVINO inference session caclulator should include the reference to the model name as configured in `subconfig.json`.
+The `subconfig.json` is an extension to the main model server `config.json` configuration file. The subconfig should include the definition of the models used in the graph nodes. They will be loaded during the model server initialization and ready to use when the graph starts executing.
+Included OpenVINO inference session calculator should include the reference to the model name as configured in `subconfig.json`.
 Here is example of the `subconfig.json`:
 ```json
 {
@@ -138,13 +142,13 @@ Here is example of the `subconfig.json`:
 ```
 
 
-### Starting OVMS with MP servables
+### Starting OpenVINO Model Server with Mediapipe servables
 MediaPipe servables configuration is to be placed in the same json file like the 
 [models config file](starting_server.md).
 While models are defined in section `model_config_list`, graphs are configured in
 the `mediapipe_config_list` section. 
 
-While the mediapipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is easy. Just a `config.json` needs to be prepared list all the graphs for deployments:
+When the mediapipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy. Just a `config.json` needs to be prepared list all the graphs for deployments:
 ```json
 {
     "model_config_list": [],
@@ -159,7 +163,7 @@ While the mediapipe graphs artifacts are packaged like presented above, configur
     ]
 }
 ```
-Nodes in the MediaPipe graphs can reference both to the models configured in model_config_list section and in subconfig.
+Nodes in the Mediapipe graphs can reference both to the models configured in model_config_list section and in subconfigs.
 
 ### MediaPipe configuration options explained
 
@@ -214,7 +218,7 @@ the version parameter is ignored. Mediapipes are not versioned. Though, they can
 If you would like to reusing existing graph and replace Tensorflow execution with OpenVINO backend, check this [guide](TBD)
 
 ## Adding your own mediapipe calculator to OpenVINO Model Server <a name="adding-calculator"></a>
-MediaPipe graphs can include only the calculators built-in the model server during the image build.
+Mediapipe graphs can include only the calculators built-in the model server image.
 If you want to add your own mediapipe calculator to OpenVINO Model Server functionality you need to add it as a dependency and rebuild the OpenVINO Model Server binary.
 
 If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](../WORKSPACE) file.
