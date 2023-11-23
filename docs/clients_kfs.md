@@ -1,16 +1,15 @@
 # KServe API Clients {#ovms_docs_clients_kfs}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   gRPC API <ovms_docs_grpc_api_kfs>
-   RESTful API <ovms_docs_rest_api_kfs>
-   Examples <https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples>
-
-@endsphinxdirective
+gRPC API <ovms_docs_grpc_api_kfs>
+RESTful API <ovms_docs_rest_api_kfs>
+Examples <https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples>
+```
 
 ## Python Client
 

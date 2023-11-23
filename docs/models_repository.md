@@ -1,14 +1,13 @@
 # Prepare a Model Repository {#ovms_docs_models_repository}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_docs_cloud_storage
-
-@endsphinxdirective
+ovms_docs_cloud_storage
+```
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the four formats:
 - [OpenVINO IR](https://docs.openvino.ai/2023.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
@@ -63,4 +62,12 @@ models/
 the version number in parameters, by default, the latest version is served.
 - Every version folder _must_ include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name can be arbitrary.
 
+<<<<<<< HEAD
+<<<<<<< HEAD
 For more information on how to use cloud hosted models, refer to the [article](./using_cloud_storage.md).
+=======
+For more information on how to use cloud hosted models, refer to the [article](https://docs.openvino.ai/2023.2/ovms_docs_cloud_storage.html).
+>>>>>>> a9ba16f3 (Reorganizing Deployment on a Local System section)
+=======
+For more information on how to use cloud hosted models, refer to the [article](./using_cloud_storage.md).
+>>>>>>> cae2a9ee (Update docs/models_repository.md)
