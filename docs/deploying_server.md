@@ -1,4 +1,4 @@
-# Deploying Model Server {#ovms_docs_deploying_server}
+# Deploy Model Server {#ovms_docs_deploying_server}
 
 1. Docker is the recommended way to deploy OpenVINO Model Server. Pre-built container images are available on Docker Hub and Red Hat Ecosystem Catalog. 
 2. Host Model Server on baremetal.
@@ -35,20 +35,28 @@ docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 
 #### Step 2. Prepare Data for Serving
 
+##### 2.1 Start the container with the model
+
 ```bash
-# start the container with the model
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
 docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest \ 
 --model_name resnet --model_path /models/resnet50 \ 
 --layout NHWC:NCHW --port 9000 
+```
 
-# download input files: an image and a label mapping file
+##### 2.2 Download input files: an image and a label mapping file
+
+```bash
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/zebra.jpeg
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/classes.py
+```
 
-# install the Python-based ovmsclient package
+##### 2.3 Install the Python-based ovmsclient package
+
+```bash
 pip3 install ovmsclient
 ```
+
 
 #### Step 3. Run Prediction
 

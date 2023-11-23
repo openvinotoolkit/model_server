@@ -12,6 +12,8 @@ This guide uses a [Faster R-CNN with Resnet-50 V1 Object Detection model](https:
 
 > **Note**: - OpenVINO Model Server can run on Linux and macOS. For use on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/) is required.
 
+> **Note**: - OpenVINO Model Server can run on Linux and macOS. For use on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/) is required.
+
 To quickly start using OpenVINO™ Model Server follow these steps:
 1. Prepare Docker
 2. Download the OpenVINO™ Model server
@@ -84,7 +86,7 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/o
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
 ```
 
-Check more information about the [writing the client applications](./clients.md).
+Check more information about the [writing the client applications](./writing_app.md).
 
 ### Step 6: Download Data for Inference
 
