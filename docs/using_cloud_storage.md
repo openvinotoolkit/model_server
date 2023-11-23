@@ -1,4 +1,4 @@
-# Using Cloud Storage as a Model Repository {#ovms_docs_cloud_storage}
+# Using Cloud Storage {#ovms_docs_cloud_storage}
 
 ### Cloud Storage Requirements
 

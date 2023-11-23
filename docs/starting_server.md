@@ -1,4 +1,4 @@
-# Starting Model Server {#ovms_docs_serving_model}
+# Setup Model Server {#ovms_docs_serving_model}
 
 ```{toctree}
 ---
@@ -6,9 +6,9 @@ maxdepth: 1
 hidden:
 ---
 
+ovms_docs_models_repository
 ovms_docs_parameters
 ovms_docs_target_devices
-ovms_docs_cloud_storage
 ovms_docs_security
 ```
 
