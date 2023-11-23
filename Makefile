@@ -401,7 +401,7 @@ ifeq ($(BUILD_NGINX), 1)
 endif
 
 python_image: release_image
-	@docker build demos/python_demos -t $(OVMS_CPP_DOCKER_IMAGE):py
+	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" demos/python_demos -t $(OVMS_CPP_DOCKER_IMAGE):py
 
 
 # Ci build expects index.html in genhtml directory
