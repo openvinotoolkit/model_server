@@ -1,6 +1,6 @@
-git+https://github.com/huggingface/optimum-intel.git
 onnx
 tritonclient[grpc]
 openvino==2023.2
 pillow
+optimum
 optimum[diffusers]

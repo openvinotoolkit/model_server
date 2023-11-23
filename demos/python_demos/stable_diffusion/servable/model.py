@@ -18,15 +18,17 @@ import io
 from PIL import Image
 from pyovms import Tensor
 from optimum.intel.openvino import OVStableDiffusionPipeline
+from diffusers import DDIMScheduler
+import time
 from transformers import AutoConfig
 
 MODEL_PATH = "/model"  # relative to container
-OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         print("-------- Running initialize")
         self.ov_model = OVStableDiffusionPipeline.from_pretrained(MODEL_PATH)
+        self.ov_model.scheduler = DDIMScheduler.from_config(self.ov_model.scheduler.config)
         print("-------- Model loaded")
         return True
 

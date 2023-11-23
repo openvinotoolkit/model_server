@@ -19,14 +19,19 @@ Mount the `./servable` which contains:
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 
 ```bash
-docker run -it --rm -p 11339:11339 -v $(pwd)/servable:/work:rw -v $(pwd)/model:/model/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy <IMAGE> --config_path /work/config.json --log_level DEBUG --port 11339
+docker run -it --rm -p 11339:11339 -v $(pwd)/servable:/workspace:rw -v $(pwd)/model:/model/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy <IMAGE> --config_path /workspace/config.json --log_level DEBUG --port 11339
 ```
 
 Replace `<IMAGE>` with pre-built OVMS image containing required pip packages.
 
 ## Sending request to the model
 
-Run time client
+The client script contains hardcoded prompt:
+```
+Zebras in space
+```
+
+Run client script:
 ```bash
 python3 client.py
 ```

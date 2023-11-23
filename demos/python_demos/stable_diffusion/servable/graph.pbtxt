@@ -24,7 +24,7 @@ node {
   output_stream: "OUTPUT:image"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/work/model.py"
+      handler_path: "/workspace/model.py"
     }
   }
 }
