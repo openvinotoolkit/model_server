@@ -287,6 +287,12 @@ COPY package.json /ovms/
 # prebuild dependencies before copying sources
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
 
+COPY src/ /ovms/src/
+
+# run python testes on a version from os not TFS
+ARG RUN_TESTS=1
+RUN if [ "$RUN_TESTS" == "1" ] ; then bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:test_python_binding; fi ;
+
 # Python <3.10 needed to build TFS in current version
 RUN if [ "$BASE_IMAGE" == "ubuntu:22.04" ] ; then \ 
         apt-get update && apt-get install -y software-properties-common gpg gpg-agent --no-install-recommends && \
@@ -302,8 +308,6 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/co
 WORKDIR /example_cpp_client
 COPY demos/common/cpp /example_cpp_client/cpp
 COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
-
-COPY src/ /ovms/src/
 
 # Compile tokenizer custom node
 WORKDIR /ovms/src/custom_nodes/tokenizer/build
@@ -341,11 +345,9 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 
-ARG RUN_TESTS=1
 RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" == "1" ] ; then \
     bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
-    bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; \ 
-    bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:test_python_binding; fi ;
+    bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
 
 # C api shared library
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_shared
