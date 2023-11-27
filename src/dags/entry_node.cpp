@@ -104,7 +104,7 @@ Status EntryNode<RequestType>::createShardedTensor(ov::Tensor& dividedTensor, Pr
         (precision == Precision::I8) ||
         (precision == Precision::U8) ||
         (precision == Precision::I16)) {
-        dividedTensor = createSharedTensor(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor.data()) + i * step));
+        dividedTensor = createTensorWithNoDataOwnership(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor.data()) + i * step));
     } else {
         return Node::createShardedTensor(dividedTensor, precision, shape, tensor, i, step, metadata, tensorName);
     }

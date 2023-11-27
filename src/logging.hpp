@@ -31,9 +31,16 @@ extern std::shared_ptr<spdlog::logger> modelmanager_logger;
 extern std::shared_ptr<spdlog::logger> dag_executor_logger;
 extern std::shared_ptr<spdlog::logger> sequence_manager_logger;
 extern std::shared_ptr<spdlog::logger> capi_logger;
-#if (MEDIAPIPE_DISABLE == 0)
+#if (MEDIAPIPE_DISABLE != 0)
 extern std::shared_ptr<spdlog::logger> mediapipe_logger;
 #endif
+#if COMPILATION_MODE == dbg
+extern std::shared_ptr<spdlog::logger> ov_logger;
+#define OV_LOGGER(...) SPDLOG_LOGGER_TRACE(ov_logger, __VA_ARGS__)
+#else
+#define OV_LOGGER(...)
+#endif
+
 void configure_logger(const std::string& log_level, const std::string& log_path);
 
 }  // namespace ovms
