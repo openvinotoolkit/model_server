@@ -39,7 +39,7 @@ docker pull openvino/model_server:latest
 
 ### Step 3: Provide a Model
 
-Store components of the model in the `model/1` directory. Here is an example command using curl and a object detection model:
+Store components of the model in the `model/1` directory. Here are example commands pulling an object detection model from TensorFlow Hub:
 
 ```bash
 mkdir -p model/1
@@ -57,7 +57,7 @@ model
         └── variables.index
 ```
 
-Sub-folder 1 indicates the version of the model. If you want to upgrade the model, other versions can be added in separate subfolders (2,3...). 
+Sub-folder `1`` indicates the version of the model. If you want to upgrade the model, other versions can be added in separate subfolders (2,3...). 
 For more information about the directory structure and how to deploy multiple models at a time, check out the following sections:
 - [Preparing models](models_repository.md)
 - [Serving models](starting_server.md)
@@ -82,15 +82,11 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/202
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
 ```
 
-For more information, check these links:
-- [More Model Server client scripts](../demos/README.md)
-- [Clients](./clients.md)
+Check more information about the [writing the client applications](./clients.md).
 
 ### Step 6: Download Data for Inference
 
-Put the files in a separate folder to provide inference data, as inference will be performed on all the files it contains.
-
-You can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/releases/2023/2/demos/common/static/images). This example uses the file [coco_bike.jpg](https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg). Run the following command to download the image:
+This example uses the file [coco_bike.jpg](https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg). Run the following command to download the image:
 
 ```bash
 wget https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg
@@ -114,7 +110,7 @@ In our case, it will be an modified input image with bounding boxes indicating d
 
 ![Inference results](quickstart_result.jpeg)
 
-> **Note**: Similar steps can be performed with an ONNX model. Check the inference [ONNX use case example](../demos/using_onnx_model/python/README.md) with a public ResNet model in ONNX format
-, [TensorFlow classification model demo](../demos/image_classification_using_tf_model/python/README.md ) or [PaddlePaddle model demo](../demos/segmentation_using_paddlepaddle_model/python/).
+> **Note**: Similar steps can be performed with other model formats. Check the [ONNX use case example](../demos/using_onnx_model/python/README.md), 
+[TensorFlow classification model demo](../demos/image_classification_using_tf_model/python/README.md ) or [PaddlePaddle model demo](../demos/segmentation_using_paddlepaddle_model/python/README.md).
 
-Congratulations, you have completed the Quickstart guide. Try other Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.
+Congratulations, you have completed the QuickStart guide. Try other Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.
