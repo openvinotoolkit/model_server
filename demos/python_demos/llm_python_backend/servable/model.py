@@ -146,14 +146,12 @@ class OvmsPythonModel:
         t1.start()
 
         partial_text = ""
+        iteration = 0
         for new_text in streamer:
             partial_text = text_processor(partial_text, new_text)
-            try:
-                print('----', partial_text)
-            except UnicodeEncodeError:
-                print('error encoding')
-                pass
-        
+            iteration += 1
+            print('iteration', iteration)
+        print('end')
 
         return [Tensor("OUTPUT", partial_text.encode())]
 

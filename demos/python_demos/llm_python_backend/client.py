@@ -21,5 +21,5 @@ print(f"Question:\n{text}\n")
 data = text.encode()
 infer_input = grpcclient.InferInput("pre_prompt", [len(data)], "BYTES")
 infer_input._raw_content = data
-results = client.infer("python_model", [infer_input], timeout=0)
+results = client.infer("python_model", [infer_input], client_timeout=60*60)  # 1 hour
 print(f"Completion:\n{results.as_numpy('OUTPUT').tobytes().decode()}\n")
