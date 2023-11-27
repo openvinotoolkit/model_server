@@ -121,7 +121,6 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
 }
 
 void ModelManager::logPluginConfiguration() {
-
     OV_LOGGER("ov::Core: {}, ieCore->get_available_devices()", reinterpret_cast<const void*>(this->ieCore.get()));
     auto availableDevices = ieCore->get_available_devices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
