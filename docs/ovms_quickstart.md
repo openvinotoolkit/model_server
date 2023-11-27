@@ -5,10 +5,12 @@ OpenVINO Model Server can perform inference using pre-trained models in either [
 
 - downloading models from [Open Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/)
 - generating the model in a training framework and saving it to a supported format: TensorFlow saved_model, ONNX or PaddlePaddle.
-- downloading the models from models hubs like [TensorFlowhub](https://www.tensorflow.org/hub) or [ONNX models zoo](https://github.com/onnx/models).
+- downloading the models from models hubs like [TensorFlowHub](https://www.tensorflow.org/hub) or [ONNX models zoo](https://github.com/onnx/models).
 - converting models from any formats using [Model Optimizer](https://docs.openvino.ai/2023.2/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html)
 
 This guide uses a [Faster R-CNN with Resnet-50 V1 Object Detection model](https://tfhub.dev/tensorflow/faster_rcnn/resnet50_v1_640x640/1) in TensorFlow format.
+
+> **Note**: - OpenVINO Model Server can run on Linux and macOS. For use on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/) is required.
 
 To quickly start using OpenVINO™ Model Server follow these steps:
 1. Prepare Docker
@@ -57,7 +59,7 @@ model
         └── variables.index
 ```
 
-Sub-folder `1`` indicates the version of the model. If you want to upgrade the model, other versions can be added in separate subfolders (2,3...). 
+Sub-folder `1` indicates the version of the model. If you want to upgrade the model, other versions can be added in separate subfolders (2,3...). 
 For more information about the directory structure and how to deploy multiple models at a time, check out the following sections:
 - [Preparing models](models_repository.md)
 - [Serving models](starting_server.md)
@@ -106,7 +108,7 @@ python3 object_detection.py --image coco_bike.jpg --output output.jpg --service_
 ### Step 8: Review the Results
 
 In the current folder, you can find files containing inference results. 
-In our case, it will be an modified input image with bounding boxes indicating detected objects and their labels.
+In our case, it will be a modified input image with bounding boxes indicating detected objects and their labels.
 
 ![Inference results](quickstart_result.jpeg)
 
