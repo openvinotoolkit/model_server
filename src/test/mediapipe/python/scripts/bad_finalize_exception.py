@@ -22,4 +22,4 @@ class OvmsPythonModel:
         return None
     
     def finalize(self):
-        return NotExistingException
+        return NotExistingException()

@@ -36,6 +36,7 @@ namespace ovms {
 PythonNodeResource::PythonNodeResource(PythonBackend* pythonBackend) {
     this->nodeResourceObject = nullptr;
     this->pythonBackend = pythonBackend;
+    this->pythonNodeFilePath = "";
 }
 
 void PythonNodeResource::finalize() {
@@ -55,13 +56,14 @@ void PythonNodeResource::finalize() {
             SPDLOG_ERROR("Failed to process python node finalize method. Python node path {} ", this->pythonNodeFilePath);
             return;
         }
+    } else {
+        SPDLOG_ERROR("nodeResourceObject is not initialized. Python node path {} ", this->pythonNodeFilePath);
+        throw std::exception();
     }
-
-    return;
 }
 
-Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions) {
-    mediapipe::PythonBackendCalculatorOptions options;
+Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions, PythonBackend* pythonBackend) {
+    mediapipe::PythonExecutorCalculatorOptions options;
     nodeOptions.UnpackTo(&options);
     if (!std::filesystem::exists(options.handler_path())) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", options.handler_path());

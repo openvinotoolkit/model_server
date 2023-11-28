@@ -38,6 +38,7 @@ public:
 #if (PYTHON_DISABLE == 0)
     std::unique_ptr<py::object> nodeResourceObject;
     PythonBackend* pythonBackend;
+    std::string pythonNodeFilePath;
 
     PythonNodeResource(PythonBackend* pythonBackend);
     ~PythonNodeResource();

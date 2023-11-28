@@ -844,7 +844,6 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
     - bad input stream element (py::object that is not pyovms.Tensor)
     - bad output stream element (py::object that is not pyovms.Tensor)
 */
-class PythonNodeResourceTest : public ::testing::Test {};
 
 TEST(PythonNodeResourceTest, FinalizePassTest) {
     // Must be here - does not work when added to test::SetUp
@@ -861,8 +860,8 @@ TEST(PythonNodeResourceTest, FinalizePassTest) {
             input_stream: "in"
             output_stream: "out2"
             node_options: {
-                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizePass.py"
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"
                 }
             }
         }
@@ -870,9 +869,9 @@ TEST(PythonNodeResourceTest, FinalizePassTest) {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
-    nodeResouce->finalize();
+    std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    nodeResource->finalize();
 }
 
 TEST(PythonNodeResourceTest, FinalizeMissingPassTest) {
@@ -890,8 +889,8 @@ TEST(PythonNodeResourceTest, FinalizeMissingPassTest) {
             input_stream: "in"
             output_stream: "out2"
             node_options: {
-                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizeMissingPass.py"
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"
                 }
             }
         }
@@ -899,9 +898,9 @@ TEST(PythonNodeResourceTest, FinalizeMissingPassTest) {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
-    nodeResouce->finalize();
+    std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    nodeResource->finalize();
 }
 
 TEST(PythonNodeResourceTest, FinalizeDestructorRemoveFileTest) {
@@ -919,8 +918,8 @@ TEST(PythonNodeResourceTest, FinalizeDestructorRemoveFileTest) {
             input_stream: "in"
             output_stream: "out2"
             node_options: {
-                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizeRemoveFile.py"
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
                 }
             }
         }
@@ -931,7 +930,7 @@ TEST(PythonNodeResourceTest, FinalizeDestructorRemoveFileTest) {
     std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
     {
         std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
-        ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
+        ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
 
         ASSERT_TRUE(std::filesystem::exists(path));
         // nodeResource destructor calls finalize and removes the file
@@ -955,8 +954,8 @@ TEST(PythonNodeResourceTest, FinalizeException) {
             input_stream: "in"
             output_stream: "out2"
             node_options: {
-                [type.googleapis.com / mediapipe.PythonBackendCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/pythonNodeFinalizeException.py"
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_finalize_exception.py"
                 }
             }
         }
@@ -964,7 +963,7 @@ TEST(PythonNodeResourceTest, FinalizeException) {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0)), StatusCode::OK);
-    nodeResouce->finalize();
+    std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    nodeResource->finalize();
 }
