@@ -64,7 +64,7 @@ void PythonNodeResource::finalize() {
 
 Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeConfig, PythonBackend* pythonBackend) {
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
-    nodeInput.UnpackTo(&nodeOptions);
+    nodeConfig.UnpackTo(&nodeOptions);
     if (!std::filesystem::exists(nodeOptions.handler_path())) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
