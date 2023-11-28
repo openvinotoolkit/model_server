@@ -72,7 +72,7 @@ It's launching along with the server and even most tests will not use the server
 std::unique_ptr<std::thread> serverThread;
 
 class PythonFlowTest : public ::testing::TestWithParam<std::pair<std::string, std::string>> {
-protected:
+public:
     static void SetUpTestSuite() {
         std::string configPath = "/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json";
         ovms::Server::instance().setShutdownRequest(0);
@@ -97,6 +97,8 @@ protected:
         ovms::Server::instance().setShutdownRequest(1);
         serverThread->join();
         ovms::Server::instance().setShutdownRequest(0);
+        std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
+        ASSERT_TRUE(!std::filesystem::exists(path));
     }
 };
 
@@ -108,6 +110,16 @@ TEST_F(PythonFlowTest, InitializationPass) {
     auto graphDefinition = manager->getMediapipeFactory().findDefinitionByName("mediapipePythonBackend");
     ASSERT_NE(graphDefinition, nullptr);
     EXPECT_TRUE(graphDefinition->getStatus().isAvailable());
+}
+
+TEST_F(PythonFlowTest, FinalizationPass) {
+    ModelManager* manager;
+    std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
+    manager = &(dynamic_cast<const ovms::ServableManagerModule*>(ovms::Server::instance().getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
+    auto graphDefinition = manager->getMediapipeFactory().findDefinitionByName("mediapipePythonBackend");
+    ASSERT_NE(graphDefinition, nullptr);
+    EXPECT_TRUE(graphDefinition->getStatus().isAvailable());
+    ASSERT_TRUE(std::filesystem::exists(path));
 }
 
 class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
@@ -845,11 +857,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
     - bad output stream element (py::object that is not pyovms.Tensor)
 */
 
-TEST(PythonNodeResourceTest, FinalizePassTest) {
-    // Must be here - does not work when added to test::SetUp
-    // Initialize Python interpreter
-    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
-    py::gil_scoped_release release;  // GIL only needed in Python custom node
+TEST_F(PythonFlowTest, FinalizePassTest) {
     const std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
@@ -874,11 +882,7 @@ TEST(PythonNodeResourceTest, FinalizePassTest) {
     nodeResource->finalize();
 }
 
-TEST(PythonNodeResourceTest, FinalizeMissingPassTest) {
-    // Must be here - does not work when added to test::SetUp
-    // Initialize Python interpreter
-    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
-    py::gil_scoped_release release;  // GIL only needed in Python custom node
+TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
     const std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
@@ -903,11 +907,7 @@ TEST(PythonNodeResourceTest, FinalizeMissingPassTest) {
     nodeResource->finalize();
 }
 
-TEST(PythonNodeResourceTest, FinalizeDestructorRemoveFileTest) {
-    // Must be here - does not work when added to test::SetUp
-    // Initialize Python interpreter
-    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
-    py::gil_scoped_release release;  // GIL only needed in Python custom node
+TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
     const std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
@@ -939,11 +939,7 @@ TEST(PythonNodeResourceTest, FinalizeDestructorRemoveFileTest) {
     ASSERT_TRUE(!std::filesystem::exists(path));
 }
 
-TEST(PythonNodeResourceTest, FinalizeException) {
-    // Must be here - does not work when added to test::SetUp
-    // Initialize Python interpreter
-    py::scoped_interpreter guard{};  // start the interpreter and keep it alive
-    py::gil_scoped_release release;  // GIL only needed in Python custom node
+TEST_F(PythonFlowTest, FinalizeException) {
     const std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
