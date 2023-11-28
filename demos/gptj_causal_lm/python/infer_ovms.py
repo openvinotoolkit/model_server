@@ -29,7 +29,7 @@ tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-j-6B")
 
 input_sentence = "OpenVINO Model Server is"
 inputs = dict(tokenizer(input_sentence, return_tensors="np"))
-inputs["position_ids"] = np.array([[i for i in range(0, inputs['input_ids'].shape[1])]], dtype=np.int64)
+inputs["position_ids"] = np.array([[i for i in range(0, inputs['input_ids'].shape[1])]], dtype=np.int64) # https://huggingface.co/docs/transformers/glossary#position-ids
 results = client.predict(inputs=inputs, model_name=args['model_name'])
 
 predicted_token_id = torch.argmax(torch.nn.functional.softmax(torch.Tensor(results[0,-1,:]),dim=-1),dim=-1)

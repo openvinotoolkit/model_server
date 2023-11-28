@@ -15,11 +15,3 @@
 # limitations under the License.
 #
 optimum-cli export openvino --model local-pt-checkpoint/ model/1 --task causal-lm --framework pt
-
-# Desired output:
-# Validating ONNX model...
-#         -[✓] ONNX model output names match reference model ({'logits'})
-#         - Validating ONNX Model output "logits":
-#                 -[✓] (3, 9, 50400) matches (3, 9, 50400)
-#                 -[✓] all values close (atol: 0.0001)
-# All good, model saved at: onnx/1/model.onnx
