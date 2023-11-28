@@ -46,9 +46,11 @@ PythonBackend::PythonBackend() {
 }
 
 PythonBackend::~PythonBackend() {
+    SPDLOG_DEBUG("Python backend destructor start");
     py::gil_scoped_acquire acquire;
     tensorClass.reset();
     pyovmsModule.reset();
+    SPDLOG_DEBUG("Python backend destructor end");
 }
 
 bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape,

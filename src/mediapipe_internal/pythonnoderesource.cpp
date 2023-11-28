@@ -74,7 +74,6 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
 
     std::string parentPath = fsHandlerPath.parent_path();
     std::string filename = fsHandlerPath.filename();
-
     py::gil_scoped_acquire acquire;
     try {
         py::module_ sys = py::module_::import("sys");
@@ -100,7 +99,6 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
         SPDLOG_ERROR("Failed to process python node file {}", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
-
     return StatusCode::OK;
 }
 

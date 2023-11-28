@@ -18,17 +18,23 @@
 
 #include "module.hpp"
 
+namespace pybind11 {
+class gil_scoped_release;
+}
+namespace py = pybind11;
+
 namespace ovms {
 class PythonBackend;
 
 class PythonInterpreterModule : public Module {
     PythonBackend* pythonBackend{nullptr};
+    mutable std::unique_ptr<py::gil_scoped_release> GILExpulsion{nullptr};
 
 public:
     ~PythonInterpreterModule();
     Status start(const ovms::Config& config) override;
-
     void shutdown() override;
     PythonBackend* getPythonBackend() const;
+    void exileGILFromCurrentThread() const;
 };
 }  // namespace ovms

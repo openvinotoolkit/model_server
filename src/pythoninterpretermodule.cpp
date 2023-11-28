@@ -32,7 +32,6 @@ namespace ovms {
 Status PythonInterpreterModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);
-    // Initialize Python interpreter
     py::initialize_interpreter();
     py::exec(R"(
         import sys
@@ -54,12 +53,15 @@ void PythonInterpreterModule::shutdown() {
 
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", PYTHON_INTERPRETER_MODULE_NAME);
-    py::gil_scoped_acquire acquire;
+    this->GILExpulsion.reset();
     if (pythonBackend != nullptr)
         delete pythonBackend;
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
     py::finalize_interpreter();
+}
+void PythonInterpreterModule::exileGILFromCurrentThread() const {
+    this->GILExpulsion = std::make_unique<py::gil_scoped_release>();
 }
 
 PythonBackend* PythonInterpreterModule::getPythonBackend() const {
