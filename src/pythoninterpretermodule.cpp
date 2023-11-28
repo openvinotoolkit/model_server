@@ -68,6 +68,8 @@ PythonBackend* PythonInterpreterModule::getPythonBackend() const {
     return pythonBackend;
 }
 
+PythonInterpreterModule::PythonInterpreterModule() = default;
+
 PythonInterpreterModule::~PythonInterpreterModule() {
     this->shutdown();
 }

@@ -31,6 +31,7 @@ class PythonInterpreterModule : public Module {
     mutable std::unique_ptr<py::gil_scoped_release> GILExpulsion{nullptr};
 
 public:
+    PythonInterpreterModule();
     ~PythonInterpreterModule();
     Status start(const ovms::Config& config) override;
     void shutdown() override;
