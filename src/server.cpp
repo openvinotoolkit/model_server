@@ -54,12 +54,7 @@
 #include "version.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include <pybind11/embed.h>  // everything needed for embedding
-
-class PythonInterpreterModule;
-
 #include "pythoninterpretermodule.hpp"
-namespace py = pybind11;
 #endif
 
 using grpc::ServerBuilder;
@@ -277,10 +272,12 @@ Status Server::startModules(ovms::Config& config, bool withPython) {
         START_MODULE(itHttp);
     }
     START_MODULE(itServable);
+#if (PYTHON_DISABLE == 0)
     if (itPythonModule != modules.end()) {
         auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(itPythonModule->second.get());
         pythonModule->exileGILFromCurrentThread();
     }
+#endif
     return status;
 }
 
