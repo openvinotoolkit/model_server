@@ -62,14 +62,14 @@ void PythonNodeResource::finalize() {
     }
 }
 
-Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions, PythonBackend* pythonBackend) {
-    mediapipe::PythonExecutorCalculatorOptions executorOptions;
-    nodeOptions.UnpackTo(&executorOptions);
-    if (!std::filesystem::exists(executorOptions.handler_path())) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", executorOptions.handler_path());
+Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeInput, PythonBackend* pythonBackend) {
+    mediapipe::PythonExecutorCalculatorOptions nodeOptions;
+    nodeInput.UnpackTo(&nodeOptions);
+    if (!std::filesystem::exists(nodeOptions.handler_path())) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }
-    auto fsHandlerPath = std::filesystem::path(executorOptions.handler_path());
+    auto fsHandlerPath = std::filesystem::path(nodeOptions.handler_path());
     fsHandlerPath.replace_extension();
 
     std::string parentPath = fsHandlerPath.parent_path();
@@ -86,18 +86,18 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
         py::bool_ success = pythonModel.attr("initialize")(kwargsParam);
 
         if (!success) {
-            SPDLOG_ERROR("Python node initialize script call returned false for: {}", executorOptions.handler_path());
+            SPDLOG_ERROR("Python node initialize script call returned false for: {}", nodeOptions.handler_path());
             return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
         }
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
         nodeResource->nodeResourceObject = std::make_unique<py::object>(pythonModel);
-        nodeResource->pythonNodeFilePath = executorOptions.handler_path();
+        nodeResource->pythonNodeFilePath = nodeOptions.handler_path();
     } catch (const pybind11::error_already_set& e) {
-        SPDLOG_ERROR("Failed to process python node file {} : {}", executorOptions.handler_path(), e.what());
+        SPDLOG_ERROR("Failed to process python node file {} : {}", nodeOptions.handler_path(), e.what());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
-        SPDLOG_ERROR("Failed to process python node file {}", executorOptions.handler_path());
+        SPDLOG_ERROR("Failed to process python node file {}", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
 
