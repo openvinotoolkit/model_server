@@ -72,9 +72,9 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
     ieCore(std::make_unique<ov::Core>()),
-    #if (MEDIAPIPE_DISABLE == 0)
+#if (MEDIAPIPE_DISABLE == 0)
     mediapipeFactory(pythonBackend),
-    #endif
+#endif
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     modelCacheDirectory(modelCacheDirectory),
     metricRegistry(registry),
