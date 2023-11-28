@@ -107,7 +107,7 @@ TEST(TokenizerTest, outputs_info) {
 
     int ret = getOutputsInfo(&info, &infoCount, params, 1, (void*)&model);
     ASSERT_EQ(ret, 0);
-    ASSERT_EQ(infoCount, 2);
+    ASSERT_EQ(infoCount, 3);
 
     ASSERT_EQ(std::strcmp(info[0].name, OUTPUT_NAME_TOKENS), 0);
     ASSERT_EQ(info[0].dimsCount, 2);
@@ -116,6 +116,12 @@ TEST(TokenizerTest, outputs_info) {
     ASSERT_EQ(info[0].precision, I64);
 
     ASSERT_EQ(std::strcmp(info[1].name, OUTPUT_NAME_ATTENTION), 0);
+    ASSERT_EQ(info[1].dimsCount, 2);
+    ASSERT_EQ(info[1].dims[0], -1);
+    ASSERT_EQ(info[1].dims[1], -1);
+    ASSERT_EQ(info[1].precision, I64);
+
+    ASSERT_EQ(std::strcmp(info[2].name, OUTPUT_NAME_POSITION), 0);
     ASSERT_EQ(info[1].dimsCount, 2);
     ASSERT_EQ(info[1].dims[0], -1);
     ASSERT_EQ(info[1].dims[1], -1);
