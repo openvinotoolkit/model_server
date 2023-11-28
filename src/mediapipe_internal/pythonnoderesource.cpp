@@ -36,16 +36,40 @@ namespace ovms {
 PythonNodeResource::PythonNodeResource(PythonBackend* pythonBackend) {
     this->nodeResourceObject = nullptr;
     this->pythonBackend = pythonBackend;
+    this->pythonNodeFilePath = "";
 }
 
-Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions, PythonBackend* pythonBackend) {
-    mediapipe::PythonExecutorCalculatorOptions options;
-    nodeOptions.UnpackTo(&options);
-    if (!std::filesystem::exists(options.handler_path())) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", options.handler_path());
+void PythonNodeResource::finalize() {
+    if (this->nodeResourceObject) {
+        py::gil_scoped_acquire acquire;
+        try {
+            if (!py::hasattr(*nodeResourceObject.get(), "finalize")) {
+                SPDLOG_DEBUG("Python node resource does not have a finalize method. Python node path {} ", this->pythonNodeFilePath);
+                return;
+            }
+
+            nodeResourceObject.get()->attr("finalize")();
+        } catch (const pybind11::error_already_set& e) {
+            SPDLOG_ERROR("Failed to process python node finalize method. {}  Python node path {} ", e.what(), this->pythonNodeFilePath);
+            return;
+        } catch (...) {
+            SPDLOG_ERROR("Failed to process python node finalize method. Python node path {} ", this->pythonNodeFilePath);
+            return;
+        }
+    } else {
+        SPDLOG_ERROR("nodeResourceObject is not initialized. Python node path {} ", this->pythonNodeFilePath);
+        throw std::exception();
+    }
+}
+
+Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeConfig, PythonBackend* pythonBackend) {
+    mediapipe::PythonExecutorCalculatorOptions nodeOptions;
+    nodeConfig.UnpackTo(&nodeOptions);
+    if (!std::filesystem::exists(nodeOptions.handler_path())) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }
-    auto fsHandlerPath = std::filesystem::path(options.handler_path());
+    auto fsHandlerPath = std::filesystem::path(nodeOptions.handler_path());
     fsHandlerPath.replace_extension();
 
     std::string parentPath = fsHandlerPath.parent_path();
@@ -62,17 +86,18 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
         py::bool_ success = pythonModel.attr("initialize")(kwargsParam);
 
         if (!success) {
-            SPDLOG_ERROR("Python node initialize script call returned false for: {}", options.handler_path());
+            SPDLOG_ERROR("Python node initialize script call returned false for: {}", nodeOptions.handler_path());
             return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
         }
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
         nodeResource->nodeResourceObject = std::make_unique<py::object>(pythonModel);
+        nodeResource->pythonNodeFilePath = nodeOptions.handler_path();
     } catch (const pybind11::error_already_set& e) {
-        SPDLOG_ERROR("Failed to process python node file {} : {}", options.handler_path(), e.what());
+        SPDLOG_ERROR("Failed to process python node file {} : {}", nodeOptions.handler_path(), e.what());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
-        SPDLOG_ERROR("Failed to process python node file {}", options.handler_path());
+        SPDLOG_ERROR("Failed to process python node file {}", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
 
@@ -81,6 +106,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
 
 PythonNodeResource::~PythonNodeResource() {
     SPDLOG_DEBUG("Calling Python node resource destructor");
+    this->finalize();
     py::gil_scoped_acquire acquire;
     this->nodeResourceObject.reset();
 }

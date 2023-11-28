@@ -72,7 +72,7 @@ It's launching along with the server and even most tests will not use the server
 std::unique_ptr<std::thread> serverThread;
 
 class PythonFlowTest : public ::testing::TestWithParam<std::pair<std::string, std::string>> {
-protected:
+public:
     static void SetUpTestSuite() {
         std::string configPath = "/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json";
         ovms::Server::instance().setShutdownRequest(0);
@@ -97,6 +97,8 @@ protected:
         ovms::Server::instance().setShutdownRequest(1);
         serverThread->join();
         ovms::Server::instance().setShutdownRequest(0);
+        std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
+        ASSERT_TRUE(!std::filesystem::exists(path));
     }
 };
 
@@ -108,6 +110,16 @@ TEST_F(PythonFlowTest, InitializationPass) {
     auto graphDefinition = manager->getMediapipeFactory().findDefinitionByName("mediapipePythonBackend");
     ASSERT_NE(graphDefinition, nullptr);
     EXPECT_TRUE(graphDefinition->getStatus().isAvailable());
+}
+
+TEST_F(PythonFlowTest, FinalizationPass) {
+    ModelManager* manager;
+    std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
+    manager = &(dynamic_cast<const ovms::ServableManagerModule*>(ovms::Server::instance().getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
+    auto graphDefinition = manager->getMediapipeFactory().findDefinitionByName("mediapipePythonBackend");
+    ASSERT_NE(graphDefinition, nullptr);
+    EXPECT_TRUE(graphDefinition->getStatus().isAvailable());
+    ASSERT_TRUE(std::filesystem::exists(path));
 }
 
 class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
@@ -844,3 +856,110 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
     - bad input stream element (py::object that is not pyovms.Tensor)
     - bad output stream element (py::object that is not pyovms.Tensor)
 */
+
+TEST_F(PythonFlowTest, FinalizePassTest) {
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    nodeResource->finalize();
+}
+
+TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    nodeResource->finalize();
+}
+
+TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
+    {
+        std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
+        ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+
+        ASSERT_TRUE(std::filesystem::exists(path));
+        // nodeResource destructor calls finalize and removes the file
+    }
+
+    ASSERT_TRUE(!std::filesystem::exists(path));
+}
+
+TEST_F(PythonFlowTest, FinalizeException) {
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_finalize_exception.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    nodeResource->finalize();
+}

@@ -38,10 +38,12 @@ public:
 #if (PYTHON_DISABLE == 0)
     std::unique_ptr<py::object> nodeResourceObject;
     PythonBackend* pythonBackend;
+    std::string pythonNodeFilePath;
 
     PythonNodeResource(PythonBackend* pythonBackend);
     ~PythonNodeResource();
     static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions, PythonBackend* pythonBackend);
+    void finalize();
 #endif
 };
 

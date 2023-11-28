@@ -41,3 +41,15 @@ node {
     }
   }
 }
+node {
+  name: "pythonNode3"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:in"
+  output_stream: "OUTPUT:out3"
+  node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
+    }
+  }
+}
