@@ -15,7 +15,11 @@
 #
 import tritonclient.grpc as grpcclient
 
-client = grpcclient.InferenceServerClient("localhost:11339")
+channel_args = [
+    # Do not drop the connection for long workloads
+    ("grpc.http2.max_pings_without_data", 0),
+]
+client = grpcclient.InferenceServerClient("localhost:11339", channel_args=channel_args)
 text = "Describe the state of the healthcare industry in the United States in max 2 sentences"
 print(f"Question:\n{text}\n")
 data = text.encode()
