@@ -62,7 +62,7 @@ void PythonNodeResource::finalize() {
     }
 }
 
-Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeInput, PythonBackend* pythonBackend) {
+Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeConfig, PythonBackend* pythonBackend) {
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
     nodeInput.UnpackTo(&nodeOptions);
     if (!std::filesystem::exists(nodeOptions.handler_path())) {
