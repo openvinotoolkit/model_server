@@ -78,11 +78,14 @@ bool Dimension::isStatic() const {
 
 ov::Dimension Dimension::createPartialDimension() const {
     if (this->isStatic()) {
+        OV_LOGGER("ov::Dimension({})", this->getStaticValue());
         return ov::Dimension(this->getStaticValue());
     }
     if (this->minimum == DYNAMIC_DIMENSION) {
+        OV_LOGGER("ov::Dimension::dynamic()");
         return ov::Dimension::dynamic();
     }
+    OV_LOGGER("ov::Dimension({},{})", this->minimum, this->maximum);
     return ov::Dimension(this->minimum, this->maximum);
 }
 
@@ -306,12 +309,18 @@ Status Shape::fromFlatShape(const shape_t& shapeIn, Shape& shapeOut) {
 
 Shape::Shape(const ov::PartialShape& shape) {
     this->reserve(shape.size());
+    OV_LOGGER("const ov::Dimension& dim : shape");
     for (const ov::Dimension& dim : shape) {
+        OV_LOGGER("dim.is_static()");
         if (dim.is_static()) {
+            OV_LOGGER("dim.get_length()");
             this->emplace_back(Dimension{dim.get_length()});
         } else if (!dim.get_interval().has_upper_bound()) {
+            OV_LOGGER("dim.get_interval().has_upper_bound()");
             this->emplace_back(Dimension::any());
         } else {
+            OV_LOGGER("dim.get_min_length()");
+            OV_LOGGER("dim.get_max_length()");
             this->emplace_back(Dimension{dim.get_min_length(), dim.get_max_length()});
         }
     }
@@ -326,19 +335,22 @@ Shape& Shape::add(const Dimension& dim, size_t pos) {
 }
 
 ov::PartialShape Shape::createPartialShape() const {
+    OV_LOGGER("shape = ov::PartialShape()");
     ov::PartialShape shape;
-
+    OV_LOGGER("shape.reserve({})", this->size());
     shape.reserve(this->size());
     for (const Dimension& dim : *this) {
         if (dim.isStatic()) {
+            OV_LOGGER("shape.push_back(ov::Dimension({}))", dim.getStaticValue());
             shape.push_back(ov::Dimension(dim.getStaticValue()));
         } else if (dim.isAny()) {
+            OV_LOGGER("shape.push_back(ov::Dimension::dynamic())");
             shape.push_back(ov::Dimension::dynamic());
         } else {
+            OV_LOGGER("shape.push_back(ov::Dimension({}, {}))", dim.getMinValue(), dim.getMaxValue());
             shape.push_back(ov::Dimension{dim.getMinValue(), dim.getMaxValue()});
         }
     }
-
     return shape;
 }
 

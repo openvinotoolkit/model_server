@@ -170,7 +170,7 @@ static Status validateConfigurationAgainstNetwork(const ModelConfig& config, std
 const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput) {
     Layout defaultLayout;
     if (isInput) {
-        OV_LOGGER("ov::Model model: {}, model->input({})", reinterpret_cast<const void*>(this->model.get()), name);
+        OV_LOGGER("ov::Model model: {}, model->input(\"{}\")", reinterpret_cast<const void*>(this->model.get()), name);
         const auto& input = this->model->input(name);
         OV_LOGGER("input: {}, input.get_partial_shape().size()", reinterpret_cast<const void*>(&input));
         defaultLayout = Layout::getDefaultLayout(input.get_partial_shape().size());
@@ -181,7 +181,7 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
             return Layout::fromOvLayout(networkSpecifiedLayout.value());
         }
     } else {
-        OV_LOGGER("model: {}, model->output({})", reinterpret_cast<const void*>(model.get()), name);
+        OV_LOGGER("model: {}, model->output(\"{}\")", reinterpret_cast<const void*>(model.get()), name);
         const auto& output = this->model->output(name);
         OV_LOGGER("output: {}, output.get_partial_shape().size()", reinterpret_cast<const void*>(&output));
         defaultLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
@@ -643,7 +643,7 @@ uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig
 }
 
 std::shared_ptr<ov::Model> ModelInstance::loadOVModelPtr(const std::string& modelFile) {
-    OV_LOGGER("ov::Core: {}, model = ieCore.read_model({})", reinterpret_cast<const void*>(&this->ieCore), modelFile);
+    OV_LOGGER("ov::Core: {}, model = ieCore.read_model(\"{}\")", reinterpret_cast<const void*>(&this->ieCore), modelFile);
     return this->ieCore.read_model(modelFile);
 }
 

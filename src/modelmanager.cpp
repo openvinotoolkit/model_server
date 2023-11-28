@@ -141,7 +141,7 @@ void ModelManager::logPluginConfiguration() {
         for (auto& key : supportedConfigKeys) {
             std::string value;
             try {
-                OV_LOGGER("ov::Core: {}, eCore->get_property({}, {})", reinterpret_cast<const void*>(this->ieCore.get()), plugin, key);
+                OV_LOGGER("ov::Core: {}, ieCore->get_property({}, {})", reinterpret_cast<const void*>(this->ieCore.get()), plugin, key);
                 auto paramValue = ieCore->get_property(plugin, key);
                 value = paramValue.as<std::string>();
             } catch (std::exception& e) {
