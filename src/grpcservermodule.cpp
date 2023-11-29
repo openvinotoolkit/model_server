@@ -49,6 +49,7 @@ using grpc::ServerBuilder;
 
 namespace ovms {
 static const int GIGABYTE = 1024 * 1024 * 1024;
+static const int SERVER_SHUTDOWN_DEADLINE_SECONDS = 5;
 
 static bool isPortAvailable(uint64_t port) {
     struct sockaddr_in addr;
@@ -195,8 +196,10 @@ void GRPCServerModule::shutdown() {
         return;
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", GRPC_SERVER_MODULE_NAME);
+    std::chrono::time_point serverDeadline = std::chrono::system_clock::now() +
+                                             std::chrono::seconds(SERVER_SHUTDOWN_DEADLINE_SECONDS);
     for (const auto& server : servers) {
-        server->Shutdown();
+        server->Shutdown(serverDeadline);
         SPDLOG_INFO("Shutdown gRPC server");
     }
     servers.clear();

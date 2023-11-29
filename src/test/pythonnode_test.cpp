@@ -547,21 +547,21 @@ public:
         return tensor;
     }
 
-    static std::vector<T> readVectorFromOutput(const std::string& outputName, int numElements, const mediapipe::CalculatorRunner* runner) {
-        const PyObjectWrapper<py::object>& pyOutput = runner->Outputs().Tag(outputName).packets[0].Get<PyObjectWrapper<py::object>>();
+    static std::vector<T> readVectorFromOutput(const std::string& outputName, int numElements, const mediapipe::CalculatorRunner* runner, int packetIndex = 0) {
+        const PyObjectWrapper<py::object>& pyOutput = runner->Outputs().Tag(outputName).packets[packetIndex].Get<PyObjectWrapper<py::object>>();
         T* outputData = (T*)pyOutput.getProperty<void*>("ptr");
         std::vector<T> output;
         output.assign(outputData, outputData + numElements);
         return output;
     }
 
-    std::vector<T> getIncrementedVector() {
+    std::vector<T> getIncrementedVector(int value = 1) {
         // SimpleTensor is expected to hold data in shape (1, X),
         // therefore we iterate over the second dimension as it holds the actual data
         std::vector<T> output;
         T* fpData = (T*)data;
         for (int i = 0; i < shape[1]; i++) {
-            output.push_back(fpData[i] + 1);
+            output.push_back(fpData[i] + value);
         }
         return output;
     }
