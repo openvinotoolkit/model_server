@@ -9,7 +9,7 @@
 @endsphinxdirective
 
 ## Introduction
-MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. If comes with a wide range of calculators/nodes which can be applied for unlimited number of scenarios in image and media analytics, generative AI, transformers and many more. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
+MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. It comes with a wide range of calculators/nodes which can be applied for unlimited number of scenarios in image and media analytics, generative AI, transformers and many more. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
 
 Thanks to the integration between MediaPipe and OpenVINO Model server, the graphs can be exposed over the network and the complete load can be delegated to a remote host or a microservice.
 We support the following scenarios:
@@ -94,7 +94,7 @@ With KServe gRPC API you are also able to push side input packets into graph. Th
 Note that with the gRPC stream connection, only the first request in the stream can include the side package parameters.
 
 ### List of default calculators
-Beside OpenVINO inference calculators, there are included, by default, in the public image also all the calculators used in the enabled demos. 
+Beside OpenVINO inference calculators, model server public docker image also includes all the calculators used in the enabled demos. 
 The list of all included calculators, subgraphs, input/output stream handler is reported in the model server is started with extra parameter `--log_level TRACE`.
 
 ### CPU and GPU execution
@@ -144,7 +144,7 @@ MediaPipe servables configuration is to be placed in the same json file like the
 While models are defined in section `model_config_list`, graphs are configured in
 the `mediapipe_config_list` section. 
 
-When the mediapipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy. Just a `config.json` needs to be prepared list all the graphs for deployments:
+When the mediapipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy. Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
 ```json
 {
     "model_config_list": [],
@@ -178,9 +178,9 @@ Subconfig file may only contain *model_config_list* section  - in the same forma
 The simples method to validate the graph execution is to set the Model Server `log_level` do `DEBUG`.
 `docker run --rm -it -v $(pwd):/config openvino/model_server:latest --config_path /config/config.json --log_level DEBUG`
 
-It will report in a verbose way all the operations in the mediapipe framework from the graph initialization and also the graphs execution.
+It will report in a verbose way all the operations in the mediapipe framework from the graph initialization and execution.
 After the model server, you could confirm with the graph has correct format and all the required models are loaded successfully.
-Note that graph loading is not confirming if all the calculators are compiled into the model server build. That can be confirmed with after sending the request to the KServe endpoint.
+Note that graph loading is not confirming if all the calculators are compiled into the model server build. That can be confirmed after sending the request to the KServe endpoint.
 During the requests processing, the logs will include info about calculators registration and processing the nodes.
 
 ### Tracing
@@ -195,7 +195,7 @@ It can generate the load to gRPC stream and the mediapipe graph based on the con
 
 ## Using MediaPipe graphs from the remote client <a name="client"></a>
 
-MediaPipe graphs can use the same gRPC KServe Inference API both the the unary calls and the streaming. 
+MediaPipe graphs can use the same gRPC KServe Inference API both for the unary calls and the streaming. 
 The same client libraries with KServe API support can be used in both cases. The client code for the unary and streaming is a bit different.
 Check the [code snippets](https://docs.openvino.ai/2023.2/ovms_docs_clients_kfs.html)
 
@@ -211,7 +211,7 @@ the version parameter is ignored. MediaPipe graphs are not versioned. Though, th
 
 ## How to update existing graphs to use OV for inference <a name="updating-graph"></a>
 
-If you would like to reusing existing graph and replace Tensorflow execution with OpenVINO backend, check this guide TBD.
+If you would like to reuse existing graph and replace Tensorflow execution with OpenVINO backend, check this guide TBD.
 
 ## Adding your own mediapipe calculator to OpenVINO Model Server <a name="adding-calculator"></a>
 MediaPipe graphs can include only the calculators built-in the model server image.
