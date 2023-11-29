@@ -1,39 +1,38 @@
 # Demos {#ovms_docs_demos}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_demo_age_gender_guide
-   ovms_demo_horizontal_text_detection
-   ovms_demo_optical_character_recognition
-   ovms_demo_face_detection
-   ovms_demo_face_blur_pipeline
-   ovms_demo_capi_inference_demo
-   ovms_demo_single_face_analysis_pipeline
-   ovms_demo_multi_faces_analysis_pipeline
-   ovms_docs_demo_ensemble
-   ovms_docs_demo_mediapipe_image_classification
-   ovms_docs_demo_mediapipe_multi_model
-   ovms_docs_demo_mediapipe_object_detection
-   ovms_docs_demo_mediapipe_holistic
-   ovms_docs_image_classification
-   ovms_demo_using_onnx_model
-   ovms_demo_tf_classification
-   ovms_demo_person_vehicle_bike_detection
-   ovms_demo_vehicle_analysis_pipeline
-   ovms_demo_real_time_stream_analysis
-   ovms_demo_bert
-   ovms_demo_gptj_causal_lm
-   ovms_demo_llama_2_chat
-   ovms_demo_stable_diffusion
-   ovms_demo_universal-sentence-encoder
-   ovms_demo_speech_recognition
-   ovms_demo_benchmark_client
-
-@endsphinxdirective
+ovms_demo_age_gender_guide
+ovms_demo_horizontal_text_detection
+ovms_demo_optical_character_recognition
+ovms_demo_face_detection
+ovms_demo_face_blur_pipeline
+ovms_demo_capi_inference_demo
+ovms_demo_single_face_analysis_pipeline
+ovms_demo_multi_faces_analysis_pipeline
+ovms_docs_demo_ensemble
+ovms_docs_demo_mediapipe_image_classification
+ovms_docs_demo_mediapipe_multi_model
+ovms_docs_demo_mediapipe_object_detection
+ovms_docs_demo_mediapipe_holistic
+ovms_docs_image_classification
+ovms_demo_using_onnx_model
+ovms_demo_tf_classification
+ovms_demo_person_vehicle_bike_detection
+ovms_demo_vehicle_analysis_pipeline
+ovms_demo_real_time_stream_analysis
+ovms_demo_bert
+ovms_demo_gptj_causal_lm
+ovms_demo_llama_2_chat
+ovms_demo_stable_diffusion
+ovms_demo_universal-sentence-encoder
+ovms_demo_speech_recognition
+ovms_demo_benchmark_client
+```
 
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities. Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
 

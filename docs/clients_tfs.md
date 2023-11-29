@@ -1,391 +1,326 @@
 # TensorFlow Serving API Clients {#ovms_docs_clients_tfs}
 
-@sphinxdirective
-
--  `Python Client <#-python-client>`__
--  `C++ and Go Clients <#-cpp-go-clients>`__
-
-.. raw:: html
-
-   <a name='-python-client' id='-python-client'/>
-
-`Python Client`_
-================
-
-@endsphinxdirective
+## Python Client
 
 When creating a Python-based client application, there are two packages on PyPi that can be used with OpenVINO Model Server:
 - [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/)
 - [ovmsclient](https://pypi.org/project/ovmsclient/)
 
 ### Install the Package
-@sphinxdirective
 
-.. tab-set::
-
-   .. tab-item::  ovmsclient  
-      :sync: ovmsclient
-   
-      .. code-block:: sh
-      
-         pip3 install ovmsclient 
-   
-   .. tab-item::  tensorflow-serving-api  
-      :sync: tensorflow-serving-api  
-   
-      .. code-block:: sh  
-      
-         pip3 install tensorflow-serving-api 
-
-@endsphinxdirective
+::::{tab-set}
+:::{tab-item} ovmsclient
+:sync: ovmsclient
+```{code} sh
+pip3 install ovmsclient
+```
+:::
+:::{tab-item} tensorflow-serving-api
+:sync: tensorflow-serving-api
+```{code} sh
+pip3 install tensorflow-serving-api
+```
+:::
+::::
 
 ### Request Model Status
 
-@sphinxdirective
+::::{tab-set}
+:::{tab-item} ovmsclient [GRPC]
+:sync: ovmsclient-grpc
+```{code} python
+from ovmsclient import make_grpc_client
 
-.. tab-set::
+client = make_grpc_client("localhost:9000")
+status = client.get_model_status(model_name="my_model")
+```
+:::
+:::{tab-item} ovmsclient [REST]
+:sync: ovmsclient-rest
+```{code} python
+from ovmsclient import make_http_client
 
-   .. tab-item::  ovmsclient [GRPC]
-      :sync: ovmsclient-grpc
-   
-      .. code-block:: python
-      
-         from ovmsclient import make_grpc_client
-     
-         client = make_grpc_client("localhost:9000")
-         status = client.get_model_status(model_name="my_model")
-   
-   
-   .. tab-item::  ovmsclient [REST]
-      :sync: ovmsclient-rest
-   
-      .. code-block:: python
-      
-         from ovmsclient import make_http_client
-      
-         client = make_http_client("localhost:8000")
-         status = client.get_model_status(model_name="my_model")
-   
-   
-   .. tab-item::  tensorflow-serving-api  
-      :sync: tensorflow-serving-api  
-   
-      .. code-block:: python
-     
-         import grpc
-         from tensorflow_serving.apis import model_service_pb2_grpc, get_model_status_pb2
-         from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
-     
-         channel = grpc.insecure_channel("localhost:9000")
-         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
-               
-         status_request = get_model_status_pb2.GetModelStatusRequest()
-         status_request.model_spec.name = "my_model"
-         status_response = model_service_stub.GetModelStatus(status_request, 10.0)
-                 
-         model_status = {}
-         model_version_status = status_response.model_version_status
-         for model_version in model_version_status:
-             model_status[model_version.version] = dict([
-                 ('state', ModelVersionStatus.State.Name(model_version.state)),
-                 ('error_code', model_version.status.error_code),
-                 ('error_message', model_version.status.error_message),
-             ])
-   
-   .. tab-item::  curl    
-      :sync: curl   
-   
-      .. code-block:: sh  
+client = make_http_client("localhost:8000")
+status = client.get_model_status(model_name="my_model")
+```
+:::
+:::{tab-item} tensorflow-serving-api
+:sync: tensorflow-serving-api
+```{code} python
+import grpc
+from tensorflow_serving.apis import model_service_pb2_grpc, get_model_status_pb2
+from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 
-         curl http://localhost:8000/v1/models/my_model
-       
-@endsphinxdirective
+channel = grpc.insecure_channel("localhost:9000")
+model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
+
+status_request = get_model_status_pb2.GetModelStatusRequest()
+status_request.model_spec.name = "my_model"
+status_response = model_service_stub.GetModelStatus(status_request, 10.0)
+        
+model_status = {}
+model_version_status = status_response.model_version_status
+for model_version in model_version_status:
+    model_status[model_version.version] = dict([
+        ('state', ModelVersionStatus.State.Name(model_version.state)),
+        ('error_code', model_version.status.error_code),
+        ('error_message', model_version.status.error_message),
+    ])
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```{code} sh
+curl http://localhost:8000/v1/models/my_model
+```
+:::
+::::
 
 ### Request Model Metadata
 
-@sphinxdirective
+::::{tab-set}
+:::{tab-item} ovmsclient [GRPC]
+:sync: ovmsclient-grpc
+```{code} python
+from ovmsclient import make_grpc_client
 
-.. tab-set::
+client = make_grpc_client("localhost:9000")
+model_metadata = client.get_model_metadata(model_name="my_model")
+```
+:::
+:::{tab-item} ovmsclient [REST]
+:sync: ovmsclient-rest
+```{code} python
+from ovmsclient import make_http_client
 
-   .. tab-item::  ovmsclient [GRPC]
-      :sync: ovmsclient-grpc
-   
-      .. code-block:: python
-           
-         from ovmsclient import make_grpc_client
-             
-         client = make_grpc_client("localhost:9000")
-         model_metadata = client.get_model_metadata(model_name="my_model")
-   
-   
-   .. tab-item::  ovmsclient [REST]
-      :sync: ovmsclient-rest
-   
-      .. code-block:: python
-               
-         from ovmsclient import make_http_client
-         
-         client = make_http_client("localhost:8000")
-         model_metadata = client.get_model_metadata(model_name="my_model")
-   
-   
-   .. tab-item::  tensorflow-serving-api
-      :sync: tensorflow-serving-api 
-   
-      .. code-block:: python
-                 
-         import grpc
-         from tensorflow_serving.apis import prediction_service_pb2_grpc, get_model_metadata_pb2
-         from tensorflow.core.framework.types_pb2 import DataType
-                  
-         channel = grpc.insecure_channel("localhost:9000")
-         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-                 
-         metadata_request = get_model_metadata_pb2.GetModelMetadataRequest()
-         metadata_request.model_spec.name = "my_model"
-         metadata_response = prediction_service_stub.GetModelMetadata(metadata_request, 10.0)
-                
-         model_metadata = {}
-                 
-         signature_def = metadata_response.metadata['signature_def']
-         signature_map = get_model_metadata_pb2.SignatureDefMap()
-         signature_map.ParseFromString(signature_def.value)
-         model_signature = signature_map.ListFields()[0][1]['serving_default']
-                    
-         inputs_metadata = {}
-         for input_name, input_info in model_signature.inputs.items():
-             input_shape = [d.size for d in input_info.tensor_shape.dim]
-             inputs_metadata[input_name] = dict([
-                 ("shape", input_shape),
-                 ("dtype", DataType.Name(input_info.dtype))
-             ])
-                      
-         outputs_metadata = {}
-         for output_name, output_info in model_signature.outputs.items():
-             output_shape = [d.size for d in output_info.tensor_shape.dim]
-             outputs_metadata[output_name] = dict([
-                 ("shape", output_shape),
-                 ("dtype", DataType.Name(output_info.dtype))
-             ])
-                          
-         version = metadata_response.model_spec.version.value
-         model_metadata = dict([
-             ("model_version", version),
-             ("inputs", inputs_metadata),
-             ("outputs", outputs_metadata)
-         ])
-   
-   .. tab-item::  curl
-      :sync: curl   
-   
-      .. code-block:: sh  
-            
-         curl http://localhost:8000/v1/models/my_model/metadata
-   
+client = make_http_client("localhost:8000")
+model_metadata = client.get_model_metadata(model_name="my_model")
+```
+:::
+:::{tab-item} tensorflow-serving-api
+:sync: tensorflow-serving-api
+```{code} python
+import grpc
+from tensorflow_serving.apis import prediction_service_pb2_grpc, get_model_metadata_pb2
+from tensorflow.core.framework.types_pb2 import DataType
 
-@endsphinxdirective
+channel = grpc.insecure_channel("localhost:9000")
+prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+
+metadata_request = get_model_metadata_pb2.GetModelMetadataRequest()
+metadata_request.model_spec.name = "my_model"
+metadata_response = prediction_service_stub.GetModelMetadata(metadata_request, 10.0)
+
+model_metadata = {}
+
+signature_def = metadata_response.metadata['signature_def']
+signature_map = get_model_metadata_pb2.SignatureDefMap()
+signature_map.ParseFromString(signature_def.value)
+model_signature = signature_map.ListFields()[0][1]['serving_default']
+
+inputs_metadata = {}
+for input_name, input_info in model_signature.inputs.items():
+    input_shape = [d.size for d in input_info.tensor_shape.dim]
+    inputs_metadata[input_name] = dict([
+        ("shape", input_shape),
+        ("dtype", DataType.Name(input_info.dtype))
+    ])
+
+outputs_metadata = {}
+for output_name, output_info in model_signature.outputs.items():
+    output_shape = [d.size for d in output_info.tensor_shape.dim]
+    outputs_metadata[output_name] = dict([
+        ("shape", output_shape),
+        ("dtype", DataType.Name(output_info.dtype))
+    ])
+
+version = metadata_response.model_spec.version.value
+model_metadata = dict([
+    ("model_version", version),
+    ("inputs", inputs_metadata),
+    ("outputs", outputs_metadata)
+])
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```{code} sh
+curl http://localhost:8000/v1/models/my_model/metadata
+```
+:::
+::::
 
 ### Request Prediction on a Binary Input
 
-@sphinxdirective
+::::{tab-set}
+:::{tab-item} ovmsclient [GRPC]
+:sync: ovmsclient-grpc
+```{code} python
+from ovmsclient import make_grpc_client
 
-.. tab-set::
+client = make_grpc_client("localhost:9000")
+with open("img.jpeg", "rb") as f:
+    data = f.read()
+inputs = {"input_name": data}    
+results = client.predict(inputs=inputs, model_name="my_model")
+```
+:::
+:::{tab-item} ovmsclient [REST]
+:sync: ovmsclient-rest
+```{code} python
+from ovmsclient import make_http_client
 
-   .. tab-item::  ovmsclient [GRPC]
-      :sync: ovmsclient-grpc
-   
-      .. code-block:: python
-                 
-         from ovmsclient import make_grpc_client
-              
-         client = make_grpc_client("localhost:9000")
-         with open("img.jpeg", "rb") as f:
-             data = f.read()
-         inputs = {"input_name": data}    
-         results = client.predict(inputs=inputs, model_name="my_model")
-   
-   .. tab-item::  ovmsclient [REST]
-      :sync: ovmsclient-rest
-   
-      .. code-block:: python
-                  
-         from ovmsclient import make_http_client
-              
-         client = make_http_client("localhost:8000")
-                 
-         with open("img.jpeg", "rb") as f:
-             data = f.read()
-         inputs = {"input_name": data}    
-         results = client.predict(inputs=inputs, model_name="my_model")
-   
-   
-   .. tab-item::  tensorflow-serving-api
-      :sync: tensorflow-serving-api 
-   
-      .. code-block:: python
-                  
-         import grpc
-         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
-         from tensorflow import make_tensor_proto, make_ndarray
-                   
-         channel = grpc.insecure_channel("localhost:9000")
-         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-                     
-         with open("img.jpeg", "rb") as f:
-             data = f.read()
-         predict_request = predict_pb2.PredictRequest()
-         predict_request.model_spec.name = "my_model"
-         predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
-         predict_response = prediction_service_stub.Predict(predict_request, 10.0)
-         results = make_ndarray(predict_response.outputs["output_name"])
-   
-   .. tab-item::  curl
-      :sync: curl   
-   
-      .. code-block:: sh  
-                 
-         curl -X POST http://localhost:8000/v1/models/my_model:predict
-         -H 'Content-Type: application/json'
-         -d '{"instances": [{"input_name": {"b64":"YXdlc29tZSBpbWFnZSBieXRlcw=="}}]}'
+client = make_http_client("localhost:8000")
 
-@endsphinxdirective
+with open("img.jpeg", "rb") as f:
+    data = f.read()
+inputs = {"input_name": data}    
+results = client.predict(inputs=inputs, model_name="my_model")
+```
+:::
+:::{tab-item} tensorflow-serving-api
+:sync: tensorflow-serving-api
+```{code} python
+import grpc
+from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
+from tensorflow import make_tensor_proto, make_ndarray
+
+channel = grpc.insecure_channel("localhost:9000")
+prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+
+with open("img.jpeg", "rb") as f:
+    data = f.read()
+predict_request = predict_pb2.PredictRequest()
+predict_request.model_spec.name = "my_model"
+predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
+predict_response = prediction_service_stub.Predict(predict_request, 10.0)
+results = make_ndarray(predict_response.outputs["output_name"])
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```{code} sh
+curl -X POST http://localhost:8000/v1/models/my_model:predict
+-H 'Content-Type: application/json'
+-d '{"instances": [{"input_name": {"b64":"YXdlc29tZSBpbWFnZSBieXRlcw=="}}]}'
+```
+:::
+::::
 
 ### Request Prediction on a Numpy Array
 
-@sphinxdirective
+::::{tab-set}
+:::{tab-item} ovmsclient [GRPC]
+:sync: ovmsclient-grpc
+```{code} python
+import numpy as np
+from ovmsclient import make_grpc_client
 
-.. tab-set::
+client = make_grpc_client("localhost:9000")
+data = np.array([1.0, 2.0, ..., 1000.0])
+inputs = {"input_name": data}
+results = client.predict(inputs=inputs, model_name="my_model")
+```
+:::
+:::{tab-item} ovmsclient [REST]
+:sync: ovmsclient-rest
+```{code} python
+import numpy as np
+from ovmsclient import make_http_client
 
-   .. tab-item::  ovmsclient [GRPC]
-      :sync: ovmsclient-grpc
-   
-      .. code-block:: python
-               
-         import numpy as np
-         from ovmsclient import make_grpc_client
-             
-         client = make_grpc_client("localhost:9000")
-         data = np.array([1.0, 2.0, ..., 1000.0])
-         inputs = {"input_name": data}
-         results = client.predict(inputs=inputs, model_name="my_model")
-   
-   .. tab-item::  ovmsclient [REST]
-      :sync: ovmsclient-rest
-   
-      .. code-block:: python
-               
-         import numpy as np
-         from ovmsclient import make_http_client
-               
-         client = make_http_client("localhost:8000")
-             
-         data = np.array([1.0, 2.0, ..., 1000.0])
-         inputs = {"input_name": data}
-         results = client.predict(inputs=inputs, model_name="my_model")
-   
-   .. tab-item::  tensorflow-serving-api  
-      :sync: tensorflow-serving-api 
-   
-      .. code-block:: python
-          
-         import grpc
-         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
-         from tensorflow import make_tensor_proto
-              
-         channel = grpc.insecure_channel("localhost:9000")
-         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-                     
-         data = np.array([1.0, 2.0, ..., 1000.0])
-         predict_request = predict_pb2.PredictRequest()
-         predict_request.model_spec.name = "my_model"
-         predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
-         predict_response = prediction_service_stub.Predict(predict_request, 10.0)
-         results = make_ndarray(predict_response.outputs["output_name"])
-   
-   .. tab-item::  curl
-      :sync: curl 
-   
-      .. code-block:: sh  
-                     
-         curl -X POST http://localhost:8000/v1/models/my_model:predict
-         -H 'Content-Type: application/json'
-         -d '{"instances": [{"input_name": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}]}'
+client = make_http_client("localhost:8000")
 
-@endsphinxdirective
+data = np.array([1.0, 2.0, ..., 1000.0])
+inputs = {"input_name": data}
+results = client.predict(inputs=inputs, model_name="my_model")
+```
+:::
+:::{tab-item} tensorflow-serving-api
+:sync: tensorflow-serving-api
+```{code} python
+import grpc
+from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
+from tensorflow import make_tensor_proto
+
+channel = grpc.insecure_channel("localhost:9000")
+prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+
+data = np.array([1.0, 2.0, ..., 1000.0])
+predict_request = predict_pb2.PredictRequest()
+predict_request.model_spec.name = "my_model"
+predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
+predict_response = prediction_service_stub.Predict(predict_request, 10.0)
+results = make_ndarray(predict_response.outputs["output_name"])
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```{code} sh
+curl -X POST http://localhost:8000/v1/models/my_model:predict
+-H 'Content-Type: application/json'
+-d '{"instances": [{"input_name": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}]}'
+```
+:::
+::::
 
 ### Request Prediction on a string
 
-@sphinxdirective
+::::{tab-set}
+:::{tab-item} ovmsclient [GRPC]
+:sync: ovmsclient-grpc
+```{code} python
+from ovmsclient import make_grpc_client
 
-.. tab-set::
+client = make_grpc_client("localhost:9000")
+data = ["<string>"]
+inputs = {"input_name": data}
+results = client.predict(inputs=inputs, model_name="my_model")
+```
+:::
+:::{tab-item} ovmsclient [REST]
+:sync: ovmsclient-rest
+```{code} python
+from ovmsclient import make_http_client
 
-   .. tab-item::  ovmsclient [GRPC]
-      :sync: ovmsclient-grpc
-   
-      .. code-block:: python
-               
-         from ovmsclient import make_grpc_client
-                
-         client = make_grpc_client("localhost:9000")
-         data = ["<string>"]
-         inputs = {"input_name": data}
-         results = client.predict(inputs=inputs, model_name="my_model")
-   
-   .. tab-item::  ovmsclient [REST]
-      :sync: ovmsclient-rest
-   
-      .. code-block:: python
-             
-         from ovmsclient import make_http_client
-               
-         client = make_http_client("localhost:8000")
-               
-         data = ["<string>"]
-         inputs = {"input_name": data}
-         results = client.predict(inputs=inputs, model_name="my_model")
-   
-   .. tab-item::  tensorflow-serving-api  
-      :sync: tensorflow-serving-api 
-   
-      .. code-block:: python
-                   
-         import grpc
-         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
-         from tensorflow import make_tensor_proto
-              
-         channel = grpc.insecure_channel("localhost:9000")
-         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-               
-         data = ["<string>"]
-         predict_request = predict_pb2.PredictRequest()
-         predict_request.model_spec.name = "my_model"
-         predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
-         predict_response = prediction_service_stub.Predict(predict_request, 1)
-         results = predict_response.outputs["output_name"]
-   
-   .. tab-item::  curl
-      :sync: curl
-   
-      .. code-block:: sh  
-                 
-         curl -X POST http://localhost:8000/v1/models/my_model:predict
-         -H 'Content-Type: application/json'
-         -d '{"instances": [{"input_name": "<string>"}]}'
-   
-@endsphinxdirective
+client = make_http_client("localhost:8000")
+
+data = ["<string>"]
+inputs = {"input_name": data}
+results = client.predict(inputs=inputs, model_name="my_model")
+```
+:::
+:::{tab-item} tensorflow-serving-api
+:sync: tensorflow-serving-api
+```{code} python
+import grpc
+from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
+from tensorflow import make_tensor_proto
+
+channel = grpc.insecure_channel("localhost:9000")
+prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+
+data = ["<string>"]
+predict_request = predict_pb2.PredictRequest()
+predict_request.model_spec.name = "my_model"
+predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
+predict_response = prediction_service_stub.Predict(predict_request, 1)
+results = predict_response.outputs["output_name"]
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```{code} sh
+curl -X POST http://localhost:8000/v1/models/my_model:predict
+-H 'Content-Type: application/json'
+-d '{"instances": [{"input_name": "<string>"}]}'
+```
+:::
+::::
+
 
 For complete usage examples see [ovmsclient samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/ovmsclient/samples).
 
-@sphinxdirective
-
-.. raw:: html
-
-   <a name='-cpp-go-clients' id='-cpp-go-clients'/>
-
-`C++ and Go Clients`_
-=====================
-
-@endsphinxdirective
+## C++ and Go Clients
 
 Creating a client application in C++ or [Go](https://go.dev/) follows the same principles as Python, but using them adds some complexity. There is no package or library available for them with convenient functions to interact with OpenVINO Model Server.
 

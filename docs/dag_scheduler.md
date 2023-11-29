@@ -1,16 +1,14 @@
 # Directed Acyclic Graph (DAG) Scheduler {#ovms_docs_dag}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_docs_demultiplexing
-   ovms_docs_custom_node_development
-
-
-@endsphinxdirective
+ovms_docs_demultiplexing
+ovms_docs_custom_node_development
+```
 
 ## Introduction
 The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipeline of models for execution in a single client request. 

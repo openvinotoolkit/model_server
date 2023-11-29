@@ -1,18 +1,17 @@
 # API Reference Guide {#ovms_docs_server_api}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_docs_grpc_api_tfs
-   ovms_docs_grpc_api_kfs
-   ovms_docs_rest_api_tfs
-   ovms_docs_rest_api_kfs
-   ovms_docs_c_api
-
-@endsphinxdirective
+ovms_docs_grpc_api_tfs
+ovms_docs_grpc_api_kfs
+ovms_docs_rest_api_tfs
+ovms_docs_rest_api_kfs
+ovms_docs_c_api
+```
 
 ## Introduction
 

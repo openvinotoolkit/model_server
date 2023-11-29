@@ -1,17 +1,16 @@
 # Advanced Features {#ovms_docs_advanced}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_sample_cpu_extension
-   ovms_docs_model_cache
-   ovms_docs_custom_loader
-   ovms_extras_nginx-mtls-auth-readme
-
-@endsphinxdirective
+ovms_sample_cpu_extension
+ovms_docs_model_cache
+ovms_docs_custom_loader
+ovms_extras_nginx-mtls-auth-readme
+```
 
 ## CPU Extensions
 Implement any CPU layer, that is not support by OpenVINO yet, as a shared library.
