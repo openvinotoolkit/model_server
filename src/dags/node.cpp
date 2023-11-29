@@ -269,7 +269,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
 }
 
 Status Node::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
-    dividedTensor = createSharedTensor(tensor.get_element_type(), shape, (char*)(tensor.data()) + i * step);
+    dividedTensor = createTensorWithNoDataOwnership(tensor.get_element_type(), shape, (char*)(tensor.data()) + i * step);
     return StatusCode::OK;
 }
 }  // namespace ovms

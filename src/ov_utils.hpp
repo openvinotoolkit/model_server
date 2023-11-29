@@ -30,10 +30,7 @@ class Status;
 class TensorInfo;
 
 Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape);
-/**
- *  Creates new tensor that copies data and owns the copy
- **/
-ov::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data);
+ov::Tensor createTensorWithNoDataOwnership(ov::element::Type_t precision, const shape_t& shape, void* data);
 
 std::string getTensorMapString(const std::map<std::string, std::shared_ptr<const TensorInfo>>& tensorMap);
 

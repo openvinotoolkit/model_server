@@ -32,6 +32,9 @@ std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("
 #if (MEDIAPIPE_DISABLE == 0)
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
 #endif
+#if COMPILATION_MODE == dbg
+std::shared_ptr<spdlog::logger> ov_logger = std::make_shared<spdlog::logger>("openvino");
+#endif
 const std::string default_pattern = "[%Y-%m-%d %T.%e][%t][%n][%l][%s:%#] %v";
 
 static void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> logger) {
@@ -66,6 +69,9 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipe_logger->set_pattern(default_pattern);
 #endif
+#if COMPILATION_MODE == dbg
+    ov_logger->set_pattern(default_pattern);
+#endif
     for (auto& sink : sinks) {
         gcs_logger->sinks().push_back(sink);
         azurestorage_logger->sinks().push_back(sink);
@@ -76,6 +82,9 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         capi_logger->sinks().push_back(sink);
 #if (MEDIAPIPE_DISABLE == 0)
         mediapipe_logger->sinks().push_back(sink);
+#endif
+#if COMPILATION_MODE == dbg
+        ov_logger->sinks().push_back(sink);
 #endif
     }
     set_log_level(log_level, serving_logger);
@@ -88,6 +97,9 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, capi_logger);
 #if (MEDIAPIPE_DISABLE == 0)
     set_log_level(log_level, mediapipe_logger);
+#endif
+#if COMPILATION_MODE == dbg
+    set_log_level(log_level, ov_logger);
 #endif
     spdlog::set_default_logger(serving_logger);
 }

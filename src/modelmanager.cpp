@@ -77,6 +77,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     modelCacheDirectory(modelCacheDirectory),
     metricRegistry(registry),
     pythonBackend(pythonBackend) {
+    OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {
         this->modelCacheDirectory = ovms::Config::instance().cacheDir();
@@ -105,6 +106,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
         try {
+            OV_LOGGER("ov::Core: {}, ieCore->add_extension({})", reinterpret_cast<const void*>(this->ieCore.get()), ovms::Config::instance().cpuExtensionLibraryPath());
             ieCore->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
             SPDLOG_INFO("Extension added.");
         } catch (std::exception& ex) {
@@ -119,6 +121,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
 }
 
 void ModelManager::logPluginConfiguration() {
+    OV_LOGGER("ov::Core: {}, ieCore->get_available_devices()", reinterpret_cast<const void*>(this->ieCore.get()));
     auto availableDevices = ieCore->get_available_devices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
@@ -127,6 +130,7 @@ void ModelManager::logPluginConfiguration() {
         auto supportedPropertiesKey = ov::supported_properties;
         try {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
+            OV_LOGGER("ov::Core: {}, ieCore->get_property({}, ov::supported_properties)", reinterpret_cast<const void*>(this->ieCore.get()), plugin);
             auto supportedConfigKeys2 = ieCore->get_property(plugin, supportedPropertiesKey);
             supportedConfigKeys = std::move(supportedConfigKeys2);
         } catch (std::exception& e) {
@@ -137,6 +141,7 @@ void ModelManager::logPluginConfiguration() {
         for (auto& key : supportedConfigKeys) {
             std::string value;
             try {
+                OV_LOGGER("ov::Core: {}, ieCore->get_property({}, {})", reinterpret_cast<const void*>(this->ieCore.get()), plugin, key);
                 auto paramValue = ieCore->get_property(plugin, key);
                 value = paramValue.as<std::string>();
             } catch (std::exception& e) {

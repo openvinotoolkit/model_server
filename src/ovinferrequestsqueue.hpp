@@ -25,8 +25,8 @@
 #include <vector>
 
 #include <openvino/openvino.hpp>
-#include <spdlog/spdlog.h>
 
+#include "logging.hpp"
 #include "queue.hpp"
 
 namespace ovms {
@@ -37,6 +37,7 @@ public:
         Queue(streamsLength) {
         for (int i = 0; i < streamsLength; ++i) {
             streams[i] = i;
+            OV_LOGGER("ov::CompiledModel: {} compiledModel.create_infer_request()", reinterpret_cast<void*>(&compiledModel));
             inferRequests.push_back(compiledModel.create_infer_request());
         }
     }
