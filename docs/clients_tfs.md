@@ -6,23 +6,10 @@ maxdepth: 1
 hidden:
 ---
 
-<<<<<<< HEAD
 gRPC API <ovms_docs_grpc_api_tfs>
 RESTful API <ovms_docs_rest_api_tfs>
 Examples <https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md>
 ```
-=======
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   gRPC API <ovms_docs_grpc_api_tfs>
-   RESTful API <ovms_docs_rest_api_tfs>
-   Examples <https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md>
-
--  `Python Client <#-python-client>`__
--  `C++ and Go Clients <#-cpp-go-clients>`__
->>>>>>> fb61159811164ae24de4d0e6f899925c5e0ef89b
 
 ## Python Client
 
