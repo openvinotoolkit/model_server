@@ -8,7 +8,7 @@
 
    TensorFlow Serving API <ovms_docs_clients_tfs>
    KServe API <ovms_docs_clients_kfs>
-   OpenVINO Model Server C-API (preview feature) <ovms_docs_c_api>
+   OpenVINO Model Server C-API <ovms_docs_c_api>
 
 @endsphinxdirective
 
