@@ -1,14 +1,13 @@
 # Prepare a Model Repository {#ovms_docs_models_repository}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_docs_cloud_storage
-
-@endsphinxdirective
+ovms_docs_cloud_storage
+```
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the four formats:
 - [OpenVINO IR](https://docs.openvino.ai/2023.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
