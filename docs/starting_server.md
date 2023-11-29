@@ -1,5 +1,4 @@
 # Setup Model Server {#ovms_docs_serving_model}
-# Setup Model Server {#ovms_docs_serving_model}
 
 ```{toctree}
 ---
