@@ -32,13 +32,13 @@
 #include "../logging.hpp"
 #include "../modelmanager.hpp"
 #include "../status.hpp"
-#include "mediapipegraphdefinition.hpp"
 #include "mediapipe/framework/deps/registration.h"
+#include "mediapipegraphdefinition.hpp"
 
 namespace ovms {
 
-void LogUnorderedSet(std::unordered_set<std::string> set, std::string list_name){
-    for ( auto name : set ) {
+void LogUnorderedSet(std::unordered_set<std::string> set, std::string list_name) {
+    for (auto name : set) {
         SPDLOG_LOGGER_DEBUG(mediapipe_logger, "Registered {}: {}", list_name, name);
     }
 }
