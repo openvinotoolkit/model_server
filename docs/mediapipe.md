@@ -40,7 +40,7 @@ This guide gives information about:
 
 We are introducing a set of calculators which can bring to the graphs execution the advantage of OpenVINO Runtime.
 
-Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms]
+Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms)
 
 
 ## Python calculator
@@ -65,8 +65,7 @@ Following table lists supported tag and packet types in pbtxt graph definition:
 
 In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor'. The stream name can be arbitrary but the convention is to use a lower case word.
 
-Input serialization to MediaPipe ImageFrame format, requires the data in the KServe request to be encapsulated in `raw_input_contents` field. That is the default behavior in the client libs like `triton-client`.
-The required data layout for the MediaPipe Image conversion is HWC and the supported precisions are:
+The required data layout for the MediaPipe `IMAGE` conversion is HWC and the supported precisions are:
 |Datatype|Allowed number of channels|
 |:---|:---|
 |FP16|1,3,4|
@@ -76,30 +75,27 @@ The required data layout for the MediaPipe Image conversion is HWC and the suppo
 |UINT16|1,3,4|
 |INT16|1,3,4|
 
+> **Note**: Input serialization to MediaPipe ImageFrame format, requires the data in the KServe request to be encapsulated in `raw_input_contents` field based on [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto). That is the default behavior in the client libs like `triton-client`.
+
 When the client is sending in the gRPC request the input as an numpy array, it will be deserialized on the Model Server side to the format specified in the graph.
-For example when the graph has the input type IMAGE, the gRPC client could send the input data with the shape (300, 300, 3) and precision INT8. It would not be allowed to send the data in the shape for example (1,300,300,1) as that would be incorrect layout and the number of dimensions.
+For example when the graph has the input type IMAGE, the gRPC client could send the input data with the shape `(300, 300, 3)` and precision INT8. It would not be allowed to send the data in the shape for example `(1,300,300,1)` as that would be incorrect layout and the number of dimensions.
 
-When the input graph would be set as OVTENSOR, an arbitrary shape and precisions on the input would be allowed. It will be converted to OV::Tensor object and passed to the graph. For example input with shape (1,3,300,300) FP32 assuming that format would be accepted by the graph calculators.
+When the input graph would be set as `OVTENSOR`, an arbitrary shape and precisions on the input would be allowed. It will be converted to `OV::Tensor` object and passed to the graph. For example input with shape `(1,3,300,300) FP32` assuming that format would be accepted by the graph calculators.
 
-TBD code snippets for ovtensor and image
+Check the code snippets for [gRPC unary](https://docs.openvino.ai/2023.2/ovms_docs_clients_kfs.html#request-prediction-on-a-numpy-array) calls and [gRPC streaming](https://docs.openvino.ai/2023.2/ovms_docs_clients_kfs.html#request-streaming-prediction).
 
 There is also an option to avoid any data conversions in the serialization and deserialization by the OpenVINO Model Server. When the input stream is of type REQUEST, it will be passed-through to the calculator. The receiving calculator will be in charge of deserializing it and interpreting all the content. Likewise, the output format RESPONSE delegate to the calculator creating a complete KServe response message to the client. That gives extra flexibility in the data format.
 
-**Note:** For list of supported packet types and tags of OpenVINOInferenceCalculator, including graph examples, check documentation of [OpenVINO Model Server calculators](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/).
+**Note:** For list of supported packet types and tags of `OpenVINOInferenceCalculator`, including graph examples, check documentation of [OpenVINO Model Server calculators](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/).
 
 ### Side packets
 Side packets are special parameters which can be passed to the calculators at the beginning of the graph initialization. It can tune the behavior of the calculator like set the object detection threshold or number of objects to process.
-With KServe gRPC API you are also able to push side input packets into graph. They are to be passed as KServe request parameters. They can be of type string, int64 or boolean.
+With KServe gRPC API you are also able to push side input packets into graph. They are to be passed as KServe request parameters. They can be of type `string`, `int64` or `boolean`.
 Note that with the gRPC stream connection, only the first request in the stream can include the side package parameters.
 
 ### List of default calculators
 Beside OpenVINO inference calculators, there are included, by default, in the public image also all the calculators used in the enabled demos. 
-They can be identified in the bazel [BUILD](../src/BUILD) file in the target `ovms_lib` directly or in the nested dependencies in the included support for MediaPipe graphs like:
-[holistic](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/graphs/holistic_tracking/BUILD),
-[object detection](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/graphs/object_detection/BUILD) etc.
-
-TBD how the list calculators with bazel cmd
-
+The list of all included calculators, subgraphs, input/output stream handler is reported in the model server is started with extra parameter `--log_level TRACE`.
 
 ### CPU and GPU execution
 As of now, the calculators included in the public docker images supports only CPU execution. They exchange between nodes objects and memory buffers form the host memory. While the GPU buffers are not supported in the MediaPipe graphs, it is still possible to run the inference operation on GPU target device.
@@ -205,20 +201,20 @@ Check the [code snippets](https://docs.openvino.ai/2023.2/ovms_docs_clients_kfs.
 
 Review also the information about the [gRPC streaming feature](./streaming_endpoints.md)
 
-Graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md)
-and [REST Model Status](model_server_rest_api_kfs.md)
+Graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md), [REST Model Status](model_server_rest_api_kfs.md) 
+and [GetModelMetadata](model_server_grpc_api_kfs.md) and [REST Model Metadata](model_server_rest_api_kfs.md).
 
-The difference in using the mediapipes and individual models is in version management. In all calls to the mediapipes,
-the version parameter is ignored. Mediapipes are not versioned. Though, they can reference a particular version of the models in the graph.
+The difference in using the MediaPipe graphs and individual models is in version management. In all calls to the MediaPipe graphs,
+the version parameter is ignored. MediaPipe graphs are not versioned. Though, they can reference a particular version of the models in the graph.
 
 
 
 ## How to update existing graphs to use OV for inference <a name="updating-graph"></a>
 
-If you would like to reusing existing graph and replace Tensorflow execution with OpenVINO backend, check this [guide](TBD)
+If you would like to reusing existing graph and replace Tensorflow execution with OpenVINO backend, check this guide TBD.
 
 ## Adding your own mediapipe calculator to OpenVINO Model Server <a name="adding-calculator"></a>
-Mediapipe graphs can include only the calculators built-in the model server image.
+MediaPipe graphs can include only the calculators built-in the model server image.
 If you want to add your own mediapipe calculator to OpenVINO Model Server functionality you need to add it as a dependency and rebuild the OpenVINO Model Server binary.
 
 If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](../WORKSPACE) file.
