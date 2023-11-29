@@ -34,7 +34,7 @@ rm -f /ovms_release/lib/libsampleloader*
 
 # Remove coverage libaries
 if [ -f /ovms_release/lib/libjava.so ] ; then cd /ovms_release/lib/ && \
-    rm -rf  libatk-wrapper.so libattach.so libawt_headless.so libawt.so libawt_xawt.so libdt_socket.so \
+    rm -rf  libatk-wrapper.so libattach.so libawt_headless.so libawt.so libawt_xawt.so libdt_socket.so libfreetype.so \
 	libextnet.so libfontmanager.so libinstrument.so libj2gss.so libj2pcsc.so libj2pkcs11.so libjaas.so \
 	libjavajpeg.so libjava.so libjawt.so libjdwp.so libjimage.so libjli.so libjsig.so libjsound.so libjvm.so \
 	liblcms.so libmanagement_agent.so libmanagement_ext.so libmanagement.so libmlib_image.so libnet.so libnio.so \
