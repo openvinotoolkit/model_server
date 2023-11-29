@@ -63,4 +63,4 @@ models/
 the version number in parameters, by default, the latest version is served.
 - Every version folder _must_ include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name can be arbitrary.
 
-For more information on how to use cloud hosted models, refer to the [article](https://docs.openvino.ai/2023.2/ovms_docs_cloud_storage.html).
+For more information on how to use cloud hosted models, refer to the [article](./using_cloud_storage.md).
