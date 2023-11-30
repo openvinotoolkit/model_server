@@ -869,6 +869,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
             this->name);
         return Status(StatusCode::INTERNAL_ERROR, "Not all input packets created");
     }
+    // we wait idle since some calculators could hold ownership on packet content while nodes further down the graph
+    // can be still processing those. Closing packet sources triggers Calculator::Close() on nodes that do not expect
+    // new packets
     MP_RETURN_ON_FAIL(graph.WaitUntilIdle(), "grap wait until idle", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
     for (auto& [outputStreamName, poller] : outputPollers) {
@@ -882,7 +885,6 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         }
         SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
     }
-    MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
     MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "grap wait until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
         SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
