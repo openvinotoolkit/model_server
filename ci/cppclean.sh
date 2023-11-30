@@ -57,7 +57,7 @@ fi
 if [ ${NO_WARNINGS} -gt  159 ]; then
     errors+="Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"$'\n'
 fi
-if [ ${NO_WARNINGS_TEST} -gt  57 ]; then
+if [ ${NO_WARNINGS_TEST} -gt  52 ]; then
     errors+="Failed due to higher than allowed number of issues in test code: ${NO_WARNINGS_TEST}"$'\n'
 fi
 if [ -n "$errors" ]; then
