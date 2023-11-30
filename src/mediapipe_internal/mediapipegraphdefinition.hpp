@@ -115,12 +115,12 @@ protected:
         std::condition_variable& loadedNotify;
     };
 
-    virtual Status validateForConfigFileExistence();
-    Status validateForConfigLoadableness();
+    virtual Status readConfigFileContent();
+    Status parseConfigFile();
 
     Status setStreamTypes();
     Status dryInitializeTest();
-    std::string chosenConfig;
+    std::string configContent;
     static MediapipeGraphConfig MGC;
     const std::string name;
 
