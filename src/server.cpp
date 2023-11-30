@@ -275,7 +275,7 @@ Status Server::startModules(ovms::Config& config, bool withPython) {
 #if (PYTHON_DISABLE == 0)
     if (itPythonModule != modules.end()) {
         auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(itPythonModule->second.get());
-        pythonModule->exileGILFromCurrentThread();
+        pythonModule->releaseGILFromCurrentThread();
     }
 #endif
     return status;

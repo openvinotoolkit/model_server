@@ -37,7 +37,7 @@ public:
     Status start(const ovms::Config& config) override;
     void shutdown() override;
     PythonBackend* getPythonBackend() const;
-    void exileGILFromCurrentThread() const;
-    void cancelGILExileFromCurrentThread() const;
+    void releaseGILFromCurrentThread() const;
+    void acquireGILForCurrentThread() const;
 };
 }  // namespace ovms
