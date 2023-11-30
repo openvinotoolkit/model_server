@@ -13,24 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
-import numpy as np
-from pyovms import Tensor
 class OvmsPythonModel:
-
-    def initialize(self, kwargs: dict):
-        self.model_outputs = dict() 
+    def initialize(self, kwargs: dict) -> bool:
+        self.node_name = kwargs["node_name"]
+        self.input_stream = kwargs["input_stream"]
+        self.output_stream = kwargs["output_stream"]
         return True
 
-    def execute(self, inputs: list, kwargs: dict = {}):
-        # Increment every element of every input and return them with changed tensor name.
-        outputs = []
-        for input in inputs:
-            input_npy = np.array(input)
-            print(input_npy)
-            output_npy = input_npy + 1
-            output_name = input.name.replace("in", "OUTPUT")
-            outputs.append(Tensor(output_name, output_npy))
-        return outputs
-
-    def finalize(self):
-        pass
+    def execute(self, inputs: dict) -> bool:
+        return None
+    
+    def finalize(self, kwargs: dict):
+        return None

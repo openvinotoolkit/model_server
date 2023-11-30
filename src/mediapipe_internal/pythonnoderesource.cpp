@@ -18,13 +18,19 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <spdlog/spdlog.h>
 
 #include "../logging.hpp"
 #include "../status.hpp"
+#include "../stringutils.hpp"
 
 #if (PYTHON_DISABLE == 0)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_graph.h"
+#pragma GCC diagnostic pop
 #include <pybind11/embed.h>  // everything needed for embedding
 
 #include "src/mediapipe_calculators/python_executor_calculator_options.pb.h"
@@ -62,9 +68,9 @@ void PythonNodeResource::finalize() {
     }
 }
 
-Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeConfig, PythonBackend* pythonBackend) {
+Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, PythonBackend* pythonBackend) {
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
-    nodeConfig.UnpackTo(&nodeOptions);
+    graphNode.node_options(0).UnpackTo(&nodeOptions);
     if (!std::filesystem::exists(nodeOptions.handler_path())) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
@@ -74,6 +80,25 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
 
     std::string parentPath = fsHandlerPath.parent_path();
     std::string filename = fsHandlerPath.filename();
+
+    // node_name validated in graph definition
+    std::string node_name = graphNode.name();
+    std::string inputStream = "";
+    std::string outputStream = "";
+
+    std::vector<std::string> inputNames;
+    std::vector<std::string> outputNames;
+    for (auto& name : graphNode.input_stream()) {
+        inputNames.push_back(name);
+    }
+
+    for (auto& name : graphNode.output_stream()) {
+        outputNames.push_back(name);
+    }
+
+    inputStream = ovms::joins(inputNames, ";");
+    outputStream = ovms::joins(outputNames, ";");
+
     py::gil_scoped_acquire acquire;
     try {
         py::module_ sys = py::module_::import("sys");
@@ -82,6 +107,9 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
         py::object OvmsPythonModel = script.attr("OvmsPythonModel");
         py::object pythonModel = OvmsPythonModel();
         py::object kwargsParam = pybind11::dict();
+        kwargsParam["node_name"] = node_name;
+        kwargsParam["input_stream"] = inputStream;
+        kwargsParam["output_stream"] = outputStream;
         py::bool_ success = pythonModel.attr("initialize")(kwargsParam);
 
         if (!success) {

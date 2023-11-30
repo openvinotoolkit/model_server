@@ -442,6 +442,56 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
     }
 }
 
+TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "in"
+            output_stream: "out"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_initialize_with_arguments.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    PythonNodeResource* nodeRes = mediapipeDummy.getPythonNodeResource("pythonNode2");
+    ASSERT_TRUE(nodeRes != nullptr);
+
+    py::gil_scoped_acquire acquire;
+    try {
+        using namespace py::literals;
+        py::module_ sys = py::module_::import("sys");
+
+        // Casting and recasting needed for ASSER_EQ to work
+        std::string sModelMame = nodeRes->nodeResourceObject.get()->attr("node_name").cast<std::string>();
+        std::string sExpectedValue = py::str("pythonNode2").cast<std::string>();
+        ASSERT_EQ(sModelMame, sExpectedValue);
+
+        std::string sInputStream = nodeRes->nodeResourceObject.get()->attr("input_stream").cast<std::string>();
+        sExpectedValue = py::str("in").cast<std::string>();
+        ASSERT_EQ(sInputStream, sExpectedValue);
+
+        std::string sOutputStream = nodeRes->nodeResourceObject.get()->attr("output_stream").cast<std::string>();
+        sExpectedValue = py::str("out").cast<std::string>();
+        ASSERT_EQ(sOutputStream, sExpectedValue);
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << "Python pybind exception: " << e.what();
+    } catch (...) {
+        ASSERT_EQ(1, 0) << "General error ";
+    }
+}
+
 TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -864,7 +914,7 @@ TEST_F(PythonFlowTest, FinalizePassTest) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0), getPythonBackend()), StatusCode::OK);
     nodeResource->finalize();
 }
 
@@ -889,7 +939,7 @@ TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0), getPythonBackend()), StatusCode::OK);
     nodeResource->finalize();
 }
 
@@ -916,7 +966,7 @@ TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
     std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
     {
         std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
-        ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+        ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0), getPythonBackend()), StatusCode::OK);
 
         ASSERT_TRUE(std::filesystem::exists(path));
         // nodeResource destructor calls finalize and removes the file
@@ -946,7 +996,7 @@ TEST_F(PythonFlowTest, FinalizeException) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0), getPythonBackend()), StatusCode::OK);
     nodeResource->finalize();
 }
 

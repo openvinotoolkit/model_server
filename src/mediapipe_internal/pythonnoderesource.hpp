@@ -21,7 +21,10 @@
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_graph.h"
+#pragma GCC diagnostic pop
 #include "src/mediapipe_calculators/python_executor_calculator_options.pb.h"
 
 namespace py = pybind11;
@@ -42,7 +45,7 @@ public:
 
     PythonNodeResource(PythonBackend* pythonBackend);
     ~PythonNodeResource();
-    static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeOptions, PythonBackend* pythonBackend);
+    static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, PythonBackend* pythonBackend);
     void finalize();
 #endif
 };

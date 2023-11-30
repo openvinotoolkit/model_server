@@ -474,7 +474,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
 
             std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
-            Status status = PythonNodeResource::createPythonNodeResource(nodeResource, config.node(i).node_options(0), pythonBackend);
+            Status status = PythonNodeResource::createPythonNodeResource(nodeResource, config.node(i), pythonBackend);
             if (nodeResource == nullptr || !status.ok()) {
                 SPDLOG_ERROR("Failed to process python node graph {}", this->name);
                 return status;
