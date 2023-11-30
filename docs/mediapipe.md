@@ -91,7 +91,13 @@ There is also an option to avoid any data conversions in the serialization and d
 ### Side packets
 Side packets are special parameters which can be passed to the calculators at the beginning of the graph initialization. It can tune the behavior of the calculator like set the object detection threshold or number of objects to process.
 With KServe gRPC API you are also able to push side input packets into graph. They are to be passed as KServe request parameters. They can be of type `string`, `int64` or `boolean`.
-Note that with the gRPC stream connection, only the first request in the stream can include the side package parameters.
+Note that with the gRPC stream connection, only the first request in the stream can include the side package parameters. On the client side, the snippet below illustrates how it can be defined:
+```python
+client.async_stream_infer(
+   model_name="model_name",
+   inputs=[infer_input],
+   parameters={'SIDE_PACKET_NAME': 10}) 
+```
 
 ### List of default calculators
 Beside OpenVINO inference calculators, model server public docker image also includes all the calculators used in the enabled demos. 
@@ -175,12 +181,12 @@ Subconfig file may only contain *model_config_list* section  - in the same forma
 
 ## Deployment testing <a name="testing"></a>
 ### Debug logs
-The simples method to validate the graph execution is to set the Model Server `log_level` do `DEBUG`.
-`docker run --rm -it -v $(pwd):/config openvino/model_server:latest --config_path /config/config.json --log_level DEBUG`
+The simples method to validate the graph execution is to set the Model Server `log_level` do `TRACE`.
+`docker run --rm -it -v $(pwd):/config openvino/model_server:latest --config_path /config/config.json --log_level TRACE`
 
 It will report in a verbose way all the operations in the mediapipe framework from the graph initialization and execution.
-After the model server, you could confirm with the graph has correct format and all the required models are loaded successfully.
-Note that graph loading is not confirming if all the calculators are compiled into the model server build. That can be confirmed after sending the request to the KServe endpoint.
+The model server logs could confirm the graph correct format and loading all the required models.
+Note that graph definition loading is not confirming if all the calculators are compiled into the model server. That can be tested after sending the request to the KServe endpoint.
 During the requests processing, the logs will include info about calculators registration and processing the nodes.
 
 ### Tracing
@@ -196,7 +202,7 @@ It can generate the load to gRPC stream and the mediapipe graph based on the con
 ## Using MediaPipe graphs from the remote client <a name="client"></a>
 
 MediaPipe graphs can use the same gRPC KServe Inference API both for the unary calls and the streaming. 
-The same client libraries with KServe API support can be used in both cases. The client code for the unary and streaming is a bit different.
+The same client libraries with KServe API support can be used in both cases. The client code for the unary and streaming is different. 
 Check the [code snippets](https://docs.openvino.ai/2023.2/ovms_docs_clients_kfs.html)
 
 Review also the information about the [gRPC streaming feature](./streaming_endpoints.md)
@@ -257,9 +263,9 @@ in the conditions:default section of the deps property:
 ## Current limitations <a name="current-limitations"></a>
 - MediaPipe graphs are supported only for gRPC KServe API.
 
-- KServe ModelMetadata call response contains only input and output names. In the response shapes will be empty and datatypes will be `"INVALID"`.
+- KServe ModelMetadata call response contains only input and output names. In the response, shapes will be empty and datatypes will be `"INVALID"`.
 
-- Binary inputs are not supported for MediaPipe graphs.
+- Binary inputs are not supported for MediaPipe graphs for the type IMAGE and OVTENSOR.
 
 - Updates in subconfig files and mediapipe graph files do not trigger model server config reloads. The reload of the full config, including subconfig and graphs, can be initiated by an updated in the main config json file or using the REST API `config/reload` endpoint. 
 
