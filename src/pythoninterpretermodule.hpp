@@ -24,11 +24,12 @@ class gil_scoped_release;
 namespace py = pybind11;
 
 namespace ovms {
+class Config;
 class PythonBackend;
 
 class PythonInterpreterModule : public Module {
-    PythonBackend* pythonBackend{nullptr};
-    mutable std::unique_ptr<py::gil_scoped_release> GILExpulsion{nullptr};
+    PythonBackend* pythonBackend;
+    mutable std::unique_ptr<py::gil_scoped_release> GILExpulsion;
 
 public:
     PythonInterpreterModule();
