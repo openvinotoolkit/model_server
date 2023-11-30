@@ -147,7 +147,7 @@ Start OVMS with prepared workspace:
 
 ```bash
 docker run -d --rm -p 9000:9000 \
-    -v $(pwd)/onnx:/onnx:ro \
+    -v $(pwd)/model:/onnx:ro \
     -v $(pwd)/workspace:/workspace:ro \
     openvino/model_server \
     --port 9000 \
