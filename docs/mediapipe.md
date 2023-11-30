@@ -42,13 +42,12 @@ We are introducing a set of calculators which can bring to the graphs execution 
 
 Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms)
 
-
 ## Python calculator
-TBD
+TBD TODO
 
 ## How to create the graph for deployment in OpenVINO Model Server <a name="create-graph"></a>
 
-### Supported graph input/output streams packet types
+### Supported graph input/output streams packet types <a name="ovms_graph_supported_packet_types"></a>
 OpenVINO Model Server supports processing several packet types at the inputs and outputs of the graph.
 Following table lists supported tag and packet types in pbtxt graph definition:
 
