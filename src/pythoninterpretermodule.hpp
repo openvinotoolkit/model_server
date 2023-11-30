@@ -38,5 +38,6 @@ public:
     void shutdown() override;
     PythonBackend* getPythonBackend() const;
     void exileGILFromCurrentThread() const;
+    void cancelGILExileFromCurrentThread() const;
 };
 }  // namespace ovms

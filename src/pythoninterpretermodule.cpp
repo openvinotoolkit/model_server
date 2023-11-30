@@ -53,7 +53,7 @@ void PythonInterpreterModule::shutdown() {
 
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", PYTHON_INTERPRETER_MODULE_NAME);
-    this->GILExpulsion.reset();
+    cancelGILExileFromCurrentThread();
     if (pythonBackend != nullptr)
         delete pythonBackend;
     state = ModuleState::SHUTDOWN;
@@ -62,6 +62,9 @@ void PythonInterpreterModule::shutdown() {
 }
 void PythonInterpreterModule::exileGILFromCurrentThread() const {
     this->GILExpulsion = std::make_unique<py::gil_scoped_release>();
+}
+void PythonInterpreterModule::cancelGILExileFromCurrentThread() const {
+    this->GILExpulsion.reset();
 }
 
 PythonBackend* PythonInterpreterModule::getPythonBackend() const {
