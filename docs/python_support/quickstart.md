@@ -1,4 +1,4 @@
-# Python support in OVMS - quickstart {#ovms_docs_python_support_quickstart}
+# Python support in OpenVINO Model Server - quickstart {#ovms_docs_python_support_quickstart}
 
 OpenVINO Model Server allows users to write custom processing nodes in Python, so they may have full control over what happens with the data reaching such node and what comes out of it.
 
@@ -106,7 +106,7 @@ class OvmsPythonModel:
 
 ### Step 3: Prepare Graph Configuration File
 
-Python logic execution in OVMS is supported via Mediapipe graphs. That means you will need to prepare graph definition for your processing flow. In that case, a graph with just one node - Python node - is enough. Let's create appropriate `graph.pbtxt` file in your `workspace/models/python_model` catalog:
+Python logic execution in OpenVINO Model Server is supported via Mediapipe graphs. That means you will need to prepare graph definition for your processing flow. In that case, a graph with just one node - Python node - is enough. Let's create appropriate `graph.pbtxt` file in your `workspace/models/python_model` catalog:
 
 ```bash
 echo '
@@ -149,7 +149,7 @@ echo '
 ' >> models/config.json
 ```
 
-This tells OVMS to to serve the graph under given name `python_model`.
+This tells OpenVINO Model Server to to serve the graph under given name `python_model`.
 
 ### Step 5: Deploy OpenVINO Model Server
 
