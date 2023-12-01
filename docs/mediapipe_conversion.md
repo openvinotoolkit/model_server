@@ -1,5 +1,5 @@
-# How to deploy existing graphs from MediaPipe framework with OpenVINO inference calculator {#ovms_docs_mediapipe_conversion}
-In this document we will walkthrough steps required to use OVMS with Mediapipe for existing calculators using Tensorflow/TfLite for inference.
+# How to update existing graphs from MediaPipe framework to use OpenVINO for inference {#ovms_docs_mediapipe_conversion}
+In this document we will walkthrough steps required to update existing Mediapipe graphs using Tensorflow/TfLite to make them use OpenVINO Model Server for inference.
 ## How to get models used in MediaPipe demos
 When you build mediapipe applications or solutions, typically the bazel configuration would download the needed models as a dependency. When the graph is to be deployed via the OpenVINO Model Server or when the mediapipe application would use OpenVINO Model Server as the inference executor, the models needs to be stored in the [models repository](https://docs.openvino.ai/2023.2/ovms_docs_models_repository.html).
 That way you can take advantage of the model versioning feature and store the models on the local or the cloud storage. The OpenVINO calculator is using as a parameter the path to the [config.json](https://docs.openvino.ai/2023.2/ovms_docs_serving_model.html#serving-multiple-models) file with models configuration with the specific model name.
@@ -8,7 +8,7 @@ To get the model used in MediaPipe demo you can either trigger build target that
 * https://storage.googleapis.com/mediapipe-assets/
 
 ## How to prepare OpenVINO Model Server deployment with Mediapipe
-We must prepare OVMS configuration files and models repository. There are two ways that would have different benefits:
+We must prepare OVMS [configuration files](starting_server.md) and [models repository](models_repository.md). There are two ways that would have different benefits:
 1. First one would be better if you want to have just one model server service containing all servables. This may be especially useful if you will reuse models between several pipelines in the same deployment. In this case servables directory structure would look like:
 ```
 servables/
@@ -109,7 +109,7 @@ We can't find direct usage of inference calculators in this graph and that is be
 grep -R -n "register_as = \"HolisticLandmarkCpu"
 ```
 We will find that in using bazel `mediapipe_simple_subgraph` function another `pbtxt` file was registered as a graph. Since in that file there is no inference calculator we need to repeat the procedure until we find all inference calculators used directly or indirectly using subgraphs.
-### 2. We need to start with basic replacement of inference calculator.
+### 2. We need to start with basic replacement of inference calculator in graph and subraphs if needed.
 Existing configuration could look like:
 ```
 node {
