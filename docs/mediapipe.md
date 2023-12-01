@@ -216,7 +216,7 @@ the version parameter is ignored. MediaPipe graphs are not versioned. Though, th
 
 ## How to update existing graphs to use OV for inference <a name="updating-graph"></a>
 
-If you would like to reuse existing graph and replace Tensorflow execution with OpenVINO backend, check this guide TBD.
+If you would like to reuse existing graph and replace Tensorflow execution with OpenVINO backend, check [this guide](mediapipe_conversion.md)
 
 ## Adding your own mediapipe calculator to OpenVINO Model Server <a name="adding-calculator"></a>
 MediaPipe graphs can include only the calculators built-in the model server image.
