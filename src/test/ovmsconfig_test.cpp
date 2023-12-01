@@ -60,7 +60,6 @@ public:
 };
 
 TEST_F(OvmsConfigDeathTest, bufferTest) {
-    ASSERT_TRUE(false);
     std::string input{"Test buffer"};
     std::cout << input;
     std::string check{buffer.str()};
