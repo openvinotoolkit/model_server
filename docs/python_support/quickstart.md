@@ -192,7 +192,7 @@ infer_input = grpcclient.InferInput("text", [len(data)], "BYTES")
 infer_input._raw_content = data
 ```
 
-You've created InferInput object that will correspond to the servable input with the name "text" (more about it soon), shape of (number_of_encoded_bytes) and datatype "BYTES". The data itself has been written to a raw_content field. All of these values can be accessed on the server side.
+You've created InferInput object that will correspond to the servable input with the name "text" (more about it soon), shape [len(data)] - where len(data) is the number of encoded bytes - and datatype "BYTES". The data itself has been written to a raw_content field. All of these values can be accessed on the server side.
 
 The last part would be to send this data to the server:
 
