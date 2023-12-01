@@ -445,14 +445,18 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
 TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "in"
-    output_stream: "out"
+    input_stream: "IMAGE:in"
+    input_stream: "MYTYPE:in2"
+    output_stream: "IMAGE:out"
+    output_stream: "MYTYPE:out2"
         node {
             name: "pythonNode2"
             calculator: "PythonExecutorCalculator"
             input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "in"
-            output_stream: "out"
+            input_stream: "IMAGE:in"
+            input_stream: "MYTYPE:in2"
+            output_stream: "IMAGE:out"
+            output_stream: "MYTYPE:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
                     handler_path: "/ovms/src/test/mediapipe/python/scripts/good_initialize_with_arguments.py"
@@ -478,13 +482,25 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
         std::string sExpectedValue = py::str("pythonNode2").cast<std::string>();
         ASSERT_EQ(sModelMame, sExpectedValue);
 
-        std::string sInputStream = nodeRes->nodeResourceObject.get()->attr("input_stream").cast<std::string>();
-        sExpectedValue = py::str("in").cast<std::string>();
-        ASSERT_EQ(sInputStream, sExpectedValue);
+        py::list sInputStream = nodeRes->nodeResourceObject.get()->attr("input_stream");
+        py::list expectedInputs = py::list();
+        expectedInputs.attr("append")(py::str("IMAGE:in"));
+        expectedInputs.attr("append")(py::str("MYTYPE:in2"));
 
-        std::string sOutputStream = nodeRes->nodeResourceObject.get()->attr("output_stream").cast<std::string>();
-        sExpectedValue = py::str("out").cast<std::string>();
-        ASSERT_EQ(sOutputStream, sExpectedValue);
+        for (pybind11::size_t i = 0; i < sInputStream.size(); i++) {
+            py::str inputName = py::cast<py::str>(sInputStream[i]);
+            ASSERT_EQ(inputName.cast<std::string>(), expectedInputs[i].cast<std::string>());
+        }
+
+        py::list sOutputStream = nodeRes->nodeResourceObject.get()->attr("output_stream");
+        py::list expectedOutputs = py::list();
+        expectedOutputs.attr("append")(py::str("IMAGE:out"));
+        expectedOutputs.attr("append")(py::str("MYTYPE:out2"));
+
+        for (pybind11::size_t i = 0; i < sOutputStream.size(); i++) {
+            py::str outputName = py::cast<py::str>(sOutputStream[i]);
+            ASSERT_EQ(outputName.cast<std::string>(), expectedOutputs[i].cast<std::string>());
+        }
     } catch (const pybind11::error_already_set& e) {
         ASSERT_EQ(1, 0) << "Python pybind exception: " << e.what();
     } catch (...) {

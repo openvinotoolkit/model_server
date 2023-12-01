@@ -83,33 +83,28 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
 
     // node_name validated in graph definition
     std::string node_name = graphNode.name();
-    std::string inputStream = "";
-    std::string outputStream = "";
-
-    std::vector<std::string> inputNames;
-    std::vector<std::string> outputNames;
-    for (auto& name : graphNode.input_stream()) {
-        inputNames.push_back(name);
-    }
-
-    for (auto& name : graphNode.output_stream()) {
-        outputNames.push_back(name);
-    }
-
-    inputStream = ovms::joins(inputNames, ";");
-    outputStream = ovms::joins(outputNames, ";");
 
     py::gil_scoped_acquire acquire;
     try {
+        py::list inputStreams = py::list();
+        py::list outputStreams = py::list();
+        for (auto& name : graphNode.input_stream()) {
+            inputStreams.append(name);
+        }
+
+        for (auto& name : graphNode.output_stream()) {
+            outputStreams.append(name);
+        }
+
         py::module_ sys = py::module_::import("sys");
         sys.attr("path").attr("append")(parentPath.c_str());
         py::module_ script = py::module_::import(filename.c_str());
         py::object OvmsPythonModel = script.attr("OvmsPythonModel");
         py::object pythonModel = OvmsPythonModel();
         py::object kwargsParam = pybind11::dict();
+        kwargsParam["input_stream"] = inputStreams;
+        kwargsParam["output_stream"] = outputStreams;
         kwargsParam["node_name"] = node_name;
-        kwargsParam["input_stream"] = inputStream;
-        kwargsParam["output_stream"] = outputStream;
         py::bool_ success = pythonModel.attr("initialize")(kwargsParam);
 
         if (!success) {
