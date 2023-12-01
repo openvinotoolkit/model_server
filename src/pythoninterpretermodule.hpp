@@ -28,7 +28,7 @@ class Config;
 class PythonBackend;
 
 class PythonInterpreterModule : public Module {
-    PythonBackend* pythonBackend;
+    PythonBackend* pythonBackend{nullptr};
     mutable std::unique_ptr<py::gil_scoped_release> GILExpulsion;
 
 public:
