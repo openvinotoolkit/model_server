@@ -35,7 +35,7 @@ make docker_build MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 OV_USE_BINARY=1 RUN_TESTS
 cd ..
 ```
 
-You will also need a client module so in your environment install a required dependency:
+You will also need a client module, so in your environment install a required dependency:
 ```bash
 pip3 install tritonclient[grpc]
 ```
@@ -44,7 +44,7 @@ pip3 install tritonclient[grpc]
 
 Let's start with the server side code. Your job is to implement an `OvmsPythonModel` class. Model Server expects it to have at least `initialize` and `execute` methods.
 
-Since there's nothing to initialize, let's focus on `execute` method that will be called everytime model receives a request. The server will read inputs from that request and pass them to `execute` function as an `inputs` argument. 
+Since there's nothing to initialize, let's focus on `execute` method that will be called every time model receives a request. The server will read inputs from that request and pass them to `execute` function as an `inputs` argument. 
 
 `inputs` is a `list` of `pyovms.Tensor` objects. In this case you will have only one input so the code can start like this:
 
@@ -54,7 +54,7 @@ input_data = inputs[0]
 
 Now `input_data` is `pyovms.Tensor` object that holds the data and some metadata like shape and datatype. At this point you need to decide what kind of data you expect to receive here.
 
-You will work on a string, so let's say you expect `input_data` to be UTF-8 encoded string. In that case you can create an instances of `bytes` from `input_data` and then decode it to actual string:
+You will work on a string, so let's say you expect `input_data` to be UTF-8 encoded string. In that case you can create an instances of `bytes` from `input_data` and then decode it to an actual string:
 
 ```python
 text = bytes(input_data).decode()
@@ -127,7 +127,7 @@ node {
 }' >> models/python_model/graph.pbtxt
 ```
 
-Above configuration file creates a graph with a single Python node that uses `PythonExecutorCalculator`, set's inputs and outputs and provides your Python code location in `handler_path`. 
+Above configuration file creates a graph with a single Python node that uses `PythonExecutorCalculator`, sets inputs and outputs and provides your Python code location in `handler_path`. 
 The `input_side_packet` value is an internal field used by the model server to share resources between graph instances - do not change it. 
 
 ### Step 4: Prepare Server Configuration File
@@ -154,7 +154,7 @@ This tells OpenVINO Model Server to to serve the graph under given name `python_
 ### Step 5: Deploy OpenVINO Model Server
 
 Before running the server let's check if all files required for deployment are in place. Check the contents of `workspace/models` catalog as it will be mounted to the container:
-```
+```bash
 tree models
 models
 ├── config.json
@@ -191,7 +191,8 @@ Now let's pack that data into a gRPC structure that will be sent to the server:
 infer_input = grpcclient.InferInput("text", [len(data)], "BYTES")
 infer_input._raw_content = data
 ```
-You've created InferInput object that will correspond to the servable input with name "text" (more about it soon), shape of (number_of_encoded_bytes) and datatype "BYTES". The data itself has been written to raw_content field. All of these values can be accessed on the server side.
+
+You've created InferInput object that will correspond to the servable input with the name "text" (more about it soon), shape of (number_of_encoded_bytes) and datatype "BYTES". The data itself has been written to a raw_content field. All of these values can be accessed on the server side.
 
 The last part would be to send this data to the server:
 
@@ -202,7 +203,7 @@ print(results.as_numpy("OUTPUT").tobytes().decode())
 
 That part will pack `infer_input` into a request and send it to the servable called `uppercase_model`. 
 
-Server is expected to respond with an output containing UTF-8 encoded string, so in the second line you read it, decode it to actual string and print it.
+Server is expected to respond with an output containing UTF-8 encoded string, so in the second line you read it, decode it to an actual string and print it.
 
 
 Let's save the entire code to `client.py` file inside `workspace`:
@@ -218,7 +219,6 @@ results = client.infer("python_model", [infer_input])
 print(results.as_numpy("OUTPUT").tobytes().decode())
 ' >> client.py 
 ```
-
 
 ### Step 7: Send Requests From The Client
 
