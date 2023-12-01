@@ -1,4 +1,4 @@
-# Using Cloud Storage {#ovms_docs_cloud_storage}
+# Use Cloud Storage {#ovms_docs_cloud_storage}
 
 ### Cloud Storage Requirements
 
