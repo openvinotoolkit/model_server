@@ -29,7 +29,7 @@ This guide gives information about:
 * <a href="#graph-deploy">Graph deployment</a>
 * <a href="#testing">Deployment testing</a>
 * <a href="#client">Using MediaPipe graphs from the remote client </a>
-* <a href="#updating-graph">How to update existing graphs to use OV for inference </a>
+* [How to update existing graphs to use OV for inference](mediapipe_conversion.md)
 * <a href="#adding-calculator">Adding your own MediaPipe calculator to OpenVINO Model Server </a>
 * <a href="#graph-examples">Demos and examples</a>
 * <a href="#current-limitations">Current Limitations</a>
