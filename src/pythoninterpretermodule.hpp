@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 #include <memory>
+#include <thread>
 
 #include "module.hpp"
 
@@ -29,7 +30,8 @@ class PythonBackend;
 
 class PythonInterpreterModule : public Module {
     PythonBackend* pythonBackend{nullptr};
-    mutable std::unique_ptr<py::gil_scoped_release> GILExpulsion;
+    mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
+    std::thread::id threadId;
 
 public:
     PythonInterpreterModule();
@@ -37,7 +39,7 @@ public:
     Status start(const ovms::Config& config) override;
     void shutdown() override;
     PythonBackend* getPythonBackend() const;
-    void releaseGILFromCurrentThread() const;
-    void acquireGILForCurrentThread() const;
+    void releaseGILFromThisThread() const;
+    void reacquireGILForThisThread() const;
 };
 }  // namespace ovms

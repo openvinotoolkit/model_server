@@ -282,7 +282,7 @@ Status Server::startModules(ovms::Config& config, bool withPython) {
     it = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
     if (it != modules.end()) {
         auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
-        pythonModule->releaseGILFromCurrentThread();
+        pythonModule->releaseGILFromThisThread();
     }
 #endif
     return status;
