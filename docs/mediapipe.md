@@ -186,7 +186,7 @@ The simples method to validate the graph execution is to set the Model Server `l
 It will report in a verbose way all the operations in the mediapipe framework from the graph initialization and execution.
 The model server logs could confirm the graph correct format and loading all the required models.
 Note that graph definition loading is not confirming if all the calculators are compiled into the model server. That can be tested after sending the request to the KServe endpoint.
-During the requests processing, the logs will include info about calculators registration and processing the nodes.
+During the requests processing, the logs will include info about calculators initialization and processing the nodes.
 
 ### Tracing
 Currently the graph tracing on the model server side is not supported. If you would like to take advantage of mediapipe tracing to identify the graph bottleneck, test the graph from the mediapipe application level. Build an example application similarly to [holistic app](https://github.com/openvinotoolkit/mediapipe/tree/main/mediapipe/examples/desktop/holistic_tracking) with the steps documented on [mediapipe tracking](https://github.com/google/mediapipe/blob/master/docs/tools/tracing_and_profiling.md).
@@ -211,9 +211,6 @@ and [GetModelMetadata](model_server_grpc_api_kfs.md) and [REST Model Metadata](m
 
 The difference in using the MediaPipe graphs and individual models is in version management. In all calls to the MediaPipe graphs,
 the version parameter is ignored. MediaPipe graphs are not versioned. Though, they can reference a particular version of the models in the graph.
-## How to update existing graphs to use OV for inference <a name="updating-graph"></a>
-
-If you would like to reuse existing graph and replace Tensorflow execution with OpenVINO backend, check [this guide](mediapipe_conversion.md)
 
 ## Adding your own mediapipe calculator to OpenVINO Model Server <a name="adding-calculator"></a>
 MediaPipe graphs can include only the calculators built-in the model server image.
