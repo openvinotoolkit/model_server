@@ -7,14 +7,11 @@ hidden:
 ---
 
 ovms_docs_quick_start_guide
-ovms_docs_models_repository
-ovms_docs_deploying_server
 ovms_docs_serving_model
+ovms_docs_deploying_server
 ovms_docs_server_app
 ovms_docs_features
 ovms_docs_performance_tuning
-ovms_docs_demos
-ovms_docs_troubleshooting
 ```
 
 Model Server hosts models and makes them accessible to software components over standard network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model Server offers many advantages for efficient model deployment: 

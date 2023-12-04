@@ -84,7 +84,7 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/o
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
 ```
 
-Check more information about the [writing the client applications](./clients.md).
+Check more information about the [writing the client applications](./writing_app.md).
 
 ### Step 6: Download Data for Inference
 
