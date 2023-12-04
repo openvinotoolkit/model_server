@@ -11,7 +11,7 @@
 ## Introduction
 MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. It comes with a wide range of calculators/nodes which can be applied for unlimited number of scenarios in image and media analytics, generative AI, transformers and many more. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
 
-Thanks to the integration between MediaPipe and OpenVINO Model server, the graphs can be exposed over the network and the complete load can be delegated to a remote host or a microservice.
+Thanks to the integration between MediaPipe and OpenVINO Model Server, the graphs can be exposed over the network and the complete load can be delegated to a remote host or a microservice.
 We support the following scenarios:
 - stateless execution via unary to unary gRPC calls 
 - stateful graph execution via [gRPC streaming sessions](./streaming_endpoints.md).
@@ -38,7 +38,7 @@ This guide gives information about:
 
 ## OpenVINO calculators <a name="ovms-calculators"></a>
 
-We are introducing a set of calculators which can bring to the graphs execution the advantage of OpenVINO Runtime.
+We are introducing a set of calculators which can bring to the graphs execution advantages of OpenVINO Runtime.
 
 Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms)
 
@@ -79,11 +79,11 @@ The required data layout for the MediaPipe `IMAGE` conversion is HWC and the sup
 When the client is sending in the gRPC request the input as an numpy array, it will be deserialized on the Model Server side to the format specified in the graph.
 For example when the graph has the input type IMAGE, the gRPC client could send the input data with the shape `(300, 300, 3)` and precision INT8. It would not be allowed to send the data in the shape for example `(1,300,300,1)` as that would be incorrect layout and the number of dimensions.
 
-When the input graph would be set as `OVTENSOR`, an arbitrary shape and precisions on the input would be allowed. It will be converted to `OV::Tensor` object and passed to the graph. For example input with shape `(1,3,300,300) FP32` assuming that format would be accepted by the graph calculators.
+When the input graph would be set as `OVTENSOR`, any shape and precisions of the input would be allowed. It will be converted to `ov::Tensor` object and passed to the graph. For example input can have shape `(1,3,300,300)` and precision `FP32`. If passed tensor would not be accepted by model, calculator and graph will return error.
 
 Check the code snippets for [gRPC unary](https://docs.openvino.ai/2023.2/ovms_docs_clients_kfs.html#request-prediction-on-a-numpy-array) calls and [gRPC streaming](https://docs.openvino.ai/2023.2/ovms_docs_clients_kfs.html#request-streaming-prediction).
 
-There is also an option to avoid any data conversions in the serialization and deserialization by the OpenVINO Model Server. When the input stream is of type REQUEST, it will be passed-through to the calculator. The receiving calculator will be in charge of deserializing it and interpreting all the content. Likewise, the output format RESPONSE delegate to the calculator creating a complete KServe response message to the client. That gives extra flexibility in the data format.
+There is also an option to avoid any data conversions in the serialization and deserialization by the OpenVINO Model Server. When the input stream is of type REQUEST, it will be passed-through to the calculator. The receiving calculator will be in charge of deserializing it and interpreting all the content. Likewise, the output format RESPONSE delegate to the calculator creating a complete KServe response message to the client. That gives extra flexibility in the data format as arbitrary data can be stored in [raw_input_content](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202) and later decoded in custom calculator.
 
 **Note:** For list of supported packet types and tags of `OpenVINOInferenceCalculator`, including graph examples, check documentation of [OpenVINO Model Server calculators](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/).
 
@@ -149,7 +149,7 @@ MediaPipe servables configuration is to be placed in the same json file like the
 While models are defined in section `model_config_list`, graphs are configured in
 the `mediapipe_config_list` section. 
 
-When the mediapipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy. Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
+When the MediaPipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy. Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
 ```json
 {
     "model_config_list": [],
@@ -164,7 +164,7 @@ When the mediapipe graphs artifacts are packaged like presented above, configuri
     ]
 }
 ```
-Nodes in the Mediapipe graphs can reference both to the models configured in model_config_list section and in subconfigs.
+Nodes in the MediaPipe graphs can reference both to the models configured in model_config_list section and in subconfigs.
 
 ### MediaPipe configuration options explained
 
@@ -180,7 +180,7 @@ Subconfig file may only contain *model_config_list* section  - in the same forma
 
 ## Deployment testing <a name="testing"></a>
 ### Debug logs
-The simples method to validate the graph execution is to set the Model Server `log_level` do `TRACE`.
+The simples method to validate the graph execution is to set the Model Server `log_level` to `DEBUG`.
 `docker run --rm -it -v $(pwd):/config openvino/model_server:latest --config_path /config/config.json --log_level TRACE`
 
 It will report in a verbose way all the operations in the mediapipe framework from the graph initialization and execution.
@@ -211,9 +211,6 @@ and [GetModelMetadata](model_server_grpc_api_kfs.md) and [REST Model Metadata](m
 
 The difference in using the MediaPipe graphs and individual models is in version management. In all calls to the MediaPipe graphs,
 the version parameter is ignored. MediaPipe graphs are not versioned. Though, they can reference a particular version of the models in the graph.
-
-
-
 ## How to update existing graphs to use OV for inference <a name="updating-graph"></a>
 
 If you would like to reuse existing graph and replace Tensorflow execution with OpenVINO backend, check [this guide](mediapipe_conversion.md)
