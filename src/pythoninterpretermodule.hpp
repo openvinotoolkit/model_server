@@ -15,20 +15,31 @@
 //*****************************************************************************
 #pragma once
 #include <memory>
+#include <thread>
 
 #include "module.hpp"
 
+namespace pybind11 {
+class gil_scoped_release;
+}
+namespace py = pybind11;
+
 namespace ovms {
+class Config;
 class PythonBackend;
 
 class PythonInterpreterModule : public Module {
     PythonBackend* pythonBackend{nullptr};
+    mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
+    std::thread::id threadId;
 
 public:
+    PythonInterpreterModule();
     ~PythonInterpreterModule();
     Status start(const ovms::Config& config) override;
-
     void shutdown() override;
     PythonBackend* getPythonBackend() const;
+    void releaseGILFromThisThread() const;
+    void reacquireGILForThisThread() const;
 };
 }  // namespace ovms
