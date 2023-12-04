@@ -968,6 +968,8 @@ cc_test(
         "test/mediapipe/relative_paths/graph1/subconfig.json",
         "test/mediapipe/relative_paths/graph2/subconfig.json",
         "test/mediapipe/relative_paths/graph2/graphadd.pbtxt",
+        "test/mediapipe/python/scripts/symmetric_increment.py",
+        "test/mediapipe/python/scripts/symmetric_increment_by_2.py",
         "test/passthrough/1/passthrough.xml",
         "test/passthrough/1/passthrough.bin",
         "test/summator/1/summator.xml",
