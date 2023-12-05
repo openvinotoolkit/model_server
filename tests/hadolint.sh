@@ -31,7 +31,8 @@ files_no_proxy_setting=(
 
 # install hadolint if missing
 ~/bin/hadolint --version | grep 2.12 ; if [ $? != 0 ]; then \
-curl -L https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 -o ~/bin/hadolint; \
+mkdir ~/bin && \
+curl -L https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 -o ~/bin/hadolint && \
 chmod 755 ~/bin/hadolint; \
 fi
 
