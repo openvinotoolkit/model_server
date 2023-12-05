@@ -81,7 +81,8 @@ def generate_next_inputs(previous_result, number_of_previous_tokens):
 
     next_inputs = dict(
         input_ids = np.array([next_token], dtype=np.int64).reshape((1,1)),
-        attention_mask =np.ones((1, number_of_previous_tokens+1), dtype=np.int64)
+        attention_mask =np.ones((1, number_of_previous_tokens+1), dtype=np.int64),
+        position_ids = np.array([[i for i in range(0, number_of_previous_tokens+1)]], dtype=np.int64)
     )
     for j in range(32):
         next_inputs[f"past_key_values.{j}.key"] = previous_result[f"present.{j}.key"]
