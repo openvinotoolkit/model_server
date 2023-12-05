@@ -16,27 +16,28 @@
 
 # This script should be used inside build image to run unit tests
 TEST_FILTER="--test_filter=*CAPI*:*OvmsConfigDeathTest*"
-SHARED_OPTIONS="
+SHARED_OPTIONS=" \
 --jobs=$JOBS \
 ${debug_bazel_flags} \
 --test_timeout=1800 \
 --test_summary=detailed \
 --test_output=streamed \
 --test_env PYTHONPATH=\"$PYTHONPATH\""
-GENEREATE_COVERAGE_REPORT_COMMAND="genhtml --output genhtml \"$(bazel info output_path)/_coverage/_coverage_report.dat\""
-TESTS_FAIL_PROCEDURE="cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1"
+generate_coverage_report() {
+    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
+}
 test_fail_procedure() {
     cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1
 }
-echo $RUN_TEST
-echo $CHECK_COVERAGE
+echo "Run test: ${RUN_TESTS}"
+echo "Run coverage: ${CHECK_COVERAGE}"
 if [ "$RUN_TESTS" == "1" ] ; then
     if [ "$CHECK_COVERAGE" == "1" ] ; then
         { bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
             //src:ovms_test > ${TEST_LOG} 2>&1 || \
             test_fail_procedure; } && \
-            $(${GENEREATE_COVERAGE_REPORT_COMMAND});
+            generate_coverage_report;
     fi
     { bazel test \
         ${SHARED_OPTIONS} "${TEST_FILTER}" \
