@@ -64,7 +64,8 @@ def prepare_preprompt_kv_cache(preprompt):
     res = tokenizer(preprompt, return_tensors="np", add_special_tokens=False)
     inputs = dict(
         input_ids = res.input_ids,                  # [1,X]
-        attention_mask = res.attention_mask         # [1,X]
+        attention_mask = res.attention_mask,        # [1,X] 
+        position_ids = np.array([[i for i in range(0, res.input_ids.shape[1])]], dtype=np.int64)
     )
     for i in range(32):
         inputs[f"past_key_values.{i}.key"] = np.zeros((1, 32, 0, 128), dtype=np.float32)
