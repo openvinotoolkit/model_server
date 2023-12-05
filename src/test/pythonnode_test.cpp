@@ -74,6 +74,7 @@ std::unique_ptr<std::thread> serverThread;
 class PythonFlowTest : public ::testing::TestWithParam<std::pair<std::string, std::string>> {
 protected:
     ovms::ExecutionContext defaultExecutionContext{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
+
 public:
     static void SetUpTestSuite() {
         std::string configPath = "/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json";
@@ -1024,5 +1025,4 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
 
     checkDummyResponse("OUTPUT", data, req, res, 2 /* expect +2 */, 1, "mediaDummy");
-
 }

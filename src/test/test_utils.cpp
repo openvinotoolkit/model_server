@@ -186,7 +186,7 @@ void checkDummyResponse(const std::string outputName,
     ASSERT_EQ(response.outputs_size(), expectedOutputsCount);
     ASSERT_EQ(response.raw_output_contents_size(), expectedOutputsCount);
     // Finding the output with given name
-    auto it = std::find_if(response.outputs().begin(), response.outputs().end(), [&outputName] (const ::KFSResponse::InferOutputTensor& tensor) {
+    auto it = std::find_if(response.outputs().begin(), response.outputs().end(), [&outputName](const ::KFSResponse::InferOutputTensor& tensor) {
         return tensor.name() == outputName;
     });
     ASSERT_NE(it, response.outputs().end());
