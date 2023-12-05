@@ -1,7 +1,7 @@
-accelerate==0.17.1
+accelerate==0.20.3
 numpy==1.23
-transformers==4.26.1
-transformers[onnx]==4.26.1
-onnxruntime==1.14.1
 torch==1.13.1
+onnx==1.15.0
+optimum[openvino,nncf]==1.14.1
 ovmsclient
+openvino
