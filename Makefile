@@ -414,17 +414,17 @@ test_checksec: venv
 	@docker cp $(OVMS_CPP_CONTAINER_NAME):/libovms_shared.so /tmp
 	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms_release/bin/ovms /tmp
 	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
-	@checksec -j /tmp/libovms_shared.so | jq '.[]| join(",")' > checksec.txt
+	@$(ACTIVATE); checksec -j /tmp/libovms_shared.so | jq '.[]| join(",")' > checksec.txt
 	@if ! grep -FRq "Full,true,true,DSO,false,true,true,true" checksec.txt; then\
  		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." ; \
-		checksec /tmp/libovms_shared.so ;\
+		$(ACTIVATE); checksec /tmp/libovms_shared.so ;\
 		exit 1;\
 	fi
 	@echo "Running checksec on ovms binary..."
-	@checksec -j /tmp/ovms | jq '.[]| join(",")' > checksec.txt
+	@$(ACTIVATE); checksec -j /tmp/ovms | jq '.[]| join(",")' > checksec.txt
 	@if ! grep -FRq "Full,true,true,PIE,false,true,true,true" checksec.txt; then\
  		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues."; \
-		checksec /tmp/ovms ; \
+		$(ACTIVATE); checksec /tmp/ovms ; \
 		exit 1;\
 	fi
 	@rm -f checksec.json
