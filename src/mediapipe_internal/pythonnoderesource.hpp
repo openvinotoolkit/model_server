@@ -46,7 +46,7 @@ public:
     void finalize();
 
 private:
-    static py::object preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig);
+    static py::dict preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig);
 #endif
 };
 

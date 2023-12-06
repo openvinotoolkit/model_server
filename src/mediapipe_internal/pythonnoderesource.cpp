@@ -67,8 +67,8 @@ void PythonNodeResource::finalize() {
     }
 }
 
-py::object PythonNodeResource::preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
-    py::object kwargsParam = py::dict();
+py::dict PythonNodeResource::preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
+    py::dict kwargsParam = py::dict();
     std::string nodeName = graphNodeConfig.name();
     py::list inputStreams = py::list();
     py::list outputStreams = py::list();
@@ -107,7 +107,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
         py::module_ script = py::module_::import(filename.c_str());
         py::object OvmsPythonModel = script.attr("OvmsPythonModel");
         py::object pythonModel = OvmsPythonModel();
-        py::object kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
+        py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
         pythonModel.attr("initialize")(kwargsParam);
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
