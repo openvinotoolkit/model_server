@@ -67,7 +67,7 @@ void PythonNodeResource::finalize() {
     }
 }
 
-// IMPORTANT: This is an internal method meant to be run in a specific context. 
+// IMPORTANT: This is an internal method meant to be run in a specific context.
 // It assumes GIL is being held by the thread and doesn't handle potential errors.
 // It MUST be called in the scope of py::gil_scoped_acquire and within the try - catch block
 py::dict PythonNodeResource::preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
