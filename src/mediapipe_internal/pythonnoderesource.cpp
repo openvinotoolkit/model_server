@@ -79,8 +79,6 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
 
     std::string parentPath = fsHandlerPath.parent_path();
     std::string filename = fsHandlerPath.filename();
-
-    // node_name validated in graph definition
     std::string nodeName = graphNodeConfig.name();
 
     py::gil_scoped_acquire acquire;

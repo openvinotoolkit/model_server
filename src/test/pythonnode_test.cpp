@@ -419,18 +419,18 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
 TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "IMAGE:in"
-    input_stream: "OVMS_PY_TENSOR:in2"
-    output_stream: "IMAGE:out"
-    output_stream: "OVMS_PY_TENSOR:out2"
+    input_stream: "OVMS_PY_TENSOR_IN1:in1"
+    input_stream: "OVMS_PY_TENSOR_IN2:in2"
+    output_stream: "OVMS_PY_TENSOR_OUT1:out1"
+    output_stream: "OVMS_PY_TENSOR_OUT2:out2"
         node {
             name: "pythonNode2"
             calculator: "PythonExecutorCalculator"
             input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "IMAGE:in"
-            input_stream: "OVMS_PY_TENSOR:in2"
-            output_stream: "IMAGE:out"
-            output_stream: "OVMS_PY_TENSOR:out2"
+            input_stream: "IN1:in1"
+            input_stream: "IN2:in2"
+            output_stream: "OUT1:out1"
+            output_stream: "OUT2:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
                     handler_path: "/ovms/src/test/mediapipe/python/scripts/good_initialize_with_arguments.py"
@@ -451,27 +451,27 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
         using namespace py::literals;
 
         // Casting and recasting needed for ASSER_EQ to work
-        std::string modelMame = nodeRes->nodeResourceObject.get()->attr("node_name").cast<std::string>();
+        std::string modelName = nodeRes->nodeResourceObject.get()->attr("node_name").cast<std::string>();
         std::string expectedName = py::str("pythonNode2").cast<std::string>();
-        ASSERT_EQ(modelMame, expectedName);
+        ASSERT_EQ(modelName, expectedName);
 
-        py::list sInputStream = nodeRes->nodeResourceObject.get()->attr("input_streams");
+        py::list inputStream = nodeRes->nodeResourceObject.get()->attr("input_streams");
         py::list expectedInputs = py::list();
-        expectedInputs.attr("append")(py::str("IMAGE:in"));
-        expectedInputs.attr("append")(py::str("OVMS_PY_TENSOR:in2"));
+        expectedInputs.attr("append")(py::str("IN1:in1"));
+        expectedInputs.attr("append")(py::str("IN2:in2"));
 
-        for (pybind11::size_t i = 0; i < sInputStream.size(); i++) {
-            py::str inputName = py::cast<py::str>(sInputStream[i]);
+        for (pybind11::size_t i = 0; i < inputStream.size(); i++) {
+            py::str inputName = py::cast<py::str>(inputStream[i]);
             ASSERT_EQ(inputName.cast<std::string>(), expectedInputs[i].cast<std::string>());
         }
 
-        py::list sOutputStream = nodeRes->nodeResourceObject.get()->attr("output_streams");
+        py::list outputStream = nodeRes->nodeResourceObject.get()->attr("output_streams");
         py::list expectedOutputs = py::list();
-        expectedOutputs.attr("append")(py::str("IMAGE:out"));
-        expectedOutputs.attr("append")(py::str("OVMS_PY_TENSOR:out2"));
+        expectedOutputs.attr("append")(py::str("OUT1:out1"));
+        expectedOutputs.attr("append")(py::str("OUT2:out2"));
 
-        for (pybind11::size_t i = 0; i < sOutputStream.size(); i++) {
-            py::str outputName = py::cast<py::str>(sOutputStream[i]);
+        for (pybind11::size_t i = 0; i < outputStream.size(); i++) {
+            py::str outputName = py::cast<py::str>(outputStream[i]);
             ASSERT_EQ(outputName.cast<std::string>(), expectedOutputs[i].cast<std::string>());
         }
     } catch (const pybind11::error_already_set& e) {

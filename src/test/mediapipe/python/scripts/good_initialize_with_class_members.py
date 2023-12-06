@@ -14,7 +14,7 @@
 # limitations under the License.
 #*****************************************************************************
 class OvmsPythonModel:
-    def initialize(self, kwargs: dict) -> bool:
+    def initialize(self, kwargs: dict):
         self.model_name = "testModel"
         self.execution_time = 300
         self.model_inputs = ["input1", "input2"]

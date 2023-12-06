@@ -14,7 +14,7 @@
 # limitations under the License.
 #*****************************************************************************
 class OvmsPythonModel:
-    def initialize(self, kwargs: dict) -> bool:
+    def initialize(self, kwargs: dict):
         self.node_name = kwargs["node_name"]
         self.input_streams = kwargs["input_streams"]
         self.output_streams = kwargs["output_streams"]
