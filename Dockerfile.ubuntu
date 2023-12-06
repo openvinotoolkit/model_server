@@ -536,7 +536,7 @@ RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit
         "ubuntu:22.04") \
             apt-get install libpython3.10 --no-install-recommends -y \
         ;; \     
-        "*") \
+        *) \
             apt-get install libpython3.8 --no-install-recommends -y \
         ;; \                          
     esac ; \
