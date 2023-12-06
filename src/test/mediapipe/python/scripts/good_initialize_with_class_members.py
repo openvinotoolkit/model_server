@@ -18,10 +18,10 @@ class OvmsPythonModel:
         self.model_name = "testModel"
         self.execution_time = 300
         self.model_inputs = ["input1", "input2"]
-        return True
+        return
 
     def execute(self, inputs: dict) -> bool:
         return None
     
     def finalize(self, kwargs: dict):
-        return None
+        return

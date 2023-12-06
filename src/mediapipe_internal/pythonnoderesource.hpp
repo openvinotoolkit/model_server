@@ -21,10 +21,6 @@
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
-#pragma GCC diagnostic pop
 #include "src/mediapipe_calculators/python_executor_calculator_options.pb.h"
 
 namespace py = pybind11;
@@ -33,6 +29,7 @@ namespace py = pybind11;
 namespace ovms {
 class Status;
 class PythonBackend;
+class Node;
 
 struct PythonNodeResource {
 public:

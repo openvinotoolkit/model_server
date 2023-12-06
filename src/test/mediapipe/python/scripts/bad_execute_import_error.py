@@ -17,11 +17,11 @@
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        return True
+        return
 
     def execute(self, inputs: list) -> list:
         import non_existing_module
         return None
 
     def finalize(self, kwargs: dict):
-        return None
+        return

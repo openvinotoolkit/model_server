@@ -267,31 +267,6 @@ TEST_F(PythonFlowTest, PythonNodeInitFailedImportOutsideTheClassError) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
 }
 
-TEST_F(PythonFlowTest, PythonNodeReturnFalse) {
-    ConstructorEnabledModelManager manager;
-    std::string testPbtxt = R"(
-    input_stream: "in"
-    output_stream: "out"
-        node {
-            name: "pythonNode2"
-            calculator: "PythonExecutorCalculator"
-            input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "in"
-            output_stream: "out2"
-            node_options: {
-                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_return_false.py"
-                }
-            }
-        }
-    )";
-
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
-}
-
 TEST_F(PythonFlowTest, PythonNodeInitException) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -416,13 +391,12 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
     py::gil_scoped_acquire acquire;
     try {
         using namespace py::literals;
-        py::module_ sys = py::module_::import("sys");
 
         // Casting and recasting needed for ASSER_EQ to work
-        std::string sModelMame = nodeRes->nodeResourceObject.get()->attr("model_name").cast<std::string>();
-        std::string sExpectedName = py::str("testModel").cast<std::string>();
+        std::string modelName = nodeRes->nodeResourceObject.get()->attr("model_name").cast<std::string>();
+        std::string expectedName = py::str("testModel").cast<std::string>();
 
-        ASSERT_EQ(sModelMame, sExpectedName);
+        ASSERT_EQ(modelName, expectedName);
         py::int_ executionTime = nodeRes->nodeResourceObject.get()->attr("execution_time");
         ASSERT_EQ(executionTime, 300);
         py::list modelInputs = nodeRes->nodeResourceObject.get()->attr("model_inputs");
@@ -446,17 +420,17 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "IMAGE:in"
-    input_stream: "MYTYPE:in2"
+    input_stream: "OVMS_PY_TENSOR:in2"
     output_stream: "IMAGE:out"
-    output_stream: "MYTYPE:out2"
+    output_stream: "OVMS_PY_TENSOR:out2"
         node {
             name: "pythonNode2"
             calculator: "PythonExecutorCalculator"
             input_side_packet: "PYTHON_NODE_RESOURCES:py"
             input_stream: "IMAGE:in"
-            input_stream: "MYTYPE:in2"
+            input_stream: "OVMS_PY_TENSOR:in2"
             output_stream: "IMAGE:out"
-            output_stream: "MYTYPE:out2"
+            output_stream: "OVMS_PY_TENSOR:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
                     handler_path: "/ovms/src/test/mediapipe/python/scripts/good_initialize_with_arguments.py"
@@ -475,27 +449,26 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
     py::gil_scoped_acquire acquire;
     try {
         using namespace py::literals;
-        py::module_ sys = py::module_::import("sys");
 
         // Casting and recasting needed for ASSER_EQ to work
-        std::string sModelMame = nodeRes->nodeResourceObject.get()->attr("node_name").cast<std::string>();
-        std::string sExpectedValue = py::str("pythonNode2").cast<std::string>();
-        ASSERT_EQ(sModelMame, sExpectedValue);
+        std::string modelMame = nodeRes->nodeResourceObject.get()->attr("node_name").cast<std::string>();
+        std::string expectedName = py::str("pythonNode2").cast<std::string>();
+        ASSERT_EQ(modelMame, expectedName);
 
-        py::list sInputStream = nodeRes->nodeResourceObject.get()->attr("input_stream");
+        py::list sInputStream = nodeRes->nodeResourceObject.get()->attr("input_streams");
         py::list expectedInputs = py::list();
         expectedInputs.attr("append")(py::str("IMAGE:in"));
-        expectedInputs.attr("append")(py::str("MYTYPE:in2"));
+        expectedInputs.attr("append")(py::str("OVMS_PY_TENSOR:in2"));
 
         for (pybind11::size_t i = 0; i < sInputStream.size(); i++) {
             py::str inputName = py::cast<py::str>(sInputStream[i]);
             ASSERT_EQ(inputName.cast<std::string>(), expectedInputs[i].cast<std::string>());
         }
 
-        py::list sOutputStream = nodeRes->nodeResourceObject.get()->attr("output_stream");
+        py::list sOutputStream = nodeRes->nodeResourceObject.get()->attr("output_streams");
         py::list expectedOutputs = py::list();
         expectedOutputs.attr("append")(py::str("IMAGE:out"));
-        expectedOutputs.attr("append")(py::str("MYTYPE:out2"));
+        expectedOutputs.attr("append")(py::str("OVMS_PY_TENSOR:out2"));
 
         for (pybind11::size_t i = 0; i < sOutputStream.size(); i++) {
             py::str outputName = py::cast<py::str>(sOutputStream[i]);
@@ -537,7 +510,6 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
     py::gil_scoped_acquire acquire;
     try {
         using namespace py::literals;
-        py::module_ sys = py::module_::import("sys");
 
         // Casting and recasting needed for ASSER_EQ to work
         py::dict modelOutputs = nodeRes->nodeResourceObject.get()->attr("model_outputs");

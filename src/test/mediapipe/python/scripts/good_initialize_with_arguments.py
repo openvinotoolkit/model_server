@@ -16,12 +16,12 @@
 class OvmsPythonModel:
     def initialize(self, kwargs: dict) -> bool:
         self.node_name = kwargs["node_name"]
-        self.input_stream = kwargs["input_stream"]
-        self.output_stream = kwargs["output_stream"]
-        return True
+        self.input_streams = kwargs["input_streams"]
+        self.output_streams = kwargs["output_streams"]
+        return
 
     def execute(self, inputs: dict) -> bool:
         return None
     
     def finalize(self, kwargs: dict):
-        return None
+        return

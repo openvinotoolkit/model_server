@@ -68,9 +68,9 @@ void PythonNodeResource::finalize() {
     }
 }
 
-Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, PythonBackend* pythonBackend) {
+Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend) {
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
-    graphNode.node_options(0).UnpackTo(&nodeOptions);
+    graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     if (!std::filesystem::exists(nodeOptions.handler_path())) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
@@ -82,17 +82,17 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
     std::string filename = fsHandlerPath.filename();
 
     // node_name validated in graph definition
-    std::string node_name = graphNode.name();
+    std::string nodeName = graphNodeConfig.name();
 
     py::gil_scoped_acquire acquire;
     try {
         py::list inputStreams = py::list();
         py::list outputStreams = py::list();
-        for (auto& name : graphNode.input_stream()) {
+        for (auto& name : graphNodeConfig.input_stream()) {
             inputStreams.append(name);
         }
 
-        for (auto& name : graphNode.output_stream()) {
+        for (auto& name : graphNodeConfig.output_stream()) {
             outputStreams.append(name);
         }
 
@@ -102,15 +102,10 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
         py::object OvmsPythonModel = script.attr("OvmsPythonModel");
         py::object pythonModel = OvmsPythonModel();
         py::object kwargsParam = pybind11::dict();
-        kwargsParam["input_stream"] = inputStreams;
-        kwargsParam["output_stream"] = outputStreams;
-        kwargsParam["node_name"] = node_name;
-        py::bool_ success = pythonModel.attr("initialize")(kwargsParam);
-
-        if (!success) {
-            SPDLOG_ERROR("Python node initialize script call returned false for: {}", nodeOptions.handler_path());
-            return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
-        }
+        kwargsParam["input_streams"] = inputStreams;
+        kwargsParam["output_streams"] = outputStreams;
+        kwargsParam["node_name"] = nodeName;
+        pythonModel.attr("initialize")(kwargsParam);
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
         nodeResource->nodeResourceObject = std::make_unique<py::object>(pythonModel);

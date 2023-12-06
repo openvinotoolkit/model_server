@@ -19,7 +19,7 @@ class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
         self.model_outputs = dict() 
-        return True
+        return
 
     def execute(self, inputs: list, kwargs: dict = {}):
         # Increment every element of every input and return them with changed tensor name.

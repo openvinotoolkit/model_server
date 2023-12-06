@@ -16,7 +16,7 @@
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        return True
+        return
 
     def execute(self, inputs: list, kwargs: dict) -> list:
         return None
