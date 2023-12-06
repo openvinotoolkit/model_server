@@ -711,7 +711,6 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
 
     ServableMetricReporter* smr{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
-
     checkDummyResponse("OUTPUT1", data1, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
     checkDummyResponse("OUTPUT2", data2, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
     checkDummyResponse("OUTPUT3", data3, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
@@ -1025,4 +1024,44 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
 
     checkDummyResponse("OUTPUT", data, req, res, 2 /* expect +2 */, 1, "mediaDummy");
+}
+
+TEST_F(PythonFlowTest, FailingToInitializeOneNodeDestructsAllResources) {
+    ConstructorEnabledModelManager manager;
+    std::string firstTestPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:in"
+            output_stream: "OUTPUT:inter"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
+                }
+            }
+        }
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:inter"
+            output_stream: "OUTPUT:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_throw_exception.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt);
+    mediapipeDummy.inputConfig = firstTestPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+    ASSERT_EQ(mediapipeDummy.getPythonNodeResource("pythonNode1"), nullptr);
+    ASSERT_EQ(mediapipeDummy.getPythonNodeResource("pythonNode2"), nullptr);
+    ASSERT_EQ(mediapipeDummy.getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
