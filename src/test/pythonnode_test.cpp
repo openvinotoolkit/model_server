@@ -1063,4 +1063,5 @@ TEST_F(PythonFlowTest, FailingToInitializeOneNodeDestructsAllResources) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
     ASSERT_EQ(mediapipeDummy.getPythonNodeResource("pythonNode1"), nullptr);
     ASSERT_EQ(mediapipeDummy.getPythonNodeResource("pythonNode2"), nullptr);
+    ASSERT_EQ(mediapipeDummy.getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
