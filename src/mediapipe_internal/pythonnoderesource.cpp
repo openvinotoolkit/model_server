@@ -24,7 +24,6 @@
 
 #include "../logging.hpp"
 #include "../status.hpp"
-#include "../stringutils.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #pragma GCC diagnostic push
