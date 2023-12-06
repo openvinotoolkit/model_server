@@ -15,7 +15,7 @@
 #
 
 # This script should be used inside build image to run unit tests
-TEST_FILTER="--test_filter=*CAPI*:*OvmsConfigDeathTest*"
+TEST_FILTER="--test_filter=*"
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
 ${debug_bazel_flags} \
