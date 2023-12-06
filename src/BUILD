@@ -970,6 +970,8 @@ cc_test(
         "test/mediapipe/relative_paths/graph2/graphadd.pbtxt",
         "test/mediapipe/python/scripts/symmetric_increment.py",
         "test/mediapipe/python/scripts/symmetric_increment_by_2.py",
+        "test/mediapipe/python/scripts/good_finalize_remove_file.py",
+        "test/mediapipe/python/scripts/bad_initialize_return_false.py",
         "test/passthrough/1/passthrough.xml",
         "test/passthrough/1/passthrough.bin",
         "test/summator/1/summator.xml",

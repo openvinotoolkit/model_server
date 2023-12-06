@@ -438,22 +438,38 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
     return {"", mediapipe_packet_type_enum::UNKNOWN};
 }
 
+struct PythonResourceInitializationCleaningGuard {
+    bool shouldCleanup{true};
+    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& resource;
+    PythonResourceInitializationCleaningGuard(std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& resource) :
+        resource(resource) {}
+    ~PythonResourceInitializationCleaningGuard() {
+        if (shouldCleanup) {
+            resource.clear();
+        }
+    }
+    void markSuccess() {
+        shouldCleanup = false;
+    }
+};
+
 Status MediapipeGraphDefinition::initializeNodes() {
 #if (PYTHON_DISABLE == 0)
+    PythonResourceInitializationCleaningGuard initializationCleaningGuard(this->pythonNodeResources);
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
             if (!config.node(i).node_options().size()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node missing options in graph: {}. ", this->name);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node missing options in graph: {}. ", this->name);
                 return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
             }
             if (config.node(i).name().empty()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name is missing in graph: {}. ", this->name);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node name is missing in graph: {}. ", this->name);
                 return StatusCode::PYTHON_NODE_MISSING_NAME;
             }
             std::string nodeName = config.node(i).name();
             if (this->pythonNodeResources.find(nodeName) != this->pythonNodeResources.end()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node name: {} already used in graph: {}. ", nodeName, this->name);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
             }
 
@@ -467,6 +483,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             this->pythonNodeResources.insert(std::pair<std::string, std::shared_ptr<PythonNodeResource>>(nodeName, std::move(nodeResource)));
         }
     }
+    initializationCleaningGuard.markSuccess();
 #endif
 
     return StatusCode::OK;
