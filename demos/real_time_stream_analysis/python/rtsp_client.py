@@ -18,6 +18,7 @@ import cv2
 import argparse
 import sys
 sys.path.append('/')
+sys.path.append('../../common/stream_client/')
 from stream_client import StreamClient
 
 parser = argparse.ArgumentParser()

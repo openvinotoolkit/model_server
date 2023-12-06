@@ -11,13 +11,14 @@ The stream analysis app is started with `rtsp_client.py` script. It reads frames
 
 Specific use case actions are defined in use case implementation - some notifications could be sent to another service if object of interest has been detected etc.
 
-As part of postprocessing, inference results can be visualized. The demo can optionally start Flask server that will host inference preview as defined for the use case. 
+As part of postprocessing, inference results can be visualized. The demo emits RTSP stream that will host inference preview as defined for the use case. 
 
 
 ## Prerequisites
 
 In order to make this demo work you need to:
 - use Python 3.7+
+- have a ffmpeg program installed
 - have access to live RTSP stream
 - have access to OpenVINO Model Server with your model of choice deployed
 - have a use case implementation
