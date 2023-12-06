@@ -438,24 +438,24 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
     return {"", mediapipe_packet_type_enum::UNKNOWN};
 }
 
-struct PythonResourceInitializationCleaningGuard {
+struct PythonResourcesCleaningGuard {
     bool shouldCleanup{true};
     std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& resource;
-    PythonResourceInitializationCleaningGuard(std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& resource) :
+    PythonResourcesCleaningGuard(std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& resource) :
         resource(resource) {}
-    ~PythonResourceInitializationCleaningGuard() {
+    ~PythonResourcesCleaningGuard() {
         if (shouldCleanup) {
             resource.clear();
         }
     }
-    void markSuccess() {
+    void disableCleaning() {
         shouldCleanup = false;
     }
 };
 
 Status MediapipeGraphDefinition::initializeNodes() {
 #if (PYTHON_DISABLE == 0)
-    PythonResourceInitializationCleaningGuard initializationCleaningGuard(this->pythonNodeResources);
+    PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResources);
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
@@ -483,7 +483,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             this->pythonNodeResources.insert(std::pair<std::string, std::shared_ptr<PythonNodeResource>>(nodeName, std::move(nodeResource)));
         }
     }
-    initializationCleaningGuard.markSuccess();
+    pythonResourcesCleaningGuard.disableCleaning();
 #endif
 
     return StatusCode::OK;
