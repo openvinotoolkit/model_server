@@ -387,8 +387,16 @@ ifeq ($(BASE_OS),ubuntu)
 	@rm ubuntu.txt sources.txt
 endif
 ifeq ($(BASE_OS),redhat)
+	docker run -it registry.access.redhat.com/ubi8:8.5 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run -it $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) rpm -qa  --qf "%{NAME}\n" | sort > all_packages.txt
 	docker run -it $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) rpm -qa --qf "%{name}: %{license}\n" | grep -e GPL -e MPL
-
+	grep -v -f base_packages.txt all_packages.txt | while read line ;	do package=$(echo $line) ; \
+	docker run -it $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) rpm -qa --qf "%{name}: %{license}\n" | grep -e GPL -e MPL ;\
+	exit_status=$? ; \
+	if [ $exit_status -eq 0 ]; then \
+			docker run -it $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) yumdownloader --skip-broken --source -y $package ;\
+	fi ; done
+	@rm ubuntu.txt sources.txt
 endif
 
 release_image:
