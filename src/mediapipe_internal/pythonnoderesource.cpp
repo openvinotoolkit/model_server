@@ -67,6 +67,26 @@ void PythonNodeResource::finalize() {
     }
 }
 
+py::object PythonNodeResource::preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
+    py::object kwargsParam = py::dict();
+    std::string nodeName = graphNodeConfig.name();
+    py::list inputStreams = py::list();
+    py::list outputStreams = py::list();
+    for (auto& name : graphNodeConfig.input_stream()) {
+        inputStreams.append(name);
+    }
+
+    for (auto& name : graphNodeConfig.output_stream()) {
+        outputStreams.append(name);
+    }
+
+    kwargsParam["input_streams"] = inputStreams;
+    kwargsParam["output_streams"] = outputStreams;
+    kwargsParam["node_name"] = nodeName;
+
+    return kwargsParam;
+}
+
 Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend) {
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
@@ -79,29 +99,15 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
 
     std::string parentPath = fsHandlerPath.parent_path();
     std::string filename = fsHandlerPath.filename();
-    std::string nodeName = graphNodeConfig.name();
 
     py::gil_scoped_acquire acquire;
     try {
-        py::list inputStreams = py::list();
-        py::list outputStreams = py::list();
-        for (auto& name : graphNodeConfig.input_stream()) {
-            inputStreams.append(name);
-        }
-
-        for (auto& name : graphNodeConfig.output_stream()) {
-            outputStreams.append(name);
-        }
-
         py::module_ sys = py::module_::import("sys");
         sys.attr("path").attr("append")(parentPath.c_str());
         py::module_ script = py::module_::import(filename.c_str());
         py::object OvmsPythonModel = script.attr("OvmsPythonModel");
         py::object pythonModel = OvmsPythonModel();
-        py::object kwargsParam = pybind11::dict();
-        kwargsParam["input_streams"] = inputStreams;
-        kwargsParam["output_streams"] = outputStreams;
-        kwargsParam["node_name"] = nodeName;
+        py::object kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
         pythonModel.attr("initialize")(kwargsParam);
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);

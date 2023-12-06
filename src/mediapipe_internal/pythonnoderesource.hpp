@@ -44,6 +44,9 @@ public:
     ~PythonNodeResource();
     static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, PythonBackend* pythonBackend);
     void finalize();
+
+private:
+    static py::object preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig);
 #endif
 };
 
