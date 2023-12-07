@@ -56,7 +56,6 @@ public:
 
     void setShutdownRequest(int i);
     virtual ~Server();
-    // TODO: Include withPython in ovms::Config
     Status startModules(ovms::Config& config);
     void shutdownModules();
 
