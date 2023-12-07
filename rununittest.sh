@@ -22,7 +22,7 @@ ${debug_bazel_flags} \
 --test_timeout=1800 \
 --test_summary=detailed \
 --test_output=streamed \
---test_env PYTHONPATH=\"$PYTHONPATH\""
+--test_env PYTHONPATH=${PYTHONPATH}"
 generate_coverage_report() {
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
 }
