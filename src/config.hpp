@@ -43,12 +43,10 @@ private:
          */
     const std::string empty;
 
-    ServerSettingsImpl serverSettings;
     ModelsSettingsImpl modelsSettings;
 
 public:
-     bool withPython = true;
-
+    ServerSettingsImpl serverSettings;
     /**
          * @brief Gets the instance of the config
          */
