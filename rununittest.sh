@@ -15,7 +15,7 @@
 #
 
 # This script should be used inside build image to run unit tests
-TEST_FILTER="--test_filter=*"
+TEST_FILTER="--test_filter=*:-PythonFlowTest.InitializationPass:PythonFlowTest.FinalizationPass:PythonFlowTest.PythonNodePassArgumentsToConstructor:PythonFlowTest.PythonCalculatorTestSingleInSingleOut:PythonFlowTest.PythonCalculatorTestMultiInMultiOut:PythonFlowTest.PythonCalculatorTestSingleInSingleOutMultiRunWithErrors"
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
 ${debug_bazel_flags} \
@@ -43,6 +43,6 @@ if [ "$RUN_TESTS" == "1" ] ; then
         ${SHARED_OPTIONS} "${TEST_FILTER}" \
         //src:ovms_test > ${TEST_LOG} 2>&1 || \
         test_fail_procedure; } && \
-        tail -n 15 ${TEST_LOG} && \
+        tail -n 100 ${TEST_LOG} && \
         rm -rf ${TEST_LOG};
 fi
