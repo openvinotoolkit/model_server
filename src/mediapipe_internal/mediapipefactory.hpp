@@ -32,6 +32,8 @@
 
 namespace ovms {
 
+void LogUnorderedSet(std::unordered_set<std::string> set, std::string list_name);
+
 class ModelManager;
 class Status;
 class MediapipeGraphConfig;
