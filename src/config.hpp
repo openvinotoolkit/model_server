@@ -47,6 +47,8 @@ private:
     ModelsSettingsImpl modelsSettings;
 
 public:
+     bool withPython = true;
+
     /**
          * @brief Gets the instance of the config
          */
