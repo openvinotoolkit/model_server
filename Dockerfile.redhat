@@ -310,11 +310,9 @@ ARG minitrace_flags
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
-
 ARG RUN_TESTS=1
-RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" = "1" ] ; then bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* --test_env PYTHONPATH=$PYTHONPATH //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
-    bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* --test_env PYTHONPATH=$PYTHONPATH //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ;  \ 
-    bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:test_python_binding; fi ;
+COPY rununittest.sh /ovms/
+RUN ./rununittest.sh
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp" && \
