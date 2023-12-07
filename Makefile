@@ -427,7 +427,7 @@ test_checksec: venv
 		. $(ACTIVATE); checksec /tmp/ovms ; \
 		exit 1;\
 	fi
-	@rm -f checksec.json
+	@rm -f checksec.txt
 	@rm -f /tmp/ovms
 	@rm -f /tmp/libovms_shared.so
 	@echo "Checksec check success."
