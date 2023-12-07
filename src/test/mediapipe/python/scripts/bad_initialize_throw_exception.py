@@ -17,9 +17,8 @@ class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         raise Exception("msg")
 
-        return None
     def execute(self, inputs: list, kwargs: dict) -> list:
         return None
 
     def finalize(self, kwargs: dict):
-        return None
+        return

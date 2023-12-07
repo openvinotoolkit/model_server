@@ -20,11 +20,11 @@ class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         with open("/tmp/pythonNodeTestRemoveFile.txt", 'wt') as file:
             file.write("1111")
-        return True
+        return
 
     def execute(self, inputs: list, kwargs: dict) -> list:
         return None
 
     def finalize(self):
         os.remove("/tmp/pythonNodeTestRemoveFile.txt")
-        return True
+        return

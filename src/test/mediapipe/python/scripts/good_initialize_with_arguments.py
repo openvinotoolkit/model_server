@@ -15,10 +15,13 @@
 #*****************************************************************************
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        return False
-    
-    def execute(self, inputs: list, kwargs: dict) -> list:
-        return None
+        self.node_name = kwargs["node_name"]
+        self.input_streams = kwargs["input_streams"]
+        self.output_streams = kwargs["output_streams"]
+        return
 
-    def finalize(self, kwargs: dict):
+    def execute(self, inputs: dict) -> bool:
         return None
+    
+    def finalize(self, kwargs: dict):
+        return
