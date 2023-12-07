@@ -31,7 +31,7 @@ pipeline {
               env
               """
               echo shortCommit
-              build job: "ovmsc/util-common/ovmsc-test-on-commit", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit],[$class: 'StringParameterValue', name: 'NODE_LABEL', value: 'test_label']]
+              build job: "ovmsc/util-common/ovmsc-test-on-commit", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit],[$class: 'StringParameterValue', name: 'NODE_LABEL', value: 'ovmsoncommit']]
           }    
         }
     }
