@@ -26,7 +26,6 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG JOBS=8
 ENV DEBIAN_FRONTEND=noninteractive
 ARG BASE_IMAGE
-ENV BASE_IMAGE=${BASE_IMAGE}
 RUN apt-get update && apt-get install --no-install-recommends -y \
             build-essential \
             gcc-9 \
@@ -97,7 +96,6 @@ RUN ./install_opencv.sh
 FROM base_build as build
 ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
-ENV BASE_IMAGE=${BASE_IMAGE}
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 
@@ -534,13 +532,13 @@ COPY --from=pkg /ovms_release /ovms
 # For image with Python enabled install Python library
 RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
     apt-get update -y ; \
-    case $BASE_IMAGE in \
-        "ubuntu:20.04") \
-            apt-get install libpython3.8 --no-install-recommends -y \
-        ;; \                        
+    case $BASE_IMAGE in \   
         "ubuntu:22.04") \
             apt-get install libpython3.10 --no-install-recommends -y \
-        ;; \          
+        ;; \     
+        *) \
+            apt-get install libpython3.8 --no-install-recommends -y \
+        ;; \                          
     esac ; \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 

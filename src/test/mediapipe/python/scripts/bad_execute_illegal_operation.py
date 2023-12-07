@@ -17,7 +17,7 @@
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        return True
+        return
 
     def execute(self, inputs: list) -> list:
         my_string = "string"
@@ -25,4 +25,4 @@ class OvmsPythonModel:
         return outputs
 
     def finalize(self, kwargs: dict):
-        return None
+        return

@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <spdlog/spdlog.h>
 
@@ -25,6 +26,10 @@
 #include "../status.hpp"
 
 #if (PYTHON_DISABLE == 0)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_graph.h"
+#pragma GCC diagnostic pop
 #include <pybind11/embed.h>  // everything needed for embedding
 
 #include "src/mediapipe_calculators/python_executor_calculator_options.pb.h"
@@ -62,9 +67,32 @@ void PythonNodeResource::finalize() {
     }
 }
 
-Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const google::protobuf::Any& nodeConfig, PythonBackend* pythonBackend) {
+// IMPORTANT: This is an internal method meant to be run in a specific context.
+// It assumes GIL is being held by the thread and doesn't handle potential errors.
+// It MUST be called in the scope of py::gil_scoped_acquire and within the try - catch block
+py::dict PythonNodeResource::preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
+    py::dict kwargsParam = py::dict();
+    std::string nodeName = graphNodeConfig.name();
+    py::list inputStreams = py::list();
+    py::list outputStreams = py::list();
+    for (auto& name : graphNodeConfig.input_stream()) {
+        inputStreams.append(name);
+    }
+
+    for (auto& name : graphNodeConfig.output_stream()) {
+        outputStreams.append(name);
+    }
+
+    kwargsParam["input_streams"] = inputStreams;
+    kwargsParam["output_streams"] = outputStreams;
+    kwargsParam["node_name"] = nodeName;
+
+    return kwargsParam;
+}
+
+Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend) {
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
-    nodeConfig.UnpackTo(&nodeOptions);
+    graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     if (!std::filesystem::exists(nodeOptions.handler_path())) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
@@ -74,6 +102,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
 
     std::string parentPath = fsHandlerPath.parent_path();
     std::string filename = fsHandlerPath.filename();
+
     py::gil_scoped_acquire acquire;
     try {
         py::module_ sys = py::module_::import("sys");
@@ -81,13 +110,8 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
         py::module_ script = py::module_::import(filename.c_str());
         py::object OvmsPythonModel = script.attr("OvmsPythonModel");
         py::object pythonModel = OvmsPythonModel();
-        py::object kwargsParam = pybind11::dict();
-        py::bool_ success = pythonModel.attr("initialize")(kwargsParam);
-
-        if (!success) {
-            SPDLOG_ERROR("Python node initialize script call returned false for: {}", nodeOptions.handler_path());
-            return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
-        }
+        py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
+        pythonModel.attr("initialize")(kwargsParam);
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
         nodeResource->nodeResourceObject = std::make_unique<py::object>(pythonModel);

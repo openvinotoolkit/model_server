@@ -18,8 +18,8 @@ from pyovms import Tensor
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        self.model_outputs = kwargs 
-        return True
+        self.model_outputs = dict() 
+        return
 
     def execute(self, inputs: list, kwargs: dict = {}):
         # Increment every element of every input and return them with changed tensor name.

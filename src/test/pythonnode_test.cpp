@@ -267,31 +267,6 @@ TEST_F(PythonFlowTest, PythonNodeInitFailedImportOutsideTheClassError) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
 }
 
-TEST_F(PythonFlowTest, PythonNodeReturnFalse) {
-    ConstructorEnabledModelManager manager;
-    std::string testPbtxt = R"(
-    input_stream: "in"
-    output_stream: "out"
-        node {
-            name: "pythonNode2"
-            calculator: "PythonExecutorCalculator"
-            input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "in"
-            output_stream: "out2"
-            node_options: {
-                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_return_false.py"
-                }
-            }
-        }
-    )";
-
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
-}
-
 TEST_F(PythonFlowTest, PythonNodeInitException) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -416,13 +391,12 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
     py::gil_scoped_acquire acquire;
     try {
         using namespace py::literals;
-        py::module_ sys = py::module_::import("sys");
 
         // Casting and recasting needed for ASSER_EQ to work
-        std::string sModelMame = nodeRes->nodeResourceObject.get()->attr("model_name").cast<std::string>();
-        std::string sExpectedName = py::str("testModel").cast<std::string>();
+        std::string modelName = nodeRes->nodeResourceObject.get()->attr("model_name").cast<std::string>();
+        std::string expectedName = py::str("testModel").cast<std::string>();
 
-        ASSERT_EQ(sModelMame, sExpectedName);
+        ASSERT_EQ(modelName, expectedName);
         py::int_ executionTime = nodeRes->nodeResourceObject.get()->attr("execution_time");
         ASSERT_EQ(executionTime, 300);
         py::list modelInputs = nodeRes->nodeResourceObject.get()->attr("model_inputs");
@@ -434,6 +408,71 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
         for (pybind11::size_t i = 0; i < modelInputs.size(); i++) {
             py::str inputName = py::cast<py::str>(modelInputs[i]);
             ASSERT_EQ(inputName.cast<std::string>(), expectedInputs[i].cast<std::string>());
+        }
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << "Python pybind exception: " << e.what();
+    } catch (...) {
+        ASSERT_EQ(1, 0) << "General error ";
+    }
+}
+
+TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR_IN1:in1"
+    input_stream: "OVMS_PY_TENSOR_IN2:in2"
+    output_stream: "OVMS_PY_TENSOR_OUT1:out1"
+    output_stream: "OVMS_PY_TENSOR_OUT2:out2"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "IN1:in1"
+            input_stream: "IN2:in2"
+            output_stream: "OUT1:out1"
+            output_stream: "OUT2:out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_initialize_with_arguments.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    PythonNodeResource* nodeRes = mediapipeDummy.getPythonNodeResource("pythonNode2");
+    ASSERT_TRUE(nodeRes != nullptr);
+
+    py::gil_scoped_acquire acquire;
+    try {
+        using namespace py::literals;
+
+        // Casting and recasting needed for ASSER_EQ to work
+        std::string modelName = nodeRes->nodeResourceObject.get()->attr("node_name").cast<std::string>();
+        std::string expectedName = py::str("pythonNode2").cast<std::string>();
+        ASSERT_EQ(modelName, expectedName);
+
+        py::list inputStream = nodeRes->nodeResourceObject.get()->attr("input_streams");
+        py::list expectedInputs = py::list();
+        expectedInputs.attr("append")(py::str("IN1:in1"));
+        expectedInputs.attr("append")(py::str("IN2:in2"));
+
+        for (pybind11::size_t i = 0; i < inputStream.size(); i++) {
+            py::str inputName = py::cast<py::str>(inputStream[i]);
+            ASSERT_EQ(inputName.cast<std::string>(), expectedInputs[i].cast<std::string>());
+        }
+
+        py::list outputStream = nodeRes->nodeResourceObject.get()->attr("output_streams");
+        py::list expectedOutputs = py::list();
+        expectedOutputs.attr("append")(py::str("OUT1:out1"));
+        expectedOutputs.attr("append")(py::str("OUT2:out2"));
+
+        for (pybind11::size_t i = 0; i < outputStream.size(); i++) {
+            py::str outputName = py::cast<py::str>(outputStream[i]);
+            ASSERT_EQ(outputName.cast<std::string>(), expectedOutputs[i].cast<std::string>());
         }
     } catch (const pybind11::error_already_set& e) {
         ASSERT_EQ(1, 0) << "Python pybind exception: " << e.what();
@@ -471,7 +510,6 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
     py::gil_scoped_acquire acquire;
     try {
         using namespace py::literals;
-        py::module_ sys = py::module_::import("sys");
 
         // Casting and recasting needed for ASSER_EQ to work
         py::dict modelOutputs = nodeRes->nodeResourceObject.get()->attr("model_outputs");
@@ -864,7 +902,7 @@ TEST_F(PythonFlowTest, FinalizePassTest) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0), getPythonBackend()), StatusCode::OK);
     nodeResource->finalize();
 }
 
@@ -889,7 +927,7 @@ TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0), getPythonBackend()), StatusCode::OK);
     nodeResource->finalize();
 }
 
@@ -916,7 +954,7 @@ TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
     std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
     {
         std::shared_ptr<PythonNodeResource> nodeResouce = nullptr;
-        ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+        ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResouce, config.node(0), getPythonBackend()), StatusCode::OK);
 
         ASSERT_TRUE(std::filesystem::exists(path));
         // nodeResource destructor calls finalize and removes the file
@@ -946,7 +984,7 @@ TEST_F(PythonFlowTest, FinalizeException) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
-    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0).node_options(0), getPythonBackend()), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResource::createPythonNodeResource(nodeResource, config.node(0), getPythonBackend()), StatusCode::OK);
     nodeResource->finalize();
 }
 
